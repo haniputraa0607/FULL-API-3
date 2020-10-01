@@ -45,6 +45,7 @@ use LaravelFCM\Message\OptionsBuilder;
 use LaravelFCM\Message\PayloadDataBuilder;
 use LaravelFCM\Message\PayloadNotificationBuilder;
 use FCM;
+use Illuminate\Support\Facades\Crypt;
 
 class MyHelper{
 	public static function  checkGet($data, $message = null){
@@ -312,7 +313,7 @@ class MyHelper{
 			{
 				if($mode == "angka")
 				{
-					$chars = "1234567890";
+					$chars = "123456789";
 				}
 				elseif($mode == "huruf")
 				{
@@ -2257,7 +2258,7 @@ class MyHelper{
 		$replace = array ( 'Sen','Sel','Rab','Kam','Jum','Sab','Min',
 			'Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu',
 			'Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des',
-			'Januari','Februari','Maret','April','Juni','Juli','Agustus','Sepember',
+			'Januari','Februari','Maret','April','Juni','Juli','Agustus','September',
 			'Oktober','November','Desember',
 		);
 		$date = date ($date_format, $timestamp);
@@ -2908,5 +2909,16 @@ class MyHelper{
 		$log->save();
 
 		return $log;
+	}
+
+	public static function decryptPIN($encrypted, $phone)
+	{
+		$user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
+		if (!$user) {
+			return false;
+		}
+		$challengeKey = substr($user->challenge_key,0,32);
+		$iv = substr($user->challenge_key,32,16);
+		return openssl_decrypt(base64_decode($encrypted), 'AES-256-CBC', $challengeKey, OPENSSL_RAW_DATA, $iv);
 	}
 }

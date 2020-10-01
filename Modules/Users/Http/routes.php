@@ -14,18 +14,19 @@ Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent'
 	Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 	{
         Route::post('phone/check', 'ApiUser@check');
-        Route::post('pin/check', 'ApiUser@checkPin');
+        Route::post('pin/check', 'ApiUser@checkPin')->middleware('decrypt_pin');
         Route::post('pin/resend', 'ApiUser@resendPin');
         Route::post('pin/forgot', 'ApiUser@forgotPin');
-        Route::post('pin/verify', 'ApiUser@verifyPin');
+        Route::post('pin/verify', 'ApiUser@verifyPin')->middleware('decrypt_pin');
         Route::post('pin/create', 'ApiUser@createPin');
-        Route::post('pin/change', 'ApiUser@changePin');
+        Route::post('pin/change', 'ApiUser@changePin')->middleware(['decrypt_pin:pin_new','decrypt_pin:pin_old']);
         Route::post('profile/update', 'ApiUser@profileUpdate');
 	});
 
     Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
     {
         Route::post('pin/check-backend', 'ApiUser@checkPinBackend');
+        Route::post('remove-user-device', 'ApiUser@removeUserDevice');
     });
     Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function()
     {

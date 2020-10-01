@@ -291,7 +291,7 @@ class ApiSubscriptionWebview extends Controller
             }
         }
 
-        $i = !empty($keyContent) ? $keyContent+1 : $i;
+        $i = !empty($keyContent) ? $keyContent+2 : $i;
         $result['subscription_content'][$i]['is_outlet']    = 1;
         $result['subscription_content'][$i]['title']        = 'Tempat Penukaran';
 

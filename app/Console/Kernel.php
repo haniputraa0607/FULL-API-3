@@ -28,7 +28,7 @@ class Kernel extends ConsoleKernel
          * sending the campaign schedule
          * run every 5 minute
          */
-        $schedule->call('Modules\Campaign\Http\Controllers\ApiCampaign@insertQueue')->everyFiveMinutes();
+        $schedule->call('Modules\Campaign\Http\Controllers\ApiCampaign@insertQueue')->cron('*/10 * * * *');
 
         /**
          * insert the promotion data that must be sent to the promotion_queue table
@@ -55,10 +55,10 @@ class Kernel extends ConsoleKernel
         $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@checkSchedule')->dailyAt('02:00');
 
         /**
-         * cancel all pending transaction that have been more than 15 minutes
-         * run every hour
+         * cancel all pending transaction that have been more than 5 minutes
+         * run every 2 minute
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@cron')->cron('*/15 * * * *');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@cron')->cron('*/2 * * * *');
 
         /**
          * reject all transactions that outlets do not receive within a certain timeframe
@@ -67,16 +67,16 @@ class Kernel extends ConsoleKernel
         $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@autoReject')->cron('* * * * *');
 
         /**
-         * cancel all pending deals that have been more than 15 minutes
-         * run every hour
+         * cancel all pending deals that have been more than 5 minutes
+         * run every 2 minute
          */
-        $schedule->call('Modules\Deals\Http\Controllers\ApiCronDealsController@cancel')->cron('*/1 * * * *');
+        $schedule->call('Modules\Deals\Http\Controllers\ApiCronDealsController@cancel')->cron('*/2 * * * *');
 
         /**
-         * cancel all pending subscription that have been more than 15 minutes
-         * run every hour
+         * cancel all pending subscription that have been more than 5 minutes
+         * run every 2 minute
          */
-        $schedule->call('Modules\Subscription\Http\Controllers\ApiCronSubscriptionController@cancel')->cron('*/1 * * * *');
+        $schedule->call('Modules\Subscription\Http\Controllers\ApiCronSubscriptionController@cancel')->cron('*/2 * * * *');
 
         /**
          * update all pickup transaction that have been more than 1 x 24 hours
@@ -135,6 +135,10 @@ class Kernel extends ConsoleKernel
          */
         $schedule->call('Modules\Disburse\Http\Controllers\ApiDisburseController@cronSendEmailDisburse')->dailyAt('01:30');
         /**
+         * To send
+         */
+        $schedule->call('Modules\Disburse\Http\Controllers\ApiDisburseController@shortcutRecap')->dailyAt('02:00');
+        /**
          * Void failed transaction shopeepay
          */
         $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancel')->cron('*/1 * * * *');
@@ -146,6 +150,12 @@ class Kernel extends ConsoleKernel
          * Void failed transaction subscription shopeepay
          */
         $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancelSubscription')->cron('*/1 * * * *');
+
+        /**
+         * Check the status of Gosend which is not updated after 5 minutes
+         * run every 5 minutes
+         */
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiGosendController@cronCheckStatus')->cron('*/5 * * * *');
 
     }
 

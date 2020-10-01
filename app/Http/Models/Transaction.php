@@ -91,7 +91,8 @@ class Transaction extends Model
 		'membership_promo_id',
         'fraud_flag',
 		'cashback_insert_status',
-		'calculate_achievement'
+		'calculate_achievement',
+		'show_rate_popup'
 	];
 
 	public function user()

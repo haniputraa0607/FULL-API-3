@@ -58,6 +58,7 @@ use Modules\Shift\Entities\Shift;
 use Modules\Shift\Entities\UserOutletApp;
 use Modules\Transaction\Http\Requests\TransactionDetail;
 use Carbon\Carbon;
+use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 
 class ApiOutletApp extends Controller
 {
@@ -73,6 +74,7 @@ class ApiOutletApp extends Controller
         $this->voucher          = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->subscription     = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
         $this->endPoint  = config('url.storage_url_api');
+        $this->shopeepay      = "Modules\ShopeePay\Http\Controllers\ShopeePayController";
     }
 
     public function deleteToken(DeleteToken $request)
@@ -250,11 +252,8 @@ class ApiOutletApp extends Controller
         $result['completed']['count'] = count($listCompleted);
         $result['completed']['data']  = $listCompleted;
 
-        $result['unpaid']['count'] = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+        $result['unpaid']['count'] = Transaction::where('id_outlet',$request->user()->id_outlet)
             ->where('transaction_payment_status', 'Pending')
-            ->whereNull('taken_at')
-            ->whereNull('taken_by_system_at')
-            ->whereNull('reject_at')
             ->whereDate('transaction_date',date('Y-m-d'))
             ->count();
 
@@ -292,6 +291,7 @@ class ApiOutletApp extends Controller
         $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->where('order_id', $post['order_id'])
             ->whereDate('transaction_date', date('Y-m-d'))
+            ->where('transactions.id_outlet', $request->user()->id_outlet)
             ->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_discounts', 'outlet')->first();
 
         $qr = $list['order_id'];
@@ -921,7 +921,11 @@ class ApiOutletApp extends Controller
         DB::beginTransaction();
 
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['taken_at' => date('Y-m-d H:i:s')]);
-        $order->show_rate_popup = 1;
+
+        if ($order->taken_by == 'Customer') {
+            $order->show_rate_popup = 1;
+        }
+
         $order->save();
         if ($pickup) {
             //send notif to customer
@@ -1336,10 +1340,10 @@ class ApiOutletApp extends Controller
         $modifiers = ProductModifier::select(\DB::raw('0 as id_brand, min(product_modifiers.id_product_modifier) as id_product_category, type as product_category_name, count(distinct(product_modifiers.id_product_modifier)) as total_product, 0 as total_sold_out'));
 
         if ($outlet['outlet_different_price']) {
-            $modifiers->join('product_modifier_price', function($join) use ($outlet) {
-                $join->on('product_modifier_price.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
-                    ->where('product_modifier_price.id_outlet', $outlet['id_outlet']);
-            })->whereNotNull('product_modifier_price.product_modifier_price');
+            $modifiers->join('product_modifier_prices', function($join) use ($outlet) {
+                $join->on('product_modifier_prices.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
+                    ->where('product_modifier_prices.id_outlet', $outlet['id_outlet']);
+            })->whereNotNull('product_modifier_prices.product_modifier_price');
         } else {
             $modifiers->join('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier', '=', 'product_modifier_global_prices.id_product_modifier')
                 ->whereNotNull('product_modifier_global_prices.product_modifier_price');
@@ -1685,6 +1689,7 @@ class ApiOutletApp extends Controller
             //refund ke balance
             // if($order['trasaction_payment_type'] == "Midtrans"){
             $multiple = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
+            $point = 0;
             if ($multiple) {
                 foreach ($multiple as $pay) {
                     if ($pay['type'] == 'Balance') {
@@ -1747,6 +1752,32 @@ class ApiOutletApp extends Controller
                                 }
                             }else{
                                 $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                                if ($refund == false) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'   => 'fail',
+                                        'messages' => ['Insert Cashback Failed'],
+                                    ]);
+                                }
+                                $rejectBalance = true;
+                            }
+                        }
+                    } elseif (strtolower($pay['type']) == 'shopeepay') {
+                        $point = 0;
+                        $payShopeepay = TransactionPaymentShopeePay::find($pay['id_payment']);
+                        if ($payShopeepay) {
+                            if(MyHelper::setting('refund_shopeepay')) {
+                                $refund = app($this->shopeepay)->void($payShopeepay['id_transaction'], 'trx', $errors);
+                                if (!$refund) {
+                                    DB::rollback();
+                                    $reject_type = 'refund';
+                                    return response()->json([
+                                        'status'   => 'fail',
+                                        'messages' => ['Refund Payment Failed'],
+                                    ]);
+                                }
+                            }else{
+                                $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payShopeepay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
                                     return response()->json([
@@ -1862,15 +1893,6 @@ class ApiOutletApp extends Controller
                         }
                         $rejectBalance = true;
                     }
-                    $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
-                    if ($refund == false) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['Insert Cashback Failed'],
-                        ]);
-                    }
-                    $rejectBalance = true;
                 } else {
                     $payBalance = TransactionPaymentBalance::where('id_transaction', $order['id_transaction'])->first();
                     if ($payBalance) {
@@ -1916,7 +1938,7 @@ class ApiOutletApp extends Controller
             }
 
             //send notif point refund
-            if($rejectBalance = true){
+            if($rejectBalance == true){
                 $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'],
                 [
                     "outlet_name"      => $outlet['outlet_name'],
@@ -2327,7 +2349,10 @@ class ApiOutletApp extends Controller
 
     public function refreshDeliveryStatus(Request $request)
     {
-        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by', 'GO-SEND')->first();
+        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->with(['outlet' => function($q) {
+            $q->select('id_outlet', 'outlet_name');
+        }])->where('pickup_by', 'GO-SEND')->first();
+        $outlet = $trx->outlet;
         if (!$trx) {
             return MyHelper::checkGet($trx, 'Transaction Not Found');
         }
@@ -2525,7 +2550,9 @@ class ApiOutletApp extends Controller
             'promo_campaign_promo_code.promo_campaign',
             'transaction_payment_subscription.subscription_user_voucher.subscription_user.subscription',
             'transaction_pickup_go_send',
-            'outlet.city')->first();
+            'outlet.city')
+            ->where('transactions.id_outlet', $request->user()->id_outlet)
+            ->first();
         if (!$list) {
             return MyHelper::checkGet([], 'empty');
         }
@@ -2718,7 +2745,7 @@ class ApiOutletApp extends Controller
                 }
                 $list['payment'] = $payment;
                 break;
-            case 'IPay88':
+            case 'Ipay88':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
                 foreach($multiPayment as $dataKey => $dataPay){
@@ -2936,12 +2963,16 @@ class ApiOutletApp extends Controller
                         break;
                     case 'completed':
                     case 'delivered':
-                        if($list['detail']['taken_at'] == null){
+                        if($list['detail']['ready_at'] == null){
+                            $result['transaction_status'] = 4;
+                            $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
+                        }elseif($list['detail']['taken_at'] == null){
                             $result['transaction_status'] = 3;
+                            $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
                         }else{
+                            $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
                             $result['transaction_status'] = 2;
                         }
-                        $result['transaction_status_text']          = 'ORDER SUDAH DIAMBIL';
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['driver']          = [
                             'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',

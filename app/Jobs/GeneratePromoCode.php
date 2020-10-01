@@ -48,7 +48,7 @@ class GeneratePromoCode implements ShouldQueue
         }
 
         $data = collect($generateCode);
-        $chunks = $data->chunk(10);
+        $chunks = $data->chunk(500);
         $chunks = $chunks->toArray();
 
         // dd($this->status);exit();

@@ -718,6 +718,12 @@ class ApiOnlineTransaction extends Controller
             $isFree = 0;
         }
 
+        if ($post['grandTotal'] < 0 || $post['subtotal'] < 0) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Invalid transaction']
+            ];
+        }
         DB::beginTransaction();
         UserFeedbackLog::where('id_user',$request->user()->id)->delete();
         $transaction = [
@@ -1920,9 +1926,7 @@ class ApiOnlineTransaction extends Controller
 		            else
 		            {
 		                if(isset($errore)){
-		            		foreach ($errore as $key => $value) {
-		            			array_push($promo_error['message'], $value);
-		            		}
+		            		$promo_error = app($this->promo_campaign)->promoError('transaction', $errore);
 		            	}
 		            }
 	        	}

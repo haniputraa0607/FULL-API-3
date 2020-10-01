@@ -45,6 +45,7 @@
 </table>
 <br>
 
+@if(!empty($summary_product))
 <table style="border: 1px solid black">
     <thead>
     <tr>
@@ -67,7 +68,7 @@
     @endif
     </tbody>
 </table>
-
+@endif
 </body>
 </html>
 

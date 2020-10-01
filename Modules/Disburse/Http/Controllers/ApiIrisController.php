@@ -21,6 +21,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
+use Modules\Disburse\Entities\BankAccount;
 use Modules\Disburse\Entities\BankName;
 use Modules\Disburse\Entities\Disburse;
 
@@ -29,6 +30,7 @@ use Modules\Disburse\Entities\DisburseOutlet;
 use Modules\Disburse\Entities\DisburseOutletTransaction;
 use Modules\Disburse\Entities\DisburseTransaction;
 use Modules\Disburse\Entities\LogIRIS;
+use Modules\Disburse\Entities\LogTopupIris;
 use Modules\Disburse\Entities\MDR;
 use Modules\Disburse\Entities\UserFranchisee;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
@@ -42,39 +44,44 @@ class ApiIrisController extends Controller
 {
     public function notification(Request $request){
         $post = $request->json()->all();
-        $reference_no = $post['reference_no'];
         $status = $post['status'];
 
-        $arrStatus = [
-            'queued' => 'Queued',
-            'processed' => 'Processed',
-            'completed' => 'Success',
-            'failed' => 'Fail',
-            'rejected' => 'Rejected',
-            'approved' => 'Approved'
-        ];
-        $data = Disburse::where('reference_no', $reference_no)->update(['disburse_status' => $arrStatus[$status]??NULL,
-            'error_code' => $post['error_code']??null, 'error_message' => $post['error_message']??null]);
-
-        $dataLog = [
-            'subject' => 'Callback IRIS',
-            'id_reference' => $post['reference_no']??null,
-            'request'=> json_encode($post)
-        ];
-
-        if($data){
-            if($status == 'completed' || $status == 'failed'){
-                SendEmailDisburseJob::dispatch(['reference_no' => $reference_no])->onConnection('disbursequeue');
-            }
-
-            $dataLog['response'] = json_encode(['status' => 'success']);
-            LogIRIS::create($dataLog);
+        if($status == 'topup'){
+            LogTopupIris::create(['response' => json_encode($post)]);
             return response()->json(['status' => 'success']);
         }else{
-            $dataLog['response'] = json_encode(['status' => 'fail', 'messages' => ['Failed Update status']]);
-            LogIRIS::create($dataLog);
-            return response()->json(['status' => 'fail',
-                'messages' => ['Failed Update status']]);
+            $reference_no = $post['reference_no'];
+            $arrStatus = [
+                'queued' => 'Queued',
+                'processed' => 'Processed',
+                'completed' => 'Success',
+                'failed' => 'Fail',
+                'rejected' => 'Rejected',
+                'approved' => 'Approved'
+            ];
+            $data = Disburse::where('reference_no', $reference_no)->update(['disburse_status' => $arrStatus[$status]??NULL,
+                'error_code' => $post['error_code']??null, 'error_message' => $post['error_message']??null]);
+
+            $dataLog = [
+                'subject' => 'Callback IRIS',
+                'id_reference' => $post['reference_no']??null,
+                'request'=> json_encode($post)
+            ];
+
+            if($data){
+                if($status == 'completed' || $status == 'failed'){
+                    SendEmailDisburseJob::dispatch(['reference_no' => $reference_no])->onConnection('disbursequeue');
+                }
+
+                $dataLog['response'] = json_encode(['status' => 'success']);
+                LogIRIS::create($dataLog);
+                return response()->json(['status' => 'success']);
+            }else{
+                $dataLog['response'] = json_encode(['status' => 'fail', 'messages' => ['Failed Update status']]);
+                LogIRIS::create($dataLog);
+                return response()->json(['status' => 'fail',
+                    'messages' => ['Failed Update status']]);
+            }
         }
     }
 
@@ -104,13 +111,19 @@ class ApiIrisController extends Controller
 
                     $getData = Transaction::join('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
                         ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
+                        ->leftJoin('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
                         ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
                         ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
                         ->leftJoin('bank_account_outlets', 'bank_account_outlets.id_outlet', 'outlets.id_outlet')
                         ->leftJoin('bank_accounts', 'bank_accounts.id_bank_account', 'bank_account_outlets.id_bank_account')
                         ->leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
-                        ->whereNull('disburse_outlet.id_disburse_outlet')
+                        ->where(function ($q){
+                            $q->whereNull('disburse_outlet.id_disburse_outlet')
+                                ->orWhereIn('disburse_status', ['Retry From Failed', 'Retry From Failed Payouts']);
+                        })
                         ->whereNotNull('bank_accounts.beneficiary_name')
+                        ->whereNull('transaction_pickups.reject_at')
+                        ->where('transactions.transaction_payment_status', 'Completed')
                         ->where(function ($q){
                             $q->whereNotNull('transaction_pickups.taken_at')
                                 ->orWhereNotNull('transaction_pickups.taken_by_system_at');
@@ -366,39 +379,6 @@ class ApiIrisController extends Controller
                         }
                     }
 
-                    //proses retry failed disburse
-                    $dataRetry = Disburse::join('bank_accounts', 'bank_accounts.id_bank_account', 'disburse.id_bank_account')
-                        ->leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
-                        ->whereIn('disburse_status', ['Retry From Failed', 'Retry From Failed Payouts'])
-                        ->select('bank_accounts.beneficiary_name', 'bank_accounts.beneficiary_account', 'bank_name.bank_code as beneficiary_bank', 'bank_accounts.beneficiary_email',
-                            'disburse_nominal as amount', 'notes', 'reference_no as ref')
-                        ->get()->toArray();
-
-                    if(!empty($dataRetry)){
-                        $chunkRetry = array_chunk($dataRetry, 100);
-
-                        foreach ($chunkRetry as $sendRetry){
-                            $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $sendRetry]);
-
-                            if(isset($sendToIris['status']) && $sendToIris['status'] == 'success'){
-                                if(isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])){
-                                    $a=0;
-                                    $return = $sendToIris['response']['payouts'];
-                                    foreach ($dataRetry as $val){
-                                        $getData = Disburse::where('reference_no', $val['ref'])->first();
-                                        $oldRefNo = $getData['old_reference_no'].','.$getData['reference_no'];
-                                        $oldRefNo = ltrim($oldRefNo,",");
-                                        $count = $getData['count_retry'] + 1;
-                                        $update = Disburse::where('id_disburse', $getData['id_disburse'])
-                                            ->update(['old_reference_no' => $oldRefNo, 'reference_no' => $return[$a]['reference_no'],
-                                                'count_retry' => $count, 'disburse_status' => $arrStatus[ $return[$a]['status']]]);
-                                        $a++;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
                     $arrSuccess = [];
                     $arrReferenceNoFailed = [];
                     //proses approve if setting approver by sistem
@@ -505,11 +485,6 @@ class ApiIrisController extends Controller
     /* !!!! please add new condition in "process calculation payment gateway" if you added new payment gateway !!!! */
     /* !!!! after update function please restart queue !!!! */
     public function calculationTransaction($id_transaction){
-        $check = DisburseOutletTransaction::where('id_transaction', $id_transaction)->first();
-        if($check){
-            return false;
-        }
-
         $data = Transaction::where('id_transaction', $id_transaction)
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
             ->with(['transaction_multiple_payment', 'vouchers', 'promo_campaign', 'transaction_payment_subscription'])
@@ -544,7 +519,7 @@ class ApiIrisController extends Controller
 
             $charged = NULL;
 
-            if(!empty($data['transaction_multiple_payment'])){
+            if(!empty($data['transaction_multiple_payment']) || !empty($data['transaction_payment_subscription'])){
 
                 // ===== Calculate Fee Subscription ====== //
                 $totalChargedSubcriptionOutlet = 0;
@@ -586,15 +561,17 @@ class ApiIrisController extends Controller
                             $amountMDR = $midtrans['gross_amount'];
                         }
 
+                        if(empty($payment)){
+                            DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
+                            return true;
+                        }
+
                         $keyMidtrans = array_search(strtoupper($payment), array_column($settingMDRAll, 'payment_name'));
                         if($keyMidtrans !== false){
                             $feePGCentral = $settingMDRAll[$keyMidtrans]['mdr_central'];
                             $feePG = $settingMDRAll[$keyMidtrans]['mdr'];
                             $feePGType = $settingMDRAll[$keyMidtrans]['percent_type'];
                             $charged = $settingMDRAll[$keyMidtrans]['charged'];
-                        }else{
-                            DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
-                            return true;
                         }
 
                     }elseif (strtolower($payments['type']) == 'balance'){
@@ -638,15 +615,16 @@ class ApiIrisController extends Controller
                         }
 
                         $method =  $ipay88['payment_method'];
+                        if(empty($method)){
+                            DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
+                            return true;
+                        }
                         $keyipay88 = array_search(strtoupper($method), array_column($settingMDRAll, 'payment_name'));
                         if($keyipay88 !== false){
                             $feePGCentral = $settingMDRAll[$keyipay88]['mdr_central'];
                             $feePG = $settingMDRAll[$keyipay88]['mdr'];
                             $feePGType = $settingMDRAll[$keyipay88]['percent_type'];
                             $charged = $settingMDRAll[$keyipay88]['charged'];
-                        }else{
-                            DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
-                            return true;
                         }
                     }elseif (strtolower($payments['type']) == 'ovo'){
                         $ovo = TransactionPaymentOvo::where('id_transaction', $data['id_transaction'])->first();
@@ -765,8 +743,7 @@ class ApiIrisController extends Controller
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
-                $insert = DisburseOutletTransaction::insert($dataInsert);
-
+                $insert = DisburseOutletTransaction::updateOrCreate(['id_transaction' => $data['id_transaction']], $dataInsert);
                 return $insert;
             }else{
                 return false;
@@ -774,6 +751,273 @@ class ApiIrisController extends Controller
         }else{
             return false;
         }
+    }
+
+    public function sycnFeeTransaction(Request $request){
+        $post = $request->json()->all();
+        $date_start = $post['date_start'];
+        $date_end = $post['date_end'];
+
+        $datas = Transaction::leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
+            ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
+            ->leftJoin('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
+            ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+            ->where(function ($q){
+                $q->whereNull('disburse_outlet_transactions.id_disburse_outlet');
+                $q->orWhereNull('disburse.disburse_status', '!=', 'Success');
+            })
+            ->where('transactions.transaction_date', '>=', $date_start)
+            ->where('transactions.transaction_date', '<=', $date_end)
+            ->select('transactions.*', 'disburse_outlet_transactions.id_disburse_transaction', 'disburse.disburse_status', 'outlets.*')
+            ->with(['transaction_multiple_payment', 'vouchers', 'promo_campaign', 'transaction_payment_subscription'])
+            ->get()->toArray();
+       
+        if(!empty($datas)){
+            foreach ($datas as $data){
+                $settingGlobalFee = Setting::where('key', 'global_setting_fee')->first()->value_text;
+                $settingGlobalFee = json_decode($settingGlobalFee);
+                $settingMDRAll = MDR::get()->toArray();
+                $subTotal = $data['transaction_subtotal'];
+                $grandTotal = $data['transaction_grandtotal'];
+                $nominalFeeToCentral = $subTotal;
+                $feePGCentral = 0;
+                $feePG = 0;
+                $feePGType = 'Percent';
+                $feePointCentral = 100;
+                $feePointOutlet = 0;
+                $feePromoCentral = 0;
+                $feeSubcriptionCentral = 0;
+                $feeSubcriptionOutlet = 0;
+                $feePromoOutlet = 0;
+                $balanceNominal = 0;
+                $nominalBalance = 0;
+                $nominalBalanceCentral = 0;
+                $totalFeeForCentral = 0;
+                $amount = 0;
+                $amountMDR = 0 ;
+                $transactionShipment = 0;
+                if(!empty($data['transaction_shipment_go_send'])){
+                    $transactionShipment = $data['transaction_shipment_go_send'];
+                }
+
+                $charged = NULL;
+
+                if(!empty($data['transaction_multiple_payment']) || !empty($data['transaction_payment_subscription'])){
+                    // ===== Calculate Fee Subscription ====== //
+                    $totalChargedSubcriptionOutlet = 0;
+                    $totalChargedSubcriptionCentral = 0;
+                    $nominalSubscription = 0;
+                    if(!empty($data['transaction_payment_subscription'])){
+                        $getSubcription = SubscriptionUserVoucher::join('subscription_users', 'subscription_users.id_subscription_user','subscription_user_vouchers.id_subscription_user')
+                            ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
+                            ->where('subscription_user_vouchers.id_subscription_user_voucher', $data['transaction_payment_subscription']['id_subscription_user_voucher'])
+                            ->groupBy('subscriptions.id_subscription')->select('subscriptions.*')->first();
+                        if($getSubcription){
+                            $nominalSubscription = abs($data['transaction_payment_subscription']['subscription_nominal']);
+                            $nominalFeeToCentral = $subTotal - abs($data['transaction_payment_subscription']['subscription_nominal']);
+                            $feeSubcriptionCentral = $getSubcription['charged_central'];
+                            $feeSubcriptionOutlet = $getSubcription['charged_outlet'];
+                            if((int) $feeSubcriptionCentral !== 100){
+                                $totalChargedSubcriptionOutlet = (abs($data['transaction_payment_subscription']['subscription_nominal']) * ($feeSubcriptionOutlet / 100));
+                                $totalChargedSubcriptionCentral = (abs($data['transaction_payment_subscription']['subscription_nominal']) * ($feeSubcriptionCentral / 100));
+                            }else{
+                                $totalChargedSubcriptionCentral = $data['transaction_payment_subscription']['subscription_nominal'];
+                            }
+                        }
+                    }
+
+                    $statusSplitPayment = 0;//for flag if transaction user split payment with balance (point)
+                    if(count($data['transaction_multiple_payment']) > 1){
+                        $statusSplitPayment = 1;
+                    }
+
+                    //process calculation payment gateway
+                    foreach ($data['transaction_multiple_payment'] as $payments){
+
+                        if(strtolower($payments['type']) == 'midtrans'){
+                            $midtrans = TransactionPaymentMidtran::where('id_transaction', $data['id_transaction'])->first();
+                            $payment = $midtrans['payment_type'];
+                            if($statusSplitPayment == 1){
+                                $amountMDR = $grandTotal - $nominalSubscription;
+                            }else{
+                                $amountMDR = $midtrans['gross_amount'];
+                            }
+
+                            $keyMidtrans = array_search(strtoupper($payment), array_column($settingMDRAll, 'payment_name'));
+                            if($keyMidtrans !== false){
+                                $feePGCentral = $settingMDRAll[$keyMidtrans]['mdr_central'];
+                                $feePG = $settingMDRAll[$keyMidtrans]['mdr'];
+                                $feePGType = $settingMDRAll[$keyMidtrans]['percent_type'];
+                                $charged = $settingMDRAll[$keyMidtrans]['charged'];
+                            }
+
+                        }elseif (strtolower($payments['type']) == 'balance'){
+                            $balanceNominal = TransactionPaymentBalance::where('id_transaction', $data['id_transaction'])->first()->balance_nominal;
+
+                            if($statusSplitPayment == 0){
+                                $balanceMdr = array_search(strtoupper('FULL POINT'), array_column($settingMDRAll, 'payment_name'));
+                                if($balanceMdr !== false){
+                                    $feePGCentral = $settingMDRAll[$balanceMdr]['mdr_central'];
+                                    $feePG = $settingMDRAll[$balanceMdr]['mdr'];
+                                    $feePGType = $settingMDRAll[$balanceMdr]['percent_type'];
+                                    $charged = $settingMDRAll[$balanceMdr]['charged'];
+
+                                    $feePointOutlet = (float)$settingMDRAll[$balanceMdr]['mdr'];
+                                    $feePointCentral = 100 - $feePointOutlet;
+
+                                    if((int)$feePointOutlet === 0){
+                                        //calculate charged point to central
+                                        $nominalBalanceCentral = $balanceNominal;
+                                    }else{
+                                        //calculate charged point to outlet
+                                        $nominalBalance = $balanceNominal * (floatval($feePointOutlet) / 100);
+
+                                        //calculate charged point to central
+                                        $nominalBalanceCentral = $balanceNominal * (floatval($feePointCentral) / 100);
+                                    }
+                                }
+                            }else{
+                                $feePointCentral = 100;
+                                $nominalBalanceCentral = $balanceNominal;
+                            }
+                        }elseif(strtolower($payments['type']) == 'ipay88'){
+                            $ipay88 = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first();
+                            if($statusSplitPayment == 1){
+                                $amountMDR = $grandTotal - $nominalSubscription;
+                            }else{
+                                $amountMDR = $ipay88['amount']/100;
+                            }
+
+                            $method =  $ipay88['payment_method'];
+                            $keyipay88 = array_search(strtoupper($method), array_column($settingMDRAll, 'payment_name'));
+                            if($keyipay88 !== false){
+                                $feePGCentral = $settingMDRAll[$keyipay88]['mdr_central'];
+                                $feePG = $settingMDRAll[$keyipay88]['mdr'];
+                                $feePGType = $settingMDRAll[$keyipay88]['percent_type'];
+                                $charged = $settingMDRAll[$keyipay88]['charged'];
+                            }
+                        }elseif (strtolower($payments['type']) == 'ovo'){
+                            $ovo = TransactionPaymentOvo::where('id_transaction', $data['id_transaction'])->first();
+
+                            if($statusSplitPayment == 1){
+                                $amountMDR = $grandTotal - $nominalSubscription;
+                            }else{
+                                $amountMDR = $ovo['amount']/100;
+                            }
+
+                            $keyipayOvo = array_search('OVO', array_column($settingMDRAll, 'payment_name'));
+                            if($keyipayOvo !== false){
+                                $feePGCentral = $settingMDRAll[$keyipayOvo]['mdr_central'];
+                                $feePG = $settingMDRAll[$keyipayOvo]['mdr'];
+                                $feePGType = $settingMDRAll[$keyipayOvo]['percent_type'];
+                                $charged = $settingMDRAll[$keyipayOvo]['charged'];
+                            }
+                        }elseif (strtolower($payments['type']) == 'shopeepay'){
+                            $shopeepay = TransactionPaymentShopeePay::where('id_transaction', $data['id_transaction'])->first();
+                            if($statusSplitPayment == 1){
+                                $amountMDR = $grandTotal - $nominalSubscription;
+                            }else{
+                                $amountMDR = $shopeepay['amount']/100;
+                            }
+
+                            $keyshopee = array_search(strtoupper('shopeepay'), array_column($settingMDRAll, 'payment_name'));
+                            if($keyshopee !== false){
+                                $feePGCentral = $settingMDRAll[$keyshopee]['mdr_central'];
+                                $feePG = $settingMDRAll[$keyshopee]['mdr'];
+                                $feePGType = $settingMDRAll[$keyshopee]['percent_type'];
+                                $charged = $settingMDRAll[$keyshopee]['charged'];
+                            }
+                        }
+                    }
+
+                    $totalChargedPromo = 0;
+                    $totalChargedPromoCentral = 0;
+                    if(count($data['vouchers']) > 0){
+                        $getDeal = Deal::where('id_deals', $data['vouchers'][0]['id_deals'])->first();
+                        $feePromoCentral = $getDeal['charged_central'];
+                        $feePromoOutlet = $getDeal['charged_outlet'];
+                        $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
+                        if((int) $feePromoCentral !== 100){
+                            $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
+                            $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
+                        }else{
+                            $totalChargedPromoCentral = $data['transaction_discount'];
+                        }
+                    }elseif (!empty($data['promo_campaign'])){
+                        $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
+                        $feePromoCentral = $data['promo_campaign']['charged_central'];
+                        $feePromoOutlet = $data['promo_campaign']['charged_outlet'];
+                        if((int) $feePromoCentral !== 100){
+                            $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
+                            $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
+                        }else{
+                            $totalChargedPromoCentral = $data['transaction_discount'];
+                        }
+                    }
+
+                    //fee payment gateway
+                    if($feePGType == 'Percent'){
+                        $totalFee = $amountMDR * (($feePGCentral + $feePG) / 100);
+                        $totalFeeForCentral = $amountMDR * ($feePGCentral/100);
+                    }else{
+                        $totalFee = $feePGCentral + $feePG;
+                        $totalFeeForCentral = $feePGCentral;
+                    }
+
+                    $percentFee = 0;
+                    if($data['outlet_special_status'] == 1){
+                        $percentFee = $data['outlet_special_fee'];
+                    }else{
+                        if($data['status_franchise'] == 1){
+                            $percentFee = ($settingGlobalFee->fee_outlet == '' ? 0 : $settingGlobalFee->fee_outlet);
+                        }else{
+                            $percentFee = ($settingGlobalFee->fee_central == '' ? 0 : $settingGlobalFee->fee_central);
+                        }
+                    }
+
+                    $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
+
+                    $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet, 2);
+                    $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentral, 2);
+                    $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral, 2);
+
+                    $dataInsert = [
+                        'id_transaction' => $data['id_transaction'],
+                        'income_outlet'=> $amount,
+                        'income_central'=> $incomeCentral,
+                        'expense_central'=> $expenseCentral,
+                        'fee_item' => $feeItemForCentral,
+                        'discount' => $totalChargedPromo,
+                        'discount_central' => $totalChargedPromoCentral,
+                        'payment_charge' => $totalFee,
+                        'point_use_expense' => $nominalBalance,
+                        'subscription' => $totalChargedSubcriptionOutlet,
+                        'subscription_central' => $totalChargedSubcriptionCentral,
+                        'fee' => $percentFee,
+                        'mdr' => $feePG,
+                        'mdr_central' => $feePGCentral,
+                        'mdr_charged' => $charged,
+                        'mdr_type' => $feePGType,
+                        'charged_point_central' => $feePointCentral,
+                        'charged_point_outlet' => $feePointOutlet,
+                        'charged_promo_central' => $feePromoCentral,
+                        'charged_promo_outlet' => $feePromoOutlet,
+                        'charged_subscription_central' => $feeSubcriptionCentral,
+                        'charged_subscription_outlet' => $feeSubcriptionOutlet,
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+
+                    if(!empty($data['id_disburse_transaction'])){
+                        $insert = DisburseOutletTransaction::where('id_disburse_transaction', $data['id_disburse_transaction'])->update($dataInsert);
+                    }else{
+                        $insert = DisburseOutletTransaction::create($dataInsert);
+                    }
+
+                }
+            }
+        }
+
+        return 'success';
     }
 
     public function getHoliday(){

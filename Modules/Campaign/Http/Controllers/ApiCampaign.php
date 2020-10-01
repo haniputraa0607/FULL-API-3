@@ -348,7 +348,7 @@ class ApiCampaign extends Controller
 		$user = $request->user();
 
 		$campaign = Campaign::where('id_campaign','=',$post['id_campaign'])->first();
-return $campaign;
+
 		if($campaign){
             DB::beginTransaction();
 			if($campaign['campaign_is_sent'] == 'Yes'){
@@ -480,6 +480,7 @@ return $campaign;
 
 			$campaigns = Campaign::where('campaign_send_at', '>=', $now2)->where('campaign_send_at', '<=', $now)->where('campaign_is_sent', 'No')->where('campaign_complete', '1')->get();
 			foreach ($campaigns as $i => $campaign) {
+                $update = Campaign::where('id_campaign','=',$campaign->id_campaign)->update(['campaign_is_sent' => 'Yes']);
 				if($campaign->campaign_generate_receipient=='Send At Time'){
 					$post=['id_campaign'=>$campaign->id_campaign];
 					GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
