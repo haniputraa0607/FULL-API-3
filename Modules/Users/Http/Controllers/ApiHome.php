@@ -96,7 +96,8 @@ class ApiHome extends Controller
 
             $item['image_url']  = config('url.storage_url_api').$value->image;
             $item['type']       = 'none';
-            $item['id_news']    = $value->id_news;
+            $item['id_news']    = $value->id_reference;
+            $item['id_reference']    = $value->id_reference;
             $item['news_title'] = "";
             $item['url']        = $value->url;
 
@@ -104,26 +105,47 @@ class ApiHome extends Controller
                 $item['type']       = 'link';
             }
 
-            if ($value->id_news != "" && isset($value->news->news_title)) {
+            if ($value->type == 'gofood') {
                 $item['type']       = 'news';
                 $item['news_title'] = $value->news->news_title;
                 // if news, generate webview news detail url
                 $item['url']        = config('url.api_url') .'news/webview/'. $value->id_news;
-            }elseif ($value->type == 'gofood') {
+            } elseif ($value->type == 'gofood') {
                 $item['type']       = 'gofood';
                 $item['id_news'] = 99999999;
                 $item['news_title'] = "GO-FOOD";
                 $item['url']     = config('url.app_url').'outlet/webview/gofood/list';
-            }elseif ($value->type == 'referral') {
+            } elseif ($value->type == 'referral') {
                 $item['type']       = 'referral';
                 $item['id_news'] = 999999999;
                 $item['news_title'] = "Referral";
                 $item['url']     = config('url.api_url') . 'api/referral/webview';
-            }elseif ($value->type == 'order') {
+            } elseif ($value->type == 'order') {
                 $item['type']       = 'order';
                 $item['id_news'] = null;
                 $item['news_title'] = null;
                 $item['url']     = null;
+            } elseif (in_array($value->type, ['deals_list', 'subscription_list', 'my_voucher', 'edit_profile'])) {
+                $item['type']         = $value->type;
+                unset($item['id_news']);
+                unset($item['news_title']);
+                unset($item['url']);
+                unset($item['id_reference']);
+            } elseif (in_array($value->type, ['deals_detail', 'subscription_detail'])) {
+                $item['type']         = $value->type;
+                unset($item['id_news']);
+                unset($item['news_title']);
+                unset($item['url']);
+            } elseif ($value->id_reference && isset($value->news->news_title)) {
+                $item['type']       = 'news';
+                $item['news_title'] = $value->news->news_title;
+                // if news, generate webview news detail url
+                $item['url']        = config('url.api_url') .'news/webview/'. $value->id_reference;
+            } elseif ($value->id_reference) {
+                $item['type']         = $value->type;
+                unset($item['id_news']);
+                unset($item['news_title']);
+                unset($item['url']);
             }
             array_push($array, $item);
         }
