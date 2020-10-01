@@ -64,7 +64,7 @@ class Banner extends Model
 
 	public function getReferenceTitleAttribute($value)
 	{
-		if ($this->id_reference) {
+		if ($this->id_reference && !in_array($this->type, ['deals_detail', 'subscription_detail', 'my_voucher', 'edit_profile', 'order'])) {
 			switch ($this->type) {
 				case 'deals_detail':
 					return Deal::where('id_deals', $this->id_reference)->value('deals_title');
@@ -72,11 +72,15 @@ class Banner extends Model
 				case 'subscription_detail':
 					return Subscription::where('id_subscription', $this->id_reference)->value('subscription_title');
 					break;
+				case 'link':
+				case 'url':
+					return $this->url;
+					break;
 				default:
 					return News::where('id_news', $this->id_reference)->value('news_title');
 			}
 		}
-		return $value;
+		return ucwords(str_replace('_',' ',$this->type));
 	}
 
 	public function getTypeAttribute($value)
