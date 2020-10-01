@@ -1845,9 +1845,15 @@ class ApiUser extends Controller
                             ->where('oauth_access_tokens.user_id', $data[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
                     }
                 }
+
+                $user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
+
                 $result = [
                     'status'    => 'success',
-                    'result'    => ['phone'    =>    $data[0]['phone']]
+                    'result'    => [
+                        'phone'    =>    $data[0]['phone'],
+                        'challenge_key' => $user->challenge_key
+                    ]
                 ];
             } else {
                 $result = [
