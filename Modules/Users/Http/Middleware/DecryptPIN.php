@@ -15,11 +15,11 @@ class DecryptPIN
      * @param  \Closure  $next
      * @return mixed
      */
-    public function handle(Request $request, Closure $next, $colname = 'pin')
+    public function handle(Request $request, Closure $next, $colname = 'pin', $column = 'phone')
     {
         if ($request->{$colname.'_encrypt'}) {
-            $jsonRequest = $request->json()->all();
-            $decrypted = MyHelper::decryptPIN($request->{$colname.'_encrypt'}, $request->phone);
+            $jsonRequest = $request->all();
+            $decrypted = MyHelper::decryptPIN($request->{$colname.'_encrypt'}, $request->$column);
             if (!$decrypted) {
                 return response()->json([
                     'status' => 'fail',
@@ -27,7 +27,7 @@ class DecryptPIN
                 ]);
             }
             $jsonRequest[$colname] = $decrypted;
-            $request->json()->replace($jsonRequest);
+            $request->replace($jsonRequest);
         }
         return $next($request);
     }
