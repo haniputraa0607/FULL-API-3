@@ -223,4 +223,10 @@ class User extends Authenticatable
     {
     	return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction::class,'id_referrer','id');
     }
+
+    public function getChallengeKeyAttribute()
+    {
+    	$password = md5($this->password);
+    	return $password.'15F1AB77951B5JAO';
+    }
 }

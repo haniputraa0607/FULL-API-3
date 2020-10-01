@@ -1926,9 +1926,7 @@ class ApiOnlineTransaction extends Controller
 		            else
 		            {
 		                if(isset($errore)){
-		            		foreach ($errore as $key => $value) {
-		            			array_push($promo_error['message'], $value);
-		            		}
+		            		$promo_error = app($this->promo_campaign)->promoError('transaction', $errore);
 		            	}
 		            }
 	        	}

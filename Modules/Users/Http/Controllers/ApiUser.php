@@ -897,7 +897,7 @@ class ApiUser extends Controller
             $phone = $checkPhoneFormat['phone'];
         }
 
-        $data = User::with('city')->where('phone', '=', $phone)->get()->toArray();
+        $data = User::select('*',\DB::raw('0 as challenge_key'))->with('city')->where('phone', '=', $phone)->get()->toArray();
 
         if($data){
             //First check rule for request otp
@@ -943,14 +943,16 @@ class ApiUser extends Controller
                     'result' => $data,
                     'otp_timer' => $holdTime,
                     'confirmation_message' => $msg_check,
-                    'messages' => null
+                    'messages' => null,
+                    'challenge_key' => $data[0]['challenge_key']
                 ]);
             }else{
                 return response()->json([
                     'status' => 'success',
                     'result' => $data,
                     'otp_timer' => $holdTime,
-                    'messages' => null
+                    'messages' => null,
+                    'challenge_key' => $data[0]['challenge_key']
                 ]);
             }
         }else{
@@ -1096,7 +1098,8 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $create->phone,
                         'autocrm'  =>    $autocrm,
-                        'message'  =>    $msg_otp
+                        'message'  =>    $msg_otp,
+                        'challenge_key' => $create->getChallengeKeyAttribute()
                     ]
                 ];
             } else {
@@ -1105,7 +1108,8 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $create->phone,
                         'autocrm'    =>    $autocrm,
-                        'message'  =>    $msg_otp
+                        'message'  =>    $msg_otp,
+                        'challenge_key' => $create->getChallengeKeyAttribute()
                     ]
                 ];
             }
@@ -1422,7 +1426,7 @@ class ApiUser extends Controller
             $phone = $checkPhoneFormat['phone'];
         }
 
-        $data = User::where('phone', '=', $phone)
+        $data = User::select('*', \DB::raw('0 as challenge_key'))->where('phone', '=', $phone)
             ->get()
             ->toArray();
 
@@ -1496,7 +1500,8 @@ class ApiUser extends Controller
                     'otp_timer' => $holdTime,
                     'result'    => [
                         'phone'    =>    $data[0]['phone'],
-                        'message'  =>    $msg_otp
+                        'message'  =>    $msg_otp,
+                        'challenge_key' => $data[0]['challenge_key']
                     ]
                 ];
             } else {
@@ -1506,7 +1511,8 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $data[0]['phone'],
                         'pin'    =>    '',
-                        'message' => $msg_otp
+                        'message' => $msg_otp,
+                        'challenge_key' => $data[0]['challenge_key']
                     ]
                 ];
             }
@@ -1575,7 +1581,7 @@ class ApiUser extends Controller
             return response()->json($result);
         }
 
-        $data = User::where('phone', '=', $phone)
+        $data = User::select('*',\DB::raw('0 as challenge_key'))->where('phone', '=', $phone)
             ->where('email', '=', $request->json('email'))
             ->get()
             ->toArray();
@@ -1647,7 +1653,8 @@ class ApiUser extends Controller
                     'otp_timer' => $holdTime,
                     'result'    => [
                         'phone'    =>    $phone,
-                        'message'  => $msg_otp
+                        'message'  => $msg_otp,
+                        'challenge_key' => $data[0]['challenge_key']
                     ]
                 ];
             } else {
@@ -1657,7 +1664,8 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $phone,
                         'pin'        =>  '', 
-                        'message' => $msg_otp
+                        'message' => $msg_otp,
+                        'challenge_key' => $data[0]['challenge_key']
                     ]
                 ];
             }

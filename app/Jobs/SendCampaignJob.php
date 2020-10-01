@@ -63,9 +63,6 @@ class SendCampaignJob implements ShouldQueue
         $recipient=$this->data['recipient'];
         switch ($type) {
             case 'email':
-                $getRecipient = Campaign::where('id_campaign', $campaign['id_campaign'])->select('campaign_email_receipient')->first();
-                $recipient = explode(',', str_replace(' ', ',', str_replace(';', ',', $getRecipient['campaign_email_receipient'])));
-
                 foreach($recipient as $key => $receipient){
 
                     $to = $receipient;
@@ -204,8 +201,6 @@ class SendCampaignJob implements ShouldQueue
                 break;
 
             case 'sms':
-                $getRecipient = Campaign::where('id_campaign', $campaign['id_campaign'])->select('campaign_sms_receipient')->first();
-                $recipient = explode(',', str_replace(' ', ',', str_replace(';', ',', $getRecipient['campaign_sms_receipient'])));
                 $senddata = array(
                     'apikey' => env('SMS_KEY'),
                     'callbackurl' => config('url.app_url'),
@@ -292,9 +287,6 @@ class SendCampaignJob implements ShouldQueue
                 break;
 
             case 'push':
-                $getRecipient = Campaign::where('id_campaign', $campaign['id_campaign'])->select('campaign_push_receipient')->first();
-                $recipient = explode(',', str_replace(' ', ',', str_replace(';', ',', $getRecipient['campaign_push_receipient'])));
-
                 foreach($recipient as $key => $receipient){
                     $dataOptional          = [];
                     $image = null;
@@ -383,49 +375,41 @@ class SendCampaignJob implements ShouldQueue
                 break;
 
             case 'inbox':
-                $getRecipient = Campaign::where('id_campaign', $campaign['id_campaign'])->select('campaign_inbox_receipient')->first();
-                $explode = explode(',', str_replace(' ', ',', str_replace(';', ',', $getRecipient['campaign_inbox_receipient'])));
-                $rece = array_chunk($explode, 500);
+                $user = User::whereIn('phone',$recipient)->get()->toArray();
+                foreach($user as $key => $receipient){
+                    $inbox = [];
+                    $inbox['id_campaign'] = $campaign['id_campaign'];
+                    $inbox['id_user']     = $receipient['id'];
+                    $inbox['inboxes_subject'] = app($autocrm)->TextReplace($campaign['campaign_inbox_subject'], $receipient['id'], null, 'id');
+                    $inbox['inboxes_clickto'] = $campaign['campaign_inbox_clickto'];
 
-                foreach ($rece as $r){
-                    $user = User::whereIn('phone',$r)->get()->toArray();
-                    foreach($user as $key => $receipient){
-                        $inbox = [];
-                        $inbox['id_campaign'] = $campaign['id_campaign'];
-                        $inbox['id_user']     = $receipient['id'];
-                        $inbox['inboxes_subject'] = app($autocrm)->TextReplace($campaign['campaign_inbox_subject'], $receipient['id'], null, 'id');
-                        $inbox['inboxes_clickto'] = $campaign['campaign_inbox_clickto'];
-
-                        if($campaign['campaign_inbox_clickto'] == 'Content'){
-                            $inbox['inboxes_content'] = app($autocrm)->TextReplace($campaign['campaign_inbox_content'], $receipient['id'], null, 'id');
-                        }
-
-                        if($campaign['campaign_inbox_clickto'] == 'Link'){
-                            $inbox['inboxes_link'] = $campaign['campaign_inbox_link'];
-                        }
-
-                        if(!empty($campaign['campaign_inbox_id_reference'])){
-                            $inbox['inboxes_id_reference'] = $campaign['campaign_inbox_id_reference'];
-                        }else{
-                            $inbox['inboxes_id_reference'] = 0;
-                        }
-
-                        if($campaign['campaign_inbox_clickto'] == 'No Action' || empty($campaign['campaign_inbox_clickto'])){
-                            $inbox['inboxes_clickto'] = 'Default';
-                        }
-
-                        $inbox['inboxes_send_at'] = date("Y-m-d H:i:s");
-                        $inbox['created_at'] = date("Y-m-d H:i:s");
-                        $inbox['updated_at'] = date("Y-m-d H:i:s");
-
-                        $inboxQuery = UserInbox::insert($inbox);
+                    if($campaign['campaign_inbox_clickto'] == 'Content'){
+                        $inbox['inboxes_content'] = app($autocrm)->TextReplace($campaign['campaign_inbox_content'], $receipient['id'], null, 'id');
                     }
+
+                    if($campaign['campaign_inbox_clickto'] == 'Link'){
+                        $inbox['inboxes_link'] = $campaign['campaign_inbox_link'];
+                    }
+
+                    if(!empty($campaign['campaign_inbox_id_reference'])){
+                        $inbox['inboxes_id_reference'] = $campaign['campaign_inbox_id_reference'];
+                    }else{
+                        $inbox['inboxes_id_reference'] = 0;
+                    }
+
+                    if($campaign['campaign_inbox_clickto'] == 'No Action' || empty($campaign['campaign_inbox_clickto'])){
+                        $inbox['inboxes_clickto'] = 'Default';
+                    }
+
+                    $inbox['inboxes_send_at'] = date("Y-m-d H:i:s");
+                    $inbox['created_at'] = date("Y-m-d H:i:s");
+                    $inbox['updated_at'] = date("Y-m-d H:i:s");
+
+                    $inboxQuery = UserInbox::insert($inbox);
                 }
                 break;
 
             case 'whatsapp':
-                $getRecipient = Campaign::where('id_campaign', $campaign['id_campaign'])->select('campaign_whatsapp_receipient')->first();
-                $recipient = explode(',', str_replace(' ', ',', str_replace(';', ',', $getRecipient['campaign_whatsapp_receipient'])));
                 $api_key = Setting::where('key', 'api_key_whatsapp')->first();
                 if($api_key){
                     if($api_key->value){

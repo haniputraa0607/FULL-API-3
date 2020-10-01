@@ -116,7 +116,7 @@ class ApiCronTrxController extends Controller
                 //     continue;
                 // }
 
-                DB::begintransaction();
+                DB::beginTransaction();
 
                 MyHelper::updateFlagTransactionOnline($singleTrx, 'cancel', $user);
 
@@ -176,6 +176,7 @@ class ApiCronTrxController extends Controller
             $log->success('success');
             return response()->json(['success']);
         } catch (\Exception $e) {
+            DB::rollBack();
             $log->fail($e->getMessage());
         }
     }
@@ -792,6 +793,7 @@ class ApiCronTrxController extends Controller
             }
             $log->success($result);
         } catch (\Exception $e) {
+            DB::rollBack();
             $log->fail($e->getMessage());
         }
     }
