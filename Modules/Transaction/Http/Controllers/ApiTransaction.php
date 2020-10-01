@@ -2503,6 +2503,19 @@ class ApiTransaction extends Controller
                 ]
             ];
 
+            if($request->json('admin')){
+                $lastLog = LogInvalidTransaction::where('id_transaction', $list['id_transaction'])->orderBy('updated_at', 'desc')->first();
+
+                if(!empty($list['image_invalid_flag'])){
+                    $result['image_invalid_flag'] =  config('url.storage_url_api').$list['image_invalid_flag'];
+                }else{
+                    $result['image_invalid_flag'] = NULL;
+                }
+
+                $result['transaction_flag_invalid'] =  $list['transaction_flag_invalid'];
+                $result['flag_reason'] =  $lastLog['reason']??'';
+            }
+
             if(isset($list['user']['phone'])){
                 $result['user']['phone'] = $list['user']['phone'];
                 $result['user']['name'] = $list['user']['name'];

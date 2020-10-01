@@ -12,6 +12,7 @@ class LogInvalidTransaction extends Model
 
     protected $fillable   = [
         'id_transaction',
+        'reason',
         'tansaction_flag',
         'updated_by',
         'updated_date',

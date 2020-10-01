@@ -2755,7 +2755,7 @@ class FeaturesTableSeeder extends Seeder
                 array(
                     'id_feature' => 275,
                     'feature_type' => 'Update',
-                    'feature_module' => 'Log Invalid Transaction',
+                    'feature_module' => 'Flag Invalid Transaction',
                     'show_hide' => 1,
                     'order' => 110,
                     'created_at' => '2018-05-10 08:00:00',
@@ -2765,7 +2765,7 @@ class FeaturesTableSeeder extends Seeder
                 array(
                     'id_feature' => 276,
                     'feature_type' => 'Report',
-                    'feature_module' => 'Log Invalid Transaction',
+                    'feature_module' => 'Flag Invalid Transaction',
                     'show_hide' => 1,
                     'order' => 110,
                     'created_at' => '2018-05-10 08:00:00',

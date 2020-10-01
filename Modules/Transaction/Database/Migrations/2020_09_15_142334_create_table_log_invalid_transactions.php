@@ -16,6 +16,7 @@ class CreateTableLogInvalidTransactions extends Migration
         Schema::create('log_invalid_transactions', function (Blueprint $table) {
             $table->bigIncrements('id_log_invalid_transaction');
             $table->integer('id_transaction');
+            $table->text('reason');
             $table->enum('tansaction_flag', ['Valid', 'Invalid'])->nullable();
             $table->string('updated_by', 250)->nullable();
             $table->dateTime('updated_date')->nullable();

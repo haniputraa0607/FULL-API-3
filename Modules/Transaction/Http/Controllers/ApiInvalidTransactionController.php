@@ -2,89 +2,25 @@
 
 namespace Modules\Transaction\Http\Controllers;
 
-use App\Http\Models\Deal;
-use App\Http\Models\TransactionProductModifier;
-use Illuminate\Pagination\Paginator;
 use App\Http\Models\Transaction;
-use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionPayment;
-use App\Http\Models\TransactionPickupGoSend;
-use App\Http\Models\Province;
-use App\Http\Models\City;
-use App\Http\Models\User;
-use App\Http\Models\Courier;
-use App\Http\Models\Product;
-use App\Http\Models\ProductPrice;
-use App\Http\Models\ProductModifierPrice;
-use App\Http\Models\ProductModifierGlobalPrice;
-use App\Http\Models\Setting;
 use App\Http\Models\StockLog;
-use App\Http\Models\UserAddress;
-use App\Http\Models\ManualPayment;
-use App\Http\Models\ManualPaymentMethod;
-use App\Http\Models\ManualPaymentTutorial;
-use App\Http\Models\TransactionPaymentManual;
-use App\Http\Models\TransactionPaymentOffline;
-use App\Http\Models\TransactionPaymentBalance;
-use Modules\Disburse\Entities\MDR;
-use Modules\IPay88\Entities\TransactionPaymentIpay88;
-use App\Http\Models\TransactionMultiplePayment;
-use App\Http\Models\Outlet;
-use App\Http\Models\LogPoint;
-use App\Http\Models\LogBalance;
-use App\Http\Models\TransactionShipment;
-use App\Http\Models\TransactionPickup;
-use App\Http\Models\TransactionPaymentMidtran;
-use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
-use App\Http\Models\DealsUser;
-use App\Http\Models\DealsPaymentMidtran;
-use App\Http\Models\DealsPaymentManual;
-use Modules\IPay88\Entities\DealsPaymentIpay88;
-use Modules\ShopeePay\Entities\DealsPaymentShopeePay;
-use App\Http\Models\UserTrxProduct;
-use Modules\Brand\Entities\Brand;
-use Modules\Product\Entities\ProductGlobalPrice;
-use Modules\Product\Entities\ProductSpecialPrice;
 
+use App\Http\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
-use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use Modules\Transaction\Entities\LogInvalidTransaction;
-use Modules\Transaction\Http\Requests\RuleUpdate;
-
-use Modules\Transaction\Http\Requests\TransactionDetail;
-use Modules\Transaction\Http\Requests\TransactionHistory;
-use Modules\Transaction\Http\Requests\TransactionFilter;
 use Modules\Transaction\Http\Requests\TransactionNew;
-use Modules\Transaction\Http\Requests\TransactionShipping;
-use Modules\Transaction\Http\Requests\GetProvince;
-use Modules\Transaction\Http\Requests\GetCity;
-use Modules\Transaction\Http\Requests\GetSub;
-use Modules\Transaction\Http\Requests\GetAddress;
-use Modules\Transaction\Http\Requests\GetNearbyAddress;
-use Modules\Transaction\Http\Requests\AddAddress;
-use Modules\Transaction\Http\Requests\UpdateAddress;
-use Modules\Transaction\Http\Requests\DeleteAddress;
-use Modules\Transaction\Http\Requests\ManualPaymentCreate;
-use Modules\Transaction\Http\Requests\ManualPaymentEdit;
-use Modules\Transaction\Http\Requests\ManualPaymentUpdate;
-use Modules\Transaction\Http\Requests\ManualPaymentDetail;
-use Modules\Transaction\Http\Requests\ManualPaymentDelete;
-use Modules\Transaction\Http\Requests\MethodSave;
-use Modules\Transaction\Http\Requests\MethodDelete;
-use Modules\Transaction\Http\Requests\ManualPaymentConfirm;
-use Modules\Transaction\Http\Requests\ShippingGoSend;
 
 use App\Lib\MyHelper;
-use App\Lib\GoSend;
 use Validator;
 use Hash;
 use DB;
 use Mail;
 use Image;
-use Illuminate\Support\Facades\Log;
+
+use Auth;
 
 class ApiInvalidTransactionController extends Controller
 {
@@ -92,6 +28,97 @@ class ApiInvalidTransactionController extends Controller
 
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
+    }
+
+    public function filterMarkFlag(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['invalid']) || $post['filter_type']){
+            $data = Transaction::join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+                ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction');
+
+            if(isset($post['invalid']) && $post['invalid'] == 1){
+                $data = $data->where('transaction_flag_invalid', 'Invalid');
+            }else{
+                $data = $data->where('transaction_flag_invalid', '!=', 'Invalid');
+            }
+
+            if(isset($post['filter_type']) && !empty($post['filter_type'])){
+
+                if($post['filter_type'] == 'receipt_number'){
+                    $param = array_column($post['conditions'], 'parameter');
+                    $data = $data->whereIn('transaction_receipt_number', $param);
+                }elseif($post['filter_type'] == 'order_id'){
+                    $param = array_column($post['conditions'], 'parameter');
+                    $data = $data->whereIn('order_id', $param);
+                }
+            }
+
+            $result = $data->paginate(20);
+            return response()->json(MyHelper::checkGet($result));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
+        }
+    }
+
+    public function markAsInvalidAdd(Request $request){
+        $post = $request->json()->all();
+        $get = User::where('id', $request->user()->id)->first();
+
+        if (password_verify($post['pin'], $get['password'])) {
+            $dataInsertLog = [
+                'id_transaction' => $post['id_transaction'],
+                'reason' => $post['reason'],
+                'tansaction_flag' => 'Invalid',
+                'updated_by' => $request->user()->id,
+                'updated_date' => date('Y-m-d H:i:s')
+            ];
+
+            $dataUpdateTrx = [
+                'transaction_flag_invalid' => 'Invalid'
+            ];
+
+            if (isset($post['image'])) {
+                $upload = MyHelper::uploadPhotoStrict($post['image'], 'img/invalid-flag/', 800, 800, $post['id_transaction']);
+                if (isset($upload['status']) && $upload['status'] == "success") {
+                    $dataUpdateTrx['image_invalid_flag'] = $upload['path'];
+                }
+            }
+
+            $add = LogInvalidTransaction::create($dataInsertLog);
+            $update = Transaction::where('id_transaction', $post['id_transaction'])->update($dataUpdateTrx);
+
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Please Input Correct Pin']]);
+        }
+    }
+
+    public function markAsValidUpdate(Request $request){
+        $post = $request->json()->all();
+
+        $get = User::where('id', $request->user()->id)->first();
+
+        if (password_verify($post['pin'], $get['password'])) {
+            $dataInsertLog = [
+                'id_transaction' => $post['id_transaction'],
+                'reason' => $post['reason'],
+                'tansaction_flag' => 'Valid',
+                'updated_by' => $request->user()->id,
+                'updated_date' => date('Y-m-d H:i:s')
+            ];
+
+            $dataUpdateTrx = [
+                'transaction_flag_invalid' => 'Valid'
+            ];
+
+            $add = LogInvalidTransaction::create($dataInsertLog);
+            $update = Transaction::where('id_transaction', $post['id_transaction'])->update($dataUpdateTrx);
+
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Please Input Correct Pin']]);
+        }
     }
 
     public function logInvalidFlag(Request $request){
@@ -190,7 +217,7 @@ class ApiInvalidTransactionController extends Controller
         $list = LogInvalidTransaction::join('transactions', 'transactions.id_transaction', 'log_invalid_transactions.id_transaction')
             ->join('users', 'users.id', 'log_invalid_transactions.updated_by')
             ->where('log_invalid_transactions.id_transaction', $request['id_transaction'])
-            ->select(DB::raw('DATE_FORMAT(log_invalid_transactions.updated_date, "%d %M %Y %H:%i") as updated_date'), 'users.name', 'log_invalid_transactions.tansaction_flag', 'transactions.transaction_receipt_number')
+            ->select(DB::raw('DATE_FORMAT(log_invalid_transactions.updated_date, "%d %M %Y %H:%i") as updated_date'), 'users.name', 'log_invalid_transactions.tansaction_flag', 'transactions.transaction_receipt_number', 'log_invalid_transactions.reason')
             ->get()->toArray();
 
         return MyHelper::checkGet($list);

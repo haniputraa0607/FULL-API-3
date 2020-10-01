@@ -6,6 +6,12 @@ Route::group(['middleware' => ['auth:api'],'prefix' => 'api/transaction', 'names
 
 Route::any('api/transaction/update-gosend', 'Modules\Transaction\Http\Controllers\ApiGosendController@updateStatus');
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+    Route::group(['prefix' => 'invalid-flag'], function () {
+        Route::any('filter', ['middleware' => 'feature_control:274', 'uses' => 'ApiInvalidTransactionController@filterMarkFlag']);
+        Route::post('mark-as-valid/update', ['uses' => 'ApiInvalidTransactionController@markAsValidUpdate']);
+        Route::post('mark-as-invalid/add', ['uses' => 'ApiInvalidTransactionController@markAsInvalidAdd']);
+    });
+
     Route::post('/outlet', 'ApiNotification@adminOutlet');
     Route::post('/admin/confirm', 'ApiNotification@adminOutletComfirm');
     Route::get('setting/cashback', 'ApiSettingCashbackController@list');

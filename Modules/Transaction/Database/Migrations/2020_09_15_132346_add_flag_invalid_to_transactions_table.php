@@ -15,6 +15,7 @@ class AddFlagInvalidToTransactionsTable extends Migration
     {
         Schema::table('transactions', function (Blueprint $table) {
             $table->enum('transaction_flag_invalid', ['Valid', 'Invalid'])->nullable()->after('distance_customer');
+            $table->text('image_invalid_flag')->nullable()->after('distance_customer');
         });
     }
 
@@ -27,6 +28,7 @@ class AddFlagInvalidToTransactionsTable extends Migration
     {
         Schema::table('transactions', function (Blueprint $table) {
             $table->dropColumn('transaction_flag_invalid');
+            $table->dropColumn('image_invalid_flag');
         });
     }
 }
