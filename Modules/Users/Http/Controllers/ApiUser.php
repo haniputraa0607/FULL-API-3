@@ -1613,6 +1613,9 @@ class ApiUser extends Controller
                     $useragent = $_SERVER['HTTP_USER_AGENT'];
                 }
 
+                $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+                            ->where('oauth_access_tokens.user_id', $data[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
+
                 if (stristr($useragent, 'iOS')) $useragent = 'iOS';
                 if (stristr($useragent, 'okhttp')) $useragent = 'Android';
                 if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
