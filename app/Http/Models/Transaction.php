@@ -89,6 +89,8 @@ class Transaction extends Model
 		'longitude',
         'distance_customer',
 		'membership_promo_id',
+        'transaction_flag_invalid',
+        'image_invalid_flag',
         'fraud_flag',
 		'cashback_insert_status',
 		'calculate_achievement',
