@@ -1009,7 +1009,7 @@ class ApiUser extends Controller
             $device_type = $request->json('device_type');
 
             $useragent = $_SERVER['HTTP_USER_AGENT'];
-            if (stristr($_SERVER['HTTP_USER_AGENT'], 'iOS')) $useragent = 'iOS';
+            if (stristr($_SERVER['HTTP_USER_AGENT'], 'iOS')) $useragent = 'IOS';
             if (stristr($_SERVER['HTTP_USER_AGENT'], 'okhttp')) $useragent = 'Android';
             if (stristr($_SERVER['HTTP_USER_AGENT'], 'GuzzleHttp')) $useragent = 'Browser';
 
@@ -1019,7 +1019,7 @@ class ApiUser extends Controller
 
             if($device_type == "Android") {
                 $is_android = 1;
-            } elseif($device_type == "iOS"){
+            } elseif($device_type == "IOS"){
                 $is_ios = 1;
             }
 
