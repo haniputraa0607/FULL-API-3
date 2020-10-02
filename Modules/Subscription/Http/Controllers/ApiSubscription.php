@@ -850,7 +850,9 @@ class ApiSubscription extends Controller
 	                    },
 	                    'brand'
                     ])
-                    ->withCount('subscription_users')
+                    ->withCount(['subscription_users' => function($q) {
+                    	$q->where('paid_status','!=','Cancelled');
+                    }])
                     // ->select(
                     //     'subscription_description'
                     // )

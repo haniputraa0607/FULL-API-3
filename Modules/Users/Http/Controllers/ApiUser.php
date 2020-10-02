@@ -1613,6 +1613,9 @@ class ApiUser extends Controller
                     $useragent = $_SERVER['HTTP_USER_AGENT'];
                 }
 
+                $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+                            ->where('oauth_access_tokens.user_id', $data[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
+
                 if (stristr($useragent, 'iOS')) $useragent = 'iOS';
                 if (stristr($useragent, 'okhttp')) $useragent = 'Android';
                 if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
@@ -1647,6 +1650,8 @@ class ApiUser extends Controller
                     break;
             }
 
+            $user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
+
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
@@ -1654,7 +1659,7 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $phone,
                         'message'  => $msg_otp,
-                        'challenge_key' => $data[0]['challenge_key']
+                        'challenge_key' => $user->challenge_key
                     ]
                 ];
             } else {
@@ -1665,7 +1670,7 @@ class ApiUser extends Controller
                         'phone'    =>    $phone,
                         'pin'        =>  '', 
                         'message' => $msg_otp,
-                        'challenge_key' => $data[0]['challenge_key']
+                        'challenge_key' => $user->challenge_key
                     ]
                 ];
             }
@@ -1840,9 +1845,15 @@ class ApiUser extends Controller
                             ->where('oauth_access_tokens.user_id', $data[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
                     }
                 }
+
+                $user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
+
                 $result = [
                     'status'    => 'success',
-                    'result'    => ['phone'    =>    $data[0]['phone']]
+                    'result'    => [
+                        'phone'    =>    $data[0]['phone'],
+                        'challenge_key' => $user->challenge_key
+                    ]
                 ];
             } else {
                 $result = [
