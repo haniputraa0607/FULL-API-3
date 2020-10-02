@@ -33,14 +33,19 @@ class ApiInvalidTransactionController extends Controller
     public function filterMarkFlag(Request $request){
         $post = $request->json()->all();
 
-        if(isset($post['invalid']) || $post['filter_type']){
+        if(isset($post['invalid']) || isset($post['filter_type'])){
             $data = Transaction::join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-                ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction');
+                ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
+                ->whereNull('dot.id_disburse_outlet');
 
             if(isset($post['invalid']) && $post['invalid'] == 1){
                 $data = $data->where('transaction_flag_invalid', 'Invalid');
             }else{
-                $data = $data->where('transaction_flag_invalid', '!=', 'Invalid');
+                $data = $data->where(function ($q){
+                    $q->where('transaction_flag_invalid', 'Valid')
+                        ->orWhereNull('transaction_flag_invalid');
+                });
             }
 
             if(isset($post['filter_type']) && !empty($post['filter_type'])){
@@ -217,9 +222,12 @@ class ApiInvalidTransactionController extends Controller
         $list = LogInvalidTransaction::join('transactions', 'transactions.id_transaction', 'log_invalid_transactions.id_transaction')
             ->join('users', 'users.id', 'log_invalid_transactions.updated_by')
             ->where('log_invalid_transactions.id_transaction', $request['id_transaction'])
-            ->select(DB::raw('DATE_FORMAT(log_invalid_transactions.updated_date, "%d %M %Y %H:%i") as updated_date'), 'users.name', 'log_invalid_transactions.tansaction_flag', 'transactions.transaction_receipt_number', 'log_invalid_transactions.reason')
+            ->select(DB::raw('DATE_FORMAT(log_invalid_transactions.updated_date, "%d %M %Y %H:%i") as updated_date'), 'users.name', 'log_invalid_transactions.tansaction_flag', 'transactions.transaction_receipt_number', 'log_invalid_transactions.reason', 'transactions.image_invalid_flag')
             ->get()->toArray();
 
+        if($list){
+            $list[0]['url_storage'] =  config('url.storage_url_api');
+        }
         return MyHelper::checkGet($list);
     }
 }
