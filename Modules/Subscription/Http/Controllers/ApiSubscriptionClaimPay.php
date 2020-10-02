@@ -566,10 +566,10 @@ class ApiSubscriptionClaimPay extends Controller
             if ($this->updateLogPoint(- $myBalance, $voucher)) {
                 if ($this->updateInfoDealUsers($voucher->id_subscription_user, $dataSubsUserUpdate)) {
                     if($paymentMethod == 'midtrans'){
-                        return $this->midtrans($subs, $voucher, $kurangBayar);
+                        return $this->midtrans($subs, $voucher, -$kurangBayar);
                     }
                     if(strtolower($paymentMethod) == 'ipay88'){
-                        $pay = $this->ipay88($subs, $voucher, $dataSubsUserUpdate['balance_nominal'], $post);
+                        $pay = $this->ipay88($subs, $voucher, -$kurangBayar, $post);
                         $ipay88 = [
                             'MERCHANT_TRANID'   => $pay['order_id'],
                             'AMOUNT'            => $pay['amount'],
@@ -578,7 +578,7 @@ class ApiSubscriptionClaimPay extends Controller
                         return $ipay88;
                     }
                     if($paymentMethod == 'shopeepay'){
-                        return $this->shopeepay($subs, $voucher, $dataSubsUserUpdate['balance_nominal']);
+                        return $this->shopeepay($subs, $voucher, -$kurangBayar);
                     }
                 }
             }
