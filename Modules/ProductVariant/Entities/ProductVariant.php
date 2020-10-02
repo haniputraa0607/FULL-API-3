@@ -5,7 +5,7 @@ namespace Modules\ProductVariant\Entities;
 use App\Lib\MyHelper;
 use Illuminate\Database\Eloquent\Model;
 
-class ProductVariant extends \App\Http\Models\BaseModel
+class ProductVariant extends Model
 {
     protected $primaryKey = 'id_product_variant';
 

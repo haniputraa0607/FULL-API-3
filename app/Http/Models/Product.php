@@ -8,6 +8,8 @@
 namespace App\Http\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Cache;
+use Modules\ProductVariant\Entities\ProductVariant;
 
 /**
  * Class Product
@@ -198,9 +200,9 @@ class Product extends Model
             return Cache::get('product_get_variant_tree_'.$id_product.($with_index ? 'true' : 'false'));
         }
         // get list variants available in products
-        $list_variants = ProductVariant::select('product_variant.id_product_variant')
-            ->join('product_variant_pivot', 'product_variant_pivot.id_product_variant', '=', 'product_variant.id_product_variant')
-            ->join('product_variant_group', 'product_variant_group.id_product_variant_group', '=', 'product_variant_pivot.id_product_variant_group')
+        $list_variants = ProductVariant::select('product_variants.id_product_variant')
+            ->join('product_variant_pivot', 'product_variant_pivot.id_product_variant', '=', 'product_variants.id_product_variant')
+            ->join('product_variant_groups', 'product_variant_groups.id_product_variant_group', '=', 'product_variant_pivot.id_product_variant_group')
             ->where('id_product', $id_product)
             ->distinct()->pluck('id_product_variant');
 

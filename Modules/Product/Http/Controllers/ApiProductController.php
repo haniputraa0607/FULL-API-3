@@ -1789,6 +1789,7 @@ class ApiProductController extends Controller
                 $product['product_price'] = $productGlobalPrice['product_global_price'];
             }
         }
+        $product['variants'] = Product::getVariantTree($product['id_product']);
         $product['modifiers'] = $product_modifiers->get()->toArray();
         foreach ($product['modifiers'] as $key => &$modifier) {
             $modifier['price'] = (int) $modifier['price'];
