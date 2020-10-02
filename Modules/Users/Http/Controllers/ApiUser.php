@@ -356,7 +356,13 @@ class ApiUser extends Controller
         if($status_all_user == 1){
             $finalResult = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
                 ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
-                ->orderBy($order_field, $order_method);
+                ->orderBy($order_field, $order_method)
+                ->select(
+                    'users.*',
+                    'cities.*',
+                    'provinces.*',
+                    DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
+                );
         }
 
         $resultCount = $finalResult->count(); // get total result
