@@ -40,7 +40,41 @@ class GeneratePromoCode implements ShouldQueue
      */
     public function handle()
     {
-        for ($i = 0; $i < $this->total_coupon; $i++) {
+    	$total_coupon 	= $this->total_coupon;
+    	$remain_coupon	= $total_coupon;
+    	$generated_code = 0; 
+    	$chunk 			= 500;
+
+		if ($this->status != 'insert') {
+			PromoCampaignPromoCode::where('id_promo_campaign', $this->id)->delete();
+		}
+
+    	while ( $total_coupon > $generated_code ) {
+
+
+    		if ($remain_coupon <= $chunk) {
+    			$generate = $remain_coupon;
+    		}else{
+    			$generate = $chunk;
+    			$remain_coupon = $remain_coupon - $chunk;
+    		}
+
+    		print_r([
+    			'cunk' => $chunk, 
+    			'total coupon' => $total_coupon, 
+    			'generated code' => $generated_code, 
+    			'remain coupon' => $remain_coupon
+    		]);
+    		$generated_code += $generate;
+    		$generate = $this->generateCode($generate);
+    	}
+
+    	return true;
+    }
+
+    public function generateCode($total_coupon)
+    {
+    	for ($i = 0; $i < $total_coupon; $i++) {
             $generateCode[$i]['id_promo_campaign']  = $this->id;
             $generateCode[$i]['promo_code']         = implode('', [$this->prefix_code, MyHelper::createrandom($this->number_last_code, 'PromoCode')]);
             $generateCode[$i]['created_at']         = date('Y-m-d H:i:s');
@@ -66,15 +100,14 @@ class GeneratePromoCode implements ShouldQueue
             } 
             catch (\Exception $e) 
             {
-                echo 'Insert Promo Codes failed';
-                return true;
+                echo 'Insert Promo Codes failed. Retrying to generate code';
+            	$this->generateCode($total_coupon);
             }
         } 
         else 
         {
             try 
             {
-                PromoCampaignPromoCode::where('id_promo_campaign', $this->id)->delete();
                 foreach ($chunks as $chunk) 
                 {
                     PromoCampaignPromoCode::insert($chunk);
@@ -84,8 +117,8 @@ class GeneratePromoCode implements ShouldQueue
             } 
             catch (\Exception $e) 
             {
-                echo 'Update Promo Codes failed';
-                return true;
+                echo 'Update Promo Codes failed. Retrying to generate code';
+            	$this->generateCode($total_coupon);
             }
         }
     }
