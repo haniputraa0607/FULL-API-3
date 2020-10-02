@@ -1008,10 +1008,19 @@ class ApiUser extends Controller
             $device_token = $request->json('device_token');
             $device_type = $request->json('device_type');
 
-            if ($request->json('device_type') == "Android") {
-                $is_android = $device_id;
-            } else {
-                $is_ios = $device_id;
+            $useragent = $_SERVER['HTTP_USER_AGENT'];
+            if (stristr($_SERVER['HTTP_USER_AGENT'], 'iOS')) $useragent = 'IOS';
+            if (stristr($_SERVER['HTTP_USER_AGENT'], 'okhttp')) $useragent = 'Android';
+            if (stristr($_SERVER['HTTP_USER_AGENT'], 'GuzzleHttp')) $useragent = 'Browser';
+
+            if(empty($device_type)){
+                $device_type = $useragent;
+            }
+
+            if($device_type == "Android") {
+                $is_android = 1;
+            } elseif($device_type == "IOS"){
+                $is_ios = 1;
             }
 
             if ($request->json('device_token') != "") {
@@ -1041,14 +1050,10 @@ class ApiUser extends Controller
                     return response()->json($checkRuleRequest);
                 }
 
-                if ($request->json('device_id') && $request->json('device_token') && $request->json('device_type')) {
-                    app($this->home)->updateDeviceUser($create, $request->json('device_id'), $request->json('device_token'), $request->json('device_type'));
+                if ($request->json('device_id') && $request->json('device_token') && $device_type) {
+                    app($this->home)->updateDeviceUser($create, $request->json('device_id'), $request->json('device_token'), $device_type);
                 }
             }
-            $useragent = $_SERVER['HTTP_USER_AGENT'];
-            if (stristr($_SERVER['HTTP_USER_AGENT'], 'iOS')) $useragent = 'iOS';
-            if (stristr($_SERVER['HTTP_USER_AGENT'], 'okhttp')) $useragent = 'Android';
-            if (stristr($_SERVER['HTTP_USER_AGENT'], 'GuzzleHttp')) $useragent = 'Browser';
 
 
             if (\Module::collections()->has('Autocrm')) {
