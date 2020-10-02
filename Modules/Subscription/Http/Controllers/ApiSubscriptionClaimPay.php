@@ -402,21 +402,20 @@ class ApiSubscriptionClaimPay extends Controller
     function paymentMethod($dataSubs, $voucher, $request)
     {
         //IF USING BALANCE
-        if ($request->get('balance') && $request->get('balance') == true){
+        if ($request->json('balance') && $request->json('balance') == true){
             /* BALANCE */
-            $pay = $this->balance($dataSubs, $voucher,$request->get('payment_method'), $request->json()->all());
+            $pay = $this->balance($dataSubs, $voucher,$request->json('payment_method'), $request->json()->all());
         }else{
-
             /* BALANCE */
-            if ($request->get('payment_method') && $request->get('payment_method') == "balance") {
+            if ($request->json('payment_method') && $request->json('payment_method') == "balance") {
                 $pay = $this->balance($dataSubs, $voucher);
             }
            /* MIDTRANS */
-            if ($request->get('payment_method') && $request->get('payment_method') == "midtrans") {
+            if ($request->json('payment_method') && $request->json('payment_method') == "midtrans") {
                 $pay = $this->midtrans($dataSubs, $voucher);
             }
            /* IPay88 */
-            if ($request->get('payment_method') && strtolower($request->get('payment_method')) == "ipay88") {
+            if ($request->json('payment_method') && strtolower($request->json('payment_method')) == "ipay88") {
                 $pay = $this->ipay88($dataSubs, $voucher, null, $request->json()->all());
                 $ipay88 = [
                     'MERCHANT_TRANID'   => $pay['order_id'],
@@ -567,7 +566,7 @@ class ApiSubscriptionClaimPay extends Controller
             if ($this->updateLogPoint(- $myBalance, $voucher)) {
                 if ($this->updateInfoDealUsers($voucher->id_subscription_user, $dataSubsUserUpdate)) {
                     if($paymentMethod == 'midtrans'){
-                        return $this->midtrans($subs, $voucher, $dataSubsUserUpdate['balance_nominal']);
+                        return $this->midtrans($subs, $voucher, $kurangBayar);
                     }
                     if(strtolower($paymentMethod) == 'ipay88'){
                         $pay = $this->ipay88($subs, $voucher, $dataSubsUserUpdate['balance_nominal'], $post);
