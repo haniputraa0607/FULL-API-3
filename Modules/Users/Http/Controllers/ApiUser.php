@@ -1493,7 +1493,9 @@ class ApiUser extends Controller
                     $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_sms', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui SMS.'));
                     break;
             }
-
+            
+            $user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
+            
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
@@ -1501,7 +1503,7 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $data[0]['phone'],
                         'message'  =>    $msg_otp,
-                        'challenge_key' => $data[0]['challenge_key']
+                        'challenge_key' => $user->challenge_key
                     ]
                 ];
             } else {
@@ -1512,7 +1514,7 @@ class ApiUser extends Controller
                         'phone'    =>    $data[0]['phone'],
                         'pin'    =>    '',
                         'message' => $msg_otp,
-                        'challenge_key' => $data[0]['challenge_key']
+                        'challenge_key' => $user->challenge_key
                     ]
                 ];
             }
