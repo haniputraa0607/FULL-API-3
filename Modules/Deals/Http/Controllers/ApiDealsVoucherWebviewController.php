@@ -63,7 +63,14 @@ class ApiDealsVoucherWebviewController extends Controller
         		])
         		->where('id_deals_user', $request->id_deals_user)
         		->get()
-        		->toArray()[0];
+        		->toArray()[0]??null;
+
+        if (!$voucher) {
+        	return [
+                'status' => 'fail',
+                'messages' => ['Voucher is not found']
+            ];
+        }
 
         if($voucher['deals_voucher']['deal']['is_all_outlet'] == 1){
             $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
@@ -74,6 +81,7 @@ class ApiDealsVoucherWebviewController extends Controller
             $voucher['deals_voucher']['deal']['outlets'] = $outlets;
         }
 
+        $voucher['deals_voucher']['deal']['outlet_by_city'] = [];
         if (!empty($voucher['deals_voucher']['deal']['outlets'])) {
             $kota = array_column($voucher['deals_voucher']['deal']['outlets'], 'city');
             $kota = array_values(array_map("unserialize", array_unique(array_map("serialize", $kota))));
@@ -96,7 +104,7 @@ class ApiDealsVoucherWebviewController extends Controller
 
             $voucher['deals_voucher']['deal']['outlet_by_city'] = $kota;
         }
-        
+
         usort($voucher['deals_voucher']['deal']['outlet_by_city'], function($a, $b) {
             if(isset($a['city_name']) && isset($b['city_name'])){
                 return $a['city_name'] <=> $b['city_name'];
