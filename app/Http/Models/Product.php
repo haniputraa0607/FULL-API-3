@@ -10,6 +10,8 @@ namespace App\Http\Models;
 use Illuminate\Database\Eloquent\Model;
 use Cache;
 use Modules\ProductVariant\Entities\ProductVariant;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
+use App\Lib\MyHelper;
 
 /**
  * Class Product
@@ -174,6 +176,10 @@ class Product extends Model
         return $this->belongsToMany(\Modules\Product\Entities\ProductPromoCategory::class,'product_product_promo_categories', 'id_product','id_product_promo_category')->withPivot('id_product','id_product_promo_category','position');
     }
  
+    protected static function getCacheName($id_product, $outlet, $with_index = false) 
+    {
+        return 'product_get_variant_tree_'.$id_product.'_'.$outlet['id_outlet'].'_'.($with_index ? 'true' : 'false');
+    }
 
     /**
      * Generate fresh product variant tree
@@ -181,9 +187,10 @@ class Product extends Model
      * @param  boolean $with_index      result should use id_product_variant as index or not
      * @return array                    array of product variant [tree]
      */
-    public static function refreshVariantTree($id_product, $with_index = false)
+    public static function refreshVariantTree($id_product, $outlet, $with_index = false)
     {
-        Cache::forget('product_get_variant_tree_'.$id_product.($with_index ? 'true' : 'false'));
+        $cache_name = self::getCacheName($id_product, $outlet, $with_index = false);
+        Cache::forget($cache_name);
         return self::getVariantTree($id_product, $with_index);
     }
 
@@ -193,11 +200,12 @@ class Product extends Model
      * @param  boolean $with_index      result should use id_product_variant as index or not
      * @return array                    array of product variant [tree]
      */
-    public static function getVariantTree($id_product, $with_index = false)
+    public static function getVariantTree($id_product, $outlet, $with_index = false)
     {
+        $cache_name = self::getCacheName($id_product, $outlet, $with_index = false);
         // retrieve from cache if available
-        if (Cache::has('product_get_variant_tree_'.$id_product.($with_index ? 'true' : 'false'))) {
-            return Cache::get('product_get_variant_tree_'.$id_product.($with_index ? 'true' : 'false'));
+        if (Cache::has($cache_name)) {
+            return Cache::get($cache_name);
         }
         // get list variants available in products
         $list_variants = ProductVariant::select('product_variants.id_product_variant')
@@ -215,7 +223,20 @@ class Product extends Model
         }
 
         // get all product variant groups assigned to this product
-        $variant_group_raws = ProductVariantGroup::select('id_product_variant_group', 'product_variant_group_price')->where('id_product', $id_product)->with(['id_product_variants'])->get()->toArray();
+        $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_price')->where('id_product', $id_product)->with(['id_product_variants']);
+
+        if ($outlet['outlet_different_price']) {
+            $variant_group_raws->join('product_variant_group_prices', function($join) use ($outlet) {
+                $join->on('product_variant_groups.id_product_variant_group', '=', 'product_variant_group_special_prices.id_product_variant_group')
+                    ->where('product_variant_group_special_prices.id_outlet', '=', $outlet['id_outlet']);
+            });
+        } else {
+            $variant_group_raws->join('product_variant_group_prices', function($join) use ($outlet) {
+                $join->on('product_variant_groups.id_product_variant_group', '=', 'product_variant_group_prices.id_product_variant_group');
+            });
+        }
+
+        $variant_group_raws = $variant_group_raws->get()->toArray();
 
         // create [id_product_variant_group => ProductVariantGroup,...] array
         $variant_groups = [];
@@ -239,7 +260,7 @@ class Product extends Model
             'variants_tree' => $variants,
         ];
         // save to cache
-        Cache::forever('product_get_variant_tree_'.$id_product.($with_index ? 'true' : 'false'), $result);
+        Cache::forever($cache_name, $result);
         // return the result
         return $result;
     }

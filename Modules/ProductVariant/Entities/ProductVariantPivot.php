@@ -5,7 +5,7 @@ namespace Modules\ProductVariant\Entities;
 use App\Lib\MyHelper;
 use Illuminate\Database\Eloquent\Model;
 
-class ProductVariantPivot extends \App\Http\Models\BaseModel
+class ProductVariantPivot extends Model
 {
     protected $table = 'product_variant_pivot';
 

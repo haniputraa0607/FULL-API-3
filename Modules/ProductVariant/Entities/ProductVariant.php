@@ -90,9 +90,8 @@ class ProductVariant extends Model
         $starter = $starter->toArray();
 
         foreach ($starter['childs'] as &$child) {
+            $child->variant = self::getVariantChildren($child,$pc);
             $child = $child->toArray();
-            $child['variant'] = $child;
-            $child['variant']['childs'] = self::getVariantChildren($child,$pc);
         }
 
         return $starter;
