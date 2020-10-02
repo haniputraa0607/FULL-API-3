@@ -17,7 +17,7 @@ class DecryptPIN
      */
     public function handle(Request $request, Closure $next, $colname = 'pin', $column = 'phone')
     {
-        if ($request->{$colname.'_encrypt'}) {
+        if ($request->{$colname.'_encrypt'} && !$request->$colname) {
             $jsonRequest = $request->all();
             $decrypted = MyHelper::decryptPIN($request->{$colname.'_encrypt'}, $request->$column);
             if (!$decrypted) {
