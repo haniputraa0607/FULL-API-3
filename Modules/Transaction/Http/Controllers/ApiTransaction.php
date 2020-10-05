@@ -2519,6 +2519,7 @@ class ApiTransaction extends Controller
             if(isset($list['user']['phone'])){
                 $result['user']['phone'] = $list['user']['phone'];
                 $result['user']['name'] = $list['user']['name'];
+                $result['user']['email'] = $list['user']['email'];
             }
 
             if ($list['trasaction_payment_type'] != 'Offline') {
