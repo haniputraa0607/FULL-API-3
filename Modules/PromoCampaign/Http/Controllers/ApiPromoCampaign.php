@@ -33,6 +33,7 @@ use Modules\Promotion\Entities\DealsPromotionTierDiscountRule;
 use Modules\Promotion\Entities\DealsPromotionBuyxgetyProductRequirement;
 use Modules\Promotion\Entities\DealsPromotionBuyxgetyRule;
 
+use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 
 use Modules\Brand\Entities\BrandProduct;
@@ -743,7 +744,9 @@ class ApiPromoCampaign extends Controller
             $datenow = date("Y-m-d H:i:s");
             $checkData = PromoCampaign::with([
             				'promo_campaign_have_tags.promo_campaign_tag', 
-            				'promo_campaign_promo_codes', 
+            				'promo_campaign_promo_codes'=> function($q) {
+            					$q->limit(1);
+            				}, 
             				'promo_campaign_reports' => function($q) {
             					$q->limit(1);
             				},
@@ -830,7 +833,10 @@ class ApiPromoCampaign extends Controller
             } 
             else 
             {
-                unset($post['promo_code']);
+                $promo_code = $post['promo_code']??null;
+                if (isset($post['promo_code']) || $post['promo_code'] == null) {
+                    unset($post['promo_code']);
+                }
 
                 if (isset($post['promo_tag'])) {
                     $insertTag = $this->insertTag('update', $post['id_promo_campaign'], $post['promo_tag']);
@@ -839,25 +845,15 @@ class ApiPromoCampaign extends Controller
 
                 $promoCampaign = PromoCampaign::where('id_promo_campaign', '=', $post['id_promo_campaign'])->first();
                 $promoCampaignUpdate = $promoCampaign->update($post);
-                
-                if ($post['code_type'] != 'Single') 
-                {
-                    $generateCode = $this->generateCode('update', $post['id_promo_campaign'], $post['code_type'], null, $post['prefix_code'], $post['number_last_code'], $post['total_coupon']);
+                $generateCode = $this->generateCode('update', $post['id_promo_campaign'], $post['code_type'], $promo_code, $post['prefix_code'], $post['number_last_code'], $post['total_coupon']);
 
-                    if ($generateCode['status'] != 'success') {
-                        DB::rollBack();
-	                    return response()->json([
-		                    'status'  => 'fail',
-		                    'messages'  => ['Update Failed']
-		                ]);
-                    }
-                }
 
                 if ($promoCampaignUpdate == 1) {
                     $promoCampaign = $promoCampaign->toArray();
+
                     $result = [
                         'status'  => 'success',
-                        'result'  => 'Update Promo Campaign',
+                        'result'  => 'Promo Campaign has been updated',
                         'promo-campaign'  => $post
                     ];
                     $send = app($this->autocrm)->SendAutoCRM('Update Promo Campaign', $user['phone'], [
