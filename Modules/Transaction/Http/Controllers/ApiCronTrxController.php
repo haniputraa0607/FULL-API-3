@@ -98,7 +98,7 @@ class ApiCronTrxController extends Controller
                 }elseif($singleTrx->trasaction_payment_type == 'Ipay88') {
                     $trx_ipay = TransactionPaymentIpay88::where('id_transaction',$singleTrx->id_transaction)->first();
 
-                    if (strtolower($trx_ipay->payment_method) == 'credit card' && $singleTrx->transaction_date > date('Y-m-d H:i:s', strtotime('- 15minutes'))) {
+                    if ($trx_ipay && strtolower($trx_ipay->payment_method) == 'credit card' && $singleTrx->transaction_date > date('Y-m-d H:i:s', strtotime('- 15minutes'))) {
                         continue;
                     }
 
