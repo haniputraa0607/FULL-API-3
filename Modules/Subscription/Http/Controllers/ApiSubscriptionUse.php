@@ -92,7 +92,7 @@ class ApiSubscriptionUse extends Controller
     	return $subs;
     }
 
-    public function calculate($id_subscription_user, $grandtotal, $subtotal, $item, $id_outlet, &$errors, &$errorProduct=0, &$product="", &$applied_product="")
+    public function calculate($id_subscription_user, $grandtotal, $subtotal, $item, $id_outlet, &$errors, &$errorProduct=0, &$product="", &$applied_product="", $delivery_fee=0)
     {
     	if (empty($id_subscription_user)) {
     		return 0;
@@ -108,6 +108,7 @@ class ApiSubscriptionUse extends Controller
     	}
 
     	$subs = $subs->toArray();
+    	$type = $subs['subscription_user']['subscription']['subscription_discount_type'];
 
     	// check expired date
         if ($subs['subscription_expired_at'] < date('Y-m-d H:i:s')) {
@@ -139,8 +140,6 @@ class ApiSubscriptionUse extends Controller
     	}
 
     	// check outlet
-    	// if ( empty($subs['subscription_user']['subscription']['is_all_outlet']) ) {
-    	// }
 		$pct = new PromoCampaignTools;
 		$check_outlet = $pct->checkOutletRule($id_outlet, $subs['subscription_user']['subscription']['is_all_outlet'], $subs['subscription_user']['subscription']['outlets_active'], $subs['subscription_user']['subscription']['id_brand']);
 
@@ -170,8 +169,16 @@ class ApiSubscriptionUse extends Controller
 
     		if (!$check) {
     			$pct = new PromoCampaignTools;
+    			$total_product = count($promo_product);
+    			if ($total_product == 1) {
+    				$product = $promo_product[0]['product']['product_name'] ?? 'product bertanda khusus';
+    			}else{
+    				$product = 'product bertanda khusus';
+    			}
+
+
     			$message = $pct->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
-				$message = MyHelper::simpleReplace($message,['product'=>'product bertanda khusus']);
+				$message = MyHelper::simpleReplace($message,['product'=>$product]);
     			$errors[] = $message;
     			
 				$getProduct  = app($this->promo_campaign)->getProduct('subscription',$subs['subscription_user']['subscription'], $id_outlet);
@@ -182,34 +189,77 @@ class ApiSubscriptionUse extends Controller
     		}
     	}
 
-		// sum subs discount
-    	if ( !empty($subs['subscription_user']['subscription']['subscription_voucher_nominal']) ) 
-    	{
-    		$subs_total = $subs['subscription_user']['subscription']['subscription_voucher_nominal'];
+		switch ($subs['subscription_user']['subscription']['subscription_discount_type']) {
+			case 'discount_delivery':
 
-    		if ( $subs_total > $grandtotal ) 
-			{
-				$subs_total = $grandtotal;
-			}
-    	}
-    	elseif( !empty($subs['subscription_user']['subscription']['subscription_voucher_percent']) )
-    	{
-    		$subs_total = $grandtotal * ($subs['subscription_user']['subscription']['subscription_voucher_percent']/100);
+				if( !empty($subs['subscription_user']['subscription']['subscription_voucher_nominal']) ){
+					$discount_type = 'Nominal';
+					$discount_value = $subs['subscription_user']['subscription']['subscription_voucher_nominal'];
+					$max_percent_discount = 0;
+				}elseif( !empty($subs['subscription_user']['subscription']['subscription_voucher_percent']) ){
+					$discount_type = 'Percent';
+					$discount_value = $subs['subscription_user']['subscription']['subscription_voucher_percent'];
+					$max_percent_discount = $subs['subscription_user']['subscription']['subscription_voucher_percent_max'];
+				}else{
+		    		$errors[] = 'Subscription not valid.';
+		    		return 0;
+		    	}
 
-    		if ( !empty($subs['subscription_user']['subscription']['subscription_voucher_percent_max']) ) 
-    		{
-    			if ( $subs_total > $subs['subscription_user']['subscription']['subscription_voucher_percent_max'] ) 
-    			{
-    				$subs_total = $subs['subscription_user']['subscription']['subscription_voucher_percent_max'];
-    			}
-    		}
-    	}
-    	else
-    	{
-    		$errors[] = 'Subscription not valid.';
-    		return 0;
-    	}
+				if (!empty($delivery_fee)) {
+					$result = $pct->discountDelivery(
+						$delivery_fee, 
+						$discount_type,
+						$discount_value,
+						$max_percent_discount
+					);
+				}
+				else{
+					$result = 0;
+				}
+				break;
+			
+			default:
+				/*
+					subscription type
+					- payment_method
+					- discount
+				*/
 
-    	return $subs_total;
+				// sum subs discount
+		    	if ( !empty($subs['subscription_user']['subscription']['subscription_voucher_nominal']) ) 
+		    	{
+		    		$result = $subs['subscription_user']['subscription']['subscription_voucher_nominal'];
+
+		    		if ( $result > $grandtotal ) 
+					{
+						$result = $grandtotal;
+					}
+		    	}
+		    	elseif( !empty($subs['subscription_user']['subscription']['subscription_voucher_percent']) )
+		    	{
+		    		$result = $grandtotal * ($subs['subscription_user']['subscription']['subscription_voucher_percent']/100);
+
+		    		if ( !empty($subs['subscription_user']['subscription']['subscription_voucher_percent_max']) ) 
+		    		{
+		    			if ( $result > $subs['subscription_user']['subscription']['subscription_voucher_percent_max'] ) 
+		    			{
+		    				$result = $subs['subscription_user']['subscription']['subscription_voucher_percent_max'];
+		    			}
+		    		}
+		    	}
+		    	else
+		    	{
+		    		$errors[] = 'Subscription not valid.';
+		    		return 0;
+		    	}
+
+				break;
+		}
+
+
+    	return [
+    		'type' => $type,
+    		'value' => $result
+    	];
     }
 }
