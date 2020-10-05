@@ -22,6 +22,7 @@ use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionProductModifier;
+use Modules\ProductVariant\Entities\TransactionProductVariant;
 use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
@@ -980,7 +981,8 @@ class ApiOnlineTransaction extends Controller
                 'transaction_product_qty_discount'  => $valueProduct['qty_discount'] ?? 0,
                 // remove discount from subtotal
                 // 'transaction_product_subtotal' => ($valueProduct['qty'] * $checkPriceProduct['product_price'])-$this_discount,
-                'transaction_product_subtotal' => ($valueProduct['qty'] * $productPrice),
+                'transaction_product_subtotal' => $valueProduct['transaction_product_subtotal'],
+                'transaction_variant_subtotal' => $valueProduct['transaction_variant_subtotal'],
                 'transaction_product_note'     => $valueProduct['note'],
                 'created_at'                   => date('Y-m-d', strtotime($insertTransaction['transaction_date'])).' '.date('H:i:s'),
                 'updated_at'                   => date('Y-m-d H:i:s')
@@ -1076,8 +1078,18 @@ class ApiOnlineTransaction extends Controller
                     'messages'  => ['Insert Product Modifier Transaction Failed']
                 ]);
             }
+            $insert_variants = [];
+            foreach ($valueProduct['variants'] as $id_product_variant => $product_variant_price) {
+                $insert_variants[] = [
+                    'id_transaction_product' => $trx_product['id_transaction_product'],
+                    'id_product_variant' => $id_product_variant,
+                    'transaction_product_variant_price' => $product_variant_price,
+                    'created_at'                   => date('Y-m-d H:i:s'),
+                    'updated_at'                   => date('Y-m-d H:i:s')
+                ];
+            }
+            $trx_variants = TransactionProductVariant::insert($insert_variants);
             $trx_product->transaction_modifier_subtotal = $mod_subtotal;
-            $trx_product->transaction_product_subtotal += $trx_product->transaction_modifier_subtotal * $valueProduct['qty'];
             $trx_product->save();
             $dataProductMidtrans = [
                 'id'       => $checkProduct['id_product'],
