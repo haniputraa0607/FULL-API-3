@@ -175,6 +175,14 @@ class ApiOutletController extends Controller
      */
     function create(Create $request) {
         $post = $this->checkInputOutlet($request->json()->all());
+        if (!empty($post['outlet_latitude']) && strpos($post['outlet_latitude'], ',') !== false) {
+            return response()->json(['status' => 'fail', 'messages' => ['Please input invalid latitude']]);
+        }
+
+        if (!empty($post['outlet_longitude']) && strpos($post['outlet_longitude'], ',') !== false) {
+            return response()->json(['status' => 'fail', 'messages' => ['Please input invalid longitude']]);
+        }
+
         if(!isset($post['outlet_code'])){
             do{
                 $post['outlet_code'] = MyHelper::createRandomPIN(3);
@@ -244,6 +252,14 @@ class ApiOutletController extends Controller
      */
     function update(Update $request) {
         $post = $this->checkInputOutlet($request->json()->all());
+
+        if (!empty($post['outlet_latitude']) && strpos($post['outlet_latitude'], ',') !== false) {
+            return response()->json(['status' => 'fail', 'messages' => ['Please input invalid latitude']]);
+        }
+
+        if (!empty($post['outlet_longitude']) && strpos($post['outlet_longitude'], ',') !== false) {
+            return response()->json(['status' => 'fail', 'messages' => ['Please input invalid longitude']]);
+        }
 
         DB::beginTransaction();
         if(is_array($brands=$post['outlet_brands']??false)){
@@ -2026,6 +2042,18 @@ class ApiOutletController extends Controller
                         if(!empty($value['close_hours'])){
                             $value['close_hours'] = date('H:i:s', strtotime($value['close_hours']));
                         }
+
+                        $value['latitude'] = str_replace(" ","",$value['latitude']);
+                        $value['longitude'] = str_replace(" ","",$value['longitude']);
+
+                        if(!empty($value['latitude']) && strpos($value['latitude'], ',') !== false){
+                            $failedImport[] = $value['code'].': Invalid latitude please use "." and remove ","';
+                        }
+
+                        if(!empty($value['longitude']) && strpos($value['longitude'], ',') !== false){
+                            $failedImport[] = $value['code'].': Invalid longitude please use "." and remove ","';
+                        }
+
                         if(empty($value['code'])){
                             do{
                                 $value['code'] = MyHelper::createRandomPIN(3);
@@ -2033,6 +2061,7 @@ class ApiOutletController extends Controller
                             }while($code != null);
                         }
                         $code = ['outlet_code' => $value['code']];
+
                         $insert = [
                             'outlet_code' => $value['code']??'',
                             'outlet_name' => $value['name']??'',
@@ -3015,5 +3044,48 @@ class ApiOutletController extends Controller
         }
 
         return MyHelper::checkGet($count.' pin has been sent');
+    }
+
+    public function restoreSchedule(Request $request)
+    {
+        if ($request->time_verify < time() - 300) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [
+                    'time_verify should after last 5 minutes. Current time '.time().'. '.url('/'),
+                ]
+            ], 403);
+        }
+        // 'open'      => '10:00:00',
+        // 'close'     => '21:30:00',
+
+        // get outlets with default schedule
+        $outlets = Outlet::select('outlets.id_outlet', 'outlets.outlet_code')->join('outlet_schedules', 'outlet_schedules.id_outlet', '=', 'outlets.id_outlet')
+            ->where([
+                'outlet_schedules.open' => '10:00:00',
+                'outlet_schedules.close' => '21:30:00',
+            ])->groupBy('outlets.id_outlet');
+        $updated = [];
+        foreach ($outlets->cursor() as $outlet) {
+            $updated[$outlet->outlet_code] = [];
+
+            $schedules = OutletScheduleUpdate::where('id_outlet', $outlet->id_outlet)->orderBy('id_outlet_schedule_update', 'desc')->take(7)->get();
+
+            foreach ($schedules as $schedule) {
+                $to_restore = json_decode($schedule->new_data, true);
+                $r = OutletSchedule::updateOrCreate([
+                    'id_outlet' => $to_restore['id_outlet'], 
+                    'day' => $to_restore['day']
+                ], [
+                    'open' => $to_restore['open'],
+                    'close' => $to_restore['close'],
+                    'is_closed' => $to_restore['is_closed'],
+                ]);
+                if ($request->show_result) {
+                    $updated[$outlet->outlet_code][] = $r;
+                }
+            }
+        }
+        return MyHelper::checkGet(['updated' => $updated]);
     }
 }

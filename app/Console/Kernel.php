@@ -28,7 +28,7 @@ class Kernel extends ConsoleKernel
          * sending the campaign schedule
          * run every 5 minute
          */
-        $schedule->call('Modules\Campaign\Http\Controllers\ApiCampaign@insertQueue')->everyFiveMinutes();
+        $schedule->call('Modules\Campaign\Http\Controllers\ApiCampaign@insertQueue')->cron('*/5 * * * *');
 
         /**
          * insert the promotion data that must be sent to the promotion_queue table
@@ -150,6 +150,12 @@ class Kernel extends ConsoleKernel
          * Void failed transaction subscription shopeepay
          */
         $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancelSubscription')->cron('*/1 * * * *');
+
+        /**
+         * Check the status of Gosend which is not updated after 5 minutes
+         * run every 5 minutes
+         */
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiGosendController@cronCheckStatus')->cron('*/5 * * * *');
 
     }
 

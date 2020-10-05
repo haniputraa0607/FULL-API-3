@@ -78,7 +78,7 @@ class ApiCronDealsController extends Controller
                 //     continue;
                 // }
 
-                DB::begintransaction();
+                DB::beginTransaction();
 
                 $singleTrx->paid_status = 'Cancelled';
                 $singleTrx->save();
@@ -117,6 +117,7 @@ class ApiCronDealsController extends Controller
             $log->success($count);
             return [$count];
         } catch (\Exception $e) {
+            DB::rollBack();
             $log->fail($e->getMessage());
         }
     }

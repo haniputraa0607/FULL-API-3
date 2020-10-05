@@ -17,6 +17,8 @@ Route::group(['prefix' => 'disburse'], function () {
     Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be']], function () {
         Route::any('sycnFeeTransaction', 'ApiIrisController@sycnFeeTransaction');
         Route::post('sendRecap', 'ApiDisburseController@sendRecap');
+        Route::post('sendRecapTransactionOultet', 'ApiDisburseController@sendRecapTransactionOultet');
+        Route::post('sendRecapTransactionEachOultet', 'ApiDisburseController@exportToOutlet');
         Route::any('dashboard', 'ApiDisburseController@dashboardV2');
         Route::any('outlets', 'ApiDisburseController@getOutlets');
         Route::any('user-franchise', 'ApiDisburseController@userFranchise');
@@ -29,6 +31,7 @@ Route::group(['prefix' => 'disburse'], function () {
         //settings bank
         Route::any('setting/bank-account', 'ApiDisburseSettingController@addBankAccount');
         Route::any('setting/edit-bank-account', 'ApiDisburseSettingController@editBankAccount');
+        Route::any('setting/delete-bank-account', 'ApiDisburseSettingController@deleteBankAccount');
         Route::any('setting/import-bank-account-outlet', 'ApiDisburseSettingController@importBankAccount');
         Route::any('bank', 'ApiDisburseSettingController@getBank');
         Route::any('setting/list-bank-account', 'ApiDisburseSettingController@listBankAccount');

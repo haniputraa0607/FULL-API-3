@@ -133,7 +133,7 @@ class ApiSubscriptionUse extends Controller
 							->whereDate('used_at', date('Y-m-d'))
 							->count();
 			if ( $subs_voucher_today >= $subs['subscription_user']['subscription']['daily_usage_limit'] ) {
-				$errors[] = 'Subscription daily usage limit has been exceeded.';
+				$errors[] = 'Penggunaan subscription telah melampaui batas harian';
     			return 0;
 			}
     	}

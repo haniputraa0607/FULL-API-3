@@ -741,6 +741,13 @@ class ApiOnlineTransaction extends Controller
             $isFree = 0;
         }
 
+        if ($post['grandTotal'] < 0 || $post['subtotal'] < 0) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Invalid transaction']
+            ];
+        }
+
         if ($promo_valid) {
         	if (($promo_type??false) == 'Discount delivery') {
         		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend);
@@ -2003,7 +2010,9 @@ class ApiOnlineTransaction extends Controller
 		            }
 		            else
 		            {
-		            	$promo_error = app($this->promo_campaign)->promoError('transaction', $errore);
+		                if(isset($errore)){
+		            		$promo_error = app($this->promo_campaign)->promoError('transaction', $errore);
+		            	}
 		            }
 	        	}
             }

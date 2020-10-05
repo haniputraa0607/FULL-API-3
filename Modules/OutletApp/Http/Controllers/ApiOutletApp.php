@@ -921,7 +921,11 @@ class ApiOutletApp extends Controller
         DB::beginTransaction();
 
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['taken_at' => date('Y-m-d H:i:s')]);
-        $order->show_rate_popup = 1;
+
+        if ($order->taken_by == 'Customer') {
+            $order->show_rate_popup = 1;
+        }
+
         $order->save();
         if ($pickup) {
             //send notif to customer
@@ -1685,6 +1689,7 @@ class ApiOutletApp extends Controller
             //refund ke balance
             // if($order['trasaction_payment_type'] == "Midtrans"){
             $multiple = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
+            $point = 0;
             if ($multiple) {
                 foreach ($multiple as $pay) {
                     if ($pay['type'] == 'Balance') {
@@ -1888,15 +1893,6 @@ class ApiOutletApp extends Controller
                         }
                         $rejectBalance = true;
                     }
-                    $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
-                    if ($refund == false) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['Insert Cashback Failed'],
-                        ]);
-                    }
-                    $rejectBalance = true;
                 } else {
                     $payBalance = TransactionPaymentBalance::where('id_transaction', $order['id_transaction'])->first();
                     if ($payBalance) {
@@ -1942,7 +1938,7 @@ class ApiOutletApp extends Controller
             }
 
             //send notif point refund
-            if($rejectBalance = true){
+            if($rejectBalance == true){
                 $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'],
                 [
                     "outlet_name"      => $outlet['outlet_name'],
@@ -2353,7 +2349,10 @@ class ApiOutletApp extends Controller
 
     public function refreshDeliveryStatus(Request $request)
     {
-        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by', 'GO-SEND')->first();
+        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->with(['outlet' => function($q) {
+            $q->select('id_outlet', 'outlet_name');
+        }])->where('pickup_by', 'GO-SEND')->first();
+        $outlet = $trx->outlet;
         if (!$trx) {
             return MyHelper::checkGet($trx, 'Transaction Not Found');
         }

@@ -98,7 +98,7 @@ class ApiCronTrxController extends Controller
                 }elseif($singleTrx->trasaction_payment_type == 'Ipay88') {
                     $trx_ipay = TransactionPaymentIpay88::where('id_transaction',$singleTrx->id_transaction)->first();
 
-                    if (strtolower($trx_ipay->payment_method) == 'credit card' && $singleTrx->transaction_date > date('Y-m-d H:i:s', strtotime('- 15minutes'))) {
+                    if ($trx_ipay && strtolower($trx_ipay->payment_method) == 'credit card' && $singleTrx->transaction_date > date('Y-m-d H:i:s', strtotime('- 15minutes'))) {
                         continue;
                     }
 
@@ -116,7 +116,7 @@ class ApiCronTrxController extends Controller
                 //     continue;
                 // }
 
-                DB::begintransaction();
+                DB::beginTransaction();
 
                 MyHelper::updateFlagTransactionOnline($singleTrx, 'cancel', $user);
 
@@ -176,6 +176,7 @@ class ApiCronTrxController extends Controller
             $log->success('success');
             return response()->json(['success']);
         } catch (\Exception $e) {
+            DB::rollBack();
             $log->fail($e->getMessage());
         }
     }
@@ -772,7 +773,7 @@ class ApiCronTrxController extends Controller
                 }
 
                 //send notif point refund
-                if($rejectBalance = true){
+                if($rejectBalance == true){
                     $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'],
                     [
                         "outlet_name"      => $outlet['outlet_name'],
@@ -792,6 +793,7 @@ class ApiCronTrxController extends Controller
             }
             $log->success($result);
         } catch (\Exception $e) {
+            DB::rollBack();
             $log->fail($e->getMessage());
         }
     }
