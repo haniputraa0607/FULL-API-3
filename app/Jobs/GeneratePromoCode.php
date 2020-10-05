@@ -59,12 +59,12 @@ class GeneratePromoCode implements ShouldQueue
     			$remain_coupon = $remain_coupon - $chunk;
     		}
 
-    		print_r([
+    		/*print_r([
     			'cunk' => $chunk, 
     			'total coupon' => $total_coupon, 
     			'generated code' => $generated_code, 
     			'remain coupon' => $remain_coupon
-    		]);
+    		]);*/
     		$generated_code += $generate;
     		$generate = $this->generateCode($generate);
     	}
@@ -100,7 +100,7 @@ class GeneratePromoCode implements ShouldQueue
             } 
             catch (\Exception $e) 
             {
-                echo 'Insert Promo Codes failed. Retrying to generate code';
+                // echo 'Insert Promo Codes failed. Retrying to generate code';
             	$this->generateCode($total_coupon);
             }
         } 
@@ -117,7 +117,7 @@ class GeneratePromoCode implements ShouldQueue
             } 
             catch (\Exception $e) 
             {
-                echo 'Update Promo Codes failed. Retrying to generate code';
+                // echo 'Update Promo Codes failed. Retrying to generate code';
             	$this->generateCode($total_coupon);
             }
         }
