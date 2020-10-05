@@ -33,37 +33,34 @@ class ApiInvalidTransactionController extends Controller
     public function filterMarkFlag(Request $request){
         $post = $request->json()->all();
 
-        if(isset($post['invalid']) || isset($post['filter_type'])){
-            $data = Transaction::join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-                ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-                ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
-                ->whereNull('dot.id_disburse_outlet');
+        $data = Transaction::join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->leftJoin('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
+            ->whereNull('dot.id_disburse_outlet')
+            ->select('outlets.*', 'transactions.*', 'transaction_pickups.*');
 
-            if(isset($post['invalid']) && $post['invalid'] == 1){
-                $data = $data->where('transaction_flag_invalid', 'Invalid');
-            }else{
-                $data = $data->where(function ($q){
-                    $q->where('transaction_flag_invalid', 'Valid')
-                        ->orWhereNull('transaction_flag_invalid');
-                });
-            }
-
-            if(isset($post['filter_type']) && !empty($post['filter_type'])){
-
-                if($post['filter_type'] == 'receipt_number'){
-                    $param = array_column($post['conditions'], 'parameter');
-                    $data = $data->whereIn('transaction_receipt_number', $param);
-                }elseif($post['filter_type'] == 'order_id'){
-                    $param = array_column($post['conditions'], 'parameter');
-                    $data = $data->whereIn('order_id', $param);
-                }
-            }
-
-            $result = $data->paginate(20);
-            return response()->json(MyHelper::checkGet($result));
+        if(isset($post['invalid']) && $post['invalid'] == 1){
+            $data = $data->where('transaction_flag_invalid', 'Invalid');
         }else{
-            return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
+            $data = $data->where(function ($q){
+                $q->where('transaction_flag_invalid', 'Valid')
+                    ->orWhereNull('transaction_flag_invalid');
+            });
         }
+
+        if(isset($post['filter_type']) && !empty($post['filter_type'])){
+
+            if($post['filter_type'] == 'receipt_number'){
+                $param = array_column($post['conditions'], 'parameter');
+                $data = $data->whereIn('transaction_receipt_number', $param);
+            }elseif($post['filter_type'] == 'order_id'){
+                $param = array_column($post['conditions'], 'parameter');
+                $data = $data->whereIn('order_id', $param);
+            }
+        }
+
+        $result = $data->paginate(20);
+        return response()->json(MyHelper::checkGet($result));
     }
 
     public function markAsInvalidAdd(Request $request){
