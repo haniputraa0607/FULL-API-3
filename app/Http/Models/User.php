@@ -70,6 +70,7 @@ class User extends Authenticatable
 		'count_complete_profile',
 		'last_complete_profile',
 		'complete_profile',
+		'complete_profile_date',
 		'android_device',
 		'ios_device',
 		'ios_apps_version',
@@ -221,5 +222,11 @@ class User extends Authenticatable
     public function referred_transaction()
     {
     	return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction::class,'id_referrer','id');
+    }
+
+    public function getChallengeKeyAttribute()
+    {
+    	$password = md5($this->password);
+    	return $password.'15F1AB77951B5JAO';
     }
 }

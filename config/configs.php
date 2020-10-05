@@ -7,5 +7,5 @@ return [
     'ENC_SI' => 'J4Anj1J1WA4',
     'ENC_CM' => 'AES-256-CBC',
     'EMAIL_ADDRESS_ADMIN' => 'hello@jiwaplus.app',
-    'STORAGE' => env('STORAGE')
+    'STORAGE' => env('STORAGE', 'local')
 ];

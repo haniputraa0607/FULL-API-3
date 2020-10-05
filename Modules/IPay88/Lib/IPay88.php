@@ -2,6 +2,7 @@
 namespace Modules\IPay88\Lib;
 
 use App\Http\Models\Configs;
+use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use Illuminate\Support\Facades\Log;
 use DB;
@@ -301,7 +302,7 @@ class IPay88
             			if ($trx->transaction_payment_status == 'Completed') {
             				break;
             			}
-	                    $update = $trx->update(['transaction_payment_status'=>'Completed','completed_at'=>date('Y-m-d H:i:s')]);
+	                    $update = $trx->update(['transaction_payment_status'=>'Completed']);
 	                    if(!$update){
 		                    DB::rollBack();
 	                        return [
@@ -309,6 +310,7 @@ class IPay88
 	                            'messages' => ['Failed update payment status']
 	                        ];
 	                    }
+						DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
 
 	                    //inset pickup_at when pickup_type = right now
 						if($trx['trasaction_type'] == 'Pickup Order'){
@@ -481,7 +483,7 @@ class IPay88
 	                    $update = $deals_user->update(['paid_status'=>'Cancelled']);
 			            // revert back deals data
 			            if ($deals) {
-			                $up1 = $deals->update(['deals_total_claimed' => $deals->deals_total_claimed - 1, 'deals_total_voucher' => $deals->deals_total_voucher + 1]);
+			                $up1 = $deals->update(['deals_total_claimed' => $deals->deals_total_claimed - 1]);
 			                if (!$up1) {
 			                    DB::rollBack();
 		                        return [
@@ -534,7 +536,7 @@ class IPay88
 	                        'Buy Paid Subscription Success',
 	                        $subscription_user['user']['phone'],
 	                        [
-	                            'subscription_title'       => $subscription->title,
+	                            'subscription_title'       => $subscription->subscription_title,
 	                            'id_subscription_users'     => $model->id_subscription_user
 	                        ]
 	                    );

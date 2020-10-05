@@ -80,7 +80,10 @@ class PromoCampaign extends Eloquent
 		'limitation_usage',
 		'step_complete',
         'charged_central',
-        'charged_outlet'
+        'charged_outlet',
+        'export_date',
+        'export_url',
+        'export_status'
 	];
 
 	public function user()
@@ -165,5 +168,27 @@ class PromoCampaign extends Eloquent
     public function brand()
     {
 		return $this->belongsTo(\Modules\Brand\Entities\Brand::class,'id_brand');
+	}
+
+	public function getGetAllRulesAttribute() {
+		$this->load([
+			'promo_campaign_outlets',
+			'promo_campaign_product_discount_rules',
+			'promo_campaign_tier_discount_rules',
+			'promo_campaign_buyxgety_rules',
+			'promo_campaign_product_discount.product' => function($q) {
+				$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+			},
+			'promo_campaign_buyxgety_product_requirement.product' => function($q) {
+				$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+			},
+			'promo_campaign_tier_discount_product.product' => function($q) {
+				$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+			},
+			'promo_campaign_tier_discount_rules.product' => function($q) {
+				$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+			},
+			'brand'
+		]);
 	}
 }

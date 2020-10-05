@@ -287,7 +287,6 @@ class SendCampaignJob implements ShouldQueue
                 break;
 
             case 'push':
-
                 foreach($recipient as $key => $receipient){
                     $dataOptional          = [];
                     $image = null;
@@ -377,9 +376,7 @@ class SendCampaignJob implements ShouldQueue
 
             case 'inbox':
                 $user = User::whereIn('phone',$recipient)->get()->toArray();
-
                 foreach($user as $key => $receipient){
-
                     $inbox = [];
                     $inbox['id_campaign'] = $campaign['id_campaign'];
                     $inbox['id_user']     = $receipient['id'];

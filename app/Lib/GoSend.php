@@ -47,7 +47,7 @@ class GoSend
 
         $post['routes'][0]['originName']         = "";
         $post['routes'][0]['originNote']         = $origin['note'];
-        $post['routes'][0]['originContactName']  = $origin['name'];
+        $post['routes'][0]['originContactName']  = 'JIWA+';
         $post['routes'][0]['originContactPhone'] = $origin['phone'];
         $post['routes'][0]['originLatLong']      = $origin['latitude'] . ',' . $origin['longitude'];
         $post['routes'][0]['originAddress']      = $origin['address'] . '. ' . $origin['note'];
@@ -249,10 +249,11 @@ class GoSend
 
         if (!$found) {
             $trx_pickup = TransactionPickup::where('id_transaction', $dataUpdate['id_transaction'])->first();
-            if ($dataUpdate['status'] == 'Completed') {
-                $trx = $trx_pickup->update(['show_confirm' => 1]);
-            }
             $trx = Transaction::where('id_transaction', $dataUpdate['id_transaction'])->first();
+            if ($dataUpdate['status'] == 'delivered') {
+                $trx_pickup->update(['show_confirm' => '1']);
+                $trx->update(['show_rate_popup' => '1']);
+            }
             $outlet  = Outlet::where('id_outlet', $trx->id_outlet)->first();
             $phone   = User::select('phone')->where('id', $trx->id_user)->pluck('phone')->first();
             $dataPush = [
@@ -275,17 +276,18 @@ class GoSend
                 'delivered'             => 'Pesananmu sudah sampai! Selamat menikmati',
                 'no_driver'             => 'Belum berhasil menemukan driver',
             ];
-
-            $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
-                [
-                    'id_reference'    => $dataUpdate['id_transaction'],
-                    'receipt_number'  => $trx->transaction_receipt_number,
-                    'outlet_code'     => $outlet->outlet_code,
-                    'outlet_name'     => $outlet->outlet_name,
-                    'delivery_status' => $replacer[$delivery_status] ?? $delivery_status,
-                    'order_id'        => $trx_pickup->order_id,
-                ]
-            );
+            if($replacer[$delivery_status] ?? false) {
+                $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
+                    [
+                        'id_reference'    => $dataUpdate['id_transaction'],
+                        'receipt_number'  => $trx->transaction_receipt_number,
+                        'outlet_code'     => $outlet->outlet_code,
+                        'outlet_name'     => $outlet->outlet_name,
+                        'delivery_status' => $replacer[$delivery_status] ?? $delivery_status,
+                        'order_id'        => $trx_pickup->order_id,
+                    ]
+                );                
+            }
             TransactionPickupGoSendUpdate::create($dataUpdate);
         }
     }

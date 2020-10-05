@@ -24,6 +24,7 @@ use App\Http\Models\CampaignWhatsappSent;
 use App\Http\Models\CampaignWhatsappSentContent;
 use App\Http\Models\News;
 use App\Http\Models\OauthAccessToken;
+use Modules\RedirectComplex\Entities\RedirectComplexReference;
 
 //use Modules\Campaign\Http\Requests\campaign_list;
 //use Modules\Campaign\Http\Requests\campaign_create;
@@ -274,6 +275,12 @@ class ApiCampaign extends Controller
 						$campaign['campaign_push_name_reference'] = $q['outlet_name'];
 					}
 				}
+				elseif($campaign['campaign_push_clickto'] == "Complex"){
+					if($campaign['campaign_push_id_reference'] != 0){
+						$q = RedirectComplexReference::where('id_redirect_complex_reference','=',$campaign['campaign_push_id_reference'])->get()->first();
+						$campaign['campaign_push_name_reference'] = $q['name'];
+					}
+				}
 			}
 
 			if($campaign['campaign_media_inbox'] == "Yes"){
@@ -473,6 +480,7 @@ class ApiCampaign extends Controller
 
 			$campaigns = Campaign::where('campaign_send_at', '>=', $now2)->where('campaign_send_at', '<=', $now)->where('campaign_is_sent', 'No')->where('campaign_complete', '1')->get();
 			foreach ($campaigns as $i => $campaign) {
+                $update = Campaign::where('id_campaign','=',$campaign->id_campaign)->update(['campaign_is_sent' => 'Yes']);
 				if($campaign->campaign_generate_receipient=='Send At Time'){
 					$post=['id_campaign'=>$campaign->id_campaign];
 					GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');

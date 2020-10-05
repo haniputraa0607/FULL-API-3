@@ -20,7 +20,7 @@ class PayNow extends FormRequest
     {
         return [
         'id_subscription_user'   => 'required|integer',
-        'payment_method'         => 'required|in:midtrans,manual,balance',
+        'payment_method'         => 'required|in:midtrans,manual,balance,ipay88,shopeepay',
         'id_manual_payment'      => ['required_if:payment_deals,manual', new InManualPayment],
         'id_bank_method'         => ['required_if:payment_deals,manual', new InBankMethod],
         'id_bank'                => ['required_if:payment_deals,manual', new InBanks],

@@ -397,8 +397,8 @@ class ApiSubscriptionClaim extends Controller
 
     /* CREATE USER */
     function createSubscriptionUser($id, $dataSubs, $price=null) {
-        $subscription_price_point = $dataSubs->subscription_price_point;
-        $subscription_price_cash = $dataSubs->subscription_price_cash;
+        $subscription_price_point = $dataSubs->subscription_price_point??0;
+        $subscription_price_cash = $dataSubs->subscription_price_cash??0;
 
         $data = [
             'id_user'                   => $id,

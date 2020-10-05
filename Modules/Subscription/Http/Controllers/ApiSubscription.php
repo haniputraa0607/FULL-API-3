@@ -149,10 +149,6 @@ class ApiSubscription extends Controller
             $data['subscription_total'] = $post['subscription_total'];
         }
 
-        if (isset($post['user_limit'])) {
-            $data['user_limit'] = $post['user_limit'];
-        }
-
         if (isset($post['subscription_voucher_start'])) {
             $data['subscription_voucher_start'] = date('Y-m-d H:i:s', strtotime($post['subscription_voucher_start']));
         }
@@ -213,9 +209,6 @@ class ApiSubscription extends Controller
             $data['deals_short_description'] = $post['deals_short_description'];
         }
 
-
-
-
         if (isset($post['deals_total_claimed'])) {
             $data['deals_total_claimed'] = $post['deals_total_claimed'];
         }
@@ -240,6 +233,9 @@ class ApiSubscription extends Controller
             $data['charged_outlet'] = $post['charged_outlet'];
         }
 
+    	if ( ($data['subscription_type']??false) == 'welcome') {
+        	$data['user_limit'] = 1;
+        }
         $data['subscription_step_complete'] = 0;
         return $data;
     }
@@ -854,7 +850,9 @@ class ApiSubscription extends Controller
 	                    },
 	                    'brand'
                     ])
-                    ->withCount('subscription_users')
+                    ->withCount(['subscription_users' => function($q) {
+                    	$q->where('paid_status','!=','Cancelled');
+                    }])
                     // ->select(
                     //     'subscription_description'
                     // )
@@ -1558,7 +1556,19 @@ class ApiSubscription extends Controller
     public static function  checkGet($data, $message = null){
             if($data && !empty($data)) return ['status' => 'success', 'result' => $data];
             else if(empty($data)) {
-                if($message == null){
+            	$empty_text = Setting::where('key','=','message_mysubscription_empty_header')
+	                ->orWhere('key','=','message_mysubscription_empty_content')
+	                ->orderBy('id_setting')
+	                ->get();
+	            $text['header'] = $empty_text[0]['value']??'Anda belum memiliki Paket.';
+	            $text['content'] = $empty_text[1]['value']??'Banyak keuntungan dengan berlangganan.';
+	            return [
+	                'status'   => 'fail',
+	                'messages' => ['My Subscription is empty'],
+	                'empty'    => $text,
+	            ];
+
+                /*if($message == null){
                     $message = 'Maaf, halaman ini tidak tersedia';
                 }
                 return [
@@ -1568,7 +1578,7 @@ class ApiSubscription extends Controller
                         'header'    => "",
                         'content'   => ""
                     ]
-                ];
+                ];*/
             }
             else return ['status' => 'fail', 'messages' => ['failed to retrieve data']];
     }
@@ -1811,34 +1821,36 @@ class ApiSubscription extends Controller
                 //check voucher total
                 if ($sub['subscription_user_vouchers_count'] < $sub['subscription']['subscription_voucher_total']) {
 
-                    $data[$key]['id_subscription']              = $sub['subscription']['id_subscription'];
-                    $data[$key]['id_subscription_user']         = $sub['id_subscription_user'];
-                    $data[$key]['subscription_end']             = date('Y-m-d H:i:s', strtotime($sub['subscription']['subscription_end']));
-                    $data[$key]['subscription_publish_end']     = date('Y-m-d H:i:s', strtotime($sub['subscription']['subscription_publish_end']));
-                    $data[$key]['subscription_expired_at']      = date('Y-m-d H:i:s', strtotime($sub['subscription_expired_at']));
-                    $data[$key]['subscription_voucher_total']   = $sub['subscription']['subscription_voucher_total'];
-                    $data[$key]['used_voucher']                 = $sub['used_voucher'];
-                    $data[$key]['available_voucher']            = $sub['available_voucher'];
+                    $temp['id_subscription']              = $sub['subscription']['id_subscription'];
+                    $temp['id_subscription_user']         = $sub['id_subscription_user'];
+                    $temp['subscription_end']             = date('Y-m-d H:i:s', strtotime($sub['subscription']['subscription_end']));
+                    $temp['subscription_publish_end']     = date('Y-m-d H:i:s', strtotime($sub['subscription']['subscription_publish_end']));
+                    $temp['subscription_expired_at']      = date('Y-m-d H:i:s', strtotime($sub['subscription_expired_at']));
+                    $temp['subscription_voucher_total']   = $sub['subscription']['subscription_voucher_total'];
+                    $temp['used_voucher']                 = $sub['used_voucher'];
+                    $temp['available_voucher']            = $sub['available_voucher'];
                     if (empty($sub['subscription']['subscription_image'])) {
-                        $data[$key]['url_subscription_image'] = config('url.storage_url_api').'img/default.jpg';
+                        $temp['url_subscription_image'] = config('url.storage_url_api').'img/default.jpg';
                     }
                     else {
-                        $data[$key]['url_subscription_image'] = config('url.storage_url_api').$sub['subscription']['subscription_image'];
+                        $temp['url_subscription_image'] = config('url.storage_url_api').$sub['subscription']['subscription_image'];
                     }
 
-                    $data[$key]['time_to_end']                  = strtotime($sub['subscription']['subscription_expired_at'])-time();
-                    $data[$key]['url_webview']                  = config('url.app_api_url') ."api/webview/mysubscription/". $sub['id_subscription_user'];
-                    $data[$key]['time_server']                  = date('Y-m-d H:i:s');
+                    $temp['time_to_end']                  = strtotime($sub['subscription']['subscription_expired_at'])-time();
+                    $temp['url_webview']                  = config('url.app_api_url') ."api/webview/mysubscription/". $sub['id_subscription_user'];
+                    $temp['time_server']                  = date('Y-m-d H:i:s');
 
                     if ($sub['subscription_expired_at'] < date('Y-m-d H:i:s') || $sub['available_voucher'] === 0) {
 	            		$sub['is_used'] = 0;
 	            	}
-                    $data[$key]['is_used']                  	= $sub['is_used'];
-                    $data[$key]['subscription_end_indo']             = MyHelper::dateFormatInd($sub['subscription']['subscription_end'], false, false).' pukul '.date('H:i', strtotime($sub['subscription']['subscription_end']));
-                    $data[$key]['subscription_publish_end_indo']     = MyHelper::dateFormatInd($sub['subscription']['subscription_publish_end'], false, false).' pukul '.date('H:i', strtotime($sub['subscription']['subscription_publish_end']));
-                    $data[$key]['time_server_indo']                  = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
-                    $data[$key]['subscription_expired_at_indo']      = MyHelper::dateFormatInd($sub['subscription_expired_at'], false, false);
-                    $data[$key]['subscription_expired_at_time_indo'] = 'pukul '.date('H:i', strtotime($sub['subscription_expired_at']));
+                    $temp['is_used']                  	= $sub['is_used'];
+                    $temp['subscription_end_indo']             = MyHelper::dateFormatInd($sub['subscription']['subscription_end'], false, false).' pukul '.date('H:i', strtotime($sub['subscription']['subscription_end']));
+                    $temp['subscription_publish_end_indo']     = MyHelper::dateFormatInd($sub['subscription']['subscription_publish_end'], false, false).' pukul '.date('H:i', strtotime($sub['subscription']['subscription_publish_end']));
+                    $temp['time_server_indo']                  = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
+                    $temp['subscription_expired_at_indo']      = MyHelper::dateFormatInd($sub['subscription_expired_at'], false, false);
+                    $temp['subscription_expired_at_time_indo'] = 'pukul '.date('H:i', strtotime($sub['subscription_expired_at']));
+
+                    $data[] = $temp;
                 }
             }
         }

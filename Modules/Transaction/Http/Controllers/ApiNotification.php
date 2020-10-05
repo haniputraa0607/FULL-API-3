@@ -6,6 +6,7 @@ use App\Http\Models\Configs;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPaymentManual;
 use App\Http\Models\TransactionPaymentOffline;
+use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use App\Http\Models\TransactionPaymentMidtran;
@@ -412,6 +413,7 @@ class ApiNotification extends Controller {
             'id_transaction' => $trx['id_transaction'],
             'name'  => $trx->user->name,
             'id' => $mid['order_id'],
+            'order_id' => $mid['order_id'],
             'outlet_name' => $outlet,
             'detail' => $detail,
             'payment' => $payment,
@@ -455,6 +457,7 @@ class ApiNotification extends Controller {
             'status' => $trx['transaction_payment_status'],
             'name'  => $trx->user->name,
             'id' => $mid['order_id'],
+            'order_id' => $mid['order_id'],
             'outlet_name' => $outlet,
             'detail' => $detail,
             'id_reference' => $mid['order_id'].','.$trx['id_outlet']
@@ -497,6 +500,7 @@ class ApiNotification extends Controller {
             'status' => $trx['transaction_payment_status'],
             'name'  => $trx->user->name,
             'id' => $mid['order_id'],
+            'order_id' => $mid['order_id'],
             'outlet_name' => $outlet,
             'detail' => $detail,
             'id_reference' => $mid['order_id'].','.$trx['id_outlet']
@@ -889,6 +893,7 @@ Detail: ".$link['short'],
                 if (!$check) {
                     return false;
                 }
+                DisburseJob::dispatch(['id_transaction' => $trx->id_transaction])->onConnection('disbursequeue');
 
                 $fraud = $this->checkFraud($trx);
                 if (!$fraud) {
@@ -902,7 +907,7 @@ Detail: ".$link['short'],
                 }
             }
         } elseif (isset($midtrans['status_code']) && $midtrans['status_code'] == 202) {
-            $check = Transaction::where('id_transaction', $trx->id_transaction)->update(['transaction_payment_status' => 'Cancelled']);
+            $check = Transaction::where('id_transaction', $trx->id_transaction)->update(['transaction_payment_status' => 'Cancelled', 'void_date' => date('Y-m-d H:i:s')]);
 
             if (!$check) {
                 return false;

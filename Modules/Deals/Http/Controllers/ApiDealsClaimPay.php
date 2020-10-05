@@ -27,6 +27,7 @@ use Modules\Deals\Http\Controllers\ApiDealsVoucher;
 use Modules\Deals\Http\Controllers\ApiDealsClaim;
 use Modules\Balance\Http\Controllers\NewTopupController;
 use Modules\Balance\Http\Controllers\BalanceController;
+use Modules\ShopeePay\Entities\DealsPaymentShopeePay;
 
 use Modules\Deals\Http\Requests\Deals\Voucher;
 use Modules\Deals\Http\Requests\Claim\Paid;
@@ -51,6 +52,7 @@ class ApiDealsClaimPay extends Controller
         if(\Module::collections()->has('Autocrm')) {
             $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         }
+        $this->shopeepay      = "Modules\ShopeePay\Http\Controllers\ShopeePayController";
     }
 
     public $saveImage = "img/receipt_deals/";
@@ -320,6 +322,14 @@ class ApiDealsClaimPay extends Controller
                             'cancel_message' => 'Are you sure you want to cancel this transaction?'
                         ]
                     ];
+                }elseif (($pay['payment']??false) == 'shopeepay'){
+                    DB::commit();
+                    $pay['message_timeout_shopeepay'] = "Sorry, your payment has expired";
+                    $pay['timer_shopeepay'] = (int) MyHelper::setting('shopeepay_validity_period','value', 300);
+                    return [
+                        'status'    => 'success',
+                        'result'    => $pay
+                    ];
                 }
             }
 
@@ -438,6 +448,11 @@ class ApiDealsClaimPay extends Controller
                 $pay = $this->ovo($dataDeals, $voucher, null,$request->json('phone'));
             }
 
+           /* ShopeePay */
+            if ($request->json('payment_deals') && $request->json('payment_deals') == "shopeepay") {
+                $pay = $this->shopeepay($dataDeals, $voucher, null);
+            }
+
             /* MANUAL */
             if ($request->json('payment_deals') && $request->json('payment_deals') == "manual") {
                 $post             = $request->json()->all();
@@ -530,6 +545,49 @@ class ApiDealsClaimPay extends Controller
             'voucher'  => DealsUser::with(['userMid', 'dealVoucher'])->where('id_deals_user', $voucher->id_deals_user)->first(),
             'data'     => [],
             'deals'    => $deals
+        ];
+    }
+
+    /* ShopeePay */
+    function shopeepay($deals, $voucher, $grossAmount=null)
+    {
+        $paymentShopeepay = DealsPaymentShopeePay::where('id_deals_user', $voucher['id_deals_user'])->first();
+        $trx_shopeepay    = null;
+        if (is_null($grossAmount)) {
+            if (!$this->updateInfoDealUsers($voucher->id_deals_user, ['payment_method' => 'Shopeepay'])) {
+                 return false;
+            }
+        }
+        $grossAmount = $grossAmount??($voucher->voucher_price_cash);
+        if (!$paymentShopeepay) {
+            $paymentShopeepay                       = new DealsPaymentShopeePay;
+            $paymentShopeepay->id_deals_user        = $voucher['id_deals_user'];
+            $paymentShopeepay->id_deals             = $deals['id_deals'];
+            $paymentShopeepay->amount               = $grossAmount * 100;
+            $paymentShopeepay->order_id = time().sprintf("%05d", $voucher->id_deals_user);
+            $paymentShopeepay->save();
+            $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'deals', $errors);
+        } elseif (!($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http)) {
+            $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'deals', $errors);
+        }
+        if (!$trx_shopeepay || !(($trx_shopeepay['status_code'] ?? 0) == 200 && ($trx_shopeepay['response']['debug_msg'] ?? '') == 'success' && ($trx_shopeepay['response']['errcode'] ?? 0) == 0)) {
+            if ($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http) {
+                return [
+                    'redirect_url_app'  => $paymentShopeepay->redirect_url_app,
+                    'redirect_url_http' => $paymentShopeepay->redirect_url_http,
+                ];
+            }
+            return false;
+        }
+        $paymentShopeepay->redirect_url_app  = $trx_shopeepay['response']['redirect_url_app'];
+        $paymentShopeepay->redirect_url_http = $trx_shopeepay['response']['redirect_url_http'];
+        $paymentShopeepay->save();
+        return [
+            'redirect' => 'true',
+            'payment' => 'shopeepay',
+            'id_deals_user' => $voucher->id_deals_user,
+            'redirect_url_app'  => $paymentShopeepay->redirect_url_app,
+            'redirect_url_http' => $paymentShopeepay->redirect_url_http
         ];
     }
     //process void
@@ -897,6 +955,8 @@ class ApiDealsClaimPay extends Controller
                             'payment'           => 'ipay88'
                         ];
                         return $ipay88;
+                    }elseif($paymentMethod == 'shopeepay'){
+                        return $this->shopeepay($deals, $voucher, -$kurangBayar);
                     }
                 }
             }

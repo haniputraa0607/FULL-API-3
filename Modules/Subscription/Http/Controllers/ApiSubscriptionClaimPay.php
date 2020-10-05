@@ -16,6 +16,7 @@ use Modules\Subscription\Entities\SubscriptionOutlet;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use Modules\IPay88\Entities\SubscriptionPaymentIpay88;
+use Modules\ShopeePay\Entities\SubscriptionPaymentShopeePay;
 use App\Http\Models\Outlet;
 use App\Http\Models\LogPoint;
 use App\Http\Models\LogBalance;
@@ -44,6 +45,7 @@ class ApiSubscriptionClaimPay extends Controller
         if(\Module::collections()->has('Autocrm')) {
             $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         }
+        $this->shopeepay      = "Modules\ShopeePay\Http\Controllers\ShopeePayController";
     }
 
     public $saveImage = "img/receipt_deals/";
@@ -322,6 +324,14 @@ class ApiSubscriptionClaimPay extends Controller
                             'cancel_message' => 'Are you sure you want to cancel this transaction?'
                         ]
                     ];
+                }elseif (($pay['payment']??false) == 'shopeepay'){
+                    DB::commit();
+                    $pay['message_timeout_shopeepay'] = "Sorry, your payment has expired";
+                    $pay['timer_shopeepay'] = (int) MyHelper::setting('shopeepay_validity_period','value', 300);
+                    return [
+                        'status'    => 'success',
+                        'result'    => $pay
+                    ];
                 }
             }
 
@@ -392,21 +402,20 @@ class ApiSubscriptionClaimPay extends Controller
     function paymentMethod($dataSubs, $voucher, $request)
     {
         //IF USING BALANCE
-        if ($request->get('balance') && $request->get('balance') == true){
+        if ($request->json('balance') && $request->json('balance') == true){
             /* BALANCE */
-            $pay = $this->balance($dataSubs, $voucher,$request->get('payment_method'), $request->json()->all());
+            $pay = $this->balance($dataSubs, $voucher,$request->json('payment_method'), $request->json()->all());
         }else{
-
             /* BALANCE */
-            if ($request->get('payment_method') && $request->get('payment_method') == "balance") {
+            if ($request->json('payment_method') && $request->json('payment_method') == "balance") {
                 $pay = $this->balance($dataSubs, $voucher);
             }
            /* MIDTRANS */
-            if ($request->get('payment_method') && $request->get('payment_method') == "midtrans") {
+            if ($request->json('payment_method') && $request->json('payment_method') == "midtrans") {
                 $pay = $this->midtrans($dataSubs, $voucher);
             }
            /* IPay88 */
-            if ($request->get('payment_method') && strtolower($request->get('payment_method')) == "ipay88") {
+            if ($request->json('payment_method') && strtolower($request->json('payment_method')) == "ipay88") {
                 $pay = $this->ipay88($dataSubs, $voucher, null, $request->json()->all());
                 $ipay88 = [
                     'MERCHANT_TRANID'   => $pay['order_id'],
@@ -416,6 +425,10 @@ class ApiSubscriptionClaimPay extends Controller
                 return $ipay88;
             }
 
+           /* ShopeePay */
+            if ($request->json('payment_method') && $request->json('payment_method') == "shopeepay") {
+                $pay = $this->shopeepay($dataSubs, $voucher, null);
+            }
         }
 
         if(!isset($pay)){
@@ -490,6 +503,49 @@ class ApiSubscriptionClaimPay extends Controller
         return $create;
     }
 
+    /* ShopeePay */
+    function shopeepay($subscription, $voucher, $grossAmount=null)
+    {
+        $paymentShopeepay = SubscriptionPaymentShopeePay::where('id_subscription_user', $voucher['id_subscription_user'])->first();
+        $trx_shopeepay    = null;
+        if (is_null($grossAmount)) {
+            if (!$this->updateInfoDealUsers($voucher->id_subscription_user, ['payment_method' => 'Shopeepay'])) {
+                 return false;
+            }
+        }
+        $grossAmount = $grossAmount??($voucher->subscription_price_cash);
+        if (!$paymentShopeepay) {
+            $paymentShopeepay                       = new SubscriptionPaymentShopeePay;
+            $paymentShopeepay->id_subscription_user        = $voucher['id_subscription_user'];
+            $paymentShopeepay->id_subscription             = $subscription['id_subscription'];
+            $paymentShopeepay->amount               = $grossAmount * 100;
+            $paymentShopeepay->order_id = $voucher->subscription_user_receipt_number;
+            $paymentShopeepay->save();
+            $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'subscription', $errors);
+        } elseif (!($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http)) {
+            $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'subscription', $errors);
+        }
+        if (!$trx_shopeepay || !(($trx_shopeepay['status_code'] ?? 0) == 200 && ($trx_shopeepay['response']['debug_msg'] ?? '') == 'success' && ($trx_shopeepay['response']['errcode'] ?? 0) == 0)) {
+            if ($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http) {
+                return [
+                    'redirect_url_app'  => $paymentShopeepay->redirect_url_app,
+                    'redirect_url_http' => $paymentShopeepay->redirect_url_http,
+                ];
+            }
+            return false;
+        }
+        $paymentShopeepay->redirect_url_app  = $trx_shopeepay['response']['redirect_url_app'];
+        $paymentShopeepay->redirect_url_http = $trx_shopeepay['response']['redirect_url_http'];
+        $paymentShopeepay->save();
+        return [
+            'redirect' => 'true',
+            'payment' => 'shopeepay',
+            'id_subscription_user' => $voucher->id_subscription_user,
+            'redirect_url_app'  => $paymentShopeepay->redirect_url_app,
+            'redirect_url_http' => $paymentShopeepay->redirect_url_http
+        ];
+    }
+
     /* BALANCE */
     function balance($subs, $voucher, $paymentMethod = null, $post = null)
     {
@@ -510,16 +566,19 @@ class ApiSubscriptionClaimPay extends Controller
             if ($this->updateLogPoint(- $myBalance, $voucher)) {
                 if ($this->updateInfoDealUsers($voucher->id_subscription_user, $dataSubsUserUpdate)) {
                     if($paymentMethod == 'midtrans'){
-                        return $this->midtrans($subs, $voucher, $dataSubsUserUpdate['balance_nominal']);
+                        return $this->midtrans($subs, $voucher, -$kurangBayar);
                     }
                     if(strtolower($paymentMethod) == 'ipay88'){
-                        $pay = $this->ipay88($subs, $voucher, $dataSubsUserUpdate['balance_nominal'], $post);
+                        $pay = $this->ipay88($subs, $voucher, -$kurangBayar, $post);
                         $ipay88 = [
                             'MERCHANT_TRANID'   => $pay['order_id'],
                             'AMOUNT'            => $pay['amount'],
                             'payment'           => 'ipay88'
                         ];
                         return $ipay88;
+                    }
+                    if($paymentMethod == 'shopeepay'){
+                        return $this->shopeepay($subs, $voucher, -$kurangBayar);
                     }
                 }
             }
@@ -582,4 +641,15 @@ class ApiSubscriptionClaimPay extends Controller
         return $update;
     }
 
+    /* CEK STATUS */
+    public function status(Request $request) {
+        $voucher = SubscriptionUser::select('id_subscription_user','paid_status')->where('id_subscription_user',$request->json('id_subscription_user'))->first()->toArray();
+        if($voucher['paid_status'] == 'Completed'){
+            $voucher['message'] = Setting::where('key', 'payment_success_messages')->pluck('value_text')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
+        }elseif($voucher['paid_status'] == 'Cancelled'){
+            $voucher['message'] = Setting::where('key', 'payment_ovo_fail_messages')->pluck('value_text')->first()??'Transaksi Gagal';
+        }
+
+        return MyHelper::checkGet($voucher);
+    }
 }
