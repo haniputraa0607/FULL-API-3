@@ -29,7 +29,7 @@ class AuthServiceProvider extends ServiceProvider
 
         Passport::routes();
         
-        Route::group(['middleware' => 'custom_auth'], function () {
+        Route::group(['middleware' => ['custom_auth', 'decrypt_pin:password,username']], function () {
             Passport::tokensCan([
                 'be' => 'Manage admin panel scope',
                 'apps' => 'Manage mobile scope',

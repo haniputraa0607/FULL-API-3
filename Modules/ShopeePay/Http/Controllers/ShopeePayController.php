@@ -12,6 +12,7 @@ use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\User;
+use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use App\Lib\MyHelper;
 use DB;
@@ -120,6 +121,8 @@ class ShopeePayController extends Controller
             if ($post['payment_status'] == '1') {
                 $update = $trx->update(['transaction_payment_status' => 'Completed']);
                 if ($update) {
+                    DisburseJob::dispatch(['id_transaction' => $trx['id_transaction']])->onConnection('disbursequeue');
+
                     $userData               = User::where('id', $trx['id_user'])->first();
                     $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;
 

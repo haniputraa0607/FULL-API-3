@@ -128,6 +128,10 @@ class ApiIrisController extends Controller
                             $q->whereNotNull('transaction_pickups.taken_at')
                                 ->orWhereNotNull('transaction_pickups.taken_by_system_at');
                         })
+                        ->where(function ($q){
+                            $q->where('transactions.transaction_flag_invalid', 'Valid')
+                                ->orWhereNull('transactions.transaction_flag_invalid');
+                        })
                         ->whereDate('transactions.transaction_date', '<', $dateForQuery)
                         ->select('disburse_outlet_transactions.*', 'transaction_shipment_go_send', 'transactions.transaction_date', 'transactions.id_outlet', 'transactions.id_transaction', 'transactions.transaction_subtotal',
                             'transactions.transaction_grandtotal', 'transactions.transaction_discount', 'transactions.id_promo_campaign_promo_code',

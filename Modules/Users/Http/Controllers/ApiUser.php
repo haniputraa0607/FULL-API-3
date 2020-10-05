@@ -356,7 +356,13 @@ class ApiUser extends Controller
         if($status_all_user == 1){
             $finalResult = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
                 ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
-                ->orderBy($order_field, $order_method);
+                ->orderBy($order_field, $order_method)
+                ->select(
+                    'users.*',
+                    'cities.*',
+                    'provinces.*',
+                    DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
+                );
         }
 
         $resultCount = $finalResult->count(); // get total result
@@ -1002,10 +1008,19 @@ class ApiUser extends Controller
             $device_token = $request->json('device_token');
             $device_type = $request->json('device_type');
 
-            if ($request->json('device_type') == "Android") {
-                $is_android = $device_id;
-            } else {
-                $is_ios = $device_id;
+            $useragent = $_SERVER['HTTP_USER_AGENT'];
+            if (stristr($_SERVER['HTTP_USER_AGENT'], 'iOS')) $useragent = 'IOS';
+            if (stristr($_SERVER['HTTP_USER_AGENT'], 'okhttp')) $useragent = 'Android';
+            if (stristr($_SERVER['HTTP_USER_AGENT'], 'GuzzleHttp')) $useragent = 'Browser';
+
+            if(empty($device_type)){
+                $device_type = $useragent;
+            }
+
+            if($device_type == "Android") {
+                $is_android = 1;
+            } elseif($device_type == "IOS"){
+                $is_ios = 1;
             }
 
             if ($request->json('device_token') != "") {
@@ -1035,14 +1050,10 @@ class ApiUser extends Controller
                     return response()->json($checkRuleRequest);
                 }
 
-                if ($request->json('device_id') && $request->json('device_token') && $request->json('device_type')) {
-                    app($this->home)->updateDeviceUser($create, $request->json('device_id'), $request->json('device_token'), $request->json('device_type'));
+                if ($request->json('device_id') && $request->json('device_token') && $device_type) {
+                    app($this->home)->updateDeviceUser($create, $request->json('device_id'), $request->json('device_token'), $device_type);
                 }
             }
-            $useragent = $_SERVER['HTTP_USER_AGENT'];
-            if (stristr($_SERVER['HTTP_USER_AGENT'], 'iOS')) $useragent = 'iOS';
-            if (stristr($_SERVER['HTTP_USER_AGENT'], 'okhttp')) $useragent = 'Android';
-            if (stristr($_SERVER['HTTP_USER_AGENT'], 'GuzzleHttp')) $useragent = 'Browser';
 
 
             if (\Module::collections()->has('Autocrm')) {
@@ -1493,7 +1504,9 @@ class ApiUser extends Controller
                     $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_sms', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui SMS.'));
                     break;
             }
-
+            
+            $user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
+            
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
@@ -1501,7 +1514,7 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $data[0]['phone'],
                         'message'  =>    $msg_otp,
-                        'challenge_key' => $data[0]['challenge_key']
+                        'challenge_key' => $user->challenge_key
                     ]
                 ];
             } else {
@@ -1512,7 +1525,7 @@ class ApiUser extends Controller
                         'phone'    =>    $data[0]['phone'],
                         'pin'    =>    '',
                         'message' => $msg_otp,
-                        'challenge_key' => $data[0]['challenge_key']
+                        'challenge_key' => $user->challenge_key
                     ]
                 ];
             }
@@ -1613,6 +1626,9 @@ class ApiUser extends Controller
                     $useragent = $_SERVER['HTTP_USER_AGENT'];
                 }
 
+                $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+                            ->where('oauth_access_tokens.user_id', $data[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
+
                 if (stristr($useragent, 'iOS')) $useragent = 'iOS';
                 if (stristr($useragent, 'okhttp')) $useragent = 'Android';
                 if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
@@ -1647,6 +1663,8 @@ class ApiUser extends Controller
                     break;
             }
 
+            $user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
+
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
@@ -1654,7 +1672,7 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $phone,
                         'message'  => $msg_otp,
-                        'challenge_key' => $data[0]['challenge_key']
+                        'challenge_key' => $user->challenge_key
                     ]
                 ];
             } else {
@@ -1665,7 +1683,7 @@ class ApiUser extends Controller
                         'phone'    =>    $phone,
                         'pin'        =>  '', 
                         'message' => $msg_otp,
-                        'challenge_key' => $data[0]['challenge_key']
+                        'challenge_key' => $user->challenge_key
                     ]
                 ];
             }
@@ -1840,9 +1858,15 @@ class ApiUser extends Controller
                             ->where('oauth_access_tokens.user_id', $data[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
                     }
                 }
+
+                $user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
+
                 $result = [
                     'status'    => 'success',
-                    'result'    => ['phone'    =>    $data[0]['phone']]
+                    'result'    => [
+                        'phone'    =>    $data[0]['phone'],
+                        'challenge_key' => $user->challenge_key
+                    ]
                 ];
             } else {
                 $result = [
