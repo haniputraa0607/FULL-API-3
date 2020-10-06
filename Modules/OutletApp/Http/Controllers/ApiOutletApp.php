@@ -3670,11 +3670,9 @@ class ApiOutletApp extends Controller
 
         if(isset($post['id_product_variant']) && !empty($post['id_product_variant'])){
             $data = $data->whereIn('product_variant_groups.id_product_variant_group', function($query) use($post){
-                $variant = implode($post['id_product_variant'], ',');
                 $query->select('pvp2.id_product_variant_group')
                     ->from('product_variant_pivot as pvp2')
-                    ->groupBy('pvp2.id_product_variant_group')
-                    ->havingRaw('INSTR(GROUP_CONCAT(pvp2.id_product_variant SEPARATOR ","), "'.$variant.'") > 0');
+                    ->whereIn('pvp2.id_product_variant', $post['id_product_variant']);
             });
         }
 
