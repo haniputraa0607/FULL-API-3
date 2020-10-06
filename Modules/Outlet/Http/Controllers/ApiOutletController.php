@@ -553,7 +553,7 @@ class ApiOutletController extends Controller
         }elseif(($post['filter']??false) == 'different_price'){
             $outlet = Outlet::where('outlet_different_price','1')->select('id_outlet','outlet_name','outlet_code');
         }elseif(\Request::route()->getName() == 'outlet_be'){
-            $outlet = Outlet::with(['today', 'brands', 'city'])->select('id_outlet','status_franchise','outlet_name','outlet_code', 'outlet_status', 'id_city');
+            $outlet = Outlet::with(['today', 'brands', 'city'])->select('id_outlet','status_franchise','outlet_name','outlet_code', 'outlet_status', 'id_city', 'time_zone_utc');
         }else{
             $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets','brands']);
             if(!($post['id_outlet']??false)||!($post['id_outlet']??false)){
@@ -661,7 +661,9 @@ class ApiOutletController extends Controller
                     $var['outlet_schedules'][$index] = $this->getTimezone($var['outlet_schedules'][$index], $var['time_zone_utc']);
                 }
             }
-            $var['today'] = $this->getTimezone($var['today'], $var['time_zone_utc']);
+            if (isset($var['time_zone_utc'])) {
+            	$var['today'] = $this->getTimezone($var['today'], $var['time_zone_utc']);
+            }
 
             if(($post['latitude']??false)&&($post['longitude']??false)){
                 $var['distance']=number_format((float)$this->distance($post['latitude'], $post['longitude'], $var['outlet_latitude'], $var['outlet_longitude'], "K"), 2, '.', '').' km';
@@ -2326,7 +2328,11 @@ class ApiOutletController extends Controller
         $post = $request->json()->all();
         DB::beginTransaction();
         $date_time = date('Y-m-d H:i:s');
+        $outlet = Outlet::where('id_outlet', $post['id_outlet'])->first();
+
         foreach ($post['day'] as $key => $value) {
+        	$post['open'][$key] = $this->setOneTimezone($post['open'][$key], $outlet->time_zone_utc);
+        	$post['close'][$key] = $this->setOneTimezone($post['close'][$key], $outlet->time_zone_utc);
             $data = [
                 'day'       => $value,
                 'open'      => $post['open'][$key],
@@ -3117,6 +3123,16 @@ class ApiOutletController extends Controller
                 $data['time_zone_id'] = 'WIT';
             break;
         }
+        return $data;
+    }
+
+    function setOneTimezone($time, $time_zone_utc)
+    {
+        $default_time_zone_utc = 7;
+        $time_diff = $time_zone_utc - $default_time_zone_utc;
+
+        $data = date('H:i', strtotime('-'.$time_diff.' hour',strtotime($time)));
+
         return $data;
     }
 }
