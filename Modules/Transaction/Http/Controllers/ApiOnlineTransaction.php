@@ -2251,7 +2251,11 @@ class ApiOnlineTransaction extends Controller
             });
 
             $product['variants'] = $variants;
-            $product['selected_variant'] = Product::getVariantParentId($item['id_product_variant_group'], Product::getVariantTree($item['id_product'], $outlet)['variants_tree']);
+            if ($item['id_product_variant_group']) {
+                $product['selected_variant'] = Product::getVariantParentId($item['id_product_variant_group'], Product::getVariantTree($item['id_product'], $outlet)['variants_tree']);
+            } else {
+                $product['selected_variant'] = [];
+            }
 
             $product['product_price_total'] = $item['transaction_product_subtotal'];
             $product['product_price_raw'] = (int) $product['product_price'];
