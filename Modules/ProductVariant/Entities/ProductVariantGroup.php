@@ -13,7 +13,8 @@ class ProductVariantGroup extends Model
         'id_product',
         'product_variant_group_code',
         'product_variant_group_name',
-        'product_variant_group_visibility'
+        'product_variant_group_visibility',
+        'product_variant_group_price'
     ];
 
     public function product_variant_pivot()

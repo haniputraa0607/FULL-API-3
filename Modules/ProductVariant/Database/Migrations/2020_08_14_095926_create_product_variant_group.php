@@ -19,6 +19,7 @@ class CreateProductVariantGroup extends Migration
             $table->string('product_variant_group_code')->unique();
             $table->text('product_variant_group_name');
             $table->enum('product_variant_group_visibility', ['Visible', 'Hidden'])->default('Visible');
+            $table->decimal('product_variant_group_price');
             $table->timestamps();
         });
     }
