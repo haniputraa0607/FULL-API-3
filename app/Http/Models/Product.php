@@ -223,7 +223,7 @@ class Product extends Model
         }
 
         // get all product variant groups assigned to this product
-        $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group')->where('id_product', $id_product)->with(['id_product_variants']);
+        $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_stock_status')->where('id_product', $id_product)->with(['id_product_variants']);
 
         if ($outlet['outlet_different_price']) {
             $variant_group_raws->addSelect('product_variant_group_special_prices.product_variant_group_price')->join('product_variant_group_special_prices', function($join) use ($outlet) {
@@ -234,7 +234,7 @@ class Product extends Model
             $variant_group_raws->addSelect('product_variant_group_price');
         }
 
-        $variant_group_raws->leftJoin('product_variant_group_details', function($join) use ($outlet) {
+        $variant_group_raws->join('product_variant_group_details', function($join) use ($outlet) {
             $join->on('product_variant_group_details.id_product_variant_group', '=', 'product_variant_groups.id_product_variant_group')
                 ->where('product_variant_group_details.id_outlet', $outlet['id_outlet']);
         })->where(function($query) {
@@ -243,8 +243,7 @@ class Product extends Model
                     $q2->whereNull('product_variant_group_details.product_variant_group_visibility')
                         ->where('product_variant_groups.product_variant_group_visibility', 'Visible');
                 });
-        })->where('product_variant_group_details.product_variant_group_stock_status', '<>', 'Sold Out')
-        ->where('product_variant_group_details.product_variant_group_status', '<>', 'Inactive');
+        })->where('product_variant_group_details.product_variant_group_status', '<>', 'Inactive');
 
         $variant_group_raws = $variant_group_raws->get()->toArray();
 
@@ -263,6 +262,7 @@ class Product extends Model
         // get base price and unset from array [for nice array structure]
         $base_price = $variants['product_variant_group_price'];
         unset($variants['product_variant_group_price']);
+        unset($variants['product_variant_stock_status']);
 
         // create result
         $result = [
@@ -305,12 +305,17 @@ class Product extends Model
                 if ($variant['variant']) { 
                     // assign price, from lowest price of variant with lower level, [previously saved in variant detail]
                     $variant['product_variant_group_price'] = $variant['variant']['product_variant_group_price'];
+                    $variant['product_variant_stock_status'] = $variant['variant']['product_variant_stock_status'];
                     // unset price in variant detail
                     unset($variant['variant']['product_variant_group_price']);
+                    unset($variant['variant']['product_variant_stock_status']);
 
                     // set this level lowest price to parent variant detail
                     if (!isset($variants['product_variant_group_price']) || $variants['product_variant_group_price'] > $variant['product_variant_group_price']) {
                         $variants['product_variant_group_price'] = $variant['product_variant_group_price'];
+                    }
+                    if (!isset($variants['product_variant_stock_status']) || $variant['product_variant_stock_status'] == 'Available') {
+                        $variants['product_variant_stock_status'] = $variant['product_variant_stock_status'];
                     }
                     continue;
                 }
@@ -324,10 +329,15 @@ class Product extends Model
                 // assigning product_variant_group_price and id_product_variant_group to this variant
                 $variant['id_product_variant_group']    = $variant_group['id_product_variant_group'];
                 $variant['product_variant_group_price'] = (double) $variant_group['product_variant_group_price'];
+                $variant['product_variant_stock_status'] = $variant_group['product_variant_group_stock_status'];
 
                 // set this level lowest price to parent variant detail
                 if (!isset($variants['product_variant_group_price']) || $variants['product_variant_group_price'] > $variant_group['product_variant_group_price']) {
                     $variants['product_variant_group_price'] = $variant['product_variant_group_price'];
+                }
+
+                if (!isset($variants['product_variant_stock_status']) || $variant_group['product_variant_group_stock_status'] == 'Available') {
+                    $variants['product_variant_stock_status'] = $variant_group['product_variant_group_stock_status'];
                 }
             } else { // doesn't has
                 // delete from array
@@ -344,6 +354,7 @@ class Product extends Model
                 'id_product_variant'    => $variant['id_product_variant'],
                 'product_variant_name'  => $variant['product_variant_name'],
                 'product_variant_price' => $variant['product_variant_price'],
+                'product_variant_stock_status' => $variant['product_variant_stock_status'],
             ];
 
             if ($variant['id_product_variant_group'] ?? false) {
@@ -377,6 +388,7 @@ class Product extends Model
             'product_variant_name'        => $variants['product_variant_name'],
             'childs'                      => $variants['childs'],
             'product_variant_group_price' => $variants['product_variant_group_price'], // do not remove or rename this
+            'product_variant_stock_status' => $variants['product_variant_stock_status'], // do not remove or rename this
         ];
 
         $variants = $new_order;
