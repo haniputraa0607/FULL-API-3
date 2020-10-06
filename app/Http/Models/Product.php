@@ -189,9 +189,9 @@ class Product extends Model
      */
     public static function refreshVariantTree($id_product, $outlet, $with_index = false)
     {
-        $cache_name = self::getCacheName($id_product, $outlet, $with_index = false);
+        $cache_name = self::getCacheName($id_product, $outlet, $with_index);
         Cache::forget($cache_name);
-        return self::getVariantTree($id_product, $with_index);
+        return self::getVariantTree($id_product, $outlet, $with_index);
     }
 
     /**
@@ -202,7 +202,7 @@ class Product extends Model
      */
     public static function getVariantTree($id_product, $outlet, $with_index = false)
     {
-        $cache_name = self::getCacheName($id_product, $outlet, $with_index = false);
+        $cache_name = self::getCacheName($id_product, $outlet, $with_index);
         // retrieve from cache if available
         if (Cache::has($cache_name)) {
             return Cache::get($cache_name);
@@ -223,18 +223,28 @@ class Product extends Model
         }
 
         // get all product variant groups assigned to this product
-        $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_price')->where('id_product', $id_product)->with(['id_product_variants']);
+        $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group')->where('id_product', $id_product)->with(['id_product_variants']);
 
         if ($outlet['outlet_different_price']) {
-            $variant_group_raws->join('product_variant_group_prices', function($join) use ($outlet) {
+            $variant_group_raws->addSelect('product_variant_group_special_prices.product_variant_group_price')->join('product_variant_group_special_prices', function($join) use ($outlet) {
                 $join->on('product_variant_groups.id_product_variant_group', '=', 'product_variant_group_special_prices.id_product_variant_group')
                     ->where('product_variant_group_special_prices.id_outlet', '=', $outlet['id_outlet']);
             });
         } else {
-            $variant_group_raws->join('product_variant_group_prices', function($join) use ($outlet) {
-                $join->on('product_variant_groups.id_product_variant_group', '=', 'product_variant_group_prices.id_product_variant_group');
-            });
+            $variant_group_raws->addSelect('product_variant_group_price');
         }
+
+        $variant_group_raws->leftJoin('product_variant_group_details', function($join) use ($outlet) {
+            $join->on('product_variant_group_details.id_product_variant_group', '=', 'product_variant_groups.id_product_variant_group')
+                ->where('product_variant_group_details.id_outlet', $outlet['id_outlet']);
+        })->where(function($query) {
+            $query->where('product_variant_group_details.product_variant_group_visibility', 'Visible')
+                ->orWhere(function($q2) {
+                    $q2->whereNull('product_variant_group_details.product_variant_group_visibility')
+                        ->where('product_variant_groups.product_variant_group_visibility', 'Visible');
+                });
+        })->where('product_variant_group_details.product_variant_group_stock_status', '<>', 'Sold Out')
+        ->where('product_variant_group_details.product_variant_group_status', '<>', 'Inactive');
 
         $variant_group_raws = $variant_group_raws->get()->toArray();
 

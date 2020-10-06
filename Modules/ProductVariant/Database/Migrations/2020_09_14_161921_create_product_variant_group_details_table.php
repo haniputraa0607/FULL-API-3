@@ -17,7 +17,7 @@ class CreateProductVariantGroupDetailsTable extends Migration
             $table->bigIncrements('id_product_variant_group_detail');
             $table->unsignedInteger('id_outlet');
             $table->unsignedBigInteger('id_product_variant_group');
-            $table->enum('product_variant_group_visibility', ['Visible', 'Hidden'])->default('Hidden');
+            $table->enum('product_variant_group_visibility', ['Visible', 'Hidden'])->default('Hidden')->nullable();
             $table->enum('product_variant_group_status', ['Active', 'Inactive'])->default('Active');
             $table->enum('product_variant_group_stock_status', ['Available', 'Sold Out'])->default('Available');
             $table->timestamps();
