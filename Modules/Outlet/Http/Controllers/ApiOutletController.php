@@ -149,6 +149,10 @@ class ApiOutletController extends Controller
             $data['status_franchise'] = 0;
         }
 
+        if (isset($post['time_zone_utc'])) {
+            $data['time_zone_utc'] = $post['time_zone_utc'];
+        }
+
         return $data;
     }
 
@@ -220,6 +224,8 @@ class ApiOutletController extends Controller
             $closes = $request->json('close');
             $is_closed = $request->json('is_closed');
             foreach($days as $key => $value){
+            	$opens[$key] = $this->setOneTimezone($opens[$key], $post['time_zone_utc']);
+            	$closes[$key] = $this->setOneTimezone($closes[$key], $post['time_zone_utc']);
                 $data['open'] = $opens[$key];
                 $data['close'] = $closes[$key];
                 $data['is_close'] = $is_closed[$key];
