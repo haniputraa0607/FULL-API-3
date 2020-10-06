@@ -214,7 +214,7 @@ class Midtrans {
                 case 'deals':
                     $trx = DealsUser::join('deals_payment_midtrans', 'deals_payment_midtrans.id_deals_user', '=', 'deals_users.id_deals_user')->where('deals_users.id_deals_user', $order_id)->orWhere('order_id', $order_id)->first();
                     if (!$trx) {
-                        return ['status'=>'fail','messages'=>'Deals payment not found'];
+                        return ['status'=>'fail','messages'=>['Deals payment not found']];
                     }
 
                     $transaction_id = $trx->order_id;
@@ -225,7 +225,7 @@ class Midtrans {
                     $transaction_id = $trx->order_id;
 
                     if (!$trx) {
-                        return ['status'=>'fail','messages'=>'Subscription payment not found'];
+                        return ['status'=>'fail','messages'=>['Subscription payment not found']];
                     }
 
                     break;
@@ -234,7 +234,8 @@ class Midtrans {
                     $trx = Transaction::join('transaction_payment_midtrans','transaction_payment_midtrans.id_transaction', '=', 'transactions.id_transaction')->where('transactions.id_transaction',$order_id)->first();
 
                     if (!$trx) {
-                        return ['status'=>'fail','messages'=>'Midtrans payment not found'];
+                        // jika edit messages error ini, pastikan edit juga di ApiCronTrxController@cron
+                        return ['status'=>'fail','messages'=>['Midtrans payment not found']];
                     }
                     $transaction_id = $trx->transaction_receipt_number;
                     break;

@@ -14,7 +14,7 @@ class AddExportDateColumnAndExportUrlColumnToPromoCampaignsTable extends Migrati
     public function up()
     {
         Schema::table('promo_campaigns', function (Blueprint $table) {
-        	$table->dateTime('export_date')->nullable()->after('min_basket_size');
+        	$table->dateTime('export_date')->nullable()->after('charged_central');
         	$table->text('export_url', 65535)->nullable()->after('export_date');
             $table->enum('export_status', array('Running', 'Ready', 'Deleted'))->nullable()->after('export_url');
         });
