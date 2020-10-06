@@ -1683,11 +1683,6 @@ class ApiOutletController extends Controller
 		                else{
 		                	$outlet['today']['status_detail'] = $outlet['today']['day'].' buka pada '.$outlet['today']['open'];
 		                }
-		            }else{
-		            	$schedule = OutletSchedule::where('id_outlet', $outlet['id_outlet'])->get()->toArray();
-			            $new_days = $this->reorderDays($schedule, $outlet['today']['day']);
-			            $new_days[0]['close'] = $this->getOneTimezone($new_days[0]['close'], $outlet['time_zone_utc']);
-						$outlet['today']['status_detail'] = 'Besok sampai pukul '.$new_days[0]['close'];
 		            }
 		        }
             }
