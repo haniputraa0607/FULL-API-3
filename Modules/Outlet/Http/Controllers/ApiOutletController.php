@@ -557,7 +557,7 @@ class ApiOutletController extends Controller
         }else{
             $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets','brands']);
             if(!($post['id_outlet']??false)||!($post['id_outlet']??false)){
-                $outlet->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude', 'outlets.status_franchise');
+                $outlet->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude', 'outlets.status_franchise', 'outlets.time_zone_utc');
             }
         }
         if($post['rule']??false){
@@ -654,9 +654,15 @@ class ApiOutletController extends Controller
             }
             $loopdata=&$outlet;
         }
-
         $loopdata = array_map(function($var) use ($post){
             $var['url']=config('url.api_url').'api/outlet/webview/'.$var['id_outlet'];
+            if(isset($var['outlet_schedules'])){
+                foreach($var['outlet_schedules'] as $index => $sch){
+                    $var['outlet_schedules'][$index] = $this->getTimezone($var['outlet_schedules'][$index], $var['time_zone_utc']);
+                }
+            }
+            $var['today'] = $this->getTimezone($var['today'], $var['time_zone_utc']);
+
             if(($post['latitude']??false)&&($post['longitude']??false)){
                 $var['distance']=number_format((float)$this->distance($post['latitude'], $post['longitude'], $var['outlet_latitude'], $var['outlet_longitude'], "K"), 2, '.', '').' km';
             }
@@ -776,7 +782,7 @@ class ApiOutletController extends Controller
         }
 
         // outlet
-        $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->with(['today','brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude','time_zone_utc')->with(['today','brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where(function($query) use ($request) {
                 $query->where('outlet_name', 'LIKE', '%'.$request->json('search').'%')
@@ -800,6 +806,8 @@ class ApiOutletController extends Controller
 
                 $outlet[$key]['distance'] = number_format($jaraknya, 2, '.', ',')." km";
                 $outlet[$key]['dist']     = (float) $jaraknya;
+
+                $outlet[$key]['today'] = $this->getTimezone($outlet[$key]['today'], $outlet[$key]['time_zone_utc']);
 
                 // $outlet[$key] = $this->setAvailableOutlet($outlet[$key], $processing);
             }
@@ -1288,7 +1296,7 @@ class ApiOutletController extends Controller
         $grabfood = $request->json('grabfood');
 
         // outlet
-        $outlet = Outlet::with(['today'])->distinct('outlets.id_outlet')->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::with(['today'])->distinct('outlets.id_outlet')->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude','time_zone_utc')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
 
         $outlet->whereHas('brands',function($query){
             $query->where('brand_active','1');
@@ -1371,6 +1379,8 @@ class ApiOutletController extends Controller
                     unset($outlet[$key]);
                     continue;
                 }
+
+                $outlet[$key]['today'] = $this->getTimezone($outlet[$key]['today'], $outlet[$key]['time_zone_utc']);
 
                 // $outlet[$key] = $this->setAvailableOutlet($outlet[$key], $processing);;
             }
@@ -3089,5 +3099,24 @@ class ApiOutletController extends Controller
             }
         }
         return MyHelper::checkGet(['updated' => $updated]);
+    }
+
+    public function getTimezone($data, $time_zone_utc){
+        $data['time_zone_id'] = 'WIB';
+        $default_time_zone_utc = 7;
+        $time_diff = $time_zone_utc - $default_time_zone_utc;
+
+        $data['open'] = date('H:i', strtotime('+'.$time_diff.' hour',strtotime($data['open'])));
+        $data['close'] = date('H:i', strtotime('+'.$time_diff.' hour', strtotime($data['close'])));
+
+        switch ($time_zone_utc) {
+            case 8:
+                $data['time_zone_id'] = 'WITA';
+            break;
+            case 9:
+                $data['time_zone_id'] = 'WIT';
+            break;
+        }
+        return $data;
     }
 }
