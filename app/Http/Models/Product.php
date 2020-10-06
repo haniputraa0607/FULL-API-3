@@ -442,4 +442,45 @@ class Product extends Model
         }
         return false;
     }
+
+    /**
+     * get list variant price of given product variant group
+     * @param  ProductVariantGroup  $product_variant_group eloquent model
+     * @param  Array                $variant               Variant tree
+     * @param  array                $variants              Temporary variant id and price list
+     * @param  integer              $last_price            last price (sum of parent price)
+     * @return boolean              true / false
+     */
+    public static function getVariantParentId($product_variant_group,$variant = null, $variants = [])
+    {
+        if (is_numeric($product_variant_group)) {
+            $product_variant_group = ProductVariantGroup::where('id_product_variant_group', $product_variant_group)->first();
+            if (!$product_variant_group) {
+                return false;
+            }
+        }
+
+        if (!$variant) {
+            $variant = self::getVariantTree($product_variant_group->id_product)['variants_tree'];
+            if(!$variant) {
+                return false;
+            }
+        }
+        foreach ($variant['childs'] as $child) {
+            $next_variants = $variants;
+            if($child['variant']) {
+                // check child or parent
+                $next_variants[] = $child['id_product_variant'];
+                if ($result = self::getVariantParentId($product_variant_group, $child['variant'], $next_variants)) {
+                    return $result;
+                }
+            } else {
+                if ($child['id_product_variant_group'] == $product_variant_group->id_product_variant_group) {
+                    $variants[] = $child['id_product_variant'];
+                    return $variants;
+                }
+            }
+        }
+        return false;
+    }
 }

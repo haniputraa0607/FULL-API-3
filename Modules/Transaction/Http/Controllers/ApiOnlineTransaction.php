@@ -77,6 +77,7 @@ use App\Lib\PushNotificationHelper;
 use Modules\Transaction\Http\Requests\Transaction\NewTransaction;
 use Modules\Transaction\Http\Requests\Transaction\ConfirmPayment;
 use Modules\Transaction\Http\Requests\CheckTransaction;
+use Modules\ProductVariant\Entities\ProductVariant;
 
 class ApiOnlineTransaction extends Controller
 {
@@ -1990,6 +1991,92 @@ class ApiOnlineTransaction extends Controller
                 $global_max_order = 100;
             }
         }
+
+        foreach ($grandTotal as $keyTotal => $valueTotal) {
+            if ($valueTotal == 'subtotal') {
+                $post['sub'] = app($this->setting_trx)->countTransaction($valueTotal, $post, $discount_promo);
+                // $post['sub'] = $this->countTransaction($valueTotal, $post);
+                if (gettype($post['sub']) != 'array') {
+                    $mes = ['Data Not Valid'];
+
+                    if (isset($post['sub']->original['messages'])) {
+                        $mes = $post['sub']->original['messages'];
+
+                        if ($post['sub']->original['messages'] == ['Price Product Not Found']) {
+                            if (isset($post['sub']->original['product'])) {
+                                $mes = ['Price Product Not Found with product '.$post['sub']->original['product'].' at outlet '.$outlet['outlet_name']];
+                            }
+                        }
+
+                        if ($post['sub']->original['messages'] == ['Price Product Not Valid']) {
+                            if (isset($post['sub']->original['product'])) {
+                                $mes = ['Price Product Not Valid with product '.$post['sub']->original['product'].' at outlet '.$outlet['outlet_name']];
+                            }
+                        }
+                    }
+
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => $mes
+                    ]);
+                }
+
+                $post['subtotal'] = array_sum($post['sub']);
+                $post['subtotal'] = $post['subtotal'] - $totalDisProduct;
+            } elseif ($valueTotal == 'discount') {
+                // $post['dis'] = $this->countTransaction($valueTotal, $post);
+                $post['dis'] = app($this->setting_trx)->countTransaction($valueTotal, $post, $discount_promo);
+                $mes = ['Data Not Valid'];
+
+                if (isset($post['dis']->original['messages'])) {
+                    $mes = $post['dis']->original['messages'];
+
+                    if ($post['dis']->original['messages'] == ['Price Product Not Found']) {
+                        if (isset($post['dis']->original['product'])) {
+                            $mes = ['Price Product Not Found with product '.$post['dis']->original['product'].' at outlet '.$outlet['outlet_name']];
+                        }
+                    }
+
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => $mes
+                    ]);
+                }
+
+                $post['discount'] = $post['dis'] + $totalDisProduct;
+            }elseif($valueTotal == 'tax'){
+                $post['tax'] = app($this->setting_trx)->countTransaction($valueTotal, $post);
+                $mes = ['Data Not Valid'];
+
+                    if (isset($post['tax']->original['messages'])) {
+                        $mes = $post['tax']->original['messages'];
+
+                        if ($post['tax']->original['messages'] == ['Price Product Not Found']) {
+                            if (isset($post['tax']->original['product'])) {
+                                $mes = ['Price Product Not Found with product '.$post['tax']->original['product'].' at outlet '.$outlet['outlet_name']];
+                            }
+                        }
+
+                        if ($post['sub']->original['messages'] == ['Price Product Not Valid']) {
+                            if (isset($post['tax']->original['product'])) {
+                                $mes = ['Price Product Not Valid with product '.$post['tax']->original['product'].' at outlet '.$outlet['outlet_name']];
+                            }
+                        }
+
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => $mes
+                        ]);
+                    }
+            }
+            else {
+                $post[$valueTotal] = app($this->setting_trx)->countTransaction($valueTotal, $post);
+            }
+        }
+
         foreach ($discount_promo['item']??$post['item'] as &$item) {
             // get detail product
             $product = Product::select([
@@ -2156,7 +2243,17 @@ class ApiOnlineTransaction extends Controller
             if(!isset($tree[$product['id_brand']]['name_brand'])){
                 $tree[$product['id_brand']] = Brand::select('name_brand','id_brand')->find($product['id_brand'])->toArray();
             }
-            $product['product_price_total'] = ($product['qty'] * ($product['product_price']+$mod_price));
+
+            $order = array_flip(array_keys($item['variants']));
+            $variants = ProductVariant::select('id_product_variant', 'product_variant_name')->whereIn('id_product_variant', array_keys($item['variants']))->get()->toArray();
+            usort($variants, function ($a, $b) use ($order) {
+                return $order[$a['id_product_variant']] <=> $order[$b['id_product_variant']];
+            });
+
+            $product['variants'] = $variants;
+            $product['selected_variant'] = Product::getVariantParentId($item['id_product_variant_group'], Product::getVariantTree($item['id_product'], $outlet)['variants_tree']);
+
+            $product['product_price_total'] = $item['transaction_product_subtotal'];
             $product['product_price_raw'] = (int) $product['product_price'];
             $product['product_price_raw_total'] = (int) $product['product_price']+$mod_price;
             $product['product_price'] = MyHelper::requestNumber($product['product_price']+$mod_price, '_CURRENCY');
@@ -2174,61 +2271,6 @@ class ApiOnlineTransaction extends Controller
             );
         }
 
-        foreach ($grandTotal as $keyTotal => $valueTotal) {
-            if ($valueTotal == 'subtotal') {
-                $post['subtotal'] = $subtotal - $totalDisProduct;
-            } elseif ($valueTotal == 'discount') {
-                // $post['dis'] = $this->countTransaction($valueTotal, $post);
-                $post['dis'] = app($this->setting_trx)->countTransaction($valueTotal, $post);
-                $mes = ['Data Not Valid'];
-
-                if (isset($post['dis']->original['messages'])) {
-                    $mes = $post['dis']->original['messages'];
-
-                    if ($post['dis']->original['messages'] == ['Price Product Not Found']) {
-                        if (isset($post['dis']->original['product'])) {
-                            $mes = ['Price Product Not Found with product '.$post['dis']->original['product'].' at outlet '.$outlet['outlet_name']];
-                        }
-                    }
-
-                    DB::rollback();
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => $mes
-                    ]);
-                }
-
-                $post['discount'] = $post['dis'] + $totalDisProduct;
-            }elseif($valueTotal == 'tax'){
-                $post['tax'] = app($this->setting_trx)->countTransaction($valueTotal, $post);
-                $mes = ['Data Not Valid'];
-
-                    if (isset($post['tax']->original['messages'])) {
-                        $mes = $post['tax']->original['messages'];
-
-                        if ($post['tax']->original['messages'] == ['Price Product Not Found']) {
-                            if (isset($post['tax']->original['product'])) {
-                                $mes = ['Price Product Not Found with product '.$post['tax']->original['product'].' at outlet '.$outlet['outlet_name']];
-                            }
-                        }
-
-                        if ($post['sub']->original['messages'] == ['Price Product Not Valid']) {
-                            if (isset($post['tax']->original['product'])) {
-                                $mes = ['Price Product Not Valid with product '.$post['tax']->original['product'].' at outlet '.$outlet['outlet_name']];
-                            }
-                        }
-
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => $mes
-                        ]);
-                    }
-            }
-            else {
-                $post[$valueTotal] = app($this->setting_trx)->countTransaction($valueTotal, $post);
-            }
-        }
         $outlet['today']['status'] = $outlet_status?'open':'closed';
 
         $post['discount'] = $post['discount'] + ($promo_discount??0);
@@ -2800,6 +2842,7 @@ class ApiOnlineTransaction extends Controller
                 'bonus' => isset($item['bonus'])?$item['bonus']:'0',
                 'id_brand' => $item['id_brand'],
                 'id_product' => $item['id_product'],
+                'id_product_variant_group' => $item['id_product_variant_group']??null,
                 'note' => $item['note'],
                 'modifiers' => array_map(function($i){
                         return [
