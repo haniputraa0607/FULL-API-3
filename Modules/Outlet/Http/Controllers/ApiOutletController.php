@@ -1940,7 +1940,8 @@ class ApiOutletController extends Controller
                 DB::raw('(CASE
                             WHEN delivery_order = 1 THEN "Active"
                             ELSE "Inactive"
-                        END) as "delivery"')
+                        END) as "delivery"'),
+                'outlets.time_zone_utc'
             )->with('brands')->join('cities', 'outlets.id_city', '=', 'cities.id_city');
 
             foreach ($brand as $bran) {
@@ -2075,7 +2076,8 @@ class ApiOutletController extends Controller
                             'delivery_order' => (isset($value['delivery']) && $value['delivery'] == 'Active' ? 1 : 0),
                             'deep_link_gojek' => $value['deep_link_gojek']??'',
                             'deep_link_grab' => $value['deep_link_grab']??'',
-                            'id_city' => $id_city[$search]??null
+                            'id_city' => $id_city[$search]??null,
+                            'time_zone_utc' => $value['time_zone_utc']??7
                         ];
                         //insert status
                         if(isset($value['outlet_status'])){
