@@ -71,6 +71,14 @@ class ApiSubscriptionClaimPay extends Controller
     function claim(Paid $request) {
 
         $post     = $request->json()->all();
+        if (isset($post['pin']) && strtolower($post['payment_method']) == 'balance') {
+            if (!password_verify($post['pin'], $request->user()->password)) {
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Incorrect PIN']
+                ];
+            }
+        }
         $dataSubs = app($this->claim)->checkSubsData($request->json('id_subscription'));
         $id_user  = $request->user()->id;
         $dataSubsUser = app($this->claim)->checkSubsUser($id_user, $dataSubs);
