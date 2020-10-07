@@ -51,6 +51,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
 use Modules\PromoCampaign\Entities\UserReferralCode;
 use Modules\PromoCampaign\Entities\UserPromo;
 use Modules\Subscription\Entities\TransactionPaymentSubscription;
+use Modules\Subscription\Entities\Subscription;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
@@ -758,7 +759,8 @@ class ApiOnlineTransaction extends Controller
 					DB::rollback();
         			return $check_promo;
         		}
-        		$post['discount_delivery'] = $check_promo['data']['discount_delivery']??0;
+        		$post['discount_delivery'] = (-$check_promo['data']['discount_delivery'])??0;
+        		$post['grandTotal'] = $post['grandTotal'] + (int) $post['discount_delivery'];
         	}
         	// check minimum subtotal
         	$check_min_basket = app($this->promo)->checkMinBasketSize($promo_source, $code??$deals, $post['subtotal']);
@@ -768,6 +770,28 @@ class ApiOnlineTransaction extends Controller
                     'status'=>'fail',
                     'messages'=>['Promo is not valid']
                 ];
+        	}
+        }
+
+        // check promo subscription type discount and discount delivery
+        if ( $request->json('id_subscription_user') )
+        {
+        	// $post_subs['delivery_fee'] = $shippingGoSend+$post['transaction_shipments'];
+        	$post_subs['delivery_fee'] = $shippingGoSend;
+        	$post_subs = $post+$post_subs;
+
+        	$check_subs = app($this->subscription_use)->checkDiscount($request, $post_subs);
+
+        	if ($check_subs['status'] == 'fail') {
+				return $check_subs;
+        	}
+
+        	if ($check_subs['result']['type'] == 'discount_delivery') {
+        		$post['discount_delivery'] = -$check_subs['result']['value'];
+        		$post['grandTotal'] = $post['grandTotal'] + (int) $post['discount_delivery'];
+        	}elseif ($check_subs['result']['type'] == 'discount') {
+        		$post['discount'] = -$check_subs['result']['value'];	
+        		$post['grandTotal'] = $post['grandTotal'] + (int) $post['discount'];
         	}
         }
 
@@ -882,15 +906,13 @@ class ApiOnlineTransaction extends Controller
         // add payment subscription
         if ( $request->json('id_subscription_user') )
         {
-        	$subs_discount 		= 0;
-        	$subs_discount_delivery	= 0;
         	$subscription_total = app($this->subscription_use)->calculate($request->id_subscription_user, $insertTransaction['transaction_subtotal'], $insertTransaction['transaction_subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
 
 	        if (!empty($subs_error)) {
 	        	DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
-                    'messages'  => ['Insert Transaction Failed']
+                    'messages'  => ['Promo not valid']
                 ]);
 	        }
 	        $subscription_type = $subscription_total['type'];
@@ -918,18 +940,9 @@ class ApiOnlineTransaction extends Controller
 	                ]);
 	            }
 			}
-			elseif ($subs_discount_type == 'discount_delivery') {
-				$subs_discount_delivery = -1 * abs($subscription_total); /* get absolute negative number */
-			}
-			else{
-				$subs_discount = -1 * abs($subscription_total); /* get absolute negative number */
-			}
 
 	        $update_trx = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
-				            'id_subscription_user_voucher' => $data_subs->id_subscription_user_voucher,
-				            'transaction_discount' => $subs_discount,
-				            'transaction_discount_delivery' => $subs_discount_delivery,
-				            'transaction_grandtotal' => $subscription['grandtotal']
+				            'id_subscription_user_voucher' => $data_subs->id_subscription_user_voucher
 				        ]);
 
 	        $update_subs_voucher = SubscriptionUserVoucher::where('id_subscription_user_voucher','=',$data_subs->id_subscription_user_voucher)

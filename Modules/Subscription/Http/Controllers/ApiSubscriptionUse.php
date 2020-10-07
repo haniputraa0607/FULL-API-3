@@ -123,7 +123,7 @@ class ApiSubscriptionUse extends Controller
     	}
 
     	// check minimal transaction 
-    	if ( !empty($subs['subscription_minimal_transaction']) && $subs['subscription_minimal_transaction'] > $subtotal) {
+    	if ( !empty($subs['subscription_user']['subscription']['subscription_minimal_transaction']) && $subs['subscription_user']['subscription']['subscription_minimal_transaction'] > $subtotal) {
     		$errors[] = 'Total transaction is not meet minimum transasction to use Subscription';
     		return 0;	
     	}
@@ -261,5 +261,32 @@ class ApiSubscriptionUse extends Controller
     		'type' => $type,
     		'value' => $result
     	];
+    }
+
+    function checkDiscount($request, $post)
+    {
+    	$data_subs = SubscriptionUser::where('id_subscription_user', $request->id_subscription_user)->with('subscription')->first();
+		if (!$data_subs) {
+			return [
+                'status'=>'fail',
+                'messages'=>['Promo is not valid']
+            ];	
+		}
+		$subs_type = $data_subs['subscription']['subscription_discount_type'];
+
+		if ($subs_type != 'payment_method') {
+        	$check_subs = $this->calculate($request->id_subscription_user, $post['subtotal'], $post['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product, $post['delivery_fee']??0);
+
+        	if (!empty($subs_error)) {
+                return [
+                    'status'    => 'fail',
+                    'messages'  => ['Promo not valid']
+                ];
+	        }
+
+	        return MyHelper::checkGet($check_subs);
+		}else{
+	        return MyHelper::checkGet(['type' => $subs_type]);
+		}
     }
 }
