@@ -52,6 +52,8 @@ use Modules\Product\Entities\ProductDetail;
 use App\Http\Models\ProductModifierDetail;
 use Modules\Product\Entities\ProductStockStatusUpdate;
 use Modules\Product\Entities\ProductModifierStockStatusUpdate;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
 use Modules\Shift\Entities\Shift;
@@ -59,6 +61,7 @@ use Modules\Shift\Entities\UserOutletApp;
 use Modules\Transaction\Http\Requests\TransactionDetail;
 use Carbon\Carbon;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
+use function foo\func;
 
 class ApiOutletApp extends Controller
 {
@@ -75,6 +78,7 @@ class ApiOutletApp extends Controller
         $this->subscription     = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
         $this->endPoint  = config('url.storage_url_api');
         $this->shopeepay      = "Modules\ShopeePay\Http\Controllers\ShopeePayController";
+        $this->outlet      		= "Modules\Outlet\Http\Controllers\ApiOutletController";
     }
 
     public function deleteToken(DeleteToken $request)
@@ -1966,6 +1970,9 @@ class ApiOutletApp extends Controller
     public function listSchedule(Request $request)
     {
         $schedules = $request->user()->outlet_schedules()->get();
+        foreach ($schedules as $key => $value) {
+        	$schedules[$key] = app($this->outlet)->getTimezone($value, $request->user()->time_zone_utc);
+        }
         return MyHelper::checkGet($schedules);
     }
 
@@ -1978,6 +1985,9 @@ class ApiOutletApp extends Controller
         $otp         = $request->outlet_app_otps;
         $date_time   = date('Y-m-d H:i:s');
         foreach ($post['schedule'] as $value) {
+
+        	$value = $this->setTimezone($value, $request->user()->time_zone_utc);
+
             $old      = OutletSchedule::select('id_outlet_schedule', 'id_outlet', 'day', 'open', 'close', 'is_closed')->where(['id_outlet' => $id_outlet, 'day' => $value['day']])->first();
             $old_data = $old ? $old->toArray() : [];
             if ($old) {
@@ -3646,5 +3656,102 @@ class ApiOutletApp extends Controller
             ]
         ];
         return $result;
+    }
+
+    //====================== Product Variant ======================//
+    public function listProductVariantGroup(Request $request){
+        $post = $request->all();
+
+        $data = ProductVariantGroup::leftJoin('product_variant_group_details as pvgd', 'pvgd.id_product_variant_group', 'product_variant_groups.id_product_variant_group');
+
+        if(isset($post['id_outlet']) && !empty($post['id_outlet'])){
+            $data = $data->where(function ($q) use($post){
+                $q->where('pvgd.id_outlet', $post['id_outlet']);
+                $q->orWhereNull('pvgd.id_product_variant_group_detail');
+            });
+        }
+
+        if(isset($post['id_product']) && !empty($post['id_product'])){
+            $data = $data->where('product_variant_groups.id_product', $post['id_product']);
+        }
+
+        if(isset($post['id_product_variant']) && !empty($post['id_product_variant'])){
+            $data = $data->whereIn('product_variant_groups.id_product_variant_group', function($query) use($post){
+                $query->select('pvp2.id_product_variant_group')
+                    ->from('product_variant_pivot as pvp2')
+                    ->whereIn('pvp2.id_product_variant', $post['id_product_variant']);
+            });
+        }
+
+        $data = $data->select([
+            'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
+            DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
+            DB::raw('(CASE
+                        WHEN pvgd.product_variant_group_visibility is NULL THEN product_variant_groups.product_variant_group_visibility
+                        ELSE pvgd.product_variant_group_visibility END) as product_variant_group_visibility'),
+            DB::raw('(CASE
+                        WHEN pvgd.product_variant_group_stock_status is NULL THEN "Sold Out"
+                        ELSE pvgd.product_variant_group_stock_status END) as product_variant_group_stock_status')]);
+
+
+        $data = $data->where(function ($q){
+                        $q->where('pvgd.product_variant_group_status', 'Active')
+                            ->orWhereNull('pvgd.product_variant_group_status');
+                    })
+                    ->where(function ($q){
+                        $q->where(function ($q2){
+                            $q2->whereNull('pvgd.product_variant_group_visibility')
+                                ->where('product_variant_groups.product_variant_group_visibility', 'Visible');
+                        });
+                        $q->orWhere(function ($q2){
+                            $q2->whereNotNull('pvgd.product_variant_group_visibility')
+                                ->where('pvgd.product_variant_group_visibility', 'Visible');
+                        });
+                    });
+
+        if(!isset($post['id_product']) || isset($post['page'])){
+            $data = $data->paginate(10)->toArray();
+        }else{
+            $data = $data->get()->toArray();
+        }
+
+        return MyHelper::checkGet($data);
+    }
+
+    public function productVariantGroupSoldOut(Request $request)
+    {
+        $post = $request->all();
+        $id_outlet = $post['id_outlet']??auth()->user()->id_outlet;
+
+        if(!$id_outlet){
+            return response()->json(['status' => 'fail', 'messages' => 'Outlet ID is required']);
+        }
+
+        if(isset($post['data_stock']) && !empty($post['data_stock'])){
+            foreach ($post['data_stock'] as $dt){
+                if($dt['product_variant_group_stock_status'] == 1){
+                    $status = 'Available';
+                }else{
+                    $status = 'Sold Out';
+                }
+
+                $updateOrCreate = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$id_outlet, 'id_product_variant_group' => $dt['id_product_variant_group']], ['product_variant_group_stock_status' => $status]);
+            }
+
+            return MyHelper::checkUpdate($updateOrCreate);
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => 'Data for update is empty']);
+        }
+ 
+    }
+  
+  public function setTimezone($data, $time_zone_utc){
+        $default_time_zone_utc = 7;
+        $time_diff = $time_zone_utc - $default_time_zone_utc;
+
+        $data['open'] = date('H:i', strtotime('-'.$time_diff.' hour',strtotime($data['open'])));
+        $data['close'] = date('H:i', strtotime('-'.$time_diff.' hour', strtotime($data['close'])));
+
+        return $data;
     }
 }

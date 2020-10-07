@@ -108,11 +108,11 @@ class SendEmailDisburseJob implements ShouldQueue
                     if($sendEmailTo == 'Email Outlet'){
                         $disburseOutlet = $disburseOutlet->selectRaw('t.transaction_date, o.outlet_code, o.outlet_name, o.outlet_email, Sum(income_outlet) as nominal')
                             ->get()->toArray();
-                        $feePerOutlet = $feeDisburse / count($disburseOutlet);
+                        $feePerOutlet = $feeDisburse / $getDataDisburse['total_outlet'];
                         $data = [];
                         foreach ($disburseOutlet as $dt){
-                            $check = array_search($dt['outlet_code'], array_column($disburseOutlet, 'outlet_code'));
-                            if($check !== false){
+                            $check = array_search($dt['outlet_code'], array_column($data, 'outlet_code'));
+                            if($check === false){
                                 $data[] = [
                                     'outlet_code' => $dt['outlet_code'],
                                     'outlet_name' => $dt['outlet_name'],
@@ -124,7 +124,7 @@ class SendEmailDisburseJob implements ShouldQueue
                                     ]]
                                 ];
                             }else{
-                                $arrTmp[$check]['datas'][] = [
+                                $data[$check]['datas'][] = [
                                     'Transaction Date' => date('d M Y', strtotime($dt['transaction_date'])),
                                     'Outlet' => $dt['outlet_code'].' - '.$dt['outlet_name'],
                                     'Nominal' => number_format($dt['nominal'], 2)

@@ -2908,4 +2908,18 @@ class MyHelper{
 		$iv = substr($user->challenge_key,32,16);
 		return openssl_decrypt(base64_decode($encrypted), 'AES-256-CBC', $challengeKey, OPENSSL_RAW_DATA, $iv);
 	}
+
+    /**
+     * Create consistent array keys from shuffled id
+     * @param  array $variant_ids array of id, order doesn't matter
+     * @return string              generated array keys
+     */
+    public static function slugMaker($variant_ids)
+    {
+        usort($variant_ids, function ($a, $b) {
+            return (int) $a <=> (int) $b;
+        });
+        return implode('.', $variant_ids); // '2.5.7'
+    }
+
 }
