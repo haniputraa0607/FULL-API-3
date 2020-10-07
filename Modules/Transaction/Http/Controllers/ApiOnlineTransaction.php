@@ -78,6 +78,7 @@ use Modules\Transaction\Http\Requests\Transaction\NewTransaction;
 use Modules\Transaction\Http\Requests\Transaction\ConfirmPayment;
 use Modules\Transaction\Http\Requests\CheckTransaction;
 use Modules\ProductVariant\Entities\ProductVariant;
+use App\Http\Models\TransactionMultiplePayment;
 
 class ApiOnlineTransaction extends Controller
 {
@@ -98,6 +99,8 @@ class ApiOnlineTransaction extends Controller
         $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
         $this->promo       = "Modules\PromoCampaign\Http\Controllers\ApiPromo";
         $this->outlet       = "Modules\Outlet\Http\Controllers\ApiOutletController";
+        $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
+        $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
     }
 
     public function newTransaction(NewTransaction $request) {
@@ -2732,21 +2735,95 @@ class ApiOnlineTransaction extends Controller
     public function cancelTransaction(Request $request)
     {
         $id_transaction = $request->id;
-        $trx = Transaction::where('id_transaction', $id_transaction)->first();
-        if(!$trx || $trx->transaction_payment_status != 'Pending'){
+        $trx = Transaction::where(['id_transaction' => $id_transaction, 'id_user' => $request->user()->id])->where('transaction_payment_status', '<>', 'Completed')->first();
+        if (!$trx) {
+            return MyHelper::checkGet([],'Transaction not found');
+        }
+
+        if($trx->transaction_payment_status != 'Pending'){
             return MyHelper::checkGet([],'Transaction cannot be canceled');
         }
-        $errors = '';
-
-        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('trx',$trx,$errors, $request->last_url);
-
-        if($cancel){
-            return ['status'=>'success'];
+        $user = $request->user();
+        $payment_type = $trx->trasaction_payment_type;
+        if ($payment_type == 'Balance') {
+            $multi_payment = TransactionMultiplePayment::select('type')->where('id_transaction', $trx->id_transaction)->pluck('type')->toArray();
+            foreach ($multi_payment as $pm) {
+                if ($pm != 'Balance') {
+                    $payment_type = $pm;
+                    break;
+                }
+            }
         }
-        return [
-            'status'=>'fail',
-            'messages' => $errors?:['Something went wrong']
-        ];
+        switch (strtolower($payment_type)) {
+            case 'ipay88':
+                $errors = '';
+
+                $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('trx',$trx,$errors, $request->last_url);
+
+                if($cancel){
+                    return ['status'=>'success'];
+                }
+                return [
+                    'status'=>'fail',
+                    'messages' => $errors?:['Something went wrong']
+                ];
+            case 'midtrans':
+                Midtrans::expire($trx->transaction_receipt_number);
+                $singleTrx = $trx;
+                $singleTrx->load('outlet_name');
+                $now = date('Y-m-d H:i:s');
+                DB::beginTransaction();
+
+                MyHelper::updateFlagTransactionOnline($singleTrx, 'cancel', $user);
+
+                $singleTrx->transaction_payment_status = 'Cancelled';
+                $singleTrx->void_date = $now;
+                $singleTrx->save();
+
+                //reversal balance
+                $logBalance = LogBalance::where('id_reference', $singleTrx->id_transaction)->whereIn('source', ['Online Transaction', 'Transaction'])->where('balance', '<', 0)->get();
+                foreach($logBalance as $logB){
+                    $reversal = app($this->balance)->addLogBalance( $singleTrx->id_user, abs($logB['balance']), $singleTrx->id_transaction, 'Reversal', $singleTrx->transaction_grandtotal);
+                    if (!$reversal) {
+                        DB::rollback();
+                        continue;
+                    }
+                    $order_id = TransactionPickup::select('order_id')->where('id_transaction', $singleTrx->id_transaction)->pluck('order_id')->first();
+                    $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $user->phone,
+                        [
+                            "outlet_name"       => $singleTrx->outlet_name->outlet_name,
+                            "transaction_date"  => $singleTrx->transaction_date,
+                            'id_transaction'    => $singleTrx->id_transaction,
+                            'receipt_number'    => $singleTrx->transaction_receipt_number,
+                            'received_point'    => (string) abs($logB['balance']),
+                            'order_id'          => $order_id,
+                        ]
+                    );
+                }
+
+                // delete promo campaign report
+                if ($singleTrx->id_promo_campaign_promo_code) {
+                    $update_promo_report = app($this->promo_campaign)->deleteReport($singleTrx->id_transaction, $singleTrx->id_promo_campaign_promo_code);
+                    if (!$update_promo_report) {
+                        DB::rollBack();
+                        continue;
+                    }   
+                }
+
+                // return voucher
+                $update_voucher = app($this->voucher)->returnVoucher($singleTrx->id_transaction);
+
+                // return subscription
+                $update_subscription = app($this->subscription)->returnSubscription($singleTrx->id_transaction);
+
+                if (!$update_voucher) {
+                    DB::rollback();
+                    continue;
+                }
+                DB::commit();
+                return ['status'=>'success'];
+        }
+        return ['status' => 'fail', 'messages' => ["Cancel $payment_type transaction is not supported yet"]];
     }
 
     public function availablePayment(Request $request)
