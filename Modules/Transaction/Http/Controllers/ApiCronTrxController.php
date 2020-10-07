@@ -57,6 +57,7 @@ class ApiCronTrxController extends Controller
         $this->trx    = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
         $this->membership       = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
+        $this->shopeepay      = "Modules\ShopeePay\Http\Controllers\ShopeePayController";
     }
 
     public function cron(Request $request)
