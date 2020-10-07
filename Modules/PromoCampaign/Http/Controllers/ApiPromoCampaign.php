@@ -323,20 +323,20 @@ class ApiPromoCampaign extends Controller
         $promoCampaign = $promoCampaign->toArray();
         if ($promoCampaign) {
 // return $promoCampaign;
-            $promoCampaign['used_code'] = PromoCampaignReport::where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign'])->get()->count();
+            $promoCampaign['used_code'] = PromoCampaignReport::where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign'])->count();
             $total = PromoCampaignReport::where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign']);
             $this->filterReport($total,$request,$foreign);
             foreach ($foreign as $value) {
                 $total->leftJoin(...$value);
             }
-            $promoCampaign['total'] = $total->get()->count();
+            $promoCampaign['total'] = $total->count();
 
             $total2 = PromoCampaignPromoCode::join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')->where('promo_campaign_promo_codes.id_promo_campaign', $post['id_promo_campaign']);
             $this->filterCoupon($total2,$request,$foreign);
             foreach ($foreign as $value) {
                 $total->leftJoin(...$value);
             }
-            $promoCampaign['total2'] = $total2->get()->count();
+            $promoCampaign['total2'] = $total2->count();
             $result = [
                 'status'  => 'success',
                 'result'  => $promoCampaign
@@ -440,8 +440,8 @@ class ApiPromoCampaign extends Controller
         }
 
         $query = $query->get()->toArray();
-        $count = $count->get()->count();
-        $total = $total->get()->count();
+        $count = $count->count();
+        $total = $total->count();
 
         if (isset($query) && !empty($query)) {
             $result = [
@@ -584,8 +584,8 @@ class ApiPromoCampaign extends Controller
         }
 
         $query = $query->get()->toArray();
-        $count = $count->get()->count();
-        $total = $total->get()->count();
+        $count = $count->count();
+        $total = $total->count();
 
         if (isset($query) && !empty($query)) {
             $result = [
