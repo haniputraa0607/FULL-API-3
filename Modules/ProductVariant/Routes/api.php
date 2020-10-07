@@ -13,10 +13,6 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'be/product-variant'], function () {
-    Route::any('/', 'ProductVariantController@index')->middleware('feature_control:32');
-    Route::post('store', 'ProductVariantController@store')->middleware('feature_control:33');
-    Route::post('edit', 'ProductVariantController@edit')->middleware('feature_control:34');
-    Route::post('update', 'ProductVariantController@update')->middleware('feature_control:34');
-    Route::any('position', 'ProductVariantController@position')->middleware('feature_control:34');
+Route::group([ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be'], 'prefix' => 'product-variant'], function () {
+    Route::post('store', ['middleware' => 'feature_control:279', 'uses' => 'ApiProductVariantController@store']);
 });

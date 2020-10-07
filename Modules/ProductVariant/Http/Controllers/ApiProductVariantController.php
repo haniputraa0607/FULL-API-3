@@ -10,7 +10,7 @@ use Modules\ProductVariant\Entities\ProductVariant;
 use DB;
 use Illuminate\Support\Facades\Log;
 
-class ProductVariantController extends Controller
+class ApiProductVariantController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -38,15 +38,6 @@ class ProductVariantController extends Controller
         }
 
         return MyHelper::checkGet($product_variant);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     * @return Response
-     */
-    public function create()
-    {
-        return view('productvariant::create');
     }
 
     /**
@@ -109,16 +100,6 @@ class ProductVariantController extends Controller
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
         }
-    }
-
-    /**
-     * Show the specified resource.
-     * @param int $id
-     * @return Response
-     */
-    public function show($id)
-    {
-        return view('productvariant::show');
     }
 
     /**

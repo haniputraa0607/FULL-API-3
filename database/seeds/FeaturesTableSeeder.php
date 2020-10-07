@@ -2771,6 +2771,46 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => '2018-05-10 08:00:00',
                     'updated_at' => '2018-05-10 08:00:00',
                 ),
+            276 =>
+                array(
+                    'id_feature' => 278,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Product Variant',
+                    'show_hide' => 1,
+                    'order' => 111,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            278 =>
+                array(
+                    'id_feature' => 279,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Product Variant',
+                    'show_hide' => 1,
+                    'order' => 111,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            279 =>
+                array(
+                    'id_feature' => 280,
+                    'feature_type' => 'Detail',
+                    'feature_module' => 'Product Variant',
+                    'show_hide' => 1,
+                    'order' => 111,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            280 =>
+                array(
+                    'id_feature' => 281,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Product Variant',
+                    'show_hide' => 1,
+                    'order' => 111,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                )
         ));
     }
 }
