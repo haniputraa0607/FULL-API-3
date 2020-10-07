@@ -2,7 +2,7 @@
 
 /**
  * Created by Reliese Model.
- * Date: Wed, 16 Sep 2020 15:41:51 +0700.
+ * Date: Wed, 07 Oct 2020 17:00:02 +0700.
  */
 
 namespace Modules\PromoCampaign\Entities;
@@ -10,11 +10,11 @@ namespace Modules\PromoCampaign\Entities;
 use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
- * Class PromoCampaignDelivery
+ * Class PromoCampaignShipmentMethod
  * 
- * @property int $id_promo_campaign_delivery
+ * @property int $id_promo_campaign_shipment_method
  * @property int $id_promo_campaign
- * @property string $delivery
+ * @property string $shipment_method
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  * 
@@ -22,9 +22,9 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  *
  * @package Modules\PromoCampaign\Entities
  */
-class PromoCampaignDelivery extends Eloquent
+class PromoCampaignShipmentMethod extends Eloquent
 {
-	protected $primaryKey = 'id_promo_campaign_delivery';
+	protected $primaryKey = 'id_promo_campaign_shipment_method';
 
 	protected $casts = [
 		'id_promo_campaign' => 'int'
@@ -32,7 +32,7 @@ class PromoCampaignDelivery extends Eloquent
 
 	protected $fillable = [
 		'id_promo_campaign',
-		'delivery'
+		'shipment_method'
 	];
 
 	public function promo_campaign()

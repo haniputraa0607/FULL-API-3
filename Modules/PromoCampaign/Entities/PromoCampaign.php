@@ -202,4 +202,14 @@ class PromoCampaign extends Eloquent
 	{
 		return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignDiscountDeliveryRule::class, 'id_promo_campaign');
 	}
+
+    public function promo_campaign_payment_method()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignPaymentMethod::class, 'id_promo_campaign', 'id_promo_campaign');
+    }
+
+    public function promo_campaign_shipment_method()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignShipmentMethod::class, 'id_promo_campaign', 'id_promo_campaign');
+    }
 }
