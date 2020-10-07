@@ -15,6 +15,8 @@ Route::group(['middleware' => ['auth:outlet-app', 'outlet_device_location', 'log
     Route::get('product', 'ApiOutletApp@listProduct');
     Route::post('product', 'ApiOutletApp@productList');
     Route::post('product/sold-out', 'ApiOutletApp@productSoldOut')->middleware('validateUserOutlet:Update Stock Status');
+    Route::get('product-variant-group', 'ApiOutletApp@listProductVariantGroup');
+    Route::post('product-variant-group/sold-outlet', 'ApiOutletApp@productVariantGroupSoldOut');
     Route::get('schedule', 'ApiOutletApp@listSchedule');
     Route::post('schedule/update', 'ApiOutletApp@updateSchedule')->middleware('validateUserOutlet:Update Schedule');
     Route::get('holiday', 'ApiOutletApp@listHoliday');
