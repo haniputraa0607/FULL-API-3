@@ -50,6 +50,9 @@ class ProductVariant extends Model
         $variants_raw->each(function($each) use (&$variants) {
             $variants[$each->id_product_variant] = $each;
         });
+        if(!$variants) {
+            return [];
+        }
         // pc = parent child
         $pc = [];
         foreach ($variants as $key => $variant) {
