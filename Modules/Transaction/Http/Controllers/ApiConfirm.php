@@ -517,12 +517,8 @@ class ApiConfirm extends Controller
                 }
                 DB::commit();
                 return [
-                    'status' => 'success',
-                    'result' => [
-                        'redirect'                  => false,
-                        'id_transaction'            => $paymentShopeepay->id_transaction,
-                        'message'                   => $paymentShopeepay->err_reason,
-                    ],
+                    'status' => 'fail',
+                    'messages' => [$paymentShopeepay->err_reason]
                 ];
             }
             $paymentShopeepay->redirect_url_app  = $trx_shopeepay['response']['redirect_url_app'];
