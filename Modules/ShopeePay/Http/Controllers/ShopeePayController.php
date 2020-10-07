@@ -25,6 +25,7 @@ use Modules\ShopeePay\Entities\LogShopeePay;
 use Modules\ShopeePay\Entities\ShopeePayMerchant;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use Modules\Subscription\Entities\SubscriptionUser;
+use Modules\Subscription\Entities\Subscription;
 
 class ShopeePayController extends Controller
 {
