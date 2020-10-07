@@ -1,0 +1,25 @@
+{
+    "name": "nwidart/productvariant",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\ProductVariant\\Providers\\ProductVariantServiceProvider"
+            ],
+            "aliases": {
+                
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\ProductVariant\\": ""
+        }
+    }
+}
