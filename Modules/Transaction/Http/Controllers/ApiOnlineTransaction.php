@@ -2250,6 +2250,7 @@ class ApiOnlineTransaction extends Controller
                 return $order[$a['id_product_variant']] <=> $order[$b['id_product_variant']];
             });
 
+            $product['id_product_variant_group'] = $item['id_product_variant_group'];
             $product['variants'] = $variants;
             if ($item['id_product_variant_group']) {
                 $product['selected_variant'] = Product::getVariantParentId($item['id_product_variant_group'], Product::getVariantTree($item['id_product'], $outlet)['variants_tree']);
