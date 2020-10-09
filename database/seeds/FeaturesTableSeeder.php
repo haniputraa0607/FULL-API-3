@@ -2810,6 +2810,16 @@ class FeaturesTableSeeder extends Seeder
                     'order' => 111,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            281 =>
+                array(
+                    'id_feature' => 282,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Product Variant',
+                    'show_hide' => 1,
+                    'order' => 111,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
                 )
         ));
     }

@@ -56,6 +56,7 @@ class Product extends Model
 		'product_weight',
 		'product_allow_sync',
 		'product_visibility',
+        'product_variant_status',
 		'position'
 	];
 	public function getPhotoAttribute() {

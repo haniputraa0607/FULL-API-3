@@ -14,5 +14,15 @@ use Illuminate\Http\Request;
 */
 
 Route::group([ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be'], 'prefix' => 'product-variant'], function () {
+    Route::any('/', ['middleware' => 'feature_control:32', 'uses' => 'ApiProductVariantController@index']);
     Route::post('store', ['middleware' => 'feature_control:279', 'uses' => 'ApiProductVariantController@store']);
+    Route::post('edit', ['middleware' => 'feature_control:281', 'uses' => 'ApiProductVariantController@edit']);
+    Route::post('update', ['middleware' => 'feature_control:281', 'uses' => 'ApiProductVariantController@update']);
+    Route::post('delete', ['middleware' => 'feature_control:282', 'uses' => 'ApiProductVariantController@destroy']);
+});
+
+Route::group([ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be'], 'prefix' => 'product-variant-group'], function () {
+    Route::any('/', ['uses' => 'ApiProductVariantController@productVariantGroup']);
+    Route::any('list-price', ['uses' => 'ApiProductVariantController@listPrice']);
+    Route::any('update-price', ['uses' => 'ApiProductVariantController@updatePrice']);
 });
