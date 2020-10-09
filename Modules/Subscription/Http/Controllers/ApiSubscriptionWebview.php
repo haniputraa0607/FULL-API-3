@@ -86,6 +86,7 @@ class ApiSubscriptionWebview extends Controller
             //voucher free
             $payment_message = Setting::where('key', 'subscription_payment_messages')->pluck('value_text')->first()??'Kamu yakin ingin membeli subscription ini?';
             $payment_message = MyHelper::simpleReplace($payment_message,['subscription_title'=>$subs['subscription_title']]);
+            $result['button_text'] = 'Ambil';
         }elseif($subs['subscription_price_type']=='point'){
             $payment_message = Setting::where('key', 'subscription_payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% poin anda dengan subscription %subscription_title%?';
             $payment_message = MyHelper::simpleReplace($payment_message,['point'=>$subs['subscription_price_point'],'subscription_title'=>$subs['subscription_title']]);
