@@ -250,19 +250,20 @@ class ApiSubscriptionClaimPay extends Controller
                         else {
                         	switch ($dataSubs->new_purchase_after) {
 				        		case 'Empty':
-				        			$msg = 'empty';
+				        			$msg = 'telah habis digunakan';
 				        			break;
 				        		case 'Empty Expired':
-				        			$msg = 'empty or expired';
+				        			$msg = 'telah habis digunakan atau telah mencapai tanggal batas pemakaian';
 				        			break;
 				        		default:
-				        			$msg = 'expired';
+				        			$msg = 'telah mencapai tanggal batas pemakaian';
 				        			break;
 				        	}
                             DB::rollback();
                             return response()->json([
                                 'status'   => 'fail',
-                                'messages' => ['You have participated, you can buy this subscription again after your previous subscription is '.$msg]
+                                // 'messages' => ['You have participated, you can buy this subscription again after your previous subscription is '.$msg]
+                                'messages' => ['Subscriptions sudah dimiliki. Subscriptions tidak bisa didapatkan sebelum Subscriptions yang dimiliki saat ini '.$msg.'.']
                             ]);
                         }
                     }
@@ -270,7 +271,8 @@ class ApiSubscriptionClaimPay extends Controller
                         DB::rollback();
                         return response()->json([
                             'status'   => 'fail',
-                            'messages' => ['You have reach max limit to buy this subscription.']
+                            // 'messages' => ['You have reach max limit to buy this subscription.']
+                            'messages' => ['Anda telah mencapai batas maksimal untuk mendapatkan Subscription ini.']
                         ]);
                     }
 
@@ -287,7 +289,8 @@ class ApiSubscriptionClaimPay extends Controller
                 DB::rollback();
                 return response()->json([
                     'status' => 'fail',
-                    'messages' => ['Date valid '.date('d F Y', strtotime($dataSubs->subscription_start)).' until '.date('d F Y', strtotime($dataSubs->subscription_end))]
+                    // 'messages' => ['Date valid '.date('d F Y', strtotime($dataSubs->subscription_start)).' until '.date('d F Y', strtotime($dataSubs->subscription_end))]
+                    'messages' => ['Tanggal berlaku '.date('d F Y', strtotime($dataSubs->subscription_start)).' sampai '.date('d F Y', strtotime($dataSubs->subscription_end))]
                 ]);
             }
 
