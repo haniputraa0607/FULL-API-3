@@ -52,7 +52,7 @@ class ApiSubscriptionClaimPay extends Controller
 
     public function cancel(Request $request) {
         $id_subscription_user = $request->id_subscription_user;
-        $subscription_user = SubscriptionUser::where('id_subscription_user', $id_subscription_user)->first();
+        $subscription_user = SubscriptionUser::where(['id_subscription_user' => $id_subscription_user, 'id_user' => $request->user()->id])->first();
         if(!$subscription_user || $subscription_user->paid_status != 'Pending'){
             return MyHelper::checkGet([],'Subscription cannot be canceled');
         }
