@@ -54,17 +54,71 @@ class ApiSubscriptionClaimPay extends Controller
         $id_subscription_user = $request->id_subscription_user;
         $subscription_user = SubscriptionUser::where('id_subscription_user', $id_subscription_user)->first();
         if(!$subscription_user || $subscription_user->paid_status != 'Pending'){
-            return MyHelper::checkGet([],'Paid subscription cannot be canceled');
+            return MyHelper::checkGet([],'Subscription cannot be canceled');
         }
-        $errors = '';
-        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('subscription',$subscription_user,$errors, $request->last_url);
-        if($cancel){
-            return ['status'=>'success'];
+        $payment_type = $subscription_user->payment_method;
+        switch (strtolower($payment_type)) {
+            case 'ipay88':
+                $errors = '';
+                $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('subscription',$subscription_user,$errors, $request->last_url);
+                if($cancel){
+                    return ['status'=>'success'];
+                }
+                return [
+                    'status'=>'fail', 
+                    'messages' => $errors?:['Something went wrong']
+                ];
+            case 'midtrans':
+                $trx_mid = SubscriptionPaymentMidtran::where('id_subscription_user', $subscription_user->id_subscription_user)->first();
+                if (!$trx_mid) {
+                    return ['status' => 'fail', 'messages' => ['Payment not found']];
+                }
+                $connectMidtrans = Midtrans::expire($trx_mid->order_id);
+                $singleTrx = $subscription_user;
+                DB::beginTransaction();
+
+                $singleTrx->paid_status = 'Cancelled';
+                $singleTrx->void_date   = date('Y-m-d H:i:s');
+                $singleTrx->save();
+
+                // revert back subscription data
+                $subscription = Subscription::where('id_subscription', $singleTrx->id_subscription)->first();
+                if ($subscription) {
+                    $up1 = $subscription->update(['subscription_bought' => $subscription->subscription_bought - 1]);
+                    if (!$up1) {
+                        DB::rollBack();
+                        continue;
+                    }
+                }
+                // $up2 = SubscriptionUserVoucher::where('id_subscription_user_voucher', $singleTrx->id_subscription_user_voucher)->delete();
+                // if (!$up2) {
+                //     DB::rollBack();
+                //     continue;
+                // }
+                //reversal balance
+                $logBalance = LogBalance::where('id_reference', $singleTrx->id_subscription_user)->where('source', 'Subscription Balance')->where('balance', '<', 0)->get();
+                foreach ($logBalance as $logB) {
+                    $reversal = app($this->balance)->addLogBalance($singleTrx->id_user, abs($logB['balance']), $singleTrx->id_subscription_user, 'Subscription Reversal', $singleTrx->subscription_price_point ?: $singleTrx->subscription_price_cash);
+                    if (!$reversal) {
+                        DB::rollBack();
+                        continue;
+                    }
+                    // $usere= User::where('id',$singleTrx->id_user)->first();
+                    // $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone,
+                    //     [
+                    //         "outlet_name"       => $singleTrx->outlet_name->outlet_name,
+                    //         "transaction_date"  => $singleTrx->transaction_date,
+                    //         'id_transaction'    => $singleTrx->id_transaction,
+                    //         'receipt_number'    => $singleTrx->transaction_receipt_number,
+                    //         'received_point'    => (string) abs($logB['balance'])
+                    //     ]
+                    // );
+                }
+
+                DB::commit();
+                return ['status' => 'success'];
         }
-        return [
-            'status'=>'fail', 
-            'messages' => $errors?:['Something went wrong']
-        ];
+        return ['status' => 'fail', 'messages' => ["Cancel $payment_type transaction is not supported yet"]];
     }
 
     /* CLAIM SUBSCRIPTION */
