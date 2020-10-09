@@ -2735,8 +2735,11 @@ class ApiOnlineTransaction extends Controller
     }
     public function cancelTransaction(Request $request)
     {
-        $id_transaction = $request->id;
-        $trx = Transaction::where(['id_transaction' => $id_transaction, 'id_user' => $request->user()->id])->where('transaction_payment_status', '<>', 'Completed')->first();
+        if ($request->id) {
+            $trx = Transaction::where(['id_transaction' => $request->id, 'id_user' => $request->user()->id])->where('transaction_payment_status', '<>', 'Completed')->first();
+        } else {
+            $trx = Transaction::where(['transaction_receipt_number' => $request->receipt_number, 'id_user' => $request->user()->id])->where('transaction_payment_status', '<>', 'Completed')->first();
+        }
         if (!$trx) {
             return MyHelper::checkGet([],'Transaction not found');
         }

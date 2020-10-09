@@ -65,7 +65,7 @@ class ApiDealsClaimPay extends Controller
 
     public function cancel(Request $request) {
         $id_deals_user = $request->id_deals_user;
-        $deals_user = DealsUser::where('id_deals_user', $id_deals_user)->first();
+        $deals_user = DealsUser::where(['id_deals_user' => $id_deals_user, 'id_user' => $request->user()->id])->first();
         if(!$deals_user || $deals_user->paid_status != 'Pending'){
             return MyHelper::checkGet([],'Deals cannot be canceled');
         }
