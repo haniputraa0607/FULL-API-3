@@ -36,6 +36,12 @@ class ApiInvalidTransactionController extends Controller
         $data = Transaction::join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->leftJoin('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
+            ->whereNull('transaction_pickups.reject_at')
+            ->where('transactions.transaction_payment_status', 'Completed')
+            ->where(function ($q){
+                $q->whereNotNull('transaction_pickups.taken_at')
+                    ->orWhereNotNull('transaction_pickups.taken_by_system_at');
+            })
             ->whereNull('dot.id_disburse_outlet')
             ->select('outlets.*', 'transactions.*', 'transaction_pickups.*');
 

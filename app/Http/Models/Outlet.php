@@ -87,8 +87,9 @@ class Outlet extends Authenticatable
 		// 'outlet_close_hours'
 		'status_franchise',
         'outlet_special_status',
-		'outlet_special_fee',
-		'plastic_used_status'
+		'plastic_used_status',
+        'outlet_special_fee',
+        'time_zone_utc'
 	];
 
 	protected $appends  = ['call', 'url'];
