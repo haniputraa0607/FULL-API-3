@@ -419,9 +419,11 @@ class ApiOnlineTransaction extends Controller
                 $post['subtotal'] = $post['subtotal'] - $totalDisProduct;
                 
                 // Additional Plastic Payment
-                $plastic = app($this->plastic)->check($post);
-                $post['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
-                $post['subtotal'] =$post['subtotal'] + $post['plastic']['plastic_price_total'] ?? 0;
+                if(isset($post['is_plastic_checked']) && $post['is_plastic_checked'] == true){
+                    $plastic = app($this->plastic)->check($post);
+                    $post['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
+                    $post['subtotal'] =$post['subtotal'] + $post['plastic']['plastic_price_total'] ?? 0;
+                }
 
             } elseif ($valueTotal == 'discount') {
                 // $post['dis'] = $this->countTransaction($valueTotal, $post);
@@ -988,6 +990,7 @@ class ApiOnlineTransaction extends Controller
             $dataProduct = [
                 'id_transaction'               => $insertTransaction['id_transaction'],
                 'id_product'                   => $checkProduct['id_product'],
+                'type'                         => $checkProduct['product_type'],
                 'id_brand'                     => $valueProduct['id_brand'] ?? null,
                 'id_outlet'                    => $insertTransaction['id_outlet'],
                 'id_user'                      => $insertTransaction['id_user'],
@@ -2258,6 +2261,19 @@ class ApiOnlineTransaction extends Controller
         // Additional Plastic Payment
         $plastic = app($this->plastic)->check($post);
         $result['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
+        if($post['type'] == 'Pickup Order'){
+            $result['plastic']['is_checked'] = true;
+            $result['plastic']['is_mandatory'] = false;
+        }elseif($post['type'] == 'GO-SEND'){
+            $result['plastic']['is_checked'] = true;
+            $result['plastic']['is_mandatory'] = true;
+        }else{
+            return [
+                'status' => 'fail',
+                'messages' => ['Invalid Order Type']
+            ];
+        }
+        
         $subtotal += $result['plastic']['plastic_price_total'] ?? 0;
 
         $result['is_advance_order'] = $is_advance;

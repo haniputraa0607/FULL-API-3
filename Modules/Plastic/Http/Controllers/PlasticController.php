@@ -13,7 +13,8 @@ use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 
 use Modules\Plastic\Http\Controllers\Plastic;
-
+use Modules\Product\Entities\ProductGlobalPrice;
+use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\Plastic\Http\Requests\PlasticTotalPrice;
 
 
@@ -132,8 +133,16 @@ class PlasticController extends Controller
 
             // calculate total price
             $total_plastic_price = 0;
+
+            // cek if outlet used different prices
+            $outlet = Outlet::where('id_outlet', $id_outlet)->where('outlet_different_price', 1)->first();
             foreach($sorted_plastic_max as $key => $value){
-                $product_price = ProductPrice::where('id_outlet', $id_outlet)->where('id_product', $value['id_product'])->first()['product_price'];
+                if($outlet){
+                    // get product price from product special prices
+                    $product_price =  ProductSpecialPrice::where('id_outlet', $id_outlet)->where('id_product', $value['id_product'])->first()['product_special_price'];
+                }else{
+                    $product_price = ProductGlobalPrice::where('id_product', $value['id_product'])->first()['product_global_price'];
+                }   
                 $sorted_plastic_max[$key]['plastic_price_raw'] = $value['total_used'] * $product_price; 
                 $total_plastic_price += $sorted_plastic_max[$key]['plastic_price_raw'];
             }
