@@ -261,16 +261,17 @@ class ApiSubscriptionWebview extends Controller
         foreach ($subs['subscription_user_vouchers'] as $key => $value) {
             if (!is_null($value['used_at'])) {
                 $getTrx = Transaction::select(DB::raw('transactions.*,sum(transaction_products.transaction_product_qty) item_total'))->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')->with('outlet')->where('transactions.id_transaction', $value['id_transaction'])->groupBy('transactions.id_transaction')->first();
-                $voucher[$key]['used_at']    = $value['used_at'];
-                $voucher[$key]['used_at_indo']    = MyHelper::dateFormatInd($value['used_at'], false, false);
-                $voucher[$key]['used_at_indo_time']    = 'pukul '.date('H:i', strtotime($value['used_at']));
+                $voucher_temp['used_at']    = $value['used_at'];
+                $voucher_temp['used_at_indo']    = MyHelper::dateFormatInd($value['used_at'], false, false);
+                $voucher_temp['used_at_indo_time']    = 'pukul '.date('H:i', strtotime($value['used_at']));
                 if (is_null($getTrx->outlet)) {
-                    $voucher[$key]['outlet']     = '-';
-                    $voucher[$key]['item']       = '-';
+                    $voucher_temp['outlet']     = '-';
+                    $voucher_temp['item']       = '-';
                 } else {
-                    $voucher[$key]['outlet']     = $getTrx->outlet->outlet_name;
-                    $voucher[$key]['item']       = $getTrx->item_total;
+                    $voucher_temp['outlet']     = $getTrx->outlet->outlet_name;
+                    $voucher_temp['item']       = $getTrx->item_total;
                 }
+                $voucher[] = $voucher_temp;
                 $result['subscription_voucher_used']    = $result['subscription_voucher_used'] + 1;
             }
         }
