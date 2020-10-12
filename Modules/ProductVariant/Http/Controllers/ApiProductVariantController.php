@@ -425,4 +425,163 @@ class ApiProductVariantController extends Controller
         DB::commit();
         return ['status' => 'success'];
     }
+
+    public function listDetail(Request $request)
+    {
+        $post      = $request->json()->all();
+        $data = ProductVariantGroup::join('products', 'products.id_product', 'product_variant_groups.id_product')
+            ->with(['product_variant_pivot']);
+
+        if(isset($post['id_outlet']) && !empty($post['id_outlet'])){
+            $data = $data->leftJoin('product_variant_group_details as pvgd', function ($join) use ($post) {
+                $join->on('pvgd.id_product_variant_group', 'product_variant_groups.id_product_variant_group');
+                $join->where('pvgd.id_outlet', '=', $post['id_outlet']);
+            })
+                ->where(function ($query) use ($post) {
+                    $query->where('pvgd.id_outlet', $post['id_outlet']);
+                    $query->orWhereNull('pvgd.id_outlet');
+                })
+                ->select('pvgd.*', 'products.product_name', 'products.product_code', 'product_variant_groups.product_variant_group_code', 'product_variant_groups.id_product_variant_group');
+        }else{
+            $data = $data->select('product_variant_groups.*', 'products.product_name', 'products.product_code');
+        }
+
+        if(isset($post['rule']) && !empty($post['rule'])){
+            $rule = 'and';
+            if(isset($post['operator'])){
+                $rule = $post['operator'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['rule'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'product_variant_group_code'){
+                            $data->where('product_variant_groups.product_variant_group_code', $row['parameter']);
+                        }
+
+                        if($row['subject'] == 'product_variant_group_visibility'){
+                            $data->where('product_variant_groups.product_variant_group_visibility', $row['parameter']);
+                        }
+                    }
+                }
+            }else{
+                $data->where(function ($subquery) use ($post){
+                    foreach ($post['rule'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'product_variant_group_code'){
+                                $subquery->orWhere('product_variant_groups.product_variant_group_code', $row['parameter']);
+                            }
+
+                            if($row['subject'] == 'product_variant_group_visibility'){
+                                $subquery->orWhere('product_variant_groups.product_variant_group_visibility', $row['parameter']);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        $data = $data->paginate(20);
+
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function updateDetail(Request $request)
+    {
+        $id_outlet  = $request->json('id_outlet');
+        $insertData = [];
+        DB::beginTransaction();
+        foreach ($request->json('detail') as $id_product_modifier => $detail) {
+            if (!($detail['product_variant_group_visibility'] ?? false) && !($detail['product_variant_group_visibility'] ?? false)) {
+                continue;
+            }
+            $key = [
+                'id_product_variant_group' => $id_product_modifier,
+                'id_outlet'           => $id_outlet,
+            ];
+            $insertData = $key + [
+                    'product_variant_group_visibility'   => $detail['product_variant_group_visibility'],
+                    'product_variant_group_stock_status' => $detail['product_variant_group_stock_status'],
+                ];
+            $insert = ProductVariantGroupDetail::updateOrCreate($key, $insertData);
+            if (!$insert) {
+                DB::rollback();
+                return [
+                    'status'   => 'fail',
+                    'messages' => ['Update detail fail'],
+                ];
+            }
+        }
+        DB::commit();
+        return ['status' => 'success'];
+    }
+
+    public function import(Request $request) {
+        $post = $request->json()->all();
+        $result = [
+            'updated' => 0,
+            'create' => 0,
+            'no_update' => 0,
+            'failed' => 0,
+            'more_msg' => [],
+            'more_msg_extended' => []
+        ];
+        $data = $post['data'][0]??[];
+
+        foreach ($data as $key => $value) {
+            $check = ProductVariant::where('product_variant_name', $value['product_variant_name'])->first();
+            if(!$check){
+                $productVariant = ProductVariant::create([
+                    'product_variant_name' => $value['product_variant_name']
+                ]);
+                if($productVariant){
+                    $explodeChild = explode(',',$value['product_variant_child']);
+                    foreach ($explodeChild as $child){
+                        $dataChild = [
+                            'id_parent' => $productVariant['id_product_variant'],
+                            'product_variant_name' => ltrim($child)
+                        ];
+                        ProductVariant::updateOrCreate(['product_variant_name' => ltrim($child)], $dataChild);
+                    }
+                    $result['create']++;
+                }else{
+                    $result['failed']++;
+                    $result['more_msg_extended'][] = "Product variant with name {$value['product_variant_name']} failed to be created";
+                }
+                continue;
+            }else{
+                $update = ProductVariant::where('id_product_variant', $check['id_product_variant'])->update(['product_variant_name' => $value['product_variant_name']]);
+
+                if($update){
+                    $explodeChild = explode(',',$value['product_variant_child']);
+                    foreach ($explodeChild as $child){
+                        $dataChild = [
+                            'id_parent' => $check['id_product_variant'],
+                            'product_variant_name' => ltrim($child)
+                        ];
+                        ProductVariant::updateOrCreate(['product_variant_name' => ltrim($child)], $dataChild);
+                    }
+                    $result['updated']++;
+                }else{
+                    $result['no_update']++;
+                }
+            }
+        }
+        $response = [];
+
+        if($result['updated']){
+            $response[] = 'Update '.$result['updated'].' product variant';
+        }
+        if($result['create']){
+            $response[] = 'Create '.$result['create'].' new product variant';
+        }
+        if($result['no_update']){
+            $response[] = $result['no_update'].' product variant not updated';
+        }
+        if($result['failed']){
+            $response[] = 'Failed create '.$result['failed'].' product variant';
+        }
+        $response = array_merge($response,$result['more_msg_extended']);
+        return MyHelper::checkGet($response);
+    }
 }

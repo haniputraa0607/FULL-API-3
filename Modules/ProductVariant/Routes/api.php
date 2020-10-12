@@ -19,10 +19,13 @@ Route::group([ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scop
     Route::post('edit', ['middleware' => 'feature_control:281', 'uses' => 'ApiProductVariantController@edit']);
     Route::post('update', ['middleware' => 'feature_control:281', 'uses' => 'ApiProductVariantController@update']);
     Route::post('delete', ['middleware' => 'feature_control:282', 'uses' => 'ApiProductVariantController@destroy']);
+    Route::post('import', ['uses' => 'ApiProductVariantController@import']);
 });
 
 Route::group([ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be'], 'prefix' => 'product-variant-group'], function () {
     Route::any('/', ['uses' => 'ApiProductVariantController@productVariantGroup']);
     Route::any('list-price', ['uses' => 'ApiProductVariantController@listPrice']);
     Route::any('update-price', ['uses' => 'ApiProductVariantController@updatePrice']);
+    Route::post('list-detail', 'ApiProductVariantController@listDetail');
+    Route::post('update-detail', 'ApiProductVariantController@updateDetail');
 });
