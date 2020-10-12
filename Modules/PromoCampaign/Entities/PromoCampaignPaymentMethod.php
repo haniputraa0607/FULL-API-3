@@ -32,7 +32,7 @@ class PromoCampaignPaymentMethod extends Eloquent
 
 	protected $fillable = [
 		'id_promo_campaign',
-		'payment_method_code'
+		'payment_method'
 	];
 
 	public function promo_campaign()

@@ -84,7 +84,9 @@ class PromoCampaign extends Eloquent
         'min_basket_size',
         'export_date',
         'export_url',
-        'export_status'
+        'export_status',
+        'is_all_shipment',
+        'is_all_payment'
 	];
 
 	public function user()
