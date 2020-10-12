@@ -12,5 +12,5 @@
 */
 
 Route::prefix('productvariant')->group(function() {
-    Route::get('/', 'ProductVariantController@index');
+    Route::get('/', 'ApiProductVariantController@index');
 });

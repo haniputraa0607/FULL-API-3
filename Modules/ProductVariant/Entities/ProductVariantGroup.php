@@ -20,7 +20,7 @@ class ProductVariantGroup extends Model
     public function product_variant_pivot()
     {
         return $this->hasMany(ProductVariantPivot::class, 'id_product_variant_group', 'id_product_variant_group')
-            ->join('product_variant', 'product_variant.id_product_variant', 'product_variant_pivot.id_product_variant');
+            ->join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
     }
 
     public function id_product_variants()

@@ -81,6 +81,7 @@ class PromoCampaign extends Eloquent
 		'step_complete',
         'charged_central',
         'charged_outlet',
+        'min_basket_size'
         'export_date',
         'export_url',
         'export_status'

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class ProductVariant extends Model
 {
     protected $primaryKey = 'id_product_variant';
-
+    protected $hidden = ['pivot'];
     protected $fillable = [
         'product_variant_name',
         'id_parent',

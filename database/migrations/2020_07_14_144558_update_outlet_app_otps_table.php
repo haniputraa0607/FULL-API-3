@@ -13,20 +13,20 @@ class UpdateOutletAppOtpsTable extends Migration
      */
     public function up()
     {
-        \DB::unprepared('ALTER TABLE `outlet_app_otps` 
-            DROP FOREIGN KEY `outlet_app_otps_id_outlet_foreign`,
-            DROP FOREIGN KEY `outlet_app_otps_id_user_outlet_foreign`;
-            ALTER TABLE `outlet_app_otps` 
-            ADD CONSTRAINT `outlet_app_otps_id_outlet_foreign`
-              FOREIGN KEY (`id_outlet`)
-              REFERENCES `outlets` (`id_outlet`)
-              ON DELETE CASCADE
-              ON UPDATE RESTRICT,
-            ADD CONSTRAINT `outlet_app_otps_id_user_outlet_foreign`
-              FOREIGN KEY (`id_user_outlet`)
-              REFERENCES `user_outlets` (`id_user_outlet`)
-              ON DELETE CASCADE;
-        ');
+        // \DB::unprepared('ALTER TABLE `outlet_app_otps` 
+        //     DROP FOREIGN KEY `outlet_app_otps_id_outlet_foreign`,
+        //     DROP FOREIGN KEY `outlet_app_otps_id_user_outlet_foreign`;
+        //     ALTER TABLE `outlet_app_otps` 
+        //     ADD CONSTRAINT `outlet_app_otps_id_outlet_foreign`
+        //       FOREIGN KEY (`id_outlet`)
+        //       REFERENCES `outlets` (`id_outlet`)
+        //       ON DELETE CASCADE
+        //       ON UPDATE RESTRICT,
+        //     ADD CONSTRAINT `outlet_app_otps_id_user_outlet_foreign`
+        //       FOREIGN KEY (`id_user_outlet`)
+        //       REFERENCES `user_outlets` (`id_user_outlet`)
+        //       ON DELETE CASCADE;
+        // ');
     }
 
     /**
@@ -36,19 +36,19 @@ class UpdateOutletAppOtpsTable extends Migration
      */
     public function down()
     {
-        \DB::unprepared('ALTER TABLE `outlet_app_otps` 
-            DROP FOREIGN KEY `outlet_app_otps_id_outlet_foreign`,
-            DROP FOREIGN KEY `outlet_app_otps_id_user_outlet_foreign`;
-            ALTER TABLE `outlet_app_otps` 
-            ADD CONSTRAINT `outlet_app_otps_id_outlet_foreign`
-              FOREIGN KEY (`id_outlet`)
-              REFERENCES `outlets` (`id_outlet`)
-              ON DELETE RESTRICT
-              ON UPDATE RESTRICT,
-            ADD CONSTRAINT `outlet_app_otps_id_user_outlet_foreign`
-              FOREIGN KEY (`id_user_outlet`)
-              REFERENCES `user_outlets` (`id_user_outlet`)
-              ON DELETE RESTRICT;
-        ');
+        // \DB::unprepared('ALTER TABLE `outlet_app_otps` 
+        //     DROP FOREIGN KEY `outlet_app_otps_id_outlet_foreign`,
+        //     DROP FOREIGN KEY `outlet_app_otps_id_user_outlet_foreign`;
+        //     ALTER TABLE `outlet_app_otps` 
+        //     ADD CONSTRAINT `outlet_app_otps_id_outlet_foreign`
+        //       FOREIGN KEY (`id_outlet`)
+        //       REFERENCES `outlets` (`id_outlet`)
+        //       ON DELETE RESTRICT
+        //       ON UPDATE RESTRICT,
+        //     ADD CONSTRAINT `outlet_app_otps_id_user_outlet_foreign`
+        //       FOREIGN KEY (`id_user_outlet`)
+        //       REFERENCES `user_outlets` (`id_user_outlet`)
+        //       ON DELETE RESTRICT;
+        // ');
     }
 }
