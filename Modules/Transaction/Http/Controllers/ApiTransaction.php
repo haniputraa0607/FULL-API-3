@@ -77,6 +77,9 @@ use Modules\Transaction\Http\Requests\MethodDelete;
 use Modules\Transaction\Http\Requests\ManualPaymentConfirm;
 use Modules\Transaction\Http\Requests\ShippingGoSend;
 
+use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
+
 use App\Lib\MyHelper;
 use App\Lib\GoSend;
 use Validator;
@@ -2963,6 +2966,7 @@ class ApiTransaction extends Controller
             0 as id_custom,
             transaction_products.id_product,
             id_transaction_product,
+            id_product_variant_group,
             id_brand,
             transaction_products.id_outlet,
             outlets.outlet_code,
@@ -2978,6 +2982,8 @@ class ApiTransaction extends Controller
             ->where(['id_transaction'=>$id_transaction])
             ->with(['modifiers'=>function($query){
                 $query->select('id_transaction_product','product_modifiers.code','transaction_product_modifiers.id_product_modifier','qty','product_modifiers.text', 'transaction_product_modifier_price')->join('product_modifiers','product_modifiers.id_product_modifier','=','transaction_product_modifiers.id_product_modifier');
+            },'variants'=>function($query){
+                $query->select('id_transaction_product','transaction_product_variants.id_product_variant','transaction_product_variants.id_product_variant','product_variants.product_variant_name', 'transaction_product_variant_price')->join('product_variants','product_variants.id_product_variant','=','transaction_product_variants.id_product_variant');
             }])->get()->toArray();
         if(!$pts){
             return MyHelper::checkGet($pts);
@@ -3005,6 +3011,21 @@ class ApiTransaction extends Controller
                 $total_mod_price+=$price*$modifier['qty'];
                 $modifier['product_modifier_price'] = MyHelper::requestNumber($price,$rn);
                 unset($modifier['transaction_product_modifier_price']);
+            }
+            if ($pt['id_product_variant_group']) {
+                if ($pt['outlet_different_price']) {
+                    $product_price = ProductVariantGroupSpecialPrice::select('product_variant_group_price')->where('id_product_variant_group', $pt['id_product_variant_group'])->first();
+                } else {
+                    $product_price = ProductVariantGroup::select('product_variant_group_price')->where('id_product_variant_group', $pt['id_product_variant_group'])->first();
+                }
+                $pt['selected_variant'] = Product::getVariantParentId($pt['id_product_variant_group'], Product::getVariantTree($pt['id_product'], $pt)['variants_tree']);
+                if (!$product_price) {
+                    $pt['product_price'] = $pt['product_price'] + array_sum(array_column($pt['variants'], 'transaction_product_variant_price'));
+                } else {
+                    $pt['product_price'] = $product_price->product_variant_group_price;
+                }
+            } else {
+                $pt['selected_variant'] = [];                
             }
             $pt['product_price_total'] = MyHelper::requestNumber(($total_mod_price + $pt['product_price'])*$pt['qty'],$rn);
             $pt['product_price'] = MyHelper::requestNumber($pt['product_price'],$rn);
