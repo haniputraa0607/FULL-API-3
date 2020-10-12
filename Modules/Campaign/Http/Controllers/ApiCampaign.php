@@ -591,10 +591,10 @@ class ApiCampaign extends Controller
 
 		$campaign=Campaign::where('id_campaign',$id_campaign)->first();
 		DB::beginTransaction();
-		if($campaign->campaign_generate_receipient=='Now'){
-			GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
-		}
-		if($campaign->campaign_send_at&&$campaign->campaign_send_at<date('Y-m-d H:i:s')){
+        if($campaign->campaign_generate_receipient=='Now' || (empty($campaign->campaign_send_at) && $campaign->campaign_generate_receipient=='Send At Time')){
+            GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
+        }
+        if($campaign->campaign_send_at&&$campaign->campaign_send_at<date('Y-m-d H:i:s')){
 			$post['campaign_send_at']=date('Y-m-d H:i:s');
 		}
 		unset($post['id_campaign']);
