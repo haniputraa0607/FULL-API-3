@@ -15,6 +15,7 @@ use Modules\Product\Entities\ProductSpecialPrice;
 use App\Http\Models\ProductModifier;
 use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\ProductModifierGlobalPrice;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
 
 use DB;
 
@@ -185,7 +186,21 @@ class ApiSettingTransactionV2 extends Controller
                 }
                 $mod_subtotal = 0;
                 if ($valueData['id_product_variant_group'] ?? false) {
-                    $variants = Product::getVariantPrice($valueData['id_product_variant_group'], Product::getVariantTree($valueData['id_product'], $outlet)['variants_tree']??[]);
+                    $product_variant_group = ProductVariantGroup::where('id_product_variant_group', $valueData['id_product_variant_group']);
+                    if ($different_price) {
+                        $product_variant_group->join('product_variant_group_special_prices', 'product_variant_group_special_prices.id_product_variant_group', 'product_variant_groups.id_product_variant_group')->select('product_variant_groups.id_product_variant_group', 'product_variant_groups.id_product', 'product_variant_group_special_prices.product_variant_group_price');
+                    } else {
+                        $product_variant_group->select('product_variant_groups.id_product_variant_group', 'product_variant_groups.id_product', 'product_variant_groups.product_variant_group_price');
+                    }
+                    $product_variant_group = $product_variant_group->first();
+                    if (!$product_variant_group) {
+                        return response()->json([
+                            'status' => 'fail',
+                            'messages' => ['Product Variant Group not found'],
+                            'product' => $product['product_name']
+                        ]);
+                    }
+                    $variants = Product::getVariantPrice($product_variant_group, Product::getVariantTree($valueData['id_product'], $outlet)['variants_tree']??[]);
                     if (!$variants) {
                         return response()->json([
                             'status' => 'fail',
@@ -194,7 +209,7 @@ class ApiSettingTransactionV2 extends Controller
                         ]);
                     }
                     $valueData['variants'] = $variants;
-                    $valueData['transaction_variant_subtotal'] = array_sum($variants);
+                    $valueData['transaction_variant_subtotal'] = $product_variant_group->product_variant_group_price - $productPrice['product_price'];
                 } else {
                     $valueData['variants'] = [];
                     $valueData['transaction_variant_subtotal'] = 0;
