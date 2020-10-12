@@ -1594,7 +1594,9 @@ class ApiPromoCampaign extends Controller
             }
             else
             {
-                GeneratePromoCode::dispatch($status, $id, $prefix_code, $number_last_code, $total_coupon)->allOnConnection('database');
+                GeneratePromoCode::dispatch($status, $id, $prefix_code, $number_last_code, $total_coupon)
+                ->onQueue('high')
+                ->allOnConnection('database');
                 $result = ['status'  => 'success'];
                 return $result;
             }
