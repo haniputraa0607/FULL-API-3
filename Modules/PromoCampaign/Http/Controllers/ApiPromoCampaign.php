@@ -30,6 +30,7 @@ use Modules\Deals\Entities\DealsBuyxgetyProductRequirement;
 use Modules\Deals\Entities\DealsBuyxgetyRule;
 use Modules\Deals\Entities\DealsDiscountBillRule;
 use Modules\Deals\Entities\DealsDiscountDeliveryRule;
+use Modules\Deals\Entities\DealsShipmentMethod;
 
 use Modules\Promotion\Entities\DealsPromotionProductDiscount;
 use Modules\Promotion\Entities\DealsPromotionProductDiscountRule;
@@ -39,6 +40,7 @@ use Modules\Promotion\Entities\DealsPromotionBuyxgetyProductRequirement;
 use Modules\Promotion\Entities\DealsPromotionBuyxgetyRule;
 use Modules\Promotion\Entities\DealsPromotionDiscountBillRule;
 use Modules\Promotion\Entities\DealsPromotionDiscountDeliveryRule;
+use Modules\Promotion\Entities\DealsPromotionShipmentMethod;
 
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
@@ -2820,12 +2822,12 @@ class ApiPromoCampaign extends Controller
     	}
     	elseif ($source == 'deals') 
     	{
-	        // $table_shipment = new DealsDiscountDeliveryRule;
+	        $table_shipment = new DealsShipmentMethod;
 	        $table_promo = new Deal;
     	}
     	elseif ($source == 'deals_promotion')
     	{
-    		// $table_shipment = new DealsPromotionDiscountDeliveryRule;
+    		$table_shipment = new DealsPromotionShipmentMethod;
 	        $table_promo = new DealsPromotionTemplate;
 	        $id_table = 'id_deals';
     	}
@@ -2834,6 +2836,9 @@ class ApiPromoCampaign extends Controller
 
         if ($post['filter_shipment'] == 'all_shipment') {
             try {
+            	if ($source == 'deals_promotion') {
+            		$id_table = 'id_deals_promotion_template';
+            	}
                 $table_promo::where($id_table, '=', $id_post)->update(['is_all_shipment' => 1]);
                 $result = ['status'  => 'success'];
             } catch (\Exception $e) {
@@ -2856,6 +2861,9 @@ class ApiPromoCampaign extends Controller
             }
             
             try {
+            	if ($source == 'deals_promotion') {
+            		$id_table = 'id_deals_promotion_template';
+            	}
                 $table_promo::where($id_table, '=', $id_post)->update(['is_all_shipment' => 0]);
                 $table_shipment::insert($data_shipment);
                 $result = ['status'  => 'success'];

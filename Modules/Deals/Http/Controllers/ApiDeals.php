@@ -1448,6 +1448,7 @@ class ApiDeals extends Controller
                 $table.'_buyxgety_rules.product',
                 $table.'_discount_bill_rules',
                 $table.'_discount_delivery_rules',
+                $table.'_shipment_method',
                 'brand'
             ]);
         }
