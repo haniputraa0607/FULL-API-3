@@ -1746,7 +1746,9 @@ class ApiOutletApp extends Controller
                         if ($payIpay) {
                             if(strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88')){
                                 $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay);
-                                $reject_type = 'refund';
+                                TransactionPickup::where('id_transaction', $order['id_transaction'])->update([
+                                    'reject_type'   => 'refund',
+                                ]);
                                 if (!$refund) {
                                     DB::rollback();
                                     return response()->json([
@@ -1772,7 +1774,9 @@ class ApiOutletApp extends Controller
                         if ($payShopeepay) {
                             if(MyHelper::setting('refund_shopeepay')) {
                                 $refund = app($this->shopeepay)->void($payShopeepay['id_transaction'], 'trx', $errors);
-                                $reject_type = 'refund';
+                                TransactionPickup::where('id_transaction', $order['id_transaction'])->update([
+                                    'reject_type'   => 'refund',
+                                ]);
                                 if (!$refund) {
                                     DB::rollback();
                                     return response()->json([
@@ -1878,7 +1882,9 @@ class ApiOutletApp extends Controller
                     $point = 0;
                     if(strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88')){
                         $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay);
-                        $reject_type = 'refund';
+                        TransactionPickup::where('id_transaction', $order['id_transaction'])->update([
+                            'reject_type'   => 'refund',
+                        ]);
                         if (!$refund) {
                             DB::rollback();
                             return response()->json([
