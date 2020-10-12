@@ -10,6 +10,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
         Route::any('filter', ['middleware' => 'feature_control:274', 'uses' => 'ApiInvalidTransactionController@filterMarkFlag']);
         Route::post('mark-as-valid/update', ['uses' => 'ApiInvalidTransactionController@markAsValidUpdate']);
         Route::post('mark-as-invalid/add', ['uses' => 'ApiInvalidTransactionController@markAsInvalidAdd']);
+        Route::post('mark-as-pending-invalid/add', ['uses' => 'ApiInvalidTransactionController@markAsPendingInvalidAdd']);
     });
 
     Route::post('/outlet', 'ApiNotification@adminOutlet');
