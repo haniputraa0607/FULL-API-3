@@ -92,7 +92,7 @@ class ApiCronReport extends Controller
             // else {
                 // DATE START
                 $dateStart = $this->firstTrx();
-                // $dateStart = "2020-08-24";
+                // $dateStart = "2020-09-21";
 
                 if ($dateStart) {
                     // UP TO YESTERDAY
@@ -130,6 +130,7 @@ class ApiCronReport extends Controller
                 'status' => 'success'
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             $log->fail($e->getMessage());
         }
     }
@@ -1230,7 +1231,7 @@ class ApiCronReport extends Controller
 			}
 		//end offline
 
-		/*
+		
 		//subscription
 			$dataPayment = TransactionPaymentSubscription::join('transactions', 'transactions.id_transaction', 'transaction_payment_subscriptions.id_transaction')
 			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
@@ -1271,7 +1272,7 @@ class ApiCronReport extends Controller
 				$insertGlobal = GlobalDailyReportPayment::insert($dataPaymentGlobal);
 			}
 		//end subscription
-		*/
+		
         return true;
     }
 
@@ -2022,7 +2023,7 @@ class ApiCronReport extends Controller
 			}
 		//end offline
 
-		/*
+		
 		//subscription
 			$dataPayment = TransactionPaymentSubscription::join('transactions', 'transactions.id_transaction', 'transaction_payment_subscriptions.id_transaction')
 			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
@@ -2067,7 +2068,7 @@ class ApiCronReport extends Controller
 				$insertGlobal = GlobalMonthlyReportPayment::insert($dataPaymentGlobal);
 			}
 		//end subscription
-		*/
+		
         return true;
     }
     

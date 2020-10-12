@@ -212,6 +212,22 @@ class ApiDisburseSettingController extends Controller
         }
     }
 
+    function deleteBankAccount(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['id_bank_account']) && !empty($post['id_bank_account'])){
+            $check = BankAccountOutlet::where('id_bank_account', $post['id_bank_account'])->pluck('id_outlet')->toArray();
+            if($check){
+                $del = BankAccount::where('id_bank_account', $post['id_bank_account'])->delete();
+                return response()->json(MyHelper::checkDelete($del));
+            }else{
+                return response()->json(['status' => 'fail', 'message' => 'Can not delete bank account']);
+            }
+        }else{
+            return response()->json(['status' => 'fail', 'message' => 'Incomplete Data']);
+        }
+    }
+
     function importBankAccount(Request $request){
         $post = $request->json()->all();
 
@@ -224,16 +240,20 @@ class ApiDisburseSettingController extends Controller
                 $searchBankCode = array_search($val['bank_code'], array_column($listBank, 'bank_code'));
                 $val['beneficiary_account'] = preg_replace("/[^0-9]/", "",$val['beneficiary_account']);
 
-                if(!empty($val['beneficiary_email'])){
-                    $domain = substr($val['beneficiary_email'], strpos($val['beneficiary_email'], "@") + 1);
-                    if(!filter_var($val['beneficiary_email'], FILTER_VALIDATE_EMAIL) ||
-                        checkdnsrr($domain, 'MX') === false){
-                        $arrFailed[] = $val['outlet_code'].'-'.$val['outlet_name'];
+                if($searchBankCode !== false){
+                    if(!empty($val['beneficiary_email'])){
+                        $domain = substr($val['beneficiary_email'], strpos($val['beneficiary_email'], "@") + 1);
+                        if(!filter_var($val['beneficiary_email'], FILTER_VALIDATE_EMAIL) ||
+                            checkdnsrr($domain, 'MX') === false){
+                            $arrFailed[] = $val['outlet_code'].' : '.'Please use invalid email';
+                            continue;
+                        }
+                    }
+
+                    if(preg_match('/[^A-Za-z0-9 ]/', $val['beneficiary_name']) > 0){
+                        $arrFailed[] = $val['outlet_code'].' : '.'Beneficiary name can not use latin numeric and latin letter';
                         continue;
                     }
-                }
-
-                if($searchBankCode !== false && preg_match('/[^A-Za-z0-9]/', $val['beneficiary_name']) <= 0){
 
                     $dt = [
                         'id_bank_name' => $listBank[$searchBankCode]['id_bank_name'],
@@ -267,12 +287,12 @@ class ApiDisburseSettingController extends Controller
                     }
 
                     if(!$update){
-                        $arrFailed[] = $val['outlet_code'].'-'.$val['outlet_name'];
+                        $arrFailed[] = $val['outlet_code'].' : Failed submit data';
                     }else{
                         $arrSuccess[] = $val['outlet_code'].'-'.$val['outlet_name'];
                     }
                 }else{
-                    $arrFailed[] = $val['outlet_code'].'-'.$val['outlet_name'];
+                    $arrFailed[] = $val['outlet_code'].' : Please use existing bank code';
                 }
             }
 

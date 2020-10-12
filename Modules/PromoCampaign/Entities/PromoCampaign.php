@@ -82,6 +82,9 @@ class PromoCampaign extends Eloquent
         'charged_central',
         'charged_outlet',
         'min_basket_size'
+        'export_date',
+        'export_url',
+        'export_status'
 	];
 
 	public function user()

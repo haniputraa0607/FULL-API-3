@@ -281,14 +281,20 @@ class ApiAutoCrm extends Controller
 
 			if($crm['autocrm_sms_toogle'] == 1 && !$forward_only){
 				if(!empty($user['phone'])){
+					//input env to log
 					$gateway = env('SMS_GATEWAY');
-					if (in_array($autocrm_title, ['Pin Sent', 'Pin Forgot'])) {
-						// if user not 0 and even, send using alternative
-						if ($user['sms_increment'] && !($user['sms_increment'] % 2)) {
-							$gateway = env('SMS_GATEWAY_ALT');
-						}
-						User::where('id', $user['id'])->update(['sms_increment' => $user['sms_increment']+1]);
-					}
+					if(env('OTP_TYPE') == 'MISSCALL'){
+                        $gateway = env('MISSCALL_GATEWAY');
+                    }else{
+                        if (in_array($autocrm_title, ['Pin Sent', 'Pin Forgot'])) {
+                            // if user not 0 and even, send using alternative
+                            if ($user['sms_increment'] % 2) {
+                                $gateway = env('SMS_GATEWAY_ALT');
+                            }
+                            User::where('id', $user['id'])->update(['sms_increment' => $user['sms_increment']+1]);
+                        }
+                    }
+
 					switch ($gateway) {
 						case 'Jatis':
 							$senddata = [
@@ -356,6 +362,29 @@ class ApiAutoCrm extends Controller
 
 							ValueFirst::create()->send($sendData);
 							break;
+                        case 'SMS114':
+                            $senddata = array(
+                                'apikey' => env('SMS114_API_KEY'),
+                                'callbackurl' => env('SMS114_URL_CALLBACK'),
+                                'datapacket'=>array()
+                            );
+
+                            //add <#> and Hash Key in pin sms content
+                            if($crm['autocrm_title'] == 'Pin Sent' || $crm['autocrm_title'] == 'Pin Forgot'){
+                                if($useragent && $useragent == "Android"){
+                                    $crm['autocrm_sms_content'] = '<#> '.$crm['autocrm_sms_content'].' '.ENV('HASH_KEY_'.ENV('HASH_KEY_TYPE'));
+                                }
+                            }
+                            $content 	= $this->TextReplace($crm['autocrm_sms_content'], $user['phone'], $variables);
+                            array_push($senddata['datapacket'],array(
+                                'number' => trim($user['phone']),
+                                'otp' => $variables['pin'],
+                                'message' => urlencode(stripslashes(utf8_encode($content))),
+                                'sendingdatetime' => ""));
+
+                            $this->rajasms->setData($senddata);
+                            $send = $this->rajasms->sendSMS();
+                            break;
 						default:
 							$senddata = array(
 								'apikey' => env('SMS_KEY'),
@@ -478,7 +507,7 @@ class ApiAutoCrm extends Controller
                             }
                         }elseif ($crm['autocrm_push_clickto'] == 'Voucher') {
                             if (isset($variables['id_deals_user'])) {
-                                $dataOptional['id_reference'] = $variables['id_deals'];
+                                $dataOptional['id_reference'] = $variables['id_deals_user'];
                             } else{
                                 $dataOptional['id_reference'] = 0;
                             }
@@ -609,7 +638,7 @@ class ApiAutoCrm extends Controller
                         }
                     } elseif ($crm['autocrm_inbox_clickto'] == 'Voucher') {
                         if (isset($variables['id_deals_user'])) {
-                            $inbox['inboxes_id_reference'] = $variables['id_deals'];
+                            $inbox['inboxes_id_reference'] = $variables['id_deals_user'];
                         } else{
                             $inbox['inboxes_id_reference'] = 0;
                         }
@@ -891,9 +920,14 @@ class ApiAutoCrm extends Controller
 				}
 
 				if($replace['keyword'] == "%points%"){
-				    $text = str_replace("%point%",number_format($replaced, 0, ',', '.'), $text);
-				    $text = str_replace("%points%",number_format($replaced, 0, ',', '.'), $text);
-				    $text = str_replace($replace['keyword'],number_format($replaced, 0, ',', '.'), $text);
+					if (is_numeric($replaced)) {
+						$points = number_format($replaced, 0, ',', '.');
+					} else {
+						$points = $replaced;
+					}
+				    $text = str_replace("%point%",$points, $text);
+				    $text = str_replace("%points%",$points, $text);
+				    $text = str_replace($replace['keyword'],$points, $text);
 				}else{
     				$text = str_replace($replace['keyword'],$replaced, $text);
 				}

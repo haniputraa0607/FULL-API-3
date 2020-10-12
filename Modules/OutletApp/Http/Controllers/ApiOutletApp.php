@@ -52,12 +52,16 @@ use Modules\Product\Entities\ProductDetail;
 use App\Http\Models\ProductModifierDetail;
 use Modules\Product\Entities\ProductStockStatusUpdate;
 use Modules\Product\Entities\ProductModifierStockStatusUpdate;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
 use Modules\Shift\Entities\Shift;
 use Modules\Shift\Entities\UserOutletApp;
 use Modules\Transaction\Http\Requests\TransactionDetail;
 use Carbon\Carbon;
+use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
+use function foo\func;
 
 class ApiOutletApp extends Controller
 {
@@ -73,6 +77,8 @@ class ApiOutletApp extends Controller
         $this->voucher          = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->subscription     = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
         $this->endPoint  = config('url.storage_url_api');
+        $this->shopeepay      = "Modules\ShopeePay\Http\Controllers\ShopeePayController";
+        $this->outlet      		= "Modules\Outlet\Http\Controllers\ApiOutletController";
     }
 
     public function deleteToken(DeleteToken $request)
@@ -250,11 +256,8 @@ class ApiOutletApp extends Controller
         $result['completed']['count'] = count($listCompleted);
         $result['completed']['data']  = $listCompleted;
 
-        $result['unpaid']['count'] = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+        $result['unpaid']['count'] = Transaction::where('id_outlet',$request->user()->id_outlet)
             ->where('transaction_payment_status', 'Pending')
-            ->whereNull('taken_at')
-            ->whereNull('taken_by_system_at')
-            ->whereNull('reject_at')
             ->whereDate('transaction_date',date('Y-m-d'))
             ->count();
 
@@ -292,6 +295,7 @@ class ApiOutletApp extends Controller
         $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->where('order_id', $post['order_id'])
             ->whereDate('transaction_date', date('Y-m-d'))
+            ->where('transactions.id_outlet', $request->user()->id_outlet)
             ->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_discounts', 'outlet')->first();
 
         $qr = $list['order_id'];
@@ -921,7 +925,11 @@ class ApiOutletApp extends Controller
         DB::beginTransaction();
 
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['taken_at' => date('Y-m-d H:i:s')]);
-        $order->show_rate_popup = 1;
+
+        if ($order->taken_by == 'Customer') {
+            $order->show_rate_popup = 1;
+        }
+
         $order->save();
         if ($pickup) {
             //send notif to customer
@@ -1336,10 +1344,10 @@ class ApiOutletApp extends Controller
         $modifiers = ProductModifier::select(\DB::raw('0 as id_brand, min(product_modifiers.id_product_modifier) as id_product_category, type as product_category_name, count(distinct(product_modifiers.id_product_modifier)) as total_product, 0 as total_sold_out'));
 
         if ($outlet['outlet_different_price']) {
-            $modifiers->join('product_modifier_price', function($join) use ($outlet) {
-                $join->on('product_modifier_price.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
-                    ->where('product_modifier_price.id_outlet', $outlet['id_outlet']);
-            })->whereNotNull('product_modifier_price.product_modifier_price');
+            $modifiers->join('product_modifier_prices', function($join) use ($outlet) {
+                $join->on('product_modifier_prices.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
+                    ->where('product_modifier_prices.id_outlet', $outlet['id_outlet']);
+            })->whereNotNull('product_modifier_prices.product_modifier_price');
         } else {
             $modifiers->join('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier', '=', 'product_modifier_global_prices.id_product_modifier')
                 ->whereNotNull('product_modifier_global_prices.product_modifier_price');
@@ -1685,6 +1693,7 @@ class ApiOutletApp extends Controller
             //refund ke balance
             // if($order['trasaction_payment_type'] == "Midtrans"){
             $multiple = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
+            $point = 0;
             if ($multiple) {
                 foreach ($multiple as $pay) {
                     if ($pay['type'] == 'Balance') {
@@ -1747,6 +1756,32 @@ class ApiOutletApp extends Controller
                                 }
                             }else{
                                 $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                                if ($refund == false) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'   => 'fail',
+                                        'messages' => ['Insert Cashback Failed'],
+                                    ]);
+                                }
+                                $rejectBalance = true;
+                            }
+                        }
+                    } elseif (strtolower($pay['type']) == 'shopeepay') {
+                        $point = 0;
+                        $payShopeepay = TransactionPaymentShopeePay::find($pay['id_payment']);
+                        if ($payShopeepay) {
+                            if(MyHelper::setting('refund_shopeepay')) {
+                                $refund = app($this->shopeepay)->void($payShopeepay['id_transaction'], 'trx', $errors);
+                                if (!$refund) {
+                                    DB::rollback();
+                                    $reject_type = 'refund';
+                                    return response()->json([
+                                        'status'   => 'fail',
+                                        'messages' => ['Refund Payment Failed'],
+                                    ]);
+                                }
+                            }else{
+                                $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payShopeepay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
                                     return response()->json([
@@ -1862,15 +1897,6 @@ class ApiOutletApp extends Controller
                         }
                         $rejectBalance = true;
                     }
-                    $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
-                    if ($refund == false) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['Insert Cashback Failed'],
-                        ]);
-                    }
-                    $rejectBalance = true;
                 } else {
                     $payBalance = TransactionPaymentBalance::where('id_transaction', $order['id_transaction'])->first();
                     if ($payBalance) {
@@ -1916,7 +1942,7 @@ class ApiOutletApp extends Controller
             }
 
             //send notif point refund
-            if($rejectBalance = true){
+            if($rejectBalance == true){
                 $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'],
                 [
                     "outlet_name"      => $outlet['outlet_name'],
@@ -1944,6 +1970,9 @@ class ApiOutletApp extends Controller
     public function listSchedule(Request $request)
     {
         $schedules = $request->user()->outlet_schedules()->get();
+        foreach ($schedules as $key => $value) {
+        	$schedules[$key] = app($this->outlet)->getTimezone($value, $request->user()->time_zone_utc);
+        }
         return MyHelper::checkGet($schedules);
     }
 
@@ -1956,6 +1985,9 @@ class ApiOutletApp extends Controller
         $otp         = $request->outlet_app_otps;
         $date_time   = date('Y-m-d H:i:s');
         foreach ($post['schedule'] as $value) {
+
+        	$value = $this->setTimezone($value, $request->user()->time_zone_utc);
+
             $old      = OutletSchedule::select('id_outlet_schedule', 'id_outlet', 'day', 'open', 'close', 'is_closed')->where(['id_outlet' => $id_outlet, 'day' => $value['day']])->first();
             $old_data = $old ? $old->toArray() : [];
             if ($old) {
@@ -2327,7 +2359,10 @@ class ApiOutletApp extends Controller
 
     public function refreshDeliveryStatus(Request $request)
     {
-        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by', 'GO-SEND')->first();
+        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->with(['outlet' => function($q) {
+            $q->select('id_outlet', 'outlet_name');
+        }])->where('pickup_by', 'GO-SEND')->first();
+        $outlet = $trx->outlet;
         if (!$trx) {
             return MyHelper::checkGet($trx, 'Transaction Not Found');
         }
@@ -2525,7 +2560,9 @@ class ApiOutletApp extends Controller
             'promo_campaign_promo_code.promo_campaign',
             'transaction_payment_subscription.subscription_user_voucher.subscription_user.subscription',
             'transaction_pickup_go_send',
-            'outlet.city')->first();
+            'outlet.city')
+            ->where('transactions.id_outlet', $request->user()->id_outlet)
+            ->first();
         if (!$list) {
             return MyHelper::checkGet([], 'empty');
         }
@@ -2718,7 +2755,7 @@ class ApiOutletApp extends Controller
                 }
                 $list['payment'] = $payment;
                 break;
-            case 'IPay88':
+            case 'Ipay88':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
                 foreach($multiPayment as $dataKey => $dataPay){
@@ -2936,12 +2973,16 @@ class ApiOutletApp extends Controller
                         break;
                     case 'completed':
                     case 'delivered':
-                        if($list['detail']['taken_at'] == null){
+                        if($list['detail']['ready_at'] == null){
+                            $result['transaction_status'] = 4;
+                            $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
+                        }elseif($list['detail']['taken_at'] == null){
                             $result['transaction_status'] = 3;
+                            $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
                         }else{
+                            $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
                             $result['transaction_status'] = 2;
                         }
-                        $result['transaction_status_text']          = 'ORDER SUDAH DIAMBIL';
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['driver']          = [
                             'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
@@ -3615,5 +3656,102 @@ class ApiOutletApp extends Controller
             ]
         ];
         return $result;
+    }
+
+    //====================== Product Variant ======================//
+    public function listProductVariantGroup(Request $request){
+        $post = $request->all();
+
+        $data = ProductVariantGroup::leftJoin('product_variant_group_details as pvgd', 'pvgd.id_product_variant_group', 'product_variant_groups.id_product_variant_group');
+
+        if(isset($post['id_outlet']) && !empty($post['id_outlet'])){
+            $data = $data->where(function ($q) use($post){
+                $q->where('pvgd.id_outlet', $post['id_outlet']);
+                $q->orWhereNull('pvgd.id_product_variant_group_detail');
+            });
+        }
+
+        if(isset($post['id_product']) && !empty($post['id_product'])){
+            $data = $data->where('product_variant_groups.id_product', $post['id_product']);
+        }
+
+        if(isset($post['id_product_variant']) && !empty($post['id_product_variant'])){
+            $data = $data->whereIn('product_variant_groups.id_product_variant_group', function($query) use($post){
+                $query->select('pvp2.id_product_variant_group')
+                    ->from('product_variant_pivot as pvp2')
+                    ->whereIn('pvp2.id_product_variant', $post['id_product_variant']);
+            });
+        }
+
+        $data = $data->select([
+            'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
+            DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
+            DB::raw('(CASE
+                        WHEN pvgd.product_variant_group_visibility is NULL THEN product_variant_groups.product_variant_group_visibility
+                        ELSE pvgd.product_variant_group_visibility END) as product_variant_group_visibility'),
+            DB::raw('(CASE
+                        WHEN pvgd.product_variant_group_stock_status is NULL THEN "Sold Out"
+                        ELSE pvgd.product_variant_group_stock_status END) as product_variant_group_stock_status')]);
+
+
+        $data = $data->where(function ($q){
+                        $q->where('pvgd.product_variant_group_status', 'Active')
+                            ->orWhereNull('pvgd.product_variant_group_status');
+                    })
+                    ->where(function ($q){
+                        $q->where(function ($q2){
+                            $q2->whereNull('pvgd.product_variant_group_visibility')
+                                ->where('product_variant_groups.product_variant_group_visibility', 'Visible');
+                        });
+                        $q->orWhere(function ($q2){
+                            $q2->whereNotNull('pvgd.product_variant_group_visibility')
+                                ->where('pvgd.product_variant_group_visibility', 'Visible');
+                        });
+                    });
+
+        if(!isset($post['id_product']) || isset($post['page'])){
+            $data = $data->paginate(10)->toArray();
+        }else{
+            $data = $data->get()->toArray();
+        }
+
+        return MyHelper::checkGet($data);
+    }
+
+    public function productVariantGroupSoldOut(Request $request)
+    {
+        $post = $request->all();
+        $id_outlet = $post['id_outlet']??auth()->user()->id_outlet;
+
+        if(!$id_outlet){
+            return response()->json(['status' => 'fail', 'messages' => 'Outlet ID is required']);
+        }
+
+        if(isset($post['data_stock']) && !empty($post['data_stock'])){
+            foreach ($post['data_stock'] as $dt){
+                if($dt['product_variant_group_stock_status'] == 1){
+                    $status = 'Available';
+                }else{
+                    $status = 'Sold Out';
+                }
+
+                $updateOrCreate = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$id_outlet, 'id_product_variant_group' => $dt['id_product_variant_group']], ['product_variant_group_stock_status' => $status]);
+            }
+
+            return MyHelper::checkUpdate($updateOrCreate);
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => 'Data for update is empty']);
+        }
+ 
+    }
+  
+  public function setTimezone($data, $time_zone_utc){
+        $default_time_zone_utc = 7;
+        $time_diff = $time_zone_utc - $default_time_zone_utc;
+
+        $data['open'] = date('H:i', strtotime('-'.$time_diff.' hour',strtotime($data['open'])));
+        $data['close'] = date('H:i', strtotime('-'.$time_diff.' hour', strtotime($data['close'])));
+
+        return $data;
     }
 }

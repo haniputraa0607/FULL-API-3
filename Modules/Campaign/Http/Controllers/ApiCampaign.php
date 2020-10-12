@@ -348,7 +348,7 @@ class ApiCampaign extends Controller
 		$user = $request->user();
 
 		$campaign = Campaign::where('id_campaign','=',$post['id_campaign'])->first();
-return $campaign;
+
 		if($campaign){
             DB::beginTransaction();
 			if($campaign['campaign_is_sent'] == 'Yes'){
@@ -483,8 +483,9 @@ return $campaign;
 				if($campaign->campaign_generate_receipient=='Send At Time'){
 					$post=['id_campaign'=>$campaign->id_campaign];
 					GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
-				}
-				$this->sendCampaignInternal($campaign->toArray());
+				}else{
+                    $this->sendCampaignInternal($campaign->toArray());
+                }
 			}
 
 			$log->success(count($campaigns).' campaign has been insert to queue');

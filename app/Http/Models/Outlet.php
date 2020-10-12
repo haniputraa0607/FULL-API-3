@@ -87,7 +87,9 @@ class Outlet extends Authenticatable
 		// 'outlet_close_hours'
 		'status_franchise',
         'outlet_special_status',
-        'outlet_special_fee'
+		'plastic_used_status',
+        'outlet_special_fee',
+        'time_zone_utc'
 	];
 
 	protected $appends  = ['call', 'url'];
@@ -200,5 +202,15 @@ class Outlet extends Authenticatable
 
 	public function payment_method_outlet(){
         return $this->hasMany(\App\Http\Models\PaymentMethodOutlet::class, 'id_outlet');
+    }
+
+    public function getOutletLatitudeAttribute($value)
+    {
+    	return preg_replace('/[^0-9.-]/', '', $value);
+    }
+
+    public function getOutletLongitudeAttribute($value)
+    {
+    	return preg_replace('/[^0-9.-]/', '', $value);
     }
 }

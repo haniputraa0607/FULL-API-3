@@ -29,6 +29,7 @@ use Modules\Product\Http\Requests\category\UpdateCategory;
 use Modules\Product\Http\Requests\category\DeleteCategory;
 
 use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
+use Modules\PromoCampaign\Lib\PromoCampaignTools;
 
 class ApiCategoryController extends Controller
 {
@@ -376,7 +377,7 @@ class ApiCategoryController extends Controller
             ->whereRaw('products.id_product in (CASE
                         WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . '  order by id_product_detail desc limit 1)
                         is NULL AND products.product_visibility = "Visible" THEN products.id_product
-                        WHEN (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . '  order by id_product_detail desc limit 1)
+                        WHEN (select product_detail.id_product from product_detail  where (product_detail.product_detail_visibility = "" OR product_detail.product_detail_visibility is NULL) AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . '  order by id_product_detail desc limit 1)
                         is NOT NULL AND products.product_visibility = "Visible" THEN products.id_product
                         ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "Visible" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . '  order by id_product_detail desc limit 1)
                     END)')
@@ -525,7 +526,7 @@ class ApiCategoryController extends Controller
             ->whereRaw('products.id_product in (CASE
                         WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
                         is NULL AND products.product_visibility = "Visible" THEN products.id_product
-                        WHEN (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
+                        WHEN (select product_detail.id_product from product_detail  where (product_detail.product_detail_visibility = "" OR product_detail.product_detail_visibility is NULL) AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
                         is NOT NULL AND products.product_visibility = "Visible" THEN products.id_product
                         ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "Visible" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
                     END)')
@@ -695,15 +696,15 @@ class ApiCategoryController extends Controller
         ) {
 
             if (!empty($post['promo_code'])) {
-                $code = app($this->promo_campaign)->checkPromoCode($post['promo_code'], null, 1);
+                $code = app($this->promo_campaign)->checkPromoCode($post['promo_code'], 1, 1);
                 $source = 'promo_campaign';
                 $id_brand = $code->id_brand;
             } elseif (!empty($post['id_deals_user'])) {
-                $code = app($this->promo_campaign)->checkVoucher($post['id_deals_user'], null, 1);
+                $code = app($this->promo_campaign)->checkVoucher($post['id_deals_user'], 1, 1);
                 $source = 'deals';
                 $id_brand = $code->dealVoucher->deals->id_brand;
             } elseif (!empty($post['id_subscription_user'])) {
-                $code = app($this->subscription_use)->checkSubscription($post['id_subscription_user'], null, 1, 1);
+                $code = app($this->subscription_use)->checkSubscription($post['id_subscription_user'], 1, 1, 1);
                 $source = 'subscription';
                 $id_brand = $code->subscription_user->subscription->id_brand;
             }
@@ -719,44 +720,54 @@ class ApiCategoryController extends Controller
                 }
                 $code = $code->toArray();
 
-                $applied_product = app($this->promo_campaign)->getProduct($source, ($code['promo_campaign'] ?? $code['deal_voucher']['deals'] ?? $code['subscription_user']['subscription']))['applied_product'] ?? [];
+                $pct = new PromoCampaignTools;
 
-                if ($applied_product == '*') { // all product
-                    foreach ($products as $key => $value) {
+				$all_outlet = $code['promo_campaign']['is_all_outlet']??$code['subscription_user']['subscription']['is_all_outlet']??$code['deal_voucher']['deals']['is_all_outlet']??0;
+				$id_brand 	= $code['promo_campaign']['id_brand']??$code['subscription_user']['subscription']['id_brand']??$code['deal_voucher']['deals']['id_brand']??null;
+				$promo_outlet 	= $code['promo_campaign']['promo_campaign_outlets']??$code['deal_voucher']['deals']['outlets_active']??$code['subscription_user']['subscription']['outlets_active']??[];
 
-                    	$check = in_array($id_brand, array_column($value->brand_category->toArray(), 'id_brand'));
+				$check_outlet = $pct->checkOutletRule($post['id_outlet'], $all_outlet, $promo_outlet, $id_brand);
 
-                    	if ($check || !isset($id_brand)) {
-                        	$products[$key]['is_promo'] = 1;
-                    	}
-                    }
-                } else {
-                    if (isset($applied_product[0])) { // tier || buy x get y
-                        foreach ($applied_product as $key => $value) {
-                            foreach ($products as $key2 => $value2) {
-                                if ($value2['id_product'] == $value['id_product']) {
-                                	$check = in_array($id_brand, array_column($value2->brand_category->toArray(), 'id_brand'));
+				if ($check_outlet) {
+	                $applied_product = app($this->promo_campaign)->getProduct($source, ($code['promo_campaign'] ?? $code['deal_voucher']['deals'] ?? $code['subscription_user']['subscription']))['applied_product'] ?? [];
 
-                    				if ($check || !isset($id_brand)) {
-	                                    $products[$key2]['is_promo'] = 1;
-	                                    break;
+	                if ($applied_product == '*') { // all product
+	                    foreach ($products as $key => $value) {
+
+	                    	$check = in_array($id_brand, array_column($value->brand_category->toArray(), 'id_brand'));
+
+	                    	if ($check || !isset($id_brand)) {
+	                        	$products[$key]['is_promo'] = 1;
+	                    	}
+	                    }
+	                } else {
+	                    if (isset($applied_product[0])) { // tier || buy x get y
+	                        foreach ($applied_product as $key => $value) {
+	                            foreach ($products as $key2 => $value2) {
+	                                if ($value2['id_product'] == $value['id_product']) {
+	                                	$check = in_array($id_brand, array_column($value2->brand_category->toArray(), 'id_brand'));
+
+	                    				if ($check || !isset($id_brand)) {
+		                                    $products[$key2]['is_promo'] = 1;
+		                                    break;
+		                                }
 	                                }
-                                }
-                            }
-                        }
-                    } elseif (isset($applied_product['id_product'])) { // selected product discount
-                        foreach ($products as $key2 => $value2) {
-                            if ($value2['id_product'] == $applied_product['id_product']) {
-                            	$check = in_array($id_brand, array_column($value2->brand_category->toArray(), 'id_brand'));
-
-                    			if ($check || !isset($id_brand)) {
-	                                $products[$key2]['is_promo'] = 1;
-	                                break;
 	                            }
-                            }
-                        }
-                    }
-                }
+	                        }
+	                    } elseif (isset($applied_product['id_product'])) { // selected product discount
+	                        foreach ($products as $key2 => $value2) {
+	                            if ($value2['id_product'] == $applied_product['id_product']) {
+	                            	$check = in_array($id_brand, array_column($value2->brand_category->toArray(), 'id_brand'));
+
+	                    			if ($check || !isset($id_brand)) {
+		                                $products[$key2]['is_promo'] = 1;
+		                                break;
+		                            }
+	                            }
+	                        }
+	                    }
+	                }
+				}
             }
         } elseif (
             (!empty($post['promo_code']) && !empty($post['id_deals_user'])) ||

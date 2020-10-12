@@ -14,6 +14,8 @@ use Modules\Subscription\Entities\Subscription;
 use App\Lib\MyHelper;
 use DB;
 
+use App\Jobs\SendSubscriptionJob;
+
 class ApiWelcomeSubscription extends Controller
 {
 	function __construct() {
@@ -61,13 +63,25 @@ class ApiWelcomeSubscription extends Controller
             $getSubs = Subscription::leftjoin('brands', 'brands.id_brand', 'subscriptions.id_brand')
 		                ->where('subscription_type','welcome')
 		                ->where('subscription_step_complete',1)
-		                ->select('subscriptions.*','brands.name_brand')
-		                ->get()->toArray();
+		                ->select('subscriptions.*','brands.name_brand');
         }else{
             $getSubs = Subscription::where('subscription_type','welcome')
-		                ->select('subscriptions.*')
-		                ->get()->toArray();
+		                ->select('subscriptions.*');
         }
+
+        if ($request->active) {
+        	$now = date("Y-m-d H:i:s");
+        	$getSubs = $getSubs->where('subscription_step_complete','1')
+        				// ->where('subscription_start', "<", $now)
+	            		->where('subscription_end', ">", $now)
+	            		// ->whereColumn('subscription_bought','<','subscription_total');
+	            		->where(function($q){
+	            			$q->where('subscription_total','=','0')
+	            			->orWhereColumn('subscription_bought','<','subscription_total');
+	            		});
+        }
+
+        $getSubs = $getSubs->get()->toArray();
 
         $result = [
             'status' => 'success',
@@ -121,24 +135,22 @@ class ApiWelcomeSubscription extends Controller
             		->select('subscriptions.*')
             		->where('subscription_start', "<", $now)
             		->where('subscription_end', ">", $now)
+            		->where(function($q){
+            			$q->where('subscription_total','=','0')
+            			->orWhereColumn('subscription_bought','<','subscription_total');
+            		})
+            		->where('subscription_step_complete','=','1')
+
             		->get();
 
-        $count = 0;
-        foreach ($getSubs as $val){
-        	if ( $val['subscription_total'] > $val['subscription_bought'] ) {
-	            $generateUser = app($this->subscription_voucher)->autoClaimedAssign($val, $user);
-	            $count++;
-	            $dataSubs = Subscription::where('id_subscription', $val['id_subscription'])->first(); // get newest update of total claimed subscription
-	            app($this->subscription_claim)->updateSubs($dataSubs);
-        	}
-        }
-
-        if (!empty($count)) {
-	        $autocrm = app($this->autocrm)->SendAutoCRM('Receive Welcome Subscription', $phone,
-	            [
-	                'count_subscription'      => (string)$count
-	            ]
-        	);
+        if (!$getSubs->isEmpty()) {
+        	$getSubs = $getSubs->toArray();
+        	$data = [
+        		'subs' 	=> $getSubs,
+        		'user'	=> $user,
+        		'phone' => $phone
+        	];
+        	SendSubscriptionJob::dispatch($data)->allOnConnection('subscriptionqueue');
         }
 
         return true;

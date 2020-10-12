@@ -89,9 +89,12 @@ class Transaction extends Model
 		'longitude',
         'distance_customer',
 		'membership_promo_id',
+        'transaction_flag_invalid',
+        'image_invalid_flag',
         'fraud_flag',
 		'cashback_insert_status',
-		'calculate_achievement'
+		'calculate_achievement',
+		'show_rate_popup'
 	];
 
 	public function user()
@@ -154,7 +157,12 @@ class Transaction extends Model
 
     public function productTransaction() 
     {
-    	return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction')->orderBy('id_product');
+    	return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction')->where('type', 'Product')->orderBy('id_product');
+	}
+
+	public function plasticTransaction() 
+    {
+    	return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction')->where('type', 'Plastic')->orderBy('id_product');
 	}
 
     public function product_detail()

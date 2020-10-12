@@ -287,7 +287,6 @@ class SendCampaignJob implements ShouldQueue
                 break;
 
             case 'push':
-
                 foreach($recipient as $key => $receipient){
                     $dataOptional          = [];
                     $image = null;
@@ -355,7 +354,7 @@ class SendCampaignJob implements ShouldQueue
                     $subject = app($autocrm)->TextReplace($campaign['campaign_push_subject'], $receipient);
                     $content = app($autocrm)->TextReplace($campaign['campaign_push_content'], $receipient);
                     $deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);
-print_r([$deviceToken['token'], $subject, $content, $image, $dataOptional]);
+
                     if (!empty($deviceToken)) {
                         if (isset($deviceToken['token']) && !empty($deviceToken['token'])) {
                             $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptional);
@@ -377,9 +376,7 @@ print_r([$deviceToken['token'], $subject, $content, $image, $dataOptional]);
 
             case 'inbox':
                 $user = User::whereIn('phone',$recipient)->get()->toArray();
-
                 foreach($user as $key => $receipient){
-
                     $inbox = [];
                     $inbox['id_campaign'] = $campaign['id_campaign'];
                     $inbox['id_user']     = $receipient['id'];

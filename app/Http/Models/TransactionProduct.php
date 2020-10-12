@@ -42,6 +42,7 @@ class TransactionProduct extends Model
 	protected $fillable = [
 		'id_transaction',
 		'id_product',
+		'type',
 		'id_outlet',
 		'id_brand',
 		'id_user',
@@ -53,7 +54,8 @@ class TransactionProduct extends Model
 		'transaction_product_note',
 		'transaction_product_discount',
 		'transaction_product_base_discount',
-		'transaction_product_qty_discount'
+		'transaction_product_qty_discount',
+		'transaction_variant_subtotal'
 	];
 	
 	public function modifiers()

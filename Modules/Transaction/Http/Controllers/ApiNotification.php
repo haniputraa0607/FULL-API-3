@@ -6,6 +6,7 @@ use App\Http\Models\Configs;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPaymentManual;
 use App\Http\Models\TransactionPaymentOffline;
+use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use App\Http\Models\TransactionPaymentMidtran;
@@ -680,6 +681,14 @@ Detail: ".$link['short'],
             }
 
             if (isset($mid['status_code']) && $mid['status_code'] == 200) {
+                if ($trx['transaction_payment_status'] == 'Cancelled') {
+                    $tpm = TransactionPaymentMidtran::where('id_transaction', $trx['id_transaction'])->first();
+                    if (!$tpm) {
+                        return false;
+                    }
+                    Midtrans::refund($tpm['vt_transaction_id'], null, $midtrans['transaction_status']);
+                    return true;
+                }
                 if ($mid['transaction_status'] == 'capture' || $mid['transaction_status'] == 'settlement') {
                     $check = LogTopup::where('id_log_topup', $trx['logTopup']['id_log_topup'])->update(['topup_payment_status' => 'Completed', 'payment_type' => 'Midtrans']);
 
@@ -735,6 +744,11 @@ Detail: ".$link['short'],
                 // if($midtrans['transaction_status'] != 'settlement' && $midtrans['payment_type'] != 'credit_card'){
                     $deals = DealsUser::with(['userMid', 'deals'])->where('id_deals_user', $deals->id_deals_user)->first();
 
+                    if ($deals['paid_status'] == 'Cancelled') {
+                        Midtrans::refund($deals['order_id'], null, $midtrans['transaction_status']);
+                        return true;
+                    }
+
                     $title = "";
                     if(isset($deals['deals']['deals_title']) && $deals['deals']['deals_title'] != null){
                         $title = $deals['deals']['deals_title'];
@@ -785,6 +799,11 @@ Detail: ".$link['short'],
             if (isset($midtrans['status_code']) && $midtrans['status_code'] == 200) {
                 // if($midtrans['transaction_status'] != 'settlement' && $midtrans['payment_type'] != 'credit_card'){
                     $subs = SubscriptionUser::with(['user', 'subscription'])->where('id_subscription_user', $subs->id_subscription_user)->first();
+
+                    if ($subs['paid_status'] == 'Cancelled') {
+                        Midtrans::refund($subs['subscription_user_receipt_number'], null, $midtrans['transaction_status']);
+                        return true;
+                    }
 
                     $title = "";
                     if( $subs['subscription']['subscription_title'] ?? false){
@@ -885,6 +904,14 @@ Detail: ".$link['short'],
         }
 
         if (isset($midtrans['status_code']) && $midtrans['status_code'] == 200) {
+            if ($trx['transaction_payment_status'] == 'Cancelled') {
+                $tpm = TransactionPaymentMidtran::where('id_transaction', $trx['id_transaction'])->first();
+                if (!$tpm) {
+                    return false;
+                }
+                Midtrans::refund($tpm['vt_transaction_id'], null, $midtrans['transaction_status']);
+                return true;
+            }
             if ($midtrans['transaction_status'] == 'refund' ) {
                 return true;
             }elseif ($midtrans['transaction_status'] == 'capture' || $midtrans['transaction_status'] == 'settlement') {
@@ -892,6 +919,7 @@ Detail: ".$link['short'],
                 if (!$check) {
                     return false;
                 }
+                DisburseJob::dispatch(['id_transaction' => $trx->id_transaction])->onConnection('disbursequeue');
 
                 $fraud = $this->checkFraud($trx);
                 if (!$fraud) {
