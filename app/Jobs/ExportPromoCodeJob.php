@@ -16,6 +16,7 @@ use Storage;
 use Excel;
 use File;
 use Symfony\Component\HttpFoundation\Request;
+use App\Lib\MyHelper;
 
 class ExportPromoCodeJob implements ShouldQueue
 {

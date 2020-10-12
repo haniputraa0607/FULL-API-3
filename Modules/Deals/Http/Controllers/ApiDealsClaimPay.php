@@ -65,19 +65,65 @@ class ApiDealsClaimPay extends Controller
 
     public function cancel(Request $request) {
         $id_deals_user = $request->id_deals_user;
-        $deals_user = DealsUser::where('id_deals_user', $id_deals_user)->first();
+        $deals_user = DealsUser::where(['id_deals_user' => $id_deals_user, 'id_user' => $request->user()->id])->first();
         if(!$deals_user || $deals_user->paid_status != 'Pending'){
-            return MyHelper::checkGet([],'Paid deals cannot be canceled');
+            return MyHelper::checkGet([],'Deals cannot be canceled');
         }
-        $errors = '';
-        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('deals',$deals_user,$errors, $request->last_url);
-        if($cancel){
-            return ['status'=>'success'];
+        $payment_type = $deals_user->payment_method;
+        switch (strtolower($payment_type)) {
+            case 'ipay88':
+                $errors = '';
+                $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('deals',$deals_user,$errors, $request->last_url);
+                if($cancel){
+                    return ['status'=>'success'];
+                }
+                return [
+                    'status'=>'fail', 
+                    'messages' => $errors?:['Something went wrong']
+                ];
+            case 'midtrans':
+                $trx_mid = DealsPaymentMidtran::where('id_deals_user', $deals_user->id_deals_user)->first();
+                if (!$trx_mid) {
+                    return ['status' => 'fail', 'messages' => ['Payment not found']];
+                }
+                $connectMidtrans = Midtrans::expire($trx_mid->order_id);
+                $singleTrx = $deals_user;
+
+                DB::beginTransaction();
+
+                $singleTrx->paid_status = 'Cancelled';
+                $singleTrx->save();
+
+                if (!$singleTrx) {
+                    DB::rollBack();
+                    continue;
+                }
+                // revert back deals data
+                $deals = Deal::where('id_deals', $singleTrx->id_deals)->first();
+                if ($deals) {
+                    $up1 = $deals->update(['deals_total_claimed' => $deals->deals_total_claimed - 1]);
+                    if (!$up1) {
+                        DB::rollBack();
+                        continue;
+                    }
+                }
+                $up2 = DealsVoucher::where('id_deals_voucher', $singleTrx->id_deals_voucher)->update(['deals_voucher_status' => 'Available']);
+                if (!$up2) {
+                    DB::rollBack();
+                    continue;
+                }
+                //reversal balance
+                if($singleTrx->balance_nominal) {
+                    $reversal = app($this->balance)->addLogBalance( $singleTrx->id_user, $singleTrx->balance_nominal, $singleTrx->id_deals_user, 'Claim Deals Failed', $singleTrx->voucher_price_point?:$singleTrx->voucher_price_cash);
+                    if (!$reversal) {
+                        DB::rollBack();
+                        continue;
+                    }
+                }
+                DB::commit();
+                return ['status' => 'success'];
         }
-        return [
-            'status'=>'fail', 
-            'messages' => $errors?:['Something went wrong']
-        ];
+        return ['status' => 'fail', 'messages' => ["Cancel $payment_type transaction is not supported yet"]];
     }
 
     /* CLAIM DEALS */
