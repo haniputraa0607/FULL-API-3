@@ -2185,6 +2185,7 @@ class ApiTransaction extends Controller
                 },
                 'productTransaction.product.product_photos',
                 'productTransaction.product.product_discounts',
+                'plasticTransaction.product',
                 'transaction_payment_offlines',
                 'transaction_vouchers.deals_voucher.deal',
                 'promo_campaign_promo_code.promo_campaign',
@@ -2694,6 +2695,16 @@ class ApiTransaction extends Controller
                     }
                 }
                 $keynya++;
+            }
+
+            if(isset($list['plastic_transaction'])){
+                $subtotal_plastic = 0;
+                foreach($list['plastic_transaction'] as $key => $value){
+                    $subtotal_plastic += $value['transaction_product_subtotal'];
+                }
+
+                $result['plastic_transaction'] = [];
+                $result['plastic_transaction']['transaction_plastic_total'] = $subtotal_plastic;
             }
 
             $result['payment_detail'][] = [

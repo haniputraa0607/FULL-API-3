@@ -157,27 +157,41 @@ class Midtrans {
 
         return $status;
     }
-    static function refund($order_id,$param = null)
+    static function refund($order_id,$param = null,$transaction_status = null)
     {
-        // $url    = env('BASE_MIDTRANS_PRO').'/v2/'.$order_id.'/expire';
-        $url    = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$order_id.'/refund/online/direct';
-        $trx = Transaction::join('transaction_payment_midtrans','transaction_payment_midtrans.id_transaction', '=', 'transactions.id_transaction')->where('vt_transaction_id',$order_id)->first();
-        if (!$trx) {
-            return ['status'=>'fail','messages'=>'Midtrans payment not found'];
-        }
-        if ($trx->transaction_status == 'capture') {
-            $url = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$order_id.'/cancel';
+        if(!$transaction_status) {
+            // $url    = env('BASE_MIDTRANS_PRO').'/v2/'.$order_id.'/expire';
+            $trx = Transaction::join('transaction_payment_midtrans','transaction_payment_midtrans.id_transaction', '=', 'transactions.id_transaction')->where('vt_transaction_id',$order_id)->orWhere('transaction_receipt_number', $order_id)->first();
+            if (!$trx) {
+                return ['status'=>'fail','messages'=>'Midtrans payment not found'];
+            }
+            $url    = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$trx->vt_transaction_id.'/refund/online/direct';
+            if ($trx->transaction_status == 'capture') {
+                $url = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$trx->vt_transaction_id.'/cancel';
+            } else {
+                $param['reason'] = 'Pengembalian dana';
+            }
+            if(!$param){
+                $param = [];
+            }
+            $id_reference = $trx->id_transaction;
         } else {
-            $param['reason'] = 'Pengembalian dana';
-        }
-        if(!$param){
-            $param = [];
+            $url    = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$order_id.'/refund/online/direct';
+            if ($transaction_status == 'capture') {
+                $url = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$order_id.'/cancel';
+            } else {
+                $param['reason'] = 'Pengembalian dana';
+            }
+            if(!$param){
+                $param = [];
+            }
+            $id_reference = $order_id;
         }
         $status = MyHelper::post($url, Self::bearer(), $param);
         try {
             LogMidtrans::create([
                 'type'                 => 'refund',
-                'id_reference'         => $trx->id_transaction,
+                'id_reference'         => $id_reference,
                 'request'              => json_encode($param),
                 'request_url'          => $url,
                 'request_header'       => json_encode(['Authorization' => Self::bearer()]),

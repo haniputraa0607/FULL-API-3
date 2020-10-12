@@ -44,6 +44,7 @@ class TransactionProduct extends Model
 		'id_transaction',
 		'id_product',
 		'id_product_variant_group',
+		'type',
 		'id_outlet',
 		'id_brand',
 		'id_user',

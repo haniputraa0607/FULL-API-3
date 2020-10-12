@@ -78,6 +78,7 @@ use Modules\Transaction\Http\Requests\Transaction\NewTransaction;
 use Modules\Transaction\Http\Requests\Transaction\ConfirmPayment;
 use Modules\Transaction\Http\Requests\CheckTransaction;
 use Modules\ProductVariant\Entities\ProductVariant;
+use App\Http\Models\TransactionMultiplePayment;
 
 class ApiOnlineTransaction extends Controller
 {
@@ -98,10 +99,21 @@ class ApiOnlineTransaction extends Controller
         $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
         $this->promo       = "Modules\PromoCampaign\Http\Controllers\ApiPromo";
         $this->outlet       = "Modules\Outlet\Http\Controllers\ApiOutletController";
+        $this->plastic       = "Modules\Plastic\Http\Controllers\PlasticController";
+        $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
+        $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
     }
 
     public function newTransaction(NewTransaction $request) {
         $post = $request->json()->all();
+        if (isset($post['pin']) && strtolower($post['payment_type']) == 'balance') {
+            if (!password_verify($post['pin'], $request->user()->password)) {
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Incorrect PIN']
+                ];
+            }
+        }
         // return $post;
         $totalPrice = 0;
         $totalWeight = 0;
@@ -301,6 +313,7 @@ class ApiOnlineTransaction extends Controller
         $discount_promo = [];
         $promo_discount = 0;
         $promo_source = null;
+        $promo_valid = false;
 
         if($request->json('promo_code') || $request->json('id_deals_user') || $request->json('id_subscription_user')){
         	// change is used flag to 0
@@ -339,6 +352,7 @@ class ApiOnlineTransaction extends Controller
                 }
 
                 $promo_source = 'promo_code';
+                $promo_valid = true;
                 $promo_discount=$discount_promo['discount'];
             }
             else
@@ -366,6 +380,7 @@ class ApiOnlineTransaction extends Controller
 	            }
 
 	            $promo_source = 'voucher_online';
+	            $promo_valid = true;
 	            $promo_discount=$discount_promo['discount'];
 	        }
 	        else
@@ -418,6 +433,14 @@ class ApiOnlineTransaction extends Controller
 
                 $post['subtotal'] = array_sum($post['sub']);
                 $post['subtotal'] = $post['subtotal'] - $totalDisProduct;
+                
+                // Additional Plastic Payment
+                if(isset($post['is_plastic_checked']) && $post['is_plastic_checked'] == true){
+                    $plastic = app($this->plastic)->check($post);
+                    $post['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
+                    $post['subtotal'] =$post['subtotal'] + $post['plastic']['plastic_price_total'] ?? 0;
+                }
+
             } elseif ($valueTotal == 'discount') {
                 // $post['dis'] = $this->countTransaction($valueTotal, $post);
                 $post['dis'] = app($this->setting_trx)->countTransaction($valueTotal, $post, $discount_promo);
@@ -590,6 +613,18 @@ class ApiOnlineTransaction extends Controller
             'service'  => $post['service'],
             'discount' => $post['discount'],
         ];
+
+        if ($promo_valid) {
+        	// check minimum subtotal
+        	$check_promo = app($this->promo)->checkMinBasketSize($promo_source, $code??$deals, $post['subtotal']);
+        	if (!$check_promo) {
+				DB::rollback();
+                return [
+                    'status'=>'fail',
+                    'messages'=>['Promo is not valid']
+                ];
+        	}
+        }
 
         // return $detailPayment;
         $post['grandTotal'] = (int)$post['subtotal'] + (int)$post['discount'] + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'];
@@ -915,6 +950,19 @@ class ApiOnlineTransaction extends Controller
 
         $insertTransaction['transaction_receipt_number'] = $receipt;
 
+        // added item plastic to post item
+        if(isset($post['plastic']['item'])){
+            foreach($post['plastic']['item'] as $key => $value){
+                $value['product_price_total'] = $value['plastic_price_raw'];
+                $value['qty'] = $value['total_used'];
+                
+                unset($value['plastic_price_raw']);
+                unset($value['total_used']);
+
+                array_push($post['item'], $value);
+            }
+        }
+
         foreach (($discount_promo['item']??$post['item']) as $keyProduct => $valueProduct) {
 
             $this_discount=$valueProduct['discount']??0;
@@ -970,6 +1018,7 @@ class ApiOnlineTransaction extends Controller
             $dataProduct = [
                 'id_transaction'               => $insertTransaction['id_transaction'],
                 'id_product'                   => $checkProduct['id_product'],
+                'type'                         => $checkProduct['product_type'],
                 'id_product_variant_group'     => $valueProduct['id_product_variant_group']??null,
                 'id_brand'                     => $valueProduct['id_brand'],
                 'id_outlet'                    => $insertTransaction['id_outlet'],
@@ -1006,72 +1055,86 @@ class ApiOnlineTransaction extends Controller
             $insert_modifier = [];
             $mod_subtotal = 0;
             $more_mid_text = '';
-            foreach ($valueProduct['modifiers'] as $modifier) {
-                $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
-                $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
-                $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price')
-                    // product visible
-                    ->leftJoin('product_modifier_details', function($join) use ($post) {
-                        $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
-                            ->where('product_modifier_details.id_outlet',$post['id_outlet']);
-                    })
-                    ->where(function($query){
-                        $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
-                        ->orWhere(function($q){
-                            $q->whereNull('product_modifier_details.product_modifier_visibility')
-                            ->where('product_modifiers.product_modifier_visibility', 'Visible');
+            if(isset($valueProduct['modifiers'])){
+                foreach ($valueProduct['modifiers'] as $modifier) {
+                    $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
+                    $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
+                    $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price')
+                        // product visible
+                        ->leftJoin('product_modifier_details', function($join) use ($post) {
+                            $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+                                ->where('product_modifier_details.id_outlet',$post['id_outlet']);
+                        })
+                        ->where(function($query){
+                            $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
+                            ->orWhere(function($q){
+                                $q->whereNull('product_modifier_details.product_modifier_visibility')
+                                ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                            });
+                        })
+                        ->where(function($q){
+                            $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                        })
+                        ->where(function($q){
+                            $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+                        })
+                        ->groupBy('product_modifiers.id_product_modifier');
+                    if($outlet['outlet_different_price']){
+                        $mod->join('product_modifier_prices',function($join) use ($post){
+                            $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                            $join->where('product_modifier_prices.id_outlet',$post['id_outlet']);
                         });
-                    })
-                    ->where(function($q){
-                        $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
-                    })
-                    ->where(function($q){
-                        $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
-                    })
-                    ->groupBy('product_modifiers.id_product_modifier');
-                if($outlet['outlet_different_price']){
-                    $mod->join('product_modifier_prices',function($join) use ($post){
-                        $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
-                        $join->where('product_modifier_prices.id_outlet',$post['id_outlet']);
-                    });
-                }else{
-                    $mod->join('product_modifier_global_prices',function($join){
-                        $join->on('product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
-                    });
-                }
-                $mod = $mod->find($id_product_modifier);
-                if(!$mod){
-                    return [
-                        'status' => 'fail',
-                        'messages' => ['Modifier not found']
+                    }else{
+                        $mod->join('product_modifier_global_prices',function($join){
+                            $join->on('product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                        });
+                    }
+                    $mod = $mod->find($id_product_modifier);
+                    if(!$mod){
+                        return [
+                            'status' => 'fail',
+                            'messages' => ['Modifier not found']
+                        ];
+                    }
+                    $mod = $mod->toArray();
+                    $insert_modifier[] = [
+                        'id_transaction_product'=>$trx_product['id_transaction_product'],
+                        'id_transaction'=>$insertTransaction['id_transaction'],
+                        'id_product'=>$checkProduct['id_product'],
+                        'id_product_modifier'=>$id_product_modifier,
+                        'id_outlet'=>$insertTransaction['id_outlet'],
+                        'id_user'=>$insertTransaction['id_user'],
+                        'type'=>$mod['type']??'',
+                        'code'=>$mod['code']??'',
+                        'text'=>$mod['text']??'',
+                        'qty'=>$qty_product_modifier,
+                        'transaction_product_modifier_price'=>$mod['product_modifier_price']*$qty_product_modifier,
+                        'datetime'=>$insertTransaction['transaction_date']??date(),
+                        'trx_type'=>$type,
+                        // 'sales_type'=>'',
+                        'created_at'                   => date('Y-m-d H:i:s'),
+                        'updated_at'                   => date('Y-m-d H:i:s')
                     ];
+                    $mod_subtotal += $mod['product_modifier_price']*$qty_product_modifier;
+                    if($qty_product_modifier>1){
+                        $more_mid_text .= ','.$qty_product_modifier.'x '.$mod['text'];
+                    }else{
+                        $more_mid_text .= ','.$mod['text'];
+                    }
                 }
-                $mod = $mod->toArray();
-                $insert_modifier[] = [
-                    'id_transaction_product'=>$trx_product['id_transaction_product'],
-                    'id_transaction'=>$insertTransaction['id_transaction'],
-                    'id_product'=>$checkProduct['id_product'],
-                    'id_product_modifier'=>$id_product_modifier,
-                    'id_outlet'=>$insertTransaction['id_outlet'],
-                    'id_user'=>$insertTransaction['id_user'],
-                    'type'=>$mod['type']??'',
-                    'code'=>$mod['code']??'',
-                    'text'=>$mod['text']??'',
-                    'qty'=>$qty_product_modifier,
-                    'transaction_product_modifier_price'=>$mod['product_modifier_price']*$qty_product_modifier,
-                    'datetime'=>$insertTransaction['transaction_date']??date(),
-                    'trx_type'=>$type,
-                    // 'sales_type'=>'',
-                    'created_at'                   => date('Y-m-d H:i:s'),
-                    'updated_at'                   => date('Y-m-d H:i:s')
-                ];
-                $mod_subtotal += $mod['product_modifier_price']*$qty_product_modifier;
-                if($qty_product_modifier>1){
-                    $more_mid_text .= ','.$qty_product_modifier.'x '.$mod['text'];
-                }else{
-                    $more_mid_text .= ','.$mod['text'];
+
+                $trx_modifier = TransactionProductModifier::insert($insert_modifier);
+                if (!$trx_modifier) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Insert Product Modifier Transaction Failed']
+                    ]);
                 }
+                $trx_product->transaction_modifier_subtotal = $mod_subtotal;
+                $trx_product->transaction_product_subtotal += $trx_product->transaction_modifier_subtotal * $valueProduct['qty'];
             }
+
             $trx_modifier = TransactionProductModifier::insert($insert_modifier);
             if (!$trx_modifier) {
                 DB::rollback();
@@ -1911,6 +1974,7 @@ class ApiOnlineTransaction extends Controller
         // check promo code & voucher
         $promo_error=null;
         $promo_source = null;
+        $promo_valid = false;
         if($request->promo_code && !$request->id_subscription_user && !$request->id_deals_user){
         	$code = app($this->promo_campaign)->checkPromoCode($request->promo_code, 1, 1);
 
@@ -1935,6 +1999,9 @@ class ApiOnlineTransaction extends Controller
 						    }
 						    $promo_source = null;
 			            }
+					    else{
+					    	$promo_valid = true;
+					    }
 			            $promo_discount=$discount_promo['discount'];
 		            }
 		            else
@@ -1969,6 +2036,9 @@ class ApiOnlineTransaction extends Controller
 	            	}
 	            	$promo_source = null;
 	            }
+	            else{
+			    	$promo_valid = true;
+			    }
 	            $promo_discount=$discount_promo['discount'];
 	        }
 	        else
@@ -1985,6 +2055,10 @@ class ApiOnlineTransaction extends Controller
         $missing_product = 0;
         // return [$discount_promo['item'],$errors];
         $is_advance = 0;
+
+        $tree_promo = []; 
+        $subtotal_promo = 0;
+
         $global_max_order = Outlet::select('max_order')->where('id_outlet',$post['id_outlet'])->pluck('max_order')->first();
         if($global_max_order == null){
             $global_max_order = Setting::select('value')->where('key','max_order')->pluck('value')->first();
@@ -2169,9 +2243,9 @@ class ApiOnlineTransaction extends Controller
             $product['id_custom'] = $item['id_custom']??null;
             $product['qty'] = $item['qty'];
             $product['note'] = $item['note']??'';
-            $product['promo_discount'] = $item['discount']??0;
+            $product['promo_discount'] = 0;
             isset($item['new_price']) ? $product['new_price']=$item['new_price'] : '';
-            $product['is_promo'] = $item['is_promo']??0;
+            $product['is_promo'] = 0;
             $product['is_free'] = $item['is_free']??0;
             $product['bonus'] = $item['bonus']??0;
             // get modifier
@@ -2242,7 +2316,11 @@ class ApiOnlineTransaction extends Controller
                 );
             }
             if(!isset($tree[$product['id_brand']]['name_brand'])){
-                $tree[$product['id_brand']] = Brand::select('name_brand','id_brand')->find($product['id_brand'])->toArray();
+            	$brand = Brand::select('name_brand','id_brand')->find($product['id_brand'])->toArray();
+            	if (!$product['bonus']) {
+                	$tree[$product['id_brand']] = $brand;
+            	}
+                $tree_promo[$product['id_brand']] = $brand;
             }
 
             $order = array_flip(array_keys($item['variants']));
@@ -2263,10 +2341,32 @@ class ApiOnlineTransaction extends Controller
             $product['product_price_raw'] = (int) $product['product_price'];
             $product['product_price_raw_total'] = (int) $product['product_price']+$mod_price;
             $product['product_price'] = MyHelper::requestNumber($product['product_price']+$mod_price, '_CURRENCY');
-            $tree[$product['id_brand']]['products'][]=$product;
-            $subtotal += $product['product_price_total'];
+
+            if (!$product['bonus']) {
+            	$tree[$product['id_brand']]['products'][]=$product;
+            	$subtotal += $product['product_price_total'];
+            }
+
+            $product['is_promo'] 		= $item['is_promo']??0;
+            $product['promo_discount'] 	= $item['discount']??0;
+            $tree_promo[$product['id_brand']]['products'][] = $product;
+            $subtotal_promo += $product['product_price_total'];
+
             // return $product;
         }
+
+        if ($promo_valid) {
+        	$check_promo = app($this->promo)->checkMinBasketSize($promo_source, $code??$deals, $subtotal);
+        	if ($check_promo) {
+        		$tree = $tree_promo;
+        		$subtotal = $subtotal_promo;
+        	}
+        	else{
+        		$promo_discount = 0;
+        		$promo_source = null;
+        	}
+        }
+
         // return $tree;
         if($missing_product){
             $error_msg[] = MyHelper::simpleReplace(
@@ -2290,13 +2390,32 @@ class ApiOnlineTransaction extends Controller
             'today' => $outlet['today']
         ];
         $result['item'] = array_values($tree);
+        
+        // Additional Plastic Payment
+        $plastic = app($this->plastic)->check($post);
+        $result['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
+        if($post['type'] == 'Pickup Order'){
+            $result['plastic']['is_checked'] = true;
+            $result['plastic']['is_mandatory'] = false;
+        }elseif($post['type'] == 'GO-SEND'){
+            $result['plastic']['is_checked'] = true;
+            $result['plastic']['is_mandatory'] = true;
+        }else{
+            return [
+                'status' => 'fail',
+                'messages' => ['Invalid Order Type']
+            ];
+        }
+        
+        $subtotal += $result['plastic']['plastic_price_total'] ?? 0;
+
         $result['is_advance_order'] = $is_advance;
         $result['subtotal'] = $subtotal;
         $result['shipping'] = $post['shipping']+$shippingGoSend;
         $result['discount'] = $post['discount'];
         $result['service'] = (int) $post['service'];
         $result['tax'] = (int) $post['tax'];
-        $result['grandtotal'] = (int)$post['subtotal'] + (int)(-$post['discount']) + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'] + $shippingGoSend;
+        $result['grandtotal'] = (int)$result['subtotal'] + (int)(-$post['discount']) + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'] + $shippingGoSend;
         $result['subscription'] = 0;
         $result['used_point'] = 0;
         $balance = app($this->balance)->balanceNow($user->id);
@@ -2733,22 +2852,99 @@ class ApiOnlineTransaction extends Controller
     }
     public function cancelTransaction(Request $request)
     {
-        $id_transaction = $request->id;
-        $trx = Transaction::where('id_transaction', $id_transaction)->first();
-        if(!$trx || $trx->transaction_payment_status != 'Pending'){
+        if ($request->id) {
+            $trx = Transaction::where(['id_transaction' => $request->id, 'id_user' => $request->user()->id])->where('transaction_payment_status', '<>', 'Completed')->first();
+        } else {
+            $trx = Transaction::where(['transaction_receipt_number' => $request->receipt_number, 'id_user' => $request->user()->id])->where('transaction_payment_status', '<>', 'Completed')->first();
+        }
+        if (!$trx) {
+            return MyHelper::checkGet([],'Transaction not found');
+        }
+
+        if($trx->transaction_payment_status != 'Pending'){
             return MyHelper::checkGet([],'Transaction cannot be canceled');
         }
-        $errors = '';
-
-        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('trx',$trx,$errors, $request->last_url);
-
-        if($cancel){
-            return ['status'=>'success'];
+        $user = $request->user();
+        $payment_type = $trx->trasaction_payment_type;
+        if ($payment_type == 'Balance') {
+            $multi_payment = TransactionMultiplePayment::select('type')->where('id_transaction', $trx->id_transaction)->pluck('type')->toArray();
+            foreach ($multi_payment as $pm) {
+                if ($pm != 'Balance') {
+                    $payment_type = $pm;
+                    break;
+                }
+            }
         }
-        return [
-            'status'=>'fail',
-            'messages' => $errors?:['Something went wrong']
-        ];
+        switch (strtolower($payment_type)) {
+            case 'ipay88':
+                $errors = '';
+
+                $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('trx',$trx,$errors, $request->last_url);
+
+                if($cancel){
+                    return ['status'=>'success'];
+                }
+                return [
+                    'status'=>'fail',
+                    'messages' => $errors?:['Something went wrong']
+                ];
+            case 'midtrans':
+                Midtrans::expire($trx->transaction_receipt_number);
+                $singleTrx = $trx;
+                $singleTrx->load('outlet_name');
+                $now = date('Y-m-d H:i:s');
+                DB::beginTransaction();
+
+                MyHelper::updateFlagTransactionOnline($singleTrx, 'cancel', $user);
+
+                $singleTrx->transaction_payment_status = 'Cancelled';
+                $singleTrx->void_date = $now;
+                $singleTrx->save();
+
+                //reversal balance
+                $logBalance = LogBalance::where('id_reference', $singleTrx->id_transaction)->whereIn('source', ['Online Transaction', 'Transaction'])->where('balance', '<', 0)->get();
+                foreach($logBalance as $logB){
+                    $reversal = app($this->balance)->addLogBalance( $singleTrx->id_user, abs($logB['balance']), $singleTrx->id_transaction, 'Reversal', $singleTrx->transaction_grandtotal);
+                    if (!$reversal) {
+                        DB::rollback();
+                        continue;
+                    }
+                    $order_id = TransactionPickup::select('order_id')->where('id_transaction', $singleTrx->id_transaction)->pluck('order_id')->first();
+                    $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $user->phone,
+                        [
+                            "outlet_name"       => $singleTrx->outlet_name->outlet_name,
+                            "transaction_date"  => $singleTrx->transaction_date,
+                            'id_transaction'    => $singleTrx->id_transaction,
+                            'receipt_number'    => $singleTrx->transaction_receipt_number,
+                            'received_point'    => (string) abs($logB['balance']),
+                            'order_id'          => $order_id,
+                        ]
+                    );
+                }
+
+                // delete promo campaign report
+                if ($singleTrx->id_promo_campaign_promo_code) {
+                    $update_promo_report = app($this->promo_campaign)->deleteReport($singleTrx->id_transaction, $singleTrx->id_promo_campaign_promo_code);
+                    if (!$update_promo_report) {
+                        DB::rollBack();
+                        continue;
+                    }   
+                }
+
+                // return voucher
+                $update_voucher = app($this->voucher)->returnVoucher($singleTrx->id_transaction);
+
+                // return subscription
+                $update_subscription = app($this->subscription)->returnSubscription($singleTrx->id_transaction);
+
+                if (!$update_voucher) {
+                    DB::rollback();
+                    continue;
+                }
+                DB::commit();
+                return ['status'=>'success'];
+        }
+        return ['status' => 'fail', 'messages' => ["Cancel $payment_type transaction is not supported yet"]];
     }
 
     public function availablePayment(Request $request)
@@ -2874,5 +3070,22 @@ class ApiOnlineTransaction extends Controller
         }
 
         return $new_items;
+    }
+
+    public function getPlasticInfo($plastic, $outlet_plastic_used_status){
+        if((isset($plastic['status']) && $plastic['status'] == 'success') && (isset($outlet_plastic_used_status) && $outlet_plastic_used_status == 'Active')){
+            $result['plastic'] = $plastic['result'];
+            $result['plastic']['status'] = $outlet_plastic_used_status;
+            $result['plastic']['item'] = array_values(
+                array_filter($result['plastic']['item'], function($item){
+                    return $item['total_used'] > 0;
+                })
+            );
+        }else{
+            $result['plastic'] = ['item' => [], 'plastic_price_total' => 0];
+            $result['plastic']['status'] = $outlet_plastic_used_status;
+        }
+
+        return $result['plastic'];
     }
 }

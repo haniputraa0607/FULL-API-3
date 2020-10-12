@@ -422,7 +422,7 @@ class ApiDealsClaim extends Controller
 
     /* GET VOUCHER GENERATE */
     function getVoucherGenerate($user, $dataDeals) {
-        $available = 0;
+      $available = 0;
     	if ($dataDeals->deals_voucher_type != "Unlimited") {
 	        $available = DealsVoucher::where('deals_vouchers.id_deals', $dataDeals->id_deals)
 	        			->leftJoin('deals_users', 'deals_users.id_deals_voucher','=','deals_vouchers.id_deals_voucher')

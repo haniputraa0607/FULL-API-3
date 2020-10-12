@@ -93,6 +93,12 @@ class ApiProductController extends Controller
     	if (isset($post['product_order'])) {
     		$data['product_order'] = $post['product_order'];
     	}
+        if (isset($post['product_variant_status'])) {
+            $data['product_variant_status'] = 1;
+        }else{
+            $data['product_variant_status'] = 0;
+        }
+
         if (isset($post['product_brands'])) {
             if(($post['product_brands'][0]??false) == '*') {
                 $data['product_brands'] = Brand::select('id_brand')->pluck('id_brand')->toArray();
