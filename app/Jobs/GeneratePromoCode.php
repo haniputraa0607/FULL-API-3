@@ -43,7 +43,7 @@ class GeneratePromoCode implements ShouldQueue
     	$total_coupon 	= $this->total_coupon;
     	$remain_coupon	= $total_coupon;
     	$generated_code = 0; 
-    	$chunk 			= 500;
+    	$chunk 			= 100;
 
 		if ($this->status != 'insert') {
 			PromoCampaignPromoCode::where('id_promo_campaign', $this->id)->delete();
