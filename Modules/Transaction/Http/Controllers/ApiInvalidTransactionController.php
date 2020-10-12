@@ -47,11 +47,10 @@ class ApiInvalidTransactionController extends Controller
 
         if(isset($post['invalid']) && $post['invalid'] == 1){
             $data = $data->where('transaction_flag_invalid', 'Invalid');
+        }else if(isset($post['pending_invalid']) && $post['pending_invalid'] == 1){
+            $data = $data->where('transaction_flag_invalid', 'Pending Invalid');
         }else{
-            $data = $data->where(function ($q){
-                $q->where('transaction_flag_invalid', 'Valid')
-                    ->orWhereNull('transaction_flag_invalid');
-            });
+            $data = $data->whereNull('transaction_flag_invalid');
         }
 
         if(isset($post['filter_type']) && !empty($post['filter_type'])){
@@ -92,6 +91,33 @@ class ApiInvalidTransactionController extends Controller
                     $dataUpdateTrx['image_invalid_flag'] = $upload['path'];
                 }
             }
+
+            $add = LogInvalidTransaction::create($dataInsertLog);
+            $update = Transaction::where('id_transaction', $post['id_transaction'])->update($dataUpdateTrx);
+
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Please Input Correct Pin']]);
+        }
+    }
+
+    public function markAsPendingInvalidAdd(Request $request){
+        $post = $request->json()->all();
+        $get = User::where('id', $request->user()->id)->first();
+
+        if (password_verify($post['pin'], $get['password'])) {
+            $dataInsertLog = [
+                'id_transaction' => $post['id_transaction'],
+                'reason' => '',
+                'tansaction_flag' => 'Pending Invalid',
+                'updated_by' => $request->user()->id,
+                'updated_date' => date('Y-m-d H:i:s')
+            ];
+
+            $dataUpdateTrx = [
+                'transaction_flag_invalid' => 'Pending Invalid'
+            ];
+
 
             $add = LogInvalidTransaction::create($dataInsertLog);
             $update = Transaction::where('id_transaction', $post['id_transaction'])->update($dataUpdateTrx);
