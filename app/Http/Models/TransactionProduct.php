@@ -42,6 +42,7 @@ class TransactionProduct extends Model
 	protected $fillable = [
 		'id_transaction',
 		'id_product',
+		'id_product_variant_group',
 		'id_outlet',
 		'id_brand',
 		'id_user',
