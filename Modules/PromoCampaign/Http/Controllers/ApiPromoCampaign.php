@@ -19,8 +19,8 @@ use Modules\PromoCampaign\Entities\PromoCampaignTag;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
 use Modules\PromoCampaign\Entities\UserReferralCode;
 use Modules\PromoCampaign\Entities\PromoCampaignDiscountBillRule;
-use Modules\PromoCampaign\Entities\PromoCampaignShipment;
 use Modules\PromoCampaign\Entities\PromoCampaignDiscountDeliveryRule;
+use Modules\PromoCampaign\Entities\PromoCampaignShipmentMethod;
 
 use Modules\Deals\Entities\DealsProductDiscount;
 use Modules\Deals\Entities\DealsProductDiscountRule;
@@ -313,6 +313,7 @@ class ApiPromoCampaign extends Controller
             'promo_campaign_tier_discount_product.product',
             'promo_campaign_buyxgety_rules.product',
             'promo_campaign_buyxgety_product_requirement.product',
+            'promo_campaign_shipment_method',
             'brand',
             'promo_campaign_reports'
         ];
@@ -1025,6 +1026,14 @@ class ApiPromoCampaign extends Controller
 		}
 
         $update = $table::where($id_table, $id_post)->update($dataPromoCampaign);
+
+        $update_shipment_rule = $this->createShipmentRule($source, $id_table, $id_post, $post);
+
+        if ($update_shipment_rule['status'] != 'success') {
+        	return $update_shipment_rule;
+        }
+
+        // $update_payment_method_rule = $this->createPaymentMethodRule();
 
         if ($post['promo_type'] == 'Product discount') {
 
@@ -1873,6 +1882,8 @@ class ApiPromoCampaign extends Controller
                             'brand',
                             'promo_campaign_discount_bill_rules',
                             'promo_campaign_discount_delivery_rules',
+                            'promo_campaign_shipment_method',
+                            'promo_campaign_payment_method',
                             'promo_campaign_reports' => function($q) {
                             	$q->first();
                             }
@@ -2479,7 +2490,7 @@ class ApiPromoCampaign extends Controller
     	return $desc;
     }
 
-    public function checkPromoCode($promo_code, $outlet=null, $product=null, $id_promo_campaign_promo_code=null, $brand=null)
+    public function checkPromoCode($promo_code, $outlet=null, $product=null, $id_promo_campaign_promo_code=null, $brand=null, $payment_method=null)
     {
     	if (!empty($id_promo_campaign_promo_code))
     	{
@@ -2524,6 +2535,10 @@ class ApiPromoCampaign extends Controller
 
 	    if (!empty($brand)) {
 		    $code = $code->with(['promo_campaign.brand']);
+	    }
+
+	    if (!empty($payment_method)) {
+		    $code = $code->with(['promo_campaign.payment']);
 	    }
 
 	    $code = $code->first();
@@ -2794,5 +2809,64 @@ class ApiPromoCampaign extends Controller
             }
 
         }
+    }
+
+    function createShipmentRule($source, $id_table, $id_post, $post)
+    {
+    	if ($source == 'promo_campaign') 
+    	{
+	        $table_shipment = new PromoCampaignShipmentMethod;
+	        $table_promo = new PromoCampaign;
+    	}
+    	elseif ($source == 'deals') 
+    	{
+	        // $table_shipment = new DealsDiscountDeliveryRule;
+	        $table_promo = new Deal;
+    	}
+    	elseif ($source == 'deals_promotion')
+    	{
+    		// $table_shipment = new DealsPromotionDiscountDeliveryRule;
+	        $table_promo = new DealsPromotionTemplate;
+	        $id_table = 'id_deals';
+    	}
+
+        $table_shipment::where($id_table, '=', $id_post)->delete();
+
+        if ($post['filter_shipment'] == 'all_shipment') {
+            try {
+                $table_promo::where($id_table, '=', $id_post)->update(['is_all_shipment' => 1]);
+                $result = ['status'  => 'success'];
+            } catch (\Exception $e) {
+                $result = [
+                    'status'  => 'fail',
+                    'message' => 'Create Shipment Rule Failed'
+                ];
+                return $result;
+            }
+        } else {
+            $data_shipment = [];
+            foreach ($post['shipment_method'] as $key => $value) {
+            	$temp_data = [
+	                $id_table => $id_post,
+	            	'shipment_method' => $value,
+	                'created_at' => date('Y-m-d H:i:s'),
+	                'updated_at' => date('Y-m-d H:i:s')
+            	];
+            	$data_shipment[] = $temp_data;
+            }
+            
+            try {
+                $table_promo::where($id_table, '=', $id_post)->update(['is_all_shipment' => 0]);
+                $table_shipment::insert($data_shipment);
+                $result = ['status'  => 'success'];
+            } catch (\Exception $e) {
+                $result = [
+                    'status'  => 'fail',
+                    'message' => 'Create Shipment Rule Failed'
+                ];
+                return $result;
+            }
+        }
+        return $result;
     }
 }
