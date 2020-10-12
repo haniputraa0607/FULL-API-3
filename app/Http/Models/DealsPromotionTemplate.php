@@ -62,7 +62,9 @@ class DealsPromotionTemplate extends Model
 		'product_type',
 		'deals_list_outlet',
 		'id_brand',
-		'min_basket_size'
+		'min_basket_size',
+		'is_all_shipment',
+        'is_all_payment'
 	];
 
 	public function deals_promotion_buyxgety_product_requirement()
@@ -159,4 +161,9 @@ class DealsPromotionTemplate extends Model
 	{
 		return $this->hasOne(\Modules\Promotion\Entities\DealsPromotionDiscountDeliveryRule::class, 'id_deals');
 	}
+
+	public function deals_promotion_shipment_method()
+    {
+        return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionShipmentMethod::class, 'id_deals');
+    }
 }

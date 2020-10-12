@@ -2,7 +2,7 @@
 
 /**
  * Created by Reliese Model.
- * Date: Tue, 15 Sep 2020 15:45:27 +0700.
+ * Date: Mon, 12 Oct 2020 15:31:45 +0700.
  */
 
 namespace Modules\Deals\Entities;
@@ -10,13 +10,11 @@ namespace Modules\Deals\Entities;
 use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
- * Class DealsDiscountBillRule
+ * Class DealsShipmentMethod
  * 
- * @property int $id_deals_discount_bill_rule
+ * @property int $id_deals_shipment_method
  * @property int $id_deals
- * @property string $discount_type
- * @property int $discount_value
- * @property int $max_percent_discount
+ * @property string $shipment_method
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  * 
@@ -24,21 +22,17 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  *
  * @package Modules\Deals\Entities
  */
-class DealsDiscountBillRule extends Eloquent
+class DealsShipmentMethod extends Eloquent
 {
-	protected $primaryKey = 'id_deals_discount_bill_rule';
+	protected $primaryKey = 'id_deals_shipment_method';
 
 	protected $casts = [
-		'id_deals' => 'int',
-		'discount_value' => 'int',
-		'max_percent_discount' => 'int'
+		'id_deals' => 'int'
 	];
 
 	protected $fillable = [
 		'id_deals',
-		'discount_type',
-		'discount_value',
-		'max_percent_discount'
+		'shipment_method'
 	];
 
 	public function deal()
