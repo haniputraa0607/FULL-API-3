@@ -2792,10 +2792,18 @@ class ApiTransaction extends Controller
                         ];
                     }
                     if ($list['transaction_pickup_go_send']) {
+                        $flagStatus = [
+                            'confirmed' => 0,
+                            'no_driver' => 0,
+                        ];
                         foreach ($list['transaction_pickup_go_send']['transaction_pickup_update'] as $valueGosend) {
                             switch (strtolower($valueGosend['status'])) {
                                 case 'finding driver':
                                 case 'confirmed':
+                                    if ($flagStatus['confirmed']) {
+                                        break;
+                                    }
+                                    $flagStatus['confirmed'] = 1;
                                     $statusOrder[] = [
                                         'text'  => 'Pesanan sudah siap dan menunggu pick up',
                                         'date'  => $valueGosend['created_at']
@@ -2837,6 +2845,10 @@ class ApiTransaction extends Controller
                                     break;
                                 case 'driver not found':
                                 case 'no_driver':
+                                    if ($flagStatus['no_driver']) {
+                                        break;
+                                    }
+                                    $flagStatus['no_driver'] = 1;
                                     $statusOrder[] = [
                                         'text'  => 'Driver tidak ditemukan',
                                         'date'  => $valueGosend['created_at']
