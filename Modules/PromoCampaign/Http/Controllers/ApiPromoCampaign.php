@@ -1029,11 +1029,11 @@ class ApiPromoCampaign extends Controller
 
         $update = $table::where($id_table, $id_post)->update($dataPromoCampaign);
 
-        $update_shipment_rule = $this->createShipmentRule($source, $id_table, $id_post, $post);
+        /*$update_shipment_rule = $this->createShipmentRule($source, $id_table, $id_post, $post);
 
         if ($update_shipment_rule['status'] != 'success') {
         	return $update_shipment_rule;
-        }
+        }*/
 
         // $update_payment_method_rule = $this->createPaymentMethodRule();
 
