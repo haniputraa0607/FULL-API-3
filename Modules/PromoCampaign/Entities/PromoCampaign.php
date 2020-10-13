@@ -81,10 +81,12 @@ class PromoCampaign extends Eloquent
 		'step_complete',
         'charged_central',
         'charged_outlet',
-        'min_basket_size'
+        'min_basket_size',
         'export_date',
         'export_url',
-        'export_status'
+        'export_status',
+        'is_all_shipment',
+        'is_all_payment'
 	];
 
 	public function user()
@@ -192,4 +194,24 @@ class PromoCampaign extends Eloquent
 			'brand'
 		]);
 	}
+
+	public function promo_campaign_discount_bill_rules()
+	{
+		return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignDiscountBillRule::class, 'id_promo_campaign');
+	}
+
+	public function promo_campaign_discount_delivery_rules()
+	{
+		return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignDiscountDeliveryRule::class, 'id_promo_campaign');
+	}
+
+    public function promo_campaign_payment_method()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignPaymentMethod::class, 'id_promo_campaign', 'id_promo_campaign');
+    }
+
+    public function promo_campaign_shipment_method()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignShipmentMethod::class, 'id_promo_campaign', 'id_promo_campaign');
+    }
 }
