@@ -130,6 +130,14 @@ class ApiDealsClaimPay extends Controller
     function claim(Paid $request)
     {
         $post      = $request->json()->all();
+        if (isset($post['pin']) && strtolower($post['payment_deals']) == 'balance') {
+            if (!password_verify($post['pin'], $request->user()->password)) {
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Incorrect PIN']
+                ];
+            }
+        }
         $dataDeals = app($this->claim)->chekDealsData($request->json('id_deals'));
         $id_user   = $request->user()->id;
         if (empty($dataDeals)) {

@@ -1593,6 +1593,7 @@ class ApiSubscription extends Controller
         $post = $request->json()->all();
         $subs = (new Subscription)->newQuery();
         $subs->where('subscription_publish_end', '>=', date('Y-m-d H:i:s'));
+		$subs->where('subscription_publish_start', '<=', date('Y-m-d H:i:s'));
         $subs->where('subscription_step_complete', '=', 1);
 
         if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {

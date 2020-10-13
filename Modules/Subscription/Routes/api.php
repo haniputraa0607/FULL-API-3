@@ -25,7 +25,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::group(['prefix' => 'claim'], function () {
         Route::post('/', 'ApiSubscriptionClaim@claim');
         Route::post('cancel', 'ApiSubscriptionClaimPay@cancel');
-        Route::post('paid', 'ApiSubscriptionClaimPay@claim');
+        Route::post('paid', 'ApiSubscriptionClaimPay@claim')->middleware('decrypt_pin:pin,request');
         Route::post('paid/status', 'ApiSubscriptionClaimPay@status');
         Route::post('pay-now', 'ApiSubscriptionClaimPay@bayarSekarang');
     });

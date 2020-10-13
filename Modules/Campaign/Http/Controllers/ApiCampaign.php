@@ -480,12 +480,12 @@ class ApiCampaign extends Controller
 
 			$campaigns = Campaign::where('campaign_send_at', '>=', $now2)->where('campaign_send_at', '<=', $now)->where('campaign_is_sent', 'No')->where('campaign_complete', '1')->get();
 			foreach ($campaigns as $i => $campaign) {
-                $update = Campaign::where('id_campaign','=',$campaign->id_campaign)->update(['campaign_is_sent' => 'Yes']);
 				if($campaign->campaign_generate_receipient=='Send At Time'){
 					$post=['id_campaign'=>$campaign->id_campaign];
 					GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
-				}
-				$this->sendCampaignInternal($campaign->toArray());
+				}else{
+                    $this->sendCampaignInternal($campaign->toArray());
+                }
 			}
 
 			$log->success(count($campaigns).' campaign has been insert to queue');
@@ -591,10 +591,10 @@ class ApiCampaign extends Controller
 
 		$campaign=Campaign::where('id_campaign',$id_campaign)->first();
 		DB::beginTransaction();
-		if($campaign->campaign_generate_receipient=='Now'){
-			GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
-		}
-		if($campaign->campaign_send_at&&$campaign->campaign_send_at<date('Y-m-d H:i:s')){
+        if($campaign->campaign_generate_receipient=='Now' || (empty($campaign->campaign_send_at) && $campaign->campaign_generate_receipient=='Send At Time')){
+            GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
+        }
+        if($campaign->campaign_send_at&&$campaign->campaign_send_at<date('Y-m-d H:i:s')){
 			$post['campaign_send_at']=date('Y-m-d H:i:s');
 		}
 		unset($post['id_campaign']);
