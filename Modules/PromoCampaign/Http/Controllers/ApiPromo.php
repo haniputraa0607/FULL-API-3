@@ -319,4 +319,56 @@ class ApiPromo extends Controller
     	
     	return $check;
     }
+
+    public function checkPromo($request, $user, $promo_source, $data_promo, $id_outlet, $item, $delivery_fee, $subtotal)
+    {
+    	$pct = new PromoCampaignTools;
+    	if ($promo_source == 'promo_code') {
+    		$validate_user = $pct->validateUser(
+    			$data_promo->id_promo_campaign, 
+    			$user->id, 
+    			$user->phone, 
+    			$request->device_type, 
+    			$request->device_id, 
+    			$errore,
+    			$data_promo->id_promo_campaign_promo_code
+    		);
+
+    		$source = 'promo_campaign';
+    		$id_promo = $data_promo->id_promo_campaign;
+
+            if ( !empty($errore) ) {
+                return [
+                    'status'	=> 'fail',
+                    'messages'	=> ['Promo code not valid']
+                ];
+            }
+    	}
+    	elseif ($promo_source == "voucher_online") {
+    		$source = 'deals';
+    		$id_promo = $data_promo->dealVoucher->id_deals;
+    	}
+
+		$discount_promo = $pct->validatePromo(
+			$id_promo, 
+			$id_outlet, 
+			$item, 
+			$errors, 
+			$source, 
+			$errorProduct, 
+			$delivery_fee
+		);
+
+		if ( !empty($errors) ) {
+            return [
+                'status' 	=> 'fail',
+                'messages'	=> ['Promo is not valid']
+            ];
+        }
+
+        return [
+        	'status' => 'success',
+        	'data'	 => $discount_promo
+        ];
+    }
 }
