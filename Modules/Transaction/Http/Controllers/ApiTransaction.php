@@ -2197,7 +2197,8 @@ class ApiTransaction extends Controller
                 'promo_campaign_promo_code.promo_campaign',
                 'transaction_pickup_go_send.transaction_pickup_update',
                 'transaction_payment_subscription.subscription_user_voucher',
-                'outlet.city')->first();
+                'subscription_user_voucher',
+                'outlet.city'])->first();
             if(!$list){
                 return MyHelper::checkGet([],'empty');
             }

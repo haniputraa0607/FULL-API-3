@@ -1015,7 +1015,15 @@ class ApiPromoCampaign extends Controller
 
         $update = $table::where($id_table, $id_post)->update($dataPromoCampaign);
 
-        if ($post['promo_type'] == 'Product Discount') {
+        /*$update_shipment_rule = $this->createShipmentRule($source, $id_table, $id_post, $post);
+
+        if ($update_shipment_rule['status'] != 'success') {
+        	return $update_shipment_rule;
+        }*/
+
+        // $update_payment_method_rule = $this->createPaymentMethodRule();
+
+        if ($post['promo_type'] == 'Product discount') {
 
             if ($post['filter_product'] == 'All Product') {
                 $createFilterProduct = $this->createProductFilter('all_product', 1, $id_post, null, $post['discount_type'], $post['discount_value'], $post['max_product'], $post['max_percent_discount'], $source, $table, $id_table);
