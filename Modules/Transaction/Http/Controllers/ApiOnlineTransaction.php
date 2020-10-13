@@ -1123,16 +1123,6 @@ class ApiOnlineTransaction extends Controller
                     }
                 }
 
-                $trx_modifier = TransactionProductModifier::insert($insert_modifier);
-                if (!$trx_modifier) {
-                    DB::rollback();
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Insert Product Modifier Transaction Failed']
-                    ]);
-                }
-                $trx_product->transaction_modifier_subtotal = $mod_subtotal;
-                $trx_product->transaction_product_subtotal += $trx_product->transaction_modifier_subtotal * $valueProduct['qty'];
             }
 
             $trx_modifier = TransactionProductModifier::insert($insert_modifier);
