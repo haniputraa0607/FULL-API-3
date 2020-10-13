@@ -59,8 +59,8 @@ class Product extends Model
 		'position',
 		'product_type',
 		'product_capacity',
-		'plastic_used'
-    'product_variant_status',
+		'plastic_used',
+        'product_variant_status',
 	];
 	public function getPhotoAttribute() {
 		return config('url.storage_url_api').($this->photos[0]['product_photo']??'img/product/item/default.png');
