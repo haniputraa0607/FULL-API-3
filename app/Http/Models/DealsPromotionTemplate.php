@@ -166,4 +166,9 @@ class DealsPromotionTemplate extends Model
     {
         return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionShipmentMethod::class, 'id_deals');
     }
+
+    public function deals_promotion_payment_method()
+    {
+        return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionPaymentMethod::class, 'id_deals');
+    }
 }

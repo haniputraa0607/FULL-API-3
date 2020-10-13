@@ -21,6 +21,7 @@ use Modules\PromoCampaign\Entities\UserReferralCode;
 use Modules\PromoCampaign\Entities\PromoCampaignDiscountBillRule;
 use Modules\PromoCampaign\Entities\PromoCampaignDiscountDeliveryRule;
 use Modules\PromoCampaign\Entities\PromoCampaignShipmentMethod;
+use Modules\PromoCampaign\Entities\PromoCampaignPaymentMethod;
 
 use Modules\Deals\Entities\DealsProductDiscount;
 use Modules\Deals\Entities\DealsProductDiscountRule;
@@ -31,6 +32,7 @@ use Modules\Deals\Entities\DealsBuyxgetyRule;
 use Modules\Deals\Entities\DealsDiscountBillRule;
 use Modules\Deals\Entities\DealsDiscountDeliveryRule;
 use Modules\Deals\Entities\DealsShipmentMethod;
+use Modules\Deals\Entities\DealsPaymentMethod;
 
 use Modules\Promotion\Entities\DealsPromotionProductDiscount;
 use Modules\Promotion\Entities\DealsPromotionProductDiscountRule;
@@ -41,6 +43,7 @@ use Modules\Promotion\Entities\DealsPromotionBuyxgetyRule;
 use Modules\Promotion\Entities\DealsPromotionDiscountBillRule;
 use Modules\Promotion\Entities\DealsPromotionDiscountDeliveryRule;
 use Modules\Promotion\Entities\DealsPromotionShipmentMethod;
+use Modules\Promotion\Entities\DealsPromotionPaymentMethod;
 
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
@@ -316,6 +319,7 @@ class ApiPromoCampaign extends Controller
             'promo_campaign_buyxgety_rules.product',
             'promo_campaign_buyxgety_product_requirement.product',
             'promo_campaign_shipment_method',
+            'promo_campaign_payment_method',
             'brand',
             'promo_campaign_reports'
         ];
@@ -1029,13 +1033,17 @@ class ApiPromoCampaign extends Controller
 
         $update = $table::where($id_table, $id_post)->update($dataPromoCampaign);
 
-        /*$update_shipment_rule = $this->createShipmentRule($source, $id_table, $id_post, $post);
+        $update_shipment_rule = $this->createShipmentRule($source, $id_table, $id_post, $post);
 
         if ($update_shipment_rule['status'] != 'success') {
         	return $update_shipment_rule;
-        }*/
+        }
 
-        // $update_payment_method_rule = $this->createPaymentMethodRule();
+        $update_payment_method_rule = $this->createPaymentRule($source, $id_table, $id_post, $post);
+
+        if ($update_payment_method_rule['status'] != 'success') {
+        	return $update_payment_method_rule;
+        }
 
         if ($post['promo_type'] == 'Product discount') {
 
@@ -2873,6 +2881,70 @@ class ApiPromoCampaign extends Controller
                 $result = [
                     'status'  => 'fail',
                     'message' => 'Create Shipment Rule Failed'
+                ];
+                return $result;
+            }
+        }
+        return $result;
+    }
+
+    function createPaymentRule($source, $id_table, $id_post, $post)
+    {
+    	if ($source == 'promo_campaign') 
+    	{
+	        $table_payment = new PromoCampaignPaymentMethod;
+	        $table_promo = new PromoCampaign;
+    	}
+    	elseif ($source == 'deals') 
+    	{
+	        $table_payment = new DealsPaymentMethod;
+	        $table_promo = new Deal;
+    	}
+    	elseif ($source == 'deals_promotion')
+    	{
+    		$table_payment = new DealsPromotionPaymentMethod;
+	        $table_promo = new DealsPromotionTemplate;
+	        $id_table = 'id_deals';
+    	}
+
+        $table_payment::where($id_table, '=', $id_post)->delete();
+
+        if ($post['filter_payment'] == 'all_payment') {
+            try {
+            	if ($source == 'deals_promotion') {
+            		$id_table = 'id_deals_promotion_template';
+            	}
+                $table_promo::where($id_table, '=', $id_post)->update(['is_all_payment' => 1]);
+                $result = ['status'  => 'success'];
+            } catch (\Exception $e) {
+                $result = [
+                    'status'  => 'fail',
+                    'message' => 'Create Payment Method Rule Failed'
+                ];
+                return $result;
+            }
+        } else {
+            $data_payment = [];
+            foreach ($post['payment_method'] as $key => $value) {
+            	$temp_data = [
+	                $id_table => $id_post,
+	            	'payment_method' => $value,
+	                'created_at' => date('Y-m-d H:i:s'),
+	                'updated_at' => date('Y-m-d H:i:s')
+            	];
+            	$data_payment[] = $temp_data;
+            }
+            try {
+            	if ($source == 'deals_promotion') {
+            		$id_table = 'id_deals_promotion_template';
+            	}
+                $table_promo::where($id_table, '=', $id_post)->update(['is_all_payment' => 0]);
+                $table_payment::insert($data_payment);
+                $result = ['status'  => 'success'];
+            } catch (\Exception $e) {
+                $result = [
+                    'status'  => 'fail',
+                    'message' => 'Create Payment Method Rule Failed'
                 ];
                 return $result;
             }

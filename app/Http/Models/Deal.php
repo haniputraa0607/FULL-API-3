@@ -267,4 +267,9 @@ class Deal extends Model
     {
         return $this->hasMany(\Modules\Deals\Entities\DealsShipmentMethod::class, 'id_deals', 'id_deals');
     }
+
+    public function deals_payment_method()
+    {
+        return $this->hasMany(\Modules\Deals\Entities\DealsPaymentMethod::class, 'id_deals', 'id_deals');
+    }
 }
