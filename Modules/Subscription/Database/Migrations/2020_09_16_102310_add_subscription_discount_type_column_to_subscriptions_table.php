@@ -14,7 +14,7 @@ class AddSubscriptionDiscountTypeColumnToSubscriptionsTable extends Migration
     public function up()
     {
         Schema::table('subscriptions', function (Blueprint $table) {
-        	$table->enum('subscription_discount_type', ['payment_method', 'discount'])->after('min_basket_size');
+        	$table->enum('subscription_discount_type', ['payment_method', 'discount'])->after('subscription_step_complete');
         });
     }
 
