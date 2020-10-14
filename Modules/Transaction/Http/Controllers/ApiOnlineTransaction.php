@@ -345,7 +345,7 @@ class ApiOnlineTransaction extends Controller
 
 	                $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
 
-	                $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors);
+	                $discount_promo=$pct->validatePromo($request, $code->id_promo_campaign, $request->id_outlet, $post['item'], $errors);
 
 	                if ( !empty($errore) || !empty($errors)) {
 	                    DB::rollback();
@@ -380,7 +380,7 @@ class ApiOnlineTransaction extends Controller
 			{
 				$promo_type = $deals->dealVoucher->deals->promo_type;
 				if ($promo_type != 'Discount delivery') {
-					$discount_promo=$pct->validatePromo($deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals');
+					$discount_promo=$pct->validatePromo($request, $deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals');
 
 					if ( !empty($errors) ) {
 						DB::rollback();
@@ -2070,6 +2070,7 @@ class ApiOnlineTransaction extends Controller
         $promo_error=null;
         $promo_source = null;
         $promo_valid = false;
+        $request_promo = $request->except('type');
         if($request->promo_code && !$request->id_subscription_user && !$request->id_deals_user){
         	$code = app($this->promo_campaign)->checkPromoCode($request->promo_code, 1, 1);
 
@@ -2084,7 +2085,7 @@ class ApiOnlineTransaction extends Controller
 		            $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
 
 		            if ($validate_user) {
-			            $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors, 'promo_campaign', $errorProduct, $post['shipping']+$shippingGoSend);
+			            $discount_promo=$pct->validatePromo($request_promo, $code->id_promo_campaign, $request->id_outlet, $post['item'], $errors, 'promo_campaign', $errorProduct, $post['shipping']+$shippingGoSend);
 
 			            $promo_source = 'promo_code';
 			            if ( !empty($errore) || !empty($errors) ) {
@@ -2120,7 +2121,7 @@ class ApiOnlineTransaction extends Controller
 
 			if($deals)
 			{
-				$discount_promo=$pct->validatePromo($deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals', $errorProduct, $post['shipping']+$shippingGoSend);
+				$discount_promo=$pct->validatePromo($request_promo, $deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals', $errorProduct, $post['shipping']+$shippingGoSend);
 
 				$promo_source = 'voucher_online';
 				if ( !empty($errors) ) {

@@ -350,6 +350,7 @@ class ApiPromo extends Controller
     	}
 
 		$discount_promo = $pct->validatePromo(
+			$request,
 			$id_promo, 
 			$id_outlet, 
 			$item, 

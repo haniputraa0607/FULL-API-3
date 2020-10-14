@@ -35,7 +35,7 @@ class PromoCampaignTools{
 	 * @param  	array 		$error     	error message
 	 * @return 	array/boolean     modified array of trxs if can, otherwise false
 	 */
-	public function validatePromo($id_promo, $id_outlet, $trxs, &$errors, $source='promo_campaign', &$errorProduct=0, $delivery_fee=0){
+	public function validatePromo($request, $id_promo, $id_outlet, $trxs, &$errors, $source='promo_campaign', &$errorProduct=0, $delivery_fee=0){
 		/**
 		 $trxs=[
 			{
@@ -80,6 +80,26 @@ class PromoCampaignTools{
 			$errors[]='Promo cannot be used at this outlet';
 			return false;
 		}
+
+		if (isset($request['type'])) {
+			$promo_shipment = $promo->{$source.'_shipment_method'}->pluck('shipment_method');
+
+			$check_shipment = $this->checkShipmentRule($promo->is_all_shipment??0, $request->type, $promo_shipment);
+			if(!$check_shipment){
+				$errors[]='Promo cannot be used for this shipment type';
+				return false;
+			}
+		}
+
+		/*if (isset($request['payment_type'])) {
+			$promo_payment = $promo->{$source.'_payment_method'}->pluck('payment_method');
+
+			$check_payment = $this->checkPaymentRule($promo->is_all_payment??0, $request->payment_type, $promo_payment);
+			if(!$check_payment){
+				$errors[]='Promo cannot be used for this payment type';
+				return false;
+			}
+		}*/
 
 		if( (!empty($promo->date_start) && !empty($promo->date_end)) && (strtotime($promo->date_start)>time()||strtotime($promo->date_end)<time())){
 			$errors[]='Promo is not valid';
