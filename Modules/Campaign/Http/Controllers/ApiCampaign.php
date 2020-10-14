@@ -338,8 +338,8 @@ class ApiCampaign extends Controller
 		$result = [
 				'status'  => 'success',
 				'result'  => $cond,
-				'recordsFiltered' => $users['recordsFiltered']??0,
-				'recordsTotal' => $users['recordsTotal']??0
+				'recordsFiltered' => $users['total']??0,
+				'recordsTotal' => $users['total']??0
 			];
 		return $result;
 	}
@@ -492,7 +492,9 @@ class ApiCampaign extends Controller
 				if($campaign->campaign_generate_receipient=='Send At Time'){
 					$post=['id_campaign'=>$campaign->id_campaign];
 					GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
-				}
+				}else{
+                    $this->sendCampaignInternal($campaign->toArray());
+                }
 			}
 
 			$log->success(count($campaigns).' campaign has been insert to queue');
