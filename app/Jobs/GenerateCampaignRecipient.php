@@ -96,7 +96,7 @@ class GenerateCampaignRecipient implements ShouldQueue
         $data['generate_recipient_status'] = 1;
         $update = Campaign::where('id_campaign','=',$id_campaign)->update($data);
 
-        if($update && $campaign->campaign_generate_receipient != 'Now'){
+        if($update && !empty($campaign->campaign_send_at) && $campaign->campaign_generate_receipient=='Send At Time'){
             $getCampaign = Campaign::where('id_campaign','=',$id_campaign)->first()->toArray();
             app($this->camp)->sendCampaignInternal($getCampaign);
         }
