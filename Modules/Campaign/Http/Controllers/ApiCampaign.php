@@ -446,6 +446,7 @@ class ApiCampaign extends Controller
                         'messages'  => ['Recipient has not yet been generated, please wait until recipient already generated.']
                     ];
                 }else{
+                    Campaign::where('id_campaign','=',$campaign['id_campaign'])->update(['campaign_is_sent' => 'Yes']);
                     SendCampaignNow::dispatch($campaign)->allOnConnection('database');
                     $result = [
                         'status'  => 'success',
