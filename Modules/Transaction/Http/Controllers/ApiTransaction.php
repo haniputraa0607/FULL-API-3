@@ -2191,6 +2191,7 @@ class ApiTransaction extends Controller
                 'promo_campaign_promo_code.promo_campaign',
                 'transaction_pickup_go_send.transaction_pickup_update',
                 'transaction_payment_subscription.subscription_user_voucher',
+                'subscription_user_voucher',
                 'outlet.city'])->first();
             if(!$list){
                 return MyHelper::checkGet([],'empty');
@@ -2743,6 +2744,17 @@ class ApiTransaction extends Controller
                 ];
             }
 
+            if (!empty($list['subscription_user_voucher']) && !empty($list['transaction_discount'])) {
+            	$discount = $list['transaction_discount'];
+                $result['promo']['code'][$p++]   = $list['subscription_user_voucher']['voucher_code'];
+                $result['payment_detail'][] = [
+                    'name'          => 'Discount',
+                    'desc'          => $list['subscription_user_voucher']['voucher_code'],
+                    "is_discount"   => 1,
+                    'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
+                ];
+            }
+
             if (!empty($list['transaction_payment_subscription'])) {
                 $list['payment'][] = [
                     'name'      => 'Subscription',
@@ -2792,10 +2804,18 @@ class ApiTransaction extends Controller
                         ];
                     }
                     if ($list['transaction_pickup_go_send']) {
+                        $flagStatus = [
+                            'confirmed' => 0,
+                            'no_driver' => 0,
+                        ];
                         foreach ($list['transaction_pickup_go_send']['transaction_pickup_update'] as $valueGosend) {
                             switch (strtolower($valueGosend['status'])) {
                                 case 'finding driver':
                                 case 'confirmed':
+                                    if ($flagStatus['confirmed']) {
+                                        break;
+                                    }
+                                    $flagStatus['confirmed'] = 1;
                                     $statusOrder[] = [
                                         'text'  => 'Pesanan sudah siap dan menunggu pick up',
                                         'date'  => $valueGosend['created_at']
@@ -2837,6 +2857,10 @@ class ApiTransaction extends Controller
                                     break;
                                 case 'driver not found':
                                 case 'no_driver':
+                                    if ($flagStatus['no_driver']) {
+                                        break;
+                                    }
+                                    $flagStatus['no_driver'] = 1;
                                     $statusOrder[] = [
                                         'text'  => 'Driver tidak ditemukan',
                                         'date'  => $valueGosend['created_at']
