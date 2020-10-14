@@ -337,8 +337,8 @@ class ApiCampaign extends Controller
 		$result = [
 				'status'  => 'success',
 				'result'  => $cond,
-				'recordsFiltered' => $users['recordsFiltered']??0,
-				'recordsTotal' => $users['recordsTotal']??0
+				'recordsFiltered' => $users['total']??0,
+				'recordsTotal' => $users['total']??0
 			];
 		return $result;
 	}
