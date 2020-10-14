@@ -93,10 +93,10 @@ class GenerateCampaignRecipient implements ShouldQueue
             $data['campaign_whatsapp_count_all']=count($recipientx);
         }
         $id_campaign=$this->data['id_campaign'];
-
+        $data['generate_recipient_status'] = 1;
         $update = Campaign::where('id_campaign','=',$id_campaign)->update($data);
 
-        if($update){
+        if($update && $campaign->campaign_generate_receipient != 'Now'){
             $getCampaign = Campaign::where('id_campaign','=',$id_campaign)->first()->toArray();
             app($this->camp)->sendCampaignInternal($getCampaign);
         }

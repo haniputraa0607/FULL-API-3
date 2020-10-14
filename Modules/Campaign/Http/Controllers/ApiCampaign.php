@@ -2,6 +2,7 @@
 
 namespace Modules\Campaign\Http\Controllers;
 
+use App\Jobs\SendCampaignNow;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -439,10 +440,18 @@ class ApiCampaign extends Controller
 
 			if($campaign['campaign_send_at'] == null && $post['resend'] != 1){
 				//Kirimnya NOW
-				$result = [
-					'status'  => 'success',
-					'result'  => true
-				];
+                if($campaign['generate_recipient_status'] != 1){
+                    $result = [
+                        'status'  => 'fail',
+                        'messages'  => ['Recipient has not yet been generated, please wait until recipient already generated.']
+                    ];
+                }else{
+                    SendCampaignNow::dispatch($campaign)->allOnConnection('database');
+                    $result = [
+                        'status'  => 'success',
+                        'result'  => true
+                    ];
+                }
 			} elseif($campaign['campaign_send_at'] == null && $post['resend'] == 1) {
 
 				$result = [
@@ -501,7 +510,7 @@ class ApiCampaign extends Controller
 			$receipient_email = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_email_receipient'])));
 			$data['campaign'] = $campaign;
 			$data['type'] = 'email';
-			foreach (array_chunk($receipient_email,100) as $recipients) {
+			foreach (array_chunk($receipient_email,200) as $recipients) {
 				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 				SendCampaignJob::dispatch($data)->allOnConnection('database');
 			}
@@ -512,7 +521,7 @@ class ApiCampaign extends Controller
 
 			$data['campaign'] = $campaign;
 			$data['type'] = 'sms';
-			foreach (array_chunk($receipient_sms,100) as $recipients) {
+			foreach (array_chunk($receipient_sms,200) as $recipients) {
 				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 				SendCampaignJob::dispatch($data)->allOnConnection('database');
 			}
@@ -523,7 +532,7 @@ class ApiCampaign extends Controller
 
 			$data['campaign'] = $campaign;
 			$data['type'] = 'push';
-			foreach (array_chunk($receipient_push,100) as $recipients) {
+			foreach (array_chunk($receipient_push,200) as $recipients) {
 				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 				SendCampaignJob::dispatch($data)->allOnConnection('database');
 			}
@@ -534,7 +543,7 @@ class ApiCampaign extends Controller
 
 			$data['campaign'] = $campaign;
 			$data['type'] = 'inbox';
-			foreach (array_chunk($receipient_inbox,100) as $recipients) {
+			foreach (array_chunk($receipient_inbox,200) as $recipients) {
 				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 				SendCampaignJob::dispatch($data)->allOnConnection('database');
 			}
@@ -547,7 +556,7 @@ class ApiCampaign extends Controller
 
 			$data['campaign'] = $campaign;
 			$data['type'] = 'whatsapp';
-			foreach (array_chunk($receipient_whatsapp,100) as $recipients) {
+			foreach (array_chunk($receipient_whatsapp,200) as $recipients) {
 				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 				SendCampaignJob::dispatch($data)->allOnConnection('database');
 			}
