@@ -1213,16 +1213,6 @@ class ApiOnlineTransaction extends Controller
                     }
                 }
 
-                $trx_modifier = TransactionProductModifier::insert($insert_modifier);
-                if (!$trx_modifier) {
-                    DB::rollback();
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Insert Product Modifier Transaction Failed']
-                    ]);
-                }
-                $trx_product->transaction_modifier_subtotal = $mod_subtotal;
-                $trx_product->transaction_product_subtotal += $trx_product->transaction_modifier_subtotal * $valueProduct['qty'];
             }
 
             $trx_modifier = TransactionProductModifier::insert($insert_modifier);
@@ -2480,7 +2470,7 @@ class ApiOnlineTransaction extends Controller
 
         $outlet['today']['status'] = $outlet_status?'open':'closed';
 
-        $post['discount'] = $post['discount'] + ($promo_discount??0);
+        // $post['discount'] = $post['discount'] + ($promo_discount??0);
         $post['discount_delivery'] = $post['discount_delivery'] + ($discount_promo['discount_delivery']??0);
 
         $result['outlet'] = [
