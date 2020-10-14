@@ -371,4 +371,65 @@ class ApiPromo extends Controller
         	'data'	 => $discount_promo
         ];
     }
+
+    public function getTransactionCheckPromoRule($result, $promo_source, $query)
+    {
+    	$check = false;
+    	$available_shipment = ['Pickup Order', 'GO-SEND'];
+    	$available_payment 	= $this->getAvailablePayment()['result'];
+    	$result['pickup_type'] = 1;
+    	$result['delivery_type'] = 1;
+    	$result['available_payment'] = [];
+
+    	switch ($promo_source) {
+    		case 'promo_code':
+    			$promo = $query;
+    			$promo_shipment = $query->promo_campaign->promo_campaign_shipment_method->pluck('shipment_method');
+    			$promo_payment 	= $query->promo_campaign->promo_campaign_payment_method->pluck('payment_method');
+    			break;
+    		
+    		case 'voucher_online':
+    			$promo = $query->dealVoucher->deals;
+    			$promo_shipment = $query->dealVoucher->deals->deals_shipment_method->pluck('shipment_method');
+    			$promo_payment 	= $query->dealVoucher->deals->deals_payment_method->pluck('payment_method');
+    			break;
+    		
+    		default:
+    			# code...
+    			break;
+    	}
+
+    	$pct = New PromoCampaignTools;
+    	if ($promo_shipment) {
+	    	if (!$pct->checkShipmentRule($promo->is_all_shipment, 'Pickup Order', $promo_shipment)) {
+	    		$result['pickup_type'] = 0;
+	    	}
+	    	if (!$pct->checkShipmentRule($promo->is_all_shipment, 'GO-SEND', $promo_shipment)) {
+	    		$result['delivery_type'] = 0;
+	    	}
+    	}
+
+    	if ($promo_payment) {
+    		foreach ($available_payment as $key => $value) {
+    			if ($pct->checkPaymentRule($promo->is_all_payment, $value['payment_method'], $promo_payment)) {
+		    		$result['available_payment'][] = $value['code'];
+		    	}	
+    		}
+    	}
+    	
+    	return $result;
+    }
+
+    public function getAvailablePayment()
+    {
+    	$custom_data 	= [];
+    	$custom_request = new \Illuminate\Http\Request;
+		$custom_request = $custom_request
+						->setJson(new \Symfony\Component\HttpFoundation\ParameterBag($custom_data))
+						->merge($custom_data);
+
+		$payment_list 	= app($this->online_transaction)->availablePayment($custom_request);
+
+		return $payment_list;
+    }
 }

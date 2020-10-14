@@ -2458,6 +2458,7 @@ class ApiOnlineTransaction extends Controller
         		$subtotal = $subtotal_promo;
         	}
         	else{
+        		$promo_valid = false;
         		$promo_discount = 0;
         		$promo_source = null;
         		$discount_promo['discount_delivery'] = 0;
@@ -2522,6 +2523,9 @@ class ApiOnlineTransaction extends Controller
         $balance = app($this->balance)->balanceNow($user->id);
         $result['points'] = (int) $balance;
         $result['total_promo'] = app($this->promo)->availablePromo();
+        $result['pickup_type'] = 1;
+        $result['delivery_type'] = 1;
+        $result['available_payment'] = null;
 
         if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user)
         {
@@ -2576,6 +2580,12 @@ class ApiOnlineTransaction extends Controller
         }
 
         $result['total_payment'] = $result['grandtotal'] - $result['used_point'];
+
+        if ($promo_valid) {
+        	// check available shipment, payment
+        	$result = app($this->promo)->getTransactionCheckPromoRule($result, $promo_source, $code??$deals);
+        }
+
         return MyHelper::checkGet($result)+['messages'=>$error_msg,'promo_error'=>$promo_error];
     }
 

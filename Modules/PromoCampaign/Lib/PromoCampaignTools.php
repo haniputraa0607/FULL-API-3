@@ -1354,5 +1354,39 @@ class PromoCampaignTools{
 
 		return $discount;
     }
+
+    public function checkPaymentRule($all_payment, $payment_method, $promo_payment_list)
+    {
+    	if (!is_array($promo_payment_list)) {
+    		$promo_payment_list = $promo_payment_list->toArray();
+    	}
+
+    	if ($all_payment) {
+    		return true;
+    	}
+
+    	if (in_array($payment_method, $promo_payment_list)) {
+    		return true;
+    	}else{
+    		return false;
+    	}	
+    }
+
+    public function checkShipmentRule($all_shipment, $shipment_method, $promo_shipment_list)
+    {
+    	if (!is_array($promo_shipment_list)) {
+    		$promo_shipment_list = $promo_shipment_list->toArray();
+    	}
+
+    	if ($all_shipment) {
+    		return true;
+    	}
+
+    	if (in_array($shipment_method, $promo_shipment_list)) {
+    		return true;
+    	}else{
+    		return false;
+    	}
+    }
 }
 ?>
