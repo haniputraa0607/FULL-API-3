@@ -95,7 +95,9 @@ class Subscription extends Eloquent
         'charged_central',
         'charged_outlet',
         'subscription_type',
-        'subscription_discount_type'
+        'subscription_discount_type',
+        'is_all_shipment',
+        'is_all_payment'
 	];
 
 	protected $appends  = [
