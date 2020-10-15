@@ -1577,13 +1577,14 @@ class ApiTransaction extends Controller
         }
 
         $query = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
-            ->select('transaction_pickups.*','transactions.*','users.*','outlets.outlet_code', 'outlets.outlet_name', 'payment_type', 'payment_method', 'transaction_payment_midtrans.gross_amount', 'transaction_payment_ipay88s.amount')
+            ->select('transaction_pickups.*','transactions.*','users.*','outlets.outlet_code', 'outlets.outlet_name', 'payment_type', 'payment_method', 'transaction_payment_midtrans.gross_amount', 'transaction_payment_ipay88s.amount', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay')
             ->leftJoin('outlets','outlets.id_outlet','=','transactions.id_outlet')
             ->leftJoin('users','transactions.id_user','=','users.id')
             ->orderBy('transactions.transaction_date', 'asc');
 
         $query = $query->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
-            ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction');
+            ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
+            ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction');
 
         $settingMDRAll = [];
         if(isset($post['detail']) && $post['detail'] == 1){
@@ -1799,7 +1800,13 @@ class ApiTransaction extends Controller
             $count = count($get);
             foreach ($get as $key=>$val) {
                 $payment = '';
-                $payment .= (!empty($val['payment_type']) ? $val['payment_type'] : '').(!empty($val['payment_method']) ? $val['payment_method'] : '');
+                if(!empty($val['payment_type'])){
+                    $payment = $val['payment_type'];
+                }elseif(!empty($val['payment_method'])){
+                    $payment = $val['payment_method'];
+                }elseif(!empty($val['id_transaction_payment_shopee_pay'])){
+                    $payment = 'Shopeepay';
+                }
 
                 if(isset($post['detail']) && $post['detail'] == 1){
 
@@ -2000,7 +2007,13 @@ class ApiTransaction extends Controller
 
         foreach ($query->cursor() as $val) {
             $payment = '';
-            $payment .= (!empty($val['payment_type']) ? $val['payment_type'] : '').(!empty($val['payment_method']) ? $val['payment_method'] : '');
+            if(!empty($val['payment_type'])){
+                $payment = $val['payment_type'];
+            }elseif(!empty($val['payment_method'])){
+                $payment = $val['payment_method'];
+            }elseif(!empty($val['id_transaction_payment_shopee_pay'])){
+                $payment = 'Shopeepay';
+            }
 
             if(isset($post['detail']) && $post['detail'] == 1){
 
