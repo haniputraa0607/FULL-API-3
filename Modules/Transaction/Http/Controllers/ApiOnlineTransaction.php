@@ -2343,6 +2343,8 @@ class ApiOnlineTransaction extends Controller
         }
 
         $result['total_payment'] = $result['grandtotal'] - $result['used_point'];
+        $result['subscription'] = (int) $result['subscription'];
+        $result['discount'] = (int) $result['discount'];
         return MyHelper::checkGet($result)+['messages'=>$error_msg,'promo_error'=>$promo_error];
     }
 
