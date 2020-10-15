@@ -12,8 +12,10 @@ use Modules\Favorite\Http\Requests\CreateRequest;
 
 use App\Http\Models\Setting;
 use App\Http\Models\Outlet;
+use App\Http\Models\Product;
 use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\ProductModifierGlobalPrice;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
 
 
 use App\Lib\MyHelper;
@@ -55,10 +57,13 @@ class ApiFavoriteController extends Controller
         $longitude = $request->json('longitude');
         $nf = $request->json('number_format')?:'float';
         $favorite = Favorite::where('id_user',$user->id)->join('outlets', 'outlets.id_outlet', 'favorites.id_outlet')->where('outlets.outlet_status','Active');
-        $select = ['id_favorite','favorites.id_outlet','outlet_different_price','favorites.id_product','id_brand','id_user','notes'];
+        $select = ['id_favorite','favorites.id_outlet','outlet_different_price','favorites.id_product','favorites.id_product_variant_group','id_brand','id_user','notes'];
         $with = [
             'modifiers'=>function($query){
                 $query->select('product_modifiers.id_product_modifier','type','code','text','favorite_modifiers.qty');
+            },
+            'variants' => function($query){
+                $query->select('product_variants.id_product_variant', 'product_variant_name');
             }
         ];
         // detail or list
@@ -102,6 +107,14 @@ class ApiFavoriteController extends Controller
             $datax = array_filter($datax, function($x) { return $x['product']['price'];});
             if(count($datax)>=1){
                 $datax = MyHelper::groupIt($datax,'id_outlet',function($key,&$val) use ($nf,$data, $request){
+
+                    if ($val['id_product_variant_group']) {
+                        $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $val['id_outlet'])->first();
+                        $val['selected_variant'] = Product::getVariantParentId($val['id_product_variant_group'], Product::getVariantTree($val['id_product'], $outlet)['variants_tree']);
+                    } else {
+                        $val['selected_variant'] = [];
+                    }
+
                     $total_price = $val['product']['price'];
                     $val['product']['price']=MyHelper::requestNumber($val['product']['price'],$nf);
                     foreach ($val['modifiers'] as &$modifier) {
@@ -205,9 +218,19 @@ class ApiFavoriteController extends Controller
         $id_user = $request->user()->id;
         $modifiers = $request->json('modifiers');
         // check is already exist
+        if ($request->json('id_product_variant_group')) {
+            $variant_group_exists = ProductVariantGroup::where(['id_product_variant_group' => $request->json('id_product_variant_group'), 'id_product' => $request->json('id_product')])->exists();
+            if (!$variant_group_exists) {
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Product variant not found']
+                ];
+            }
+        }
         $data = Favorite::where([
             ['id_outlet',$request->json('id_outlet')],
             ['id_product',$request->json('id_product')],
+            ['id_product_variant_group',$request->json('id_product_variant_group')],
             ['id_brand',$request->json('id_brand')],
             ['id_user',$id_user],
             ['notes',$request->json('notes')??'']
@@ -237,6 +260,7 @@ class ApiFavoriteController extends Controller
                 'id_outlet' => $request->json('id_outlet'),
                 'id_brand' => $request->json('id_brand'),
                 'id_product' => $request->json('id_product'),
+                'id_product_variant_group' => $request->json('id_product_variant_group'),
                 'id_user' => $id_user,
                 'notes' => $request->json('notes')?:''];
 

@@ -20,15 +20,16 @@
         <th style="background-color: #dcdcdc;" width="10"> Item Price </th>
         <th style="background-color: #dcdcdc;" width="10"> Modifier Price </th>
         <th style="background-color: #dcdcdc;" width="10"> Notes </th>
-        <th style="background-color: #dcdcdc;" width="10"> Promo Type </th>
         <th style="background-color: #dcdcdc;" width="10"> Promo Name </th>
         <th style="background-color: #dcdcdc;" width="10"> Promo Code </th>
         <th style="background-color: #dcdcdc;" width="10"> Sub Total </th>
         <th style="background-color: #dcdcdc;" width="10"> Discounts </th>
         <th style="background-color: #dcdcdc;" width="10"> Grand Total </th>
         <th style="background-color: #dcdcdc;" width="10"> Total Transaction </th>
-        <th style="background-color: #dcdcdc;" width="10"> Total Fee </th>
+        <th style="background-color: #dcdcdc;" width="10"> Biaya Jasa </th>
         <th style="background-color: #dcdcdc;" width="10"> MDR PG </th>
+        <th style="background-color: #dcdcdc;" width="10"> Income Promo </th>
+        <th style="background-color: #dcdcdc;" width="10"> Income Subscription </th>
         <th style="background-color: #dcdcdc;" width="10"> Income Outlet </th>
         <th style="background-color: #dcdcdc;" width="10"> Payment </th>
         <th style="background-color: #dcdcdc;" width="10"> Point Use </th>

@@ -27,6 +27,7 @@ use Modules\Deals\Http\Controllers\ApiDealsVoucher;
 use Modules\Deals\Http\Controllers\ApiDealsClaim;
 use Modules\Balance\Http\Controllers\NewTopupController;
 use Modules\Balance\Http\Controllers\BalanceController;
+use Modules\ShopeePay\Entities\DealsPaymentShopeePay;
 
 use Modules\Deals\Http\Requests\Deals\Voucher;
 use Modules\Deals\Http\Requests\Claim\Paid;
@@ -51,6 +52,7 @@ class ApiDealsClaimPay extends Controller
         if(\Module::collections()->has('Autocrm')) {
             $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         }
+        $this->shopeepay      = "Modules\ShopeePay\Http\Controllers\ShopeePayController";
     }
 
     public $saveImage = "img/receipt_deals/";
@@ -63,25 +65,79 @@ class ApiDealsClaimPay extends Controller
 
     public function cancel(Request $request) {
         $id_deals_user = $request->id_deals_user;
-        $deals_user = DealsUser::where('id_deals_user', $id_deals_user)->first();
+        $deals_user = DealsUser::where(['id_deals_user' => $id_deals_user, 'id_user' => $request->user()->id])->first();
         if(!$deals_user || $deals_user->paid_status != 'Pending'){
-            return MyHelper::checkGet([],'Paid deals cannot be canceled');
+            return MyHelper::checkGet([],'Deals cannot be canceled');
         }
-        $errors = '';
-        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('deals',$deals_user,$errors, $request->last_url);
-        if($cancel){
-            return ['status'=>'success'];
+        $payment_type = $deals_user->payment_method;
+        switch (strtolower($payment_type)) {
+            case 'ipay88':
+                $errors = '';
+                $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('deals',$deals_user,$errors, $request->last_url);
+                if($cancel){
+                    return ['status'=>'success'];
+                }
+                return [
+                    'status'=>'fail', 
+                    'messages' => $errors?:['Something went wrong']
+                ];
+            case 'midtrans':
+                $trx_mid = DealsPaymentMidtran::where('id_deals_user', $deals_user->id_deals_user)->first();
+                if (!$trx_mid) {
+                    return ['status' => 'fail', 'messages' => ['Payment not found']];
+                }
+                $connectMidtrans = Midtrans::expire($trx_mid->order_id);
+                $singleTrx = $deals_user;
+
+                DB::beginTransaction();
+
+                $singleTrx->paid_status = 'Cancelled';
+                $singleTrx->save();
+
+                if (!$singleTrx) {
+                    DB::rollBack();
+                    continue;
+                }
+                // revert back deals data
+                $deals = Deal::where('id_deals', $singleTrx->id_deals)->first();
+                if ($deals) {
+                    $up1 = $deals->update(['deals_total_claimed' => $deals->deals_total_claimed - 1]);
+                    if (!$up1) {
+                        DB::rollBack();
+                        continue;
+                    }
+                }
+                $up2 = DealsVoucher::where('id_deals_voucher', $singleTrx->id_deals_voucher)->update(['deals_voucher_status' => 'Available']);
+                if (!$up2) {
+                    DB::rollBack();
+                    continue;
+                }
+                //reversal balance
+                if($singleTrx->balance_nominal) {
+                    $reversal = app($this->balance)->addLogBalance( $singleTrx->id_user, $singleTrx->balance_nominal, $singleTrx->id_deals_user, 'Claim Deals Failed', $singleTrx->voucher_price_point?:$singleTrx->voucher_price_cash);
+                    if (!$reversal) {
+                        DB::rollBack();
+                        continue;
+                    }
+                }
+                DB::commit();
+                return ['status' => 'success'];
         }
-        return [
-            'status'=>'fail', 
-            'messages' => $errors?:['Something went wrong']
-        ];
+        return ['status' => 'fail', 'messages' => ["Cancel $payment_type transaction is not supported yet"]];
     }
 
     /* CLAIM DEALS */
     function claim(Paid $request)
     {
         $post      = $request->json()->all();
+        if (isset($post['pin']) && strtolower($post['payment_deals']) == 'balance') {
+            if (!password_verify($post['pin'], $request->user()->password)) {
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Incorrect PIN']
+                ];
+            }
+        }
         $dataDeals = app($this->claim)->chekDealsData($request->json('id_deals'));
         $id_user   = $request->user()->id;
         if (empty($dataDeals)) {
@@ -320,6 +376,14 @@ class ApiDealsClaimPay extends Controller
                             'cancel_message' => 'Are you sure you want to cancel this transaction?'
                         ]
                     ];
+                }elseif (($pay['payment']??false) == 'shopeepay'){
+                    DB::commit();
+                    $pay['message_timeout_shopeepay'] = "Sorry, your payment has expired";
+                    $pay['timer_shopeepay'] = (int) MyHelper::setting('shopeepay_validity_period','value', 300);
+                    return [
+                        'status'    => 'success',
+                        'result'    => $pay
+                    ];
                 }
             }
 
@@ -438,6 +502,11 @@ class ApiDealsClaimPay extends Controller
                 $pay = $this->ovo($dataDeals, $voucher, null,$request->json('phone'));
             }
 
+           /* ShopeePay */
+            if ($request->json('payment_deals') && $request->json('payment_deals') == "shopeepay") {
+                $pay = $this->shopeepay($dataDeals, $voucher, null);
+            }
+
             /* MANUAL */
             if ($request->json('payment_deals') && $request->json('payment_deals') == "manual") {
                 $post             = $request->json()->all();
@@ -530,6 +599,49 @@ class ApiDealsClaimPay extends Controller
             'voucher'  => DealsUser::with(['userMid', 'dealVoucher'])->where('id_deals_user', $voucher->id_deals_user)->first(),
             'data'     => [],
             'deals'    => $deals
+        ];
+    }
+
+    /* ShopeePay */
+    function shopeepay($deals, $voucher, $grossAmount=null)
+    {
+        $paymentShopeepay = DealsPaymentShopeePay::where('id_deals_user', $voucher['id_deals_user'])->first();
+        $trx_shopeepay    = null;
+        if (is_null($grossAmount)) {
+            if (!$this->updateInfoDealUsers($voucher->id_deals_user, ['payment_method' => 'Shopeepay'])) {
+                 return false;
+            }
+        }
+        $grossAmount = $grossAmount??($voucher->voucher_price_cash);
+        if (!$paymentShopeepay) {
+            $paymentShopeepay                       = new DealsPaymentShopeePay;
+            $paymentShopeepay->id_deals_user        = $voucher['id_deals_user'];
+            $paymentShopeepay->id_deals             = $deals['id_deals'];
+            $paymentShopeepay->amount               = $grossAmount * 100;
+            $paymentShopeepay->order_id = time().sprintf("%05d", $voucher->id_deals_user);
+            $paymentShopeepay->save();
+            $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'deals', $errors);
+        } elseif (!($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http)) {
+            $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'deals', $errors);
+        }
+        if (!$trx_shopeepay || !(($trx_shopeepay['status_code'] ?? 0) == 200 && ($trx_shopeepay['response']['debug_msg'] ?? '') == 'success' && ($trx_shopeepay['response']['errcode'] ?? 0) == 0)) {
+            if ($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http) {
+                return [
+                    'redirect_url_app'  => $paymentShopeepay->redirect_url_app,
+                    'redirect_url_http' => $paymentShopeepay->redirect_url_http,
+                ];
+            }
+            return false;
+        }
+        $paymentShopeepay->redirect_url_app  = $trx_shopeepay['response']['redirect_url_app'];
+        $paymentShopeepay->redirect_url_http = $trx_shopeepay['response']['redirect_url_http'];
+        $paymentShopeepay->save();
+        return [
+            'redirect' => 'true',
+            'payment' => 'shopeepay',
+            'id_deals_user' => $voucher->id_deals_user,
+            'redirect_url_app'  => $paymentShopeepay->redirect_url_app,
+            'redirect_url_http' => $paymentShopeepay->redirect_url_http
         ];
     }
     //process void
@@ -897,6 +1009,8 @@ class ApiDealsClaimPay extends Controller
                             'payment'           => 'ipay88'
                         ];
                         return $ipay88;
+                    }elseif($paymentMethod == 'shopeepay'){
+                        return $this->shopeepay($deals, $voucher, -$kurangBayar);
                     }
                 }
             }

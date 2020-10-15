@@ -29,6 +29,7 @@ use Modules\Product\Http\Requests\category\UpdateCategory;
 use Modules\Product\Http\Requests\category\DeleteCategory;
 
 use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
+use Modules\PromoCampaign\Lib\PromoCampaignTools;
 
 class ApiCategoryController extends Controller
 {
@@ -363,9 +364,9 @@ class ApiCategoryController extends Controller
                         ELSE product_global_price.product_global_price
                     END) as product_price'),
             DB::raw('(CASE
-                        WHEN (select product_detail.product_detail_stock_status from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' ) 
+                        WHEN (select product_detail.product_detail_stock_status from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' order by id_product_detail desc limit 1) 
                         is NULL THEN "Available"
-                        ELSE (select product_detail.product_detail_stock_status from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
+                        ELSE (select product_detail.product_detail_stock_status from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' order by id_product_detail desc limit 1)
                     END) as product_stock_status'),
         ])
             ->join('brand_product', 'brand_product.id_product', '=', 'products.id_product')
@@ -374,20 +375,20 @@ class ApiCategoryController extends Controller
             ->where('brand_outlet.id_outlet', '=', $post['id_outlet'])
             ->join('brand_outlet', 'brand_outlet.id_brand', '=', 'brand_product.id_brand')
             ->whereRaw('products.id_product in (CASE
-                        WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
+                        WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . '  order by id_product_detail desc limit 1)
                         is NULL AND products.product_visibility = "Visible" THEN products.id_product
-                        WHEN (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
+                        WHEN (select product_detail.id_product from product_detail  where (product_detail.product_detail_visibility = "" OR product_detail.product_detail_visibility is NULL) AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . '  order by id_product_detail desc limit 1)
                         is NOT NULL AND products.product_visibility = "Visible" THEN products.id_product
-                        ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "Visible" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
+                        ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "Visible" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . '  order by id_product_detail desc limit 1)
                     END)')
             ->whereRaw('products.id_product in (CASE
-                        WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
+                        WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' order by id_product_detail desc limit 1)
                         is NULL THEN products.id_product
-                        ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_status = "Active" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
+                        ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_status = "Active" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' order by id_product_detail desc limit 1)
                     END)')
             ->where(function ($query) use ($post) {
-                $query->WhereRaw('(select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = ' . $post['id_outlet'] . ' ) is NOT NULL');
-                $query->orWhereRaw('(select product_global_price.product_global_price from product_global_price  where product_global_price.id_product = products.id_product) is NOT NULL');
+                $query->WhereRaw('(select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = ' . $post['id_outlet'] . '  order by id_product_special_price desc limit 1) is NOT NULL');
+                $query->orWhereRaw('(select product_global_price.product_global_price from product_global_price  where product_global_price.id_product = products.id_product order by id_product_global_price desc limit 1) is NOT NULL');
             })
             ->with([
                 'brand_category' => function ($query) {
@@ -525,7 +526,7 @@ class ApiCategoryController extends Controller
             ->whereRaw('products.id_product in (CASE
                         WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
                         is NULL AND products.product_visibility = "Visible" THEN products.id_product
-                        WHEN (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
+                        WHEN (select product_detail.id_product from product_detail  where (product_detail.product_detail_visibility = "" OR product_detail.product_detail_visibility is NULL) AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
                         is NOT NULL AND products.product_visibility = "Visible" THEN products.id_product
                         ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "Visible" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
                     END)')
@@ -695,30 +696,46 @@ class ApiCategoryController extends Controller
         ) {
 
             if (!empty($post['promo_code'])) {
-                $code = app($this->promo_campaign)->checkPromoCode($post['promo_code'], null, 1);
+                $code = app($this->promo_campaign)->checkPromoCode($post['promo_code'], 1, 1);
+                if (!$code) {
+                    $promo_error = 'Promo not valid';
+                    return false;
+                }
                 $source = 'promo_campaign';
                 $id_brand = $code->id_brand;
             } elseif (!empty($post['id_deals_user'])) {
-                $code = app($this->promo_campaign)->checkVoucher($post['id_deals_user'], null, 1);
+                $code = app($this->promo_campaign)->checkVoucher($post['id_deals_user'], 1, 1);
+                if (!$code) {
+                    $promo_error = 'Promo not valid';
+                    return false;
+                }
                 $source = 'deals';
                 $id_brand = $code->dealVoucher->deals->id_brand;
             } elseif (!empty($post['id_subscription_user'])) {
-                $code = app($this->subscription_use)->checkSubscription($post['id_subscription_user'], null, 1);
+                $code = app($this->subscription_use)->checkSubscription($post['id_subscription_user'], 1, 1, 1);
+                if (!$code) {
+                    $promo_error = 'Promo not valid';
+                    return false;
+                }
                 $source = 'subscription';
                 $id_brand = $code->subscription_user->subscription->id_brand;
             }
 
-            if (!$code) {
-                $promo_error = 'Promo not valid';
+            if (($code['promo_campaign']['date_end'] ?? $code['voucher_expired_at'] ?? $code['subscription_expired_at']) < date('Y-m-d H:i:s')) {
+                $promo_error = 'Promo is ended';
                 return false;
-            } else {
+            }
+            $code = $code->toArray();
 
-                if (($code['promo_campaign']['date_end'] ?? $code['voucher_expired_at'] ?? $code['subscription_expired_at']) < date('Y-m-d H:i:s')) {
-                    $promo_error = 'Promo is ended';
-                    return false;
-                }
-                $code = $code->toArray();
+            $pct = new PromoCampaignTools;
 
+			$all_outlet = $code['promo_campaign']['is_all_outlet']??$code['subscription_user']['subscription']['is_all_outlet']??$code['deal_voucher']['deals']['is_all_outlet']??0;
+			$id_brand 	= $code['promo_campaign']['id_brand']??$code['subscription_user']['subscription']['id_brand']??$code['deal_voucher']['deals']['id_brand']??null;
+			$promo_outlet 	= $code['promo_campaign']['promo_campaign_outlets']??$code['deal_voucher']['deals']['outlets_active']??$code['subscription_user']['subscription']['outlets_active']??[];
+
+			$check_outlet = $pct->checkOutletRule($post['id_outlet'], $all_outlet, $promo_outlet, $id_brand);
+
+			if ($check_outlet) {
                 $applied_product = app($this->promo_campaign)->getProduct($source, ($code['promo_campaign'] ?? $code['deal_voucher']['deals'] ?? $code['subscription_user']['subscription']))['applied_product'] ?? [];
 
                 if ($applied_product == '*') { // all product
@@ -757,7 +774,7 @@ class ApiCategoryController extends Controller
                         }
                     }
                 }
-            }
+			}
         } elseif (
             (!empty($post['promo_code']) && !empty($post['id_deals_user'])) ||
             (!empty($post['id_subscription_user']) && !empty($post['id_deals_user'])) ||

@@ -80,7 +80,13 @@ class PromoCampaign extends Eloquent
 		'limitation_usage',
 		'step_complete',
         'charged_central',
-        'charged_outlet'
+        'charged_outlet',
+        'min_basket_size',
+        'export_date',
+        'export_url',
+        'export_status',
+        'is_all_shipment',
+        'is_all_payment'
 	];
 
 	public function user()
@@ -166,4 +172,46 @@ class PromoCampaign extends Eloquent
     {
 		return $this->belongsTo(\Modules\Brand\Entities\Brand::class,'id_brand');
 	}
+
+	public function getGetAllRulesAttribute() {
+		$this->load([
+			'promo_campaign_outlets',
+			'promo_campaign_product_discount_rules',
+			'promo_campaign_tier_discount_rules',
+			'promo_campaign_buyxgety_rules',
+			'promo_campaign_product_discount.product' => function($q) {
+				$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+			},
+			'promo_campaign_buyxgety_product_requirement.product' => function($q) {
+				$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+			},
+			'promo_campaign_tier_discount_product.product' => function($q) {
+				$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+			},
+			'promo_campaign_tier_discount_rules.product' => function($q) {
+				$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+			},
+			'brand'
+		]);
+	}
+
+	public function promo_campaign_discount_bill_rules()
+	{
+		return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignDiscountBillRule::class, 'id_promo_campaign');
+	}
+
+	public function promo_campaign_discount_delivery_rules()
+	{
+		return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignDiscountDeliveryRule::class, 'id_promo_campaign');
+	}
+
+    public function promo_campaign_payment_method()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignPaymentMethod::class, 'id_promo_campaign', 'id_promo_campaign');
+    }
+
+    public function promo_campaign_shipment_method()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignShipmentMethod::class, 'id_promo_campaign', 'id_promo_campaign');
+    }
 }

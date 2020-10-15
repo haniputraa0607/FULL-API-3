@@ -6,6 +6,13 @@ Route::group(['middleware' => ['auth:api'],'prefix' => 'api/transaction', 'names
 
 Route::any('api/transaction/update-gosend', 'Modules\Transaction\Http\Controllers\ApiGosendController@updateStatus');
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+    Route::group(['prefix' => 'invalid-flag'], function () {
+        Route::any('filter', ['middleware' => 'feature_control:274', 'uses' => 'ApiInvalidTransactionController@filterMarkFlag']);
+        Route::post('mark-as-valid/update', ['uses' => 'ApiInvalidTransactionController@markAsValidUpdate']);
+        Route::post('mark-as-invalid/add', ['uses' => 'ApiInvalidTransactionController@markAsInvalidAdd']);
+        Route::post('mark-as-pending-invalid/add', ['uses' => 'ApiInvalidTransactionController@markAsPendingInvalidAdd']);
+    });
+
     Route::post('/outlet', 'ApiNotification@adminOutlet');
     Route::post('/admin/confirm', 'ApiNotification@adminOutletComfirm');
     Route::get('setting/cashback', 'ApiSettingCashbackController@list');
@@ -49,6 +56,9 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     });
     Route::post('/be/new', 'ApiOnlineTransaction@newTransaction');
     Route::get('be/{key}', 'ApiTransaction@transactionList');
+
+    Route::any('log-invalid-flag/list', 'ApiInvalidTransactionController@logInvalidFlag');
+    Route::any('log-invalid-flag/detail', 'ApiInvalidTransactionController@detailInvalidFlag');
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
@@ -80,7 +90,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('/void', 'ApiTransaction@transactionVoid');
 
     Route::post('/check', 'ApiOnlineTransaction@checkTransaction');
-    Route::post('/new', 'ApiOnlineTransaction@newTransaction');
+    Route::post('/new', 'ApiOnlineTransaction@newTransaction')->middleware('decrypt_pin:pin,request');
     Route::post('/confirm', 'ApiConfirm@confirmTransaction');
     Route::post('/cancel', 'ApiOnlineTransaction@cancelTransaction');
     Route::post('/prod/confirm', 'ApiTransactionProductionController@confirmTransaction2');

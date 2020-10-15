@@ -35,7 +35,7 @@ class PromoCampaignTools{
 	 * @param  	array 		$error     	error message
 	 * @return 	array/boolean     modified array of trxs if can, otherwise false
 	 */
-	public function validatePromo($id_promo, $id_outlet, $trxs, &$errors, $source='promo_campaign', &$errorProduct=0){
+	public function validatePromo($id_promo, $id_outlet, $trxs, &$errors, $source='promo_campaign', &$errorProduct=0, $delivery_fee=0){
 		/**
 		 $trxs=[
 			{
@@ -85,7 +85,9 @@ class PromoCampaignTools{
 			$errors[]='Promo is not valid';
 			return false;
 		}
-		$discount=0;
+
+		$discount = 0;
+		$discount_delivery = 0;
 
 		/*
 		* dikomen karena sekarang belum digunakan
@@ -113,23 +115,25 @@ class PromoCampaignTools{
 		}
 		*/
 
-		//get all modifier in array
-		$mod = [];
-		foreach ($trxs as $key => $value) {
-			foreach ($value['modifiers'] as $key2 => $value2) {
-				$mod[] = $value2['id_product_modifier']??$value2;
+		if ($promo->promo_type != 'Discount delivery') {
+			//get all modifier in array
+			$mod = [];
+			foreach ($trxs as $key => $value) {
+				foreach ($value['modifiers'] as $key2 => $value2) {
+					$mod[] = $value2['id_product_modifier']??$value2;
+				}
 			}
-		}
-		// remove duplicate modifiers
-		$mod = array_flip($mod);
-		$mod = array_flip($mod);
-		// get all modifier data
-		$mod = $this->getAllModifier($mod, $id_outlet);
+			// remove duplicate modifiers
+			$mod = array_flip($mod);
+			$mod = array_flip($mod);
+			// get all modifier data
+			$mod = $this->getAllModifier($mod, $id_outlet);
 
-		// get mod price 
-		$mod_price =[];
-		foreach ($mod as $key => $value) {
-			$mod_price[$value['id_product_modifier']] = $value['product_modifier_price']??0;
+			// get mod price 
+			$mod_price =[];
+			foreach ($mod as $key => $value) {
+				$mod_price[$value['id_product_modifier']] = $value['product_modifier_price']??0;
+			}
 		}
 
 		switch ($promo->promo_type) {
@@ -590,6 +594,7 @@ class PromoCampaignTools{
 					break;
 				}
 				break;
+			
 			case 'Referral':
 				$promo->load('promo_campaign_referral');
 				$promo_rules=$promo->promo_campaign_referral;
@@ -629,6 +634,48 @@ class PromoCampaignTools{
 						'discount'=>0
 					];
 				}
+				break;
+
+			case 'Discount bill':
+				// load required relationship
+				$promo->load($source.'_discount_bill_rules');
+				$promo_rules = $promo[$source.'_discount_bill_rules'];
+				// get jumlah harga
+				$total_price=0;
+				foreach ($trxs as  $id_trx => &$trx) {
+					$product = $this->getProductPrice($id_outlet, $trx['id_product']);
+					$price = $trx['qty'] * $product['product_price']??0;
+					$total_price += $price;
+				}
+				if($promo_rules->discount_type == 'Percent'){
+					$discount += ($total_price * $promo_rules->discount_value)/100;
+					if(!empty($promo_rules->max_percent_discount) && $discount > $promo_rules->max_percent_discount){
+						$discount = $promo_rules->max_percent_discount;
+					}
+				}else{
+					if($promo_rules->discount_value < $total_price){
+						$discount += $promo_rules->discount_value;
+					}else{
+						$discount += $total_price;
+					}
+				}
+				break;
+
+			case 'Discount delivery':
+				// load required relationship
+				$promo->load($source.'_discount_delivery_rules');
+				$promo_rules = $promo[$source.'_discount_delivery_rules'];
+
+				if ($promo_rules) {
+					$discount_delivery = $this->discountDelivery(
+						$delivery_fee, 
+						$promo_rules->discount_type,
+						$promo_rules->discount_value,
+						$promo_rules->max_percent_discount
+					);
+				}
+
+				break;
 		}
 		// discount?
 		// if($discount<=0){
@@ -636,8 +683,10 @@ class PromoCampaignTools{
 		// 	return false;
 		// }
 		return [
-			'item'=>$trxs,
-			'discount'=>$discount
+			'item'		=> $trxs,
+			'discount'	=> $discount,
+			'promo_type'=> $promo->promo_type,
+			'discount_delivery'	=> $discount_delivery??0
 		];
 	}
 
@@ -1285,6 +1334,25 @@ class PromoCampaignTools{
 		}
 
 		return $item;
+    }
+
+    public function discountDelivery($delivery_fee, $discount_type, $discount_value, $discount_max)
+    {
+    	$discount = 0;
+    	if($discount_type == 'Percent'){
+			$discount = ($delivery_fee * $discount_value)/100;
+			if(!empty($discount_max) && $discount > $discount_max){
+				$discount = $discount_max;
+			}
+		}else{
+			if($discount_value < $delivery_fee){
+				$discount = $discount_value;
+			}else{
+				$discount = $delivery_fee;
+			}
+		}
+
+		return $discount;
     }
 }
 ?>

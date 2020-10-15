@@ -168,6 +168,7 @@ class ApiUser extends Controller
     {
         $prevResult = [];
         $finalResult = [];
+        $status_all_user = 0;
 
         if ($conditions != null) {
             $key = 0;
@@ -200,6 +201,10 @@ class ApiUser extends Controller
                     $arr_tmp_product = [];
                     $arr_tmp_outlet = [];
                     foreach ($cond as $i => $condition) {
+                        if($condition['subject'] == 'all_user'){
+                            $status_all_user = 1;
+                            break 2;
+                        }
                         if (stristr($condition['subject'], 'trx')) $scanTrx = true;
                         if (stristr($condition['subject'], 'trx_product')) $scanProd = true;
                         if (stristr($condition['subject'], 'trx_product_tag')) $scanTag = true;
@@ -346,6 +351,18 @@ class ApiUser extends Controller
                 'provinces.*',
                 DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
             );
+        }
+
+        if($status_all_user == 1){
+            $finalResult = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
+                ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
+                ->orderBy($order_field, $order_method)
+                ->select(
+                    'users.*',
+                    'cities.*',
+                    'provinces.*',
+                    DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
+                );
         }
 
         $resultCount = $finalResult->count(); // get total result
@@ -886,7 +903,7 @@ class ApiUser extends Controller
             $phone = $checkPhoneFormat['phone'];
         }
 
-        $data = User::with('city')->where('phone', '=', $phone)->get()->toArray();
+        $data = User::select('*',\DB::raw('0 as challenge_key'))->with('city')->where('phone', '=', $phone)->get()->toArray();
 
         if($data){
             //First check rule for request otp
@@ -897,11 +914,12 @@ class ApiUser extends Controller
         }
 
         if (isset($data[0]['is_suspended']) && $data[0]['is_suspended'] == '1') {
+            $emailSender = Setting::where('key', 'email_sender')->first();
             return response()->json([
                 'status' => 'success',
                 'result' => $data,
                 'otp_timer' => $holdTime,
-                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]
+                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
             ]);
         }
 
@@ -911,28 +929,44 @@ class ApiUser extends Controller
             }
         }
 
+        switch (env('OTP_TYPE', 'PHONE')) {
+            case 'MISSCALL':
+                $msg_check = str_replace('%phone%', $phone, MyHelper::setting('message_send_otp_miscall', 'value_text', 'Kami akan mengirimkan kode OTP melalui Missed Call ke %phone%.<br/>Anda akan mendapatkan panggilan dari nomor 6 digit.<br/>Nomor panggilan tsb adalah Kode OTP Anda.'));
+                break;
+
+            case 'WA':
+                $msg_check = str_replace('%phone%', $phone, MyHelper::setting('message_send_otp_wa', 'value_text', 'Kami akan mengirimkan kode OTP melalui Whatsapp.<br/>Pastikan nomor %phone% terdaftar di Whatsapp.'));
+                break;
+
+            default:
+                $msg_check = str_replace('%phone%', $phone, MyHelper::setting('message_send_otp_sms', 'value_text', 'Kami akan mengirimkan kode OTP melalui SMS.<br/>Pastikan nomor %phone% aktif.'));
+                break;
+        }
+
         if($data){
             if(isset($data[0]['phone_verified']) && $data[0]['phone_verified'] == '0'){
                 return response()->json([
                     'status' => 'success',
                     'result' => $data,
                     'otp_timer' => $holdTime,
-                    'confirmation_message' => 'Anda akan mendaftar menggunakan nomor <b>'.$phone.'</b>. Apakah nomor telepon yang Anda masukkan sudah benar?',
-                    'messages' => null
+                    'confirmation_message' => $msg_check,
+                    'messages' => null,
+                    'challenge_key' => $data[0]['challenge_key']
                 ]);
             }else{
                 return response()->json([
                     'status' => 'success',
                     'result' => $data,
                     'otp_timer' => $holdTime,
-                    'messages' => null
+                    'messages' => null,
+                    'challenge_key' => $data[0]['challenge_key']
                 ]);
             }
         }else{
             return response()->json([
                 'status' => 'fail',
                 'otp_timer' => $holdTime,
-                'confirmation_message' => 'Anda akan mendaftar menggunakan nomor <b>'.$phone.'</b>. Apakah nomor telepon yang Anda masukkan sudah benar?',
+                'confirmation_message' => $msg_check,
                 'messages' => ['empty!']
             ]);
         }
@@ -975,10 +1009,19 @@ class ApiUser extends Controller
             $device_token = $request->json('device_token');
             $device_type = $request->json('device_type');
 
-            if ($request->json('device_type') == "Android") {
-                $is_android = $device_id;
-            } else {
-                $is_ios = $device_id;
+            $useragent = $_SERVER['HTTP_USER_AGENT'];
+            if (stristr($_SERVER['HTTP_USER_AGENT'], 'iOS')) $useragent = 'IOS';
+            if (stristr($_SERVER['HTTP_USER_AGENT'], 'okhttp')) $useragent = 'Android';
+            if (stristr($_SERVER['HTTP_USER_AGENT'], 'GuzzleHttp')) $useragent = 'Browser';
+
+            if(empty($device_type)){
+                $device_type = $useragent;
+            }
+
+            if($device_type == "Android") {
+                $is_android = 1;
+            } elseif($device_type == "IOS"){
+                $is_ios = 1;
             }
 
             if ($request->json('device_token') != "") {
@@ -1008,17 +1051,18 @@ class ApiUser extends Controller
                     return response()->json($checkRuleRequest);
                 }
 
-                if ($request->json('device_id') && $request->json('device_token') && $request->json('device_type')) {
-                    app($this->home)->updateDeviceUser($create, $request->json('device_id'), $request->json('device_token'), $request->json('device_type'));
+                if ($request->json('device_id') && $request->json('device_token') && $device_type) {
+                    app($this->home)->updateDeviceUser($create, $request->json('device_id'), $request->json('device_token'), $device_type);
                 }
             }
-            $useragent = $_SERVER['HTTP_USER_AGENT'];
-            if (stristr($_SERVER['HTTP_USER_AGENT'], 'iOS')) $useragent = 'iOS';
-            if (stristr($_SERVER['HTTP_USER_AGENT'], 'okhttp')) $useragent = 'Android';
-            if (stristr($_SERVER['HTTP_USER_AGENT'], 'GuzzleHttp')) $useragent = 'Browser';
 
 
             if (\Module::collections()->has('Autocrm')) {
+                $autocrm = app($this->autocrm)->SendAutoCRM(
+                    'Pin Create',
+                    $phone,
+                    []
+                );
                 $autocrm = app($this->autocrm)->SendAutoCRM(
                     'Pin Sent',
                     $phone,
@@ -1045,12 +1089,29 @@ class ApiUser extends Controller
                 ]);
             }
 
+            switch (env('OTP_TYPE', 'PHONE')) {
+                case 'MISSCALL':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_miscall', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Missed Call.'));
+                    break;
+
+                case 'WA':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_wa', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Whatsapp.'));
+                    break;
+
+                default:
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_sms', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui SMS.'));
+                    break;
+            }
+
+
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
                     'result'    => [
                         'phone'    =>    $create->phone,
-                        'autocrm'    =>    $autocrm
+                        'autocrm'  =>    $autocrm,
+                        'message'  =>    $msg_otp,
+                        'challenge_key' => $create->getChallengeKeyAttribute()
                     ]
                 ];
             } else {
@@ -1059,7 +1120,8 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $create->phone,
                         'autocrm'    =>    $autocrm,
-                        'pin'    =>    MyHelper::encPIN($pin)
+                        'message'  =>    $msg_otp,
+                        'challenge_key' => $create->getChallengeKeyAttribute()
                     ]
                 ];
             }
@@ -1251,18 +1313,19 @@ class ApiUser extends Controller
                         $check = array_column($check, 'id_user');
 
                         if ($deviceCus && count($deviceCus) > (int) $fraud['parameter_detail'] && array_search($datauser[0]['id'], $check) !== false) {
+                            $emailSender = Setting::where('key', 'email_sender')->first();
                             $sendFraud = app($this->setting_fraud)->checkFraud($fraud, $datauser[0], ['device_id' => $device_id, 'device_type' => $request->json('device_type')], 0, 0, null, 0);
                             $data = User::with('city')->where('phone', '=', $datauser[0]['phone'])->get()->toArray();
 
                             if ($data[0]['is_suspended'] == 1) {
                                 return response()->json([
                                     'status' => 'fail',
-                                    'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]
+                                    'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
                                 ]);
                             } else {
                                 return response()->json([
                                     'status' => 'fail',
-                                    'messages' => ['Akun Anda tidak dapat login di device ini karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]
+                                    'messages' => ['Akun Anda tidak dapat login di device ini karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
                                 ]);
                             }
                         }
@@ -1376,7 +1439,7 @@ class ApiUser extends Controller
             $phone = $checkPhoneFormat['phone'];
         }
 
-        $data = User::where('phone', '=', $phone)
+        $data = User::select('*', \DB::raw('0 as challenge_key'))->where('phone', '=', $phone)
             ->get()
             ->toArray();
 
@@ -1409,6 +1472,11 @@ class ApiUser extends Controller
 
                 if (\Module::collections()->has('Autocrm')) {
                     $autocrm = app($this->autocrm)->SendAutoCRM(
+                        'Pin Create',
+                        $phone,
+                        []
+                    );
+                    $autocrm = app($this->autocrm)->SendAutoCRM(
                         'Pin Sent',
                         $phone,
                         [
@@ -1425,11 +1493,31 @@ class ApiUser extends Controller
                 $holdTime = $checkRuleRequest['otp_timer'];
             }
 
+            switch (env('OTP_TYPE', 'PHONE')) {
+                case 'MISSCALL':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_miscall', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Missed Call.'));
+                    break;
+
+                case 'WA':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_wa', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Whatsapp.'));
+                    break;
+
+                default:
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_sms', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui SMS.'));
+                    break;
+            }
+            
+            $user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
+            
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
                     'otp_timer' => $holdTime,
-                    'result'    => ['phone'    =>    $data[0]['phone'],]
+                    'result'    => [
+                        'phone'    =>    $data[0]['phone'],
+                        'message'  =>    $msg_otp,
+                        'challenge_key' => $user->challenge_key
+                    ]
                 ];
             } else {
                 $result = [
@@ -1437,7 +1525,9 @@ class ApiUser extends Controller
                     'otp_timer' => $holdTime,
                     'result'    => [
                         'phone'    =>    $data[0]['phone'],
-                        'pin'    =>    ''
+                        'pin'    =>    '',
+                        'message' => $msg_otp,
+                        'challenge_key' => $user->challenge_key
                     ]
                 ];
             }
@@ -1485,6 +1575,8 @@ class ApiUser extends Controller
         }
 
         $user = User::where('phone', '=', $phone)->first();
+        $user->sms_increment = 0;
+        $user->save();
 
         if (!$user) {
             $result = [
@@ -1504,7 +1596,7 @@ class ApiUser extends Controller
             return response()->json($result);
         }
 
-        $data = User::where('phone', '=', $phone)
+        $data = User::select('*',\DB::raw('0 as challenge_key'))->where('phone', '=', $phone)
             ->where('email', '=', $request->json('email'))
             ->get()
             ->toArray();
@@ -1536,6 +1628,9 @@ class ApiUser extends Controller
                     $useragent = $_SERVER['HTTP_USER_AGENT'];
                 }
 
+                $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+                            ->where('oauth_access_tokens.user_id', $data[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
+
                 if (stristr($useragent, 'iOS')) $useragent = 'iOS';
                 if (stristr($useragent, 'okhttp')) $useragent = 'Android';
                 if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
@@ -1556,11 +1651,31 @@ class ApiUser extends Controller
                 $holdTime = $checkRuleRequest['otp_timer'];
             }
 
+            switch (env('OTP_TYPE', 'PHONE')) {
+                case 'MISSCALL':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_miscall', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Missed Call.'));
+                    break;
+
+                case 'WA':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_wa', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Whatsapp.'));
+                    break;
+
+                default:
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_sms', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui SMS.'));
+                    break;
+            }
+
+            $user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
+
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
                     'otp_timer' => $holdTime,
-                    'result'    => ['phone'    =>    $phone]
+                    'result'    => [
+                        'phone'    =>    $phone,
+                        'message'  => $msg_otp,
+                        'challenge_key' => $user->challenge_key
+                    ]
                 ];
             } else {
                 $result = [
@@ -1568,7 +1683,9 @@ class ApiUser extends Controller
                     'otp_timer' => $holdTime,
                     'result'    => [
                         'phone'    =>    $phone,
-                        'pin'        =>  ''
+                        'pin'        =>  '', 
+                        'message' => $msg_otp,
+                        'challenge_key' => $user->challenge_key
                     ]
                 ];
             }
@@ -1650,18 +1767,19 @@ class ApiUser extends Controller
                             $check = array_column($check, 'id_user');
 
                             if ($deviceCus && count($deviceCus) > (int) $fraud['parameter_detail'] && array_search($data[0]['id'], $check) !== false) {
+                                $emailSender = Setting::where('key', 'email_sender')->first();
                                 $sendFraud = app($this->setting_fraud)->checkFraud($fraud, $data[0], ['device_id' => $device_id, 'device_type' => $request->json('device_type')], 0, 0, null, 0);
                                 $data = User::with('city')->where('phone', '=', $phone)->get()->toArray();
 
                                 if ($data[0]['is_suspended'] == 1) {
                                     return response()->json([
                                         'status' => 'fail',
-                                        'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]
+                                        'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
                                     ]);
                                 } else {
                                     return response()->json([
                                         'status' => 'fail',
-                                        'messages' => ['Akun Anda tidak dapat di daftarkan karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]
+                                        'messages' => ['Akun Anda tidak dapat di daftarkan karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
                                     ]);
                                 }
                             }
@@ -1684,6 +1802,11 @@ class ApiUser extends Controller
                                 'profile' => $profile
                             ]
                         ];
+                    }else{
+                        $result = [
+                            'status'    => 'fail',
+                            'messages'    => ['Failed to Update Data']
+                        ];
                     }
                 } else {
                     $result = [
@@ -1703,7 +1826,7 @@ class ApiUser extends Controller
                 'messages'    => ['This phone number isn\'t registered']
             ];
         }
-        return response()->json($result);
+        return response()->json($result??['status' => 'fail','messages' => ['No Process']]);
     }
 
     function changePin(users_phone_pin_new $request)
@@ -1743,9 +1866,15 @@ class ApiUser extends Controller
                             ->where('oauth_access_tokens.user_id', $data[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
                     }
                 }
+
+                $user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
+
                 $result = [
                     'status'    => 'success',
-                    'result'    => ['phone'    =>    $data[0]['phone']]
+                    'result'    => [
+                        'phone'    =>    $data[0]['phone'],
+                        'challenge_key' => $user->challenge_key
+                    ]
                 ];
             } else {
                 $result = [
@@ -1866,11 +1995,13 @@ class ApiUser extends Controller
             $phone = $checkPhoneFormat['phone'];
         }
 
+
         $data = User::where('phone', '=', $phone)
             ->get()
             ->toArray();
 
         if ($data) {
+        	DB::beginTransaction();
             // $pin_x = MyHelper::decryptkhususpassword($data[0]['pin_k'], md5($data[0]['id_user'], true));
             if($request->json('email') != "" && $request->json('name') != "" &&
                 empty($data[0]['email']) && empty($data[0]['name'])){
@@ -1879,16 +2010,13 @@ class ApiUser extends Controller
 				foreach ($get_setting as $key => $value) {
 					$setting[$value['key']] = $value['value'];
 				}
-                if($setting['welcome_voucher_setting'] == 1){
-                    $injectVoucher = app($this->deals)->injectWelcomeVoucher(['id' => $data[0]['id']], $data[0]['phone']);
-                }
-                if($setting['welcome_subscription_setting'] == 1){
-                    $inject_subscription = app($this->welcome_subscription)->injectWelcomeSubscription(['id' => $data[0]['id']], $data[0]['phone']);
-                }
+
+				$welcome_promo = 1;
             }
 
             if ($request->json('email') != "") {
-                if (!filter_var($request->json('email'), FILTER_VALIDATE_EMAIL)) {
+                $domain = substr($request->json('email'), strpos($request->json('email'), "@") + 1);
+                if (!filter_var($request->json('email'), FILTER_VALIDATE_EMAIL) ||  checkdnsrr($domain, 'MX') === false) {
                     $result = [
                         'status'    => 'fail',
                         'messages'    => ['The email must be a valid email address.']
@@ -1954,8 +2082,6 @@ class ApiUser extends Controller
                     }
                 }
 
-                DB::beginTransaction();
-
                 $referral = \Modules\PromoCampaign\Lib\PromoCampaignTools::createReferralCode($data[0]['id']);
 
                 if (!$referral) {
@@ -1972,7 +2098,13 @@ class ApiUser extends Controller
 
                 //cek complete profile ?
                 if ($datauser[0]['complete_profile'] != "1") {
-                    if ($datauser[0]['name'] != "" && $datauser[0]['email'] != "" && $datauser[0]['gender'] != "" && $datauser[0]['birthday'] != "" && $datauser[0]['id_city'] != "" && $datauser[0]['job'] != "" 
+                    if ($datauser[0]['name'] != "" 
+                    	&& $datauser[0]['email'] != "" 
+                    	&& $datauser[0]['gender'] != "" 
+                    	&& $datauser[0]['birthday'] != "" 
+                    	&& $datauser[0]['id_city'] != "" 
+                    	&& $datauser[0]['job'] != "" 
+                    	&& $datauser[0]['phone_verified'] == "1"
                         // && $datauser[0]['id_card_image'] != ""
                     ) {
                         //get point
@@ -2038,7 +2170,7 @@ class ApiUser extends Controller
                                 ]);
                             }
                         }
-                        $update = User::where('id', '=', $data[0]['id'])->update(['complete_profile' => '1']);
+                        $update = User::where('id', '=', $data[0]['id'])->update(['complete_profile' => '1', 'complete_profile_date' => date('Y-m-d H:i:s')]);
 
                         $checkMembership = app($this->membership)->calculateMembership($datauser[0]['phone']);
                     }
@@ -2048,7 +2180,7 @@ class ApiUser extends Controller
                 if (!empty($datauser[0]['id_card_image']) && !is_null($datauser[0]['id_card_image'])) {
                     $urlIdCard = config('url.storage_url_api') . $datauser[0]['id_card_image'];
                 }
-                DB::commit();
+                
                 $result = [
                     'status'    => 'success',
                     'result'    => [
@@ -2072,6 +2204,17 @@ class ApiUser extends Controller
                 //         'messages'	=> ['Current PIN doesn\'t match']
                 //     ];
                 // }
+		        if ($welcome_promo ?? false) {
+		        	if($setting['welcome_voucher_setting'] == 1){
+		                $injectVoucher = app($this->deals)->injectWelcomeVoucher(['id' => $data[0]['id']], $data[0]['phone']);
+		            }
+
+		            if($setting['welcome_subscription_setting'] == 1){
+		                $inject_subscription = app($this->welcome_subscription)->injectWelcomeSubscription(['id' => $data[0]['id']], $data[0]['phone']);
+		            }
+		        }
+
+		        DB::commit();
             } else {
                 $result = [
                     'status'    => 'fail',
@@ -2084,6 +2227,7 @@ class ApiUser extends Controller
                 'messages'    => ['This phone number isn\'t registered']
             ];
         }
+
         return response()->json($result);
     }
 
@@ -2679,6 +2823,14 @@ class ApiUser extends Controller
                 }
             } else {
                 unset($post['update']['id_card_image']);
+            }
+        }
+
+        if(isset($post['update']['otp_request_status'])){
+            $old = $user[0]['otp_request_status'];
+            $current = $post['update']['otp_request_status'];
+            if($old == 'Can Not Request' && $current == 'Can Request'){
+                $post['update']['otp_increment'] = 0;
             }
         }
 
@@ -3311,7 +3463,14 @@ class ApiUser extends Controller
 
     function verifyEmail(Request $request, $slug)
     {
-        $setting = Setting::where('key', 'LIKE', 'email_copyright')->first();
+        $getsetting = Setting::whereIn('key', ['email_copyright', 'email_logo'])->get()->toArray();
+
+        foreach ($getsetting as $s){
+            $setting[$s['key']] = [
+                'value' => $s['value'],
+                'value_text' => $s['value_text']
+            ];
+        }
 
         try {
             $decrypt = MyHelper::decrypt2019($slug);
@@ -3325,36 +3484,49 @@ class ApiUser extends Controller
                     $user = User::where('phone', $phone)->where('email', $email)->first();
                     if (!empty($user)) {
                         if ($user['email_verified'] == 1) {
-                            $data = ['status_verify' => 'already', 'message' => 'This page is expired, your email is already verified', 'settings' => $setting];
+                            $data = ['status_verify' => 'already', 'message' => 'This page is expired, your email is already verified', 'email' => $email, 'settings' => $setting];
                             return view('users::verify_email', $data);
                         } elseif (strtotime(date('Y-m-d H:i:s')) > strtotime($user['email_verified_valid_time'])) {
-                            $data = ['status_verify' => 'expired', 'message' => 'This page is expired, please re-request verify email from apps', 'settings' => $setting];
+                            $data = ['status_verify' => 'expired', 'message' => 'This page is expired, please re-request verify email from apps', 'email' => $email, 'settings' => $setting];
                             return view('users::verify_email', $data);
                         } else {
                             $udpate = User::where('phone', $phone)->where('email', $email)->update(['email_verified' => 1]);
                             if ($udpate) {
-                                $data = ['status_verify' => 'success', 'message' => 'Successfully verified your email ', 'settings' => $setting];
+                                $data = ['status_verify' => 'success', 'message' => 'Successfully verified your email ', 'email' => $email, 'settings' => $setting];
                                 return view('users::verify_email', $data);
                             } else {
-                                $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, something went wrong', 'settings' => $setting];
+                                $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, something went wrong', 'email' => $email, 'settings' => $setting];
                                 return view('users::verify_email', $data);
                             }
                         }
                     } else {
-                        $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, user not found', 'settings' => $setting];
+                        $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, user not found', 'email' => $email, 'settings' => $setting];
                         return view('users::verify_email', $data);
                     }
                 } else {
-                    $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
+                    $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'email' => '', 'settings' => $setting];
                     return view('users::verify_email', $data);
                 }
             } else {
-                $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
+                $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'email' => '', 'settings' => $setting];
                 return view('users::verify_email', $data);
             }
         } catch (\Exception $e) {
-            $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
+            $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'email' => '', 'settings' => $setting];
             return view('users::verify_email', $data);
         }
+    }
+
+    public function removeUserDevice(Request $request)
+    {
+    	$post = $request->json()->all();
+    	$get_user = User::where('phone',$request->phone)->first();
+
+    	$del = UserDevice::Where('id_user', $get_user->id)->delete();
+    	$del = UsersDeviceLogin::Where('id_user', $get_user->id)->delete();
+
+
+    	return ['status' => 'success'];
+    	// return MyHelper::checkDelete($del);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Modules\Campaign\Http\Controllers;
 
+use App\Jobs\SendCampaignNow;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -24,6 +25,7 @@ use App\Http\Models\CampaignWhatsappSent;
 use App\Http\Models\CampaignWhatsappSentContent;
 use App\Http\Models\News;
 use App\Http\Models\OauthAccessToken;
+use Modules\RedirectComplex\Entities\RedirectComplexReference;
 
 //use Modules\Campaign\Http\Requests\campaign_list;
 //use Modules\Campaign\Http\Requests\campaign_create;
@@ -274,6 +276,12 @@ class ApiCampaign extends Controller
 						$campaign['campaign_push_name_reference'] = $q['outlet_name'];
 					}
 				}
+				elseif($campaign['campaign_push_clickto'] == "Complex"){
+					if($campaign['campaign_push_id_reference'] != 0){
+						$q = RedirectComplexReference::where('id_redirect_complex_reference','=',$campaign['campaign_push_id_reference'])->get()->first();
+						$campaign['campaign_push_name_reference'] = $q['name'];
+					}
+				}
 			}
 
 			if($campaign['campaign_media_inbox'] == "Yes"){
@@ -330,8 +338,8 @@ class ApiCampaign extends Controller
 		$result = [
 				'status'  => 'success',
 				'result'  => $cond,
-				'recordsFiltered' => $users['recordsFiltered']??0,
-				'recordsTotal' => $users['recordsTotal']??0
+				'recordsFiltered' => $users['total']??0,
+				'recordsTotal' => $users['total']??0
 			];
 		return $result;
 	}
@@ -432,11 +440,19 @@ class ApiCampaign extends Controller
 
 			if($campaign['campaign_send_at'] == null && $post['resend'] != 1){
 				//Kirimnya NOW
-				$send=$this->sendCampaignInternal($campaign);
-				$result = [
-					'status'  => 'success',
-					'result'  => $send
-				];
+                if($campaign['generate_recipient_status'] != 1){
+                    $result = [
+                        'status'  => 'fail',
+                        'messages'  => ['Recipient has not yet been generated, please wait until recipient already generated.']
+                    ];
+                }else{
+                    Campaign::where('id_campaign','=',$campaign['id_campaign'])->update(['campaign_is_sent' => 'Yes']);
+                    SendCampaignNow::dispatch($campaign)->allOnConnection('database');
+                    $result = [
+                        'status'  => 'success',
+                        'result'  => true
+                    ];
+                }
 			} elseif($campaign['campaign_send_at'] == null && $post['resend'] == 1) {
 
 				$result = [
@@ -476,8 +492,9 @@ class ApiCampaign extends Controller
 				if($campaign->campaign_generate_receipient=='Send At Time'){
 					$post=['id_campaign'=>$campaign->id_campaign];
 					GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
-				}
-				$this->sendCampaignInternal($campaign->toArray());
+				}else{
+                    $this->sendCampaignInternal($campaign->toArray());
+                }
 			}
 
 			$log->success(count($campaigns).' campaign has been insert to queue');
@@ -491,11 +508,12 @@ class ApiCampaign extends Controller
 	}
 
 	public function sendCampaignInternal($campaign){
+        $update = Campaign::where('id_campaign','=',$campaign['id_campaign'])->update(['campaign_is_sent' => 'Yes']);
 		if($campaign['campaign_media_email'] == "Yes"){
 			$receipient_email = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_email_receipient'])));
 			$data['campaign'] = $campaign;
 			$data['type'] = 'email';
-			foreach (array_chunk($receipient_email,10) as $recipients) {
+			foreach (array_chunk($receipient_email,200) as $recipients) {
 				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 				SendCampaignJob::dispatch($data)->allOnConnection('database');
 			}
@@ -506,7 +524,7 @@ class ApiCampaign extends Controller
 
 			$data['campaign'] = $campaign;
 			$data['type'] = 'sms';
-			foreach (array_chunk($receipient_sms,10) as $recipients) {
+			foreach (array_chunk($receipient_sms,200) as $recipients) {
 				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 				SendCampaignJob::dispatch($data)->allOnConnection('database');
 			}
@@ -517,7 +535,7 @@ class ApiCampaign extends Controller
 
 			$data['campaign'] = $campaign;
 			$data['type'] = 'push';
-			foreach (array_chunk($receipient_push,10) as $recipients) {
+			foreach (array_chunk($receipient_push,200) as $recipients) {
 				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 				SendCampaignJob::dispatch($data)->allOnConnection('database');
 			}
@@ -528,7 +546,7 @@ class ApiCampaign extends Controller
 
 			$data['campaign'] = $campaign;
 			$data['type'] = 'inbox';
-			foreach (array_chunk($receipient_inbox,10) as $recipients) {
+			foreach (array_chunk($receipient_inbox,200) as $recipients) {
 				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 				SendCampaignJob::dispatch($data)->allOnConnection('database');
 			}
@@ -541,7 +559,7 @@ class ApiCampaign extends Controller
 
 			$data['campaign'] = $campaign;
 			$data['type'] = 'whatsapp';
-			foreach (array_chunk($receipient_whatsapp,10) as $recipients) {
+			foreach (array_chunk($receipient_whatsapp,200) as $recipients) {
 				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 				SendCampaignJob::dispatch($data)->allOnConnection('database');
 			}
@@ -583,10 +601,10 @@ class ApiCampaign extends Controller
 
 		$campaign=Campaign::where('id_campaign',$id_campaign)->first();
 		DB::beginTransaction();
-		if($campaign->campaign_generate_receipient=='Now'){
-			GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
-		}
-		if($campaign->campaign_send_at&&$campaign->campaign_send_at<date('Y-m-d H:i:s')){
+        if($campaign->campaign_generate_receipient=='Now' || (empty($campaign->campaign_send_at) && $campaign->campaign_generate_receipient=='Send At Time')){
+            GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
+        }
+        if($campaign->campaign_send_at&&$campaign->campaign_send_at<date('Y-m-d H:i:s')){
 			$post['campaign_send_at']=date('Y-m-d H:i:s');
 		}
 		unset($post['id_campaign']);

@@ -15,6 +15,7 @@ use Modules\Product\Entities\ProductSpecialPrice;
 use App\Http\Models\ProductModifier;
 use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\ProductModifierGlobalPrice;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
 
 use DB;
 
@@ -118,7 +119,7 @@ class ApiSettingTransactionV2 extends Controller
         return $convert;
     }
 
-    public function countTransaction($value, $data,$discount_promo=[]) {
+    public function countTransaction($value, &$data,&$discount_promo=[]) {
         $subtotal = isset($data['subtotal']) ? $data['subtotal'] : 0;
         $service  = isset($data['service']) ? $data['service'] : 0;
         $tax      = isset($data['tax']) ? $data['tax'] : 0;
@@ -126,9 +127,15 @@ class ApiSettingTransactionV2 extends Controller
         $discount = isset($data['discount']) ? $data['discount'] : 0;
         // return $data;
         if ($value == 'subtotal') {
-            $different_price = Outlet::select('outlet_different_price')->where('id_outlet',$data['id_outlet'])->pluck('outlet_different_price')->first();
+            $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet',$data['id_outlet'])->first();
+            $different_price = $outlet->outlet_different_price;
             $dataSubtotal = [];
-            foreach (($discount_promo['item']??$data['item']) as $keyData => $valueData) {
+            if ($discount_promo['item'] ?? false) {
+                $loopable = &$discount_promo['item'];
+            } else {
+                $loopable = &$data['item'];
+            }
+            foreach ($loopable as $keyData => &$valueData) {
                 $this_discount=0;
                 $this_discount=$valueData['discount']??0;
 
@@ -178,6 +185,35 @@ class ApiSettingTransactionV2 extends Controller
                     ]);
                 }
                 $mod_subtotal = 0;
+                if ($valueData['id_product_variant_group'] ?? false) {
+                    $product_variant_group = ProductVariantGroup::where('id_product_variant_group', $valueData['id_product_variant_group']);
+                    if ($different_price) {
+                        $product_variant_group->join('product_variant_group_special_prices', 'product_variant_group_special_prices.id_product_variant_group', 'product_variant_groups.id_product_variant_group')->select('product_variant_groups.id_product_variant_group', 'product_variant_groups.id_product', 'product_variant_group_special_prices.product_variant_group_price');
+                    } else {
+                        $product_variant_group->select('product_variant_groups.id_product_variant_group', 'product_variant_groups.id_product', 'product_variant_groups.product_variant_group_price');
+                    }
+                    $product_variant_group = $product_variant_group->first();
+                    if (!$product_variant_group) {
+                        return response()->json([
+                            'status' => 'fail',
+                            'messages' => ['Product Variant Group not found'],
+                            'product' => $product['product_name']
+                        ]);
+                    }
+                    $variants = Product::getVariantPrice($product_variant_group, Product::getVariantTree($valueData['id_product'], $outlet)['variants_tree']??[]);
+                    if (!$variants) {
+                        return response()->json([
+                            'status' => 'fail',
+                            'messages' => ['Price Variant Not Found'],
+                            'product' => $product['product_name']
+                        ]);
+                    }
+                    $valueData['variants'] = $variants;
+                    $valueData['transaction_variant_subtotal'] = $product_variant_group->product_variant_group_price - $productPrice['product_price'];
+                } else {
+                    $valueData['variants'] = [];
+                    $valueData['transaction_variant_subtotal'] = 0;
+                }
                 foreach ($valueData['modifiers'] as $modifier) {
                     $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                     $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
@@ -191,7 +227,8 @@ class ApiSettingTransactionV2 extends Controller
                 // $price = $productPrice['product_price_base'] * $valueData['qty'];
                 // remove discount from substotal
                 // $price = (($productPrice['product_price']+$mod_subtotal) * $valueData['qty'])-$this_discount;
-                $price = (($productPrice['product_price']+$mod_subtotal) * $valueData['qty']);
+                $price = (($productPrice['product_price'] + $mod_subtotal + $valueData['transaction_variant_subtotal']) * $valueData['qty']);
+                $valueData['transaction_product_subtotal'] = $price;
                 array_push($dataSubtotal, $price);
             }
 

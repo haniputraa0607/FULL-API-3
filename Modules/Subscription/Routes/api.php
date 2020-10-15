@@ -25,7 +25,8 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::group(['prefix' => 'claim'], function () {
         Route::post('/', 'ApiSubscriptionClaim@claim');
         Route::post('cancel', 'ApiSubscriptionClaimPay@cancel');
-        Route::post('paid', 'ApiSubscriptionClaimPay@claim');
+        Route::post('paid', 'ApiSubscriptionClaimPay@claim')->middleware('decrypt_pin:pin,request');
+        Route::post('paid/status', 'ApiSubscriptionClaimPay@status');
         Route::post('pay-now', 'ApiSubscriptionClaimPay@bayarSekarang');
     });
     Route::post('mysubscription', 'ApiSubscriptionWebview@mySubscription');
@@ -60,6 +61,10 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('delete', 'ApiSubscription@delete');
     Route::post('update-complete', ['middleware' => 'feature_control:175', 'uses' => 'ApiSubscription@updateComplete']);
     Route::post('text-replace', ['middleware' => 'feature_control:174', 'uses' => 'ApiSubscription@textReplace']);
+
+    /* Transaction report*/
+    Route::post('transaction-report', ['middleware' => 'feature_control:174', 'uses' => 'ApiSubscriptionReport@transactionReport']);
+    Route::any('be/list-started', ['middleware' => 'feature_control:173', 'uses' => 'ApiSubscriptionReport@liststartedSubscription']);
 
 });
 

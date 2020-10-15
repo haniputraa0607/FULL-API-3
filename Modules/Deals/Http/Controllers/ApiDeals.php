@@ -49,6 +49,8 @@ use Illuminate\Support\Facades\Schema;
 
 use Image;
 
+use App\Jobs\SendDealsJob;
+
 class ApiDeals extends Controller
 {
 
@@ -1363,23 +1365,27 @@ class ApiDeals extends Controller
     }
 
     function injectWelcomeVoucher($user, $phone){
+    	$now = date("Y-m-d H:i:s");
         $getDeals = DealTotal::join('deals', 'deals.id_deals', '=', 'deals_total.id_deals')
-            ->select('deals.*','deals_total.deals_total')->get();
-        $count = 0;
-        foreach ($getDeals as $val){
-            for($i=0;$i<$val['deals_total'];$i++){
-                $generateVoucher = app($this->hidden_deals)->autoClaimedAssign($val, $user, $val['deals_total']);
-                $count++;
-            }
-            $dataDeals = Deal::where('id_deals', $val['id_deals'])->first();
-            app($this->deals_claim)->updateDeals($dataDeals);
+        			->where('deals_start', "<", $now)
+            		->where('deals_end', ">", $now)
+            		->where('step_complete','=','1')
+            		->where(function($q){
+            			$q->where('deals_total_voucher','0')
+            			->orWhereColumn('deals_total_claimed','<','deals_total_voucher');
+            		})
+            		->select('deals.*','deals_total.deals_total')->get();
+
+        if (!$getDeals->isEmpty()) {
+        	$getDeals = $getDeals->toArray();
+        	$data = [
+        		'deals' => $getDeals,
+        		'user'	=> $user,
+        		'phone' => $phone
+        	];
+        	SendDealsJob::dispatch($data)->allOnConnection('dealsqueue');
         }
 
-        $autocrm = app($this->autocrm)->SendAutoCRM('Receive Welcome Voucher', $phone,
-            [
-                'count_voucher'      => (string)$count
-            ]
-        );
         return true;
     }
 
@@ -1440,6 +1446,9 @@ class ApiDeals extends Controller
                 $table.'_tier_discount_rules', 
                 $table.'_buyxgety_product_requirement.product', 
                 $table.'_buyxgety_rules.product',
+                $table.'_discount_bill_rules',
+                $table.'_discount_delivery_rules',
+                $table.'_shipment_method',
                 'brand'
             ]);
         }
@@ -1726,8 +1735,12 @@ class ApiDeals extends Controller
     	$deals = $deals->toArray();
     	if ( $deals['is_online'] == 1)
     	{
-	    	if ( empty($deals['deals_product_discount_rules']) && empty($deals['deals_tier_discount_rules']) && empty($deals['deals_buyxgety_rules']) )
-	    	{
+	    	if ( empty($deals['deals_product_discount_rules']) 
+	    		&& empty($deals['deals_tier_discount_rules']) 
+	    		&& empty($deals['deals_buyxgety_rules']) 
+	    		&& empty($deals['deals_discount_bill_rules']) 
+	    		&& empty($deals['deals_discount_delivery_rules'])
+	    	){
 	    		$step = 2;
 	    		$errors = 'Deals not complete';
 	    		return false;

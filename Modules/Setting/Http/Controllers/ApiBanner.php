@@ -20,9 +20,7 @@ class ApiBanner extends Controller
     public function index()
     {
         // get banner with news title
-        $banners = DB::table('banners')
-            ->leftJoin('news', 'news.id_news', '=', 'banners.id_news')
-            ->select('banners.*', 'news.news_title')
+        $banners = Banner::select('banners.*', \DB::raw('"-" as reference_title'))
             ->orderBy('banners.position')
             ->get();
 

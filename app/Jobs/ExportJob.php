@@ -23,7 +23,7 @@ use Symfony\Component\HttpFoundation\Request;
 class ExportJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-    protected $data,$payment,$trx;
+    protected $data,$payment,$trx,$subscription;
     /**
      * Create a new job instance.
      *
@@ -33,6 +33,7 @@ class ExportJob implements ShouldQueue
     {
         $this->payment="Modules\Report\Http\Controllers\ApiReportPayment";
         $this->trx="Modules\Transaction\Http\Controllers\ApiTransaction";
+        $this->subscription="Modules\Subscription\Http\Controllers\ApiSubscriptionReport";
         $this->data=$data;
     }
 
@@ -57,6 +58,9 @@ class ExportJob implements ShouldQueue
                 }else{
                     $fileName = 'Report_'.str_replace(" ","", $val['report_payment']);
                 }
+            }elseif($val['report_type'] == 'Subscription'){
+                $generateExcel = app($this->subscription)->exportExcel($filter);
+                $fileName = 'Report_'.str_replace(" ","", $val['report_type']).'_'.$filter['type'];
             }
 
             if($generateExcel){

@@ -11,6 +11,8 @@ class Disburse extends Model
 
 	protected $fillable = [
 	    'disburse_nominal',
+        'disburse_fee',
+        'total_income_outlet',
         'id_bank_account',
 		'disburse_status',
         'beneficiary_bank_name',
@@ -25,7 +27,9 @@ class Disburse extends Model
         'notes',
         'reference_no',
         'old_reference_no',
-        'count_retry'
+        'total_outlet',
+        'count_retry',
+        'send_email_status'
 	];
 
     public function disburse_outlet()
