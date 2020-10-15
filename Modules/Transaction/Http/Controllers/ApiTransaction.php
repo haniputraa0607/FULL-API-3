@@ -1574,7 +1574,7 @@ class ApiTransaction extends Controller
         }
 
         $query = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
-            ->select('transaction_pickups.*','transactions.*','users.*','outlets.outlet_code', 'outlets.outlet_name', 'payment_type', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay','payment_method', 'transaction_payment_midtrans.gross_amount', 'transaction_payment_ipay88s.amount')
+            ->select('transaction_pickups.*','transactions.*','users.*','outlets.outlet_code', 'outlets.outlet_name', 'payment_type', 'payment_method', 'transaction_payment_midtrans.gross_amount', 'transaction_payment_ipay88s.amount', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay')
             ->leftJoin('outlets','outlets.id_outlet','=','transactions.id_outlet')
             ->leftJoin('users','transactions.id_user','=','users.id')
             ->orderBy('transactions.transaction_date', 'asc');

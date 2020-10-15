@@ -272,7 +272,7 @@ class ApiOutletAppReport extends Controller
 	    	$data['trx_grand']		= number_format($daily_trx['trx_grand'],0,",",".");
 	    	$data['trx_count']		= number_format($daily_trx['trx_count'],0,",",".");
 	    	$data['trx_total_item']	= number_format($daily_trx['trx_total_item'],0,",",".");
-            $data['trx_net_sale']	= number_format($daily_trx['trx_net_sale'],0,",",".");
+            $data['trx_net_sale']	= (int)$daily_trx['trx_net_sale'];
             $data['trx_shipment_go_send']	= number_format($daily_trx['trx_shipment_go_send'],0,",",".");
     	}else{
 	    	$data['first_trx_time'] = "";
