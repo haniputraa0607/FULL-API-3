@@ -483,6 +483,10 @@ class ApiCategoryController extends Controller
                 return $pos_a <=> $pos_b ?: $a['category']['id_product_category'] <=> $b['category']['id_product_category'];
             });
             $brand = Brand::select('id_brand', 'name_brand', 'code_brand', 'order_brand')->find($id_brand);
+            if (!$brand) {
+                unset($result[$id_brand]);
+                continue;
+            }
             $result[$id_brand] = [
                 'brand' => $brand,
                 'list' => $categories

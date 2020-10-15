@@ -940,6 +940,7 @@ class ApiDisburseController extends Controller
                 ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
                 ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
                 ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
+                ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
                 ->where('transaction_payment_status', 'Completed')
                 ->whereNull('reject_at')
                 ->where('transactions.id_outlet', $getOutlet['id_outlet'])
@@ -949,7 +950,7 @@ class ApiDisburseController extends Controller
                         ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                         ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
                 }, 'vouchers.deal', 'promo_campaign'])
-                ->select('payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
+                ->select('transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
                     'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
                     'transactions.transaction_grandtotal',
                     'transactions.transaction_discount', 'transactions.transaction_subtotal')
@@ -1092,6 +1093,7 @@ class ApiDisburseController extends Controller
                             ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
                             ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
                             ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
+                            ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
                             ->where('transaction_payment_status', 'Completed')
                             ->whereNull('reject_at')
                             ->where('transactions.id_outlet', $outlet['id_outlet'])
@@ -1101,7 +1103,7 @@ class ApiDisburseController extends Controller
                                     ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                                     ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
                             }, 'vouchers.deal', 'promo_campaign'])
-                            ->select('payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
+                            ->select('transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
                                 'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
                                 'transactions.transaction_grandtotal',
                                 'transactions.transaction_discount', 'transactions.transaction_subtotal')
@@ -1410,6 +1412,7 @@ class ApiDisburseController extends Controller
                 ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
                 ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
                 ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
+                ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
                 ->where('transaction_payment_status', 'Completed')
                 ->whereNull('reject_at')
                 ->whereDate('transactions.transaction_date', $yesterday)
@@ -1418,7 +1421,7 @@ class ApiDisburseController extends Controller
                         ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                         ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
                 }, 'vouchers.deal', 'promo_campaign'])
-                ->select('payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
+                ->select('transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
                     'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
                     'transactions.transaction_grandtotal',
                     'transactions.transaction_discount', 'transactions.transaction_subtotal')

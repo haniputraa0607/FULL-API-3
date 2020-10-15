@@ -69,8 +69,15 @@
                 <td style="text-align: left">{{(float)$val['fee_item']}}</td>
                 <td style="text-align: left">
                     <?php
-                    $payment = (!empty($val['payment_type']) ? $val['payment_type'] : '').(!empty($val['payment_method']) ? $val['payment_method'] : '');
-                    echo $payment;
+                        $payment = '';
+                        if(!empty($val['payment_type'])){
+                            $payment = $val['payment_type'];
+                        }elseif(!empty($val['payment_method'])){
+                            $payment = $val['payment_method'];
+                        }elseif(!empty($val['id_transaction_payment_shopee_pay'])){
+                            $payment = 'Shopeepay';
+                        }
+                        echo $payment;
                     ?>
                 </td>
                 <td style="text-align: left">{{(float)$val['payment_charge']}}</td>
