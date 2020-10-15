@@ -478,7 +478,8 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
 
-                $post['discount'] = $post['dis'] + $totalDisProduct;
+                // $post['discount'] = $post['dis'] + $totalDisProduct; 
+                $post['discount'] = $totalDisProduct;
             }elseif($valueTotal == 'tax'){
                 $post['tax'] = app($this->setting_trx)->countTransaction($valueTotal, $post);
                 $mes = ['Data Not Valid'];
@@ -510,6 +511,7 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
+        $post['discount'] = $post['discount'] + $promo_discount;
         $post['point'] = app($this->setting_trx)->countTransaction('point', $post);
         $post['cashback'] = app($this->setting_trx)->countTransaction('cashback', $post);
 
@@ -2060,6 +2062,7 @@ class ApiOnlineTransaction extends Controller
         $promo_error=null;
         $promo_source = null;
         $promo_valid = false;
+        $promo_discount = 0;
         $request_promo = $request->except('type');
         if($request->promo_code && !$request->id_subscription_user && !$request->id_deals_user){
         	$code = app($this->promo_campaign)->checkPromoCode($request->promo_code, 1, 1);
@@ -2207,7 +2210,8 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
 
-                $post['discount'] = $post['dis'] + $totalDisProduct;
+                // $post['discount'] = $post['dis'] + $totalDisProduct;
+                $post['discount'] = $totalDisProduct;
             }elseif($valueTotal == 'tax'){
                 $post['tax'] = app($this->setting_trx)->countTransaction($valueTotal, $post);
                 $mes = ['Data Not Valid'];
@@ -2470,7 +2474,7 @@ class ApiOnlineTransaction extends Controller
 
         $outlet['today']['status'] = $outlet_status?'open':'closed';
 
-        // $post['discount'] = $post['discount'] + ($promo_discount??0);
+        $post['discount'] = $post['discount'] + $promo_discount;
         $post['discount_delivery'] = $post['discount_delivery'] + ($discount_promo['discount_delivery']??0);
 
         $result['outlet'] = [
