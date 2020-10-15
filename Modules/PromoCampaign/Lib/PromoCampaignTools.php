@@ -21,6 +21,7 @@ use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
 
 use App\Lib\MyHelper;
+use Modules\IPay88\Lib\IPay88;
 
 class PromoCampaignTools{
 
@@ -91,15 +92,16 @@ class PromoCampaignTools{
 			}
 		}
 
-		/*if (isset($request['payment_type'])) {
-			$promo_payment = $promo->{$source.'_payment_method'}->pluck('payment_method');
+		if (isset($request['payment_type']) && (isset($request['payment_id']) || isset($request['payment_detail'])) ) {
+			$promo_payment 	= $promo->{$source.'_payment_method'}->pluck('payment_method');
+			$payment_method = $this->getPaymentMethod($request['payment_type'], $request['payment_id'], $request['payment_detail']);
+			$check_payment 	= $this->checkPaymentRule($promo->is_all_payment??0, $payment_method, $promo_payment);
 
-			$check_payment = $this->checkPaymentRule($promo->is_all_payment??0, $request->payment_type, $promo_payment);
 			if(!$check_payment){
 				$errors[]='Promo cannot be used for this payment type';
 				return false;
 			}
-		}*/
+		}
 
 		if( (!empty($promo->date_start) && !empty($promo->date_end)) && (strtotime($promo->date_start)>time()||strtotime($promo->date_end)<time())){
 			$errors[]='Promo is not valid';
@@ -1407,6 +1409,39 @@ class PromoCampaignTools{
     	}else{
     		return false;
     	}
+    }
+
+    public function getPaymentMethod($payment_type, $payment_id, $payment_detail)
+    {
+    	// payment_id for ipay88
+    	// payment_detail for midtrans
+    	$payment_method = null;
+    	if ( $payment_type == "Ipay88" ) {
+	    	$payment_method = $this->getPaymentIpay88($payment_id);
+    	}
+    	elseif ( $payment_type == "Midtrans" ) {
+	    	$payment_method =  $payment_detail;
+    	}
+    	
+    	return $payment_method;
+    }
+
+    public function getPaymentIpay88($payment_id)
+    {
+    	$payment_id = strtoupper($payment_id);
+    	$ipay88 = new Ipay88;
+	    $payment_list = $ipay88->payment_id;
+	    $payment_list['CREDIT_CARD'] = 'Credit Card';
+	    $payment_list['CREDIT CARD'] = 'Credit Card';
+	    $payment_list['OVO'] = 'Ovo';
+
+	    if (isset($payment_list[$payment_id])) {
+	    	$payment_method = $payment_list[$payment_id];
+	    }else{
+	    	$payment_method = null;
+	    }
+	    
+	    return $payment_method;
     }
 }
 ?>
