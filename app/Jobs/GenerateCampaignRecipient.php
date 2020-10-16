@@ -57,7 +57,7 @@ class GenerateCampaignRecipient implements ShouldQueue
             $get[]='phone';
         }
         if($user!=false){
-            $user->chunk(200,function($users) use (&$recipient,$get){
+            $user->chunk(10000,function($users) use (&$recipient,$get){
                 foreach ($users as $user) {
                     foreach ($get as $key) {
                         if(!empty($key)){
@@ -93,12 +93,13 @@ class GenerateCampaignRecipient implements ShouldQueue
             $data['campaign_whatsapp_count_all']=count($recipientx);
         }
         $id_campaign=$this->data['id_campaign'];
-
+        $data['generate_recipient_status'] = 1;
         $update = Campaign::where('id_campaign','=',$id_campaign)->update($data);
 
-        if($update && $campaign->campaign_generate_receipient != 'Now'){
-            $getCampaign = Campaign::where('id_campaign','=',$id_campaign)->first()->toArray();
-            app($this->camp)->sendCampaignInternal($getCampaign);
+        $getCampaign = Campaign::where('id_campaign','=',$id_campaign)->first()->toArray();
+
+        if($update && !empty($campaign->campaign_send_at) && $campaign->campaign_generate_receipient=='Send At Time' && $getCampaign['campaign_is_sent'] == 'No'){
+            SendCampaignNow::dispatch($getCampaign)->allOnConnection('database');
         }
 
         return $update;
