@@ -1334,10 +1334,14 @@ class ApiOutletApp extends Controller
                     'brand_active'     => 1,
                     'brand_visibility' => 1,
                 ])->first();
+            if(!$brand) {
+                return 'no_brand';
+            }
             $brand['categories'] = $val;
             $val                 = $brand;
             return $key;
         });
+        unset($result['no_brand']);
         usort($result, function ($a, $b) {
             return $a['order_brand'] <=> $b['order_brand'];
         });
