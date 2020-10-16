@@ -1591,6 +1591,10 @@ class ApiSubscription extends Controller
         $subs->where('subscription_publish_end', '>=', date('Y-m-d H:i:s'));
 		$subs->where('subscription_publish_start', '<=', date('Y-m-d H:i:s'));
         $subs->where('subscription_step_complete', '=', 1);
+        $subs->where(function($q){
+        	$q->whereColumn('subscription_bought', '<', 'subscription_total')
+        		->orWhere('subscription_total','0');
+        });
 
         if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {
             $subs = $subs->leftJoin('subscription_outlets', 'subscriptions.id_subscription', '=', 'subscription_outlets.id_subscription')
