@@ -156,7 +156,8 @@ class ApiSubscriptionClaim extends Controller
                                     DB::rollback();
                                     return response()->json([
                                         'status'   => 'fail',
-                                        'messages' => ['Voucher is runs out.']
+                                        // 'messages' => ['Voucher is runs out.']
+                                        'messages' => ['Halo Kak, Mohon Maaf Voucher Telah Habis. Yuk Gunakan Voucher Lainnya pada Page Subscriptions 😊🙏']
                                     ]);
                                 }
 
