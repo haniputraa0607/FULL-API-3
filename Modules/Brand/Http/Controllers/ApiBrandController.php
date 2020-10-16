@@ -137,6 +137,13 @@ class ApiBrandController extends Controller
     public function destroy(Request $request)
     {
         try {
+            $product_exists = Product::join('brand_product', 'products.id_product', 'brand_product.id_product')->where('id_brand',$request->json('id_brand'))->exists();
+            if ($product_exists) {
+                return response()->json([
+                    'status' => 'fail',
+                    'messages' => ['Cannot delete the brand that has been assigned to the product']
+                ]);
+            }
             $delete = Brand::where('id_brand', $request->json('id_brand'))->delete();
             return response()->json(MyHelper::checkDelete($delete));
         } catch (\Exception $e) {

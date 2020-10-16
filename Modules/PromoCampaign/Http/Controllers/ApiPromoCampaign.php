@@ -2413,7 +2413,7 @@ class ApiPromoCampaign extends Controller
         	if ( !empty($query['subscription_voucher_percent']) ) {
         		$discount = ($query['subscription_voucher_percent']??0).'%';
         	}else{
-        		$discount = 'Rp '.number_format($query['subscription_voucher_nominal']??0);
+        		$discount = 'Rp '.number_format(($query['subscription_voucher_nominal']??0),0,',','.');
         	}
 
         	$key = $brand ? 'description_product_discount_brand_no_qty' : 'description_product_discount_no_qty';
@@ -2432,7 +2432,7 @@ class ApiPromoCampaign extends Controller
 	        	if ($discount == 'Percent') {
 	        		$discount = ($query[$source.'_product_discount_rules']['discount_value']??0).'%';
 	        	}else{
-	        		$discount = 'Rp '.number_format($query[$source.'_product_discount_rules']['discount_value']??0);
+	        		$discount = 'Rp '.number_format(($query[$source.'_product_discount_rules']['discount_value']??0),0,',','.');
 	        	}
 
 	        	if ( empty($qty) ) {

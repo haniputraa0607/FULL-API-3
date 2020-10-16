@@ -2581,6 +2581,8 @@ class ApiOnlineTransaction extends Controller
         	$result = app($this->promo)->getTransactionCheckPromoRule($result, $promo_source, $code??$deals);
         }
 
+        $result['subscription'] = (int) $result['subscription'];
+        $result['discount'] = (int) $result['discount'];
         return MyHelper::checkGet($result)+['messages'=>$error_msg,'promo_error'=>$promo_error];
     }
 
