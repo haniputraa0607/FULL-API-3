@@ -90,20 +90,7 @@ class ApiDisburseSettingController extends Controller
             if($bankAccount){
                 $delete = true;
                 $dtToInsert = [];
-                if(isset($post['outlets']) && $post['outlets'] == 'all'){
-                    $getDataBankOutlet = BankAccountOutlet::count();
-                    if($getDataBankOutlet > 0){
-                        $delete = BankAccountOutlet::whereNotNull('id_outlet')->delete();
-                    }
-
-                    $dtOutlet = Outlet::pluck('id_outlet');//get all outlet
-                    foreach ($dtOutlet as $val){
-                        $dtToInsert[] = [
-                            'id_bank_account' => $bankAccount['id_bank_account'],
-                            'id_outlet' => $val
-                        ];
-                    }
-                }elseif (isset($post['outlets'])){
+                if (isset($post['id_outlet']) && !empty($post['id_outlet'])){
                     $getDataBankOutlet = BankAccountOutlet::whereIn('id_outlet', $post['id_outlet'])->count();
                     if($getDataBankOutlet > 0) {
                         $delete = BankAccountOutlet::whereIn('id_outlet', $post['id_outlet'])->delete();
@@ -112,7 +99,9 @@ class ApiDisburseSettingController extends Controller
                     foreach ($post['id_outlet'] as $val){
                         $dtToInsert[] = [
                             'id_bank_account' => $bankAccount['id_bank_account'],
-                            'id_outlet' => $val
+                            'id_outlet' => $val,
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
                         ];
                     }
                 }
@@ -236,6 +225,9 @@ class ApiDisburseSettingController extends Controller
             $arrSuccess = [];
             $listBank = BankName::get()->toArray();
             foreach ($post['data_import'] as $val){
+                if(empty($val['beneficiary_account'])){
+                    continue;
+                }
                 $val = (array)$val;
                 $searchBankCode = array_search($val['bank_code'], array_column($listBank, 'bank_code'));
                 $val['beneficiary_account'] = preg_replace("/[^0-9]/", "",$val['beneficiary_account']);
@@ -266,6 +258,13 @@ class ApiDisburseSettingController extends Controller
                     $check = BankAccount::where('beneficiary_account', $val['beneficiary_account'])->first();//check account number is already exist or not
                     $outlet = Outlet::where('outlet_code', $val['outlet_code'])->first();//get Outlet
                     if($check){
+                        $updateBank = BankAccount::where('id_bank_account', $check['id_bank_account'])->update(
+                            [
+                                'beneficiary_name' => $val['beneficiary_name'],
+                                'beneficiary_alias' => $val['beneficiary_alias'],
+                                'beneficiary_email' => $val['beneficiary_email']
+                            ]
+                        );
                         if($outlet){
                             $delete = BankAccountOutlet::where('id_outlet', $outlet['id_outlet'])->delete();
                             $dtInsertToBankOutlet = [

@@ -136,7 +136,7 @@ class SendEmailDisburseJob implements ShouldQueue
                         if(!empty($data)){
                             foreach ($data  as $val){
                                 if($val['outlet_email']){
-                                    $fileName = 'Disburse_['.date('d M Y').']_['.$val['outlet_code'].'].xlsx';
+                                    $fileName = 'Disburse_['.date('d M Y').']_['.$val['outlet_code'].']_['.$this->data['reference_no'].'].xlsx';
                                     $path = storage_path('app/excel_email/'.$fileName);
                                     $val['datas'][] = [
                                         'Transaction Date' => '',

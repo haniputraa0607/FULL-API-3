@@ -1574,7 +1574,7 @@ class ApiTransaction extends Controller
         }
 
         $query = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
-            ->select('transaction_pickups.*','transactions.*','users.*','outlets.outlet_code', 'outlets.outlet_name', 'payment_type', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay','payment_method', 'transaction_payment_midtrans.gross_amount', 'transaction_payment_ipay88s.amount')
+            ->select('transaction_pickups.*','transactions.*','users.*','outlets.outlet_code', 'outlets.outlet_name', 'payment_type', 'payment_method', 'transaction_payment_midtrans.gross_amount', 'transaction_payment_ipay88s.amount', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay')
             ->leftJoin('outlets','outlets.id_outlet','=','transactions.id_outlet')
             ->leftJoin('users','transactions.id_user','=','users.id')
             ->orderBy('transactions.transaction_date', 'asc');
@@ -2197,7 +2197,8 @@ class ApiTransaction extends Controller
                 'promo_campaign_promo_code.promo_campaign',
                 'transaction_pickup_go_send.transaction_pickup_update',
                 'transaction_payment_subscription.subscription_user_voucher',
-                'outlet.city')->first();
+                'subscription_user_voucher',
+                'outlet.city'])->first();
             if(!$list){
                 return MyHelper::checkGet([],'empty');
             }
@@ -2577,7 +2578,7 @@ class ApiTransaction extends Controller
                     $result['transaction_status'] = 5;
                     $result['transaction_status_text'] = 'PESANAN MASUK. MENUNGGU JILID UNTUK MENERIMA ORDER';
                 }
-                if ($list['transaction_pickup_go_send']) {
+                if ($list['detail']['ready_at'] != null && $list['transaction_pickup_go_send']) {
                     // $result['transaction_status'] = 5;
                     $result['delivery_info'] = [
                         'driver' => null,
@@ -2781,10 +2782,18 @@ class ApiTransaction extends Controller
                         ];
                     }
                     if ($list['transaction_pickup_go_send']) {
+                        $flagStatus = [
+                            'confirmed' => 0,
+                            'no_driver' => 0,
+                        ];
                         foreach ($list['transaction_pickup_go_send']['transaction_pickup_update'] as $valueGosend) {
                             switch (strtolower($valueGosend['status'])) {
                                 case 'finding driver':
                                 case 'confirmed':
+                                    if ($flagStatus['confirmed']) {
+                                        break;
+                                    }
+                                    $flagStatus['confirmed'] = 1;
                                     $statusOrder[] = [
                                         'text'  => 'Pesanan sudah siap dan menunggu pick up',
                                         'date'  => $valueGosend['created_at']
@@ -2826,6 +2835,10 @@ class ApiTransaction extends Controller
                                     break;
                                 case 'driver not found':
                                 case 'no_driver':
+                                    if ($flagStatus['no_driver']) {
+                                        break;
+                                    }
+                                    $flagStatus['no_driver'] = 1;
                                     $statusOrder[] = [
                                         'text'  => 'Driver tidak ditemukan',
                                         'date'  => $valueGosend['created_at']

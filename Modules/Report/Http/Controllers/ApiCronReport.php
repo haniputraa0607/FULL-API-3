@@ -43,6 +43,9 @@ use Modules\Report\Entities\GlobalMonthlyReportTrxModifier;
 use App\Http\Models\DailyCustomerReportRegistration;
 use App\Http\Models\MonthlyCustomerReportRegistration;
 
+use Modules\ShopeePay\Entities\DealsPaymentShopeePay;
+use Modules\ShopeePay\Entities\SubscriptionPaymentShopeePay;
+use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use Modules\Subscription\Entities\TransactionPaymentSubscription;
 
 use Illuminate\Http\Request;
@@ -1149,6 +1152,108 @@ class ApiCronReport extends Controller
 			}
 		//end Ipay88
 
+        //Shopee
+        $dataPaymentDealsShopee = DealsPaymentShopeePay::join('deals_users', 'deals_users.id_deals_user', 'deals_payment_shopee_pays.id_deals_user')
+            ->select(
+                DB::raw('DATE(deals_payment_shopee_pays.created_at) as date'),
+                DB::raw('"Shopeepay" as payment_type'),
+                DB::raw('COUNT(deals_payment_shopee_pays.id_deals_user) as payment_count'),
+                DB::raw('SUM(deals_payment_shopee_pays.amount / 100) as payment_nominal'),
+                DB::raw("'Shopee Pay' AS payment")
+            )
+            ->whereDate('deals_payment_shopee_pays.created_at', $date)
+            ->where('deals_users.paid_status', 'Completed')
+            ->groupBy('payment')
+            ->get()->toArray();
+
+        if($dataPaymentDealsShopee){
+            //insert daily
+            $insertDailyDealsShopee = DailyReportPaymentDeals::insert($dataPaymentDealsShopee);
+        }
+
+        $dataPaymentSubcsriptionShopee = SubscriptionPaymentShopeePay::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_payment_shopee_pays.id_subscription_user')
+            ->select(
+                DB::raw('DATE(subscription_payment_shopee_pays.created_at) as date'),
+                DB::raw('"Shopeepay" as payment_type'),
+                DB::raw('COUNT(subscription_payment_shopee_pays.id_subscription_user) as payment_count'),
+                DB::raw('SUM(subscription_payment_shopee_pays.amount / 100) as payment_nominal'),
+                DB::raw("'Shopee Pay' AS payment")
+            )
+            ->whereDate('subscription_payment_shopee_pays.created_at', $date)
+            ->where('subscription_users.paid_status', 'Completed')
+            ->groupBy('payment')
+            ->get()->toArray();
+
+        if($dataPaymentSubcsriptionShopee){
+            //insert daily
+            $insertDailySubcsriptionShopee = DailyReportPaymentSubcription::insert($dataPaymentSubcsriptionShopee);
+        }
+
+        $dataPayment = TransactionPaymentShopeePay::join('transactions', 'transactions.id_transaction', 'transaction_payment_shopee_pays.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->select(
+                'transactions.id_outlet',
+                DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                DB::raw('0 as refund_with_point'),
+                DB::raw('"Shopeepay" as payment_type'),
+                DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
+                DB::raw('SUM(transaction_payment_shopee_pays.amount / 100) as trx_payment_nominal'),
+                DB::raw("'Shopee Pay' AS trx_payment")
+            )
+            ->whereDate('transactions.transaction_date', $date)
+            ->where('transactions.transaction_payment_status', 'Completed')
+            ->whereNull('transaction_pickups.reject_at')
+            ->whereNull('transaction_pickups.reject_type')
+            ->groupBy('transactions.id_outlet', 'trx_payment')
+            ->get()->toArray();
+
+        if($dataPayment){
+            //insert daily
+            $insertDaily = DailyReportPayment::insert($dataPayment);
+        }
+
+        $dataPaymentRejectToPoint = TransactionPaymentShopeePay::join('transactions', 'transactions.id_transaction', 'transaction_payment_shopee_pays.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->select(
+                'transactions.id_outlet',
+                DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                DB::raw('1 as refund_with_point'),
+                DB::raw('"Shopeepay" as payment_type'),
+                DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
+                DB::raw('SUM(transaction_payment_shopee_pays.amount / 100) as trx_payment_nominal'),
+                DB::raw("'Shopee Pay' AS trx_payment")
+            )
+            ->whereDate('transactions.transaction_date', $date)
+            ->where('transactions.transaction_payment_status', 'Completed')
+            ->where('transaction_pickups.reject_type', 'point')
+            ->groupBy('transactions.id_outlet', 'trx_payment')
+            ->get()->toArray();
+
+        if($dataPaymentRejectToPoint){
+            //insert daily
+            $insertDaily = DailyReportPayment::insert($dataPaymentRejectToPoint);
+        }
+
+        $dataPaymentGlobal = TransactionPaymentShopeePay::join('transactions', 'transactions.id_transaction', 'transaction_payment_shopee_pays.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->select(
+                DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
+                DB::raw('SUM(transaction_payment_shopee_pays.amount / 100) as trx_payment_nominal'),
+                DB::raw("'Shopee Pay' AS trx_payment")
+            )
+            ->whereDate('transactions.transaction_date', $date)
+            ->where('transactions.transaction_payment_status', 'Completed')
+            ->whereNull('transaction_pickups.reject_at')
+            ->groupBy('trx_payment')
+            ->get()->toArray();
+
+        if($dataPaymentGlobal){
+            //insert global
+            $insertGlobal = GlobalDailyReportPayment::insert($dataPaymentGlobal);
+        }
+        //end Shopee
+
 		//balance
 			$dataPayment = TransactionPaymentBalance::join('transactions', 'transactions.id_transaction', 'transaction_payment_balances.id_transaction')
 			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
@@ -1932,6 +2037,51 @@ class ApiCronReport extends Controller
 				$insertGlobal = GlobalMonthlyReportPayment::insert($dataPaymentGlobal);
 			}
 		//end Ipay88
+
+        //Shopee
+        $dataPayment = TransactionPaymentShopeePay::join('transactions', 'transactions.id_transaction', 'transaction_payment_shopee_pays.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->select(
+                'transactions.id_outlet',
+                DB::raw('"'.$month.'" as trx_month'),
+                DB::raw('"'.$year.'" as trx_year'),
+                DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
+                DB::raw('SUM(transaction_payment_shopee_pays.amount / 100) as trx_payment_nominal'),
+                DB::raw("'Shopee Pay' AS trx_payment")
+            )
+            ->whereMonth('transactions.transaction_date', $month)
+            ->whereYear('transactions.transaction_date', $year)
+            ->where('transactions.transaction_payment_status', 'Completed')
+            ->whereNull('transaction_pickups.reject_at')
+            ->groupBy('transactions.id_outlet', 'trx_payment', 'trx_month', 'trx_year')
+            ->get()->toArray();
+
+        if($dataPayment){
+            //insert daily
+            $insertDaily = MonthlyReportPayment::insert($dataPayment);
+        }
+
+        $dataPaymentGlobal = TransactionPaymentShopeePay::join('transactions', 'transactions.id_transaction', 'transaction_payment_shopee_pays.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->select(
+                DB::raw('"'.$month.'" as trx_month'),
+                DB::raw('"'.$year.'" as trx_year'),
+                DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
+                DB::raw('SUM(transaction_payment_shopee_pays.amount / 100) as trx_payment_nominal'),
+                DB::raw("'Shopee Pay' AS trx_payment")
+            )
+            ->whereMonth('transactions.transaction_date', $month)
+            ->whereYear('transactions.transaction_date', $year)
+            ->where('transactions.transaction_payment_status', 'Completed')
+            ->whereNull('transaction_pickups.reject_at')
+            ->groupBy('trx_payment', 'trx_month', 'trx_year')
+            ->get()->toArray();
+
+        if($dataPaymentGlobal){
+            //insert global
+            $insertGlobal = GlobalMonthlyReportPayment::insert($dataPaymentGlobal);
+        }
+        //end Shopee
 
 		//balance
 			$dataPayment = TransactionPaymentBalance::join('transactions', 'transactions.id_transaction', 'transaction_payment_balances.id_transaction')

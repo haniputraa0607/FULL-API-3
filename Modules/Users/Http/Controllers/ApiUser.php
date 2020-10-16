@@ -1799,6 +1799,11 @@ class ApiUser extends Controller
                                 'profile' => $profile
                             ]
                         ];
+                    }else{
+                        $result = [
+                            'status'    => 'fail',
+                            'messages'    => ['Failed to Update Data']
+                        ];
                     }
                 } else {
                     $result = [
@@ -1818,7 +1823,7 @@ class ApiUser extends Controller
                 'messages'    => ['This phone number isn\'t registered']
             ];
         }
-        return response()->json($result);
+        return response()->json($result??['status' => 'fail','messages' => ['No Process']]);
     }
 
     function changePin(users_phone_pin_new $request)
