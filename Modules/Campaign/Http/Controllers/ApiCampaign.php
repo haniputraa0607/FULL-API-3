@@ -513,7 +513,7 @@ class ApiCampaign extends Controller
 			$receipient_email = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_email_receipient'])));
 			$data['campaign'] = $campaign;
 			$data['type'] = 'email';
-			foreach (array_chunk($receipient_email,200) as $recipients) {
+			foreach (array_chunk($receipient_email,300) as $recipients) {
 				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 				SendCampaignJob::dispatch($data)->allOnConnection('database');
 			}
@@ -524,7 +524,7 @@ class ApiCampaign extends Controller
 
 			$data['campaign'] = $campaign;
 			$data['type'] = 'sms';
-			foreach (array_chunk($receipient_sms,200) as $recipients) {
+			foreach (array_chunk($receipient_sms,300) as $recipients) {
 				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 				SendCampaignJob::dispatch($data)->allOnConnection('database');
 			}
@@ -535,7 +535,7 @@ class ApiCampaign extends Controller
 
 			$data['campaign'] = $campaign;
 			$data['type'] = 'push';
-			foreach (array_chunk($receipient_push,200) as $recipients) {
+			foreach (array_chunk($receipient_push,300) as $recipients) {
 				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 				SendCampaignJob::dispatch($data)->allOnConnection('database');
 			}
@@ -546,7 +546,7 @@ class ApiCampaign extends Controller
 
 			$data['campaign'] = $campaign;
 			$data['type'] = 'inbox';
-			foreach (array_chunk($receipient_inbox,200) as $recipients) {
+			foreach (array_chunk($receipient_inbox,300) as $recipients) {
 				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 				SendCampaignJob::dispatch($data)->allOnConnection('database');
 			}
@@ -559,7 +559,7 @@ class ApiCampaign extends Controller
 
 			$data['campaign'] = $campaign;
 			$data['type'] = 'whatsapp';
-			foreach (array_chunk($receipient_whatsapp,200) as $recipients) {
+			foreach (array_chunk($receipient_whatsapp,300) as $recipients) {
 				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 				SendCampaignJob::dispatch($data)->allOnConnection('database');
 			}
