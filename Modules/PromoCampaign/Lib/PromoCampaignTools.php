@@ -19,6 +19,8 @@ use App\Http\Models\DealsUser;
 use App\Http\Models\Outlet;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 
 use App\Lib\MyHelper;
 use Modules\IPay88\Lib\IPay88;
@@ -278,7 +280,7 @@ class PromoCampaignTools{
 					// is all product get promo
 					if($promo_rules->is_all_product){
 						// get product data
-						$product = $this->getProductPrice($id_outlet, $trx['id_product']);
+						$product = $this->getProductPrice($id_outlet, $trx['id_product'], $trx['id_product_variant_group']);
 						
 						//is product available
 						if(!$product){
@@ -293,7 +295,7 @@ class PromoCampaignTools{
 						// is product available in promo
 						if(is_array($promo_product)&&in_array($trx['id_product'],array_column($promo_product,'id_product'))){
 							// get product data
-							$product = $this->getProductPrice($id_outlet, $trx['id_product']);
+							$product = $this->getProductPrice($id_outlet, $trx['id_product'], $trx['id_product_variant_group']);
 
 							//is product available
 							if(!$product){
@@ -1226,21 +1228,39 @@ class PromoCampaignTools{
 		return $product;
     }
 
-    public function getProductPrice($id_outlet, $id_product, $brand=null)
+    public function getProductPrice($id_outlet, $id_product, $id_product_variant_group=null)
     {
 	    $different_price = Outlet::select('outlet_different_price')->where('id_outlet',$id_outlet)->pluck('outlet_different_price')->first();
         // $productPrice = ProductPrice::where(['id_product' => $valueData['id_product'], 'id_outlet' => $data['id_outlet']])->first();
-        if($different_price){
-            $productPrice = ProductSpecialPrice::where(['id_product' => $id_product, 'id_outlet' => $id_outlet])->first()->toArray();
-            if($productPrice){
-                $productPrice['product_price'] = $productPrice['product_special_price'];
-            }
+
+        if ($id_product_variant_group) {
+        	if($different_price){
+        		$productPrice = ProductVariantGroupSpecialPrice::select('product_variant_group_price')->where('id_product_variant_group', $id_product_variant_group)->first();
+
+	            if($productPrice){
+	                $productPrice['product_price'] = $productPrice['product_variant_group_price'];
+	            }
+	        }else{
+	        	$productPrice = ProductVariantGroup::select('product_variant_group_price')->where('id_product_variant_group', $id_product_variant_group)->first();
+
+	            if($productPrice){
+	                $productPrice['product_price'] = $productPrice['product_variant_group_price'];
+	            }
+	        }
         }else{
-            $productPrice = ProductGlobalPrice::where(['id_product' => $id_product])->first()->toArray();
-            if($productPrice){
-                $productPrice['product_price'] = $productPrice['product_global_price'];
-            }
+	        if($different_price){
+	            $productPrice = ProductSpecialPrice::where(['id_product' => $id_product, 'id_outlet' => $id_outlet])->first()->toArray();
+	            if($productPrice){
+	                $productPrice['product_price'] = $productPrice['product_special_price'];
+	            }
+	        }else{
+	            $productPrice = ProductGlobalPrice::where(['id_product' => $id_product])->first()->toArray();
+	            if($productPrice){
+	                $productPrice['product_price'] = $productPrice['product_global_price'];
+	            }
+	        }
         }
+
 
 		return $productPrice;
     }
