@@ -92,7 +92,7 @@ class ApiSubscriptionUse extends Controller
     	return $subs;
     }
 
-    public function calculate($id_subscription_user, $grandtotal, $subtotal, $item, $id_outlet, &$errors, &$errorProduct=0, &$product="", &$applied_product="", $delivery_fee=0)
+    public function calculate($request, $id_subscription_user, $grandtotal, $subtotal, $item, $id_outlet, &$errors, &$errorProduct=0, &$product="", &$applied_product="", $delivery_fee=0)
     {
     	if (empty($id_subscription_user)) {
     		return 0;
@@ -107,6 +107,7 @@ class ApiSubscriptionUse extends Controller
     		return 0;
     	}
 
+    	$subs_obj = $subs;
     	$subs = $subs->toArray();
     	$type = $subs['subscription_user']['subscription']['subscription_discount_type'];
 
@@ -187,6 +188,32 @@ class ApiSubscriptionUse extends Controller
     			$errorProduct = 1;
     			return 0;
     		}
+    	}
+
+    	// check shipment
+    	if (isset($subs['subscription_user']['subscription']['is_all_shipment']) && isset($request['type']) ) {
+    		$promo_shipment = $subs_obj->subscription_user->subscription->subscription_shipment_method->pluck('shipment_method');
+    		$check_shipment = $pct->checkShipmentRule($subs['subscription_user']['subscription']['is_all_shipment'], $request['type'], $promo_shipment);
+
+    		if(!$check_shipment){
+				$errors[]='Promo cannot be used for this shipment method';
+				return false;
+			}
+    	}
+
+    	// check payment
+    	if (isset($subs['subscription_user']['subscription']['is_all_payment']) 
+    		&& isset($request['payment_type']) 
+    		&& (isset($request['payment_id']) || isset($request['payment_detail'])) 
+    	) {
+    		$promo_payment = $subs_obj->subscription_user->subscription->subscription_payment_method->pluck('payment_method');
+    		$payment_method = $pct->getPaymentMethod($request['payment_type'], $request['payment_id'], $request['payment_detail']);
+    		$check_payment = $pct->checkPaymentRule($subs['subscription_user']['subscription']['is_all_payment'], $payment_method, $promo_payment);
+
+    		if(!$check_payment){
+				$errors[]='Promo cannot be used for this payment method';
+				return false;
+			}
     	}
 
 		switch ($subs['subscription_user']['subscription']['subscription_discount_type']) {
@@ -275,7 +302,7 @@ class ApiSubscriptionUse extends Controller
 		$subs_type = $data_subs['subscription']['subscription_discount_type'];
 
 		if ($subs_type != 'payment_method') {
-        	$check_subs = $this->calculate($request->id_subscription_user, $post['subtotal'], $post['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product, $post['delivery_fee']??0);
+        	$check_subs = $this->calculate($request, $request->id_subscription_user, $post['subtotal'], $post['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product, $post['delivery_fee']??0);
 
         	if (!empty($subs_error)) {
                 return [

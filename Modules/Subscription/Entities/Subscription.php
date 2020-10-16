@@ -243,4 +243,14 @@ class Subscription extends Eloquent
     public function brand(){
 		return $this->belongsTo(\Modules\Brand\Entities\Brand::class,'id_brand');
 	}
+
+	public function subscription_shipment_method()
+    {
+        return $this->hasMany(\Modules\Subscription\Entities\SubscriptionShipmentMethod::class, 'id_subscription', 'id_subscription');
+    }
+
+    public function subscription_payment_method()
+    {
+        return $this->hasMany(\Modules\Subscription\Entities\SubscriptionPaymentMethod::class, 'id_subscription', 'id_subscription');
+    }
 }

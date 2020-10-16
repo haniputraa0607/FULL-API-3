@@ -940,7 +940,7 @@ class ApiOnlineTransaction extends Controller
         // add payment subscription
         if ( $request->json('id_subscription_user') )
         {
-        	$subscription_total = app($this->subscription_use)->calculate($request->id_subscription_user, $insertTransaction['transaction_subtotal'], $insertTransaction['transaction_subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
+        	$subscription_total = app($this->subscription_use)->calculate($request, $request->id_subscription_user, $insertTransaction['transaction_subtotal'], $insertTransaction['transaction_subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
 
 	        if (!empty($subs_error)) {
 	        	DB::rollback();
@@ -2525,7 +2525,7 @@ class ApiOnlineTransaction extends Controller
         if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user)
         {
         	$promo_source = 'subscription';
-	        $check_subs = app($this->subscription_use)->calculate($request->id_subscription_user, $result['subtotal'], $result['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product, $result['shipping']);
+	        $check_subs = app($this->subscription_use)->calculate($request_promo, $request->id_subscription_user, $result['subtotal'], $result['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product, $result['shipping']);
 
 	        if (!empty($subs_error)) {
 	        	$error = $subs_error;
