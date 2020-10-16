@@ -57,7 +57,7 @@ class GenerateCampaignRecipient implements ShouldQueue
             $get[]='phone';
         }
         if($user!=false){
-            $user->chunk(200,function($users) use (&$recipient,$get){
+            $user->chunk(10000,function($users) use (&$recipient,$get){
                 foreach ($users as $user) {
                     foreach ($get as $key) {
                         if(!empty($key)){
