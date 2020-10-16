@@ -2279,7 +2279,7 @@ class ApiOnlineTransaction extends Controller
 
         $outlet['today']['status'] = $outlet_status?'open':'closed';
 
-        $post['discount'] = $post['discount'] + ($promo_discount??0);
+        // $post['discount'] = $post['discount'] + ($promo_discount??0);
 
         $result['outlet'] = [
             'id_outlet' => $outlet['id_outlet'],
