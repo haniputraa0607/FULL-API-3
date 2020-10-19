@@ -23,9 +23,14 @@ Route::group([ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scop
 });
 
 Route::group([ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be'], 'prefix' => 'product-variant-group'], function () {
-    Route::any('/', ['uses' => 'ApiProductVariantController@productVariantGroup']);
-    Route::any('list-price', ['uses' => 'ApiProductVariantController@listPrice']);
-    Route::any('update-price', ['uses' => 'ApiProductVariantController@updatePrice']);
-    Route::post('list-detail', 'ApiProductVariantController@listDetail');
-    Route::post('update-detail', 'ApiProductVariantController@updateDetail');
+    Route::any('/', ['uses' => 'ApiProductVariantGroupController@productVariantGroup']);
+    Route::any('list-price', ['uses' => 'ApiProductVariantGroupController@listPrice']);
+    Route::any('update-price', ['uses' => 'ApiProductVariantGroupController@updatePrice']);
+    Route::post('list-detail', 'ApiProductVariantGroupController@listDetail');
+    Route::post('update-detail', 'ApiProductVariantGroupController@updateDetail');
+    Route::post('export', 'ApiProductVariantGroupController@export');
+});
+
+Route::group(['prefix' => 'product-variant-group'], function () {
+    Route::any('rerer', ['uses' => 'ApiProductVariantController@getProductVariantRecursive']);
 });
