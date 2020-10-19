@@ -584,19 +584,15 @@ class ApiCronTrxController extends Controller
                                     $reject_type = 'refund';
                                     if (!$refund) {
                                         DB::rollback();
-                                        return response()->json([
-                                            'status'   => 'fail',
-                                            'messages' => ['Refund Payment Failed'],
-                                        ]);
+                                        $result['error']++;
+                                        continue 2;
                                     }
                                 }else{
                                     $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                                     if ($refund == false) {
                                         DB::rollback();
-                                        return response()->json([
-                                            'status'   => 'fail',
-                                            'messages' => ['Insert Cashback Failed'],
-                                        ]);
+                                        $result['error']++;
+                                        continue 2;
                                     }
                                     $rejectBalance = true;
                                 }
@@ -610,19 +606,15 @@ class ApiCronTrxController extends Controller
                                     $reject_type = 'refund';
                                     if (!$refund) {
                                         DB::rollback();
-                                        return response()->json([
-                                            'status'   => 'fail',
-                                            'messages' => ['Refund Payment Failed'],
-                                        ]);
+                                        $result['error']++;
+                                        continue 2;
                                     }
                                 }else{
                                     $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payShopeepay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                                     if ($refund == false) {
                                         DB::rollback();
-                                        return response()->json([
-                                            'status'   => 'fail',
-                                            'messages' => ['Insert Cashback Failed'],
-                                        ]);
+                                        $result['error']++;
+                                        continue 2;
                                     }
                                     $rejectBalance = true;
                                 }
@@ -702,19 +694,15 @@ class ApiCronTrxController extends Controller
                             $reject_type = 'refund';
                             if (!$refund) {
                                 DB::rollback();
-                                return response()->json([
-                                    'status'   => 'fail',
-                                    'messages' => ['Refund Payment Failed'],
-                                ]);
+                                $result['error']++;
+                                continue;
                             }
                         }else{
                             $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                             if ($refund == false) {
                                 DB::rollback();
-                                return response()->json([
-                                    'status'   => 'fail',
-                                    'messages' => ['Insert Cashback Failed'],
-                                ]);
+                                $result['error']++;
+                                continue;
                             }
                             $rejectBalance = true;
                         }
