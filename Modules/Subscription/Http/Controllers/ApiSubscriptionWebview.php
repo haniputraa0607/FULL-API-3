@@ -95,7 +95,7 @@ class ApiSubscriptionWebview extends Controller
             $payment_message = MyHelper::simpleReplace($payment_message,['cash'=> $subs['subscription_price_cash'], 'subscription_title'=>$subs['subscription_title']]);
         }
 
-        $payment_success_message = Setting::where('key', 'subscription_payment_success_messages')->pluck('value_text')->first()??'Anda telah membeli subscription %subscription_title%';
+        $payment_success_message = Setting::where('key', 'subscription_payment_success_messages')->pluck('value_text')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
         $payment_success_message = MyHelper::simpleReplace($payment_success_message,['subscription_title'=>$subs['subscription_title']]);
 
 
