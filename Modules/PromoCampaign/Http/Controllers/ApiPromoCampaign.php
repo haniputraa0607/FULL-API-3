@@ -2452,7 +2452,7 @@ class ApiPromoCampaign extends Controller
 	    		$data[$key] = $value;
 	    	}
 
-	    	if ($errorProduct == 1 || $errorProduct == 'all') 
+	    	if ($errorProduct == 1 || $errorProduct === 'all') 
 	    	{
 	        	$result['button_ok'] = $data['promo_error_ok_button']??'Tambah item';
 	    	}
@@ -2465,7 +2465,7 @@ class ApiPromoCampaign extends Controller
 	        $result['product_label'] = "";
 	        $result['product'] = null;
 
-	        if ($errorProduct == 'all') {
+	        if ($errorProduct === 'all') {
 	        	$result['all_item'] = true;
 	        }
     	}
