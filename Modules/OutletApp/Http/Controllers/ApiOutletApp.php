@@ -1334,10 +1334,14 @@ class ApiOutletApp extends Controller
                     'brand_active'     => 1,
                     'brand_visibility' => 1,
                 ])->first();
+            if(!$brand) {
+                return 'no_brand';
+            }
             $brand['categories'] = $val;
             $val                 = $brand;
             return $key;
         });
+        unset($result['no_brand']);
         usort($result, function ($a, $b) {
             return $a['order_brand'] <=> $b['order_brand'];
         });
@@ -2916,7 +2920,7 @@ class ApiOutletApp extends Controller
                 $result['rejectable']              = 1;
             }
 
-            if ($list['transaction_pickup_go_send']) {
+            if ($list['detail']['ready_at'] != null && $list['transaction_pickup_go_send']) {
                 // $result['transaction_status'] = 5;
                 $result['delivery_info'] = [
                     'driver'            => null,
