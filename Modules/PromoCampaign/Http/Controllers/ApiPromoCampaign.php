@@ -2622,11 +2622,12 @@ class ApiPromoCampaign extends Controller
     		$setting = ['promo_error_title', 'promo_error_ok_button', 'promo_error_ok_button_v2', 'promo_error_cancel_button'];
 	    	$getData = Setting::whereIn('key',$setting)->get()->toArray();
 	    	$data = [];
+	    	$result['all_item'] = false;
 	    	foreach ($getData as $key => $value) {
 	    		$data[$key] = $value;
 	    	}
 
-	    	if ($errorProduct == 1) 
+	    	if ($errorProduct == 1 || $errorProduct === 'all') 
 	    	{
 	        	$result['button_ok'] = $data['promo_error_ok_button']??'Tambah item';
 	    	}
@@ -2639,6 +2640,9 @@ class ApiPromoCampaign extends Controller
 	        $result['product_label'] = "";
 	        $result['product'] = null;
 
+	        if ($errorProduct === 'all') {
+	        	$result['all_item'] = true;
+	        }
     	}
     	else
     	{
