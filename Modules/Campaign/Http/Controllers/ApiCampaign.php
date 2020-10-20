@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
+use App\Jobs\SendCampaignNow;
 use App\Http\Models\User;
 use App\Http\Models\UserInbox;
 use App\Http\Models\Campaign;
@@ -925,4 +926,24 @@ class ApiCampaign extends Controller
 		return response()->json($result);
 	}
 
+	public function destroy(Request $request){
+        $post = $request->json()->all();
+        if(isset($post['id_campaign']) && !empty($post['id_campaign'])){
+            $check = Campaign::where('id_campaign', $post['id_campaign'])->first();
+
+            if($check['campaign_is_sent'] == 'Yes'){
+                return response()->json(['status'  => 'fail','messages'  => ['Can not delete this campaign, the campaign has been sent.']]);
+            }else{
+                $delete = Campaign::where('id_campaign', $post['id_campaign'])->delete();
+                if($delete){
+                    $getId = CampaignRuleParent::where('id_campaign', $post['id_campaign'])->first();
+                    CampaignRuleParent::where('id_campaign', $post['id_campaign'])->delete();
+                    CampaignRule::where('id_campaign_rule_parent', $getId['id_campaign_rule_parent'])->delete();
+                }
+                return response()->json(MyHelper::checkDelete($delete));
+            }
+        }else{
+            return response()->json(['status'  => 'fail','messages'  => ['Incompleted data']]);
+        }
+    }
 }
