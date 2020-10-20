@@ -2843,6 +2843,9 @@ class MyHelper{
     	if (!$user) {
 	        $user = User::where('id',$trx['id_user'])->first();
     	}
+    	if (!$user) {
+	        return true;
+    	}
     	if ($status == 'success') {
     		if ($user['transaction_online_status'] == 'success') {
     			return true;
