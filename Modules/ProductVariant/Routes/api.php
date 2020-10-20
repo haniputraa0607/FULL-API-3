@@ -33,6 +33,3 @@ Route::group([ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scop
     Route::post('import-price', ['uses' => 'ApiProductVariantGroupController@importPrice']);
 });
 
-Route::group(['prefix' => 'product-variant-group'], function () {
-    Route::any('rerer', ['uses' => 'ApiProductVariantController@getProductVariantRecursive']);
-});
