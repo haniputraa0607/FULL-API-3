@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
+use App\Jobs\SendCampaignNow;
 use App\Http\Models\User;
 use App\Http\Models\UserInbox;
 use App\Http\Models\Campaign;

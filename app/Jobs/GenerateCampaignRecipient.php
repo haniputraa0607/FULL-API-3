@@ -12,6 +12,7 @@ use Modules\Users\Http\Controllers\ApiUser;
 
 use App\Http\Models\Campaign;
 use App\Http\Models\CampaignRuleView;
+use App\Jobs\SendCampaignNow;
 
 class GenerateCampaignRecipient implements ShouldQueue
 {

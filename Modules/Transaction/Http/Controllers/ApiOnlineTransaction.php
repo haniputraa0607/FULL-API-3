@@ -2092,9 +2092,7 @@ class ApiOnlineTransaction extends Controller
 		            }
 		            else
 		            {
-		                if(isset($errore)){
-		            		$promo_error = app($this->promo_campaign)->promoError('transaction', $errore);
-		            	}
+		            	$promo_error = app($this->promo_campaign)->promoError('transaction', $errore);
 		            }
 	        	}
             }
