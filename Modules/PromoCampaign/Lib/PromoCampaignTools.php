@@ -21,6 +21,7 @@ use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
+use Modules\Brand\Entities\BrandOutlet;
 
 use App\Lib\MyHelper;
 use Modules\IPay88\Lib\IPay88;
@@ -77,10 +78,12 @@ class PromoCampaignTools{
 			return false;
 		}
 
-		$outlet = $this->checkOutletRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet, $promo->id_brand);
+		$promo_brand = $promo->promo_campaign_brands->pluck('id_brand')->toArray();
+		// $outlet = $this->checkOutletRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet, $promo->id_brand);
+		$outlet = $this->checkOutletBrandRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet, $promo_brand);
 
 		if(!$outlet){
-			$errors[]='Promo cannot be used at this outlet';
+			$errors[]='Promo tidak dapat digunakan di outlet ini.';
 			return false;
 		}
 
@@ -169,7 +172,34 @@ class PromoCampaignTools{
 				$qty_promo_available = [];
 
 				if(!$promo_rules->is_all_product){
-					$promo_product=$promo[$source.'_product_discount']->toArray();
+					if ($promo[$source.'_product_discount']->isEmpty()) {
+						$errors[]='Produk tidak ditemukan';
+						return false;
+					}
+					$promo_product = $promo[$source.'_product_discount']->toArray();
+
+					$check_product = array_diff(array_column($promo_product, 'id_product'), array_column($trxs, 'id_product'));
+						
+					if ($promo->product_rule === 'and') {
+						if (!empty($check_product)) {
+							$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
+							$message = MyHelper::simpleReplace($message,['product'=>'semua product bertanda khusus']);
+
+							$errors[]= $message;
+							$errorProduct = 1;
+							return false;		
+						}
+					}elseif($promo->product_rule === 'or') {
+						if (count($promo_product) == count($check_product)) {
+							$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
+							$message = MyHelper::simpleReplace($message,['product'=>'product bertanda khusus']);
+
+							$errors[]= $message;
+							$errorProduct = 1;
+							return false;
+						}
+					}
+
 				}else{
 					$promo_product="*";
 				}
@@ -1077,6 +1107,34 @@ class PromoCampaignTools{
         else 
         {
             foreach ($outlet as $value) 
+            {
+                if ( $value['id_outlet'] == $id_outlet ) 
+                {
+                    return true;
+                } 
+            }
+
+            return false;
+        }
+    }
+
+    public function checkOutletBrandRule($id_outlet, $all_outlet, $outlets, $brands)
+    {
+    	$outlet_brands = BrandOutlet::where('id_outlet', $id_outlet)->pluck('id_brand')->toArray();
+
+    	$check_brand = array_diff($brands, $outlet_brands);
+
+    	if ($check_brand) {
+    		return false;
+    	}
+
+        if ($all_outlet == '1') 
+        {
+            return true;
+        } 
+        else 
+        {
+            foreach ($outlets as $value) 
             {
                 if ( $value['id_outlet'] == $id_outlet ) 
                 {

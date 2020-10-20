@@ -22,6 +22,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignDiscountBillRule;
 use Modules\PromoCampaign\Entities\PromoCampaignDiscountDeliveryRule;
 use Modules\PromoCampaign\Entities\PromoCampaignShipmentMethod;
 use Modules\PromoCampaign\Entities\PromoCampaignPaymentMethod;
+use Modules\PromoCampaign\Entities\PromoCampaignBrand;
 
 use Modules\Deals\Entities\DealsProductDiscount;
 use Modules\Deals\Entities\DealsProductDiscountRule;
@@ -320,7 +321,7 @@ class ApiPromoCampaign extends Controller
             'promo_campaign_buyxgety_product_requirement.product',
             'promo_campaign_shipment_method',
             'promo_campaign_payment_method',
-            'brand',
+            'brands',
             'promo_campaign_reports'
         ];
         $promoCampaign = PromoCampaign::with($data)->where('id_promo_campaign', '=', $post['id_promo_campaign'])->first();
@@ -766,7 +767,8 @@ class ApiPromoCampaign extends Controller
             				'promo_campaign_reports' => function($q) {
             					$q->limit(1);
             				},
-            				'brand'
+            				'brand',
+            				'promo_campaign_brands'
             			])
             			->where('id_promo_campaign', '=', $post['id_promo_campaign'])
             			->get()		
@@ -786,7 +788,18 @@ class ApiPromoCampaign extends Controller
                 ]);
            	}
 
-			if ($checkData[0]['id_brand'] != $post['id_brand']) {
+           	$del_rule 	= false;
+           	$brand_now 	= array_column($checkData[0]['promo_campaign_brands'], 'id_brand');
+           	$brand_new	= $post['id_brand'];
+           	unset($post['id_brand']);
+
+           	foreach ($brand_new as $value) {
+           		if (!in_array($value, $brand_now)) {
+           			$del_rule = true;
+           		}
+           	}
+
+			if ($del_rule) {
 				$delete_rule = $this->deleteAllProductRule('promo_campaign', $post['id_promo_campaign']);
 				$delete_outlet_rule = $this->deleteOutletRule('promo_campaign', $post['id_promo_campaign']);
 				if (!$delete_rule || !$delete_outlet_rule) {
@@ -795,18 +808,25 @@ class ApiPromoCampaign extends Controller
 	                    'messages'  => ['Update Failed']
 	                ]);
 	           	}
+
+	           	$insert_brand = $this->insertPromoCampaignBrand($post['id_promo_campaign'], $brand_new);
+				if (!$insert_brand) {
+	           		return response()->json([
+	                    'status'  => 'fail',
+	                    'messages'  => ['Insert Promo Campaign Brand Failed']
+	                ]);
+	           	}
 			}
 
             if ($checkData[0]['code_type'] == 'Single') {
                 $checkData[0]['promo_code'] = $checkData[0]['promo_campaign_promo_codes'][0]['promo_code'];
             }
             if (	
-            		$checkData[0]['code_type'] != $post['code_type'] || 
-            		$checkData[0]['prefix_code'] != $post['prefix_code'] || 
-            		$checkData[0]['number_last_code'] != $post['number_last_code'] || 
-            		($checkData[0]['promo_code']??null) != $post['promo_code'] || 
-            		$checkData[0]['total_coupon'] != $post['total_coupon'] ||
-            		$checkData[0]['id_brand'] != $post['id_brand']
+            		$checkData[0]['code_type'] != $post['code_type'] 
+            		|| $checkData[0]['prefix_code'] != $post['prefix_code'] 
+            		|| $checkData[0]['number_last_code'] != $post['number_last_code'] 
+            		|| ($checkData[0]['promo_code']??null) != $post['promo_code'] 
+            		|| $checkData[0]['total_coupon'] != $post['total_coupon']
             	) 
             {
                 $promo_code = $post['promo_code'];
@@ -836,7 +856,7 @@ class ApiPromoCampaign extends Controller
                 if ($generateCode['status'] == 'success') {
                     $result = [
                         'status'  => 'success',
-                        'result'  => 'Update Promo Campaign & Promo Code Success',
+                        'result'  => 'Update Promo Campaign Success',
                         'promo-campaign'  => $post
                     ];
                 } else {
@@ -909,18 +929,28 @@ class ApiPromoCampaign extends Controller
                 $post['date_end']   = $date_end->format('Y-m-d H:i:s');
             }
 
+            $brands = $post['id_brand'];
+            unset($post['id_brand']);
             $promoCampaign = PromoCampaign::create($post);
             $generateCode = $this->generateCode('insert', $promoCampaign['id_promo_campaign'], $post['code_type'], $post['promo_code'], $post['prefix_code'], $post['number_last_code'], $post['total_coupon']);
             if (isset($post['promo_tag'])) {
                 $insertTag = $this->insertTag(null, $promoCampaign['id_promo_campaign'], $post['promo_tag']);
             }
 
+            $insert_brand = $this->insertPromoCampaignBrand($promoCampaign['id_promo_campaign'], $brands);
+			if (!$insert_brand) {
+           		return response()->json([
+                    'status'  => 'fail',
+                    'messages'  => ['Insert Promo Campaign Brand Failed']
+                ]);
+           	}
+
             $post['id_promo_campaign'] = $promoCampaign['id_promo_campaign'];
 
             if ($generateCode['status'] == 'success') {
                 $result = [
                     'status'  => 'success',
-                    'result'  => 'Creates Promo Campaign & Promo Code Success',
+                    'result'  => 'Creates Promo Campaign Success',
                     'promo-campaign'  => $post
                 ];
                 $promoCampaign = $promoCampaign->toArray();
@@ -1031,6 +1061,7 @@ class ApiPromoCampaign extends Controller
 			}
 		}
 
+	    $dataPromoCampaign['product_rule'] = $post['product_rule']??null;
         $update = $table::where($id_table, $id_post)->update($dataPromoCampaign);
 
         $update_shipment_rule = $this->createShipmentRule($source, $id_table, $id_post, $post);
@@ -1227,6 +1258,29 @@ class ApiPromoCampaign extends Controller
             }
         }
         return $result;
+    }
+
+    public function insertPromoCampaignBrand($id_promo_campaign, $brand_list=[])
+    {
+    	$data = [];
+    	foreach ($brand_list as $id_brand) {
+    		$temp = [
+    			'id_promo_campaign' => $id_promo_campaign,
+    			'id_brand' => $id_brand
+    		];
+    		$data[] = $temp;
+    	}
+
+    	try {
+	    	$save = PromoCampaignBrand::where('id_promo_campaign', $id_promo_campaign)->delete();
+	    	$save = PromoCampaignBrand::insert($data);
+	    	$status = true;
+    		
+    	} catch (\Exception $e) {
+    		$status = false;
+    	}
+
+    	return $status;
     }
 
     public function deleteAllProductRule($source, $id_post)
@@ -1847,7 +1901,8 @@ class ApiPromoCampaign extends Controller
                             'promo_campaign_have_tags.promo_campaign_tag',
                             'promo_campaign_reports' => function($q) {
                             	$q->first();
-                            }
+                            },
+                            'promo_campaign_brands'
                         ])
                         ->where('id_promo_campaign', '=', $post['id_promo_campaign'])->first();
 
@@ -1891,7 +1946,7 @@ class ApiPromoCampaign extends Controller
                             'promo_campaign_buyxgety_product_requirement', 
                             'promo_campaign_buyxgety_rules',
                             'outlets',
-                            'brand',
+                            'brands',
                             'promo_campaign_discount_bill_rules',
                             'promo_campaign_discount_delivery_rules',
                             'promo_campaign_shipment_method',
