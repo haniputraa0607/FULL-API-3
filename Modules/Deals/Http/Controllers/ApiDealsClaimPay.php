@@ -130,6 +130,14 @@ class ApiDealsClaimPay extends Controller
     function claim(Paid $request)
     {
         $post      = $request->json()->all();
+        if (isset($post['pin']) && strtolower($post['payment_deals']) == 'balance') {
+            if (!password_verify($post['pin'], $request->user()->password)) {
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Incorrect PIN']
+                ];
+            }
+        }
         $dataDeals = app($this->claim)->chekDealsData($request->json('id_deals'));
         $id_user   = $request->user()->id;
         if (empty($dataDeals)) {
@@ -248,7 +256,7 @@ class ApiDealsClaimPay extends Controller
                                 DB::rollback();
                                 return response()->json([
                                     'status'   => 'fail',
-                                    'messages' => ['Voucher is runs out.']
+                                    'messages' => ['Halo Kak, Mohon Maaf Voucher Telah Habis. Yuk Gunakan Voucher Lainnya pada Page Deals 😊🙏']
                                 ]);
                             }
                         }
@@ -262,7 +270,7 @@ class ApiDealsClaimPay extends Controller
                                     DB::rollback();
                                     return response()->json([
                                         'status'   => 'fail',
-                                        'messages' => ['Voucher is runs out.']
+                                        'messages' => ['Halo Kak, Mohon Maaf Voucher Telah Habis. Yuk Gunakan Voucher Lainnya pada Page Deals 😊🙏']
                                     ]);
                                 }
                             }
@@ -274,7 +282,7 @@ class ApiDealsClaimPay extends Controller
                                     DB::rollback();
                                     return response()->json([
                                         'status'   => 'fail',
-                                        'messages' => ['Voucher is runs out.']
+                                        'messages' => ['Halo Kak, Mohon Maaf Voucher Telah Habis. Yuk Gunakan Voucher Lainnya pada Page Deals 😊🙏']
                                     ]);
                                 }
                             }

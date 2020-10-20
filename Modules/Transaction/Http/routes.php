@@ -90,7 +90,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('/void', 'ApiTransaction@transactionVoid');
 
     Route::post('/check', 'ApiOnlineTransaction@checkTransaction');
-    Route::post('/new', 'ApiOnlineTransaction@newTransaction');
+    Route::post('/new', 'ApiOnlineTransaction@newTransaction')->middleware('decrypt_pin:pin,request');
     Route::post('/confirm', 'ApiConfirm@confirmTransaction');
     Route::post('/cancel', 'ApiOnlineTransaction@cancelTransaction');
     Route::post('/prod/confirm', 'ApiTransactionProductionController@confirmTransaction2');

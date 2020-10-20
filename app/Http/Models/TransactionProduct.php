@@ -36,12 +36,15 @@ class TransactionProduct extends Model
 		'id_product' => 'int',
 		'transaction_product_qty' => 'int',
 // 		'transaction_product_price' => 'int',
-		'transaction_product_subtotal' => 'int'
+		'transaction_product_subtotal' => 'int',
+		'transaction_variant_subtotal' => 'double'
 	];
 
 	protected $fillable = [
 		'id_transaction',
 		'id_product',
+		'id_product_variant_group',
+		'type',
 		'id_outlet',
 		'id_brand',
 		'id_user',
@@ -60,6 +63,11 @@ class TransactionProduct extends Model
 	public function modifiers()
 	{
 		return $this->hasMany(\App\Http\Models\TransactionProductModifier::class, 'id_transaction_product');
+	}
+	
+	public function variants()
+	{
+		return $this->hasMany(\Modules\ProductVariant\Entities\TransactionProductVariant::class, 'id_transaction_product');
 	}
 	
 	public function product()

@@ -1,0 +1,16 @@
+{
+    "name": "ProductBundling",
+    "alias": "productbundling",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\ProductBundling\\Providers\\ProductBundlingServiceProvider"
+    ],
+    "aliases": {},
+    "files": [
+        "start.php"
+    ],
+    "requires": []
+}

@@ -62,6 +62,7 @@ class Transaction extends Model
 		'id_user',
 		'id_outlet',
 		'id_promo_campaign_promo_code',
+		'id_subscription_user_voucher',
 		'transaction_receipt_number',
 		'transaction_notes',
 		'transaction_subtotal',
@@ -94,7 +95,8 @@ class Transaction extends Model
         'fraud_flag',
 		'cashback_insert_status',
 		'calculate_achievement',
-		'show_rate_popup'
+		'show_rate_popup',
+		'transaction_discount_delivery'
 	];
 
 	public function user()
@@ -157,7 +159,12 @@ class Transaction extends Model
 
     public function productTransaction() 
     {
-    	return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction')->orderBy('id_product');
+    	return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction')->where('type', 'Product')->orderBy('id_product');
+	}
+
+	public function plasticTransaction() 
+    {
+    	return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction')->where('type', 'Plastic')->orderBy('id_product');
 	}
 
     public function product_detail()
@@ -229,4 +236,9 @@ class Transaction extends Model
     public function disburse_outlet_transaction(){
         return $this->hasOne(\Modules\Disburse\Entities\DisburseOutletTransaction::class, 'id_transaction');
     }
+
+    public function subscription_user_voucher()
+	{
+		return $this->belongsTo(\Modules\Subscription\Entities\SubscriptionUserVoucher::class, 'id_subscription_user_voucher');
+	}
 }

@@ -9,6 +9,7 @@ use App\Http\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
+use Modules\ProductVariant\Entities\ProductVariant;
 
 class Favorite extends Model
 {
@@ -18,6 +19,7 @@ class Favorite extends Model
 		'id_outlet',
 		'id_brand',
 		'id_product',
+		'id_product_variant_group',
 		'id_user',
 		'notes'
 	];
@@ -27,6 +29,11 @@ class Favorite extends Model
 	public function modifiers()
 	{
 		return $this->belongsToMany(ProductModifier::class, 'favorite_modifiers', 'id_favorite', 'id_product_modifier');
+	}
+
+	public function variants()
+	{
+		return $this->belongsToMany(ProductVariant::class, 'product_variant_pivot', 'id_product_variant_group', 'id_product_variant', 'id_product_variant_group');
 	}
 
 	public function outlet()

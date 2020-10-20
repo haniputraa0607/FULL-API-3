@@ -158,7 +158,9 @@ class ApiPromotionDeals extends Controller
 	                'deals_promotion_content.deals_promotion_content_details',
 	                'created_by_user',
 	                'promotion_contents.deals',
-	                'brand'
+	                'brand',
+	                'deals_promotion_discount_bill_rules',
+	                'deals_promotion_discount_delivery_rules'
 	            ])
 	            ->first();
 	    $outlet = explode(',',$deals->deals_list_outlet);
@@ -575,7 +577,12 @@ class ApiPromotionDeals extends Controller
     	$deals = $dataDeals->toArray();
     	if ( $deals['is_online'] == 1)
     	{
-	    	if ( empty($deals['deals_promotion_product_discount_rules']) && empty($deals['deals_promotion_tier_discount_rules']) && empty($deals['deals_promotion_buyxgety_rules']) )
+	    	if ( empty($deals['deals_promotion_product_discount_rules']) 
+	    		&& empty($deals['deals_promotion_tier_discount_rules']) 
+	    		&& empty($deals['deals_promotion_buyxgety_rules']) 
+	    		&& empty($deals['deals_promotion_discount_bill_rules']) 
+	    		&& empty($deals['deals_promotion_discount_delivery_rules'])
+	    	)
 	    	{
 	    		$step = 2;
 	    		$errors = 'Deals Promotion not complete';
