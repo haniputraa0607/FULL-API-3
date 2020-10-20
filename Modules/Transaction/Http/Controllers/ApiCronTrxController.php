@@ -432,8 +432,10 @@ class ApiCronTrxController extends Controller
                 }
                 $newTrx->update(['cashback_insert_status' => 1]);
 
-                //check achievement
-                AchievementCheck::dispatch(['id_transaction' => $newTrx->id_transaction, 'phone' => $newTrx->user->phone])->onConnection('achievement');
+                if ($newTrx->user) {
+                    //check achievement
+                    AchievementCheck::dispatch(['id_transaction' => $newTrx->id_transaction, 'phone' => $newTrx->user->phone])->onConnection('achievement');
+                }
             
             }
             //update taken_by_sistem_at

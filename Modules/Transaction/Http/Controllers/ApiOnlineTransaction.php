@@ -2413,9 +2413,9 @@ class ApiOnlineTransaction extends Controller
                 return $order[$a['id_product_variant']] <=> $order[$b['id_product_variant']];
             });
 
-            $product['id_product_variant_group'] = $item['id_product_variant_group'];
+            $product['id_product_variant_group'] = $item['id_product_variant_group'] ?? null;
             $product['variants'] = $variants;
-            if ($item['id_product_variant_group']) {
+            if ($item['id_product_variant_group'] ?? null) {
                 $product['selected_variant'] = Product::getVariantParentId($item['id_product_variant_group'], Product::getVariantTree($item['id_product'], $outlet)['variants_tree']);
             } else {
                 $product['selected_variant'] = [];
@@ -2538,7 +2538,7 @@ class ApiOnlineTransaction extends Controller
         }
         $result['get_point'] = ($post['payment_type'] != 'Balance') ? $this->checkPromoGetPoint($promo_source) : 0;
         if (isset($post['payment_type'])&&$post['payment_type'] == 'Balance') {
-            if($balance>=$result['grandtotal']){
+            if($balance >= ($result['grandtotal']-$result['subscription'])){
                 $result['used_point'] = $result['grandtotal'];
 
 	            if ($result['subscription'] >= $result['used_point']) {
@@ -2549,7 +2549,6 @@ class ApiOnlineTransaction extends Controller
             }else{
                 $result['used_point'] = $balance;
             }
-
 
             $result['points'] -= $result['used_point'];
         }
@@ -3193,5 +3192,60 @@ class ApiOnlineTransaction extends Controller
         }
 
         return $result['plastic'];
+    }
+
+    public function triggerReversal(Request $request)
+    {
+        // cari transaksi yang pakai balance, atau split balance, sudah cancelled tapi balance nya tidak balik, & user nya ada
+        $trxs = Transaction::select('transactions.id_transaction','transactions.id_user', 'transaction_receipt_number', 'transaction_grandtotal', 'log_bayar.balance as bayar', 'log_reversal.balance as reversal')
+            ->join('transaction_multiple_payments', function($join) {
+                $join->on('transaction_multiple_payments.id_transaction', 'transactions.id_transaction')
+                    ->where('transaction_multiple_payments.type', 'Balance');
+            })
+            ->join('log_balances as log_bayar', function($join) {
+                $join->on('log_bayar.id_reference', 'transactions.id_transaction')
+                    ->whereIn('log_bayar.source', ['Transaction', 'Online Transaction'])
+                    ->where('log_bayar.balance', '<', 0);
+            })
+            ->leftJoin('log_balances as log_reversal', function($join) {
+                $join->on('log_reversal.id_reference', 'transactions.id_transaction')
+                    ->whereIn('log_reversal.source', ['Transaction Failed', 'Reversal'])
+                    ->where('log_reversal.balance', '>', 0);
+            })
+            ->join('users', 'users.id', '=', 'transactions.id_user')
+            ->where([
+                'transaction_payment_status' => 'Cancelled'
+            ]);
+        $summary = [
+            'all_with_point' => 0,
+            'already_reversal' => 0,
+            'new_reversal' => 0
+        ];
+        $reversal = [];
+        foreach ($trxs->cursor() as $trx) {
+            $summary['all_with_point']++;
+            if ($trx->reversal) {
+                $summary['already_reversal']++;
+            } else {
+                if (strtolower($request->request_type) == 'reversal') {
+                    app($this->balance)->addLogBalance( $trx->id_user, abs($trx->bayar), $trx->id_transaction, 'Reversal', $trx->transaction_grandtotal);
+                }
+                $summary['new_reversal']++;
+                $reversal[] = [
+                    'id_transaction' => $trx->id_transaction,
+                    'receipt_number' => $trx->transaction_receipt_number,
+                    'balance_nominal' => abs($trx->bayar),
+                    'grandtotal' => $trx->transaction_grandtotal,
+                ];
+            }
+        }
+        return [
+            'status' => 'success',
+            'results' => [
+                'type' => strtolower($request->request_type) == 'reversal' ? 'DO REVERSAL' : 'SHOW REVERSAL',
+                'summary' => $summary,
+                'new_reversal_detail' => $reversal
+            ]
+        ];
     }
 }
