@@ -125,6 +125,7 @@ class ApiSubscriptionUse extends Controller
     	if ( !empty($subs['subscription_user']['subscription']['subscription_minimal_transaction']) && $subs['subscription_user']['subscription']['subscription_minimal_transaction'] > $subtotal) {
     		// $errors[] = 'Total transaction is not meet minimum transasction to use Subscription';
     		$errors[] = 'Total transaksi belum mencapai syarat minimum untuk menggunakan Subscription ini.';
+    		$errorProduct = 'all';
     		return 0;	
     	}
 

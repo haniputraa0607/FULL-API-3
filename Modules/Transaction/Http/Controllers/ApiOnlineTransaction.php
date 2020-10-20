@@ -2810,7 +2810,7 @@ class ApiOnlineTransaction extends Controller
                     $update_promo_report = app($this->promo_campaign)->deleteReport($singleTrx->id_transaction, $singleTrx->id_promo_campaign_promo_code);
                     if (!$update_promo_report) {
                         DB::rollBack();
-                        continue;
+                        return ['status'=>'fail', 'messages' => ['Failed revert promo']];
                     }   
                 }
 
@@ -2822,7 +2822,7 @@ class ApiOnlineTransaction extends Controller
 
                 if (!$update_voucher) {
                     DB::rollback();
-                    continue;
+                    return ['status'=>'fail', 'messages' => ['Failed return voucher']];
                 }
                 DB::commit();
                 return ['status'=>'success'];
