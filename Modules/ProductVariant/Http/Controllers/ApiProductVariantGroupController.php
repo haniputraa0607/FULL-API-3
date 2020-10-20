@@ -2,6 +2,7 @@
 
 namespace Modules\ProductVariant\Http\Controllers;
 
+use App\Http\Models\Outlet;
 use App\Lib\MyHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -316,5 +317,141 @@ class ApiProductVariantGroupController extends Controller
             }
             $i++;
         }
+    }
+
+    public function exportPrice(Request $request){
+        $different_outlet = Outlet::where('outlet_different_price',1)->get()->toArray();
+        $different_outlet_price = Outlet::select('outlet_code','id_product_variant_group','product_variant_group_price')
+            ->leftJoin('product_variant_group_special_prices','outlets.id_outlet','=','product_variant_group_special_prices.id_outlet')
+            ->where('outlet_different_price',1)->get()->toArray();
+        $data = ProductVariantGroup::join('products', 'products.id_product', 'product_variant_groups.id_product')
+            ->select('product_variant_groups.product_variant_group_price as global_price', 'products.product_name', 'products.product_code', 'product_variant_groups.product_variant_group_code', 'product_variant_groups.id_product_variant_group')
+            ->with(['product_variant_pivot'])->get()->toArray();
+
+        $arrProductVariant = [];
+        foreach ($data as $key => $pv) {
+            $arr = array_column($pv['product_variant_pivot'], 'product_variant_name');
+            $name = implode(',',$arr);
+            $arrProductVariant[$key] = [
+                'product' => $pv['product_code'].' - '.$pv['product_name'],
+                'product_variant_group_code' => $pv['product_variant_group_code'],
+                'product_variant_group' => $name,
+                'global_price' => $pv['global_price']
+            ];
+
+            foreach ($different_outlet as $o){
+                $arrProductVariant[$key]['price_'.$o['outlet_code']] = 0;
+                foreach ($different_outlet_price as $key_o => $o_price){
+                    if($o_price['id_product_variant_group'] == $pv['id_product_variant_group'] && $o_price['outlet_code'] == $o['outlet_code']){
+                        $arrProductVariant[$key]['price_'.$o['outlet_code']] = $o_price['product_variant_group_price'];
+                        unset($key_o);
+                    }else{
+                        continue;
+                    }
+                }
+            }
+        }
+
+        return response()->json(MyHelper::checkGet($arrProductVariant));
+    }
+
+    public function importPrice(Request $request){
+        $post = $request->json()->all();
+        $result = [
+            'updated' => 0,
+            'create' => 0,
+            'no_update' => 0,
+            'invalid' => 0,
+            'failed' => 0,
+            'more_msg' => [],
+            'more_msg_extended' => []
+        ];
+        $data = $post['data'][0]??[];
+
+        foreach ($data as $key => $value) {
+            if(empty($value['product_variant_group_code'])){
+                $result['invalid']++;
+                continue;
+            }
+            if(empty($value['product'])){
+                unset($value['product']);
+            }
+            if(empty($value['product_variant_group'])){
+                unset($value['product_variant_group']);
+            }
+            if(empty($value['global_price'])){
+                unset($value['global_price']);
+            }
+
+            $productVariantGroup = ProductVariantGroup::where([
+                    'product_variant_group_code' => $value['product_variant_group_code']
+                ])->first();
+            if(!$productVariantGroup){
+                $result['not_found']++;
+                $result['more_msg_extended'][] = "Product variant with code {$value['product_variant_group_code']} not found";
+                continue;
+            }
+
+            $update1 = ProductVariantGroup::where([
+                'product_variant_group_code' => $value['product_variant_group_code']
+            ])->update(['product_variant_group_price'=>$value['global_price']]);
+
+            if($update1){
+                $result['updated']++;
+            }else{
+                $result['no_update']++;
+            }
+
+            foreach ($value as $col_name => $col_value) {
+                if(!$col_value){
+                    continue;
+                }
+                if(strpos($col_name, 'price_') !== false){
+                    $outlet_code = str_replace('price_', '', $col_name);
+                    $pp = ProductVariantGroupSpecialPrice::join('outlets','outlets.id_outlet','=','product_variant_group_special_prices.id_outlet')
+                        ->where([
+                            'outlet_code' => $outlet_code,
+                            'id_product_variant_group' => $productVariantGroup['id_product_variant_group']
+                        ])->first();
+                    if($pp){
+                        $update = $pp->update(['product_variant_group_price'=>$col_value]);
+                    }else{
+                        $id_outlet = Outlet::select('id_outlet')->where('outlet_code',$outlet_code)->pluck('id_outlet')->first();
+                        if(!$id_outlet){
+                            $result['updated_price_fail']++;
+                            $result['more_msg_extended'][] = "Failed create new price for product variant group {$value['product_variant_group_code']} at outlet $outlet_code failed";
+                            continue;
+                        }
+                        $update = ProductVariantGroupSpecialPrice::create([
+                            'id_outlet' => $id_outlet,
+                            'id_product_variant_group' => $productVariantGroup['id_product_variant_group'],
+                            'product_variant_group_price'=>$col_value
+                        ]);
+                    }
+                    if($update){
+                        $result['updated']++;
+                    }else{
+                        $result['no_update']++;
+                        $result['more_msg_extended'][] = "Failed set price for product variant group {$value['product_variant_group_code']} at outlet $outlet_code failed";
+                    }
+                }
+            }
+        }
+        $response = [];
+
+        if($result['updated']){
+            $response[] = 'Update '.$result['updated'].' product variant group price';
+        }
+        if($result['create']){
+            $response[] = 'Create '.$result['create'].' new product variant group';
+        }
+        if($result['no_update']){
+            $response[] = $result['no_update'].' product variant group not updated';
+        }
+        if($result['failed']){
+            $response[] = 'Failed create '.$result['failed'].' product variant group';
+        }
+        $response = array_merge($response,$result['more_msg_extended']);
+        return MyHelper::checkGet($response);
     }
 }
