@@ -12,6 +12,7 @@ use Modules\Users\Http\Controllers\ApiUser;
 
 use App\Http\Models\Campaign;
 use App\Http\Models\CampaignRuleView;
+use App\Jobs\SendCampaignNow;
 
 class GenerateCampaignRecipient implements ShouldQueue
 {
@@ -96,9 +97,10 @@ class GenerateCampaignRecipient implements ShouldQueue
         $data['generate_recipient_status'] = 1;
         $update = Campaign::where('id_campaign','=',$id_campaign)->update($data);
 
-        if($update && !empty($campaign->campaign_send_at) && $campaign->campaign_generate_receipient=='Send At Time'){
-            $getCampaign = Campaign::where('id_campaign','=',$id_campaign)->first()->toArray();
-            app($this->camp)->sendCampaignInternal($getCampaign);
+        $getCampaign = Campaign::where('id_campaign','=',$id_campaign)->first()->toArray();
+
+        if($update && !empty($campaign->campaign_send_at) && $campaign->campaign_generate_receipient=='Send At Time' && $getCampaign['campaign_is_sent'] == 'No'){
+            SendCampaignNow::dispatch($getCampaign)->allOnConnection('database');
         }
 
         return $update;

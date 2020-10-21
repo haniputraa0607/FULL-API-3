@@ -91,11 +91,12 @@ class ApiSubscriptionWebview extends Controller
             $payment_message = Setting::where('key', 'subscription_payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% poin anda dengan subscription %subscription_title%?';
             $payment_message = MyHelper::simpleReplace($payment_message,['point'=>$subs['subscription_price_point'],'subscription_title'=>$subs['subscription_title']]);
         }else{
-            $payment_message = Setting::where('key', 'subscription_payment_messages_cash')->pluck('value_text')->first()??'Kamu yakin ingin membeli subscription %subscription_title% dengan harga %cash% ?';
-            $payment_message = MyHelper::simpleReplace($payment_message,['cash'=> $subs['subscription_price_cash'], 'subscription_title'=>$subs['subscription_title']]);
+        	$cash_pretty = 'Rp '.MyHelper::requestNumber($subs['subscription_price_cash'],'thousand_id');
+            $payment_message = Setting::where('key', 'subscription_payment_messages_cash')->pluck('value_text')->first()??'Kamu yakin ingin membeli subscription %subscription_title% dengan harga %cash%?';
+            $payment_message = MyHelper::simpleReplace($payment_message,['cash'=> $cash_pretty, 'subscription_title'=>$subs['subscription_title']]);
         }
 
-        $payment_success_message = Setting::where('key', 'subscription_payment_success_messages')->pluck('value_text')->first()??'Anda telah membeli subscription %subscription_title%';
+        $payment_success_message = Setting::where('key', 'subscription_payment_success_messages')->pluck('value_text')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
         $payment_success_message = MyHelper::simpleReplace($payment_success_message,['subscription_title'=>$subs['subscription_title']]);
 
 

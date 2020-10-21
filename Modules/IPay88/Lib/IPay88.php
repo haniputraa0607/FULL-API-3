@@ -289,6 +289,9 @@ class IPay88
             		$amount = $model->amount / 100;
             	}
             	$trx = Transaction::with('user','outlet')->where('id_transaction',$id_transaction)->first();
+            	if ($trx->transaction_payment_status != 'Pending') {
+            		return 1;
+            	};
             	if (!$amount) {
             		$amount = $trx->transaction_grandtotal;
             	}
@@ -432,6 +435,9 @@ class IPay88
             	}
     			$deals_user = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')->with('userMid')->where('id_deals_user',$id_deals_user)->first();
     			$deals = Deal::where('id_deals',$deals_user->id_deals)->first();
+            	if ($deals_user->paid_status != 'Pending') {
+            		return 1;
+            	};
             	switch ($data['Status']) {
             		case '1':
             			if ($deals_user->paid_status == 'Completed') {
@@ -519,6 +525,9 @@ class IPay88
             case 'subscription':
     			$subscription_user = SubscriptionUser::with('user')->where('id_subscription_user',$model->id_subscription_user)->first();
     			$subscription = Subscription::where('id_subscription',$model->id_subscription)->first();
+            	if ($subscription_user->paid_status != 'Pending') {
+            		return 1;
+            	};
             	switch ($data['Status']) {
             		case '1':
             			if ($subscription_user->paid_status == 'Completed') {
