@@ -129,7 +129,7 @@ class ApiDealsWebview extends Controller
         else
         {
             $deals['button_text'] = 'Buy';
-            $payment_message = Setting::where('key', 'payment_messages_cash')->pluck('value_text')->first()??'Kamu yakin ingin membeli deals %deals_title% dengan harga %cash% ?';
+            $payment_message = Setting::where('key', 'payment_messages_cash')->pluck('value_text')->first()??'Kamu yakin ingin membeli deals %deals_title% dengan harga %cash%?';
             $payment_message = MyHelper::simpleReplace($payment_message,['cash'=>$deals['deals_voucher_price_pretty'],'deals_title'=>$deals['deals_title']]);
         }
 
