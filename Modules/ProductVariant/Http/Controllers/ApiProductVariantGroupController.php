@@ -299,24 +299,91 @@ class ApiProductVariantGroupController extends Controller
     }
 
     public function export(Request $request){
-        $post = $request->json()->all();
-        $productVariant = ProductVariant::whereNull('id_parent')->get()->toArray();
-        $products = Product::get()->toArray();
+        $data = Product::with(['product_variant_group'])->get()->toArray();
+        $parent = ProductVariant::whereNull('id_parent')->get()->toArray();
 
         $arr = [];
-        $i = 0;
-        foreach ($products as $product){
-            $arr[] = [
-                'product_name' => $product['product_name'],
-                'product_code' => $product['product_code'],
-                'use_variant_status' => ($product['product_variant_status'] == 1  ? 'YES' : 'NO')
+        foreach ($data as $key=>$dt){
+            $arr[$key] = [
+                'product_name' => $dt['product_name'],
+                'product_code' => $dt['product_code'],
+                'use_variant_status' => ($dt['product_variant_status'] == 1 ? 'YES' : 'NO')
             ];
 
-            foreach ($productVariant as $pv){
-                $arr[$i][$pv['product_variant_name']] = [];
+            foreach ($parent as $p){
+                $variant = [];
+                foreach ($dt['product_variant_group'] as $pg){
+                    if($pg['id_parent'] == $p['id_product_variant'] && array_search($pg['product_variant_name'],$variant) === false){
+                        $variant[] = $pg['product_variant_name'];
+                    }
+                }
+                $arr[$key][$p['product_variant_name']] = implode(',', $variant);
             }
-            $i++;
         }
+        return response()->json(MyHelper::checkGet($arr));
+    }
+
+    public function import(Request $request){
+        $post = $request->json()->all();
+        $result = [
+            'updated' => 0,
+            'create' => 0,
+            'no_update' => 0,
+            'invalid' => 0,
+            'failed' => 0,
+            'more_msg' => [],
+            'more_msg_extended' => []
+        ];
+        $data = $post['data'][0]??[];
+        $arrTmp = [];
+
+        foreach ($data as $key => $value) {
+            if(empty($value['product_code'])){
+                $result['invalid']++;
+                continue;
+            }
+
+            if(empty($value['use_variant_status'])){
+                $result['invalid']++;
+                continue;
+            }
+
+            $arrVariantGroup = [];
+            $products = Product::where('product_code', $value['product_code'])->first();
+            $update = Product::where('product_code', $value['product_code'])->update(['product_variant_status' => (strtolower($value['use_variant_status']) == 'yes' ? 1 : 0)]);
+            if(strtolower($value['use_variant_status']) == 'yes'){
+                unset($value['product_code']);
+                unset($value['product_name']);
+                unset($value['product_variant_status']);
+                $getAllVariant = ProductVariant::whereNotNull('id_parent')->get()->toArray();
+                $newArr = $value;
+                $explode = explode(",",$newArr[0]);
+                unset($newArr[0]);
+                foreach ($newArr as $new){
+                    $explode2 = explode(",",$new);
+                    foreach ($explode2 as $ex){
+
+                    }
+                }
+            }
+        }
+
+        $response = [];
+
+        if($result['updated']){
+            $response[] = 'Update '.$result['updated'].' product variant group price';
+        }
+        if($result['create']){
+            $response[] = 'Create '.$result['create'].' new product variant group';
+        }
+        if($result['no_update']){
+            $response[] = $result['no_update'].' product variant group not updated';
+        }
+        if($result['failed']){
+            $response[] = 'Failed create '.$result['failed'].' product variant group';
+        }
+        $response = array_merge($response,$result['more_msg_extended']);
+        return MyHelper::checkGet($response);
     }
 
     public function exportPrice(Request $request){

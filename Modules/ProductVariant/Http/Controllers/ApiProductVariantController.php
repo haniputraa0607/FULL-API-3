@@ -304,31 +304,4 @@ class ApiProductVariantController extends Controller
         $response = array_merge($response,$result['more_msg_extended']);
         return MyHelper::checkGet($response);
     }
-
-    public function getProductVariantRecursive($id_parent = NULL, $parent = NULL)
-    {
-        $arr = [];
-
-        if(empty($id_parent)){
-            $productVariant = ProductVariant::whereNull('id_parent')->get()->toArray();
-
-            foreach ($productVariant as $key=>$pv){
-                $get = $this->getProductVariantRecursive($pv['id_product_variant'], $pv['product_variant_name']);
-                $arr[$pv['product_variant_name']][] = $get;
-            }
-        }else{
-            $child = ProductVariant::where('id_parent', $id_parent)->select('product_variant_name', 'id_product_variant')->get()->toArray();
-            if($child){
-                foreach ($child as $key=>$c){
-                    $childIn = $this->getProductVariantRecursive($c['id_product_variant'], $parent);
-                    if($childIn){
-                        $child[$key][] = $childIn;
-                    }
-                }
-            }
-            return $child;
-        }
-
-        return $arr;
-    }
 }

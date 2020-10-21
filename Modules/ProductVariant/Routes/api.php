@@ -28,8 +28,7 @@ Route::group([ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scop
     Route::any('update-price', ['uses' => 'ApiProductVariantGroupController@updatePrice']);
     Route::post('list-detail', 'ApiProductVariantGroupController@listDetail');
     Route::post('update-detail', 'ApiProductVariantGroupController@updateDetail');
-    Route::post('export', 'ApiProductVariantGroupController@export');
+    Route::get('export', 'ApiProductVariantGroupController@export');
     Route::post('export-price', 'ApiProductVariantGroupController@exportPrice');
     Route::post('import-price', ['uses' => 'ApiProductVariantGroupController@importPrice']);
 });
-
