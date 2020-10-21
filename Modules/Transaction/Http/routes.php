@@ -2,6 +2,7 @@
 Route::group(['middleware' => ['auth:api'],'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::any('available-payment', 'ApiOnlineTransaction@availablePayment');
     Route::any('available-payment/update', 'ApiOnlineTransaction@availablePaymentUpdate')->middleware('scopes:be');
+    Route::any('trigger-reversal', 'ApiOnlineTransaction@triggerReversal')->middleware('scopes:be');
 });
 
 Route::any('api/transaction/update-gosend', 'Modules\Transaction\Http\Controllers\ApiGosendController@updateStatus');
@@ -90,7 +91,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('/void', 'ApiTransaction@transactionVoid');
 
     Route::post('/check', 'ApiOnlineTransaction@checkTransaction');
-    Route::post('/new', 'ApiOnlineTransaction@newTransaction');
+    Route::post('/new', 'ApiOnlineTransaction@newTransaction')->middleware('decrypt_pin:pin,request');
     Route::post('/confirm', 'ApiConfirm@confirmTransaction');
     Route::post('/cancel', 'ApiOnlineTransaction@cancelTransaction');
     Route::post('/prod/confirm', 'ApiTransactionProductionController@confirmTransaction2');

@@ -110,7 +110,10 @@ class Deal extends Model
         'charged_central',
         'charged_outlet',
         'is_all_outlet',
-        'custom_outlet_text'
+        'custom_outlet_text',
+        'min_basket_size',
+        'is_all_shipment',
+        'is_all_payment'
 	];
 
 	protected $appends  = ['url_deals_image', 'deals_status', 'deals_voucher_price_type', 'deals_voucher_price_pretty', 'url_webview'];
@@ -137,7 +140,7 @@ class Deal extends Model
         }
         elseif ($this->dealsVoucherPriceType == 'nominal') {
             // $pretty = MyHelper::requestNumber($this->deals_voucher_price_cash,'_CURRENCY');
-            $pretty = MyHelper::requestNumber($this->deals_voucher_price_cash,'rupiah');
+            $pretty = 'Rp '.MyHelper::requestNumber($this->deals_voucher_price_cash,'thousand_id');
         }
         return $pretty;
 	}
@@ -249,5 +252,20 @@ class Deal extends Model
     public function created_by_user()
     {
         return $this->belongsTo(\App\Http\Models\User::class, 'created_by');
+    }
+
+    public function deals_discount_bill_rules()
+	{
+		return $this->hasOne(\Modules\Deals\Entities\DealsDiscountBillRule::class, 'id_deals');
+	}
+
+	public function deals_discount_delivery_rules()
+	{
+		return $this->hasOne(\Modules\Deals\Entities\DealsDiscountDeliveryRule::class, 'id_deals');
+	}
+
+	public function deals_shipment_method()
+    {
+        return $this->hasMany(\Modules\Deals\Entities\DealsShipmentMethod::class, 'id_deals', 'id_deals');
     }
 }

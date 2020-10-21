@@ -116,7 +116,7 @@ class Controller extends BaseController
 			mkdir('img/summernote/'.$post['type'], 0777, true);
 		}
 
-        $upload = MyHelper::uploadPhoto($request->json('image'), 'img/summernote/'.$post['type'].'/');
+        $upload = MyHelper::uploadPhotoSummerNote($request->json('image'), 'img/summernote/'.$post['type'].'/', null);
         
         if ($upload['status'] == "success") {
             $result = [

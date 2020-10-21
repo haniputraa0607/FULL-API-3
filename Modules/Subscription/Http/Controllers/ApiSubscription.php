@@ -48,6 +48,10 @@ class ApiSubscription extends Controller
 
         $data = [];
 
+        if (isset($post['subscription_discount_type'])) {
+        	$data['subscription_discount_type'] = $post['subscription_discount_type'];
+        }
+
         if (isset($post['subscription_type'])) {
         	$data['subscription_type'] = $post['subscription_type'];
         }

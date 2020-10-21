@@ -2,6 +2,7 @@
 
 namespace Modules\Campaign\Http\Controllers;
 
+use App\Jobs\SendCampaignNow;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -601,10 +602,10 @@ class ApiCampaign extends Controller
 
 		$campaign=Campaign::where('id_campaign',$id_campaign)->first();
 		DB::beginTransaction();
-		if($campaign->campaign_generate_receipient=='Now'){
-			GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
-		}
-		if($campaign->campaign_send_at&&$campaign->campaign_send_at<date('Y-m-d H:i:s')){
+        if($campaign->campaign_generate_receipient=='Now' || (empty($campaign->campaign_send_at) && $campaign->campaign_generate_receipient=='Send At Time')){
+            GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
+        }
+        if($campaign->campaign_send_at&&$campaign->campaign_send_at<date('Y-m-d H:i:s')){
 			$post['campaign_send_at']=date('Y-m-d H:i:s');
 		}
 		unset($post['id_campaign']);
@@ -925,4 +926,24 @@ class ApiCampaign extends Controller
 		return response()->json($result);
 	}
 
+	public function destroy(Request $request){
+        $post = $request->json()->all();
+        if(isset($post['id_campaign']) && !empty($post['id_campaign'])){
+            $check = Campaign::where('id_campaign', $post['id_campaign'])->first();
+
+            if($check['campaign_is_sent'] == 'Yes'){
+                return response()->json(['status'  => 'fail','messages'  => ['Can not delete this campaign, the campaign has been sent.']]);
+            }else{
+                $delete = Campaign::where('id_campaign', $post['id_campaign'])->delete();
+                if($delete){
+                    $getId = CampaignRuleParent::where('id_campaign', $post['id_campaign'])->first();
+                    CampaignRuleParent::where('id_campaign', $post['id_campaign'])->delete();
+                    CampaignRule::where('id_campaign_rule_parent', $getId['id_campaign_rule_parent'])->delete();
+                }
+                return response()->json(MyHelper::checkDelete($delete));
+            }
+        }else{
+            return response()->json(['status'  => 'fail','messages'  => ['Incompleted data']]);
+        }
+    }
 }

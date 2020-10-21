@@ -862,6 +862,71 @@ class MyHelper{
 			return $result;
 	}
 
+    public static function uploadPhotoSummerNote($foto, $path, $resize=800, $name=null) {
+        // kalo ada foto
+        $decoded = base64_decode($foto);
+
+        if (!file_exists($path)) {
+            mkdir($path, 0777, true);
+        }
+
+        // cek extension
+        $ext = MyHelper::checkExtensionImageBase64($decoded);
+
+        // set picture name
+        if($name != null)
+            $pictName = $name.$ext;
+        else
+            $pictName = mt_rand(0, 1000).''.time().''.$ext;
+
+        // path
+        $upload = $path.$pictName;
+
+        $img    = Image::make($decoded);
+
+        $width  = $img->width();
+        $height = $img->height();
+
+        // ga usah di resize kalau ga perlu
+        if($resize){
+            $img->resize($resize, null, function ($constraint) {
+                $constraint->aspectRatio();
+            });
+        }
+
+        if(env('STORAGE')){
+            $resource = $img->stream()->detach();
+
+            $save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
+            if ($save) {
+                $result = [
+                    'status' => 'success',
+                    'path'  => $upload
+                ];
+            }
+            else {
+                $result = [
+                    'status' => 'fail'
+                ];
+            }
+        }else{
+            if ($img->save($upload)) {
+                $result = [
+                    'status' => 'success',
+                    'path'  => $upload
+                ];
+            }
+            else {
+                $result = [
+                    'status' => 'fail'
+                ];
+            }
+        }
+
+
+        return $result;
+    }
+
 	public static function cekImageNews($type, $foto) {
 			// kalo ada foto
 			$decoded = base64_decode($foto);
@@ -2625,9 +2690,11 @@ class MyHelper{
     	return Setting::select($column)->where('key',$key)->pluck($column)->first()??$default;
     }
 
-    public static function checkRuleForRequestOTP($data_user, $check = 0){
+    public static function checkRuleForRequestOTP($data_user, $check = 0)
+    {
         //get setting rule for request otp
         $setting = Setting::where('key', 'otp_rule_request')->first();
+        $emailSender = Setting::where('key', 'email_sender')->first();
         /*
           note : hold time in seconds. if the user has requested otp exceeds the
           maximum number then the user cannot make an otp request.
@@ -2635,80 +2702,65 @@ class MyHelper{
 
         $holdTime = 60;//set default hold time if setting not exist
         $maxValueRequest = 10;//set default max value for request if setting not exist
-        if($setting){
+        if ($setting) {
             $setting = json_decode($setting['value_text']);
             $holdTime = (int)$setting->hold_time;
             $maxValueRequest = (int)$setting->max_value_request;
         }
-        $folder1 = 'otp';
-        $file = $data_user[0]['id'].'.json';
 
         //check flag first in database
-        if(isset($data_user[0]['otp_request_status']) && $data_user[0]['otp_request_status'] == 'Can Not Request'){
+        if (isset($data_user[0]['otp_request_status']) && $data_user[0]['otp_request_status'] == 'Can Not Request') {
             return [
-                'status'=>'fail',
-                'otp_check'=> 1,
-                'messages'=> ["OTP request has passed the limit, please contact our customer service at ".config('configs.EMAIL_ADDRESS_ADMIN')]
+                'status' => 'fail',
+                'otp_check' => 1,
+                'messages' => ["OTP request has passed the limit, please contact our customer service at " . $emailSender['value'] ?? '']
             ];
         }
 
-        //check folder
-        if(env('STORAGE') == 'local'){
-            if(!Storage::disk(env('STORAGE'))->exists($folder1)){
-                Storage::makeDirectory($folder1);
-            }
-        }
-
-        if(Storage::disk(env('STORAGE'))->exists($folder1.'/'.$file)){
-            $readContent = Storage::disk(env('STORAGE'))->get($folder1.'/'.$file);
-            $content = json_decode($readContent);
+        if($data_user[0]['otp_available_time_request'] != NULL){
             $currentTime = date('Y-m-d H:i:s');
-            $count = $content->count_request + 1;
 
-            $different = strtotime($content->available_request_time) - strtotime($currentTime);
+            $different = strtotime($data_user[0]['otp_available_time_request']) - strtotime($currentTime);
             $different = (int)date('s', $different);
 
             if($different > $holdTime){
                 $different = -1;
             }
 
-            if(strtotime($currentTime) < strtotime($content->available_request_time)){
+            if(strtotime($currentTime) < strtotime($data_user[0]['otp_available_time_request'])){
                 return [
                     'status'=>'success',
                     'otp_check'=> 1,
                     'otp_timer' => $different
                 ];
-            } elseif($count > $maxValueRequest){
+            }elseif (isset($data_user[0]['otp_increment']) && ($data_user[0]['otp_increment'] + 1) > $maxValueRequest) {
                 $updateFlag = User::where('id', $data_user[0]['id'])->update(['otp_request_status' => 'Can Not Request']);
-                MyHelper::deleteFile($folder1.'/'.$file);
                 return [
-                    'status'=>'fail',
-                    'otp_check'=> 1,
-                    'messages'=> ["OTP request has passed the limit, please contact our customer service at ".config('configs.EMAIL_ADDRESS_ADMIN')]
+                    'status' => 'fail',
+                    'otp_check' => 1,
+                    'messages' => ["OTP request has passed the limit, please contact our customer service at " . $emailSender['value'] ?? '']
                 ];
-            } elseif($check == 0){
+            }elseif ($check == 0){
                 $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
-                $contentFile = [
-                    'available_request_time' => $availebleTime,
-                    'count_request' => 1 + $content->count_request
-                ];
-                $createFile = MyHelper::createFile($contentFile, 'json', 'otp/', $data_user[0]['id']);
-                return true;
+                $update = User::where('id', $data_user[0]['id'])->update(['otp_available_time_request' => $availebleTime]);
             }
         }elseif($check == 0){
             $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
-            $contentFile = [
-                'available_request_time' => $availebleTime,
-                'count_request' => 1
-            ];
-            $createFile = MyHelper::createFile($contentFile, 'json', 'otp/', $data_user[0]['id']);
-            return true;
+            $update = User::where('id', $data_user[0]['id'])->update(['otp_available_time_request' => $availebleTime]);
         }
+
+        return true;
     }
 
     public static function checkRuleForRequestEmailVerify($data_user){
         //get setting rule for request email verify
         $setting = Setting::where('key', 'email_verify_rule_request')->first();
+        $emailSender = Setting::where('key', 'email_sender')->first();
+        $autocrmEmail = Setting::where('key', 'Email Verify')->first();
+
+        if(!$autocrmEmail){
+            return true;
+        }
         /*
           note : hold time in seconds. if the user has requested email verify exceeds the
           maximum number then the user cannot make an email verify request.
@@ -2729,7 +2781,7 @@ class MyHelper{
             return [
                 'status'=>'fail',
                 'email_verify_check'=> 1,
-                'messages'=> ["Email Verify request has passed the limit, please contact our customer service at ".config('configs.EMAIL_ADDRESS_ADMIN')]
+                'messages'=> ["Email Verify request has passed the limit, please contact our customer service at ".$emailSender['value']??'']
             ];
         }
 
@@ -2758,7 +2810,7 @@ class MyHelper{
                 return [
                     'status'=>'fail',
                     'email_verify_check'=> 1,
-                    'messages'=> ["Email Verify request has passed the limit, please contact our customer service at ".config('configs.EMAIL_ADDRESS_ADMIN')]
+                    'messages'=> ["Email Verify request has passed the limit, please contact our customer service at ".$emailSender['value']??'']
                 ];
             } else{
                 $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
@@ -2790,6 +2842,9 @@ class MyHelper{
     {
     	if (!$user) {
 	        $user = User::where('id',$trx['id_user'])->first();
+    	}
+    	if (!$user) {
+	        return true;
     	}
     	if ($status == 'success') {
     		if ($user['transaction_online_status'] == 'success') {
