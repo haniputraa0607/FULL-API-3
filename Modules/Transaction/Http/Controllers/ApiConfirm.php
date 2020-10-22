@@ -228,6 +228,9 @@ class ApiConfirm extends Controller
         }
 
         if ($post['payment_type'] == 'Midtrans') {
+            if (\Cache::has('midtrans_confirm_'.$check['id_transaction'])) {
+                return response()->json(\Cache::get('midtrans_confirm_'.$check['id_transaction']));
+            }
             $transaction_details = array(
                 'order_id'     => $check['transaction_receipt_number'],
                 'gross_amount' => $countGrandTotal,
@@ -340,15 +343,16 @@ class ApiConfirm extends Controller
             ];
             $encode = json_encode($dataEncode);
             $base   = base64_encode($encode);
-
-            return response()->json([
+            $response = [
                 'status'           => 'success',
                 'snap_token'       => $connectMidtrans['token'],
                 'redirect_url'     => $connectMidtrans['redirect_url'],
                 'transaction_data' => $dataMidtrans,
                 'url'              => env('VIEW_URL') . '/transaction/web/view/detail?data=' . $base,
 
-            ]);
+            ];
+            \Cache::put('midtrans_confirm_'.$check['id_transaction'], $response, now()->addMinutes(10));
+            return response()->json($response);
         } elseif ($post['payment_type'] == 'Ovo') {
 
             //validasi phone
@@ -719,6 +723,10 @@ class ApiConfirm extends Controller
             DB::commit();
 
         } else {
+            return response()->json([
+                'status'   => 'fail',
+                'messages' => ['Payment already in progress'],
+            ]);
             $insertPayOvo = $dataPay;
         }
 

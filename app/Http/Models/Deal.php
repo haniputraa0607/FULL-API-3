@@ -140,7 +140,7 @@ class Deal extends Model
         }
         elseif ($this->dealsVoucherPriceType == 'nominal') {
             // $pretty = MyHelper::requestNumber($this->deals_voucher_price_cash,'_CURRENCY');
-            $pretty = MyHelper::requestNumber($this->deals_voucher_price_cash,'rupiah');
+            $pretty = 'Rp '.MyHelper::requestNumber($this->deals_voucher_price_cash,'thousand_id');
         }
         return $pretty;
 	}
