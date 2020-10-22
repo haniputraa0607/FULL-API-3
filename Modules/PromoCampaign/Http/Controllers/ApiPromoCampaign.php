@@ -330,7 +330,7 @@ class ApiPromoCampaign extends Controller
         }
         $promoCampaign = $promoCampaign->toArray();
         if ($promoCampaign) {
-// return $promoCampaign;
+
             $promoCampaign['used_code'] = PromoCampaignReport::where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign'])->count();
             $total = PromoCampaignReport::where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign']);
             $this->filterReport($total,$request,$foreign);
@@ -744,7 +744,6 @@ class ApiPromoCampaign extends Controller
             for ($i=0; isset($post['prefix_code'][$i]) ; $i++) { 
             	$strpos = strpos($allow_char, $post['prefix_code'][$i]);
             	if ($strpos === false) {
-            		// return [$post['prefix_code'][$i]];
             		$result =  [
 	                    'status'  => 'fail',
 	                    'messages'  => ['Prefix code must be alphanumeric']
@@ -793,11 +792,11 @@ class ApiPromoCampaign extends Controller
            	$brand_new	= $post['id_brand'];
            	unset($post['id_brand']);
 
-           	foreach ($brand_new as $value) {
-           		if (!in_array($value, $brand_now)) {
-           			$del_rule = true;
-           		}
-           	}
+           	$check_brand = array_merge(array_diff($brand_now, $brand_new), array_diff($brand_new, $brand_now));
+
+       		if (!empty($check_brand)) {
+       			$del_rule = true;
+       		}
 
 			if ($del_rule) {
 				$delete_rule = $this->deleteAllProductRule('promo_campaign', $post['id_promo_campaign']);
@@ -1506,11 +1505,14 @@ class ApiPromoCampaign extends Controller
         }
 
         $dataProduct = [];
-        for ($i = 0; $i < count($product); $i++) {
-            $dataProduct[$i]['id_product']           = array_values($product)[$i];
-            $dataProduct[$i][$id_table]    = $id_post;
-            $dataProduct[$i]['created_at']           = date('Y-m-d H:i:s');
-            $dataProduct[$i]['updated_at']           = date('Y-m-d H:i:s');
+        foreach ($product[0] as $key => $value) {
+        	$temp = [
+        		'id_product' => $value,
+        		$id_table => $id_post,
+        		'created_at' => date('Y-m-d H:i:s'),
+            	'updated_at' => date('Y-m-d H:i:s')
+        	];
+        	$dataProduct[] = $temp;
         }
         
         try {
@@ -1522,8 +1524,6 @@ class ApiPromoCampaign extends Controller
                 'status'  => 'fail',
                 'message' => 'Create Filter Product Failed'
             ];
-            DB::rollBack();
-            return response()->json($result);
         }
         return $result;
     }

@@ -156,7 +156,7 @@ class PromoCampaign extends Eloquent
 
     public function promo_campaign_tier_discount_product()
     {
-        return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaignTierDiscountProduct::class, 'id_promo_campaign', 'id_promo_campaign');
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignTierDiscountProduct::class, 'id_promo_campaign', 'id_promo_campaign');
     }
 
     public function promo_campaign_product_discount()
