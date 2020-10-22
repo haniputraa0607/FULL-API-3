@@ -2413,9 +2413,9 @@ class ApiOnlineTransaction extends Controller
                 return $order[$a['id_product_variant']] <=> $order[$b['id_product_variant']];
             });
 
-            $product['id_product_variant_group'] = $item['id_product_variant_group'];
+            $product['id_product_variant_group'] = $item['id_product_variant_group'] ?? null;
             $product['variants'] = $variants;
-            if ($item['id_product_variant_group']) {
+            if ($item['id_product_variant_group'] ?? null) {
                 $product['selected_variant'] = Product::getVariantParentId($item['id_product_variant_group'], Product::getVariantTree($item['id_product'], $outlet)['variants_tree']);
             } else {
                 $product['selected_variant'] = [];
@@ -2538,7 +2538,7 @@ class ApiOnlineTransaction extends Controller
         }
         $result['get_point'] = ($post['payment_type'] != 'Balance') ? $this->checkPromoGetPoint($promo_source) : 0;
         if (isset($post['payment_type'])&&$post['payment_type'] == 'Balance') {
-            if($balance>=$result['grandtotal']){
+            if($balance >= ($result['grandtotal']-$result['subscription'])){
                 $result['used_point'] = $result['grandtotal'];
 
 	            if ($result['subscription'] >= $result['used_point']) {
@@ -2549,7 +2549,6 @@ class ApiOnlineTransaction extends Controller
             }else{
                 $result['used_point'] = $balance;
             }
-
 
             $result['points'] -= $result['used_point'];
         }
