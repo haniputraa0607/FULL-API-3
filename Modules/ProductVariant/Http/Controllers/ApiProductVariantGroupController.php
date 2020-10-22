@@ -335,8 +335,8 @@ class ApiProductVariantGroupController extends Controller
             'more_msg_extended' => []
         ];
         $data = $post['data'][0]??[];
-        $arrTmp = [];
 
+        $getAllVariant = ProductVariant::whereNotNull('id_parent')->get()->toArray();
         foreach ($data as $key => $value) {
             if(empty($value['product_code'])){
                 $result['invalid']++;
@@ -347,22 +347,73 @@ class ApiProductVariantGroupController extends Controller
                 $result['invalid']++;
                 continue;
             }
-
             $arrVariantGroup = [];
             $products = Product::where('product_code', $value['product_code'])->first();
             $update = Product::where('product_code', $value['product_code'])->update(['product_variant_status' => (strtolower($value['use_variant_status']) == 'yes' ? 1 : 0)]);
             if(strtolower($value['use_variant_status']) == 'yes'){
                 unset($value['product_code']);
                 unset($value['product_name']);
-                unset($value['product_variant_status']);
-                $getAllVariant = ProductVariant::whereNotNull('id_parent')->get()->toArray();
-                $newArr = $value;
-                $explode = explode(",",$newArr[0]);
-                unset($newArr[0]);
-                foreach ($newArr as $new){
-                    $explode2 = explode(",",$new);
-                    foreach ($explode2 as $ex){
+                unset($value['use_variant_status']);
+                $newArr = [];
+                foreach ($value as $new){
+                    $explode = explode(",",$new);
+                    $newArr[] = $explode;
+                }
+                $arrCombinations = $this->combinations($newArr);
 
+                if($arrCombinations){
+                    foreach ($arrCombinations as $group){
+                        //search id product variant for insert into product variant pivot
+                        $arrTmp = [];
+                        foreach ($group as $g){
+                            $searchId = array_search($g, array_column($getAllVariant, 'product_variant_name'));
+                            if($searchId !== false){
+                                $arrTmp[] = $getAllVariant[$searchId]['id_product_variant'];
+                            }
+                        }
+
+                        if($arrTmp){
+                            $checkExisting = ProductVariantPivot::join('product_variant_groups as pvg', 'pvg.id_product_variant_group', 'product_variant_pivot.id_product_variant_group')
+                                            ->whereIn('product_variant_pivot.id_product_variant', $arrTmp)->where('pvg.id_product', $products['id_product'])
+                                            ->groupBy('product_variant_pivot.id_product_variant_group')->havingRaw('COUNT(product_variant_pivot.`id_product_variant`) = '.count($arrTmp))->first();
+
+                            if($checkExisting){
+                                $result['updated']++;
+                                $dt_insert = [];
+                                $delete = ProductVariantPivot::where('id_product_variant_group', $checkExisting['id_product_variant_group'])->delete();
+                                if($delete){
+                                    foreach ($arrTmp as $val){
+                                        $dt_insert[] = [
+                                            'id_product_variant_group' => $checkExisting['id_product_variant_group'],
+                                            'id_product_variant' => $val
+                                        ];
+                                    }
+                                    ProductVariantPivot::insert($dt_insert);
+                                }else{
+                                    $result['no_update']++;
+                                }
+                            }else{
+                                $result['create']++;
+                                $create = ProductVariantGroup::create(
+                                    [
+                                        'id_product' => $products['id_product'],
+                                        'product_variant_group_code' =>'GENERATEBYSYSTEM_'.$products['product_code'].'_'.implode('',$arrTmp),
+                                        'product_variant_group_price' => 0,
+                                        'product_variant_group_visibility' => 'Visible'
+                                    ]
+                                );
+                                if($create){
+                                    $dt_insert = [];
+                                    foreach ($arrTmp as $val){
+                                        $dt_insert[] = [
+                                            'id_product_variant_group' => $create['id_product_variant_group'],
+                                            'id_product_variant' => $val
+                                        ];
+                                    }
+                                    ProductVariantPivot::insert($dt_insert);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -371,7 +422,7 @@ class ApiProductVariantGroupController extends Controller
         $response = [];
 
         if($result['updated']){
-            $response[] = 'Update '.$result['updated'].' product variant group price';
+            $response[] = 'Update '.$result['updated'].' product variant group';
         }
         if($result['create']){
             $response[] = 'Create '.$result['create'].' new product variant group';
@@ -384,6 +435,31 @@ class ApiProductVariantGroupController extends Controller
         }
         $response = array_merge($response,$result['more_msg_extended']);
         return MyHelper::checkGet($response);
+    }
+
+    function combinations($arrays, $i = 0) {
+        if (!isset($arrays[$i])) {
+            return array();
+        }
+        if ($i == count($arrays) - 1) {
+            return $arrays[$i];
+        }
+
+        // get combinations from subsequent arrays
+        $tmp = $this->combinations($arrays, $i + 1);
+
+        $result = array();
+
+        // concat each array from tmp with each element from $arrays[$i]
+        foreach ($arrays[$i] as $v) {
+            foreach ($tmp as $t) {
+                $result[] = is_array($t) ?
+                    array_merge(array($v), $t) :
+                    array($v, $t);
+            }
+        }
+
+        return $result;
     }
 
     public function exportPrice(Request $request){
@@ -401,7 +477,8 @@ class ApiProductVariantGroupController extends Controller
             $name = implode(',',$arr);
             $arrProductVariant[$key] = [
                 'product' => $pv['product_code'].' - '.$pv['product_name'],
-                'product_variant_group_code' => $pv['product_variant_group_code'],
+                'current_product_variant_group_code' => $pv['product_variant_group_code'],
+                'new_product_variant_group_code' => '',
                 'product_variant_group' => $name,
                 'global_price' => $pv['global_price']
             ];
@@ -430,13 +507,14 @@ class ApiProductVariantGroupController extends Controller
             'no_update' => 0,
             'invalid' => 0,
             'failed' => 0,
+            'not_found' => 0,
             'more_msg' => [],
             'more_msg_extended' => []
         ];
         $data = $post['data'][0]??[];
 
         foreach ($data as $key => $value) {
-            if(empty($value['product_variant_group_code'])){
+            if(empty($value['current_product_variant_group_code'])){
                 $result['invalid']++;
                 continue;
             }
@@ -446,22 +524,23 @@ class ApiProductVariantGroupController extends Controller
             if(empty($value['product_variant_group'])){
                 unset($value['product_variant_group']);
             }
-            if(empty($value['global_price'])){
-                unset($value['global_price']);
-            }
 
             $productVariantGroup = ProductVariantGroup::where([
-                    'product_variant_group_code' => $value['product_variant_group_code']
+                    'product_variant_group_code' => $value['current_product_variant_group_code']
                 ])->first();
             if(!$productVariantGroup){
                 $result['not_found']++;
-                $result['more_msg_extended'][] = "Product variant with code {$value['product_variant_group_code']} not found";
+                $result['more_msg_extended'][] = "Product variant with code {$value['current_product_variant_group_code']} not found";
                 continue;
             }
 
+            $datUpdate = ['product_variant_group_price'=>$value['global_price']];
+            if(!empty($value['new_product_variant_group_code'])){
+                $datUpdate['product_variant_group_code'] = $value['new_product_variant_group_code'];
+            }
             $update1 = ProductVariantGroup::where([
-                'product_variant_group_code' => $value['product_variant_group_code']
-            ])->update(['product_variant_group_price'=>$value['global_price']]);
+                'id_product_variant_group' => $productVariantGroup['id_product_variant_group']
+            ])->update($datUpdate);
 
             if($update1){
                 $result['updated']++;
@@ -471,7 +550,7 @@ class ApiProductVariantGroupController extends Controller
 
             foreach ($value as $col_name => $col_value) {
                 if(!$col_value){
-                    continue;
+                    $col_value = 0;
                 }
                 if(strpos($col_name, 'price_') !== false){
                     $outlet_code = str_replace('price_', '', $col_name);
