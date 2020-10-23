@@ -108,6 +108,9 @@ class ApiCronTrxController extends Controller
                         'Status' => '0',
                         'requery_response' => 'Cancelled by cron'
                     ],false,false);
+                    if ($trx_ipay) {
+                        \Modules\IPay88\Lib\IPay88::create()->void($trx_ipay);
+                    }
                     continue;                
                 }
                 // $detail = $this->getHtml($singleTrx, $productTrx, $user->name, $user->phone, $singleTrx->created_at, $singleTrx->transaction_receipt_number);
