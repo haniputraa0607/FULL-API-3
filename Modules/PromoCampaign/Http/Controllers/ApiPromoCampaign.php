@@ -1603,15 +1603,21 @@ class ApiPromoCampaign extends Controller
             }
 
         }
-
-        $dataProduct['id_product']           = $product;
-        $dataProduct[$id_table]    			 = $id_post;
-        $dataProduct['created_at']           = date('Y-m-d H:i:s');
-        $dataProduct['updated_at']           = date('Y-m-d H:i:s');
+	
+		$data_product = [];
+		foreach ($product as $key => $value) {
+			$temp_data = [
+				'id_product'	=> $value,
+		    	$id_table		=> $id_post,
+		    	'created_at'	=> date('Y-m-d H:i:s'),
+		    	'updated_at'	=> date('Y-m-d H:i:s'),
+			];
+			$data_product[] = $temp_data;
+		}
 
         try {
             $table_buyxgety_discount_rule::insert($data);
-            $table_buyxgety_discount_product::insert($dataProduct);
+            $table_buyxgety_discount_product::insert($data_product);
             $result = ['status'  => 'success'];
         } catch (\Illuminate\Database\QueryException $e) {
             $result = [

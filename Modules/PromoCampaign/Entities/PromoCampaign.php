@@ -151,7 +151,7 @@ class PromoCampaign extends Eloquent
 
 	public function promo_campaign_buyxgety_product_requirement()
     {
-        return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignBuyxgetyProductRequirement::class, 'id_promo_campaign', 'id_promo_campaign');
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignBuyxgetyProductRequirement::class, 'id_promo_campaign', 'id_promo_campaign');
     }
 
     public function promo_campaign_tier_discount_product()
