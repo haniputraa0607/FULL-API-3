@@ -1196,7 +1196,7 @@ class ApiPromotion extends Controller
 			$post = $request->json()->all();
 			$countUser = 0;
 
-			$queue = PromotionQueue::with(['content', 'content.promotion','user'])->where('send_at', '<=', $now)->orderBy('send_at', 'ASC')->limit(1000)->get();
+			$queue = PromotionQueue::with(['content', 'content.promotion','user'])->where('send_at', '<=', $now)->orderBy('send_at', 'ASC')->limit(3000)->get();
 			$dataPromotionSent = array();
 			foreach($queue as $key => $dataQueue){
 				SendPromotionJob::dispatch($dataQueue)->allOnConnection('database');
