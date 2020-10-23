@@ -63,7 +63,8 @@ class IPay88Controller extends Controller
         $post['Amount'] = $trx_ipay88->amount;
         $requery = $this->lib->reQuery($post, $post['Status']);
 
-        if($requery['valid']){
+        // should not update when request not valid or status cancelled (status Cancelled only allowed from backend notif)
+        if($requery['valid'] && $post['Status'] != '0'){
             $post['from_user'] = 1;
             $post['requery_response'] = $requery['response'];
             $this->lib->update($trx_ipay88,$post);
