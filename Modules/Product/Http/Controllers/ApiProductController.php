@@ -797,6 +797,7 @@ class ApiProductController extends Controller
                 $data['products'] = ProductModifier::select('product_modifiers.id_product_modifier','type','code','text as name','global_prices.global_price')
                     ->leftJoin('product_modifier_brands','product_modifier_brands.id_product_modifier','=','product_modifiers.id_product_modifier')
                     ->leftJoin(DB::raw('('.$subquery.') as global_prices'),'product_modifiers.id_product_modifier','=','global_prices.id_product_modifier')
+                    ->whereNotIn('type', ['Modifier Group'])
                     ->where(function($q) use ($post){
                         $q->where('id_brand',$post['id_brand'])
                             ->orWhere('modifier_type','<>','Global Brand');
@@ -820,6 +821,7 @@ class ApiProductController extends Controller
                 $data['brand'] = Brand::where('id_brand',$post['id_brand'])->first();
                 $data['products'] = ProductModifier::select('type','code','text as name')
                     ->leftJoin('product_modifier_brands','product_modifier_brands.id_product_modifier','=','product_modifiers.id_product_modifier')
+                    ->whereNotIn('type', ['Modifier Group'])
                     ->where(function($q) use ($post){
                         $q->where('id_brand',$post['id_brand'])
                             ->orWhere('modifier_type','<>','Global Brand');

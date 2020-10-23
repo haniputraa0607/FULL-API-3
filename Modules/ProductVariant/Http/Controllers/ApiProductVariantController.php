@@ -36,6 +36,10 @@ class ApiProductVariantController extends Controller
                         });
         }
 
+        if(isset($post['get_child']) && $post['get_child'] == 1){
+            $product_variant = $product_variant->whereNotNull('id_parent');
+        }
+
         if(isset($post['page'])){
             $product_variant = $product_variant->paginate($request->length?:10);
         }else{
