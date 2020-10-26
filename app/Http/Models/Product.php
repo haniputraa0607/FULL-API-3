@@ -244,7 +244,7 @@ class Product extends Model
             $variant_group_raws->addSelect('product_variant_group_price');
         }
 
-        $variant_group_raws->join('product_variant_group_details', function($join) use ($outlet) {
+        $variant_group_raws->leftJoin('product_variant_group_details', function($join) use ($outlet) {
             $join->on('product_variant_group_details.id_product_variant_group', '=', 'product_variant_groups.id_product_variant_group')
                 ->where('product_variant_group_details.id_outlet', $outlet['id_outlet']);
         })->where(function($query) {
@@ -253,7 +253,8 @@ class Product extends Model
                     $q2->whereNull('product_variant_group_details.product_variant_group_visibility')
                         ->where('product_variant_groups.product_variant_group_visibility', 'Visible');
                 });
-        })->where('product_variant_group_details.product_variant_group_status', '<>', 'Inactive');
+        })->whereRaw('coalesce(product_variant_group_details.product_variant_group_status, "Active") <> "Inactive"')
+        ->whereRaw('coalesce(product_variant_group_details.product_variant_group_stock_status, "Available") <> "Sold Out"');
 
         $variant_group_raws = $variant_group_raws->get()->toArray();
 
