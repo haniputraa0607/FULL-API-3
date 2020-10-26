@@ -3,6 +3,7 @@
 namespace Modules\ProductVariant\Http\Controllers;
 
 use App\Http\Models\Outlet;
+use App\Jobs\RefreshVariantTree;
 use App\Lib\MyHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -15,6 +16,8 @@ use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 use Modules\ProductVariant\Entities\ProductVariantPivot;
+use Modules\Product\Entities\ProductSpecialPrice;
+use Modules\Product\Entities\ProductGlobalPrice;
 
 class ApiProductVariantGroupController extends Controller
 {
@@ -79,11 +82,25 @@ class ApiProductVariantGroupController extends Controller
                 if($process){
                     $updt = ['product_variant_status' => 1];
                     Product::where('product_code', $request->product_code)->update($updt);
-                }
-
-                if($process){
-                    Product::refreshVariantTree($id_product['id_product'], true);
-                    Product::refreshVariantTree($id_product['id_product'], false);
+                    $basePrice = ProductVariantGroup::orderBy('product_variant_group_price', 'asc')->where('id_product', $id_product['id_product'])->first();
+                    $getAllOutlets = Outlet::get();
+                    foreach ($getAllOutlets as $o){
+                        Product::refreshVariantTree($id_product['id_product'], $o);
+                        if($o['outlet_different_price'] == 1){
+                            $basePriceDiferrentOutlet = ProductVariantGroup::join('product_variant_group_special_prices as pgsp', 'pgsp.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
+                                ->orderBy('product_variant_group_price', 'asc')
+                                ->select(DB::raw('(CASE
+                                        WHEN pgsp.product_variant_group_price is NOT NULL THEN pgsp.product_variant_group_price
+                                        ELSE product_variant_groups.product_variant_group_price END)  as product_variant_group_price'))
+                                ->where('id_product', $id_product['id_product'])->where('id_outlet', $o['id_outlet'])->first();
+                            if($basePriceDiferrentOutlet){
+                                ProductSpecialPrice::updateOrCreate(['id_outlet' => $o['id_outlet'], 'id_product' => $id_product['id_product']], ['product_special_price' => $basePriceDiferrentOutlet['product_variant_group_price']]);
+                            }else{
+                                ProductSpecialPrice::updateOrCreate(['id_outlet' => $o['id_outlet'], 'id_product' => $id_product['id_product']], ['product_special_price' => $basePrice['product_variant_group_price']]);
+                            }
+                        }
+                    }
+                    ProductGlobalPrice::updateOrCreate(['id_product' => $id_product['id_product']], ['product_global_price' => $basePrice['product_variant_group_price']]);
                 }
 
                 return response()->json(MyHelper::checkCreate($process));
@@ -583,6 +600,10 @@ class ApiProductVariantGroupController extends Controller
                 }
             }
         }
+
+        //update all product
+        RefreshVariantTree::dispatch([])->allOnConnection('database');
+
         $response = [];
 
         if($result['updated']){
