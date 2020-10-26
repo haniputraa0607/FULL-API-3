@@ -676,20 +676,25 @@ class PromoCampaignTools{
 				$minmax = $min_qty != $max_qty ? "$min_qty - $max_qty" : $min_qty;
 				$promo_product_array = $promo_product->toArray();
 				$promo_product_id = array_column($promo_product_array, 'id_product');
-				// $check_product = array_diff($promo_product_id, array_column($trxs, 'id_product'));
 
-				$check_product = array_udiff($promo_product_array, $trxs, function($a, $b) use ($promo_brand){
-					// check product brand
-					if (isset($b['id_brand']) && !in_array($b['id_brand'], $promo_brand)) {
-						return -1;
+				// check merged product with rule brand and rule product
+				$check_product = [];
+				foreach ($item_get_promo as $key => $val) {
+					if (!in_array($key, $promo_brand)) {
+						continue;
 					}
-					return $a['id_product'] - $b['id_product'];
-				});
+
+					foreach ($val as $key2 => $val2) {
+						if(in_array($key2, $promo_product_id)){
+							$check_product[$key2] = $key;
+						}
+					}
+				}
 
 				// promo product not available in cart?
 				if ($promo->product_rule === 'and') {
 					$product_name = 'semua product bertanda khusus';
-					if (!empty($check_product)) {
+					if (count($check_product) != count($promo_product)) {
 						$message = $this->getMessage('error_buyxgety_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
 						$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
@@ -699,7 +704,7 @@ class PromoCampaignTools{
 					}
 				}elseif($promo->product_rule === 'or') {
 					$product_name = 'product bertanda khusus';
-					if (count($promo_product) == count($check_product)) {
+					if (empty($check_product)) {
 						$message = $this->getMessage('error_buyxgety_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
 						$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
@@ -737,6 +742,27 @@ class PromoCampaignTools{
 					$errorProduct = 1;
 					return false;
 				}
+
+				// sum total quantity of same product
+				$item_get_promo = []; // include brand
+				$item_promo = []; // only product
+				foreach ($product as $key => $value) 
+				{
+					if (isset($item_promo[$value['id_product']])) {
+						$item_promo[$value['id_product']] += $value['qty'];
+					}
+					else{
+						$item_promo[$value['id_product']] = $value['qty'];
+					}
+
+					if (isset($item_get_promo[$value['id_brand']][$value['id_product']])) {
+						$item_get_promo[$value['id_brand']][$value['id_product']] += $value['qty'];
+					}
+					else{
+						$item_get_promo[$value['id_brand']][$value['id_product']] = $value['qty'];
+					}
+				}
+
 				//find promo
 				$promo_rules=$promo[$source.'_buyxgety_rules'];
 				$promo_rule=false;
@@ -760,12 +786,7 @@ class PromoCampaignTools{
 								$max_qty = $rule->max_qty_requirement;
 							}
 							
-							$a[] = [
-								'min_qty' => $rule->min_qty_requirement, 
-								'qty' => $item_get_promo[$val['id_brand']][$val['id_product']],
-								// 'rule' => $rule
-							];
-							if($rule->min_qty_requirement > $item_get_promo[$val['id_brand']][$val['id_product']]){
+							if($rule->min_qty_requirement > $item_promo[$val['id_product']]){
 								if (empty($temp_rule_key[$key])) {
 									$req_valid = false;
 									break;
@@ -825,7 +846,6 @@ class PromoCampaignTools{
 					$errors[]="Product benefit not found.";
 					return false;
 				}
-
 
 				$benefit_qty	= $promo_rule->benefit_qty;
 				$benefit_value 	= $promo_rule->discount_value;
