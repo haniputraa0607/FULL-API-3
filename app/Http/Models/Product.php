@@ -185,6 +185,12 @@ class Product extends Model
         return 'product_get_variant_tree_'.$id_product.'_'.$outlet['id_outlet'].'_'.($with_index ? 'true' : 'false');
     }
 
+    public function product_variant_group(){
+        return $this->hasMany(\Modules\ProductVariant\Entities\ProductVariantGroup::class,'id_product','id_product')
+            ->join('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
+            ->join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
+    }
+
     /**
      * Generate fresh product variant tree
      * @param  integer  $id_product     id of product
