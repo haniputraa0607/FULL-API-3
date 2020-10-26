@@ -67,7 +67,7 @@ class GeneratePromotionRecipient implements ShouldQueue
 							// $users = User::whereIn('id', $idUsers)->get();
 		
 							if($idUsers){
-					            $idUsers->chunk(500,function($users) use ($content, $timeNow){
+					            $idUsers->chunkById(1000,function($users) use ($content, $timeNow){
 
 									$dataPromotionQueue = [];
 					                foreach ($users as $user) {
@@ -138,7 +138,7 @@ class GeneratePromotionRecipient implements ShouldQueue
 
 			        // db::beginTransaction();
 					if($userFilter){
-			            $userFilter->chunk(500,function($users) use ($promotion, $timeNow){
+			            $userFilter->chunkById(1000,function($users) use ($promotion, $timeNow){
 							$dataPromotionQueue = [];
 			                foreach ($users as $user) {
 			                    $queue['id_user'] 				= $user['id'];
