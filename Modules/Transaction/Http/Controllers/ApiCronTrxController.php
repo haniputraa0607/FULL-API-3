@@ -483,7 +483,14 @@ class ApiCronTrxController extends Controller
                 ->whereNull('reject_at')
                 ->whereNull('taken_by_system_at')
                 ->whereDate('transactions.transaction_date',date('Y-m-d'))
-                ->where('transaction_date','<',$max_time)
+                ->where(function($query) use ($max_time) {
+                    $query->where(function($query2) use ($max_time) {
+                        $query2->whereNotNull('completed_at')->where('completed_at', '<', $max_time);
+                    })
+                    ->orWhere(function($query2) use ($max_time) {
+                        $query2->whereNull('completed_at')->where('transaction_date', '<', $max_time);
+                    });
+                })
                 ->get();
 
             $reason = 'auto reject order by system';
