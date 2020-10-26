@@ -246,7 +246,9 @@ class IPay88
 				'amount' => $grandtotal*100,
 				'payment_id' => $this->getPaymentId($post['payment_id']??''),
 				'payment_method' => $this->getPaymentMethod($post['payment_id']??''),
-				'user_contact' => $post['phone']??null
+				'user_contact' => $post['phone']??null,
+		        'merchant_code' => $this->merchant_code,
+		        'ref_no' => $data['transaction_receipt_number'] ?? '',
 			];
 
 			$result = TransactionPaymentIpay88::create($toInsert);
@@ -289,9 +291,12 @@ class IPay88
             		$amount = $model->amount / 100;
             	}
             	$trx = Transaction::with('user','outlet')->where('id_transaction',$id_transaction)->first();
-            	if ($trx->transaction_payment_status != 'Pending') {
+            	if ($trx->transaction_payment_status == 'Cancelled' && $data['Status'] == '1') { // kalau di kita cancel dari ipay success, void
+            		$this->void($model);
             		return 1;
-            	};
+            	} elseif ($trx->transaction_payment_status != 'Pending') {
+            		return 1;
+            	}
             	if (!$amount) {
             		$amount = $trx->transaction_grandtotal;
             	}
@@ -435,9 +440,12 @@ class IPay88
             	}
     			$deals_user = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')->with('userMid')->where('id_deals_user',$id_deals_user)->first();
     			$deals = Deal::where('id_deals',$deals_user->id_deals)->first();
-            	if ($deals_user->paid_status != 'Pending') {
+            	if ($deals_user->paid_status == 'Cancelled' && $data['Status'] == '1') { // kalau di kita cancel dari ipay success, void
+            		$this->void($model, 'deals');
             		return 1;
-            	};
+            	} elseif ($deals_user->paid_status != 'Pending') {
+            		return 1;
+            	}
             	switch ($data['Status']) {
             		case '1':
             			if ($deals_user->paid_status == 'Completed') {
@@ -525,9 +533,12 @@ class IPay88
             case 'subscription':
     			$subscription_user = SubscriptionUser::with('user')->where('id_subscription_user',$model->id_subscription_user)->first();
     			$subscription = Subscription::where('id_subscription',$model->id_subscription)->first();
-            	if ($subscription_user->paid_status != 'Pending') {
+            	if ($subscription_user->paid_status == 'Cancelled' && $data['Status'] == '1') { // kalau di kita cancel dari ipay success, void
+            		$this->void($model, 'subscription');
             		return 1;
-            	};
+            	} elseif ($subscription_user->paid_status != 'Pending') {
+            		return 1;
+            	}
             	switch ($data['Status']) {
             		case '1':
             			if ($subscription_user->paid_status == 'Completed') {
@@ -884,12 +895,25 @@ class IPay88
     				$model = TransactionPaymentIpay88::where('id_transaction',$model)->first();
     				break;
 
+    			case 'deals':
+    				$model = DealsPaymentIpay88::where('id_deals_user',$model)->first();
+    				break;
+
+    			case 'trx':
+    				$model = SubscriptionPaymentIpay88::where('id_subscription_user',$model)->first();
+    				break;
+
     			default:
     				return false;
     		}
     	}
+
+    	if (!$model) {
+    		return true;
+    	}
+
 		$submitted = $this->signVoid([
-			'MerchantCode' => $model['merchant_code'],
+			'MerchantCode' => $model['merchant_code'] ?: $this->merchant_code,
 			'RefNo' => $model['ref_no'],
 			'Reason' => 'Pengembalian dana',
 			'Amount' => $model['amount']/100

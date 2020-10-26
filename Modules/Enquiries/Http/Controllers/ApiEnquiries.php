@@ -2,10 +2,12 @@
 
 namespace Modules\Enquiries\Http\Controllers;
 
+use App\Http\Models\AutocrmPushLog;
 use App\Http\Models\Enquiry;
 use App\Http\Models\EnquiriesPhoto;
 use App\Http\Models\Setting;
 use App\Http\Models\Outlet;
+use App\Http\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -459,15 +461,26 @@ class ApiEnquiries extends Controller
                     }
 					// return $dataOptional;
 
-					$deviceToken = array($check['enquiry_device_token']);
+                    $deviceToken = PushNotificationHelper::searchDeviceToken("phone", $check['enquiry_phone']);
 
 
                     $subject = app($this->autocrm)->TextReplace($post['reply_push_subject'], $check['enquiry_phone'], $aditionalVariabel);
                     $content = app($this->autocrm)->TextReplace($post['reply_push_content'], $check['enquiry_phone'], $aditionalVariabel);
 
-					if (!empty($deviceToken)) {
-							$push = PushNotificationHelper::sendPush($deviceToken, $subject, $content, $image, $dataOptional);
-							// return $push;
+                    if (!empty($deviceToken)) {
+                        if (isset($deviceToken['token']) && !empty($deviceToken['token'])) {
+                            $push = PushNotificationHelper::sendPush($deviceToken, $subject, $content, $image, $dataOptional);
+                            $getUser = User::where('phone', $check['enquiry_phone'])->first();
+                            if (isset($push['success']) && $push['success'] > 0 && $getUser) {
+                                $logData = [];
+                                $logData['id_user'] = $getUser['id'];
+                                $logData['push_log_to'] = $getUser['phone'];
+                                $logData['push_log_subject'] = $subject;
+                                $logData['push_log_content'] = $content;
+
+                                $logs = AutocrmPushLog::create($logData);
+                            }
+                        }
 					}
 				} catch (\Exception $e) {
 					return response()->json(MyHelper::throwError($e));
