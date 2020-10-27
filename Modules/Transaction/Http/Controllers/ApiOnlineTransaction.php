@@ -996,7 +996,8 @@ class ApiOnlineTransaction extends Controller
             //update when total = 0
             if(($transaction['transaction_grandtotal'] - $subscription_total) == 0){
                 $updateTrx = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
-                    'transaction_payment_status' => 'Completed'
+                    'transaction_payment_status' => 'Completed', 
+                    'completed_at' => date('Y-m-d H:i:s')
                 ]);
                 $insertTransaction['transaction_payment_status'] = 'Completed'; 
                 $insertTransaction['transaction_grandtotal'] = 0;
