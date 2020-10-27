@@ -69,6 +69,20 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
         Route::post('update-detail', 'ApiProductModifierController@updateDetail');
     });
 
+    /* product modifier group */
+    Route::group(['prefix' => 'modifier-group'], function() {
+        Route::any('/', 'ApiProductModifierGroupController@index');
+        Route::post('create', 'ApiProductModifierGroupController@store');
+        Route::post('update', 'ApiProductModifierGroupController@update');
+        Route::post('delete', 'ApiProductModifierGroupController@destroy');
+        Route::post('list-price', 'ApiProductModifierGroupController@listPrice');
+        Route::post('list-detail', 'ApiProductModifierGroupController@listDetail');
+        Route::get('export', 'ApiProductModifierGroupController@export');
+        Route::post('import', 'ApiProductModifierGroupController@import');
+        Route::get('export-price', 'ApiProductModifierGroupController@exportPrice');
+        Route::post('import-price', 'ApiProductModifierGroupController@importPrice');
+    });
+
     Route::group(['prefix' => 'category'], function() {
         Route::any('be/list', 'ApiCategoryController@listCategory');
         Route::post('position/assign', 'ApiCategoryController@positionCategoryAssign');

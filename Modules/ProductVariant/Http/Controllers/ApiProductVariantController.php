@@ -2,11 +2,13 @@
 
 namespace Modules\ProductVariant\Http\Controllers;
 
+use App\Jobs\RefreshVariantTree;
 use App\Lib\MyHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Http\Models\Product;
+use Illuminate\Support\Facades\Artisan;
 use Modules\ProductVariant\Entities\ProductVariant;
 use DB;
 use Illuminate\Support\Facades\Log;
@@ -24,7 +26,7 @@ class ApiProductVariantController extends Controller
     public function index(Request $request)
     {
         $post = $request->all();
-        $product_variant = ProductVariant::with(['product_variant_parent', 'product_variant_child']);
+        $product_variant = ProductVariant::with(['product_variant_parent', 'product_variant_child'])->orderBy('updated_at', 'desc');
 
         if ($keyword = ($request->search['value']??false)) {
             $product_variant->where('product_variant_name', 'like', '%'.$keyword.'%')
@@ -34,6 +36,10 @@ class ApiProductVariantController extends Controller
                         ->orWhereHas('product_variant_child', function($q) use ($keyword) {
                             $q->where('product_variant_name', 'like', '%'.$keyword.'%');
                         });
+        }
+
+        if(isset($post['get_child']) && $post['get_child'] == 1){
+            $product_variant = $product_variant->whereNotNull('id_parent');
         }
 
         if(isset($post['page'])){
@@ -186,6 +192,8 @@ class ApiProductVariantController extends Controller
             }
 
             DB::commit();
+            //update all product
+            RefreshVariantTree::dispatch([])->allOnConnection('database');
             return response()->json(['status' => 'success']);
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
@@ -205,6 +213,8 @@ class ApiProductVariantController extends Controller
         if($delete){
             $delete = $this->deleteChild($id_product_variant);
         }
+        //update all product
+        RefreshVariantTree::dispatch([])->allOnConnection('database');
 
         return MyHelper::checkDelete($delete);
     }
@@ -288,6 +298,9 @@ class ApiProductVariantController extends Controller
             }
         }
         $response = [];
+
+        //update all product
+        RefreshVariantTree::dispatch([])->allOnConnection('database');
 
         if($result['updated']){
             $response[] = 'Update '.$result['updated'].' product variant';

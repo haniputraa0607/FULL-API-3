@@ -222,6 +222,8 @@ class ApiProductVariantGroupController extends Controller
 
         }
         DB::commit();
+        //update all product
+        RefreshVariantTree::dispatch([])->allOnConnection('database');
         return ['status' => 'success'];
     }
 
@@ -310,6 +312,9 @@ class ApiProductVariantGroupController extends Controller
                     'messages' => ['Update detail fail'],
                 ];
             }
+            $selectGroup = ProductVariantGroup::where('id_product_variant_group', $id_product_modifier)->first();
+            $outlet = Outlet::where('id_outlet', $id_outlet)->first();
+            Product::refreshVariantTree($selectGroup['id_product'], $outlet);
         }
         DB::commit();
         return ['status' => 'success'];
@@ -317,24 +322,29 @@ class ApiProductVariantGroupController extends Controller
 
     public function export(Request $request){
         $data = Product::with(['product_variant_group'])->get()->toArray();
-        $parent = ProductVariant::whereNull('id_parent')->get()->toArray();
+        $parent = ProductVariant::whereNull('id_parent')->with(['product_variant_child'])->get()->toArray();
 
         $arr = [];
         foreach ($data as $key=>$dt){
             $arr[$key] = [
                 'product_name' => $dt['product_name'],
                 'product_code' => $dt['product_code'],
-                'use_variant_status' => ($dt['product_variant_status'] == 1 ? 'YES' : 'NO')
+                'use_product_variant_status' => ($dt['product_variant_status'] == 1 ? 'YES' : 'NO')
             ];
 
             foreach ($parent as $p){
+                $name = '';
+                if(!empty($p['product_variant_child'])){
+                    $child = array_column($p['product_variant_child'], 'product_variant_name');
+                    $name = '('.implode(',',$child).')';
+                }
                 $variant = [];
                 foreach ($dt['product_variant_group'] as $pg){
                     if($pg['id_parent'] == $p['id_product_variant'] && array_search($pg['product_variant_name'],$variant) === false){
                         $variant[] = $pg['product_variant_name'];
                     }
                 }
-                $arr[$key][$p['product_variant_name']] = implode(',', $variant);
+                $arr[$key][$p['product_variant_name'].' '.$name] = implode(',', $variant);
             }
         }
         return response()->json(MyHelper::checkGet($arr));
@@ -360,17 +370,17 @@ class ApiProductVariantGroupController extends Controller
                 continue;
             }
 
-            if(empty($value['use_variant_status'])){
+            if(empty($value['use_product_variant_status'])){
                 $result['invalid']++;
                 continue;
             }
             $arrVariantGroup = [];
             $products = Product::where('product_code', $value['product_code'])->first();
-            $update = Product::where('product_code', $value['product_code'])->update(['product_variant_status' => (strtolower($value['use_variant_status']) == 'yes' ? 1 : 0)]);
-            if(strtolower($value['use_variant_status']) == 'yes'){
+            $update = Product::where('product_code', $value['product_code'])->update(['product_variant_status' => (strtolower($value['use_product_variant_status']) == 'yes' ? 1 : 0)]);
+            if(strtolower($value['use_product_variant_status']) == 'yes'){
                 unset($value['product_code']);
                 unset($value['product_name']);
-                unset($value['use_variant_status']);
+                unset($value['use_product_variant_status']);
                 $newArr = [];
                 foreach ($value as $new){
                     $explode = explode(",",$new);
@@ -435,6 +445,8 @@ class ApiProductVariantGroupController extends Controller
                 }
             }
         }
+        //update all product
+        RefreshVariantTree::dispatch([])->allOnConnection('database');
 
         $response = [];
 
@@ -494,8 +506,8 @@ class ApiProductVariantGroupController extends Controller
             $name = implode(',',$arr);
             $arrProductVariant[$key] = [
                 'product' => $pv['product_code'].' - '.$pv['product_name'],
-                'current_product_variant_group_code' => $pv['product_variant_group_code'],
-                'new_product_variant_group_code' => '',
+                'current_product_variant_code' => $pv['product_variant_group_code'],
+                'new_product_variant_code' => '',
                 'product_variant_group' => $name,
                 'global_price' => $pv['global_price']
             ];
@@ -531,29 +543,29 @@ class ApiProductVariantGroupController extends Controller
         $data = $post['data'][0]??[];
 
         foreach ($data as $key => $value) {
-            if(empty($value['current_product_variant_group_code'])){
+            if(empty($value['current_product_variant_code'])){
                 $result['invalid']++;
                 continue;
             }
             if(empty($value['product'])){
                 unset($value['product']);
             }
-            if(empty($value['product_variant_group'])){
-                unset($value['product_variant_group']);
+            if(empty($value['product_variant'])){
+                unset($value['product_variant']);
             }
 
             $productVariantGroup = ProductVariantGroup::where([
-                    'product_variant_group_code' => $value['current_product_variant_group_code']
+                    'product_variant_group_code' => $value['current_product_variant_code']
                 ])->first();
             if(!$productVariantGroup){
                 $result['not_found']++;
-                $result['more_msg_extended'][] = "Product variant with code {$value['current_product_variant_group_code']} not found";
+                $result['more_msg_extended'][] = "Product variant with code {$value['current_product_variant_code']} not found";
                 continue;
             }
 
             $datUpdate = ['product_variant_group_price'=>$value['global_price']];
-            if(!empty($value['new_product_variant_group_code'])){
-                $datUpdate['product_variant_group_code'] = $value['new_product_variant_group_code'];
+            if(!empty($value['new_product_variant_code'])){
+                $datUpdate['product_variant_group_code'] = $value['new_product_variant_code'];
             }
             $update1 = ProductVariantGroup::where([
                 'id_product_variant_group' => $productVariantGroup['id_product_variant_group']
@@ -582,7 +594,7 @@ class ApiProductVariantGroupController extends Controller
                         $id_outlet = Outlet::select('id_outlet')->where('outlet_code',$outlet_code)->pluck('id_outlet')->first();
                         if(!$id_outlet){
                             $result['updated_price_fail']++;
-                            $result['more_msg_extended'][] = "Failed create new price for product variant group {$value['product_variant_group_code']} at outlet $outlet_code failed";
+                            $result['more_msg_extended'][] = "Failed create new price for product variant group {$value['product_variant_code']} at outlet $outlet_code failed";
                             continue;
                         }
                         $update = ProductVariantGroupSpecialPrice::create([
@@ -595,7 +607,7 @@ class ApiProductVariantGroupController extends Controller
                         $result['updated']++;
                     }else{
                         $result['no_update']++;
-                        $result['more_msg_extended'][] = "Failed set price for product variant group {$value['product_variant_group_code']} at outlet $outlet_code failed";
+                        $result['more_msg_extended'][] = "Failed set price for product variant group {$value['product_variant_code']} at outlet $outlet_code failed";
                     }
                 }
             }
