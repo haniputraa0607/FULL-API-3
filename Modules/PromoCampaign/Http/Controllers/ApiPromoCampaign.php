@@ -62,6 +62,7 @@ use App\Http\Models\Treatment;
 use App\Http\Models\Deal;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsPromotionTemplate;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
 
 use Modules\PromoCampaign\Http\Requests\Step1PromoCampaignRequest;
 use Modules\PromoCampaign\Http\Requests\Step2PromoCampaignRequest;
@@ -1994,24 +1995,53 @@ class ApiPromoCampaign extends Controller
             $data = Outlet::select('id_outlet', DB::raw('CONCAT(outlet_code, " - ", outlet_name) AS outlet'));
 
             if (!empty($post['brand'])) {
-            	$data = $data->whereHas('brands',function($query) use ($post){
-                    $query->where('brands.id_brand',$post['brand']);
-                });
+                foreach ($post['brand'] as $value) {
+	                $data = $data->whereHas('brands',function($query) use ($value){
+			                    $query->where('brands.id_brand',$value);
+			                });
+	            }
             }
             
             $data = $data->get()->toArray();
         } 
         elseif ($post['get'] == 'Product') 
         {
-            $data = Product::select('id_product', DB::raw('CONCAT(product_code, " - ", product_name) AS product'));
+            $data = Product::select('products.id_product', 'brands.id_brand' ,DB::raw('CONCAT(name_brand, " - ", product_code, " - ", product_name) AS product'),DB::raw('CONCAT(products.id_product, ".", brands.id_brand) AS id_product'))
+            		->leftJoin('brand_product', 'products.id_product', '=', 'brand_product.id_product')
+            		->join('brands', 'brands.id_brand', '=', 'brand_product.id_brand')
+            		->groupBy('brand_product.id_brand_product')
+            		->orderBy('brands.id_brand');
 
-            if (!empty($post['brand'])) {
-            	$data = $data->whereHas('brands',function($query) use ($post){
-                    $query->where('brands.id_brand',$post['brand']);
-                });
+	        if (!empty($post['brand'])) {
+                $data = $data->whereIn('brands.id_brand',$post['brand']);
             }
-            
+
             $data = $data->get()->toArray();
+        }
+        elseif ($post['get'] == 'Product Variant') {
+        	$data = ProductVariantGroup::where('id_product', $post['id_product'])
+        			->where('product_variant_group_visibility', 'Visible')
+        			->whereDoesntHave('product_variant_pivot.product_variant', function($q){
+        				$q->where('product_variant_visibility', 'Hidden');
+        			})
+        			->with(['product_variant_pivot'])
+        			->get();
+
+        	if ($data) {
+        		$new_data = [];
+        		foreach ($data as $key => $value) {
+        			$name = $value->product_variant_pivot->pluck('product_variant_name')->toArray();
+        			$name = implode(', ', $name);
+
+        			$temp_data = [
+        				'id_product_variant_group' => $value['id_product_variant_group'],
+        				'product_variant_group_code' => $value['product_variant_group_code'],
+        				'product_variant_group_name' => $name
+        			];
+        			$new_data[] = $temp_data;
+        		}
+        		$data = $new_data;
+        	}
         } 
         else 
         {
