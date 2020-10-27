@@ -38,6 +38,7 @@ class PromoCampaignBuyxgetyProductRequirement extends Eloquent
 	protected $fillable = [
 		'id_promo_campaign',
 		'id_product',
+		'id_brand',
 		'id_product_category'
 	];
 

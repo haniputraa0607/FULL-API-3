@@ -38,7 +38,8 @@ class PromoCampaignProductDiscount extends Eloquent
 	protected $fillable = [
 		'id_promo_campaign',
 		'id_product',
-		'id_product_category'
+		'id_product_category',
+		'id_brand'
 	];
 
 	public function product()

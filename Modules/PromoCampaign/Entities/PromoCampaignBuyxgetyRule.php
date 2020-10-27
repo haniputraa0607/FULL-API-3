@@ -45,10 +45,12 @@ class PromoCampaignBuyxgetyRule extends Eloquent
 		'min_qty_requirement',
 		'max_qty_requirement',
 		'benefit_id_product',
+		'id_product_variant_group',
 		'benefit_qty',
 		'discount_type',
 		'discount_value',
-		'max_percent_discount'
+		'max_percent_discount',
+		'id_brand'
 	];
 
 	public function product()
