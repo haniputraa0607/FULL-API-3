@@ -693,7 +693,7 @@ Detail: ".$link['short'],
                     $check = LogTopup::where('id_log_topup', $trx['logTopup']['id_log_topup'])->update(['topup_payment_status' => 'Completed', 'payment_type' => 'Midtrans']);
 
                     if ($check) {
-                        $upTrx = Transaction::where('id_transaction', $trx['id_transaction'])->update(['transaction_payment_status' => 'Completed']);
+                        $upTrx = Transaction::where('id_transaction', $trx['id_transaction'])->update(['transaction_payment_status' => 'Completed', 'completed_at' => date('Y-m-d H:i:s')]);
                         if (!$upTrx) {
                             return false;
                         }
@@ -915,7 +915,7 @@ Detail: ".$link['short'],
             if ($midtrans['transaction_status'] == 'refund' ) {
                 return true;
             }elseif ($midtrans['transaction_status'] == 'capture' || $midtrans['transaction_status'] == 'settlement') {
-                $check = Transaction::where('id_transaction', $trx->id_transaction)->update(['transaction_payment_status' => 'Completed']);
+                $check = Transaction::where('id_transaction', $trx->id_transaction)->update(['transaction_payment_status' => 'Completed', 'completed_at' => date('Y-m-d H:i:s')]);
                 if (!$check) {
                     return false;
                 }
