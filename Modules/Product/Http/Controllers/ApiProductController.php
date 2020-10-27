@@ -26,6 +26,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Validator;
 use Hash;
 use DB;
@@ -1125,6 +1126,10 @@ class ApiProductController extends Controller
     	$save = Product::where('id_product', $post['id_product'])->update($data);
 
     	if($save){
+            if(isset($data['product_variant_status']) && !empty($data['product_variant_status'])){
+                ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']], ['product_global_price' => 0]);
+            }
+
             if(isset($post['photo'])){
                 //delete all photo
                 $delete = $this->deletePhoto($post['id_product']);
