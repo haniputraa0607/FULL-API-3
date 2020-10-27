@@ -104,7 +104,9 @@ class ProductVariant extends Model
                 $child->variant = self::getVariantChildren($child, $variants);
                 $childs[$key] = $child->toArray();
             }
-            return $childs;
+            $variant_res = $variant->toArray();
+            $variant_res['childs'] = $childs;
+            return $variant_res;
         } elseif ($variants['_root']['childs']) {
             $starter = array_shift($variants['_root']['childs']);
             while($variants['_root']['childs'] && !isset($variants[$starter['id_product_variant']])) {
