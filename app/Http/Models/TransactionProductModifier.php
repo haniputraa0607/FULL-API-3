@@ -22,6 +22,7 @@ class TransactionProductModifier extends Model
 		'id_transaction',
 		'id_product',
 		'id_product_modifier',
+		'id_product_modifier_group',
 		'id_outlet',
 		'id_user',
 		'type',

@@ -12,6 +12,7 @@ use Cache;
 use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use App\Lib\MyHelper;
+use Modules\Product\Entities\ProductModifierGroup;
 
 /**
  * Class Product
@@ -244,7 +245,7 @@ class Product extends Model
             $variant_group_raws->addSelect('product_variant_group_price');
         }
 
-        $variant_group_raws->join('product_variant_group_details', function($join) use ($outlet) {
+        $variant_group_raws->leftJoin('product_variant_group_details', function($join) use ($outlet) {
             $join->on('product_variant_group_details.id_product_variant_group', '=', 'product_variant_groups.id_product_variant_group')
                 ->where('product_variant_group_details.id_outlet', $outlet['id_outlet']);
         })->where(function($query) {
@@ -253,7 +254,8 @@ class Product extends Model
                     $q2->whereNull('product_variant_group_details.product_variant_group_visibility')
                         ->where('product_variant_groups.product_variant_group_visibility', 'Visible');
                 });
-        })->where('product_variant_group_details.product_variant_group_status', '<>', 'Inactive');
+        })->whereRaw('coalesce(product_variant_group_details.product_variant_group_status, "Active") <> "Inactive"')
+        ->whereRaw('coalesce(product_variant_group_details.product_variant_group_stock_status, "Available") <> "Sold Out"');
 
         $variant_group_raws = $variant_group_raws->get()->toArray();
 
@@ -269,6 +271,61 @@ class Product extends Model
         // merge product variant tree and product's product variant group
         self::recursiveCheck($variants, $variant_groups, [], $with_index);
 
+        // get list modifiers group order by name where id_product or id_variant
+        $modifier_groups_raw = ProductModifierGroup::select('product_modifier_groups.id_product_modifier_group', 'product_modifier_group_name', \DB::raw('GROUP_CONCAT(id_product) as id_products, GROUP_CONCAT(id_product_variant) as id_product_variants'))->join('product_modifier_group_pivots', 'product_modifier_groups.id_product_modifier_group', 'product_modifier_group_pivots.id_product_modifier_group')->where('id_product', $id_product)->orWhereIn('id_product_variant', $list_variants)->groupBy('product_modifier_groups.id_product_modifier_group')->orderBy('product_modifier_group_name')->get()->toArray();
+        // ambil modifier + harga + yang visible dll berdasarkan modifier group
+        $modifier_groups = [];
+        foreach ($modifier_groups_raw as $key => &$modifier_group) {
+            $modifiers = ProductModifier::select('product_modifiers.id_product_modifier as id_product_variant', 'product_modifier_price as product_variant_price', 'text as product_variant_name', \DB::raw('coalesce(product_modifier_stock_status, "Available") as product_variant_stock_status'))
+                ->where('modifier_type', 'Modifier Group')
+                ->where('id_product_modifier_group', $modifier_group['id_product_modifier_group'])
+                ->leftJoin('product_modifier_details', function($join) use ($outlet) {
+                    $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+                        ->where('product_modifier_details.id_outlet',$outlet['id_outlet']);
+                })
+                ->where(function($query){
+                    $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
+                    ->orWhere(function($q){
+                        $q->whereNull('product_modifier_details.product_modifier_visibility')
+                        ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                    });
+                })
+                ->where(function($q){
+                    $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                })
+                ->where(function($q){
+                    $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+                })
+                ->groupBy('product_modifiers.id_product_modifier');
+            if ($outlet['outlet_diferent_price']) {
+                $modifiers->join('product_modifier_prices', function($join) use ($outlet) {
+                    $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier')
+                        ->where('product_modifier_prices.id_outlet',$outlet['id_outlet']);
+                });
+            } else {
+                $modifiers->join('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+            }
+            $modifiers = $modifiers->get()->toArray();
+            if (!$modifiers) {
+                unset($modifier_groups[$key]);
+            }
+            $modifier_group['childs'] = $modifiers;
+            if (in_array($id_product, explode(',', $modifier_group['id_products']))) {
+                unset($modifier_group['id_products']);
+                unset($modifier_group['id_product_variants']);
+                $modifier_groups['*'][$modifier_group['id_product_modifier_group']] = $modifier_group;
+            } else {
+                $id_product_variants = explode(',', $modifier_group['id_product_variants']);
+                unset($modifier_group['id_products']);
+                unset($modifier_group['id_product_variants']);
+                foreach ($id_product_variants as $id_product_variant) {
+                    $modifier_groups[$id_product_variant][$modifier_group['id_product_modifier_group']] = $modifier_group;
+                }
+            }
+        }
+        // masukan ke dalam vaiants
+        // \Log::debug($variants);
+        // self::mergeModifierGroup($variants, $modifier_groups);
         // get base price and unset from array [for nice array structure]
         $base_price = $variants['product_variant_group_price'];
         unset($variants['product_variant_group_price']);
@@ -492,5 +549,32 @@ class Product extends Model
             }
         }
         return false;
+    }
+
+    /**
+     * Merge product modifiers 
+     * @param  [type] $variants        [description]
+     * @param  [type] $modifier_groups [description]
+     * @return [type]                  [description]
+     */
+    public static function mergeModifierGroup($variants, $modifier_groups, $selected_id = [], $id_product_variant_group = null)
+    {
+        foreach ($variants['childs']??[] as $variant) {
+            \Log::debug('variants', $selected_id);
+            if($variant['variant']) {
+                $new_selected_id = array_merge($selected_id, [$variant['variant']['id_product_variant']]);
+                self::mergeModifierGroup($variant['variant'], $modifier_groups, $new_selected_id, $id_product_variant_group);
+            } else {
+                // ambil kemungkinan modifier group
+                $modifiers = $modifier_groups['*']??[];
+                foreach($selected_id as $variant_id) {
+                    $modifiers = array_merge($modifiers, $modifier_groups[$variant_id]??[]);
+                }
+                \Log::debug($modifiers);
+                // loop modifier group
+                // tambah
+                // loop masuk
+            }
+        }
     }
 }
