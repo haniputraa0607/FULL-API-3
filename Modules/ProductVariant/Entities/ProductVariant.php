@@ -41,7 +41,7 @@ class ProductVariant extends Model
     public static function getVariantTree($variants = [])
     {
         $to_select = ['id_product_variant', 'product_variant_name', 'id_parent', 'product_variant_order'];
-        $variants_raw = self::select($to_select)->orderBy('product_variant_order');
+        $variants_raw = self::select($to_select)->where('product_variant_visibility', 'Visible')->orderByRaw('CASE WHEN product_variant_order is not null then 1 else 2 end')->orderBy('product_variant_order');
         if ($variants) {
             $variants_raw->whereIn('id_product_variant', $variants)->orWhereNull('id_parent');
         }
@@ -86,11 +86,9 @@ class ProductVariant extends Model
             return [];
         }
 
-        $starter->append('childs');
-
-        $starter->childs = $pc[$starter['id_product_variant']]['childs'];
 
         $starter = $starter->toArray();
+        $starter['childs'] = $pc[$starter['id_product_variant']]['childs'];
 
         foreach ($starter['childs'] as &$child) {
             $child->variant = self::getVariantChildren($child,$pc);
@@ -109,6 +107,9 @@ class ProductVariant extends Model
             return $childs;
         } elseif ($variants['_root']['childs']) {
             $starter = array_shift($variants['_root']['childs']);
+            while($variants['_root']['childs'] && !isset($variants[$starter['id_product_variant']])) {
+                $starter = array_shift($variants['_root']['childs']);
+            }
             foreach ($variants[$starter['id_product_variant']]['childs']??[] as $key => $child) {
                 $child->variant = self::getVariantChildren($child, $variants);
                 $variants[$starter['id_product_variant']]['childs'][$key] = $child->toArray();
