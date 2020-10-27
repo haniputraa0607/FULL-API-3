@@ -313,18 +313,19 @@ class Product extends Model
             if (in_array($id_product, explode(',', $modifier_group['id_products']))) {
                 unset($modifier_group['id_products']);
                 unset($modifier_group['id_product_variants']);
-                $modifier_groups['*'][] = $modifier_group;
+                $modifier_groups['*'][$modifier_group['id_product_modifier_group']] = $modifier_group;
             } else {
                 $id_product_variants = explode(',', $modifier_group['id_product_variants']);
                 unset($modifier_group['id_products']);
                 unset($modifier_group['id_product_variants']);
                 foreach ($id_product_variants as $id_product_variant) {
-                    $modifier_groups[$id_product_variant][] = $modifier_group;
+                    $modifier_groups[$id_product_variant][$modifier_group['id_product_modifier_group']] = $modifier_group;
                 }
             }
         }
         // masukan ke dalam vaiants
-
+        // \Log::debug($variants);
+        // self::mergeModifierGroup($variants, $modifier_groups);
         // get base price and unset from array [for nice array structure]
         $base_price = $variants['product_variant_group_price'];
         unset($variants['product_variant_group_price']);
@@ -548,5 +549,32 @@ class Product extends Model
             }
         }
         return false;
+    }
+
+    /**
+     * Merge product modifiers 
+     * @param  [type] $variants        [description]
+     * @param  [type] $modifier_groups [description]
+     * @return [type]                  [description]
+     */
+    public static function mergeModifierGroup($variants, $modifier_groups, $selected_id = [], $id_product_variant_group = null)
+    {
+        foreach ($variants['childs']??[] as $variant) {
+            \Log::debug('variants', $selected_id);
+            if($variant['variant']) {
+                $new_selected_id = array_merge($selected_id, [$variant['variant']['id_product_variant']]);
+                self::mergeModifierGroup($variant['variant'], $modifier_groups, $new_selected_id, $id_product_variant_group);
+            } else {
+                // ambil kemungkinan modifier group
+                $modifiers = $modifier_groups['*']??[];
+                foreach($selected_id as $variant_id) {
+                    $modifiers = array_merge($modifiers, $modifier_groups[$variant_id]??[]);
+                }
+                \Log::debug($modifiers);
+                // loop modifier group
+                // tambah
+                // loop masuk
+            }
+        }
     }
 }
