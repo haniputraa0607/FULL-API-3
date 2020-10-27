@@ -1417,10 +1417,11 @@ class ApiPromoCampaign extends Controller
         } else {
             $dataProduct = [];
             for ($i = 0; $i < count($product); $i++) {
-                $dataProduct[$i]['id_product']           = array_values($product)[$i];
-                $dataProduct[$i][$id_table]    			 = $id_post;
-                $dataProduct[$i]['created_at']           = date('Y-m-d H:i:s');
-                $dataProduct[$i]['updated_at']           = date('Y-m-d H:i:s');
+                $dataProduct[$i]['id_product']	= $this->splitBrandProduct(($product)[$i], 'product');
+                $dataProduct[$i]['id_brand']    = $this->splitBrandProduct(($product)[$i], 'brand');
+                $dataProduct[$i][$id_table]    	= $id_post;
+                $dataProduct[$i]['created_at']  = date('Y-m-d H:i:s');
+                $dataProduct[$i]['updated_at']  = date('Y-m-d H:i:s');
             }
             try {
                 $table_product_discount_rule::insert($data);
@@ -1508,10 +1509,11 @@ class ApiPromoCampaign extends Controller
         $dataProduct = [];
         foreach ($product[0] as $key => $value) {
         	$temp = [
-        		'id_product' => $value,
-        		$id_table => $id_post,
-        		'created_at' => date('Y-m-d H:i:s'),
-            	'updated_at' => date('Y-m-d H:i:s')
+        		'id_product' 	=> $this->splitBrandProduct($value, 'product'),
+        		'id_brand' 		=> $this->splitBrandProduct($value, 'brand'),
+        		$id_table 		=> $id_post,
+        		'created_at' 	=> date('Y-m-d H:i:s'),
+            	'updated_at' 	=> date('Y-m-d H:i:s')
         	];
         	$dataProduct[] = $temp;
         }
@@ -1570,11 +1572,14 @@ class ApiPromoCampaign extends Controller
 
             $data[$key] = [
                 $id_table   	=> $id_post,
-                'benefit_id_product'  	=> $rule['benefit_id_product'] == 0 ? $product : $rule['benefit_id_product'],
-                'max_qty_requirement' 	=> $rule['max_qty_requirement'],
-                'min_qty_requirement' 	=> $rule['min_qty_requirement'],
-                'benefit_qty'         	=> $rule['benefit_qty'],
-                'max_percent_discount'  => $rule['max_percent_discount']
+                // 'benefit_id_product'  	=> $rule['benefit_id_product'] == 0 ? $product : $rule['benefit_id_product'],
+                'benefit_id_product'  		=> $this->splitBrandProduct($rule['benefit_id_product'], 'product'),
+                'id_brand'  				=> $this->splitBrandProduct($rule['benefit_id_product'], 'brand'),
+                'id_product_variant_group'  => $rule['id_product_variant_group'] ?? null,
+                'max_qty_requirement' 		=> $rule['max_qty_requirement'],
+                'min_qty_requirement' 		=> $rule['min_qty_requirement'],
+                'benefit_qty'         		=> $rule['benefit_qty'],
+                'max_percent_discount'  	=> $rule['max_percent_discount']
             ];
 
             if ($rule['benefit_type'] == "percent") 
@@ -1608,7 +1613,8 @@ class ApiPromoCampaign extends Controller
 		$data_product = [];
 		foreach ($product as $key => $value) {
 			$temp_data = [
-				'id_product'	=> $value,
+				'id_product'	=> $this->splitBrandProduct($value, 'product'),
+				'id_brand'		=> $this->splitBrandProduct($value, 'brand'),
 		    	$id_table		=> $id_post,
 		    	'created_at'	=> date('Y-m-d H:i:s'),
 		    	'updated_at'	=> date('Y-m-d H:i:s'),
@@ -3045,5 +3051,23 @@ class ApiPromoCampaign extends Controller
             }
         }
         return $result;
+    }
+
+    function splitBrandProduct($id_brand_product, $type){
+    	$result = null;
+    	if (strpos($id_brand_product, '-') !== false) {
+    		$split = explode('-', $id_brand_product);
+    		if ($type == 'product') {
+    			$result = $split[1];
+    		}else{
+    			$result = $split[0];
+    		}
+    	}else{
+    		if ($type == 'product') {
+    			$result = $id_brand_product;
+    		}
+    	}
+
+    	return $result;
     }
 }
