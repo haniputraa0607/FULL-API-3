@@ -56,4 +56,9 @@ class PromoCampaignBuyxgetyProductRequirement extends Eloquent
 	{
 		return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaign::class, 'id_promo_campaign');
 	}
+
+	public function brand()
+	{
+		return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
+	}
 }
