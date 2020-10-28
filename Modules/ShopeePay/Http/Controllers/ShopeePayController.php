@@ -120,7 +120,7 @@ class ShopeePayController extends Controller
                 goto end;
             }
             if ($post['payment_status'] == '1') {
-                $update = $trx->update(['transaction_payment_status' => 'Completed']);
+                $update = $trx->update(['transaction_payment_status' => 'Completed', 'completed_at' => date('Y-m-d H:i:s')]);
                 if ($update) {
                     DisburseJob::dispatch(['id_transaction' => $trx['id_transaction']])->onConnection('disbursequeue');
 
@@ -345,7 +345,7 @@ class ShopeePayController extends Controller
                         goto cancel;
                     }
                     DB::beginTransaction();
-                    $update = Transaction::where(['id_transaction' => $singleTrx->id_transaction])->update(['transaction_payment_status' => 'Completed']);
+                    $update = Transaction::where(['id_transaction' => $singleTrx->id_transaction])->update(['transaction_payment_status' => 'Completed', 'completed_at' => date('Y-m-d H:i:s')]);
                     if ($update) {
                         $userData               = User::where('id', $singleTrx['id_user'])->first();
                         $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;

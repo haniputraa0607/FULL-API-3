@@ -62,6 +62,8 @@ use Modules\Transaction\Http\Requests\TransactionDetail;
 use Carbon\Carbon;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use function foo\func;
+use Modules\Product\Entities\ProductSpecialPrice;
+use Modules\Product\Entities\ProductGlobalPrice;
 
 class ApiOutletApp extends Controller
 {
@@ -3743,6 +3745,10 @@ class ApiOutletApp extends Controller
             return response()->json(['status' => 'fail', 'messages' => 'Outlet ID is required']);
         }
 
+        if(!isset($post['id_product']) && empty($post['id_product'])){
+            return response()->json(['status' => 'fail', 'messages' => 'Product ID is required']);
+        }
+
         if(isset($post['data_stock']) && !empty($post['data_stock'])){
             foreach ($post['data_stock'] as $dt){
                 if($dt['product_variant_group_stock_status'] == 1){
@@ -3752,6 +3758,24 @@ class ApiOutletApp extends Controller
                 }
 
                 $updateOrCreate = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$id_outlet, 'id_product_variant_group' => $dt['id_product_variant_group']], ['product_variant_group_stock_status' => $status]);
+            }
+
+            $outlet = Outlet::where('id_outlet', $id_outlet)->first();
+            $basePrice = ProductVariantGroup::orderBy('product_variant_group_price', 'asc')->where('id_product', $post['id_product'])->first();
+            ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']], ['product_global_price' => $basePrice['product_variant_group_price']]);
+            Product::refreshVariantTree($post['id_product'], $outlet);
+            if($outlet['outlet_different_price'] == 1){
+                $basePriceDiferrentOutlet = ProductVariantGroup::leftJoin('product_variant_group_special_prices as pgsp', 'pgsp.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
+                    ->orderBy('product_variant_group_price', 'asc')
+                    ->select(DB::raw('(CASE
+                        WHEN pgsp.product_variant_group_price is NOT NULL THEN pgsp.product_variant_group_price
+                        ELSE product_variant_groups.product_variant_group_price END)  as product_variant_group_price'))
+                    ->where('id_product', $post['id_product'])->where('id_outlet', $id_outlet)->first();
+                if($basePriceDiferrentOutlet){
+                    ProductSpecialPrice::updateOrCreate(['id_outlet' => $id_outlet, 'id_product' => $post['id_product']], ['product_special_price' => $basePriceDiferrentOutlet['product_variant_group_price']]);
+                }else{
+                    ProductSpecialPrice::updateOrCreate(['id_outlet' => $id_outlet, 'id_product' => $post['id_product']], ['product_special_price' => $basePrice['product_variant_group_price']]);
+                }
             }
 
             return MyHelper::checkUpdate($updateOrCreate);

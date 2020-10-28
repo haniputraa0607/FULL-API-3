@@ -83,6 +83,7 @@ class Transaction extends Model
 		'trasaction_payment_type',
 		'void_date',
 		'transaction_date',
+		'completed_at',
 		'special_memberships',
 		'membership_level',
 		'id_deals_voucher',
