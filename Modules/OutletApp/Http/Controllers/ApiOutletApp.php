@@ -722,6 +722,7 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        DB::beginTransaction();
 
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['receive_at' => date('Y-m-d H:i:s')]);
 
@@ -736,6 +737,7 @@ class ApiOutletApp extends Controller
                 'order_id'         => $order->order_id,
             ]);
             if ($send != true) {
+                DB::rollback();
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['Failed Send notification to customer'],
@@ -748,11 +750,13 @@ class ApiOutletApp extends Controller
             }
 
             if (($result['status']??false) != 'success') {
+                DB::rollback();
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => $result['messages']??['Failed to order GO-SEND'],
                 ]);
             }
+            DB::commit();
         }
 
         return response()->json(MyHelper::checkUpdate($pickup));

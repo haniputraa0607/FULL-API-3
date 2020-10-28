@@ -1644,12 +1644,6 @@ class ApiAchievement extends Controller
                     $getAchievementDetail = AchievementDetail::where([
                         'id_achievement_group' => MyHelper::decSlug($group['id_achievement_group']),
                     ])->get()->toArray();
-                    
-                    //skip for achievement doesnt have badge
-                    if(count($getAchievementDetail) <= 0){
-                        unset($result['category'][$kA]['achievement'][$keyAchGroup]);
-                        continue;
-                    }
                     $achProgress    = 0;
                     $achEndProgress = 0;
                     foreach ($getAchievementDetail as $keyAchDetail => $detail) {
@@ -1662,8 +1656,7 @@ class ApiAchievement extends Controller
                             'id_user' => Auth::user()->id,
                             'id_achievement_detail' => $detail['id_achievement_detail'],
                         ])->first();
-                        
-                        $result['category'][$kA]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress'] = 0;
+
                         if ($getAchievementProgress) {
                             $badgePercentProgress = ($getAchievementProgress->progress == 0) ? 0 : $getAchievementProgress->progress / $getAchievementProgress->end_progress;
                             $result['category'][$kA]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress']            = $getAchievementProgress->progress;
