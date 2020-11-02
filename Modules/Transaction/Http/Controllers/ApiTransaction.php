@@ -35,6 +35,7 @@ use App\Http\Models\LogBalance;
 use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPaymentMidtran;
+use Modules\ProductVariant\Entities\TransactionProductVariant;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsPaymentMidtran;
@@ -1808,6 +1809,10 @@ class ApiTransaction extends Controller
                     $payment = 'Shopeepay';
                 }
 
+                $variant = TransactionProductVariant::join('product_variants as pv', 'pv.id_product_variant', 'transaction_product_variants.id_product_variant')
+                                ->where('id_transaction_product', $val['id_transaction_product'])->pluck('product_variant_name')->toArray();
+
+
                 if(isset($post['detail']) && $post['detail'] == 1){
 
                     $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
@@ -1880,6 +1885,7 @@ class ApiTransaction extends Controller
                         $html .= '<td>'.$val['name_brand'].'</td>';
                         $html .= '<td>'.$val['product_category_name'].'</td>';
                         $html .= '<td>'.$val['product_name'].'</td>';
+                        $html .= '<td>'.implode(",",$variant).'</td>';
                         $html .= '<td>'.$textMod.'</td>';
                         $html .= '<td>'.$val['transaction_product_price'].'</td>';
                         $html .= '<td>'.$priceMod.'</td>';
@@ -1906,6 +1912,7 @@ class ApiTransaction extends Controller
                             for($i=1;$i<$totalMod;$i++){
                                 $html .= '<tr>';
                                 $html .= $sameData;
+                                $html .= '<td></td>';
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
@@ -1946,6 +1953,7 @@ class ApiTransaction extends Controller
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
+                                $html .= '<td></td>';
                                 $html .= '<td>'.abs($val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
                                 $html .= '<td>'.(-$val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
                                 $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
@@ -1959,7 +1967,7 @@ class ApiTransaction extends Controller
                             $html .= '<td></td>';
                             $html .= '<td></td>';
                             $html .= '<td>Delivery</td>';
-                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                             $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
                             $html .= '<td>0</td>';
                             $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
@@ -1972,7 +1980,7 @@ class ApiTransaction extends Controller
                         $html .= '<td></td>';
                         $html .= '<td></td>';
                         $html .= '<td>Fee</td>';
-                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                         $html .= '<td>'.($val['transaction_grandtotal']-$sub).'</td>';
                         $html .= '<td>'.(float)$val['fee_item'].'</td>';
                         $html .= '<td>'.(float)$paymentCharge.'</td>';
