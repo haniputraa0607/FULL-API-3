@@ -180,9 +180,11 @@ class SendEmailDisburseJob implements ShouldQueue
                                                     $message->from($setting['email_sender']);
                                                 }
 
-                                                if(!empty($setting['email_reply_to'])){
-                                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-                                                }
+                                                if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                                }else if(!empty($setting['email_reply_to'])){
+                                    $message->replyTo($setting['email_reply_to']);
+                                }
 
                                                 if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
                                                     $message->cc($setting['email_cc'], $setting['email_cc_name']);
@@ -262,9 +264,11 @@ class SendEmailDisburseJob implements ShouldQueue
                                             $message->from($setting['email_sender']);
                                         }
 
-                                        if(!empty($setting['email_reply_to'])){
-                                            $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-                                        }
+                                        if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                                }else if(!empty($setting['email_reply_to'])){
+                                    $message->replyTo($setting['email_reply_to']);
+                                }
 
                                         if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
                                             $message->cc($setting['email_cc'], $setting['email_cc_name']);
