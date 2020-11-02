@@ -639,6 +639,7 @@ class ApiOutletApp extends Controller
         if (empty($check)) {
             $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
                 ->where('order_id', $post['order_id'])
+                ->where('transactions.id_outlet', $request->user()->id_outlet)
                 ->whereIn('transaction_payment_status', ['Pending', 'Completed'])
                 ->whereDate('transaction_date', date('Y-m-d', strtotime($post['transaction_date'])))
                 ->first();
