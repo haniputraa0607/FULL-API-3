@@ -694,6 +694,7 @@ class ApiOutletApp extends Controller
         $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->where('order_id', $post['order_id'])
             ->whereDate('transaction_date', date('Y-m-d'))
+            ->where('transactions.id_outlet', $outlet->id_outlet)
             ->first();
 
         if (!$order) {
@@ -768,6 +769,7 @@ class ApiOutletApp extends Controller
         $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->where('order_id', $post['order_id'])
             ->whereDate('transaction_date', date('Y-m-d'))
+            ->where('transactions.id_outlet', $outlet->id_outlet)
             ->first();
 
         if (!$order) {
@@ -876,6 +878,7 @@ class ApiOutletApp extends Controller
         $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->where('order_id', $post['order_id'])
             ->whereDate('transaction_date', date('Y-m-d'))
+            ->where('transactions.id_outlet', $outlet->id_outlet)
             ->first();
 
         if (!$order) {
@@ -1592,6 +1595,7 @@ class ApiOutletApp extends Controller
         $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->where('order_id', $post['order_id'])
             ->whereDate('transaction_date', date('Y-m-d'))
+            ->where('transactions.id_outlet', $outlet->id_outlet)
             ->first();
 
         if (!$order) {
