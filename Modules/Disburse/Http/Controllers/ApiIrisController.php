@@ -99,6 +99,7 @@ class ApiIrisController extends Controller
                  -today is not holiday when return true
                  -cron runs on weekdays
                 */
+                $arrSuccess = [];
                 $currentDate = date('Y-m-d');
                 $day = date('D', strtotime($currentDate));
                 $getHoliday = $this->getHoliday();
