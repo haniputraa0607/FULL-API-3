@@ -3003,7 +3003,8 @@ class ApiTransaction extends Controller
 
 
     }
-    // api/transaction/item
+    // api/transaction/item 
+    // api order lagi
     public function transactionDetailTrx(Request $request) {
         $trid = $request->json('id_transaction');
         $rn = $request->json('request_number');
@@ -3039,7 +3040,7 @@ class ApiTransaction extends Controller
             ->join('outlets','outlets.id_outlet','=','transaction_products.id_outlet')
             ->where(['id_transaction'=>$id_transaction])
             ->with(['modifiers'=>function($query){
-                $query->select('id_transaction_product','product_modifiers.code','transaction_product_modifiers.id_product_modifier','qty','product_modifiers.text', 'transaction_product_modifier_price')->join('product_modifiers','product_modifiers.id_product_modifier','=','transaction_product_modifiers.id_product_modifier');
+                $query->select('id_transaction_product','product_modifiers.code','transaction_product_modifiers.id_product_modifier','qty','product_modifiers.text', 'transaction_product_modifier_price', 'modifier_type')->join('product_modifiers','product_modifiers.id_product_modifier','=','transaction_product_modifiers.id_product_modifier');
             },'variants'=>function($query){
                 $query->select('id_transaction_product','transaction_product_variants.id_product_variant','transaction_product_variants.id_product_variant','product_variants.product_variant_name', 'transaction_product_variant_price')->join('product_variants','product_variants.id_product_variant','=','transaction_product_variants.id_product_variant');
             }])->get()->toArray();
@@ -3057,7 +3058,7 @@ class ApiTransaction extends Controller
             } else {
                 $pt['product_price'] = ProductGlobalPrice::select('product_global_price')->where('id_product',$pt['id_product'])->pluck('product_global_price')->first()?:$pt['transaction_product_price'];
             }
-            foreach ($pt['modifiers'] as &$modifier) {
+            foreach ($pt['modifiers'] as $key => &$modifier) {
                 if ($pt['outlet_different_price']) {
                     $price = ProductModifierPrice::select('product_modifier_price')->where([
                         'id_product_modifier'=>$modifier['id_product_modifier'],
@@ -3069,6 +3070,13 @@ class ApiTransaction extends Controller
                 $total_mod_price+=$price*$modifier['qty'];
                 $modifier['product_modifier_price'] = MyHelper::requestNumber($price,$rn);
                 unset($modifier['transaction_product_modifier_price']);
+                if ($modifier['modifier_type'] == 'Modifier Group') {
+                    $pt['variants'][] = [
+                        'id_product_variant' => $modifier['id_product_modifier'],
+                        'product_variant_name' => $modifier['text']
+                    ];
+                    unset($pt['modifiers'][$key]);
+                }
             }
             if ($pt['id_product_variant_group']) {
                 if ($pt['outlet_different_price']) {
