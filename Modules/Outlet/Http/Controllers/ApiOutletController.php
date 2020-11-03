@@ -2772,16 +2772,35 @@ class ApiOutletController extends Controller
 	        		return false;
 	        	}
 
+	        	if ($source == 'promo_campaign') {
+	        		$brands 		= $code->promo_campaign->promo_campaign_brands()->pluck('id_brand')->toArray();
+	        		$all_outlet 	= $code['promo_campaign']['is_all_outlet']??0;
+	        		$promo_outlet 	= $code['promo_campaign']['promo_campaign_outlets']??[];
+	        		$id_brand 		= $code['promo_campaign']['id_brand']??null;
+	        	}elseif($source == 'deals'){
+	        		$brands 		= $code->promo_campaign->promo_campaign_brands();
+	        		$all_outlet 	= $code['deal_voucher']['deals']['is_all_outlet']??0;
+	        		$promo_outlet 	= $code['deal_voucher']['deals']['outlets_active']??[];
+	        		$id_brand 		= $code['deal_voucher']['deals']['id_brand']??null;
+	        	}elseif($source == 'subscription'){
+	        		$brands 		= $code->promo_campaign->promo_campaign_brands();
+	        		$all_outlet 	= $code['subscription_user']['subscription']['is_all_outlet']??0;
+	        		$promo_outlet 	= $code['subscription_user']['subscription']['outlets_active']??[];
+	        		$id_brand 		= $code['subscription_user']['subscription']['id_brand']??null;
+	        	}
+
 	        	// if valid give flag is_promo = 1
+	        	$code_obj = $code;
 	        	$code = $code->toArray();
 	        	$pct = new PromoCampaignTools;
 
-				$all_outlet = $code['promo_campaign']['is_all_outlet']??$code['subscription_user']['subscription']['is_all_outlet']??$code['deal_voucher']['deals']['is_all_outlet']??0;
-				$id_brand 	= $code['promo_campaign']['id_brand']??$code['subscription_user']['subscription']['id_brand']??$code['deal_voucher']['deals']['id_brand']??null;
-				$promo_outlet 	= $code['promo_campaign']['promo_campaign_outlets']??$code['deal_voucher']['deals']['outlets_active']??$code['subscription_user']['subscription']['outlets_active']??[];
-
 				foreach ($outlet as $key => $value) {
-					$check_outlet = $pct->checkOutletRule($value['id_outlet'], $all_outlet, $promo_outlet, $id_brand);
+					if (isset($id_brand)) {
+						$check_outlet = $pct->checkOutletRule($value['id_outlet'], $all_outlet, $promo_outlet, $id_brand);
+					}else{
+						$check_outlet = $pct->checkOutletBrandRule($value['id_outlet'], $all_outlet, $promo_outlet, $brands);
+					}
+					
 					if ($check_outlet) {
 						$outlet[$key]['is_promo'] = 1;
 					}
