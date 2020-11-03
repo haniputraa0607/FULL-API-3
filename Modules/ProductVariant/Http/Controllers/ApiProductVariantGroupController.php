@@ -32,8 +32,7 @@ class ApiProductVariantGroupController extends Controller
                     if(!empty($dt['group_id'])){
                         $update = ProductVariantGroup::where('id_product_variant_group', $dt['group_id'])
                             ->update(['product_variant_group_price' => str_replace(".","",$dt['price']),
-                                'product_variant_group_code' => $dt['code'],
-                                'product_variant_group_visibility' => $dt['visibility']]);
+                                'product_variant_group_code' => $dt['code']]);
 
                         if($update){
                             $del = ProductVariantPivot::where('id_product_variant_group', $dt['group_id'])->delete();
@@ -55,8 +54,7 @@ class ApiProductVariantGroupController extends Controller
                             [
                                 'id_product' => $id_product['id_product'],
                                 'product_variant_group_code' =>$dt['code'],
-                                'product_variant_group_price' => str_replace(".","",$dt['price']),
-                                'product_variant_group_visibility' => $dt['visibility']
+                                'product_variant_group_price' => str_replace(".","",$dt['price'])
                             ]
                         );
                         if($create){
@@ -293,16 +291,12 @@ class ApiProductVariantGroupController extends Controller
         $insertData = [];
         DB::beginTransaction();
         foreach ($request->json('detail') as $id_product_modifier => $detail) {
-            if (!($detail['product_variant_group_visibility'] ?? false) && !($detail['product_variant_group_visibility'] ?? false)) {
-                continue;
-            }
             $key = [
                 'id_product_variant_group' => $id_product_modifier,
                 'id_outlet'           => $id_outlet,
             ];
             $insertData = $key + [
-                    'product_variant_group_visibility'   => $detail['product_variant_group_visibility'],
-                    'product_variant_group_stock_status' => $detail['product_variant_group_stock_status'],
+                    'product_variant_group_stock_status' => $detail['product_variant_group_stock_status']
                 ];
             $insert = ProductVariantGroupDetail::updateOrCreate($key, $insertData);
             if (!$insert) {
@@ -312,11 +306,9 @@ class ApiProductVariantGroupController extends Controller
                     'messages' => ['Update detail fail'],
                 ];
             }
-            $selectGroup = ProductVariantGroup::where('id_product_variant_group', $id_product_modifier)->first();
-            $outlet = Outlet::where('id_outlet', $id_outlet)->first();
-            Product::refreshVariantTree($selectGroup['id_product'], $outlet);
         }
         DB::commit();
+        RefreshVariantTree::dispatch([])->allOnConnection('database');
         return ['status' => 'success'];
     }
 
@@ -646,5 +638,18 @@ class ApiProductVariantGroupController extends Controller
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
         }
+    }
+
+    public function listProductWithVariant(Request $request){
+        $data = Product::select('products.*', DB::raw('(Select COUNT(pvg.id_product_variant_group) from product_variant_groups pvg where pvg.id_product = products.id_product) as count_product_variant_group'));
+
+        if ($keyword = ($request->search['value']??false)) {
+            $data->where('product_code', 'like', '%'.$keyword.'%')
+                ->orWhere('product_name', 'like', '%'.$keyword.'%');
+        }
+
+        $data = $data->paginate(20);
+
+        return response()->json(MyHelper::checkGet($data));
     }
 }
