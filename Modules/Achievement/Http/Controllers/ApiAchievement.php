@@ -24,6 +24,7 @@ use Modules\Achievement\Entities\AchievementProvinceLog;
 use Modules\Achievement\Entities\AchievementProvinceDifferentLog;
 use Modules\Achievement\Entities\AchievementUser;
 use Modules\Achievement\Entities\AchievementUserLog;
+use Modules\OutletApp\Jobs\AchievementCheck;
 
 class ApiAchievement extends Controller
 {
@@ -1714,5 +1715,33 @@ class ApiAchievement extends Controller
         $result['progress']     = $totalProgress;
         $result['end_progress'] = $totalEndProgress;
         return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function calculateAchievement(Request $request){
+        $log = MyHelper::logCron('Calculate Achievement');
+        try {
+            $getTrx = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+                        ->join('users', 'users.id', 'transactions.id_user')
+                        ->where('calculate_achievement', 'not yet')
+                        ->where('transaction_payment_status', 'Completed')
+                        ->where('transaction_date', '<=', date('Y-m-d 23:59:59', strtotime('-1 day')))
+                        ->whereNull('reject_at')
+                        ->where( function($q) {
+                            $q->whereNotNull('taken_at')
+                                ->orWhereNotNull('taken_by_system_at');
+                        })
+                        ->select('transactions.id_transaction', 'users.phone')
+                        ->get();
+            
+            foreach($getTrx as $trx){
+                //check achievement
+                AchievementCheck::dispatch(['id_transaction' => $trx->id_transaction, 'phone' => $trx->phone])->onConnection('achievement');
+            }
+            $log->success($getTrx);
+            return 'success';
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $log->fail($e->getMessage());
+        }
     }
 }
