@@ -27,6 +27,7 @@ use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantPivot;
 use Validator;
 use Hash;
 use DB;
@@ -1128,6 +1129,12 @@ class ApiProductController extends Controller
     	if($save){
             if(isset($data['product_variant_status']) && !empty($data['product_variant_status'])){
                 ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']], ['product_global_price' => 0]);
+            }else{
+                $getGroup = ProductVariantGroup::where('id_product',$post['id_product'])->pluck('id_product_variant_group')->toArray();
+                if($getGroup){
+                    ProductVariantPivot::whereIn('id_product_variant_group',$getGroup)->delete();
+                    ProductVariantGroup::where('id_product',$post['id_product'])->delete();
+                }
             }
 
             if(isset($post['photo'])){
