@@ -316,10 +316,14 @@ class ApiPromoCampaign extends Controller
             'promo_campaign_discount_bill_rules',
             'promo_campaign_discount_delivery_rules',
             'promo_campaign_product_discount.product.category',
+            'promo_campaign_product_discount.brand',
             'promo_campaign_tier_discount_rules',
             'promo_campaign_tier_discount_product.product',
+            'promo_campaign_tier_discount_product.brand',
             'promo_campaign_buyxgety_rules.product',
+            'promo_campaign_buyxgety_rules.brand',
             'promo_campaign_buyxgety_product_requirement.product',
+            'promo_campaign_buyxgety_product_requirement.brand',
             'promo_campaign_shipment_method',
             'promo_campaign_payment_method',
             'brands',
@@ -1062,6 +1066,15 @@ class ApiPromoCampaign extends Controller
 		}
 
 	    $dataPromoCampaign['product_rule'] = $post['product_rule']??null;
+		if (!isset($post['product_rule']) 
+			&& (($post['promo_type'] == 'Product discount' && $post['filter_product'] == 'Selected')
+				|| $post['promo_type'] == 'Tier discount' 
+				|| $post['promo_type'] == 'Buy X Get Y'
+			)
+		) {
+			$dataPromoCampaign['product_rule'] = 'or';
+		}
+
         $update = $table::where($id_table, $id_post)->update($dataPromoCampaign);
 
         $update_shipment_rule = $this->createShipmentRule($source, $id_table, $id_post, $post);
