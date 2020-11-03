@@ -1002,6 +1002,7 @@ class ApiOutletApp extends Controller
         }
 
         $updated     = 0;
+        $outlet = Outlet::where('id_outlet', $outlet['id_outlet'])->first();
         foreach ($request->variants as $v){
             if(isset($v['available']) && !empty($v['available'])){
                 foreach ($v['available'] as $availableProductVariant){
@@ -1009,8 +1010,7 @@ class ApiOutletApp extends Controller
                     $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $availableProductVariant], ['product_variant_group_stock_status' => $status]);
                 }
 
-                $outlet = Outlet::where('id_outlet', $outlet['id_outlet'])->first();
-                $basePrice = ProductVariantGroup::orderBy('product_variant_group_price', 'asc')->where('id_product', $v['id_product'])->first();
+                $basePrice = ProductVariantGroup::orderBy('product_variant_group_price', 'asc')->whereIn('id_product_variant_group', $v['available'])->first();
                 ProductGlobalPrice::updateOrCreate(['id_product' => $v['id_product']], ['product_global_price' => $basePrice['product_variant_group_price']]);
                 Product::refreshVariantTree($v['id_product'], $outlet);
                 if($outlet['outlet_different_price'] == 1){
@@ -1019,6 +1019,7 @@ class ApiOutletApp extends Controller
                         ->select(DB::raw('(CASE
                         WHEN pgsp.product_variant_group_price is NOT NULL THEN pgsp.product_variant_group_price
                         ELSE product_variant_groups.product_variant_group_price END)  as product_variant_group_price'))
+                        ->whereIn('pgsp.id_product_variant_group', $v['available'])
                         ->where('id_product', $v['id_product'])->where('id_outlet', $outlet['id_outlet'])->first();
                     if($basePriceDiferrentOutlet){
                         ProductSpecialPrice::updateOrCreate(['id_outlet' => $outlet['id_outlet'], 'id_product' => $v['id_product']], ['product_special_price' => $basePriceDiferrentOutlet['product_variant_group_price']]);
@@ -1031,27 +1032,9 @@ class ApiOutletApp extends Controller
             if(isset($v['sold_out']) && !empty($v['sold_out'])){
                 foreach ($v['sold_out'] as $soldOutProductVariant){
                     $status = 'Sold Out';
-
                     $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $soldOutProductVariant], ['product_variant_group_stock_status' => $status]);
                 }
-
-                $outlet = Outlet::where('id_outlet', $outlet['id_outlet'])->first();
-                $basePrice = ProductVariantGroup::orderBy('product_variant_group_price', 'asc')->where('id_product', $v['id_product'])->first();
-                ProductGlobalPrice::updateOrCreate(['id_product' => $v['id_product']], ['product_global_price' => $basePrice['product_variant_group_price']]);
                 Product::refreshVariantTree($v['id_product'], $outlet);
-                if($outlet['outlet_different_price'] == 1){
-                    $basePriceDiferrentOutlet = ProductVariantGroup::leftJoin('product_variant_group_special_prices as pgsp', 'pgsp.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
-                        ->orderBy('product_variant_group_price', 'asc')
-                        ->select(DB::raw('(CASE
-                        WHEN pgsp.product_variant_group_price is NOT NULL THEN pgsp.product_variant_group_price
-                        ELSE product_variant_groups.product_variant_group_price END)  as product_variant_group_price'))
-                        ->where('id_product', $v['id_product'])->where('id_outlet', $outlet['id_outlet'])->first();
-                    if($basePriceDiferrentOutlet){
-                        ProductSpecialPrice::updateOrCreate(['id_outlet' => $outlet['id_outlet'], 'id_product' => $v['id_product']], ['product_special_price' => $basePriceDiferrentOutlet['product_variant_group_price']]);
-                    }else{
-                        ProductSpecialPrice::updateOrCreate(['id_outlet' => $outlet['id_outlet'], 'id_product' => $v['id_product']], ['product_special_price' => $basePrice['product_variant_group_price']]);
-                    }
-                }
             }
         }
 
@@ -1062,24 +1045,7 @@ class ApiOutletApp extends Controller
                 foreach ($productVariantGroup as $pvg){
                     $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $pvg['id_product_variant_group']], ['product_variant_group_stock_status' => 'Sold Out']);
                 }
-
-                $outlet = Outlet::where('id_outlet', $outlet['id_outlet'])->first();
-                $basePrice = ProductVariantGroup::orderBy('product_variant_group_price', 'asc')->where('id_product', $s)->first();
-                ProductGlobalPrice::updateOrCreate(['id_product' => $v['id_product']], ['product_global_price' => $basePrice['product_variant_group_price']]);
                 Product::refreshVariantTree($v['id_product'], $outlet);
-                if($outlet['outlet_different_price'] == 1){
-                    $basePriceDiferrentOutlet = ProductVariantGroup::leftJoin('product_variant_group_special_prices as pgsp', 'pgsp.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
-                        ->orderBy('product_variant_group_price', 'asc')
-                        ->select(DB::raw('(CASE
-                        WHEN pgsp.product_variant_group_price is NOT NULL THEN pgsp.product_variant_group_price
-                        ELSE product_variant_groups.product_variant_group_price END)  as product_variant_group_price'))
-                        ->where('id_product', $s)->where('id_outlet', $outlet['id_outlet'])->first();
-                    if($basePriceDiferrentOutlet){
-                        ProductSpecialPrice::updateOrCreate(['id_outlet' => $outlet['id_outlet'], 'id_product' => $s], ['product_special_price' => $basePriceDiferrentOutlet['product_variant_group_price']]);
-                    }else{
-                        ProductSpecialPrice::updateOrCreate(['id_outlet' => $outlet['id_outlet'], 'id_product' => $s], ['product_special_price' => $basePrice['product_variant_group_price']]);
-                    }
-                }
             }
         }
 
