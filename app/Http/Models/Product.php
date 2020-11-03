@@ -427,7 +427,7 @@ class Product extends Model
             if ($variant['id_product_variant_group'] ?? false) {
                 $new_order['id_product_variant_group']    = $variant['id_product_variant_group'];
                 $new_order['product_variant_group_price'] = $variant['product_variant_group_price'];
-                $new_order['extra_modifier'] = [];
+                $new_order['extra_modifiers'] = [];
             }
             $new_order['variant'] = $variant['variant'];
 
@@ -481,14 +481,14 @@ class Product extends Model
         }
 
         if (!$variant) {
-            $variant = self::getVariantTree($product_variant_group->id_product)['variants_tree'];
-            if(!$variant) {
-                return false;
-            }
+            return false;
         }
 
         foreach ($variant['childs'] as $child) {
             $next_variants = $variants;
+            if ($child['is_modifier']??false) {
+                return $variants;
+            }
             if($child['variant']) {
                 // check child or parent
                 if ($child['id_product_variant'] != $child['variant']['id_product_variant']) { //child
@@ -594,8 +594,9 @@ class Product extends Model
         ];
         foreach($result['childs'] as &$variant_child) {
             $variant_child['product_variant_group_price'] = $variant['product_variant_group_price'] + $variant_child['product_variant_price'];
-            $variant_child['extra_modifier'] = $variant['extra_modifier'];
-            $variant_child['extra_modifier'][] = $variant_child['id_product_variant'];
+            $variant_child['extra_modifiers'] = $variant['extra_modifiers'];
+            $variant_child['extra_modifiers'][] = $variant_child['id_product_variant'];
+            $variant_child['is_modifier']       = true;
             if (!$modifier_groups) { // child
                 $variant_child['id_product_variant_group'] = $id_product_variant_group;
                 $variant_child['variant'] = null;
@@ -603,7 +604,7 @@ class Product extends Model
                 $variant_child['variant'] = self::insertModifierGroup($variant_child, $modifier_groups, $id_product_variant_group);
             }
         }
-        unset($variant['extra_modifier']);
+        unset($variant['extra_modifiers']);
         unset($variant['id_product_variant_group']);
         unset($variant['product_variant_group_price']);
         return $result;

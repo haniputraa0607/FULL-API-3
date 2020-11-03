@@ -200,7 +200,8 @@ class ApiSettingTransactionV2 extends Controller
                             'product' => $product['product_name']
                         ]);
                     }
-                    $variants = Product::getVariantPrice($product_variant_group, Product::getVariantTree($valueData['id_product'], $outlet)['variants_tree']??[]);
+                    $variantTree = Product::getVariantTree($valueData['id_product'], $outlet);
+                    $variants = Product::getVariantPrice($product_variant_group, $variantTree['variants_tree']??[]);
                     if (!$variants) {
                         return response()->json([
                             'status' => 'fail',
@@ -209,6 +210,8 @@ class ApiSettingTransactionV2 extends Controller
                         ]);
                     }
                     $valueData['variants'] = $variants;
+                    $productPrice['product_price'] = $variantTree['base_price'] ?? $productPrice['product_price'];
+                    $valueData['transaction_product_price'] = $productPrice['product_price'];
                     $valueData['transaction_variant_subtotal'] = $product_variant_group->product_variant_group_price - $productPrice['product_price'];
                 } else {
                     $valueData['variants'] = [];
