@@ -11,7 +11,8 @@ class ProductModifier extends Model
 	protected $primaryKey = 'id_product_modifier';
 
 	protected $casts = [
-		'id_product' => 'int'
+		'id_product' => 'int',
+		'product_variant_price' => 'double'
 	];
 
 	protected $fillable = [

@@ -909,13 +909,19 @@ class ApiDisburseController extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function exportToOutlet(Request $request){
+    public function sendRecapTransactionEachOultet(Request $request){
         $post = $request->json()->all();
-        $yesterday = date('Y-m-d', strtotime($post['date']));
+        SendRecapManualy::dispatch(['data' => $post, 'type' => 'recap_transaction_each_outlet'])->onConnection('disbursequeue');
+        return 'Success';
+    }
+
+    public function exportToOutlet($post){
+        $start = date('Y-m-d', strtotime($post['date_start']));
+        $end = date('Y-m-d', strtotime($post['date_end']));
         $getOutlet = Outlet::where('outlet_code', $post['outlet_code'])->first();
         if($getOutlet && !empty($getOutlet['outlet_email'])){
-            $filter['date_start'] = $yesterday;
-            $filter['date_end'] = $yesterday;
+            $filter['date_start'] = $start;
+            $filter['date_end'] = $end;
             $filter['detail'] = 1;
             $filter['key'] = 'all';
             $filter['rule'] = 'and';
@@ -932,7 +938,7 @@ class ApiDisburseController extends Controller
                 ]
             ];
 
-            $summary = $this->summaryCalculationFee($yesterday, $getOutlet['id_outlet']);
+            $summary = $this->summaryCalculationFeeWithRangeDate($start, $end, $getOutlet['id_outlet']);
             $generateTrx = app($this->trx)->exportTransaction($filter, 1);
             $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
                 ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
@@ -944,7 +950,8 @@ class ApiDisburseController extends Controller
                 ->where('transaction_payment_status', 'Completed')
                 ->whereNull('reject_at')
                 ->where('transactions.id_outlet', $getOutlet['id_outlet'])
-                ->whereDate('transactions.transaction_date', $yesterday)
+                ->whereDate('transactions.transaction_date', '>=',$start)
+                ->whereDate('transactions.transaction_date', '<=',$end)
                 ->with(['transaction_payment_subscription'=> function($q){
                     $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
                         ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
@@ -957,7 +964,7 @@ class ApiDisburseController extends Controller
                 ->get()->toArray();
 
             if(!empty($generateTrx)){
-                $excelFile = 'Transaction_['.$yesterday.']['.$getOutlet['outlet_code'].'].xlsx';
+                $excelFile = 'Transaction_['.$start.'_'.$end.']['.$getOutlet['outlet_code'].'].xlsx';
                 $store  = (new MultipleSheetExport([
                     "Summary" => $summary,
                     "Calculation Fee" => $dataDisburse,
@@ -981,12 +988,12 @@ class ApiDisburseController extends Controller
 
                     $data = array(
                         'customer' => '',
-                        'html_message' => 'Report Outlet '.$getOutlet['outlet_name'].', transaksi tanggal '.date('d M Y', strtotime($yesterday)),
+                        'html_message' => 'Report Outlet '.$getOutlet['outlet_name'].', transaksi tanggal '.date('d M Y', strtotime($start)).' sampai '.date('d M Y', strtotime($end)),
                         'setting' => $setting
                     );
 
                     $to = $getOutlet['outlet_email'];
-                    $subject = 'Report Transaksi ['.date('d M Y', strtotime($yesterday)).']';
+                    $subject = 'Report Transaksi ['.date('d M Y', strtotime($start)).' - '.date('d M Y', strtotime($end)).']';
                     $name =  $getOutlet['outlet_name'];
                     $variables['attachment'] = $tmpPath;
 
@@ -1034,6 +1041,300 @@ class ApiDisburseController extends Controller
         }else{
             return 'Outlet Not Found';
         }
+    }
+
+    public function sendRecapDisburseEachOultet(Request $request){
+        $post = $request->json()->all();
+        SendRecapManualy::dispatch(['data' => $post, 'type' => 'recap_disburse_each_outlet'])->onConnection('disbursequeue');
+        return 'Success';
+    }
+
+    function sendDisburseWithRangeDate($post){
+        $start = date('Y-m-d', strtotime($post['date_start']));
+        $end = date('Y-m-d', strtotime($post['date_end']));
+        $settingSendEmail = Setting::where('key', 'disburse_setting_email_send_to')->first();
+        $disburse = Disburse::join('disburse_outlet', 'disburse_outlet.id_disburse', 'disburse.id_disburse')
+            ->join('outlets', 'outlets.id_outlet', 'disburse_outlet.id_outlet')
+            ->whereDate('disburse.created_at', '>=', $start)
+            ->whereDate('disburse.created_at', '<=', $end)
+            ->where('outlets.outlet_code', $post['outlet_code'])
+            ->where('send_email_status', 1)
+            ->groupBy('disburse.id_disburse')
+            ->select('disburse.*')
+            ->get()->toArray();
+
+        foreach ($disburse as $getDataDisburse){
+            if(!empty($settingSendEmail)){
+                $feeDisburse = (int)$getDataDisburse['disburse_fee'];
+                //get status franchise
+                $getOutlet = DisburseOutlet::join('outlets', 'outlets.id_outlet', 'disburse_outlet.id_outlet')
+                    ->where('disburse_outlet.id_disburse', $getDataDisburse['id_disburse'])
+                    ->pluck('outlets.status_franchise')->toArray();
+                if(!$getOutlet){
+                    return false;
+                }
+                //check if data disburse have outlet franchise
+                //if have outlet franchise, send email to use setting outlet franchise
+                //if no have otulet franchise, send email to use setting outlet central
+                $check = in_array("1", $getOutlet);
+
+                $sendEmailTo = '';
+                $getSettingSendEmail = (array)json_decode($settingSendEmail['value_text']);
+                if($check === false){
+                    $sendEmailTo = $getSettingSendEmail['outlet_central'];
+                }else{
+                    $sendEmailTo = $getSettingSendEmail['outlet_franchise'];
+                }
+
+                $disburseOutlet = DisburseOutlet::join('disburse_outlet_transactions as dot', 'dot.id_disburse_outlet', 'disburse_outlet.id_disburse_outlet')
+                    ->join('transactions as t', 'dot.id_transaction', 't.id_transaction')
+                    ->join('outlets as o', 'o.id_outlet', 't.id_outlet')
+                    ->where('disburse_outlet.id_disburse', $getDataDisburse['id_disburse'])
+                    ->groupBy(DB::raw('DATE(t.transaction_date)'),'t.id_outlet');
+
+                if($sendEmailTo == 'Email Outlet'){
+                    $disburseOutlet = $disburseOutlet->selectRaw('t.transaction_date, o.outlet_code, o.outlet_name, o.outlet_email, Sum(income_outlet) as nominal')
+                        ->get()->toArray();
+                    $feePerOutlet = $feeDisburse / $getDataDisburse['total_outlet'];
+                    $data = [];
+                    foreach ($disburseOutlet as $dt){
+                        $check = array_search($dt['outlet_code'], array_column($data, 'outlet_code'));
+                        if($check === false){
+                            $data[] = [
+                                'outlet_code' => $dt['outlet_code'],
+                                'outlet_name' => $dt['outlet_name'],
+                                'outlet_email' => $dt['outlet_email'],
+                                'datas' => [[
+                                    'Transaction Date' => date('d M Y', strtotime($dt['transaction_date'])),
+                                    'Outlet' => $dt['outlet_code'].' - '.$dt['outlet_name'],
+                                    'Nominal' => number_format($dt['nominal'], 2)
+                                ]]
+                            ];
+                        }else{
+                            $data[$check]['datas'][] = [
+                                'Transaction Date' => date('d M Y', strtotime($dt['transaction_date'])),
+                                'Outlet' => $dt['outlet_code'].' - '.$dt['outlet_name'],
+                                'Nominal' => number_format($dt['nominal'], 2)
+                            ];
+                        }
+                    }
+
+                    /*send excel to outlet*/
+                    if(!empty($data)){
+                        foreach ($data  as $val){
+                            if($val['outlet_email']){
+                                $fileName = 'Disburse_['.date('d M Y', strtotime($getDataDisburse['created_at'])).']_['.$val['outlet_code'].']_['.$getDataDisburse['reference_no'].'].xlsx';
+                                $path = storage_path('app/excel_email/'.$fileName);
+                                $val['datas'][] = [
+                                    'Transaction Date' => '',
+                                    'Outlet' => 'Fee Disburse',
+                                    'Nominal' => -$feePerOutlet
+                                ];
+                                if(!Storage::disk(env('local'))->exists('excel_email')){
+                                    Storage::makeDirectory('excel_email');
+                                }
+                                $store = (new FastExcel($val['datas']))->export($path);
+
+                                if($store){
+                                    $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
+                                    $setting = array();
+                                    foreach ($getSetting as $key => $value) {
+                                        if($value['key'] == 'email_setting_url'){
+                                            $setting[$value['key']]  = (array)json_decode($value['value_text']);
+                                        }else{
+                                            $setting[$value['key']] = $value['value'];
+                                        }
+                                    }
+
+                                    $data = array(
+                                        'customer' => '',
+                                        'html_message' => 'Laporan Disburse tanggal '.date('d M Y', strtotime($getDataDisburse['created_at'])).' untuk outlet '.$val['outlet_code'].'-'.$val['outlet_name'].'.',
+                                        'setting' => $setting
+                                    );
+
+                                    $to = $val['outlet_email'];
+                                    $subject = 'Report Disburse ['.date('d M Y', strtotime($getDataDisburse['created_at'])).']['.$val['outlet_code'].']';
+                                    $name =  $val['outlet_name'];
+                                    $variables['attachment'] = [$path];
+
+                                    try{
+                                        Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
+                                        {
+                                            $message->to($to, $name)->subject($subject);
+                                            if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                                                $message->from($setting['email_sender'], $setting['email_from']);
+                                            }else if(!empty($setting['email_sender'])){
+                                                $message->from($setting['email_sender']);
+                                            }
+
+                                            if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+                                                $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                                            }else if(!empty($setting['email_reply_to'])){
+                                                $message->replyTo($setting['email_reply_to']);
+                                            }
+
+                                            if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+                                                $message->cc($setting['email_cc'], $setting['email_cc_name']);
+                                            }
+
+                                            if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+                                                $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+                                            }
+
+                                            // attachment
+                                            if(isset($variables['attachment']) && !empty($variables['attachment'])){
+                                                foreach($variables['attachment'] as $attach){
+                                                    $message->attach($attach);
+                                                }
+                                            }
+                                        });
+                                    }catch(\Exception $e){
+                                    }
+
+                                    foreach ($variables['attachment'] as $t){
+                                        File::delete($t);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }elseif($sendEmailTo == 'Email Bank'){
+                    $disburseOutlet = $disburseOutlet->selectRaw('DATE_FORMAT(t.transaction_date, "%d %M %Y") as "Transaction Date", CONCAT(o.outlet_code, " - ", o.outlet_name) AS Outlet, FORMAT(SUM(income_outlet), 2) as Nominal')
+                        ->get()->toArray();
+
+                    if($getDataDisburse['beneficiary_email']){
+                        $fileName = 'Disburse_['.date('d M Y', strtotime($getDataDisburse['created_at'])).']['.$getDataDisburse['reference_no'].'].xlsx';
+                        $path = storage_path('app/excel_email/'.$fileName);
+                        $listOutlet = array_column($disburseOutlet, 'Outlet');
+                        $disburseOutlet[] = [
+                            'Transaction Date' => '',
+                            'Outlet' => 'Fee Disburse',
+                            'Nominal' => -$feeDisburse
+                        ];
+                        if(!Storage::disk(env('local'))->exists('excel_email')){
+                            Storage::makeDirectory('excel_email');
+                        }
+
+                        $store = (new FastExcel($disburseOutlet))->export($path);
+
+                        if($store){
+                            $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
+                            $setting = array();
+                            foreach ($getSetting as $key => $value) {
+                                if($value['key'] == 'email_setting_url'){
+                                    $setting[$value['key']]  = (array)json_decode($value['value_text']);
+                                }else{
+                                    $setting[$value['key']] = $value['value'];
+                                }
+                            }
+
+                            $data = array(
+                                'customer' => '',
+                                'html_message' => 'Laporan Disburse tanggal '.date('d M Y', strtotime($getDataDisburse['created_at'])).'.<br><br> List Outlet : <br>'.implode('<br>',$listOutlet),
+                                'setting' => $setting
+                            );
+
+                            $to = $getDataDisburse['beneficiary_email'];
+                            $subject = 'Report Disburse ['.date('d M Y', strtotime($getDataDisburse['created_at'])).']';
+                            $name =  $getDataDisburse['beneficiary_name'];
+                            $variables['attachment'] = [$path];
+
+                            try{
+                                Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
+                                {
+                                    $message->to($to, $name)->subject($subject);
+                                    if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                                        $message->from($setting['email_sender'], $setting['email_from']);
+                                    }else if(!empty($setting['email_sender'])){
+                                        $message->from($setting['email_sender']);
+                                    }
+
+                                    if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+                                        $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                                    }else if(!empty($setting['email_reply_to'])){
+                                        $message->replyTo($setting['email_reply_to']);
+                                    }
+
+                                    if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+                                        $message->cc($setting['email_cc'], $setting['email_cc_name']);
+                                    }
+
+                                    if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+                                        $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+                                    }
+
+                                    // attachment
+                                    if(isset($variables['attachment']) && !empty($variables['attachment'])){
+                                        foreach($variables['attachment'] as $attach){
+                                            $message->attach($attach);
+                                        }
+                                    }
+                                });
+                            }catch(\Exception $e){
+                            }
+
+                            foreach ($variables['attachment'] as $t){
+                                File::delete($t);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function summaryCalculationFeeWithRangeDate($date_start, $date_end, $id_outlet = null){
+        $summaryFee = [];
+        $summaryFee = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->leftJoin('transaction_payment_subscriptions as tps', 'tps.id_transaction', 'transactions.id_transaction')
+            ->whereDate('transactions.transaction_date', '>=',$date_start)
+            ->whereDate('transactions.transaction_date', '<=',$date_end)
+            ->where('transactions.transaction_payment_status', 'Completed')
+            ->whereNull('transaction_pickups.reject_at')
+            ->selectRaw('COUNT(transactions.id_transaction) total_trx, SUM(transactions.transaction_grandtotal) as total_gross_sales,
+                        SUM(tps.subscription_nominal) as total_subscription, 
+                        SUM(transactions.transaction_subtotal) as total_sub_total, 
+                        SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
+                        SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
+                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription');
+
+        if($id_outlet){
+            $summaryFee = $summaryFee->where('id_outlet', $id_outlet);
+        }
+
+        $summaryFee = $summaryFee->first()->toArray();
+
+        $config = Configs::where('config_name', 'show or hide info calculation disburse')->first();
+
+        $summaryProduct = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->join('products as p', 'p.id_product', 'transaction_products.id_product')
+            ->where('transaction_payment_status', 'Completed')
+            ->whereNull('reject_at')
+            ->whereDate('transaction_date', '>=',$date_start)
+            ->whereDate('transaction_date', '<=',$date_end)
+            ->where('transactions.id_outlet', $id_outlet)
+            ->groupBy('transaction_products.id_product')
+            ->selectRaw("p.product_name as name, 'Product' as type, SUM(transaction_products.transaction_product_qty) as total_qty");
+        $summaryModifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'transaction_product_modifiers.id_transaction')
+            ->join('transaction_products as tp', 'tp.id_transaction_product', 'transaction_product_modifiers.id_transaction_product')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+            ->where('transaction_payment_status', 'Completed')
+            ->whereNull('reject_at')
+            ->whereDate('transaction_date', '>=',$date_start)
+            ->whereDate('transaction_date', '<=',$date_end)
+            ->where('transactions.id_outlet', $id_outlet)
+            ->groupBy('transaction_product_modifiers.id_product_modifier')
+            ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty");
+
+        $summary = $summaryProduct->unionAll($summaryModifier)->get()->toArray();
+        return [
+            'summary_product' => $summary,
+            'summary_fee' => $summaryFee,
+            'config' => $config
+        ];
     }
 
     function sendRecapTransactionOultet(Request $request){
