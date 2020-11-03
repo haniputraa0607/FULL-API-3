@@ -211,12 +211,12 @@ class ApiSettingTransactionV2 extends Controller
                     }
                     $valueData['variants'] = $variants;
                     $productPrice['product_price'] = $variantTree['base_price'] ?? $productPrice['product_price'];
-                    $valueData['transaction_product_price'] = $productPrice['product_price'];
                     $valueData['transaction_variant_subtotal'] = $product_variant_group->product_variant_group_price - $productPrice['product_price'];
                 } else {
                     $valueData['variants'] = [];
                     $valueData['transaction_variant_subtotal'] = 0;
                 }
+                $valueData['transaction_product_price'] = $productPrice['product_price'];
                 foreach ($valueData['modifiers'] as $modifier) {
                     $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                     $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];

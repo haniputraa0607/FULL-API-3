@@ -3058,6 +3058,7 @@ class ApiTransaction extends Controller
             } else {
                 $pt['product_price'] = ProductGlobalPrice::select('product_global_price')->where('id_product',$pt['id_product'])->pluck('product_global_price')->first()?:$pt['transaction_product_price'];
             }
+            $pt['extra_modifiers'] = [];
             foreach ($pt['modifiers'] as $key => &$modifier) {
                 if ($pt['outlet_different_price']) {
                     $price = ProductModifierPrice::select('product_modifier_price')->where([
@@ -3072,9 +3073,12 @@ class ApiTransaction extends Controller
                 unset($modifier['transaction_product_modifier_price']);
                 if ($modifier['modifier_type'] == 'Modifier Group') {
                     $pt['variants'][] = [
+                        'id_transaction_product' => $pt['id_transaction_product'],
                         'id_product_variant' => $modifier['id_product_modifier'],
-                        'product_variant_name' => $modifier['text']
+                        'product_variant_name' => $modifier['text'],
+                        'product_variant_price' => (double) $price,
                     ];
+                    $pt['extra_modifiers'][] = $modifier['id_product_modifier'];
                     unset($pt['modifiers'][$key]);
                 }
             }
@@ -3093,6 +3097,10 @@ class ApiTransaction extends Controller
             } else {
                 $pt['selected_variant'] = [];                
             }
+            $order = array_flip($pt['selected_variant']);
+            usort($pt['variants'], function ($a, $b) use ($order) {
+                return $order[$a['id_product_variant']] <=> $order[$b['id_product_variant']];
+            });
             $pt['product_price_total'] = MyHelper::requestNumber(($total_mod_price + $pt['product_price'])*$pt['qty'],$rn);
             $pt['product_price'] = MyHelper::requestNumber($pt['product_price'],$rn);
             $pt['note'] = $pt['note']?:'';

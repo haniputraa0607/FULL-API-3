@@ -118,6 +118,7 @@ class ApiFavoriteController extends Controller
                     $total_price = $val['product']['price'];
                     $val['product']['price']=MyHelper::requestNumber($val['product']['price'],$nf);
                     $variants = [];
+                    $val['extra_modifiers'] = [];
                     foreach ($val['modifiers'] as $keyx => &$modifier) {
                         if($val['outlet_different_price']){
                             $price = ProductModifierPrice::select('product_modifier_price')->where([
@@ -134,9 +135,14 @@ class ApiFavoriteController extends Controller
                                 'id_product_variant' => $modifier['id_product_modifier'],
                                 'product_variant_name' => $modifier['text']
                             ];
+                            $val['extra_modifiers'][] = $modifier['id_product_modifier'];
                             unset($val['modifiers'][$keyx]);
                         }
                     }
+                    $order = array_flip($val['selected_variant']);
+                    usort($val['variants'], function ($a, $b) use ($order) {
+                        return $order[$a['id_product_variant']] <=> $order[$b['id_product_variant']];
+                    });
                     $val['product_price_total'] = $total_price;
 
                     if ($request->json('max_price') && $request->json('min_price')) {

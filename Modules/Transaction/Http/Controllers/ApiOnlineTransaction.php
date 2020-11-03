@@ -2427,7 +2427,7 @@ class ApiOnlineTransaction extends Controller
 
             $order = array_flip($product['selected_variant']);
             $variants = array_merge(ProductVariant::select('id_product_variant', 'product_variant_name')->whereIn('id_product_variant', array_keys($item['variants']))->get()->toArray(), $product['extra_modifiers']??[]);
-            unset($product['extra_modifiers']);
+            $product['extra_modifiers'] = array_column($product['extra_modifiers']??[], 'id_product_variant');
             $filtered = array_filter($variants, function($i) use ($product) {return in_array($i['id_product_variant'], $product['selected_variant']);});
             if(count($variants) != count($filtered)){
                 $error_msg[] = MyHelper::simpleReplace(
