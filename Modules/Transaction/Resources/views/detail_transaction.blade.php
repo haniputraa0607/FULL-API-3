@@ -16,6 +16,7 @@
         <th style="background-color: #dcdcdc;" width="10"> Brand </th>
         <th style="background-color: #dcdcdc;" width="10"> Category </th>
         <th style="background-color: #dcdcdc;" width="10"> Items </th>
+        <th style="background-color: #dcdcdc;" width="10"> Variants </th>
         <th style="background-color: #dcdcdc;" width="10"> Modifier </th>
         <th style="background-color: #dcdcdc;" width="10"> Item Price </th>
         <th style="background-color: #dcdcdc;" width="10"> Modifier Price </th>
