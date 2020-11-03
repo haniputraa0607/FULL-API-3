@@ -24,6 +24,7 @@ Route::group([ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scop
 
 Route::group([ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be'], 'prefix' => 'product-variant-group'], function () {
     Route::post('list', 'ApiProductVariantGroupController@listProductWithVariant');
+    Route::post('product-delete', 'ApiProductVariantGroupController@deleteVariantFromProduct');
 
     Route::any('/', ['uses' => 'ApiProductVariantGroupController@productVariantGroup']);
     Route::post('delete', ['uses' => 'ApiProductVariantGroupController@deleteProductVariantGroup']);

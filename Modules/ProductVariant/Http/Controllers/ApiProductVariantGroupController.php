@@ -626,6 +626,22 @@ class ApiProductVariantGroupController extends Controller
         return MyHelper::checkGet($response);
     }
 
+    public function deleteVariantFromProduct(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['product_code']) && !empty($post['product_code'])){
+            $getId = Product::where('product_code', $post['product_code'])->first();
+            $getVariants = ProductVariantGroup::where('id_product', $getId['id_product'])->pluck('id_product_variant_group')->toArray();
+            $delete = ProductVariantPivot::whereIn('id_product_variant_group',$getVariants)->delete();
+            if($delete){
+                $delete = ProductVariantGroup::where('id_product',$getId['id_product'])->delete();
+            }
+            return response()->json(MyHelper::checkDelete($delete));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
+        }
+    }
+
     public function deleteProductVariantGroup(Request $request){
         $post = $request->json()->all();
 
