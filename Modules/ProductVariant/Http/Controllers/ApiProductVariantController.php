@@ -26,7 +26,7 @@ class ApiProductVariantController extends Controller
     public function index(Request $request)
     {
         $post = $request->all();
-        $product_variant = ProductVariant::with(['product_variant_parent', 'product_variant_child'])->orderBy('updated_at', 'desc');
+        $product_variant = ProductVariant::with(['product_variant_parent', 'product_variant_child']);
 
         if ($keyword = ($request->search['value']??false)) {
             $product_variant->where('product_variant_name', 'like', '%'.$keyword.'%')
@@ -43,7 +43,7 @@ class ApiProductVariantController extends Controller
         }
 
         if(isset($post['page'])){
-            $product_variant = $product_variant->paginate($request->length?:10);
+            $product_variant = $product_variant->orderBy('updated_at', 'desc')->paginate($request->length?:10);
         }else{
             $product_variant = $product_variant->get()->toArray();
         }

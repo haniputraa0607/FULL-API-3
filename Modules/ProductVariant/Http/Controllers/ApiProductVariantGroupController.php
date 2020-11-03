@@ -633,4 +633,18 @@ class ApiProductVariantGroupController extends Controller
         $response = array_merge($response,$result['more_msg_extended']);
         return MyHelper::checkGet($response);
     }
+
+    public function deleteProductVariantGroup(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['id_product_variant_group']) && !empty($post['id_product_variant_group'])){
+            $delete = ProductVariantPivot::where('id_product_variant_group',$post['id_product_variant_group'])->delete();
+            if($delete){
+                $delete = ProductVariantGroup::where('id_product_variant_group',$post['id_product_variant_group'])->delete();
+            }
+            return response()->json(MyHelper::checkDelete($delete));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
+        }
+    }
 }
