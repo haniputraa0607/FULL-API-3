@@ -2431,7 +2431,7 @@ class ApiOnlineTransaction extends Controller
             $filtered = array_filter($variants, function($i) use ($product) {return in_array($i['id_product_variant'], $product['selected_variant']);});
             if(count($variants) != count($filtered)){
                 $error_msg[] = MyHelper::simpleReplace(
-                    'selected variant for %product_name% is not available',
+                    'Selected variant for %product_name% is not available',
                     [
                         'product_name' => $product['product_name']
                     ]
@@ -2475,7 +2475,11 @@ class ApiOnlineTransaction extends Controller
 	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error);
         	}
         }
-
+        foreach ($tree as $key => $tre) {
+            if (!($tre['products'] ?? false)) {
+                unset($tree[$key]);
+            }
+        }
         // return $tree;
         if($missing_product){
             $error_msg[] = MyHelper::simpleReplace(
