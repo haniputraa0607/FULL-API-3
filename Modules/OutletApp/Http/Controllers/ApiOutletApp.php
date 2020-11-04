@@ -1002,22 +1002,24 @@ class ApiOutletApp extends Controller
         }
 
         $updated     = 0;
-        $outlet = Outlet::where('id_outlet', $outlet['id_outlet'])->first();
-        foreach ($request->variants as $v){
-            if(isset($v['available']) && !empty($v['available'])){
-                foreach ($v['available'] as $availableProductVariant){
-                    $status = 'Available';
-                    $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $availableProductVariant], ['product_variant_group_stock_status' => $status]);
+        if(isset($request->variants) && !empty($request->variants)){
+            $outlet = Outlet::where('id_outlet', $outlet['id_outlet'])->first();
+            foreach ($request->variants as $v){
+                if(isset($v['available']) && !empty($v['available'])){
+                    foreach ($v['available'] as $availableProductVariant){
+                        $status = 'Available';
+                        $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $availableProductVariant], ['product_variant_group_stock_status' => $status]);
+                    }
+                    Product::refreshVariantTree($v['id_product'], $outlet);
                 }
-                Product::refreshVariantTree($v['id_product'], $outlet);
-            }
 
-            if(isset($v['sold_out']) && !empty($v['sold_out'])){
-                foreach ($v['sold_out'] as $soldOutProductVariant){
-                    $status = 'Sold Out';
-                    $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $soldOutProductVariant], ['product_variant_group_stock_status' => $status]);
+                if(isset($v['sold_out']) && !empty($v['sold_out'])){
+                    foreach ($v['sold_out'] as $soldOutProductVariant){
+                        $status = 'Sold Out';
+                        $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $soldOutProductVariant], ['product_variant_group_stock_status' => $status]);
+                    }
+                    Product::refreshVariantTree($v['id_product'], $outlet);
                 }
-                Product::refreshVariantTree($v['id_product'], $outlet);
             }
         }
 
@@ -1028,7 +1030,7 @@ class ApiOutletApp extends Controller
                 foreach ($productVariantGroup as $pvg){
                     $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $pvg['id_product_variant_group']], ['product_variant_group_stock_status' => 'Sold Out']);
                 }
-                Product::refreshVariantTree($v['id_product'], $outlet);
+                Product::refreshVariantTree($s, $outlet);
             }
         }
 
