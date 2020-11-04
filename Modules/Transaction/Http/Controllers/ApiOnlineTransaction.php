@@ -107,6 +107,7 @@ class ApiOnlineTransaction extends Controller
 
     public function newTransaction(NewTransaction $request) {
         $post = $request->json()->all();
+        $post['item'] = $this->mergeProducts($post['item']);
         if (isset($post['pin']) && strtolower($post['payment_type']) == 'balance') {
             if (!password_verify($post['pin'], $request->user()->password)) {
                 return [
@@ -1117,7 +1118,7 @@ class ApiOnlineTransaction extends Controller
                 'id_outlet'                    => $insertTransaction['id_outlet'],
                 'id_user'                      => $insertTransaction['id_user'],
                 'transaction_product_qty'      => $valueProduct['qty'],
-                'transaction_product_price'    => $productPrice,
+                'transaction_product_price'    => $valueProduct['transaction_product_price'],
                 'transaction_product_price_base' => NULL,
                 'transaction_product_price_tax'  => NULL,
                 'transaction_product_discount'   => $this_discount,
@@ -1152,7 +1153,7 @@ class ApiOnlineTransaction extends Controller
                 foreach ($valueProduct['modifiers'] as $modifier) {
                     $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                     $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
-                    $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price')
+                    $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price', 'id_product_modifier_group', 'modifier_type')
                         // product visible
                         ->leftJoin('product_modifier_details', function($join) use ($post) {
                             $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
@@ -1195,6 +1196,7 @@ class ApiOnlineTransaction extends Controller
                         'id_transaction'=>$insertTransaction['id_transaction'],
                         'id_product'=>$checkProduct['id_product'],
                         'id_product_modifier'=>$id_product_modifier,
+                        'id_product_modifier_group'=>$mod['modifier_type'] == 'Modifier Group' ? $mod['id_product_modifier_group'] : null,
                         'id_outlet'=>$insertTransaction['id_outlet'],
                         'id_user'=>$insertTransaction['id_user'],
                         'type'=>$mod['type']??'',
@@ -2343,10 +2345,10 @@ class ApiOnlineTransaction extends Controller
             $product['modifiers'] = [];
             $removed_modifier = [];
             $missing_modifier = 0;
-            foreach ($item['modifiers'] as $key => $modifier) {
+            foreach ($item['modifiers']??[] as $key => $modifier) {
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
-                $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price')
+                $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price', 'modifier_type')
                     // product visible
                     ->leftJoin('product_modifier_details', function($join) use ($post) {
                         $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
@@ -2382,9 +2384,17 @@ class ApiOnlineTransaction extends Controller
                     continue;
                 }
                 $mod = $mod->toArray();
+                $scope = $mod['modifier_type'];
                 $mod['qty'] = $qty_product_modifier;
                 $mod['product_modifier_price'] = (int) $mod['product_modifier_price'];
-                $product['modifiers'][]=$mod;
+                if ($scope == 'Modifier Group') {
+                    $product['extra_modifiers'][]=[
+                        'product_variant_name' => $mod['text'],
+                        'id_product_variant' => $mod['id_product_modifier']
+                    ];
+                } else {
+                    $product['modifiers'][]=$mod;
+                }
                 $mod_price+=$mod['qty']*$mod['product_modifier_price'];
             }
             if($missing_modifier){
@@ -2413,19 +2423,30 @@ class ApiOnlineTransaction extends Controller
                 $tree_promo[$product['id_brand']] = $brand;
             }
 
-            $order = array_flip(array_keys($item['variants']));
-            $variants = ProductVariant::select('id_product_variant', 'product_variant_name')->whereIn('id_product_variant', array_keys($item['variants']))->get()->toArray();
-            usort($variants, function ($a, $b) use ($order) {
-                return $order[$a['id_product_variant']] <=> $order[$b['id_product_variant']];
-            });
-
             $product['id_product_variant_group'] = $item['id_product_variant_group'] ?? null;
-            $product['variants'] = $variants;
-            if ($item['id_product_variant_group'] ?? null) {
+            if ($product['id_product_variant_group']) {
                 $product['selected_variant'] = Product::getVariantParentId($item['id_product_variant_group'], Product::getVariantTree($item['id_product'], $outlet)['variants_tree']);
             } else {
                 $product['selected_variant'] = [];
             }
+
+            $order = array_flip($product['selected_variant']);
+            $variants = array_merge(ProductVariant::select('id_product_variant', 'product_variant_name')->whereIn('id_product_variant', array_keys($item['variants']))->get()->toArray(), $product['extra_modifiers']??[]);
+            $product['extra_modifiers'] = array_column($product['extra_modifiers']??[], 'id_product_variant');
+            $filtered = array_filter($variants, function($i) use ($product) {return in_array($i['id_product_variant'], $product['selected_variant']);});
+            if(count($variants) != count($filtered)){
+                $error_msg[] = MyHelper::simpleReplace(
+                    'selected variant for %product_name% is not available',
+                    [
+                        'product_name' => $product['product_name']
+                    ]
+                );
+                continue;
+            }
+            usort($variants, function ($a, $b) use ($order) {
+                return $order[$a['id_product_variant']] <=> $order[$b['id_product_variant']];
+            });
+            $product['variants'] = $variants;
 
             $product['product_price_total'] = $item['transaction_product_subtotal'];
             $product['product_price_raw'] = (int) $product['product_price'];
@@ -3168,11 +3189,17 @@ class ApiOnlineTransaction extends Controller
                 'id_product_variant_group' => $item['id_product_variant_group']??null,
                 'note' => $item['note'],
                 'modifiers' => array_map(function($i){
+                        if (is_numeric($i)) {
+                            return [
+                                'id_product_modifier' => $i,
+                                'qty' => 1
+                            ];
+                        }
                         return [
                             'id_product_modifier' => $i['id_product_modifier'],
                             'qty' => $i['qty']
                         ];
-                    },$item['modifiers']??[]),
+                    },array_merge($item['modifiers']??[], $item['extra_modifiers']??[])),
             ];
             usort($new_item['modifiers'],function($a, $b) { return $a['id_product_modifier'] <=> $b['id_product_modifier']; });
             $pos = array_search($new_item, $new_items);

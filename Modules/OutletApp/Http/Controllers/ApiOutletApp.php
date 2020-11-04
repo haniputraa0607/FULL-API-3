@@ -1002,39 +1002,24 @@ class ApiOutletApp extends Controller
         }
 
         $updated     = 0;
-        $outlet = Outlet::where('id_outlet', $outlet['id_outlet'])->first();
-        foreach ($request->variants as $v){
-            if(isset($v['available']) && !empty($v['available'])){
-                foreach ($v['available'] as $availableProductVariant){
-                    $status = 'Available';
-                    $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $availableProductVariant], ['product_variant_group_stock_status' => $status]);
-                }
-
-                $basePrice = ProductVariantGroup::orderBy('product_variant_group_price', 'asc')->whereIn('id_product_variant_group', $v['available'])->first();
-                ProductGlobalPrice::updateOrCreate(['id_product' => $v['id_product']], ['product_global_price' => $basePrice['product_variant_group_price']]);
-                Product::refreshVariantTree($v['id_product'], $outlet);
-                if($outlet['outlet_different_price'] == 1){
-                    $basePriceDiferrentOutlet = ProductVariantGroup::leftJoin('product_variant_group_special_prices as pgsp', 'pgsp.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
-                        ->orderBy('product_variant_group_price', 'asc')
-                        ->select(DB::raw('(CASE
-                        WHEN pgsp.product_variant_group_price is NOT NULL THEN pgsp.product_variant_group_price
-                        ELSE product_variant_groups.product_variant_group_price END)  as product_variant_group_price'))
-                        ->whereIn('pgsp.id_product_variant_group', $v['available'])
-                        ->where('id_product', $v['id_product'])->where('id_outlet', $outlet['id_outlet'])->first();
-                    if($basePriceDiferrentOutlet){
-                        ProductSpecialPrice::updateOrCreate(['id_outlet' => $outlet['id_outlet'], 'id_product' => $v['id_product']], ['product_special_price' => $basePriceDiferrentOutlet['product_variant_group_price']]);
-                    }else{
-                        ProductSpecialPrice::updateOrCreate(['id_outlet' => $outlet['id_outlet'], 'id_product' => $v['id_product']], ['product_special_price' => $basePrice['product_variant_group_price']]);
+        if(isset($request->variants) && !empty($request->variants)){
+            $outlet = Outlet::where('id_outlet', $outlet['id_outlet'])->first();
+            foreach ($request->variants as $v){
+                if(isset($v['available']) && !empty($v['available'])){
+                    foreach ($v['available'] as $availableProductVariant){
+                        $status = 'Available';
+                        $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $availableProductVariant], ['product_variant_group_stock_status' => $status]);
                     }
+                    Product::refreshVariantTree($v['id_product'], $outlet);
                 }
-            }
 
-            if(isset($v['sold_out']) && !empty($v['sold_out'])){
-                foreach ($v['sold_out'] as $soldOutProductVariant){
-                    $status = 'Sold Out';
-                    $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $soldOutProductVariant], ['product_variant_group_stock_status' => $status]);
+                if(isset($v['sold_out']) && !empty($v['sold_out'])){
+                    foreach ($v['sold_out'] as $soldOutProductVariant){
+                        $status = 'Sold Out';
+                        $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $soldOutProductVariant], ['product_variant_group_stock_status' => $status]);
+                    }
+                    Product::refreshVariantTree($v['id_product'], $outlet);
                 }
-                Product::refreshVariantTree($v['id_product'], $outlet);
             }
         }
 
@@ -1045,7 +1030,7 @@ class ApiOutletApp extends Controller
                 foreach ($productVariantGroup as $pvg){
                     $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $pvg['id_product_variant_group']], ['product_variant_group_stock_status' => 'Sold Out']);
                 }
-                Product::refreshVariantTree($v['id_product'], $outlet);
+                Product::refreshVariantTree($s, $outlet);
             }
         }
 
@@ -1490,6 +1475,7 @@ class ApiOutletApp extends Controller
                     foreach ($data['data'] as $key => $dt){
                         $variants = ProductVariantGroup::leftJoin('product_variant_group_details as pvgd', 'pvgd.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
                             ->where('id_product', $dt['id_product'])
+                            ->where('id_outlet', $outlet['id_outlet'])
                             ->select([
                                 'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
                                 DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
@@ -1509,6 +1495,7 @@ class ApiOutletApp extends Controller
                 foreach ($data as $key => $dt){
                     $variants = ProductVariantGroup::leftJoin('product_variant_group_details as pvgd', 'pvgd.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
                         ->where('id_product', $dt['id_product'])
+                        ->where('id_outlet', $outlet['id_outlet'])
                         ->select(['product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
                             DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR " - ") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
                             DB::raw('(CASE
