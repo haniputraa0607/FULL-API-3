@@ -560,6 +560,7 @@ class Product extends Model
      */
     public static function mergeModifierGroup(&$variants, $modifier_groups, $selected_id = [])
     {
+        if(!$modifier_groups){return;}
         foreach ($variants['childs'] as &$variant) {
             $new_selected_id = array_merge($selected_id, [$variant['id_product_variant']]);
             if($variant['variant']) {
