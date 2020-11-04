@@ -154,9 +154,19 @@ class PromoCampaign extends Eloquent
         return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignBuyxgetyProductRequirement::class, 'id_promo_campaign', 'id_promo_campaign');
     }
 
+    public function promo_campaign_buyxgety_product_requirement_v1()
+    {
+        return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignBuyxgetyProductRequirement::class, 'id_promo_campaign', 'id_promo_campaign');
+    }
+
     public function promo_campaign_tier_discount_product()
     {
         return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignTierDiscountProduct::class, 'id_promo_campaign', 'id_promo_campaign');
+    }
+
+    public function promo_campaign_tier_discount_product_v1()
+    {
+        return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaignTierDiscountProduct::class, 'id_promo_campaign', 'id_promo_campaign');
     }
 
     public function promo_campaign_product_discount()

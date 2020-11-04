@@ -1027,7 +1027,7 @@ class PromoCampaignTools{
 	 * @param  Array 								$trx 			transaction data
 	 * @return int discount
 	 */
-	protected function discount_product($product,$promo_rules,&$trx, $modifier=null){
+	public function discount_product($product,$promo_rules,&$trx, $modifier=null){
 		// check discount type
 		$discount 	= 0;
 		$modifier 	= 0; // reset all modifier price to 0
@@ -1783,6 +1783,50 @@ class PromoCampaignTools{
 	    	'product' => $product,
 	    	'total_product' => $total_product
 	    ];
+    }
+
+    public function getCheapestVariant($id_outlet, $id_product)
+    {
+	    $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet',$id_outlet)->first();
+	    $variant_list = Product::getVariantTree($id_product, $outlet);
+	    $result = null;
+
+	    if ($variant_list) {
+	    	$variant = 	$this->getVariant($variant_list['base_price'], $variant_list['variants_tree']['childs'], $group_price);
+
+	    	if (isset($variant['id_product_variant_group'])) {
+	    		$result = $variant['id_product_variant_group'];
+	    	}
+	    }
+
+		return $result;
+    }
+
+    public function getVariant($base_price, $variant, &$group_price)
+    {
+    	try {
+	    	foreach ($variant as $key => $value) {
+
+	    		if (isset($value['variant']['childs'])) {
+					$group_price = self::getVariant($base_price, $value['variant']['childs'], $group_price);
+	    		}
+
+				if (isset($value['product_variant_group_price'])) {
+					if ($value['product_variant_group_price'] == $base_price) {
+			    		$group_price = [
+			    			'price' => $value['product_variant_group_price'],
+			    			'id_product_variant_group' => $value['id_product_variant_group']
+			    		];
+			    		break;
+					}
+				}
+	    	}
+
+	    	return $group_price;
+    		
+    	} catch (\Exception $e) {
+    		return $e->getMessage();
+    	}
     }
 }
 ?>

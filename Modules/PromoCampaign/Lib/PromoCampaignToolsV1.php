@@ -19,6 +19,7 @@ use App\Http\Models\DealsUser;
 use App\Http\Models\Outlet;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
+use Modules\PromoCampaign\Lib\PromoCampaignTools;
 
 use App\Lib\MyHelper;
 
@@ -44,6 +45,7 @@ class PromoCampaignToolsV1{
 			}
 		 ]
 		 */
+		$pct = new PromoCampaignTools;
 		if(!is_numeric($id_promo)){
 			$errors[]='Id promo not valid';
 			return false;
@@ -157,6 +159,11 @@ class PromoCampaignToolsV1{
 				$mod_price_qty_per_item = [];
 				foreach ($trxs as $key => $value) 
 				{
+					// check product brand
+					if ($promo->id_brand != $value['id_brand']) {
+						continue;
+					}
+
 					if (isset($item_get_promo[$value['id_product']])) 
 					{
 						if ( ($item_get_promo[$value['id_product']] + $value['qty']) >= $max_product && !empty($max_product)) {
@@ -238,12 +245,7 @@ class PromoCampaignToolsV1{
 				foreach ($trxs as  $id_trx => &$trx) {
 
 					// continue if qty promo for same product is all used 
-					if ($trx['promo_qty'] == 0) {
-						continue;
-					}
-
-					// check product brand
-					if ($promo->id_brand != $trx['id_brand']) {
+					if (!isset($trx['promo_qty']) || $trx['promo_qty'] == 0) {
 						continue;
 					}
 
@@ -256,8 +258,7 @@ class PromoCampaignToolsV1{
 					// is all product get promo
 					if($promo_rules->is_all_product){
 						// get product data
-						$product = $this->getProductPrice($id_outlet, $trx['id_product']);
-						
+						$product = $pct->getProductPrice($id_outlet, $trx['id_product'], $trx['id_product_variant_group']);
 						//is product available
 						if(!$product){
 							// product not available
@@ -266,12 +267,12 @@ class PromoCampaignToolsV1{
 							continue;
 						}
 						// add discount
-						$discount+=$this->discount_product($product,$promo_rules,$trx, $modifier);
+						$discount += $pct->discount_product($product,$promo_rules,$trx, $modifier);
 					}else{
 						// is product available in promo
 						if(is_array($promo_product)&&in_array($trx['id_product'],array_column($promo_product,'id_product'))){
 							// get product data
-							$product = $this->getProductPrice($id_outlet, $trx['id_product']);
+							$product = $pct->getProductPrice($id_outlet, $trx['id_product'], $trx['id_product_variant_group']);
 
 							//is product available
 							if(!$product){
@@ -280,7 +281,7 @@ class PromoCampaignToolsV1{
 								continue;
 							}
 							// add discount
-							$discount+=$this->discount_product($product,$promo_rules,$trx, $modifier);
+							$discount += $pct->discount_product($product,$promo_rules,$trx, $modifier);
 						}
 					}
 				}
@@ -298,7 +299,7 @@ class PromoCampaignToolsV1{
 			case 'Tier discount':
 				// load requirement relationship
 				$promo->load($source.'_tier_discount_rules',$source.'_tier_discount_product');
-				$promo_product=$promo[$source.'_tier_discount_product'];
+				$promo_product=$promo[$source.'_tier_discount_product_v1'];
 				$promo_product->load('product');
 				if(!$promo_product){
 					$errors[]='Tier discount promo product is not set correctly';
@@ -368,7 +369,7 @@ class PromoCampaignToolsV1{
 					return false;
 				}
 				
-				$product_price = $this->getProductPrice($id_outlet, $promo_product->id_product);
+				// $product_price = $this->getProductPrice($id_outlet, $promo_product->id_product);
 				//find promo
 				$promo_rule=false;
 				$min_qty=null;
@@ -406,9 +407,10 @@ class PromoCampaignToolsV1{
 						$modifier += $mod_price[$value2['id_product_modifier']??$value2]??0;
 					}
 
-					if($trx['id_product']==$promo_product->id_product){
+					if($trx['id_product'] == $promo_product->id_product){
 						$trx['promo_qty'] = $max_qty < $trx['qty'] ? $max_qty : $trx['qty'];
-						$discount+=$this->discount_product($product_price,$promo_rule,$trx, $modifier);
+						$product_price = $pct->getProductPrice($id_outlet, $trx['id_product'], $trx['id_product_variant_group']);
+						$discount += $pct->discount_product($product_price,$promo_rule,$trx, $modifier);
 					}
 				}
 
@@ -417,7 +419,7 @@ class PromoCampaignToolsV1{
 			case 'Buy X Get Y':
 				// load requirement relationship
 				$promo->load($source.'_buyxgety_rules',$source.'_buyxgety_product_requirement');
-				$promo_product=$promo[$source.'_buyxgety_product_requirement'];
+				$promo_product=$promo[$source.'_buyxgety_product_requirement_v1'];
 				$promo_product->load('product');
 
 				if(!$promo_product){
@@ -525,17 +527,21 @@ class PromoCampaignToolsV1{
 					return false;
 				}
 				$benefit_product = $this->getOneProduct($id_outlet, $promo_rule->benefit_id_product,1);
-				$benefit_product_price = $this->getProductPrice($id_outlet, $promo_rule->benefit_id_product);
+				if(!$benefit_product){
+					$errors[]="Product benefit not found.";
+					return false;
+				}
+
+				if (!$promo_rule->id_product_variant_group) {
+					$benefit_variant = $pct->getCheapestVariant($id_outlet, $benefit_product->id_product);
+				}
+
+				$benefit_product_price = $pct->getProductPrice($id_outlet, $promo_rule->benefit_id_product, $promo_rule->id_product_variant_group??$benefit_variant??null, $promo_rule->id_brand);
 
 				$benefit_qty=$promo_rule->benefit_qty;
 				$benefit_value=$promo_rule->discount_value;
 				$benefit_type = $promo_rule->discount_type;
 				$benefit_max_value = $promo_rule->max_percent_discount;
-
-				if(!$benefit_product){
-					$errors[]="Product benefit not found.";
-					return false;
-				}
 				$benefit=null;
 
 				$rule=(object) [
@@ -554,13 +560,14 @@ class PromoCampaignToolsV1{
 					'is_promo'		=> 1,
 					'is_free'		=> ($promo_rule->discount_type == "percent" && $promo_rule->discount_value == 100) ? 1 : 0,
 					'modifiers'		=> [],
-					'bonus'			=> 1
+					'bonus'			=> 1,
+					'id_product_variant_group' => $promo_rule->id_product_variant_group??$benefit_variant??null
 				];
 				// $benefit_item['id_product']	= $benefit_product->id_product;
 				// $benefit_item['id_brand'] 	= $benefit_product->brands[0]->id_brand??'';
 				// $benefit_item['qty'] 		= $promo_rule->benefit_qty;
 
-				$discount+=$this->discount_product($benefit_product_price,$rule,$benefit_item);
+				$discount += $pct->discount_product($benefit_product_price,$rule,$benefit_item);
 
 				// return $benefit_item;
 				array_push($trxs, $benefit_item);
