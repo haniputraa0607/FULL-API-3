@@ -410,7 +410,16 @@ class ApiCategoryController extends Controller
 
         // grouping by id
         $result = [];
+        $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $post['id_outlet'])->first();
+        if (!$outlet) {
+            return [
+                'status' => 'fail', 
+                'messages' => ['Outlet not found']
+            ];
+        }
         foreach ($products as $product) {
+            $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+            $product['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
             $product['product_price_raw'] = (int) $product['product_price'];
             $product->append('photo');
             $product = $product->toArray();

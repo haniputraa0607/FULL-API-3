@@ -588,6 +588,7 @@ class Product extends Model
      */
     public static function insertModifierGroup(&$variant, $modifier_groups, $id_product_variant_group) {
         $starter = array_shift($modifier_groups);
+        if(!($starter['childs']??false)) {return null;}
         $result = [
             'product_variant_name'  => $starter['product_modifier_group_name'],
             'id_product_variant'    => $starter['id_product_modifier_group'],
