@@ -2741,11 +2741,10 @@ class ApiOutletController extends Controller
 		}
 
 		$promo_error = null;
-		if (
-				(!empty($post['promo_code']) && empty($post['id_deals_user']) && empty($post['id_subscription_user']) ) ||
-        		(empty($post['promo_code']) && !empty($post['id_deals_user']) && empty($post['id_subscription_user']) ) ||
-        		(empty($post['promo_code']) && empty($post['id_deals_user']) && !empty($post['id_subscription_user']) )
-			) {
+		if ((!empty($post['promo_code']) && empty($post['id_deals_user']) && empty($post['id_subscription_user'])) 
+			|| (empty($post['promo_code']) && !empty($post['id_deals_user']) && empty($post['id_subscription_user'])) 
+			|| (empty($post['promo_code']) && empty($post['id_deals_user']) && !empty($post['id_subscription_user']))
+		) {
         // if (isset($post['promo_code'])) {
         	if (!empty($post['promo_code']))
         	{
@@ -2804,7 +2803,6 @@ class ApiOutletController extends Controller
 					if ($check_outlet) {
 						$outlet[$key]['is_promo'] = 1;
 					}
-
 				}
 	        }
 	    }elseif (
