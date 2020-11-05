@@ -9,6 +9,7 @@ use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\ProductModifierDetail;
 use App\Http\Models\ProductModifierProduct;
 use App\Http\Models\ProductModifierProductCategory;
+use App\Jobs\RefreshVariantTree;
 use App\Lib\MyHelper;
 use DB;
 use Illuminate\Http\Request;
@@ -346,6 +347,9 @@ class ApiProductModifierController extends Controller
 
         }
         DB::commit();
+        if(!empty($request->json('type')) && $request->json('type') == 'modifiergroup'){
+            RefreshVariantTree::dispatch(['type' => 'refresh_product'])->allOnConnection('database');
+        }
         return ['status' => 'success'];
     }
     public function listDetail(Request $request)
@@ -414,6 +418,10 @@ class ApiProductModifierController extends Controller
             }
         }
         DB::commit();
+
+        if(!empty($request->json('type')) && $request->json('type') == 'modifiergroup'){
+            RefreshVariantTree::dispatch(['type' => 'refresh_product'])->allOnConnection('database');
+        }
         return ['status' => 'success'];
     }
     public function filterList($query, $rules, $operator = 'and')
