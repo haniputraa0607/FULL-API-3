@@ -64,7 +64,8 @@ class DealsPromotionTemplate extends Model
 		'id_brand',
 		'min_basket_size',
 		'is_all_shipment',
-        'is_all_payment'
+        'is_all_payment',
+        'product_rule'
 	];
 
 	public function deals_promotion_buyxgety_product_requirement()
