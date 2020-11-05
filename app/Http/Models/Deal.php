@@ -113,7 +113,8 @@ class Deal extends Model
         'custom_outlet_text',
         'min_basket_size',
         'is_all_shipment',
-        'is_all_payment'
+        'is_all_payment',
+        'product_rule'
 	];
 
 	protected $appends  = ['url_deals_image', 'deals_status', 'deals_voucher_price_type', 'deals_voucher_price_pretty', 'url_webview'];
