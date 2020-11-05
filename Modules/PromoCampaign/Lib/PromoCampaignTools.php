@@ -34,6 +34,8 @@ class PromoCampaignTools{
     function __construct()
     {
         $this->user     = "Modules\Users\Http\Controllers\ApiUser";
+        $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+        $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
     }
 	/**
 	 * validate transaction to use promo campaign
@@ -1827,6 +1829,137 @@ class PromoCampaignTools{
     	} catch (\Exception $e) {
     		return $e->getMessage();
     	}
+    }
+
+    public function applyPromoProduct($post, $brand_products, &$promo_error)
+    {
+    	$result = $brand_products;
+
+        // set default flag to 0
+        foreach ($result as $id_brand => $categories) {
+        	foreach ($categories as $id_category => $products) {
+        		foreach ($products as $key => $value) {
+            		$result[$id_brand][$id_category][$key]['is_promo'] = 0;
+        		}
+        	}
+        }
+
+        // return data if not using promo
+        if ((empty($post['promo_code']) && empty($post['id_deals_user']) && empty($post['id_subscription_user']))) {
+        	return $result;
+        }
+
+        $promo_error = null;
+        if ((!empty($post['promo_code']) && !empty($post['id_deals_user']) && !empty($post['id_subscription_user'])) 
+            || (!empty($post['promo_code']) && !empty($post['id_deals_user']) && empty($post['id_subscription_user'])) 
+            || (!empty($post['promo_code']) && empty($post['id_deals_user']) && !empty($post['id_subscription_user']))
+            || (empty($post['promo_code']) && !empty($post['id_deals_user']) && !empty($post['id_subscription_user']))
+        ) {
+        	$promo_error = 'Promo not valid';
+        	return $result;
+        }
+
+        if (!empty($post['promo_code'])) {
+            $code = app($this->promo_campaign)->checkPromoCode($post['promo_code'], 1, 1);
+            if (!$code) {
+                $promo_error = 'Promo not valid';
+                return $result;
+            }
+            $source 		= 'promo_campaign';
+            $brands 		= $code->promo_campaign->promo_campaign_brands()->pluck('id_brand')->toArray();
+    		$all_outlet 	= $code['promo_campaign']['is_all_outlet']??0;
+    		$promo_outlet 	= $code['promo_campaign']['promo_campaign_outlets']??[];
+    		$id_brand_promo	= $code['promo_campaign']['id_brand']??null;
+
+    		// if promo doesn't have product related rule, return data
+    		if ($code->promo_type != 'Product discount' && $code->promo_type != 'Tier discount' && $code->promo_type != 'Buy X Get Y') {
+                return $result;
+    		}
+
+        } elseif (!empty($post['id_deals_user'])) {
+            $code = app($this->promo_campaign)->checkVoucher($post['id_deals_user'], 1, 1);
+            if (!$code) {
+                $promo_error = 'Promo not valid';
+                return $result;
+            }
+            $source = 'deals';
+            $id_brand_promo = $code->dealVoucher->deals->id_brand;
+        } elseif (!empty($post['id_subscription_user'])) {
+            $code = app($this->subscription_use)->checkSubscription($post['id_subscription_user'], 1, 1, 1);
+            if (!$code) {
+                $promo_error = 'Promo not valid';
+                return $result;
+            }
+            $source = 'subscription';
+            $id_brand_promo = $code->subscription_user->subscription->id_brand;
+        }
+
+        if (($code['promo_campaign']['date_end'] ?? $code['voucher_expired_at'] ?? $code['subscription_expired_at']) < date('Y-m-d H:i:s')) {
+            $promo_error = 'Promo is ended';
+            return $result;
+        }
+
+        $code = $code->toArray();
+
+        if (!empty($id_brand_promo)) {
+			$check_outlet = $this->checkOutletRule($post['id_outlet'], $all_outlet, $promo_outlet, $id_brand_promo);
+		}else{
+			$check_outlet = $this->checkOutletBrandRule($post['id_outlet'], $all_outlet, $promo_outlet, $brands);
+		}
+
+		if (!$check_outlet) {
+			$promo_error = 'Promo tidak dapat digunakan di outlet ini.';
+            return $result;
+		}
+
+        $applied_product = app($this->promo_campaign)->getProduct($source, ($code['promo_campaign'] ?? $code['deal_voucher']['deals'] ?? $code['subscription_user']['subscription']))['applied_product'] ?? [];
+
+        if (!empty($id_brand_promo)) { // single brand
+        	foreach ($result as $id_brand => $categories) {
+				foreach ($categories as $id_category => $products) {
+					foreach ($products as $key => $product) {
+						if ($product['id_brand'] != $id_brand_promo){
+							continue;
+						}
+						if ($applied_product == '*') { // all product
+							$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+						}else{
+							if (isset($applied_product['id_product'])) { // single product
+								if ($applied_product['id_product'] == $product['id_product']) {
+									$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+								}
+							}else{ // multiple product
+								foreach ($applied_product as $val) {
+									if ($val['id_product'] == $product['id_product']) {
+										$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+									}
+								}
+							}
+						}
+					}
+				}
+			}	
+        }else{ // multi brand
+			foreach ($result as $id_brand => $categories) {
+				foreach ($categories as $id_category => $products) {
+					foreach ($products as $key => $product) {
+						if ($applied_product == '*') { // all product
+							if (in_array($product['id_brand'], $brands)) {
+								$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+							}
+						}else{
+							foreach ($applied_product as $val) { // multiple product
+								if ($val['id_brand'] == $product['id_brand'] && $val['id_product'] == $product['id_product']) {
+									$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+								}
+							}
+						}
+					}
+				}
+			}
+        }
+
+        return $result;
     }
 }
 ?>

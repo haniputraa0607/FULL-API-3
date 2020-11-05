@@ -327,6 +327,7 @@ class ApiPromoCampaign extends Controller
             'promo_campaign_shipment_method',
             'promo_campaign_payment_method',
             'brands',
+            'brand',
             'promo_campaign_reports'
         ];
         $promoCampaign = PromoCampaign::with($data)->where('id_promo_campaign', '=', $post['id_promo_campaign'])->first();

@@ -408,12 +408,6 @@ class ApiCategoryController extends Controller
             ->orderBy('products.id_product')
             ->get();
 
-        $promo_data = $this->applyPromo($post, $products, $promo_error);
-
-        if ($promo_data) {
-            $products = $promo_data;
-        }
-
         // grouping by id
         $result = [];
         foreach ($products as $product) {
@@ -454,6 +448,15 @@ class ApiCategoryController extends Controller
                 }
             }
         }
+
+        // check promo
+       	$pct = new PromoCampaignTools;
+        $promo_data = $pct->applyPromoProduct($post, $result, $promo_error);
+
+        if ($promo_data) {
+            $result = $promo_data;
+        }
+
         // get detail of every key
         foreach ($result as $id_brand => $categories) {
             foreach ($categories as $id_category => $products) {
