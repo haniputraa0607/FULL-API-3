@@ -2777,10 +2777,10 @@ class ApiOutletController extends Controller
 	        		$promo_outlet 	= $code['promo_campaign']['promo_campaign_outlets']??[];
 	        		$id_brand 		= $code['promo_campaign']['id_brand']??null;
 	        	}elseif($source == 'deals'){
-	        		$brands 		= $code->promo_campaign->promo_campaign_brands();
-	        		$all_outlet 	= $code['deal_voucher']['deals']['is_all_outlet']??0;
-	        		$promo_outlet 	= $code['deal_voucher']['deals']['outlets_active']??[];
-	        		$id_brand 		= $code['deal_voucher']['deals']['id_brand']??null;
+	        		$brands 		= $code->dealVoucher->deals->deals_brands()->pluck('id_brand')->toArray();
+	        		$all_outlet 	= $code['dealVoucher']['deals']['is_all_outlet']??0;
+	        		$promo_outlet 	= $code['dealVoucher']['deals']['outlets_active']??[];
+	        		$id_brand 		= $code['dealVoucher']['deals']['id_brand']??null;
 	        	}elseif($source == 'subscription'){
 	        		$brands 		= $code->promo_campaign->promo_campaign_brands();
 	        		$all_outlet 	= $code['subscription_user']['subscription']['is_all_outlet']??0;
