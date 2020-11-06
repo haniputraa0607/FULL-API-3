@@ -232,10 +232,20 @@ class Deal extends Model
 
 	public function deals_buyxgety_product_requirement()
     {
+        return $this->hasMany(\Modules\Deals\Entities\DealsBuyxgetyProductRequirement::class, 'id_deals', 'id_deals');
+    }
+
+    public function deals_buyxgety_product_requirement_v1()
+    {
         return $this->hasOne(\Modules\Deals\Entities\DealsBuyxgetyProductRequirement::class, 'id_deals', 'id_deals');
     }
 
     public function deals_tier_discount_product()
+    {
+        return $this->hasMany(\Modules\Deals\Entities\DealsTierDiscountProduct::class, 'id_deals', 'id_deals');
+    }
+
+    public function deals_tier_discount_product_v1()
     {
         return $this->belongsTo(\Modules\Deals\Entities\DealsTierDiscountProduct::class, 'id_deals', 'id_deals');
     }
@@ -274,4 +284,13 @@ class Deal extends Model
     {
         return $this->hasMany(\Modules\Deals\Entities\DealsPaymentMethod::class, 'id_deals', 'id_deals');
     }
+
+    public function brands(){
+		return $this->belongsToMany(\Modules\Brand\Entities\Brand::class,'deals_brands','id_deals','id_brand');
+	}
+
+	public function deals_brands()
+	{
+        return $this->hasMany(\Modules\Deals\Entities\DealsBrand::class, 'id_deals', 'id_deals');
+	}
 }

@@ -14,6 +14,6 @@ class DealsBrand extends Model
 
     public function deals()
 	{
-        return $this->belongsTo(\Modules\Deals\Entities\Deal::class, 'id_deals', 'id_deals');
+        return $this->belongsTo(\App\Http\Models\Deal::class, 'id_deals', 'id_deals');
 	}
 }
