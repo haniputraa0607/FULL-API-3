@@ -203,13 +203,10 @@ class ApiSettingTransactionV2 extends Controller
                     $variantTree = Product::getVariantTree($valueData['id_product'], $outlet);
                     $variants = Product::getVariantPrice($product_variant_group, $variantTree['variants_tree']??[]);
                     if (!$variants) {
-                        return response()->json([
-                            'status' => 'fail',
-                            'messages' => ['Price Variant Not Found'],
-                            'product' => $product['product_name']
-                        ]);
+                        $valueData['variants'] = [];
+                    } else {
+                        $valueData['variants'] = $variants;
                     }
-                    $valueData['variants'] = $variants;
                     $productPrice['product_price'] = $variantTree['base_price'] ?? $productPrice['product_price'];
                     $valueData['transaction_variant_subtotal'] = $product_variant_group->product_variant_group_price - $productPrice['product_price'];
                 } else {

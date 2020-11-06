@@ -2435,7 +2435,7 @@ class ApiOnlineTransaction extends Controller
             $filtered = array_filter($variants, function($i) use ($product) {return in_array($i['id_product_variant'], $product['selected_variant']);});
             if(count($variants) != count($filtered)){
                 $error_msg[] = MyHelper::simpleReplace(
-                    'Selected variant for %product_name% is not available',
+                    'Varian yang dipilih untuk %product_name% tidak tersedia',
                     [
                         'product_name' => $product['product_name']
                     ]
