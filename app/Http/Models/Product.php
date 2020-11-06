@@ -276,7 +276,7 @@ class Product extends Model
         // ambil modifier + harga + yang visible dll berdasarkan modifier group
         $modifier_groups = [];
         foreach ($modifier_groups_raw as $key => &$modifier_group) {
-            $modifiers = ProductModifier::select('product_modifiers.id_product_modifier as id_product_variant', 'product_modifier_price as product_variant_price', 'text as product_variant_name', \DB::raw('coalesce(product_modifier_stock_status, "Available") as product_variant_stock_status'))
+            $modifiers = ProductModifier::select('product_modifiers.id_product_modifier as id_product_variant', \DB::raw('coalesce(product_modifier_price,0) as product_variant_price'), 'text as product_variant_name', \DB::raw('coalesce(product_modifier_stock_status, "Available") as product_variant_stock_status'))
                 ->where('modifier_type', 'Modifier Group')
                 ->where('id_product_modifier_group', $modifier_group['id_product_modifier_group'])
                 ->leftJoin('product_modifier_details', function($join) use ($outlet) {
@@ -291,19 +291,16 @@ class Product extends Model
                     });
                 })
                 ->where(function($q){
-                    $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
-                })
-                ->where(function($q){
                     $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
                 })
                 ->groupBy('product_modifiers.id_product_modifier');
             if ($outlet['outlet_diferent_price']) {
-                $modifiers->join('product_modifier_prices', function($join) use ($outlet) {
+                $modifiers->leftJoin('product_modifier_prices', function($join) use ($outlet) {
                     $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier')
                         ->where('product_modifier_prices.id_outlet',$outlet['id_outlet']);
                 });
             } else {
-                $modifiers->join('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                $modifiers->leftJoin('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
             }
             $modifiers = $modifiers->get()->toArray();
             if (!$modifiers) {
