@@ -2706,12 +2706,14 @@ class ApiTransaction extends Controller
                     $discount = $discount + $valueProduct['transaction_product_discount'];
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'] = [];
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'] = [];
+                    $extra_modifiers = [];
                     foreach ($valueProduct['modifiers'] as $keyMod => $valueMod) {
                         if (!$valueMod['id_product_modifier_group']) {
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_name']   = $valueMod['text'];
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_qty']    = $valueMod['qty'];
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_price']  = MyHelper::requestNumber($valueMod['transaction_product_modifier_price'],'_CURRENCY');
                         } else {
+                            $extra_modifiers[] = $valueMod['id_product_modifier'];
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']['m'.$keyMod]['id_product_variant']   = $valueMod['id_product_modifier'];
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']['m'.$keyMod]['product_variant_name']   = $valueMod['text'];
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']['m'.$keyMod]['product_variant_price']  = MyHelper::requestNumber($valueMod['transaction_product_modifier_price'],'_CURRENCY');
@@ -2724,7 +2726,7 @@ class ApiTransaction extends Controller
                     }
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'] = array_values($result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']);
                     if ($valueProduct['id_product_variant_group'] ?? false) {
-                        $order = array_flip(Product::getVariantParentId($valueProduct['id_product_variant_group'], Product::getVariantTree($valueProduct['id_product'], $list['outlet'])['variants_tree']));
+                        $order = array_flip(Product::getVariantParentId($valueProduct['id_product_variant_group'], Product::getVariantTree($valueProduct['id_product'], $list['outlet'])['variants_tree'], $extra_modifiers));
                         usort($result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'], function ($a, $b) use ($order) {
                             return ($order[$a['id_product_variant']]??999) <=> ($order[$b['id_product_variant']]??999);
                         });
@@ -3110,7 +3112,7 @@ class ApiTransaction extends Controller
                 } else {
                     $product_price = ProductVariantGroup::select('product_variant_group_price')->where('id_product_variant_group', $pt['id_product_variant_group'])->first();
                 }
-                $pt['selected_variant'] = Product::getVariantParentId($pt['id_product_variant_group'], Product::getVariantTree($pt['id_product'], $pt)['variants_tree']);
+                $pt['selected_variant'] = Product::getVariantParentId($pt['id_product_variant_group'], Product::getVariantTree($pt['id_product'], $pt)['variants_tree'] ?? [], $pt['extra_modifiers']);
                 if (!$product_price) {
                     $pt['product_price'] = $pt['product_price'] + array_sum(array_column($pt['variants'], 'transaction_product_variant_price'));
                 } else {
