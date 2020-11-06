@@ -56,6 +56,7 @@ class RefreshVariantTree implements ShouldQueue
                 ->pluck('id_product')->toArray();
 
             $products = array_merge($products1,$products2);
+            $products = array_unique($products);
             foreach ($products as $p){
                 $getAllOutlets = Outlet::get();
                 foreach ($getAllOutlets as $o) {
