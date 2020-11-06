@@ -1151,7 +1151,7 @@ class ApiOnlineTransaction extends Controller
                 foreach ($valueProduct['modifiers'] as $modifier) {
                     $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                     $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
-                    $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price', 'id_product_modifier_group', 'modifier_type')
+                    $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status',\DB::raw('coalesce(product_modifier_price, 0) as product_modifier_price'), 'id_product_modifier_group', 'modifier_type')
                         // product visible
                         ->leftJoin('product_modifier_details', function($join) use ($post) {
                             $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
@@ -1164,20 +1164,22 @@ class ApiOnlineTransaction extends Controller
                                 ->where('product_modifiers.product_modifier_visibility', 'Visible');
                             });
                         })
-                        ->where(function($q){
-                            $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                        ->where(function($q) {
+                            $q->where(function($q){
+                                $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                            })->orWhere('product_modifiers.modifier_type', '=', 'Modifier Group');
                         })
                         ->where(function($q){
                             $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
                         })
                         ->groupBy('product_modifiers.id_product_modifier');
                     if($outlet['outlet_different_price']){
-                        $mod->join('product_modifier_prices',function($join) use ($post){
+                        $mod->leftJoin('product_modifier_prices',function($join) use ($post){
                             $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
                             $join->where('product_modifier_prices.id_outlet',$post['id_outlet']);
                         });
                     }else{
-                        $mod->join('product_modifier_global_prices',function($join){
+                        $mod->leftJoin('product_modifier_global_prices',function($join) use ($post){
                             $join->on('product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
                         });
                     }
@@ -2343,7 +2345,7 @@ class ApiOnlineTransaction extends Controller
             foreach ($item['modifiers']??[] as $key => $modifier) {
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
-                $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price', 'modifier_type')
+                $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status',\DB::raw('coalesce(product_modifier_price, 0) as product_modifier_price'), 'modifier_type')
                     // product visible
                     ->leftJoin('product_modifier_details', function($join) use ($post) {
                         $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
@@ -2356,20 +2358,22 @@ class ApiOnlineTransaction extends Controller
                             ->where('product_modifiers.product_modifier_visibility', 'Visible');
                         });
                     })
-                    ->where(function($q){
-                        $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                    ->where(function($q) {
+                        $q->where(function($q){
+                            $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                        })->orWhere('product_modifiers.modifier_type', '=', 'Modifier Group');
                     })
                     ->where(function($q){
                         $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
                     })
                     ->groupBy('product_modifiers.id_product_modifier');
                 if($outlet['outlet_different_price']){
-                    $mod->join('product_modifier_prices',function($join) use ($post){
+                    $mod->leftJoin('product_modifier_prices',function($join) use ($post){
                         $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
                         $join->where('product_modifier_prices.id_outlet',$post['id_outlet']);
                     });
                 }else{
-                    $mod->join('product_modifier_global_prices',function($join) use ($post){
+                    $mod->leftJoin('product_modifier_global_prices',function($join) use ($post){
                         $join->on('product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
                     });
                 }
@@ -2420,7 +2424,7 @@ class ApiOnlineTransaction extends Controller
 
             $product['id_product_variant_group'] = $item['id_product_variant_group'] ?? null;
             if ($product['id_product_variant_group']) {
-                $product['selected_variant'] = Product::getVariantParentId($item['id_product_variant_group'], Product::getVariantTree($item['id_product'], $outlet)['variants_tree']);
+                $product['selected_variant'] = Product::getVariantParentId($item['id_product_variant_group'], Product::getVariantTree($item['id_product'], $outlet)['variants_tree'], array_column($product['extra_modifiers']??[], 'id_product_variant'));
             } else {
                 $product['selected_variant'] = [];
             }
