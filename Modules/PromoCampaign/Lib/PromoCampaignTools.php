@@ -1881,8 +1881,20 @@ class PromoCampaignTools{
                 $promo_error = 'Promo not valid';
                 return $result;
             }
-            $source = 'deals';
-            $id_brand_promo = $code->dealVoucher->deals->id_brand;
+            $source 		= 'deals';
+    		$brands 		= $code->dealVoucher->deals->deals_brands()->pluck('id_brand')->toArray();
+    		$all_outlet 	= $code['dealVoucher']['deals']['is_all_outlet']??0;
+    		$promo_outlet 	= $code['dealVoucher']['deals']['outlets_active']??[];
+    		$id_brand_promo = $code['dealVoucher']['deals']['id_brand']??null;
+
+    		// if promo doesn't have product related rule, return data
+    		if ($code->dealVoucher->deals->promo_type != 'Product discount' 
+    			&& $code->dealVoucher->deals->promo_type != 'Tier discount' 
+    			&& $code->dealVoucher->deals->promo_type != 'Buy X Get Y'
+    		) {
+                return $result;
+    		}
+
         } elseif (!empty($post['id_subscription_user'])) {
             $code = app($this->subscription_use)->checkSubscription($post['id_subscription_user'], 1, 1, 1);
             if (!$code) {
