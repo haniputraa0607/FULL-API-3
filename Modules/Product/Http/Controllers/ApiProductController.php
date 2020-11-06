@@ -1810,6 +1810,10 @@ class ApiProductController extends Controller
             }
         }
         $product['variants'] = Product::getVariantTree($product['id_product'], $outlet)['variants_tree']??null;
+        $product['selected_available'] = 1;
+        if ($post['selected'] ?? false) {
+            $product['selected_available'] = (!!Product::getVariantParentId($post['selected']['id_product_variant_group'], $product['variants'], $post['selected']['extra_modifiers'] ?? []))?1:0;
+        }
         $product['modifiers'] = $product_modifiers->get()->toArray();
         foreach ($product['modifiers'] as $key => &$modifier) {
             $modifier['price'] = (int) $modifier['price'];
