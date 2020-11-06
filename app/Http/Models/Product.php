@@ -483,12 +483,9 @@ class Product extends Model
 
         foreach ($variant['childs'] as $child) {
             $next_variants = $variants;
-            if ($child['is_modifier']??false) {
-                return $variants;
-            }
             if($child['variant']) {
                 // check child or parent
-                if ($child['id_product_variant'] != $child['variant']['id_product_variant']) { //child
+                if ($child['id_product_variant'] != $child['variant']['id_product_variant'] && !($child['is_modifier']??false)) { //child
                     $next_variants[$child['id_product_variant']] = $last_price + $child['product_variant_price'];
                     $next_last_price = 0;
                 } else { //parent
@@ -500,7 +497,9 @@ class Product extends Model
                 }
             } else {
                 if ($child['id_product_variant_group'] == $product_variant_group->id_product_variant_group) {
-                    $variants[$child['id_product_variant']] = $last_price + $child['product_variant_price'];
+                    if (!($child['is_modifier']??false)) {
+                        $variants[$child['id_product_variant']] = $last_price + $child['product_variant_price'];
+                    }
                     return $variants;
                 }
             }
@@ -516,37 +515,44 @@ class Product extends Model
      * @param  integer              $last_price            last price (sum of parent price)
      * @return boolean              true / false
      */
-    public static function getVariantParentId($product_variant_group,$variant = null, $variants = [])
+    // validasi : if is modifier dan ada di extra variant
+    public static function getVariantParentId($product_variant_group,$variant = null, $extra_modifiers = [], $variants = [])
     {
         if (is_numeric($product_variant_group)) {
             $product_variant_group = ProductVariantGroup::where('id_product_variant_group', $product_variant_group)->first();
             if (!$product_variant_group) {
-                return false;
+                return [];
             }
         }
 
         if (!$variant) {
             $variant = self::getVariantTree($product_variant_group->id_product)['variants_tree'];
             if(!$variant) {
-                return false;
+                return [];
             }
         }
         foreach ($variant['childs'] as $child) {
             $next_variants = $variants;
             if($child['variant']) {
+                if (($child['is_modifier']??false) && !in_array($child['id_product_variant'], $extra_modifiers)) {
+                    continue;
+                }
                 // check child or parent
                 $next_variants[] = $child['id_product_variant'];
-                if ($result = self::getVariantParentId($product_variant_group, $child['variant'], $next_variants)) {
+                if ($result = self::getVariantParentId($product_variant_group, $child['variant'], $extra_modifiers, $next_variants)) {
                     return $result;
                 }
             } else {
+                if (($child['is_modifier']??false) && !in_array($child['id_product_variant'], $extra_modifiers)) {
+                    continue;
+                }
                 if ($child['id_product_variant_group'] == $product_variant_group->id_product_variant_group) {
                     $variants[] = $child['id_product_variant'];
                     return $variants;
                 }
             }
         }
-        return false;
+        return [];
     }
 
     /**
