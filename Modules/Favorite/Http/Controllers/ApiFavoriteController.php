@@ -108,13 +108,6 @@ class ApiFavoriteController extends Controller
             if(count($datax)>=1){
                 $datax = MyHelper::groupIt($datax,'id_outlet',function($key,&$val) use ($nf,$data, $request){
 
-                    if ($val['id_product_variant_group']) {
-                        $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $val['id_outlet'])->first();
-                        $val['selected_variant'] = Product::getVariantParentId($val['id_product_variant_group'], Product::getVariantTree($val['id_product'], $outlet)['variants_tree']);
-                    } else {
-                        $val['selected_variant'] = [];
-                    }
-
                     $total_price = $val['product']['price'];
                     $val['product']['price']=MyHelper::requestNumber($val['product']['price'],$nf);
                     $variants = [];
@@ -139,9 +132,22 @@ class ApiFavoriteController extends Controller
                             unset($val['modifiers'][$keyx]);
                         }
                     }
+
+                    if ($val['id_product_variant_group']) {
+                        $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $val['id_outlet'])->first();
+                        $variant_tree = Product::getVariantTree($val['id_product'], $outlet);
+                        if ($variant_tree['base_price'] ?? false) {
+                            $total_price += $variant_tree['base_price'] - $val['product']['price'];
+                            $variant_price = Product::getVariantPrice($val['id_product_variant_group'], $variant_tree['variants_tree']??[]);
+                            $total_price += array_sum($variant_price);
+                        }
+                        $val['selected_variant'] = Product::getVariantParentId($val['id_product_variant_group'], $variant_tree['variants_tree']??[], $val['extra_modifiers']);
+                    } else {
+                        $val['selected_variant'] = [];
+                    }
                     $order = array_flip($val['selected_variant']);
                     usort($val['variants'], function ($a, $b) use ($order) {
-                        return $order[$a['id_product_variant']] <=> $order[$b['id_product_variant']];
+                        return ($order[$a['id_product_variant']]??999) <=> ($order[$b['id_product_variant']]??999);
                     });
                     $val['product_price_total'] = $total_price;
 
