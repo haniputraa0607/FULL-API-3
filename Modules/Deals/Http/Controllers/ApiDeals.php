@@ -33,6 +33,7 @@ use Modules\Deals\Entities\DealsBuyxgetyRule;
 use Modules\Deals\Entities\DealsUserLimit;
 use Modules\Deals\Entities\DealsContent;
 use Modules\Deals\Entities\DealsContentDetail;
+use Modules\Deals\Entities\DealsBrand;
 
 use DB;
 
@@ -94,7 +95,6 @@ class ApiDeals extends Controller
     /* CHECK INPUTAN */
     function checkInputan($post)
     {
-
         $data = [];
 
         if (isset($post['deals_promo_id_type'])) {
@@ -169,9 +169,9 @@ class ApiDeals extends Controller
         if (isset($post['id_product'])) {
             $data['id_product'] = $post['id_product'];
         }
-        if (isset($post['id_brand'])) {
+        /*if (isset($post['id_brand'])) {
             $data['id_brand'] = $post['id_brand'];
-        }
+        }*/
         if (isset($post['deals_start'])) {
             $data['deals_start'] = date('Y-m-d H:i:s', strtotime($post['deals_start']));
         }
@@ -274,6 +274,10 @@ class ApiDeals extends Controller
         	$data['custom_outlet_text'] = $post['custom_outlet_text'];
         }
 
+        if (isset($post['id_brand'])) {
+        	$data['id_brand'] = $post['id_brand'];
+        }
+
         return $data;
     }
 
@@ -297,6 +301,9 @@ class ApiDeals extends Controller
                     $data['id_brand'] = $brand['id_brand'];
                 }
             }
+        }else{
+        	$data_brand = $data['id_brand'];
+        	unset($data['id_brand']);
         }
 
         if ($data['deals_type'] == 'Promotion') {
@@ -313,6 +320,13 @@ class ApiDeals extends Controller
                     if (!$saveOutlet) {
                         return false;
                     }
+                }
+            }
+
+            if (isset($data_brand)) {
+            	$save_brand = $this->saveBrand($save, $data_brand);
+            	if (!$save_brand) {
+                    return false;
                 }
             }
         }
@@ -1272,6 +1286,29 @@ class ApiDeals extends Controller
         return $delete;
     }
 
+    function saveBrand($deals, $id_brand)
+    {
+    	$id_deals = $deals->id_deals;
+        $data_brand = [];
+
+        foreach ($id_brand as $value) {
+            array_push($data_brand, [
+                'id_brand' 	=> $value,
+                'id_deals'  => $id_deals
+            ]);
+        }
+
+        if (!empty($data_brand)) {
+            $save = DealsBrand::insert($data_brand);
+
+            return $save;
+        } else {
+            return false;
+        }
+
+        return true;
+    }
+
     /*Welcome Voucher*/
     function listDealsWelcomeVoucher(Request $request){
         $configUseBrand = Configs::where('config_name', 'use brand')->first();
@@ -1435,22 +1472,27 @@ class ApiDeals extends Controller
     	}
 
         if ( ($post['step'] == 1 || $post['step'] == 'all') && ($deals_type != 'Promotion') ){
-			$deals = $deals->with(['outlets']);
+			$deals = $deals->with(['outlets', $table.'_brands']);
         }
 
         if ($post['step'] == 2 || $post['step'] == 'all') {
-			$deals = $deals->with([  
+			$deals = $deals->with([
                 $table.'_product_discount.product', 
+                $table.'_product_discount.brand', 
                 $table.'_product_discount_rules', 
                 $table.'_tier_discount_product.product', 
+                $table.'_tier_discount_product.brand', 
                 $table.'_tier_discount_rules', 
                 $table.'_buyxgety_product_requirement.product', 
+                $table.'_buyxgety_product_requirement.brand', 
                 $table.'_buyxgety_rules.product',
+                $table.'_buyxgety_rules.brand',
                 $table.'_discount_bill_rules',
                 $table.'_discount_delivery_rules',
                 $table.'_shipment_method',
                 $table.'_payment_method',
-                'brand'
+                'brand',
+                'brands'
             ]);
         }
 
