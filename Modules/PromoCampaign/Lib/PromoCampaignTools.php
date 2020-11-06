@@ -88,7 +88,7 @@ class PromoCampaignTools{
 			return $pct->validatePromo($id_promo, $id_outlet, $trxs, $errors, $source, $errorProduct, $delivery_fee);
 		}
 
-		$promo_brand = $promo->promo_campaign_brands->pluck('id_brand')->toArray();
+		$promo_brand = $promo->{$source.'_brands'}->pluck('id_brand')->toArray();
 		// $outlet = $this->checkOutletRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet, $promo->id_brand);
 		$outlet = $this->checkOutletBrandRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet, $promo_brand);
 
@@ -286,7 +286,7 @@ class PromoCampaignTools{
 					}
 
 					$product[$key]['promo_qty'] = $promo_qty;
-				}				
+				}
 
 				foreach ($trxs as $key => &$trx) {
 					if (!isset($product[$key])) {
@@ -383,11 +383,11 @@ class PromoCampaignTools{
 						$item_promo[$value['id_product']] = $value['qty'];
 					}
 
-					if (isset($item_get_promo[$value['id_brand']][$value['id_product']])) {
-						$item_get_promo[$value['id_brand']][$value['id_product']] += $value['qty'];
+					if (isset($item_get_promo[$value['id_brand'].'-'.$value['id_product']])) {
+						$item_get_promo[$value['id_brand'].'-'.$value['id_product']] += $value['qty'];
 					}
 					else{
-						$item_get_promo[$value['id_brand']][$value['id_product']] = $value['qty'];
+						$item_get_promo[$value['id_brand'].'-'.$value['id_product']] = $value['qty'];
 					}
 				}
 
@@ -410,7 +410,7 @@ class PromoCampaignTools{
 								$max_qty = $rule->max_qty;
 							}
 							
-							if($rule->min_qty > $item_promo[$val['id_product']]){
+							if($rule->min_qty > $item_get_promo[$val['id_brand'].'-'.$val['id_product']]){
 								if (empty($temp_rule_key[$key])) {
 									$req_valid = false;
 									break;
@@ -421,8 +421,8 @@ class PromoCampaignTools{
 							$temp_rule_key[$key][] 	= $key2;
 						}
 
-						if ($item_promo[$val['id_product']] < $promo_qty_each || $promo_qty_each == 0) {
-							$promo_qty_each = $item_promo[$val['id_product']];
+						if ($item_get_promo[$val['id_brand'].'-'.$val['id_product']] < $promo_qty_each || $promo_qty_each == 0) {
+							$promo_qty_each = $item_get_promo[$val['id_brand'].'-'.$val['id_product']];
 						}
 
 						if (!empty($rule_key)) {
@@ -494,21 +494,21 @@ class PromoCampaignTools{
 				foreach ($product as $key => $value) {
 
 					if (!empty($promo_qty_each)) {
-						if (!isset($qty_each[$value['id_product']])) {
-							$qty_each[$value['id_product']] = $promo_qty_each;
+						if (!isset($qty_each[$value['id_brand']][$value['id_product']])) {
+							$qty_each[$value['id_brand']][$value['id_product']] = $promo_qty_each;
 						}
 
-						if ($qty_each[$value['id_product']] < 0) {
-							$qty_each[$value['id_product']] = 0;
+						if ($qty_each[$value['id_brand']][$value['id_product']] < 0) {
+							$qty_each[$value['id_brand']][$value['id_product']] = 0;
 						}
 
-						if ($qty_each[$value['id_product']] > $value['qty']) {
+						if ($qty_each[$value['id_brand']][$value['id_product']] > $value['qty']) {
 							$promo_qty = $value['qty'];
 						}else{
-							$promo_qty = $qty_each[$value['id_product']];
+							$promo_qty = $qty_each[$value['id_brand']][$value['id_product']];
 						}
 
-						$qty_each[$value['id_product']] -= $value['qty'];
+						$qty_each[$value['id_brand']][$value['id_product']] -= $value['qty'];
 						
 					}else{
 						if ($total_promo_qty < 0) {
@@ -643,11 +643,11 @@ class PromoCampaignTools{
 						$item_promo[$value['id_product']] = $value['qty'];
 					}
 
-					if (isset($item_get_promo[$value['id_brand']][$value['id_product']])) {
-						$item_get_promo[$value['id_brand']][$value['id_product']] += $value['qty'];
+					if (isset($item_get_promo[$value['id_brand'].'-'.$value['id_product']])) {
+						$item_get_promo[$value['id_brand'].'-'.$value['id_product']] += $value['qty'];
 					}
 					else{
-						$item_get_promo[$value['id_brand']][$value['id_product']] = $value['qty'];
+						$item_get_promo[$value['id_brand'].'-'.$value['id_product']] = $value['qty'];
 					}
 				}
 
@@ -674,7 +674,7 @@ class PromoCampaignTools{
 								$max_qty = $rule->max_qty_requirement;
 							}
 							
-							if($rule->min_qty_requirement > $item_promo[$val['id_product']]){
+							if($rule->min_qty_requirement > $item_get_promo[$val['id_brand'].'-'.$val['id_product']]){
 								if (empty($temp_rule_key[$key])) {
 									$req_valid = false;
 									break;
@@ -1035,7 +1035,7 @@ class PromoCampaignTools{
 		$modifier 	= 0; // reset all modifier price to 0
 		// set quantity of product to apply discount
 		$discount_qty = $trx['promo_qty']??$trx['qty'];
-		$old=$trx['discount']??0;
+		$old = $trx['discount']??0;
 		// is there any max qty set?
 		if(($promo_rules->max_qty??false)&&$promo_rules->max_qty<$discount_qty){
 			$discount_qty=$promo_rules->max_qty;
@@ -1066,7 +1066,7 @@ class PromoCampaignTools{
 			$trx['discount']		= ($trx['discount']??0)+$discount;
 			$trx['new_price']		= ($product_price*$trx['qty'])-$trx['discount'];
 			$trx['is_promo']		= 1;
-			$trx['base_discount']	= $promo_rules->discount_value;
+			$trx['base_discount']	= $product_price < $promo_rules->discount_value ? $product_price : $promo_rules->discount_value;
 			$trx['qty_discount']	= $discount_qty;
 		}else{
 			// percent
@@ -1702,7 +1702,6 @@ class PromoCampaignTools{
     		$promo_product_array = $promo_product;
     	}
     	$promo_product_id = array_column($promo_product_array, 'id_product');
-
     	// merge total quantity of same product
 		$merge_product = [];
 		foreach ($trxs as $key => $value) {
@@ -1730,7 +1729,7 @@ class PromoCampaignTools{
 				}
 
 				if($found && in_array($key2, $promo_product_id)){
-					$check_product[$key2] = $key;
+					$check_product[$key.'-'.$key2] = $key;
 				}
 			}
 		}
