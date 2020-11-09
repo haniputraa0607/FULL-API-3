@@ -471,6 +471,7 @@ class ApiCategoryController extends Controller
             foreach ($categories as $id_category => $products) {
                 if (!is_numeric($id_category)) {
                     // berarti ini promo category
+                    $products['list'] = array_filter($products['list']);
                     usort($products['list'], function ($a, $b) {
                         return $a['position'] <=> $b['position'];
                     });
