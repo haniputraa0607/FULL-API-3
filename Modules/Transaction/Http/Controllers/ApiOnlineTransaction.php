@@ -2321,7 +2321,7 @@ class ApiOnlineTransaction extends Controller
             $product = $product->toArray();
             if($product['product_stock_status']!='Available'){
                 $error_msg[] = MyHelper::simpleReplace(
-                    '%product_name% is out of stock',
+                    'Produk %product_name% tidak tersedia',
                     [
                         'product_name' => $product['product_name']
                     ]
@@ -2351,16 +2351,15 @@ class ApiOnlineTransaction extends Controller
                         $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
                             ->where('product_modifier_details.id_outlet',$post['id_outlet']);
                     })
-                    ->where(function($query){
-                        $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
-                        ->orWhere(function($q){
-                            $q->whereNull('product_modifier_details.product_modifier_visibility')
-                            ->where('product_modifiers.product_modifier_visibility', 'Visible');
-                        });
-                    })
                     ->where(function($q) {
                         $q->where(function($q){
-                            $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                            $q->where(function($query){
+                                $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
+                                ->orWhere(function($q){
+                                    $q->whereNull('product_modifier_details.product_modifier_visibility')
+                                    ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                                });
+                            });
                         })->orWhere('product_modifiers.modifier_type', '=', 'Modifier Group');
                     })
                     ->where(function($q){
@@ -2392,13 +2391,17 @@ class ApiOnlineTransaction extends Controller
                         'id_product_variant' => $mod['id_product_modifier']
                     ];
                 } else {
-                    $product['modifiers'][]=$mod;
+                    if ($mod['product_modifier_stock_status'] != 'Sold Out') {
+                        $product['modifiers'][]=$mod;
+                    } else {
+                        $removed_modifier[] = $mod['text'];
+                    }
                 }
                 $mod_price+=$mod['qty']*$mod['product_modifier_price'];
             }
             if($missing_modifier){
                 $error_msg[] = MyHelper::simpleReplace(
-                    '%missing_modifier% modifiers for product %product_name% not found',
+                    '%missing_modifier% topping untuk produk %product_name% tidak tersedia',
                     [
                         'missing_modifier' => $missing_modifier,
                         'product_name' => $product['product_name']
@@ -2407,7 +2410,7 @@ class ApiOnlineTransaction extends Controller
             }
             if($removed_modifier){
                 $error_msg[] = MyHelper::simpleReplace(
-                    'Modifier %removed_modifier% for product %product_name% is out of stock',
+                    'Topping %removed_modifier% untuk produk %product_name% tidak tersedia',
                     [
                         'removed_modifier' => implode(',',$removed_modifier),
                         'product_name' => $product['product_name']
@@ -2434,9 +2437,12 @@ class ApiOnlineTransaction extends Controller
             $product['extra_modifiers'] = array_column($product['extra_modifiers']??[], 'id_product_variant');
             $filtered = array_filter($variants, function($i) use ($product) {return in_array($i['id_product_variant'], $product['selected_variant']);});
             if(count($variants) != count($filtered)){
+                $variantsss = ProductVariant::join('product_variant_pivot', 'product_variant_pivot.id_product_variant', 'product_variants.id_product_variant')->select('product_variant_name')->where('id_product_variant_group', $product['id_product_variant_group'])->pluck('product_variant_name')->toArray();
+                $modifiersss = ProductModifier::whereIn('id_product_modifier', array_column($item['modifiers'], 'id_product_modifier'))->where('modifier_type', 'Modifier Group')->pluck('text')->toArray();
                 $error_msg[] = MyHelper::simpleReplace(
-                    'Varian yang dipilih untuk %product_name% tidak tersedia',
+                    'Varian %variants% untuk %product_name% tidak tersedia',
                     [
+                        'variants' => implode(', ', array_merge($variantsss, $modifiersss)),
                         'product_name' => $product['product_name']
                     ]
                 );
@@ -2595,6 +2601,9 @@ class ApiOnlineTransaction extends Controller
         $result['total_payment'] = $result['grandtotal'] - $result['used_point'];
         $result['subscription'] = (int) $result['subscription'];
         $result['discount'] = (int) $result['discount'];
+        if (count($error_msg) > 1) {
+            $error_msg = ['Produk, Varian, atau Topping yang anda pilih tidak tersedia. Silakan cek kembali pesanan anda'];
+        }
         return MyHelper::checkGet($result)+['messages'=>$error_msg,'promo_error'=>$promo_error];
     }
 
