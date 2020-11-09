@@ -16,6 +16,8 @@ use Modules\Subscription\Entities\SubscriptionContent;
 use Modules\Subscription\Entities\SubscriptionContentDetail;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
+use Modules\Subscription\Entities\SubscriptionShipmentMethod;
+use Modules\Subscription\Entities\SubscriptionPaymentMethod;
 use Modules\Deals\Entities\DealsContent;
 use Modules\Deals\Entities\DealsContentDetail;
 use Modules\Promotion\Entities\DealsPromotionContent;
@@ -141,6 +143,14 @@ class ApiSubscription extends Controller
 
         if (isset($post['id_product'])) {
             $data['id_product'] = $post['id_product'];
+        }
+
+        if (isset($post['payment_method'])) {
+            $data['payment_method'] = $post['payment_method'];
+        }
+
+        if (isset($post['shipment_method'])) {
+            $data['shipment_method'] = $post['shipment_method'];
         }
 
         if (isset($post['subscription_total'])) {
@@ -432,6 +442,7 @@ class ApiSubscription extends Controller
             return response()->json($data);
         }
 
+        $subs=Subscription::find($data['id_subscription']);
         if (isset($data['id_outlet'])) {
 
             $data['is_all_outlet'] = null;
@@ -445,7 +456,6 @@ class ApiSubscription extends Controller
             {
                 // SAVE
                 $data['is_all_outlet'] = 0;
-                $subs=Subscription::find($data['id_subscription']);
                 $saveOutlet = $this->saveOutlet($subs['id_subscription'], $data['id_outlet']);
             }
             unset($data['id_outlet']);
@@ -464,10 +474,39 @@ class ApiSubscription extends Controller
             {
                 // SAVE
                 $data['is_all_product'] = 0;
-                $subs=Subscription::find($data['id_subscription']);
                 $saveOutlet = $this->saveProduct($subs['id_subscription'], $data['id_product']);
             }
             unset($data['id_product']);
+        }
+
+        $delete_payment = SubscriptionPaymentMethod::where('id_subscription', $data['id_subscription'])->delete();
+        if (isset($data['payment_method'])) {
+        	if(in_array('all', $data['payment_method'])){
+                $data['is_all_payment'] = 1;
+        	}
+        	else
+            {
+                $data['is_all_payment'] = 0;
+                $saveOutlet = $this->savePayment($subs['id_subscription'], $data['payment_method']);
+            }
+            unset($data['payment_method']);
+        }else{
+        	$data['is_all_payment'] = 1;
+        }
+
+        $delete_shipment = SubscriptionShipmentMethod::where('id_subscription', $data['id_subscription'])->delete();
+        if (isset($data['shipment_method'])) {
+        	if(in_array('all', $data['shipment_method'])){
+                $data['is_all_shipment'] = 1;
+        	}
+        	else
+            {
+                $data['is_all_shipment'] = 0;
+                $saveOutlet = $this->saveShipment($subs['id_subscription'], $data['shipment_method']);
+            }
+            unset($data['shipment_method']);
+        }else{
+        	$data['is_all_shipment'] = 1;
         }
 
         $save = Subscription::where('id_subscription', $data['id_subscription'])->update($data);
@@ -748,6 +787,56 @@ class ApiSubscription extends Controller
         return true;
     }
 
+    /* SAVE PAYMENT */
+    function savePayment($id_subs, $payment = [])
+    {
+        $data_payment = [];
+
+        foreach ($payment as $value) {
+            array_push($data_payment, [
+                'payment_method' => $value,
+                'id_subscription'  => $id_subs,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+        }
+
+        if (!empty($data_payment)) {
+            $save = SubscriptionPaymentMethod::insert($data_payment);
+
+            return $save;
+        } else {
+            return false;
+        }
+
+        return true;
+    }
+
+    /* SAVE SHIPMENT */
+    function saveShipment($id_subs, $shipment = [])
+    {
+        $data_shipment = [];
+
+        foreach ($shipment as $value) {
+            array_push($data_shipment, [
+                'shipment_method' => $value,
+                'id_subscription'  => $id_subs,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+        }
+
+        if (!empty($data_shipment)) {
+            $save = SubscriptionShipmentMethod::insert($data_shipment);
+
+            return $save;
+        } else {
+            return false;
+        }
+
+        return true;
+    }
+
     /* DELETE OUTLET */
     function deleteOutlet($id_subscription)
     {
@@ -805,7 +894,9 @@ class ApiSubscription extends Controller
 	                    		'product_code',
 	                    		'product_name'
 	                    	);
-	                    }
+	                    },
+	                    'subscription_shipment_method',
+	                    'subscription_payment_method'
 	                ])
                     ->first()
                     ->toArray();
@@ -852,7 +943,9 @@ class ApiSubscription extends Controller
 	                    		'product_name'
 	                    	);
 	                    },
-	                    'brand'
+	                    'brand',
+	                    'subscription_shipment_method',
+	                    'subscription_payment_method'
                     ])
                     ->withCount(['subscription_users' => function($q) {
                     	$q->where('paid_status','!=','Cancelled');
