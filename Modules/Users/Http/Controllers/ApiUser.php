@@ -2776,67 +2776,75 @@ class ApiUser extends Controller
     public function updateProfileByAdmin(Request $request)
     {
         $post = $request->json()->all();
+        $user = $request->user();
+        if($user->phone == $post['phone']){
+            $user = User::where('phone', $post['phone'])->get()->toArray();
 
-        $user = User::where('phone', $post['phone'])->get()->toArray();
-
-        if (isset($post['update']['phone'])) {
-            if ($post['update']['phone'] != $user[0]['phone']) {
-                $check = User::where('phone', $post['update']['phone'])->get()->toArray();
-                if ($check) {
-                    $result = [
-                        'status'    => 'fail',
-                        'messages'    => ['Update profile failed. Phone Number already exist.']
-                    ];
-                    return response()->json($result);
+            if (isset($post['update']['phone'])) {
+                if ($post['update']['phone'] != $user[0]['phone']) {
+                    $check = User::where('phone', $post['update']['phone'])->get()->toArray();
+                    if ($check) {
+                        $result = [
+                            'status'    => 'fail',
+                            'messages'    => ['Update profile failed. Phone Number already exist.']
+                        ];
+                        return response()->json($result);
+                    }
                 }
             }
-        }
 
-        if (isset($post['update']['email'])) {
-            if ($post['update']['email'] != $user[0]['email']) {
-                $check = User::where('email', $post['update']['email'])->get()->toArray();
-                if ($check) {
-                    $result = [
-                        'status'    => 'fail',
-                        'messages'    => ['Update profile failed. Email already exist.']
-                    ];
-                    return response()->json($result);
+            if (isset($post['update']['email'])) {
+                if ($post['update']['email'] != $user[0]['email']) {
+                    $check = User::where('email', $post['update']['email'])->get()->toArray();
+                    if ($check) {
+                        $result = [
+                            'status'    => 'fail',
+                            'messages'    => ['Update profile failed. Email already exist.']
+                        ];
+                        return response()->json($result);
+                    }
                 }
             }
-        }
 
-        if (isset($post['update']['birthday'])) {
-            if (stristr($post['update']['birthday'], '/')) {
-                $explode = explode('/', $post['update']['birthday']);
-                $post['update']['birthday'] = $explode[2] . '-' . $explode[1] . '-' . $explode[0];
-            }
-        }
-
-        if (isset($post['update']['id_card_image']) && !empty($post['update']['id_card_image'])) {
-            if (is_null($user[0]['id_card_image']) || empty($user[0]['id_card_image'])) {
-                $idCardImage = $post['update']['id_card_image'];
-                $path = 'img/customer/idcard/';
-                $upload = MyHelper::uploadPhoto($idCardImage, $path, null, $user[0]['phone']);
-
-                if ($upload['status'] == "success") {
-                    $post['update']['id_card_image'] = $upload['path'];
+            if (isset($post['update']['birthday'])) {
+                if (stristr($post['update']['birthday'], '/')) {
+                    $explode = explode('/', $post['update']['birthday']);
+                    $post['update']['birthday'] = $explode[2] . '-' . $explode[1] . '-' . $explode[0];
                 }
-            } else {
-                unset($post['update']['id_card_image']);
             }
-        }
 
-        if(isset($post['update']['otp_request_status'])){
-            $old = $user[0]['otp_request_status'];
-            $current = $post['update']['otp_request_status'];
-            if($old == 'Can Not Request' && $current == 'Can Request'){
-                $post['update']['otp_increment'] = 0;
+            if (isset($post['update']['id_card_image']) && !empty($post['update']['id_card_image'])) {
+                if (is_null($user[0]['id_card_image']) || empty($user[0]['id_card_image'])) {
+                    $idCardImage = $post['update']['id_card_image'];
+                    $path = 'img/customer/idcard/';
+                    $upload = MyHelper::uploadPhoto($idCardImage, $path, null, $user[0]['phone']);
+
+                    if ($upload['status'] == "success") {
+                        $post['update']['id_card_image'] = $upload['path'];
+                    }
+                } else {
+                    unset($post['update']['id_card_image']);
+                }
             }
+
+            if(isset($post['update']['otp_request_status'])){
+                $old = $user[0]['otp_request_status'];
+                $current = $post['update']['otp_request_status'];
+                if($old == 'Can Not Request' && $current == 'Can Request'){
+                    $post['update']['otp_increment'] = 0;
+                }
+            }
+
+            $update = User::where('phone', $post['phone'])->update($post['update']);
+
+            return MyHelper::checkUpdate($update);
+        }else{
+            $result = [
+                'status'    => 'fail',
+                'messages'    => ["You don't have access."]
+            ];
+            return response()->json($result);
         }
-
-        $update = User::where('phone', $post['phone'])->update($post['update']);
-
-        return MyHelper::checkUpdate($update);
     }
 
     public function updateProfilePhotoByAdmin(Request $request)
@@ -2868,23 +2876,32 @@ class ApiUser extends Controller
     public function updateProfilePasswordByAdmin(users_phone_pin_new_admin $request)
     {
         $post = $request->json()->all();
-        if (isset($post['password_new'])) {
-            $password = bcrypt($post['password_new']);
-            $update = User::where('phone', $post['phone'])->update(['password' => $password]);
+        $user = $request->user();
+        if($user->phone == $post['phone']){
+            if (isset($post['password_new'])) {
+                $password = bcrypt($post['password_new']);
+                $update = User::where('phone', $post['phone'])->update(['password' => $password]);
 
-            $user = User::where('phone', $post['phone'])->first();
+                $user = User::where('phone', $post['phone'])->first();
 
-            if ($user) {
+                if ($user) {
 
-                $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
-                    ->where('oauth_access_tokens.user_id', $user->id)->where('oauth_access_token_providers.provider', 'users')->delete();
+                    $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+                        ->where('oauth_access_tokens.user_id', $user->id)->where('oauth_access_token_providers.provider', 'users')->delete();
+                }
+
+                return MyHelper::checkUpdate($update);
+            } else {
+                $result = [
+                    'status'    => 'fail',
+                    'messages'    => ['Update profile password failed.']
+                ];
+                return response()->json($result);
             }
-
-            return MyHelper::checkUpdate($update);
-        } else {
+        }else{
             $result = [
                 'status'    => 'fail',
-                'messages'    => ['Update profile password failed.']
+                'messages'    => ["You don't have access."]
             ];
             return response()->json($result);
         }
