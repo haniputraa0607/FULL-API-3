@@ -276,7 +276,7 @@ class Product extends Model
         // ambil modifier + harga + yang visible dll berdasarkan modifier group
         $modifier_groups = [];
         foreach ($modifier_groups_raw as $key => &$modifier_group) {
-            $modifiers = ProductModifier::select('product_modifiers.id_product_modifier as id_product_variant', 'product_modifier_price as product_variant_price', 'text as product_variant_name', \DB::raw('coalesce(product_modifier_stock_status, "Available") as product_variant_stock_status'))
+            $modifiers = ProductModifier::select('product_modifiers.id_product_modifier as id_product_variant', \DB::raw('coalesce(product_modifier_price,0) as product_variant_price'), 'text as product_variant_name', \DB::raw('coalesce(product_modifier_stock_status, "Available") as product_variant_stock_status'))
                 ->where('modifier_type', 'Modifier Group')
                 ->where('id_product_modifier_group', $modifier_group['id_product_modifier_group'])
                 ->leftJoin('product_modifier_details', function($join) use ($outlet) {
@@ -291,19 +291,16 @@ class Product extends Model
                     });
                 })
                 ->where(function($q){
-                    $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
-                })
-                ->where(function($q){
                     $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
                 })
                 ->groupBy('product_modifiers.id_product_modifier');
             if ($outlet['outlet_diferent_price']) {
-                $modifiers->join('product_modifier_prices', function($join) use ($outlet) {
+                $modifiers->leftJoin('product_modifier_prices', function($join) use ($outlet) {
                     $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier')
                         ->where('product_modifier_prices.id_outlet',$outlet['id_outlet']);
                 });
             } else {
-                $modifiers->join('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                $modifiers->leftJoin('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
             }
             $modifiers = $modifiers->get()->toArray();
             if (!$modifiers) {
@@ -486,12 +483,9 @@ class Product extends Model
 
         foreach ($variant['childs'] as $child) {
             $next_variants = $variants;
-            if ($child['is_modifier']??false) {
-                return $variants;
-            }
             if($child['variant']) {
                 // check child or parent
-                if ($child['id_product_variant'] != $child['variant']['id_product_variant']) { //child
+                if ($child['id_product_variant'] != $child['variant']['id_product_variant'] && !($child['is_modifier']??false)) { //child
                     $next_variants[$child['id_product_variant']] = $last_price + $child['product_variant_price'];
                     $next_last_price = 0;
                 } else { //parent
@@ -503,7 +497,9 @@ class Product extends Model
                 }
             } else {
                 if ($child['id_product_variant_group'] == $product_variant_group->id_product_variant_group) {
-                    $variants[$child['id_product_variant']] = $last_price + $child['product_variant_price'];
+                    if (!($child['is_modifier']??false)) {
+                        $variants[$child['id_product_variant']] = $last_price + $child['product_variant_price'];
+                    }
                     return $variants;
                 }
             }
@@ -519,37 +515,44 @@ class Product extends Model
      * @param  integer              $last_price            last price (sum of parent price)
      * @return boolean              true / false
      */
-    public static function getVariantParentId($product_variant_group,$variant = null, $variants = [])
+    // validasi : if is modifier dan ada di extra variant
+    public static function getVariantParentId($product_variant_group,$variant = null, $extra_modifiers = [], $variants = [])
     {
         if (is_numeric($product_variant_group)) {
             $product_variant_group = ProductVariantGroup::where('id_product_variant_group', $product_variant_group)->first();
             if (!$product_variant_group) {
-                return false;
+                return [];
             }
         }
 
         if (!$variant) {
             $variant = self::getVariantTree($product_variant_group->id_product)['variants_tree'];
             if(!$variant) {
-                return false;
+                return [];
             }
         }
         foreach ($variant['childs'] as $child) {
             $next_variants = $variants;
             if($child['variant']) {
+                if (($child['is_modifier']??false) && !in_array($child['id_product_variant'], $extra_modifiers)) {
+                    continue;
+                }
                 // check child or parent
                 $next_variants[] = $child['id_product_variant'];
-                if ($result = self::getVariantParentId($product_variant_group, $child['variant'], $next_variants)) {
+                if ($result = self::getVariantParentId($product_variant_group, $child['variant'], $extra_modifiers, $next_variants)) {
                     return $result;
                 }
             } else {
+                if (($child['is_modifier']??false) && !in_array($child['id_product_variant'], $extra_modifiers)) {
+                    continue;
+                }
                 if ($child['id_product_variant_group'] == $product_variant_group->id_product_variant_group) {
                     $variants[] = $child['id_product_variant'];
                     return $variants;
                 }
             }
         }
-        return false;
+        return [];
     }
 
     /**

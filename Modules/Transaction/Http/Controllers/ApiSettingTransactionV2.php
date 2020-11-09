@@ -186,7 +186,7 @@ class ApiSettingTransactionV2 extends Controller
                 }
                 $mod_subtotal = 0;
                 if ($valueData['id_product_variant_group'] ?? false) {
-                    $product_variant_group = ProductVariantGroup::where('id_product_variant_group', $valueData['id_product_variant_group']);
+                    $product_variant_group = ProductVariantGroup::where('product_variant_groups.id_product_variant_group', $valueData['id_product_variant_group']);
                     if ($different_price) {
                         $product_variant_group->join('product_variant_group_special_prices', 'product_variant_group_special_prices.id_product_variant_group', 'product_variant_groups.id_product_variant_group')->select('product_variant_groups.id_product_variant_group', 'product_variant_groups.id_product', 'product_variant_group_special_prices.product_variant_group_price');
                     } else {
@@ -203,13 +203,10 @@ class ApiSettingTransactionV2 extends Controller
                     $variantTree = Product::getVariantTree($valueData['id_product'], $outlet);
                     $variants = Product::getVariantPrice($product_variant_group, $variantTree['variants_tree']??[]);
                     if (!$variants) {
-                        return response()->json([
-                            'status' => 'fail',
-                            'messages' => ['Price Variant Not Found'],
-                            'product' => $product['product_name']
-                        ]);
+                        $valueData['variants'] = [];
+                    } else {
+                        $valueData['variants'] = $variants;
                     }
-                    $valueData['variants'] = $variants;
                     $productPrice['product_price'] = $variantTree['base_price'] ?? $productPrice['product_price'];
                     $valueData['transaction_variant_subtotal'] = $product_variant_group->product_variant_group_price - $productPrice['product_price'];
                 } else {
