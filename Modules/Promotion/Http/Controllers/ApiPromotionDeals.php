@@ -27,9 +27,13 @@ use Modules\Deals\Entities\DealsTierDiscountProduct;
 use Modules\Deals\Entities\DealsTierDiscountRule;
 use Modules\Deals\Entities\DealsBuyxgetyProductRequirement;
 use Modules\Deals\Entities\DealsBuyxgetyRule;
+use Modules\Deals\Entities\DealsDiscountBillRule;
+use Modules\Deals\Entities\DealsDiscountDeliveryRule;
 use Modules\Deals\Entities\DealsUserLimit;
 use Modules\Deals\Entities\DealsContent;
 use Modules\Deals\Entities\DealsContentDetail;
+use Modules\Deals\Entities\DealsShipmentMethod;
+use Modules\Deals\Entities\DealsPaymentMethod;
 
 use Modules\Promotion\Http\Requests\DetailPromotion;
 use Modules\Promotion\Http\Requests\DeleteDealsPromotionTemplate;
@@ -42,6 +46,7 @@ class ApiPromotionDeals extends Controller
 	function __construct() {
         date_default_timezone_set('Asia/Jakarta');
         $this->dealsVoucher 	= "Modules\Deals\Http\Controllers\ApiDealsVoucher";
+        $this->promo_campaign   = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
     }
 	
   
@@ -160,7 +165,9 @@ class ApiPromotionDeals extends Controller
 	                'promotion_contents.deals',
 	                'brand',
 	                'deals_promotion_discount_bill_rules',
-	                'deals_promotion_discount_delivery_rules'
+	                'deals_promotion_discount_delivery_rules',
+	                'deals_promotion_shipment_method',
+	                'deals_promotion_payment_method'
 	            ])
 	            ->first();
 	    $outlet = explode(',',$deals->deals_list_outlet);
@@ -217,6 +224,9 @@ class ApiPromotionDeals extends Controller
 		$dataDeals['is_offline'] 			= $dealsTemplate['is_offline'];
 		$dataDeals['step_complete'] 		= 1;
 		$dataDeals['custom_outlet_text'] 	= $dealsTemplate['custom_outlet_text'];
+		$dataDeals['is_all_shipment'] 		= $dealsTemplate['is_all_shipment'];
+		$dataDeals['is_all_payment'] 		= $dealsTemplate['is_all_payment'];
+		$dataDeals['min_basket_size'] 		= $dealsTemplate['min_basket_size'];
 
 		if ($post['duration'][$key] == 'duration') {
 			$dataDeals['deals_voucher_duration'] = $post['deals_voucher_expiry_duration'][$key];
@@ -373,6 +383,29 @@ class ApiPromotionDeals extends Controller
 
 			}
 
+			// save shipment method
+ 			$saveShipment = $this->insertShipmentMethod($dealsTemplate, $id_deals);
+ 			if (!$saveShipment) {
+ 				$result = [
+					'status'	=> 'fail',
+					'messages'	=> ['Update Promotion Content Deals Failed.']
+				];
+				return $result;
+ 			}
+
+ 			// save shipment method
+ 			$savePayment = $this->insertPaymentMethod($dealsTemplate, $id_deals);
+ 			if (!$savePayment) {
+ 				$result = [
+					'status'	=> 'fail',
+					'messages'	=> ['Update Promotion Content Deals Failed.']
+				];
+				return $result;
+ 			}
+
+ 			// delete all rule
+ 			app($this->promo_campaign)->deleteAllProductRule('deals', $id_deals);
+
 			// save promo rule
 			switch ($dealsTemplate['promo_type']) {
 				case 'Product discount':
@@ -388,11 +421,26 @@ class ApiPromotionDeals extends Controller
 					$saveRule = $this->insertBuyxgetyDiscount($dealsTemplate, $id_deals);
 					break;
 
+				case 'Discount bill':
+					$saveRule = $this->insertBillDiscount($dealsTemplate, $id_deals);
+					break;
+
+				case 'Discount delivery':
+					$saveRule = $this->insertDeliveryDiscount($dealsTemplate, $id_deals);
+					break;
+
 				default:
 					# code...
 					break;
 			}
 
+			if (!$saveRule) {
+ 				$result = [
+					'status'	=> 'fail',
+					'messages'	=> ['Update Promotion Content Deals Failed.']
+				];
+				return $result;
+ 			}
 
 			// save content & detail content
  			$saveContent = $this->insertContent($dealsTemplate, $id_deals);
@@ -455,7 +503,13 @@ class ApiPromotionDeals extends Controller
     			];
     		}
     		$delProduct = DealsProductDiscount::where('id_deals',$id_deals)->delete();
-    		$saveProduct = DealsProductDiscount::insert($product);
+    		$saveRule = DealsProductDiscount::insert($product);
+		}
+
+		if ($saveRule) {
+			return true;
+		}else{
+			return false;
 		}
     }
 
@@ -468,7 +522,7 @@ class ApiPromotionDeals extends Controller
 		$rule['id_product'] 		= $product_rule['id_product'];
 		$rule['id_product_category'] = $product_rule['id_product_category'];
 
-		$save = DealsTierDiscountProduct::updateOrCreate(['id_deals' => $id_deals],$rule);
+		$saveRule = DealsTierDiscountProduct::updateOrCreate(['id_deals' => $id_deals],$rule);
 
 		foreach ($promotion_rule as $key => $value) {
 			$ruleBenefit[] = [
@@ -482,8 +536,14 @@ class ApiPromotionDeals extends Controller
         		'updated_at' 			=> date('Y-m-d H:i:s')
 			];
 		}
-		$delProduct = DealsTierDiscountRule::where('id_deals',$id_deals)->delete();
-		$saveRuleBenefit = DealsTierDiscountRule::insert($ruleBenefit);
+		$delRule = DealsTierDiscountRule::where('id_deals',$id_deals)->delete();
+		$saveRule = DealsTierDiscountRule::insert($ruleBenefit);
+
+		if ($saveRule) {
+			return true;
+		}else{
+			return false;
+		}
     }
 
     function insertBuyxgetyDiscount($query, $id_deals)
@@ -495,7 +555,7 @@ class ApiPromotionDeals extends Controller
 		$rule['id_product'] 	= $product_rule['id_product'];
 		$rule['id_product_category'] 	= $product_rule['id_product_category'];
 
-		$save = DealsBuyxgetyProductRequirement::updateOrCreate(['id_deals' => $id_deals],$rule);
+		$saveRule = DealsBuyxgetyProductRequirement::updateOrCreate(['id_deals' => $id_deals],$rule);
 
 		foreach ( $promotion_rule as $key => $value ) {
 
@@ -514,7 +574,103 @@ class ApiPromotionDeals extends Controller
 		}
 
 		$delRule = DealsBuyxgetyRule::where('id_deals', $id_deals)->delete();
-		$saveRuleBenefit = DealsBuyxgetyRule::insert($ruleBenefit);
+		$saveRule = DealsBuyxgetyRule::insert($ruleBenefit);
+
+		if ($saveRule) {
+			return true;
+		}else{
+			return false;
+		}
+    }
+
+    function insertBillDiscount($query, $id_deals)
+    {
+    	$dealsTemplate = $query;
+
+    	$promotion_rule = $dealsTemplate->deals_promotion_discount_bill_rules;
+
+		$rule['id_deals'] 				= $id_deals;
+		$rule['discount_type'] 			= $promotion_rule['discount_type'];
+		$rule['discount_value'] 		= $promotion_rule['discount_value'];
+		$rule['max_percent_discount'] 	= $promotion_rule['max_percent_discount'];
+
+		$saveRule = DealsDiscountBillRule::updateOrCreate(['id_deals' => $id_deals],$rule);
+
+		if ($saveRule) {
+			return true;
+		}else{
+			return false;
+		}
+    }
+
+    function insertDeliveryDiscount($query, $id_deals)
+    {
+    	$dealsTemplate = $query;
+
+    	$promotion_rule = $dealsTemplate->deals_promotion_discount_delivery_rules;
+
+		$rule['id_deals'] 				= $id_deals;
+		$rule['discount_type'] 			= $promotion_rule['discount_type'];
+		$rule['discount_value'] 		= $promotion_rule['discount_value'];
+		$rule['max_percent_discount'] 	= $promotion_rule['max_percent_discount'];
+
+		$saveRule = DealsDiscountDeliveryRule::updateOrCreate(['id_deals' => $id_deals],$rule);
+
+		if ($saveRule) {
+			return true;
+		}else{
+			return false;
+		}
+    }
+
+    function insertShipmentMethod($query, $id_deals)
+    {
+    	$dealsTemplate = $query;
+
+    	$shipment_rule = $dealsTemplate->deals_promotion_shipment_method;
+
+    	$shipment = [];
+		foreach ($shipment_rule as $key => $value) {
+			$shipment[] = [
+				'id_deals'			=> $id_deals,
+				'shipment_method' 	=> $value['shipment_method'],
+				'created_at' 		=> date('Y-m-d H:i:s'),
+    			'updated_at' 		=> date('Y-m-d H:i:s')
+			];
+		}
+		$delShipment = DealsShipmentMethod::where('id_deals',$id_deals)->delete();
+		$saveShipment = DealsShipmentMethod::insert($shipment);
+
+		if ($saveShipment) {
+			return true;
+		}else{
+			return false;
+		}
+    }
+
+    function insertPaymentMethod($query, $id_deals)
+    {
+    	$dealsTemplate = $query;
+
+    	$payment_rule = $dealsTemplate->deals_promotion_payment_method;
+
+    	$payment = [];
+		foreach ($payment_rule as $key => $value) {
+			$payment[] = [
+				'id_deals'			=> $id_deals,
+				'payment_method' 	=> $value['payment_method'],
+				'created_at' 		=> date('Y-m-d H:i:s'),
+    			'updated_at' 		=> date('Y-m-d H:i:s')
+			];
+		}
+		$delPayment = DealsPaymentMethod::where('id_deals',$id_deals)->delete();
+		$savePayment = DealsPaymentMethod::insert($payment);
+
+		if ($savePayment) {
+			return true;
+		}else{
+			return false;
+		}
     }
 
     function insertContent($query, $id_deals)

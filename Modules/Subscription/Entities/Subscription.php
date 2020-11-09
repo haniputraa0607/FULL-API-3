@@ -95,7 +95,9 @@ class Subscription extends Eloquent
         'charged_central',
         'charged_outlet',
         'subscription_type',
-        'subscription_discount_type'
+        'subscription_discount_type',
+        'is_all_shipment',
+        'is_all_payment'
 	];
 
 	protected $appends  = [
@@ -241,4 +243,14 @@ class Subscription extends Eloquent
     public function brand(){
 		return $this->belongsTo(\Modules\Brand\Entities\Brand::class,'id_brand');
 	}
+
+	public function subscription_shipment_method()
+    {
+        return $this->hasMany(\Modules\Subscription\Entities\SubscriptionShipmentMethod::class, 'id_subscription', 'id_subscription');
+    }
+
+    public function subscription_payment_method()
+    {
+        return $this->hasMany(\Modules\Subscription\Entities\SubscriptionPaymentMethod::class, 'id_subscription', 'id_subscription');
+    }
 }
