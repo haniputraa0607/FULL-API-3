@@ -38,7 +38,8 @@ class SubscriptionProduct extends Eloquent
 	protected $fillable = [
 		'id_subscription',
 		'id_product',
-		'id_product_category'
+		'id_product_category',
+		'id_brand'
 	];
 
 	public function product()
@@ -54,5 +55,10 @@ class SubscriptionProduct extends Eloquent
 	public function subscription()
 	{
 		return $this->belongsTo(\Modules\Subscription\Entities\Subscription::class, 'id_subscription');
+	}
+
+	public function brand()
+	{
+		return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
 	}
 }
