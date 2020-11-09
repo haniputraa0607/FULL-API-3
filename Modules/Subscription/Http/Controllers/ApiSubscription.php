@@ -1548,9 +1548,12 @@ class ApiSubscription extends Controller
                 $text['header'] = $empty_text[0]['value']??'Anda belum memiliki Paket.';
                 $text['content'] = $empty_text[1]['value']??'Banyak keuntungan dengan berlangganan.';
                 return  response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['My Subscription is empty'],
-                    'empty'    => $text,
+                	'status'   	=> 'fail',
+	                'result'	=> [
+	                	'data'	=> [],
+	                	'empty'    => $text,
+	                ],
+	                'messages' 	=> ['My Subscription is empty']
                 ]);
             }
         }
@@ -1567,9 +1570,12 @@ class ApiSubscription extends Controller
 	            $text['header'] = $empty_text[0]['value']??'Anda belum memiliki Paket.';
 	            $text['content'] = $empty_text[1]['value']??'Banyak keuntungan dengan berlangganan.';
 	            return [
-	                'status'   => 'fail',
-	                'messages' => ['My Subscription is empty'],
-	                'empty'    => $text,
+	            	'status'   	=> 'fail',
+	                'result'	=> [
+	                	'data'	=> [],
+	                	'empty'    => $text,
+	                ],
+	                'messages' 	=> ['My Subscription is empty']
 	            ];
 
                 /*if($message == null){
@@ -1872,13 +1878,24 @@ class ApiSubscription extends Controller
             $text['header'] = $empty_text[0]['value']??'Anda belum memiliki Paket.';
             $text['content'] = $empty_text[1]['value']??'Banyak keuntungan dengan berlangganan.';
             return  response()->json([
-                'status'   => 'fail',
-                'messages' => ['My Subscription is empty'],
-                'empty'    => $text,
+            	'status'   	=> 'fail',
+                'result'	=> [
+                	'data'	=> [],
+                	'empty'    => $text,
+                ],
+                'messages' 	=> ['My Subscription is empty']
             ]);
         }
 
-        return response()->json($this->checkGet($data));
+        $result = [
+        	'data' 	=> $data,
+        	'empty'	=> null	
+        ];
+        $result = $this->checkGet($result);
+        if ($result['status'] == 'success') {
+        	$result['messages'] = null;
+        }
+        return response()->json($result);
     }
     /*============================= End Filter & Sort V2 ================================*/
 

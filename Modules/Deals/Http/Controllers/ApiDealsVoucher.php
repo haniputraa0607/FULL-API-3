@@ -551,9 +551,12 @@ class ApiDealsVoucher extends Controller
             $resultMessage['header'] =  $empty_text[0]['value']??'Anda belum memiliki Kupon.';
             $resultMessage['content'] =  $empty_text[1]['value']??'Potongan menarik untuk setiap pembelian.';
             return  response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['My voucher is empty'],
-                    'empty'    => $resultMessage
+                    'status'   	=> 'fail',
+                    'result'	=> [
+                    	'data'	=> [],
+                    	'empty'	=> $resultMessage
+                    ],
+                    'messages' 	=> ['My voucher is empty'],
                 ]);
     	}
 
@@ -918,6 +921,7 @@ class ApiDealsVoucher extends Controller
         $result['prev_page_url'] = $prev_page_url;
         $result['per_page'] = $per_page;
         $result['total'] = $total;
+        $result['empty'] = null;
         if(!$result['total']){
             $result=[];
         }
@@ -930,12 +934,20 @@ class ApiDealsVoucher extends Controller
             $resultMessage['header'] =  $empty_text[0]['value']??'Anda belum memiliki Kupon.';
             $resultMessage['content'] =  $empty_text[1]['value']??'Potongan menarik untuk setiap pembelian.';
             return  response()->json([
-                'status'   => 'fail',
-                'messages' => ['My voucher is empty'],
-                'empty'    => $resultMessage
+            	'status'   	=> 'fail',
+                'result'	=> [
+                	'data'	=> [],
+                	'empty'	=> $resultMessage
+                ],
+                'messages' 	=> ['My voucher is empty'],
             ]);
         }
-        return response()->json(app($this->subscription)->checkGet($result, $resultMessage??''));
+        $result = app($this->subscription)->checkGet($result, $resultMessage??'');
+
+        if ($result['status'] == 'success') {
+        	$result['messages'] = null;
+        }
+        return response()->json($result);
 
     }
     /*============================= End Filter & Sort V2 ================================*/
