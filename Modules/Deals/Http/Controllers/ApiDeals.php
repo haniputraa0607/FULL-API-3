@@ -23,6 +23,7 @@ use Modules\Brand\Entities\Brand;
 use App\Http\Models\DealsPromotionTemplate;
 use Modules\ProductVariant\Entities\ProductGroup;
 use App\Http\Models\Product;
+use Modules\Promotion\Entities\DealsPromotionBrand;
 
 use Modules\Deals\Entities\DealsProductDiscount;
 use Modules\Deals\Entities\DealsProductDiscountRule;
@@ -311,7 +312,6 @@ class ApiDeals extends Controller
         }else{
         	$save = Deal::create($data);
         }
-
         if ($save) {
             if (isset($data['id_outlet']) && $data['is_all_outlet'] == 0) {
                 if (isset($data['id_outlet'])) {
@@ -1288,7 +1288,13 @@ class ApiDeals extends Controller
 
     function saveBrand($deals, $id_brand)
     {
-    	$id_deals = $deals->id_deals;
+    	if (isset($deals->id_deals_promotion_template)) {
+    		$table = new DealsPromotionBrand;
+    		$id_deals = $deals->id_deals_promotion_template;
+    	}else{
+    		$table = new DealsBrand;
+    		$id_deals = $deals->id_deals;
+    	}
         $data_brand = [];
 
         foreach ($id_brand as $value) {
@@ -1299,7 +1305,7 @@ class ApiDeals extends Controller
         }
 
         if (!empty($data_brand)) {
-            $save = DealsBrand::insert($data_brand);
+            $save = $table::insert($data_brand);
 
             return $save;
         } else {

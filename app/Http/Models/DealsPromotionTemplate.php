@@ -184,7 +184,7 @@ class DealsPromotionTemplate extends Model
     }
 
     public function brands(){
-		return $this->belongsToMany(\Modules\Brand\Entities\Brand::class,'deals_brands','id_deals','id_brand');
+		return $this->belongsToMany(\Modules\Brand\Entities\Brand::class,'deals_promotion_brands','id_deals','id_brand');
 	}
 
 	public function deals_promotion_brands()

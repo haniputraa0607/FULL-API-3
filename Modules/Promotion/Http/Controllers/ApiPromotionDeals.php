@@ -154,10 +154,13 @@ class ApiPromotionDeals extends Controller
 				->where('deals_promotion_templates.id_deals_promotion_template', $post['id_deals_promotion_template'])
 				->with([
 	                'deals_promotion_product_discount.product',
+	                'deals_promotion_product_discount.brand',
 	                'deals_promotion_product_discount_rules',
 	                'deals_promotion_tier_discount_product.product',
+	                'deals_promotion_tier_discount_product.brand',
 	                'deals_promotion_tier_discount_rules',
 	                'deals_promotion_buyxgety_product_requirement.product',
+	                'deals_promotion_buyxgety_product_requirement.brand',
 	                'deals_promotion_buyxgety_rules.product',
 	                'deals_promotion_content',
 	                'deals_promotion_content.deals_promotion_content_details',
@@ -167,7 +170,8 @@ class ApiPromotionDeals extends Controller
 	                'deals_promotion_discount_bill_rules',
 	                'deals_promotion_discount_delivery_rules',
 	                'deals_promotion_shipment_method',
-	                'deals_promotion_payment_method'
+	                'deals_promotion_payment_method',
+	                'brands'
 	            ])
 	            ->first();
 	    $outlet = explode(',',$deals->deals_list_outlet);
