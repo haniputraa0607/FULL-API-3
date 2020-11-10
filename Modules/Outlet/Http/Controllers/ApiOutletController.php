@@ -2732,7 +2732,7 @@ class ApiOutletController extends Controller
     public function applyPromo($promo_post, $data_outlet, &$promo_error)
     {
     	// check promo
-    	$post = $promo_post;
+    	$post 	= $promo_post;
     	$outlet = $data_outlet;
 
     	// give all product flag is_promo = 0
@@ -2782,7 +2782,7 @@ class ApiOutletController extends Controller
 	        		$promo_outlet 	= $code['dealVoucher']['deals']['outlets_active']??[];
 	        		$id_brand 		= $code['dealVoucher']['deals']['id_brand']??null;
 	        	}elseif($source == 'subscription'){
-	        		$brands 		= $code->promo_campaign->promo_campaign_brands();
+	        		$brands 		= $code->subscription_user->subscription->subscription_brands->pluck('id_brand')->toArray();
 	        		$all_outlet 	= $code['subscription_user']['subscription']['is_all_outlet']??0;
 	        		$promo_outlet 	= $code['subscription_user']['subscription']['outlets_active']??[];
 	        		$id_brand 		= $code['subscription_user']['subscription']['id_brand']??null;
