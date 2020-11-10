@@ -1901,8 +1901,11 @@ class PromoCampaignTools{
                 $promo_error = 'Promo not valid';
                 return $result;
             }
-            $source = 'subscription';
-            $id_brand_promo = $code->subscription_user->subscription->id_brand;
+            $source 		= 'subscription';
+            $brands 		= $code->subscription_user->subscription->subscription_brands->pluck('id_brand')->toArray();
+    		$all_outlet 	= $code['subscription_user']['subscription']['is_all_outlet']??0;
+    		$promo_outlet 	= $code['subscription_user']['subscription']['outlets_active']??[];
+    		$id_brand_promo	= $code['subscription_user']['subscription']['id_brand']??null;
         }
 
         if (($code['promo_campaign']['date_end'] ?? $code['voucher_expired_at'] ?? $code['subscription_expired_at']) < date('Y-m-d H:i:s')) {
