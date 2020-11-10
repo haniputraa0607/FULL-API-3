@@ -3123,7 +3123,7 @@ class ApiTransaction extends Controller
             }
             $order = array_flip($pt['selected_variant']);
             usort($pt['variants'], function ($a, $b) use ($order) {
-                return $order[$a['id_product_variant']] <=> $order[$b['id_product_variant']];
+                return ($order[$a['id_product_variant']]??999) <=> ($order[$b['id_product_variant']]??999);
             });
             $pt['product_price_total'] = MyHelper::requestNumber(($total_mod_price + $pt['product_price'])*$pt['qty'],$rn);
             $pt['product_price'] = MyHelper::requestNumber($pt['product_price'],$rn);
