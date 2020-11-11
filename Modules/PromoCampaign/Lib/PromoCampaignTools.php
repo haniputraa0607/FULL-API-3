@@ -1837,8 +1837,12 @@ class PromoCampaignTools{
         // set default flag to 0
         foreach ($result as $id_brand => $categories) {
         	foreach ($categories as $id_category => $products) {
-        		foreach ($products as $key => $value) {
-            		$result[$id_brand][$id_category][$key]['is_promo'] = 0;
+        		foreach ($products['list']??$products as $key => $value) {
+        			if (!is_numeric($id_category)) {
+        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 0;
+        			}else{
+        				$result[$id_brand][$id_category][$key]['is_promo'] = 0;
+        			}
         		}
         	}
         }
@@ -1928,21 +1932,33 @@ class PromoCampaignTools{
         if (!empty($id_brand_promo)) { // single brand
         	foreach ($result as $id_brand => $categories) {
 				foreach ($categories as $id_category => $products) {
-					foreach ($products as $key => $product) {
+					foreach ($products['list']??$products as $key => $product) {
 						if ($product['id_brand'] != $id_brand_promo){
 							continue;
 						}
 						if ($applied_product == '*') { // all product
-							$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+							if (!is_numeric($id_category)) {
+		        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 1;
+		        			}else{
+		        				$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+		        			}
 						}else{
 							if (isset($applied_product['id_product'])) { // single product
 								if ($applied_product['id_product'] == $product['id_product']) {
-									$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+									if (!is_numeric($id_category)) {
+				        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 1;
+				        			}else{
+				        				$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+				        			}
 								}
 							}else{ // multiple product
 								foreach ($applied_product as $val) {
 									if ($val['id_product'] == $product['id_product']) {
-										$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+										if (!is_numeric($id_category)) {
+					        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 1;
+					        			}else{
+					        				$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+					        			}
 									}
 								}
 							}
@@ -1953,15 +1969,23 @@ class PromoCampaignTools{
         }else{ // multi brand
 			foreach ($result as $id_brand => $categories) {
 				foreach ($categories as $id_category => $products) {
-					foreach ($products as $key => $product) {
+					foreach ($products['list']??$products as $key => $product) {
 						if ($applied_product == '*') { // all product
 							if (in_array($product['id_brand'], $brands)) {
-								$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+								if (!is_numeric($id_category)) {
+			        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 1;
+			        			}else{
+			        				$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+			        			}
 							}
 						}else{
 							foreach ($applied_product as $val) { // multiple product
 								if ($val['id_brand'] == $product['id_brand'] && $val['id_product'] == $product['id_product']) {
-									$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+									if (!is_numeric($id_category)) {
+				        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 1;
+				        			}else{
+				        				$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+				        			}
 								}
 							}
 						}
