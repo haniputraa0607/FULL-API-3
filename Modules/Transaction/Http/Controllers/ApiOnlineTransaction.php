@@ -2488,7 +2488,7 @@ class ApiOnlineTransaction extends Controller
         		$promo_source = null;
         		$discount_promo['discount_delivery'] = 0;
         		$error = ['Total pembelian minimum belum terpenuhi'];
-	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error);
+	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, 'all');
         	}
         }
         foreach ($tree as $key => $tre) {
