@@ -189,6 +189,6 @@ class DealsPromotionTemplate extends Model
 
 	public function deals_promotion_brands()
 	{
-        return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionBrand::class, 'id_deals', 'id_deals');
+        return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionBrand::class, 'id_deals', 'id_deals_promotion_template');
 	}
 }
