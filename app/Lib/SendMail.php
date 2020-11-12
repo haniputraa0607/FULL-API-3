@@ -26,9 +26,12 @@ class SendMail
             $settings[$setting['key']] = $setting['value'];
         }
 
-        if (strpos($to['address'], 'hotmail') !== false || strpos($to['address'], 'yahoo') !== false) {
+        //for yahoo, hotmail, rocketmail use env 2
+        if (strpos($to['address'], 'hotmail') !== false || strpos($to['address'], 'yahoo') !== false || strpos($to['address'], 'rocketmail') !== false) {
             $envMail = 2;
-        }else{
+        }
+        //for other using env default
+        else{
             $envMail = '';
         }
 
