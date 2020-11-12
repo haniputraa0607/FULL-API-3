@@ -20,7 +20,7 @@ use App\Lib\ValueFirst;
 use Hash;
 use App\Lib\PushNotificationHelper;
 use DB;
-use Mail;
+use App\Lib\SendMail as Mail;
 use File;
 
 use Modules\Enquiries\Http\Requests\Create;

@@ -37,7 +37,7 @@ use App\Lib\classJatisSMS;
 use App\Lib\ValueFirst;
 use App\Lib\apiwha;
 use DateTime;
-use Mail;
+use App\Lib\SendMail as Mail;
 use Modules\SettingFraud\Entities\LogCheckPromoCode;
 use function GuzzleHttp\Psr7\str;
 use File;
