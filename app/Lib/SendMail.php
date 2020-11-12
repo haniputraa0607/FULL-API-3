@@ -26,13 +26,10 @@ class SendMail
             $settings[$setting['key']] = $setting['value'];
         }
 
-        //for gmail use env default
-        if (strpos($to['address'], 'gmail') !== false || strpos($to['address'], 'yahoo') !== false) {
-            $envMail = '';
-        }
-        //other use env 2
-        else{
+        if (strpos($to['address'], 'hotmail') !== false || strpos($to['address'], 'yahoo') !== false) {
             $envMail = 2;
+        }else{
+            $envMail = '';
         }
 
         $config               = config('mail');
