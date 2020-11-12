@@ -2088,7 +2088,7 @@ class ApiOnlineTransaction extends Controller
 			            $promo_source = 'promo_code';
 			            if ( !empty($errore) || !empty($errors) ) {
 			            	$promo_error = app($this->promo_campaign)->promoError('transaction', $errore, $errors, $errorProduct);
-			            	if ($errorProduct==1) {
+			            	if ($errorProduct) {
 				            	$promo_error['product_label'] = app($this->promo_campaign)->getProduct('promo_campaign', $code['promo_campaign'])['product']??'';
 						        $promo_error['product'] = $pct->getRequiredProduct($code->id_promo_campaign)??null;
 						    }
@@ -2123,7 +2123,7 @@ class ApiOnlineTransaction extends Controller
 				if ( !empty($errors) ) {
 					$code = $deals->toArray();
 	            	$promo_error = app($this->promo_campaign)->promoError('transaction', null, $errors, $errorProduct);
-	            	if ($errorProduct==1) {
+	            	if ($errorProduct) {
 		            	$promo_error['product_label'] = app($this->promo_campaign)->getProduct('deals', $code['deal_voucher']['deals'])['product']??'';
 			        	$promo_error['product'] = $pct->getRequiredProduct($deals->dealVoucher->id_deals, 'deals')??null;
 	            	}
@@ -2488,7 +2488,7 @@ class ApiOnlineTransaction extends Controller
         		$promo_source = null;
         		$discount_promo['discount_delivery'] = 0;
         		$error = ['Total pembelian minimum belum terpenuhi'];
-	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error);
+	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, 'all');
         	}
         }
         foreach ($tree as $key => $tre) {

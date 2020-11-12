@@ -193,6 +193,13 @@ class PromoCampaignTools{
 						return false;
 					}
 					$promo_product = $promo[$source.'_product_discount']->toArray();
+					$promo_product_count = count($promo_product);
+
+					if ($promo_product_count == 1) {
+						$product_error_applied = 1;
+					}else{
+						$product_error_applied = 'all';
+					}
 
 					$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
 
@@ -201,11 +208,12 @@ class PromoCampaignTools{
 						$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
 						$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
 						$errors[]= $message;
-						$errorProduct = 1;
-						return false;		
+						$errorProduct = $product_error_applied;
+						return false;
 					}
 				}else{
-					$promo_product="*";
+					$promo_product = "*";
+					$product_error_applied = 'all';
 				}
 
 				$get_promo_product = $this->getPromoProduct($trxs, $promo_brand, $promo_product);
@@ -216,8 +224,8 @@ class PromoCampaignTools{
 					$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
 
-					$errors[]= $message;
-					$errorProduct = 1;
+					$errors[] = $message;
+					$errorProduct = $product_error_applied;
 					return false;
 				}
 
@@ -307,7 +315,7 @@ class PromoCampaignTools{
 					$message = MyHelper::simpleReplace($message,['product'=>'product bertanda khusus']);
 
 					$errors[]= $message;
-					$errorProduct = 1;
+					$errorProduct = $product_error_applied;
 					return false;
 				}
 				break;
@@ -338,6 +346,13 @@ class PromoCampaignTools{
 				$minmax = $min_qty != $max_qty ? "$min_qty - $max_qty" : $min_qty;
 				$promo_product_array = $promo_product->toArray();
 				$promo_product_id = array_column($promo_product_array, 'id_product');
+				$promo_product_count = count($promo_product);
+
+				if ($promo_product_count == 1) {
+					$product_error_applied = 1;
+				}else{
+					$product_error_applied = 'all';
+				}
 
 				$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
 
@@ -352,7 +367,7 @@ class PromoCampaignTools{
 					$message = $this->getMessage('error_tier_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 					$errors[]= $message;
-					$errorProduct = 1;
+					$errorProduct = $product_error_applied;
 					return false;		
 				}
 
@@ -367,7 +382,7 @@ class PromoCampaignTools{
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
 					$errors[]= $message;
-					$errorProduct = 1;
+					$errorProduct = $product_error_applied;
 					return false;
 				}
 
@@ -467,7 +482,7 @@ class PromoCampaignTools{
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
 					$errors[]= $message;
-					$errorProduct = 1;
+					$errorProduct = $product_error_applied;
 					return false;
 				}
 
@@ -565,6 +580,14 @@ class PromoCampaignTools{
 					return false;
 				}
 
+				$promo_product_count = count($promo_product);
+
+				if ($promo_product_count == 1) {
+					$product_error_applied = 1;
+				}else{
+					$product_error_applied = 'all';
+				}
+
 				// sum total quantity of same product
 				foreach ($trxs as $key => $value) 
 				{
@@ -612,7 +635,7 @@ class PromoCampaignTools{
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 					
 					$errors[]= $message;
-					$errorProduct = 1;
+					$errorProduct = $product_error_applied;
 					return false;		
 				}
 
@@ -627,7 +650,7 @@ class PromoCampaignTools{
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
 					$errors[]= $message;
-					$errorProduct = 1;
+					$errorProduct = $product_error_applied;
 					return false;
 				}
 
@@ -725,7 +748,7 @@ class PromoCampaignTools{
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
 					$errors[]= $message;
-					$errorProduct = 1;
+					$errorProduct = $product_error_applied;
 					return false;
 				}
 				// get product with brand
@@ -1356,22 +1379,31 @@ class PromoCampaignTools{
 	        elseif ( !empty($promo[$source.'_product_discount']) )
 	        {
 	        	$product = $promo[$source.'_product_discount'][0]['product']??'';
+		        if (!empty($promo[$source.'_product_discount'][0]['id_brand'])) {
+		        	$product['id_brand'] = $promo[$source.'_product_discount'][0]['id_brand'];
+		        }
 	        }
 	        elseif ( !empty($promo[$source.'_tier_discount_product']) )
 	        {
-	        	$product = $promo[$source.'_tier_discount_product']['product']??'';
+	        	$product = $promo[$source.'_tier_discount_product']['product']??$promo[$source.'_tier_discount_product'][0]['product']??'';
+	        	if (!empty($promo[$source.'_tier_discount_product'][0]['id_brand'])) {
+		        	$product['id_brand'] = $promo[$source.'_tier_discount_product'][0]['id_brand'];
+		        }
 	        }
 	        elseif ( !empty($promo[$source.'_buyxgety_product_requirement']) )
 	        {
-	        	$product = $promo[$source.'_buyxgety_product_requirement']['product']??'';
+	        	$product = $promo[$source.'_buyxgety_product_requirement']['product']??$promo[$source.'_buyxgety_product_requirement'][0]['product']??'';
+	        	if (!empty($promo[$source.'_buyxgety_product_requirement'][0]['id_brand'])) {
+		        	$product['id_brand'] = $promo[$source.'_buyxgety_product_requirement'][0]['id_brand'];
+		        }
 	        }
 	        else
 	        {
 	        	$product = null;
 	        }
 
-	        if (!empty($product)) {
-	        	$product['id_brand'] = $promo['id_brand']??'';
+	        if (!empty($product) && !empty($promo['id_brand'])) {
+	        	$product['id_brand'] = $promo['id_brand'];
 	        }
 	        return $product;
         }else{
@@ -1837,8 +1869,12 @@ class PromoCampaignTools{
         // set default flag to 0
         foreach ($result as $id_brand => $categories) {
         	foreach ($categories as $id_category => $products) {
-        		foreach ($products as $key => $value) {
-            		$result[$id_brand][$id_category][$key]['is_promo'] = 0;
+        		foreach ($products['list']??$products as $key => $value) {
+        			if (!is_numeric($id_category)) {
+        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 0;
+        			}else{
+        				$result[$id_brand][$id_category][$key]['is_promo'] = 0;
+        			}
         		}
         	}
         }
@@ -1931,21 +1967,33 @@ class PromoCampaignTools{
         if (!empty($id_brand_promo)) { // single brand
         	foreach ($result as $id_brand => $categories) {
 				foreach ($categories as $id_category => $products) {
-					foreach ($products as $key => $product) {
+					foreach ($products['list']??$products as $key => $product) {
 						if ($product['id_brand'] != $id_brand_promo){
 							continue;
 						}
 						if ($applied_product == '*') { // all product
-							$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+							if (!is_numeric($id_category)) {
+		        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 1;
+		        			}else{
+		        				$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+		        			}
 						}else{
 							if (isset($applied_product['id_product'])) { // single product
 								if ($applied_product['id_product'] == $product['id_product']) {
-									$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+									if (!is_numeric($id_category)) {
+				        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 1;
+				        			}else{
+				        				$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+				        			}
 								}
 							}else{ // multiple product
 								foreach ($applied_product as $val) {
 									if ($val['id_product'] == $product['id_product']) {
-										$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+										if (!is_numeric($id_category)) {
+					        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 1;
+					        			}else{
+					        				$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+					        			}
 									}
 								}
 							}
@@ -1956,15 +2004,23 @@ class PromoCampaignTools{
         }else{ // multi brand
 			foreach ($result as $id_brand => $categories) {
 				foreach ($categories as $id_category => $products) {
-					foreach ($products as $key => $product) {
+					foreach ($products['list']??$products as $key => $product) {
 						if ($applied_product == '*') { // all product
 							if (in_array($product['id_brand'], $brands)) {
-								$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+								if (!is_numeric($id_category)) {
+			        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 1;
+			        			}else{
+			        				$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+			        			}
 							}
 						}else{
 							foreach ($applied_product as $val) { // multiple product
 								if ($val['id_brand'] == $product['id_brand'] && $val['id_product'] == $product['id_product']) {
-									$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+									if (!is_numeric($id_category)) {
+				        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 1;
+				        			}else{
+				        				$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+				        			}
 								}
 							}
 						}
