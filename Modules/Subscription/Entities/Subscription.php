@@ -98,7 +98,8 @@ class Subscription extends Eloquent
         'subscription_discount_type',
         'is_all_shipment',
         'is_all_payment',
-        'product_rule'
+        'product_rule',
+        'brand_rule'
 	];
 
 	protected $appends  = [
