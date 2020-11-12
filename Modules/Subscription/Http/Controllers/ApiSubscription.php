@@ -256,6 +256,11 @@ class ApiSubscription extends Controller
     	if ( ($data['subscription_type']??false) == 'welcome') {
         	$data['user_limit'] = 1;
         }
+        
+        if (isset($post['brand_rule'])) {
+        	$data['brand_rule'] = $post['brand_rule'];
+        }
+
         $data['subscription_step_complete'] = 0;
         return $data;
     }

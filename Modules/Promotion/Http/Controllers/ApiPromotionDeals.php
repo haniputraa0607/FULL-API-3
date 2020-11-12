@@ -231,6 +231,7 @@ class ApiPromotionDeals extends Controller
 		$dataDeals['is_all_shipment'] 		= $dealsTemplate['is_all_shipment'];
 		$dataDeals['is_all_payment'] 		= $dealsTemplate['is_all_payment'];
 		$dataDeals['min_basket_size'] 		= $dealsTemplate['min_basket_size'];
+		$dataDeals['brand_rule'] 			= $dealsTemplate['brand_rule'];
 
 		if ($post['duration'][$key] == 'duration') {
 			$dataDeals['deals_voucher_duration'] = $post['deals_voucher_expiry_duration'][$key];

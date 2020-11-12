@@ -279,6 +279,10 @@ class ApiDeals extends Controller
         	$data['id_brand'] = $post['id_brand'];
         }
 
+        if (isset($post['brand_rule'])) {
+        	$data['brand_rule'] = $post['brand_rule'];
+        }
+
         return $data;
     }
 
