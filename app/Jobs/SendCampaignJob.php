@@ -29,7 +29,7 @@ use App\Lib\classMaskingJson;
 use App\Lib\classJatisSMS;
 use App\Lib\ValueFirst;
 use DB;
-use Mail;
+use App\Lib\SendMail as Mail;
 
 class SendCampaignJob implements ShouldQueue
 {
