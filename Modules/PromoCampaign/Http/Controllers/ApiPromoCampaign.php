@@ -2015,11 +2015,17 @@ class ApiPromoCampaign extends Controller
             $data = Outlet::select('id_outlet', DB::raw('CONCAT(outlet_code, " - ", outlet_name) AS outlet'));
 
             if (!empty($post['brand'])) {
-                foreach ($post['brand'] as $value) {
-	                $data = $data->whereHas('brands',function($query) use ($value){
-			                    $query->where('brands.id_brand',$value);
-			                });
-	            }
+            	if (($post['brand_rule']??false) == 'or') {
+		            $data = $data->whereHas('brands',function($query) use ($post){
+				                    $query->whereIn('brands.id_brand',$post['brand']);
+				                });
+            	}else{
+	                foreach ($post['brand'] as $value) {
+		                $data = $data->whereHas('brands',function($query) use ($value){
+				                    $query->where('brands.id_brand',$value);
+				                });
+		            }
+            	}
             }
             
             $data = $data->get()->toArray();
