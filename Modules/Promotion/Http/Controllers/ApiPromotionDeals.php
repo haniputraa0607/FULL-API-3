@@ -584,6 +584,8 @@ class ApiPromotionDeals extends Controller
 				'max_percent_discount' 	=> $value['max_percent_discount'],
 				'benefit_id_product' 	=> $value['benefit_id_product'],
 				'benefit_qty'  			=> $value['benefit_qty'],
+				'id_brand'  			=> $value['id_brand'],
+				'id_product_variant_group'=> $value['id_product_variant_group'],
 				'created_at' 			=> date('Y-m-d H:i:s'),
     			'updated_at' 			=> date('Y-m-d H:i:s')
 			];
