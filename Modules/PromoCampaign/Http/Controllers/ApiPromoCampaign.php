@@ -2195,7 +2195,11 @@ class ApiPromoCampaign extends Controller
 						},
 						'promo_campaign.promo_campaign_product_discount_rules',
 						'promo_campaign.promo_campaign_tier_discount_rules',
-						'promo_campaign.promo_campaign_buyxgety_rules'
+						'promo_campaign.promo_campaign_buyxgety_rules',
+						'promo_campaign.promo_campaign_discount_bill_rules',
+						'promo_campaign.promo_campaign_discount_delivery_rules',
+						'promo_campaign.promo_campaign_payment_method',
+						'promo_campaign.promo_campaign_shipment_method'
 					])
 	                ->first();
 
@@ -2510,6 +2514,16 @@ class ApiPromoCampaign extends Controller
     {
     	$brand = $query['brand']['name_brand']??null;
 
+    	$payment_method = null;
+    	if (!empty($query[$source.'_payment_method'])) {
+    		$payment_method = implode(', ', array_column($query[$source.'_payment_method'], 'payment_method'));
+    	}
+
+    	$shipment_method = null;
+    	if (!empty($query[$source.'_shipment_method'])) {
+    		$shipment_method = implode(', ', array_column($query[$source.'_shipment_method'], 'shipment_method'));
+    	}
+
     	if ($source == 'subscription') 
     	{
     		if ( !empty($query['subscription_voucher_percent']) ) 
@@ -2602,6 +2616,52 @@ class ApiPromoCampaign extends Controller
 	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
 	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax, 'brand'=>$brand]);
+	    	}
+	    	elseif ($query['promo_type'] == 'Discount bill') 
+	    	{
+	    		$discount = $query[$source.'_discount_bill_rules']['discount_type']??'Nominal';
+	        	$max_percent_discount = $query[$source.'_discount_bill_rules']['max_percent_discount']??0;
+
+	        	if ($discount == 'Percent') {
+	        		$discount = ($query[$source.'_discount_bill_rules']['discount_value']??0).'%';
+	        	}else{
+	        		$discount = 'Rp '.number_format(($query[$source.'_discount_bill_rules']['discount_value']??0),0,',','.');
+	        	}
+
+				$text = 'Anda berhak mendapatkan potongan %discount% ';
+
+				if (isset($payment_method) && isset($shipment_method)) {
+					$text.='berlaku untuk pembayaran menggunakan %payment_method% dan %shipment_method% order';
+				}elseif (isset($payment_method)) {
+					$text.='berlaku untuk pembayaran menggunakan %payment_method%';
+				}elseif (isset($shipment_method)) {
+					$text.='berlaku untuk %shipment_method% order';
+				}
+
+	    		$desc = MyHelper::simpleReplace($text,['discount'=>$discount, 'payment_method'=>$payment_method, 'shipment_method'=>$shipment_method]);
+	    	}
+	    	elseif ($query['promo_type'] == 'Discount delivery')
+	        {
+	        	$discount = $query[$source.'_discount_delivery_rules']['discount_type']??'Nominal';
+	        	$max_percent_discount = $query[$source.'_discount_delivery_rules']['max_percent_discount']??0;
+
+	        	if ($discount == 'Percent') {
+	        		$discount = ($query[$source.'_discount_delivery_rules']['discount_value']??0).'%';
+	        	}else{
+	        		$discount = 'Rp '.number_format(($query[$source.'_discount_delivery_rules']['discount_value']??0),0,',','.');
+	        	}
+
+				$text = 'Anda berhak mendapatkan potongan ongkos kirim %discount% ';
+
+				if (isset($payment_method) && isset($shipment_method)) {
+					$text.='berlaku untuk pembayaran menggunakan %payment_method% dan %shipment_method% order';
+				}elseif (isset($payment_method)) {
+					$text.='berlaku untuk pembayaran menggunakan %payment_method%';
+				}elseif (isset($shipment_method)) {
+					$text.='berlaku untuk %shipment_method% order';
+				}
+
+	    		$desc = MyHelper::simpleReplace($text,['discount'=>$discount, 'payment_method'=>$payment_method, 'shipment_method'=>$shipment_method]);
 	    	}
 	    	else
 	    	{
