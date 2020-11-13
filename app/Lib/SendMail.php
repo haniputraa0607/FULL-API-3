@@ -31,6 +31,7 @@ class SendMail
             $envMail = 2;
         }
         //for other using env default
+        else{
             $envMail = '';
         }
 
