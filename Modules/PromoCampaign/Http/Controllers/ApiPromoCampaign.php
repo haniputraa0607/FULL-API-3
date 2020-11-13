@@ -50,6 +50,7 @@ use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 
 use Modules\Brand\Entities\BrandProduct;
+use Modules\Brand\Entities\BrandOutlet;
 
 use App\Http\Models\User;
 use App\Http\Models\Campaign;
