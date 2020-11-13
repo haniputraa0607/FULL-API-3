@@ -54,6 +54,7 @@ use Modules\Product\Entities\ProductStockStatusUpdate;
 use Modules\Product\Entities\ProductModifierStockStatusUpdate;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
+use Modules\ProductVariant\Entities\ProductVariantPivot;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
 use Modules\Shift\Entities\Shift;
@@ -1000,6 +1001,39 @@ class ApiOutletApp extends Controller
             }
         }
 
+        $updated     = 0;
+        if(isset($request->variants) && !empty($request->variants)){
+            $outlet = Outlet::where('id_outlet', $outlet['id_outlet'])->first();
+            foreach ($request->variants as $v){
+                if(isset($v['available']) && !empty($v['available'])){
+                    foreach ($v['available'] as $availableProductVariant){
+                        $status = 'Available';
+                        $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $availableProductVariant], ['product_variant_group_stock_status' => $status]);
+                    }
+                    Product::refreshVariantTree($v['id_product'], $outlet);
+                }
+
+                if(isset($v['sold_out']) && !empty($v['sold_out'])){
+                    foreach ($v['sold_out'] as $soldOutProductVariant){
+                        $status = 'Sold Out';
+                        $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $soldOutProductVariant], ['product_variant_group_stock_status' => $status]);
+                    }
+                    Product::refreshVariantTree($v['id_product'], $outlet);
+                }
+            }
+        }
+
+        if(isset($post['sold_out']) && !empty($post['sold_out'])){
+            $sold = array_unique($post['sold_out']);
+            foreach ($sold as $s){
+                $productVariantGroup = ProductVariantGroup::where('id_product', $s)->get()->toArray();
+                foreach ($productVariantGroup as $pvg){
+                    $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $pvg['id_product_variant_group']], ['product_variant_group_stock_status' => 'Sold Out']);
+                }
+                Product::refreshVariantTree($s, $outlet);
+            }
+        }
+
         if (!$is_modifier) {
             $updated     = 0;
             $date_time   = date('Y-m-d H:i:s');
@@ -1437,10 +1471,40 @@ class ApiOutletApp extends Controller
                 $data = $products->paginate(30)->toArray();
                 if (empty($data['data'])) {
                     return MyHelper::checkGet($data['data']);
+                }else{
+                    foreach ($data['data'] as $key => $dt){
+                        $variants = ProductVariantGroup::leftJoin('product_variant_group_details as pvgd', 'pvgd.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
+                            ->where('id_product', $dt['id_product'])
+                            ->where('id_outlet', $outlet['id_outlet'])
+                            ->select([
+                                'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
+                                DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
+                                DB::raw('(CASE
+                        WHEN pvgd.product_variant_group_visibility is NULL THEN product_variant_groups.product_variant_group_visibility
+                        ELSE pvgd.product_variant_group_visibility END) as product_variant_group_visibility'),
+                                DB::raw('(CASE
+                        WHEN pvgd.product_variant_group_stock_status is NULL THEN "Sold Out"
+                        ELSE pvgd.product_variant_group_stock_status END) as product_variant_group_stock_status')])->get()->toArray();
+
+                        $data['data'][$key]['product_variant_group'] = $variants;
+                    }
                 }
                 return MyHelper::checkGet($data);
             } else {
-                return MyHelper::checkGet($products->get()->toArray());
+                $data = $products->get()->toArray();
+                foreach ($data as $key => $dt){
+                    $variants = ProductVariantGroup::leftJoin('product_variant_group_details as pvgd', 'pvgd.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
+                        ->where('id_product', $dt['id_product'])
+                        ->where('id_outlet', $outlet['id_outlet'])
+                        ->select(['product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
+                            DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR " - ") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
+                            DB::raw('(CASE
+                        WHEN pvgd.product_variant_group_stock_status is NULL THEN "Sold Out"
+                        ELSE pvgd.product_variant_group_stock_status END) as product_variant_group_stock_status')])->get()->toArray();
+
+                    $data[$key]['product_variant_group'] = $variants;
+                }
+                return MyHelper::checkGet($data);
             }
         } else {
             // modifiers

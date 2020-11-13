@@ -42,7 +42,7 @@ use App\Lib\apiwha;
 use Validator;
 use Hash;
 use DB;
-use Mail;
+use App\Lib\SendMail as Mail;
 
 class ApiCampaign extends Controller
 {
@@ -58,29 +58,13 @@ class ApiCampaign extends Controller
 		$post = $request->json()->all();
 
 		$query = Campaign::orderBy('id_campaign', 'Desc');
-		$count = Campaign::get();
 
 		if(isset($post['campaign_title']) && $post['campaign_title'] != ""){
 			$query = $query->where('campaign_title','like','%'.$post['campaign_title'].'%');
-			$count = $count->where('campaign_title','like','%'.$post['campaign_title'].'%');
 		}
 
-		$query = $query->skip($post['skip'])->take($post['take'])->get()->toArray();
-		$count = $count->count();
-
-		if(isset($query) && !empty($query)) {
-			$result = [
-					'status'  => 'success',
-					'result'  => $query,
-					'count'  => $count
-				];
-		} else {
-			$result = [
-					'status'  => 'fail',
-					'messages'  => ['No Campaign']
-				];
-		}
-		return response()->json($result);
+        $query = $query->paginate(15);
+        return response()->json(MyHelper::checkGet($query));
 	}
 	public function CreateCampaign(Request $request){
 		if($request->hasFile('import_file')){
@@ -598,6 +582,8 @@ class ApiCampaign extends Controller
 				return response()->json($result);
 			}
 		}
+
+        $post['campaign_push_id_reference'] = $post['campaign_push_id_reference']??NULL;
 
 		$campaign=Campaign::where('id_campaign',$id_campaign)->first();
 		DB::beginTransaction();

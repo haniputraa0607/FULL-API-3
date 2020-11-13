@@ -64,10 +64,16 @@ class DealsPromotionTemplate extends Model
 		'id_brand',
 		'min_basket_size',
 		'is_all_shipment',
-        'is_all_payment'
+        'is_all_payment',
+        'product_rule'
 	];
 
 	public function deals_promotion_buyxgety_product_requirement()
+	{
+		return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionBuyxgetyProductRequirement::class, 'id_deals');
+	}
+
+	public function deals_promotion_buyxgety_product_requirement_v1()
 	{
 		return $this->hasOne(\Modules\Promotion\Entities\DealsPromotionBuyxgetyProductRequirement::class, 'id_deals');
 	}
@@ -93,6 +99,11 @@ class DealsPromotionTemplate extends Model
 	}
 
 	public function deals_promotion_tier_discount_product()
+	{
+		return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionTierDiscountProduct::class, 'id_deals');
+	}
+
+	public function deals_promotion_tier_discount_product_v1()
 	{
 		return $this->hasOne(\Modules\Promotion\Entities\DealsPromotionTierDiscountProduct::class, 'id_deals');
 	}
@@ -166,4 +177,18 @@ class DealsPromotionTemplate extends Model
     {
         return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionShipmentMethod::class, 'id_deals');
     }
+
+    public function deals_promotion_payment_method()
+    {
+        return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionPaymentMethod::class, 'id_deals');
+    }
+
+    public function brands(){
+		return $this->belongsToMany(\Modules\Brand\Entities\Brand::class,'deals_brands','id_deals','id_brand');
+	}
+
+	public function deals_promotion_brands()
+	{
+        return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionBrand::class, 'id_deals', 'id_deals');
+	}
 }
