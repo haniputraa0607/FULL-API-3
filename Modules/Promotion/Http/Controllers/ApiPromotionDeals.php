@@ -48,6 +48,7 @@ class ApiPromotionDeals extends Controller
         date_default_timezone_set('Asia/Jakarta');
         $this->dealsVoucher 	= "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->promo_campaign   = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+        $this->promo       	= "Modules\PromoCampaign\Http\Controllers\ApiPromo";
     }
   
     public function list(Request $request)
@@ -789,6 +790,7 @@ class ApiPromotionDeals extends Controller
 
     public function checkComplete($dataDeals, &$step, &$errors)
     {
+    	$errors = [];
     	$deals = $dataDeals->toArray();
     	if ( $deals['is_online'] == 1)
     	{
@@ -802,6 +804,27 @@ class ApiPromotionDeals extends Controller
 	    		$step = 2;
 	    		$errors = 'Deals Promotion not complete';
 	    		return false;
+	    	}else{
+	    		$products = $deals['deals_promotion_product_discount']??$deals['deals_promotion_tier_discount_product']??$deals['deals_promotion_buyxgety_product_requirement'];
+				if (isset($deals['deals_list_outlet'])) {
+		    		$outlets = explode(',', $deals['deals_list_outlet']);
+		    		if (in_array('all', $outlets)) {
+		    			$deals['is_all_outlet'] = 1;
+		    			$outlets = [];
+		    		}
+		    	}
+		    	if (!empty($outlets) 
+		    		&& !empty($products) 
+		    		&& ($deals['is_all_outlet']??0) != 1 
+		    		&& ($deals['deals_promotion_product_discountuct_discount_rules']['is_all_product']??0) != 1
+		    	) {
+			        $check_brand_product = app($this->promo)->checkBrandProduct($outlets, $products);
+		        	if ($check_brand_product['status'] == false) {
+		        		$step = 2;
+		        		$errors = array_merge($errors,$check_brand_product['messages']??['Outlet tidak mempunyai produk dengan brand yang sesuai.']);
+			    		return false;
+		        	}
+		        }
 	    	}
     	}
 

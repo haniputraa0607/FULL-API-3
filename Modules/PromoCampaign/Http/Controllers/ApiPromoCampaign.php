@@ -1045,6 +1045,10 @@ class ApiPromoCampaign extends Controller
 	            DB::rollBack();
 	            return response()->json($createFilterOutlet);
 	        }
+
+	        if ($createFilterOutlet['status'] != 'success') {
+	        	return $createFilterOutlet;
+	        }
         }
         else
         {
@@ -1056,10 +1060,10 @@ class ApiPromoCampaign extends Controller
         	$dataPromoCampaign['min_basket_size'] 		= $post['min_basket_size']??null;
         }
 
-		$image = $table::where($id_table, $id_post)->first();
+		$data_promo = $table::where($id_table, $id_post)->first();
 
 		if (!empty($post['id_deals'])) {
-			if (!empty($image['deals_total_claimed']) ) {
+			if (!empty($data_promo['deals_total_claimed']) ) {
 				return [
 	                'status'  => 'fail',
 	                'message' => 'Cannot update deals because someone has already claimed a voucher'
@@ -1167,6 +1171,33 @@ class ApiPromoCampaign extends Controller
         }
 
         DB::commit();
+
+        $outlets = $data_promo->{$source.'_outlets'};
+        $products = $createFilterProduct['products'] ?? false;
+    	if (isset($data_promo->deals_list_outlet)) {
+    		$outlets = explode(',', $data_promo->deals_list_outlet);
+    		if (in_array('all', $outlets)) {
+    			$outlets = [];
+    		}
+    	}
+
+        if ( !empty($outlets) 
+        	&& !empty($products) 
+        	&& $data_promo['is_all_outlet'] != 1 
+        	&& ($data_promo[$source.'_product_discount']['is_all_product']??0) != 1 
+        ) {
+        	unset($createFilterProduct['products']);
+
+	        $check_brand_product = app($this->promo)->checkBrandProduct($outlets, $products);
+        	if ($check_brand_product['status'] == false) {
+        		$createFilterProduct['brand_product_error'] = array_merge($createFilterProduct['messages']??[],$check_brand_product['messages']??['Outlet tidak mempunyai produk dengan brand yang sesuai.']);
+
+        		if ($source == 'promo_campaign') {
+        			PromoCampaign::where('id_promo_campaign', $id_post)->update(['step_complete' => 0]);
+        		}
+        	}
+        }
+
         return response()->json($createFilterProduct);
     }
 
@@ -1214,6 +1245,10 @@ class ApiPromoCampaign extends Controller
 			        else {
 			            $update = false;
 			        }
+
+			        if ($update && $update['status'] != 'success') {
+			        	$update = false;
+			        }
     			}
 
     			break;
@@ -1249,7 +1284,7 @@ class ApiPromoCampaign extends Controller
                     'message' => 'Create Filter Outlet Failed'
                 ];
                 DB::rollBack();
-                return response()->json($result);
+                return $result;
             }
         } else {
             $dataOutlet = [];
@@ -1269,7 +1304,7 @@ class ApiPromoCampaign extends Controller
                     'message' => 'Create Filter Outlet Failed'
                 ];
                 DB::rollBack();
-                return response()->json($result);
+                return $result;
             }
         }
         return $result;
@@ -1441,7 +1476,7 @@ class ApiPromoCampaign extends Controller
             try {
                 $table_product_discount_rule::insert($data);
                 $table_product_discount::insert($dataProduct);
-                $result = ['status'  => 'success'];
+                $result = ['status'  => 'success', 'products' => $dataProduct];
             } catch (\Exception $e) {
                 $result = [
                     'status'  => 'fail',
@@ -1536,7 +1571,7 @@ class ApiPromoCampaign extends Controller
         try {
             $table_tier_discount_rule::insert($data);
             $table_tier_discount_product::insert($dataProduct);
-            $result = ['status'  => 'success'];
+            $result = ['status'  => 'success', 'products' => $dataProduct];
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
@@ -1640,14 +1675,13 @@ class ApiPromoCampaign extends Controller
         try {
             $table_buyxgety_discount_rule::insert($data);
             $table_buyxgety_discount_product::insert($data_product);
-            $result = ['status'  => 'success'];
+            $result = ['status'  => 'success', 'products' => $data_product];
         } catch (\Illuminate\Database\QueryException $e) {
             $result = [
                 'status'  => 'fail',
                 'message' => $e->getMessage()
             ];
             DB::rollBack();
-            return response()->json($result);
         }
         return $result;
     }

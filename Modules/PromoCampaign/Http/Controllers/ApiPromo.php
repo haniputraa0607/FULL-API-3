@@ -445,6 +445,9 @@ class ApiPromo extends Controller
     	];
 
     	if (isset($outlets[0]['id_outlet'])) {
+    		if (!is_array($outlets)) {
+	    		$outlets = $outlets->toArray();
+	    	}
     		$outlets = array_column($outlets, 'id_outlet');
     	}
 
@@ -466,7 +469,7 @@ class ApiPromo extends Controller
     		if (empty($get_product_brand)) {
     			continue;
     		}
-    		
+
     		$brand_product[] = $get_product_brand;
     	}
 

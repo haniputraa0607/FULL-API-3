@@ -66,6 +66,7 @@ class ApiDeals extends Controller
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->promotion_deals      = "Modules\Promotion\Http\Controllers\ApiPromotionDeals";
         $this->deals_claim    = "Modules\Deals\Http\Controllers\ApiDealsClaim";
+        $this->promo       	= "Modules\PromoCampaign\Http\Controllers\ApiPromo";
     }
 
     public $saveImage = "img/deals/";
@@ -1810,16 +1811,17 @@ class ApiDeals extends Controller
 			return [
 				'status'	=> 'fail',
 				'step' 		=> $step,
-				'messages' 	=> [$errors]
+				'messages' 	=> $errors
 			];
 		}
     }
 
-    public function checkComplete($id, &$step, &$errors, $promo_type)
+    public function checkComplete($id, &$step, &$errors = [], $promo_type)
     {
+    	$errors = [];
     	$deals = $this->getDealsData($id, 'all', $promo_type);
     	if (!$deals) {
-    		$errors = 'Deals not found';
+    		$errors[] = 'Deals not found';
     		return false;
     	}
 
@@ -1827,7 +1829,7 @@ class ApiDeals extends Controller
     		return app($this->promotion_deals)->checkComplete($deals, $step, $errors);
     	}
 
-    	$deals = $deals->toArray();
+    	$deals = $deals->load('deals_outlets')->toArray();
     	if ( $deals['is_online'] == 1)
     	{
 	    	if ( empty($deals['deals_product_discount_rules']) 
@@ -1837,24 +1839,42 @@ class ApiDeals extends Controller
 	    		&& empty($deals['deals_discount_delivery_rules'])
 	    	){
 	    		$step = 2;
-	    		$errors = 'Deals not complete';
+	    		$errors[] = 'Deals not complete';
 	    		return false;
 	    	}
+	    	else{
+	    		$products = $deals['deals_product_discount']??$deals['deals_tier_discount_product']??$deals['deals_buyxgety_product_requirement'];
+
+		    	if (!empty($deals['deals_outlets']) 
+		    		&& !empty($products) 
+		    		&& $deals['is_all_outlet'] != 1 
+		    		&& ($deals['deals_product_discount_rules']['is_all_product']??0) != 1
+		    	) {
+			        $check_brand_product = app($this->promo)->checkBrandProduct($deals['deals_outlets'], $products);
+		        	if ($check_brand_product['status'] == false) {
+		        		$step = 2;
+		        		$errors = array_merge($errors,$check_brand_product['messages']??['Outlet tidak mempunyai produk dengan brand yang sesuai.']);
+			    		return false;
+		        	}
+		        }
+	    		
+	    	}
     	}
+
 
     	if ( $deals['is_offline'] == 1)
     	{
     		if ( empty($deals['deals_promo_id_type']) && empty($deals['deals_promo_id']) )
 	    	{
 	    		$step = 2;
-	    		$errors = 'Deals not complete';
+	    		$errors[] = 'Deals not complete';
 	    		return false;
 	    	}
     	}
 
     	if ( empty($deals['deals_content']) || empty($deals['deals_description'])) {
     		$step = 3;
-	    	$errors = 'Deals not complete';
+	    	$errors[] = 'Deals not complete';
     		return false;
     	}
 

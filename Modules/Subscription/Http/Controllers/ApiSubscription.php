@@ -533,7 +533,7 @@ class ApiSubscription extends Controller
         }
 
         $brand_product_messages = [];
-        if (!empty($outlets) && !empty($products)) {
+        if (!empty($outlets) && !empty($products) && $data['is_all_outlet'] != 1 && $data['is_all_product'] != 1) {
         	$check_brand_product = app($this->promo)->checkBrandProduct($outlets, $products);
         	if ($check_brand_product['status'] == false) {
         		$brand_product_messages = $check_brand_product['messages']??['Outlet tidak mempunyai produk dengan brand yang sesuai.'];
@@ -2231,7 +2231,7 @@ class ApiSubscription extends Controller
 			if( !isset($subs['subscription_voucher_total']) ) break;
 			if( empty($subs['subscription_voucher_nominal']) && empty($subs['subscription_voucher_percent']) ) break;
 
-			if (!empty($subs['outlets']) && !empty($subs['subscription_products']) && $subs['is_all_outlet'] != '1') {
+			if (!empty($subs['outlets']) && !empty($subs['subscription_products']) && $subs['is_all_outlet'] != 1 && $subs['is_all_product'] != 1) {
  	        	$check_brand_product = app($this->promo)->checkBrandProduct($subs['outlets'], $subs['subscription_products']);
 	        	if ($check_brand_product['status'] == false) {
 	        		$errors = array_merge($errors,$check_brand_product['messages']??['Outlet tidak mempunyai produk dengan brand yang sesuai.']);
