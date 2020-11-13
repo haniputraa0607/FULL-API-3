@@ -27,7 +27,7 @@ class SendMail
         }
 
         //for yahoo, hotmail, rocketmail use env 2
-        if (strpos($to['address'], 'gmail') !== false || strpos($to['address'], 'yahoo') !== false || strpos($to['address'], 'rocketmail') !== false) {
+        if (strpos($to['address'], 'yahoo') !== false || strpos($to['address'], 'hotmail') !== false || strpos($to['address'], 'rocketmail') !== false) {
             $envMail = 2;
         }
         //for other using env default
