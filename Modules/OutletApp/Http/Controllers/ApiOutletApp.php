@@ -2923,7 +2923,7 @@ class ApiOutletApp extends Controller
                 $result['rejectable']              = 1;
             }
 
-            if ($list['detail']['ready_at'] != null && $list['transaction_pickup_go_send']) {
+            if ($list['transaction_pickup_go_send']) {
                 // $result['transaction_status'] = 5;
                 $result['delivery_info'] = [
                     'driver'            => null,
@@ -2975,8 +2975,10 @@ class ApiOutletApp extends Controller
                     case 'enroute drop':
                     case 'out_for_delivery':
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
-                        $result['transaction_status_text']          = 'PROSES PENGANTARAN';
-                        $result['transaction_status']               = 3;
+                        if($list['detail']['ready_at'] != null){
+                            $result['transaction_status_text']          = 'PROSES PENGANTARAN';
+                            $result['transaction_status']               = 3;
+                        }
                         $result['delivery_info']['driver']          = [
                             'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
                             'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
