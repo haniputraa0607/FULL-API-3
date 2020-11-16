@@ -196,7 +196,7 @@ class SendCampaignJob implements ShouldQueue
                                'campaign_email_count_sent' => DB::raw('campaign_email_count_sent + 1')
                            ]);
                     }catch(\Exception $e){
-                        print "Mail to $receipient not send\n";
+                        \Log::error($e);
                     }
 
                 }
