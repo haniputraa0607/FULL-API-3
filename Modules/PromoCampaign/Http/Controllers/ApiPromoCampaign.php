@@ -2516,12 +2516,59 @@ class ApiPromoCampaign extends Controller
 
     	$payment_method = null;
     	if (!empty($query[$source.'_payment_method'])) {
-    		$payment_method = implode(', ', array_column($query[$source.'_payment_method'], 'payment_method'));
+    		$available_payment = config('payment_method');
+    		$payment_list = [];
+    		foreach ($available_payment as $key => $value) {
+    			$payment_list[$value['payment_method']] = $value['text'];
+    		}
+    		$payment_method = '';
+    		$payment_count 	= count($query[$source.'_payment_method']);
+    		$i = 1;
+    		foreach ($query[$source.'_payment_method'] as $key => $value) {
+    			if ($i == 1) {
+    				$payment_method .= $payment_list[$value['payment_method']];
+    			}
+    			elseif ($i == $payment_count) {
+    				$payment_method .= ' atau '.$payment_list[$value['payment_method']];
+    			}
+    			else {
+    				$payment_method .= ', '.$payment_list[$value['payment_method']];
+    			}
+
+    			$i++;
+    		}
     	}
 
     	$shipment_method = null;
     	if (!empty($query[$source.'_shipment_method'])) {
-    		$shipment_method = implode(', ', array_column($query[$source.'_shipment_method'], 'shipment_method'));
+    		$shipment_list = array_column($query[$source.'_shipment_method'], 'shipment_method');
+    		$shipment_list = array_flip($shipment_list);
+
+    		if (isset($shipment_list['GO-SEND'])) {
+    			$shipment_list['Delivery'] = $shipment_list['GO-SEND'];
+    			unset($shipment_list['GO-SEND']);
+    		}
+    		if (isset($shipment_list['Pickup Order'])) {
+    			$shipment_list['Pickup'] = $shipment_list['Pickup Order'];
+    			unset($shipment_list['Pickup Order']);
+    		}
+    		$shipment_list = array_flip($shipment_list);
+
+    		$shipment_method = '';
+    		$shipment_count = count($shipment_list);
+    		$i = 1;
+    		foreach ($shipment_list as $key => $value) {
+    			if ($i == 1) {
+    				$shipment_method .= $value;
+    			}
+    			elseif ($i == $shipment_count) {
+    				$shipment_method .= ' atau '.$value;
+    			}
+    			else {
+    				$shipment_method .= ', '.$value;
+    			}
+    			$i++;
+    		}
     	}
 
     	if ($source == 'subscription') 
