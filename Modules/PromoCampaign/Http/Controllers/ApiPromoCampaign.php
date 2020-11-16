@@ -2673,7 +2673,7 @@ class ApiPromoCampaign extends Controller
     	return $desc;
     }
 
-    public function checkPromoCode($promo_code, $outlet=null, $product=null, $id_promo_campaign_promo_code=null, $brand=null, $payment_method=null)
+    public function checkPromoCode($promo_code, $outlet=null, $promo_rule=null, $id_promo_campaign_promo_code=null, $brand=null)
     {
     	if (!empty($id_promo_campaign_promo_code))
     	{
@@ -2696,7 +2696,7 @@ class ApiPromoCampaign extends Controller
 	    	$code = $code->with(['promo_campaign.promo_campaign_outlets']);
 	    }
 
-	    if (!empty($product)) {
+	    if (!empty($promo_rule)) {
 		    $code = $code->with([
 					'promo_campaign.promo_campaign_product_discount',
 					'promo_campaign.promo_campaign_buyxgety_product_requirement',
@@ -2713,15 +2713,15 @@ class ApiPromoCampaign extends Controller
 					'promo_campaign.promo_campaign_tier_discount_product.product' => function($q) {
 						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 					},
+					'promo_campaign.promo_campaign_discount_bill_rules',
+					'promo_campaign.promo_campaign_discount_delivery_rules',
+					'promo_campaign.promo_campaign_payment_method',
+					'promo_campaign.promo_campaign_shipment_method'
 				]);
 	    }
 
 	    if (!empty($brand)) {
 		    $code = $code->with(['promo_campaign.brand']);
-	    }
-
-	    if (!empty($payment_method)) {
-		    $code = $code->with(['promo_campaign.payment']);
 	    }
 
 	    $code = $code->first();
