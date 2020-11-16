@@ -147,7 +147,7 @@ class ApiAutoCrm extends Controller
 								}
 							});
 						}catch(\Exception $e){
-							
+							\Log::error($e);
 						}
 					}else{
 					    try{
