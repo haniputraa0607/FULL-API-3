@@ -154,7 +154,8 @@ class ApiSubscriptionUse extends Controller
 								$id_outlet, 
 								$subs['subscription_user']['subscription']['is_all_outlet'], 
 								$subs['subscription_user']['subscription']['outlets_active'], 
-								$promo_brands
+								$promo_brands,
+								$subs['subscription_user']['subscription']['brand_rule']
 							);
 
 			if ( !$check_outlet ) {
@@ -209,7 +210,7 @@ class ApiSubscriptionUse extends Controller
 			$getProduct  = app($this->promo_campaign)->getProduct('subscription',$subs['subscription_user']['subscription'], $id_outlet);
 			$product = $getProduct['product']??'';
 			$applied_product = $getProduct['applied_product'][0]??'';
-			$errorProduct = 1;
+			$errorProduct = 'all';
 			return 0;
 		}
 
