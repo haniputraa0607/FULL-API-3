@@ -2246,6 +2246,7 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
+        $promo_missing_product = false;
         foreach ($discount_promo['item']??$post['item'] as &$item) {
             // get detail product
             $product = Product::select([
@@ -2320,6 +2321,9 @@ class ApiOnlineTransaction extends Controller
             }
             if(!$product){
                 $missing_product++;
+                if ($item['is_promo'] ?? false) {
+                	$promo_missing_product = true;
+                }
                 continue;
             }
             $product->append('photo');
@@ -2498,12 +2502,21 @@ class ApiOnlineTransaction extends Controller
         }
         // return $tree;
         if($missing_product){
-            $error_msg[] = MyHelper::simpleReplace(
-                '%missing_product% products not found',
-                [
-                    'missing_product' => $missing_product
-                ]
-            );
+	        if ($promo_missing_product) {
+	        	$promo_valid = false;
+	    		$promo_discount = 0;
+	    		$promo_source = null;
+	    		$discount_promo['discount_delivery'] = 0;
+	    		$error = ['Promo tidak berlaku karena product tidak tersedia'];
+	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, 'all');
+	        }else{
+	            $error_msg[] = MyHelper::simpleReplace(
+	                '%missing_product% products not found',
+	                [
+	                    'missing_product' => $missing_product
+	                ]
+	            );
+	        }
         }
 
         $outlet['today']['status'] = $outlet_status?'open':'closed';
