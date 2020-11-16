@@ -2853,10 +2853,12 @@ class ApiTransaction extends Controller
                                         break;
                                     }
                                     $flagStatus['confirmed'] = 1;
-                                    $statusOrder[] = [
-                                        'text'  => 'Pesanan sudah siap dan menunggu pick up',
-                                        'date'  => $valueGosend['created_at']
-                                    ];
+                                    if($list['detail']['ready_at'] != null){
+                                        $statusOrder[] = [
+                                            'text'  => 'Pesanan sudah siap dan menunggu pick up',
+                                            'date'  => $valueGosend['created_at']
+                                        ];
+                                    }
                                     break;
                                 // case 'driver allocated':
                                 // case 'allocated':

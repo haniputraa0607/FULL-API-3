@@ -3203,7 +3203,7 @@ class ApiOnlineTransaction extends Controller
                 'bonus' => isset($item['bonus'])?$item['bonus']:'0',
                 'id_brand' => $item['id_brand'],
                 'id_product' => $item['id_product'],
-                'id_product_variant_group' => $item['id_product_variant_group']??null,
+                'id_product_variant_group' => ($item['id_product_variant_group']??null) ?: null,
                 'note' => $item['note'],
                 'modifiers' => array_map(function($i){
                         if (is_numeric($i)) {
