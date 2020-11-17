@@ -2537,6 +2537,11 @@ class ApiPromoCampaign extends Controller
 	        	$applied_product = $query[$source.'_buyxgety_product_requirement'];
 	        	$product = $applied_product['product']['product_name']??'product tertentu';
 	        }
+	        elseif ( !empty($query[$source.'_discount_bill_rules']) )
+	        {
+	        	$applied_product = '*';
+	        	$product = 'semua product';
+	        }
 	        else
 	        {
 	        	$applied_product = [];
@@ -2770,7 +2775,7 @@ class ApiPromoCampaign extends Controller
         return $code;
     }
 
-	public function checkVoucher($id_deals_user=null, $outlet=null, $product=null, $brand=null)
+	public function checkVoucher($id_deals_user=null, $outlet=null, $promo_rule=null, $brand=null)
     {
     	$deals = new DealsUser;
 
@@ -2797,7 +2802,7 @@ class ApiPromoCampaign extends Controller
         	$deals = $deals->with(['dealVoucher.deals.outlets_active']);
 	    }
 
-	    if (!empty($product)) {
+	    if (!empty($promo_rule)) {
         	$deals = $deals->with([
                     'dealVoucher.deals.outlets_active',
                     'dealVoucher.deals.deals_product_discount', 
@@ -2814,7 +2819,9 @@ class ApiPromoCampaign extends Controller
 					}, 
                     'dealVoucher.deals.deals_buyxgety_product_requirement.product' => function($q) {
 						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-					}
+					},
+					'dealVoucher.deals.deals_discount_bill_rules', 
+					'dealVoucher.deals.deals_discount_delivery_rules', 
                 ]);
 	    }
 

@@ -1888,7 +1888,6 @@ class PromoCampaignTools{
         if ((empty($post['promo_code']) && empty($post['id_deals_user']) && empty($post['id_subscription_user']))) {
         	return $result;
         }
-
         $promo_error = null;
         if ((!empty($post['promo_code']) && !empty($post['id_deals_user']) && !empty($post['id_subscription_user'])) 
             || (!empty($post['promo_code']) && !empty($post['id_deals_user']) && empty($post['id_subscription_user'])) 
@@ -1913,7 +1912,7 @@ class PromoCampaignTools{
     		$brand_rule		= $code['promo_campaign']['brand_rule']??'and';
 
     		// if promo doesn't have product related rule, return data
-    		if ($code->promo_type != 'Product discount' && $code->promo_type != 'Tier discount' && $code->promo_type != 'Buy X Get Y') {
+    		if ($code->promo_type != 'Product discount' && $code->promo_type != 'Tier discount' && $code->promo_type != 'Buy X Get Y' && $code->promo_type != 'Discount bill') {
                 return $result;
     		}
 
@@ -1934,6 +1933,7 @@ class PromoCampaignTools{
     		if ($code->dealVoucher->deals->promo_type != 'Product discount' 
     			&& $code->dealVoucher->deals->promo_type != 'Tier discount' 
     			&& $code->dealVoucher->deals->promo_type != 'Buy X Get Y'
+    			&& $code->dealVoucher->deals->promo_type != 'Discount bill'
     		) {
                 return $result;
     		}
