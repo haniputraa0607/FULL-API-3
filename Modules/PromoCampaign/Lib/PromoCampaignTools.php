@@ -1799,7 +1799,7 @@ class PromoCampaignTools{
 		return true;
     }
 
-    public function getPromoProduct($trxs, $promo_brand, $promo_product)
+    public function getPromoProduct(&$trxs, $promo_brand, $promo_product)
     {
     	if ($promo_product != '*') {
 	    	if (!is_array($promo_product)) {
@@ -1822,6 +1822,7 @@ class PromoCampaignTools{
 					if ($value2['id_brand'] == $trx['id_brand'] && $value2['id_product'] == $trx['id_product']) {
 						$product[$key] = $trx;
 						$total_product += $trx['qty'];
+						$trx['is_promo'] = 1;
 						break;
 					}
 				}
