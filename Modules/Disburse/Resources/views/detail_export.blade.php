@@ -19,12 +19,20 @@
         <td>: {{(float)$summary_fee['total_delivery']}}</td>
     </tr>
     <tr>
-        <td width="30"><b>Sub Total (Gross Sales + delivery - discount)</b></td>
+        <td width="30"><b>Total Discount Delivery</b></td>
+        <td>: {{(float)$summary_fee['total_discount_delivery']}}</td>
+    </tr>
+    <tr>
+        <td width="30"><b>Sub Total (Gross Sales + delivery - discount delivery - discount)</b></td>
         <td>: {{(float)$summary_fee['total_gross_sales']-$summary_fee['total_subscription']}}</td>
     </tr>
     <tr>
         <td width="30"><b>Total Fee Item</b></td>
         <td>: {{(float)$summary_fee['total_fee_item']}}</td>
+    </tr>
+    <tr>
+        <td width="30"><b>Total Fee Discount Delivery</b></td>
+        <td>: {{(float)$summary_fee['total_fee_discount_delivery']}}</td>
     </tr>
     <tr>
         <td width="30"><b>Total MDR PG</b></td>

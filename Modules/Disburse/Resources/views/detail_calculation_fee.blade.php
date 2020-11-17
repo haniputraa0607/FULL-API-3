@@ -12,9 +12,11 @@
         <th style="background-color: #dcdcdc;" width="20"> Nama Promo </th>
         <th style="background-color: #dcdcdc;" width="20"> Promo </th>
         <th style="background-color: #dcdcdc;" width="20"> Delivery </th>
+        <th style="background-color: #dcdcdc;" width="20"> Discount Delivery </th>
         <th style="background-color: #dcdcdc;" width="20"> Sub Total </th>
         <th style="background-color: #dcdcdc;" width="20"> Biaya Jasa </th>
         <th style="background-color: #dcdcdc;" width="20"> Payment </th>
+        <th style="background-color: #dcdcdc;" width="20"> Fee Discount Delivery </th>
         <th style="background-color: #dcdcdc;" width="20"> MDR PG </th>
         <th style="background-color: #dcdcdc;" width="20"> Income Promo </th>
         <th style="background-color: #dcdcdc;" width="20"> Income Subscription </th>
@@ -52,6 +54,8 @@
                         }else{
                             $promoName = $val['transaction_payment_subscription']['subscription_title'];
                         }
+                    }elseif(isset($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']) && !empty($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription'])) {
+                        $promoName = $val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']['subscription_title'];
                     }elseif($val['discount_central'] > 0){
                         $promoName = 'Unknown Promo';
                     }
@@ -65,6 +69,7 @@
                     ?>
                 </td>
                 <td style="text-align: left">{{$val['transaction_shipment_go_send']}}</td>
+                <td style="text-align: left">{{$val['transaction_discount_delivery']}}</td>
                 <td style="text-align: left">{{$val['transaction_grandtotal']-$sub}}</td>
                 <td style="text-align: left">{{(float)$val['fee_item']}}</td>
                 <td style="text-align: left">
@@ -80,6 +85,7 @@
                         echo $payment;
                     ?>
                 </td>
+                <td style="text-align: left">{{(float)$val['discount_delivery_outlet']}}</td>
                 <td style="text-align: left">{{(float)$val['payment_charge']}}</td>
                 <td style="text-align: left">{{(float)$val['discount_central']}}</td>
                 <td style="text-align: left">{{(float)$val['subscription_central']}}</td>

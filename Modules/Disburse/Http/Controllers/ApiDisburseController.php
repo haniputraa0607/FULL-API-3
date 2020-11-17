@@ -956,10 +956,10 @@ class ApiDisburseController extends Controller
                     $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
                         ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                         ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
-                }, 'vouchers.deal', 'promo_campaign'])
+                }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
                 ->select('transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
                     'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
-                    'transactions.transaction_grandtotal',
+                    'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
                     'transactions.transaction_discount', 'transactions.transaction_subtotal')
                 ->get()->toArray();
 
@@ -1297,7 +1297,8 @@ class ApiDisburseController extends Controller
                         SUM(transactions.transaction_subtotal) as total_sub_total, 
                         SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
                         SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
-                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription');
+                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription,
+                        SUM(transactions.transaction_discount_delivery) total_discount_delivery, SUM(discount_delivery_outlet) total_fee_discount_delivery');
 
         if($id_outlet){
             $summaryFee = $summaryFee->where('id_outlet', $id_outlet);
@@ -1405,10 +1406,10 @@ class ApiDisburseController extends Controller
                                 $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
                                     ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                                     ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
-                            }, 'vouchers.deal', 'promo_campaign'])
+                            }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
                             ->select('transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
                                 'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
-                                'transactions.transaction_grandtotal',
+                                'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
                                 'transactions.transaction_discount', 'transactions.transaction_subtotal')
                             ->get()->toArray();
 
@@ -1510,7 +1511,8 @@ class ApiDisburseController extends Controller
                         SUM(transactions.transaction_subtotal) as total_sub_total, 
                         SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
                         SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
-                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription');
+                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription,
+                        SUM(transactions.transaction_discount_delivery) total_discount_delivery, SUM(discount_delivery_outlet) total_fee_discount_delivery');
 
         if($id_outlet){
             $summaryFee = $summaryFee->where('id_outlet', $id_outlet);
@@ -1725,10 +1727,10 @@ class ApiDisburseController extends Controller
                     $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
                         ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                         ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
-                }, 'vouchers.deal', 'promo_campaign'])
+                }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
                 ->select('transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
                     'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
-                    'transactions.transaction_grandtotal',
+                    'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
                     'transactions.transaction_discount', 'transactions.transaction_subtotal')
                 ->orderBy('outlets.outlet_code', 'asc')
                 ->get()->toArray();

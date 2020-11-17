@@ -28,6 +28,7 @@
         <th style="background-color: #dcdcdc;" width="10"> Grand Total </th>
         <th style="background-color: #dcdcdc;" width="10"> Total Transaction </th>
         <th style="background-color: #dcdcdc;" width="10"> Biaya Jasa </th>
+        <th style="background-color: #dcdcdc;" width="10"> Fee Discount Delivery </th>
         <th style="background-color: #dcdcdc;" width="10"> MDR PG </th>
         <th style="background-color: #dcdcdc;" width="10"> Income Promo </th>
         <th style="background-color: #dcdcdc;" width="10"> Income Subscription </th>
