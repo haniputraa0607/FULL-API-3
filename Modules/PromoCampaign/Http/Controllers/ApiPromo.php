@@ -116,7 +116,7 @@ class ApiPromo extends Controller
     	}
     	elseif ( $user_promo->promo_type == 'subscription' )
     	{
-    		$promo = app($this->subscription_use)->checkSubscription(null, null, 1, 1, null, $user_promo->id_reference, 1);
+    		$promo = app($this->subscription_use)->checkSubscription(null, null, 1, 1, null, $user_promo->id_reference, 1, 1);
 
     		if ($promo) {
     			if ($promo->subscription_expired_at < $datenow) {

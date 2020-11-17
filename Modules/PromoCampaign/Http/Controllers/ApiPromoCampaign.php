@@ -2304,7 +2304,11 @@ class ApiPromoCampaign extends Controller
 						}, 
                         'dealVoucher.deals.deals_product_discount_rules', 
                         'dealVoucher.deals.deals_tier_discount_rules', 
-                        'dealVoucher.deals.deals_buyxgety_rules'
+                        'dealVoucher.deals.deals_buyxgety_rules',
+                        'dealVoucher.deals.deals_discount_bill_rules', 
+						'dealVoucher.deals.deals_discount_delivery_rules',
+						'dealVoucher.deals.deals_payment_method',
+						'dealVoucher.deals.deals_shipment_method'
                     ])
         			->first();
 			
@@ -2336,7 +2340,7 @@ class ApiPromoCampaign extends Controller
         }
         elseif (!$request->promo_code && !$request->id_deals_user && $request->id_subscription_user) 
         {
-        	$subs = app($this->subscription)->checkSubscription($request->id_subscription_user, 1, 1, 1, null, null, 1);
+        	$subs = app($this->subscription)->checkSubscription($request->id_subscription_user, 'outlet', 'product', 'product_detail', null, null, 'brand', 'promo_rule');
 
         	if(!$subs){
 	            return [
@@ -2560,33 +2564,39 @@ class ApiPromoCampaign extends Controller
     {
     	$brand = $query['brand']['name_brand']??null;
 
-    	$payment_method = null;
-    	if (!empty($query[$source.'_payment_method'])) {
+    	$payment_text = null;
+    	if (!empty($query[$source.'_payment_method']) && $query['is_all_payment'] != 1) {
     		$available_payment = config('payment_method');
     		$payment_list = [];
     		foreach ($available_payment as $key => $value) {
     			$payment_list[$value['payment_method']] = $value['text'];
     		}
-    		$payment_method = '';
+    		$payment_text = '';
     		$payment_count 	= count($query[$source.'_payment_method']);
     		$i = 1;
     		foreach ($query[$source.'_payment_method'] as $key => $value) {
     			if ($i == 1) {
-    				$payment_method .= $payment_list[$value['payment_method']];
+    				$payment_text .= $payment_list[$value['payment_method']];
     			}
     			elseif ($i == $payment_count) {
-    				$payment_method .= ' atau '.$payment_list[$value['payment_method']];
+    				$payment_text .= ' atau '.$payment_list[$value['payment_method']];
     			}
     			else {
-    				$payment_method .= ', '.$payment_list[$value['payment_method']];
+    				$payment_text .= ', '.$payment_list[$value['payment_method']];
     			}
 
     			$i++;
     		}
+    		if ($payment_text) {
+    			$payment_text = 'pembayaran menggunakan '.$payment_text;
+    		}
+    	}else{
+    		// $payment_text = 'semua metode pembayaran';
+    		$payment_text = null;
     	}
 
-    	$shipment_method = null;
-    	if (!empty($query[$source.'_shipment_method'])) {
+    	$shipment_text = null;
+    	if (!empty($query[$source.'_shipment_method']) && $query['is_all_shipment'] != 1) {
     		$shipment_list = array_column($query[$source.'_shipment_method'], 'shipment_method');
     		$shipment_list = array_flip($shipment_list);
 
@@ -2600,22 +2610,38 @@ class ApiPromoCampaign extends Controller
     		}
     		$shipment_list = array_flip($shipment_list);
 
-    		$shipment_method = '';
+    		$shipment_text = '';
     		$shipment_count = count($shipment_list);
     		$i = 1;
     		foreach ($shipment_list as $key => $value) {
     			if ($i == 1) {
-    				$shipment_method .= $value;
+    				$shipment_text .= $value;
     			}
     			elseif ($i == $shipment_count) {
-    				$shipment_method .= ' atau '.$value;
+    				$shipment_text .= ' atau '.$value;
     			}
     			else {
-    				$shipment_method .= ', '.$value;
+    				$shipment_text .= ', '.$value;
     			}
     			$i++;
     		}
+
+    		if ($shipment_text) {
+    			$shipment_text = $shipment_text.' order';
+    		}
+    	}else{
+    		// $shipment_text = 'semua tipe order';
+    		$shipment_text = null;
     	}
+
+		$global_text = '';
+		if (isset($payment_text) && isset($shipment_text)) {
+			$global_text.='berlaku untuk %payment_text% dan %shipment_text%';
+		}elseif (isset($payment_text)) {
+			$global_text.='berlaku untuk %payment_text%';
+		}elseif (isset($shipment_text)) {
+			$global_text.='berlaku untuk %shipment_text%';
+		}
 
     	if ($source == 'subscription') 
     	{
@@ -2635,7 +2661,7 @@ class ApiPromoCampaign extends Controller
         	}
 
         	$key = $brand ? 'description_product_discount_brand_no_qty' : 'description_product_discount_no_qty';
-    		$key_null = $brand ? 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%.' : 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%.';
+    		$key_null = $brand ? 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%.' : 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%';
     		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
     		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'brand'=>$brand]);
@@ -2655,10 +2681,10 @@ class ApiPromoCampaign extends Controller
 
 	        	if ( empty($qty) ) {
         			$key = 'description_product_discount_brand_no_qty';
-    				$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%.';
+    				$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%';
 	        	}else{
 	        		$key = 'description_product_discount_brand';
-	    			$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk di %brand%.';
+	    			$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk di %brand%';
 	        	}
 
 	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
@@ -2682,7 +2708,7 @@ class ApiPromoCampaign extends Controller
 					}
 	    		}
 	    		$key = 'description_tier_discount_brand';
-	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax% di %brand%.';
+	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax% di %brand%';
 	    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
 	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
@@ -2704,7 +2730,7 @@ class ApiPromoCampaign extends Controller
 					}
 	    		}
 	    		$key = 'description_buyxgety_discount_brand';
-	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %min% - %max% di %brand.';
+	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %min% - %max% di %brand';
 	    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
 	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
@@ -2721,17 +2747,9 @@ class ApiPromoCampaign extends Controller
 	        		$discount = 'Rp '.number_format(($query[$source.'_discount_bill_rules']['discount_value']??0),0,',','.');
 	        	}
 
-				$text = 'Anda berhak mendapatkan potongan %discount% ';
+				$text = 'Anda berhak mendapatkan potongan %discount%';
 
-				if (isset($payment_method) && isset($shipment_method)) {
-					$text.='berlaku untuk pembayaran menggunakan %payment_method% dan %shipment_method% order';
-				}elseif (isset($payment_method)) {
-					$text.='berlaku untuk pembayaran menggunakan %payment_method%';
-				}elseif (isset($shipment_method)) {
-					$text.='berlaku untuk %shipment_method% order';
-				}
-
-	    		$desc = MyHelper::simpleReplace($text,['discount'=>$discount, 'payment_method'=>$payment_method, 'shipment_method'=>$shipment_method]);
+	    		$desc = MyHelper::simpleReplace($text,['discount'=>$discount]);
 	    	}
 	    	elseif ($query['promo_type'] == 'Discount delivery')
 	        {
@@ -2744,23 +2762,23 @@ class ApiPromoCampaign extends Controller
 	        		$discount = 'Rp '.number_format(($query[$source.'_discount_delivery_rules']['discount_value']??0),0,',','.');
 	        	}
 
-				$text = 'Anda berhak mendapatkan potongan ongkos kirim %discount% ';
+				$text = 'Anda berhak mendapatkan potongan ongkos kirim %discount%';
 
-				if (isset($payment_method) && isset($shipment_method)) {
-					$text.='berlaku untuk pembayaran menggunakan %payment_method% dan %shipment_method% order';
-				}elseif (isset($payment_method)) {
-					$text.='berlaku untuk pembayaran menggunakan %payment_method%';
-				}elseif (isset($shipment_method)) {
-					$text.='berlaku untuk %shipment_method% order';
-				}
-
-	    		$desc = MyHelper::simpleReplace($text,['discount'=>$discount, 'payment_method'=>$payment_method, 'shipment_method'=>$shipment_method]);
+	    		$desc = MyHelper::simpleReplace($text,['discount'=>$discount]);
 	    	}
 	    	else
 	    	{
 	    		$key = null;
-	    		$desc = 'no description';
+	    		$desc = null;
 	    	}
+    	}
+
+    	if ($desc) {
+	    	$text = $desc.' '.$global_text;
+
+	    	$desc = MyHelper::simpleReplace($text,['payment_text'=>$payment_text, 'shipment_text'=>$shipment_text]);
+    	}else{
+    		$desc = 'no description';
     	}
 
     	return $desc;
@@ -2867,8 +2885,10 @@ class ApiPromoCampaign extends Controller
                     'dealVoucher.deals.deals_buyxgety_product_requirement.product' => function($q) {
 						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 					},
-					'dealVoucher.deals.deals_discount_bill_rules', 
-					'dealVoucher.deals.deals_discount_delivery_rules', 
+					'dealVoucher.deals.deals_discount_bill_rules',
+					'dealVoucher.deals.deals_discount_delivery_rules',
+					'dealVoucher.deals.deals_payment_method',
+					'dealVoucher.deals.deals_shipment_method'
                 ]);
 	    }
 

@@ -37,7 +37,7 @@ class ApiSubscriptionUse extends Controller
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
     }
 
-    public function checkSubscription($id_subscription_user=null, $outlet=null, $product=null, $product_detail=null, $active=null, $id_subscription_user_voucher=null, $brand=null)
+    public function checkSubscription($id_subscription_user=null, $outlet=null, $product=null, $product_detail=null, $active=null, $id_subscription_user_voucher=null, $brand=null, $promo_rule = null)
     {
     	if (!empty($id_subscription_user_voucher)) 
     	{
@@ -86,6 +86,13 @@ class ApiSubscriptionUse extends Controller
 		    				$q->where('subscription_users.subscription_active_at','<=',date('Y-m-d H:i:s'))	
 		    					->orWhereNull('subscription_users.subscription_active_at');
 		    			});
+    	}
+
+    	if (!empty($promo_rule)) {
+    		$subs = $subs->with(
+    			'subscription_user.subscription.subscription_shipment_method',
+    			'subscription_user.subscription.subscription_payment_method'
+    		);
     	}
 
     	$subs = $subs->first();
