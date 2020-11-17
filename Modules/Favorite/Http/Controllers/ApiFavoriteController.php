@@ -60,7 +60,7 @@ class ApiFavoriteController extends Controller
         $select = ['id_favorite','favorites.id_outlet','outlet_different_price','favorites.id_product','favorites.id_product_variant_group','id_brand','id_user','notes'];
         $with = [
             'modifiers'=>function($query){
-                $query->select('product_modifiers.id_product_modifier','type','code','text','favorite_modifiers.qty');
+                $query->select('product_modifiers.id_product_modifier','type', 'modifier_type','code','text','favorite_modifiers.qty');
             },
             'variants' => function($query){
                 $query->select('product_variants.id_product_variant', 'product_variant_name');
@@ -108,16 +108,11 @@ class ApiFavoriteController extends Controller
             if(count($datax)>=1){
                 $datax = MyHelper::groupIt($datax,'id_outlet',function($key,&$val) use ($nf,$data, $request){
 
-                    if ($val['id_product_variant_group']) {
-                        $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $val['id_outlet'])->first();
-                        $val['selected_variant'] = Product::getVariantParentId($val['id_product_variant_group'], Product::getVariantTree($val['id_product'], $outlet)['variants_tree']);
-                    } else {
-                        $val['selected_variant'] = [];
-                    }
-
                     $total_price = $val['product']['price'];
                     $val['product']['price']=MyHelper::requestNumber($val['product']['price'],$nf);
-                    foreach ($val['modifiers'] as &$modifier) {
+                    $variants = [];
+                    $val['extra_modifiers'] = [];
+                    foreach ($val['modifiers'] as $keyx => &$modifier) {
                         if($val['outlet_different_price']){
                             $price = ProductModifierPrice::select('product_modifier_price')->where([
                                 'id_product_modifier' => $modifier['id_product_modifier'],
@@ -128,7 +123,32 @@ class ApiFavoriteController extends Controller
                         }
                         $modifier['product_modifier_price'] = MyHelper::requestNumber($price,$nf);
                         $total_price+=$price*$modifier['qty'];
+                        if ($modifier['modifier_type'] == 'Modifier Group') {
+                            $val['variants'][] = [
+                                'id_product_variant' => $modifier['id_product_modifier'],
+                                'product_variant_name' => $modifier['text']
+                            ];
+                            $val['extra_modifiers'][] = $modifier['id_product_modifier'];
+                            unset($val['modifiers'][$keyx]);
+                        }
                     }
+
+                    if ($val['id_product_variant_group']) {
+                        $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $val['id_outlet'])->first();
+                        $variant_tree = Product::getVariantTree($val['id_product'], $outlet);
+                        if ($variant_tree['base_price'] ?? false) {
+                            $total_price += $variant_tree['base_price'] - $val['product']['price'];
+                            $variant_price = Product::getVariantPrice($val['id_product_variant_group'], $variant_tree['variants_tree']??[]);
+                            $total_price += array_sum($variant_price);
+                        }
+                        $val['selected_variant'] = Product::getVariantParentId($val['id_product_variant_group'], $variant_tree['variants_tree']??[], $val['extra_modifiers']);
+                    } else {
+                        $val['selected_variant'] = [];
+                    }
+                    $order = array_flip($val['selected_variant']);
+                    usort($val['variants'], function ($a, $b) use ($order) {
+                        return ($order[$a['id_product_variant']]??999) <=> ($order[$b['id_product_variant']]??999);
+                    });
                     $val['product_price_total'] = $total_price;
 
                     if ($request->json('max_price') && $request->json('min_price')) {
@@ -207,16 +227,18 @@ class ApiFavoriteController extends Controller
      * {
      *     'id_outlet'=>'',
      *     'id_product'=>'',
+     *     'id_product_variant_group'=>'',
      *     'id_user'=>'',
      *     'notes'=>'',
-     *     'product_qty'=>''
-     *     'modifiers'=>[id,id,id]
+     *     'product_qty'=>'',
+     *     'modifiers'=>[id,id,id],
+     *     'extra_modifiers'=>[id,id,id]
      * }
      * @return Response
      */
     public function store(CreateRequest $request){
         $id_user = $request->user()->id;
-        $modifiers = $request->json('modifiers');
+        $modifiers = array_merge($request->json('modifiers')?:[],$request->json('extra_modifiers')?:[]);
         // check is already exist
         if ($request->json('id_product_variant_group')) {
             $variant_group_exists = ProductVariantGroup::where(['id_product_variant_group' => $request->json('id_product_variant_group'), 'id_product' => $request->json('id_product')])->exists();
