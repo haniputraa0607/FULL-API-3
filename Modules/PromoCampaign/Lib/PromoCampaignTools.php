@@ -877,7 +877,7 @@ class PromoCampaignTools{
 					if (!isset($promo_brand_flipped[$trx['id_brand']])) {
 						continue;
 					}
-					$product = $this->getProductPrice($id_outlet, $trx['id_product']);
+					$product = $this->getProductPrice($id_outlet, $trx['id_product'], $trx['id_product_variant_group']);
 					$price = $trx['qty'] * $product['product_price']??0;
 					$total_price += $price;
 				}
