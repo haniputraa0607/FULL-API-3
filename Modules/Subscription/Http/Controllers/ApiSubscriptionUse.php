@@ -37,7 +37,7 @@ class ApiSubscriptionUse extends Controller
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
     }
 
-    public function checkSubscription($id_subscription_user=null, $outlet=null, $product=null, $product_detail=null, $active=null, $id_subscription_user_voucher=null, $brand=null)
+    public function checkSubscription($id_subscription_user=null, $outlet=null, $product=null, $product_detail=null, $active=null, $id_subscription_user_voucher=null, $brand=null, $promo_rule = null)
     {
     	if (!empty($id_subscription_user_voucher)) 
     	{
@@ -67,7 +67,8 @@ class ApiSubscriptionUse extends Controller
 
     	if (!empty($brand)) {
     		$subs = $subs->with(
-    			'subscription_user.subscription.brand'
+    			'subscription_user.subscription.brand',
+    			'subscription_user.subscription.brands'
     		);
     	}
 
@@ -87,6 +88,13 @@ class ApiSubscriptionUse extends Controller
 		    			});
     	}
 
+    	if (!empty($promo_rule)) {
+    		$subs = $subs->with(
+    			'subscription_user.subscription.subscription_shipment_method',
+    			'subscription_user.subscription.subscription_payment_method'
+    		);
+    	}
+
     	$subs = $subs->first();
 
     	return $subs;
@@ -98,8 +106,7 @@ class ApiSubscriptionUse extends Controller
     		return 0;
     	}
 
-
-    	$subs = $this->checkSubscription($id_subscription_user, 1, 1, 1);
+    	$subs = $this->checkSubscription($id_subscription_user, "outlet", "product", "product_detail", $active=null, $id_subscription_user_voucher=null, "brand");
 
     	// check if subscription exists
     	if (!$subs) {
@@ -146,53 +153,73 @@ class ApiSubscriptionUse extends Controller
 
     	// check outlet
 		$pct = new PromoCampaignTools;
-		$check_outlet = $pct->checkOutletRule($id_outlet, $subs['subscription_user']['subscription']['is_all_outlet'], $subs['subscription_user']['subscription']['outlets_active'], $subs['subscription_user']['subscription']['id_brand']);
+		if (!empty($subs['subscription_user']['subscription']['id_brand'])) {
+			$check_outlet = $pct->checkOutletRule($id_outlet, $subs['subscription_user']['subscription']['is_all_outlet'], $subs['subscription_user']['subscription']['outlets_active'], $subs['subscription_user']['subscription']['id_brand']);
+		}else{
+			$promo_brands = $subs_obj->subscription_user->subscription->subscription_brands->pluck('id_brand')->toArray();
+			$check_outlet = $pct->checkOutletBrandRule(
+								$id_outlet, 
+								$subs['subscription_user']['subscription']['is_all_outlet'], 
+								$subs['subscription_user']['subscription']['outlets_active'], 
+								$promo_brands,
+								$subs['subscription_user']['subscription']['brand_rule']
+							);
 
-		if ( !$check_outlet ) {
-    		$errors[] = 'Cannot use subscription at this outlet';
-    		return 0;
-    	}
+			if ( !$check_outlet ) {
+	    		$errors[] = 'Cannot use subscription at this outlet';
+	    		return 0;
+	    	}
+		}
 
-    	// check product
-    	if ( !empty($subs['subscription_user']['subscription']['subscription_products']) ) {
-    		$promo_product = $subs['subscription_user']['subscription']['subscription_products'];
-    		$check = false;
-    		foreach ($promo_product as $key => $value) 
-    		{
-    			foreach ($item as $key2 => $value2) 
-    			{
-    				if ($value['id_product'] == $value2['id_product']) 
-    				{
-    					$check = true;
-    					break;
-    				}
-    			}
-    			if ($check) {
-    				break;
-    			}
-    		}
+	    // check product
+		if (!empty($subs['subscription_user']['subscription']['id_brand'])) {
+	    	if ( !empty($subs['subscription_user']['subscription']['subscription_products']) ) {
+	    		$promo_product = $subs['subscription_user']['subscription']['subscription_products'];
+	    		$check = false;
+	    		foreach ($promo_product as $key => $value) 
+	    		{
+	    			foreach ($item as $key2 => $value2) 
+	    			{
+	    				if ($value['id_product'] == $value2['id_product']) 
+	    				{
+	    					$check = true;
+	    					break;
+	    				}
+	    			}
+	    			if ($check) {
+	    				break;
+	    			}
+	    		}
+	    	}
+		}else{
+			if ( !empty($subs['subscription_user']['subscription']['subscription_products']) ) {
+	    		$promo_product = $subs['subscription_user']['subscription']['subscription_products'];
+				$check = $pct->checkProductRule($subs_obj->subscription_user->subscription, $promo_brands, $promo_product, $item);
+	    	}
+		}
+		if (!$check) {
+			$pct = new PromoCampaignTools;
+			$total_product = count($promo_product);
+			if ($total_product == 1) {
+				$product = $promo_product[0]['product']['product_name'] ?? 'product bertanda khusus';
+			}else{
+				if ($subs_obj->subscription_user->subscription->product_rule == 'and') {
+					$product = 'semua product bertanda khusus';
+				}else{
+					$product = 'product bertanda khusus';
+				}
+			}
 
-    		if (!$check) {
-    			$pct = new PromoCampaignTools;
-    			$total_product = count($promo_product);
-    			if ($total_product == 1) {
-    				$product = $promo_product[0]['product']['product_name'] ?? 'product bertanda khusus';
-    			}else{
-    				$product = 'product bertanda khusus';
-    			}
-
-
-    			$message = $pct->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
-				$message = MyHelper::simpleReplace($message,['product'=>$product]);
-    			$errors[] = $message;
-    			
-				$getProduct  = app($this->promo_campaign)->getProduct('subscription',$subs['subscription_user']['subscription'], $id_outlet);
-    			$product = $getProduct['product']??'';
-    			$applied_product = $getProduct['applied_product'][0]??'';
-    			$errorProduct = 1;
-    			return 0;
-    		}
-    	}
+			$message = $pct->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
+			$message = MyHelper::simpleReplace($message,['product'=>$product]);
+			$errors[] = $message;
+			
+			$getProduct  = app($this->promo_campaign)->getProduct('subscription',$subs['subscription_user']['subscription'], $id_outlet);
+			$product = $getProduct['product']??'';
+			$applied_product = $getProduct['applied_product'][0]??'';
+			$errorProduct = 'all';
+			return 0;
+		}
 
     	// check shipment
     	if (isset($subs['subscription_user']['subscription']['is_all_shipment']) && isset($request['type']) ) {

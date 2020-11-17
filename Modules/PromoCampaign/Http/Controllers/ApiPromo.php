@@ -59,6 +59,9 @@ use Hash;
 use Modules\SettingFraud\Entities\DailyCheckPromoCode;
 use Modules\SettingFraud\Entities\LogCheckPromoCode;
 
+use Modules\Brand\Entities\BrandProduct;
+use Modules\Brand\Entities\BrandOutlet;
+
 class ApiPromo extends Controller
 {
 
@@ -113,7 +116,7 @@ class ApiPromo extends Controller
     	}
     	elseif ( $user_promo->promo_type == 'subscription' )
     	{
-    		$promo = app($this->subscription_use)->checkSubscription(null, null, 1, 1, null, $user_promo->id_reference, 1);
+    		$promo = app($this->subscription_use)->checkSubscription(null, null, 1, 1, null, $user_promo->id_reference, 1, 1);
 
     		if ($promo) {
     			if ($promo->subscription_expired_at < $datenow) {
@@ -432,5 +435,70 @@ class ApiPromo extends Controller
 		$payment_list 	= app($this->online_transaction)->availablePayment($custom_request);
 
 		return $payment_list;
+    }
+
+    public function checkBrandProduct($outlets = [], $products = [])
+    {
+    	$result	= [
+    		'status' => true,
+    		'messages' => []
+    	];
+
+    	if (isset($outlets[0]['id_outlet'])) {
+    		if (!is_array($outlets)) {
+	    		$outlets = $outlets->toArray();
+	    	}
+    		$outlets = array_column($outlets, 'id_outlet');
+    	}
+
+    	$outlet = BrandOutlet::select('id_brand', 'id_outlet')->whereIn('id_outlet', $outlets)->get()->toArray();
+    	$brand_outlet = array_column($outlet, 'id_brand');
+
+    	if (isset($products[0]['id_brand'])) {
+    		
+    	}
+    	$brand_product 	= [];
+    	foreach ($products as $value) {
+
+    		if (isset($value['id_brand'])) {
+    			$get_product_brand = $value['id_brand'];
+    		}else{
+    			$get_product_brand = app($this->promo_campaign)->splitBrandProduct($value, 'brand');
+    		}
+
+    		if (empty($get_product_brand)) {
+    			continue;
+    		}
+
+    		$brand_product[] = $get_product_brand;
+    	}
+
+    	// if product doesn't have brand then return true
+    	if (empty($brand_product)) {
+    		return $result;
+    	}
+
+    	$brand_product 	= array_flip($brand_product);
+
+    	$outlet_invalid = [];
+    	$outlet_valid 	= [];
+    	foreach ($brand_outlet as $key => $value) {
+    		if (!isset($brand_product[$value])) {
+    			$outlet_invalid[] = $outlet[$key]['id_outlet'];
+    		}else{
+    			$outlet_valid[] = $outlet[$key]['id_outlet'];
+    		}
+    	}
+		
+		$invalid 	= array_flip(array_flip(array_diff($outlet_invalid, $outlet_valid)));
+
+		$messages = [];
+		if (!empty($invalid)) {
+			$outlet_name = Outlet::whereIn('id_outlet', $invalid)->pluck('outlet_name')->toArray();
+			$result['status'] 	= false;
+			$result['messages'] = array_merge(["Outlet tidak mempunyai produk dengan brand yang sesuai."],$outlet_name);
+		}
+
+		return $result;
     }
 }

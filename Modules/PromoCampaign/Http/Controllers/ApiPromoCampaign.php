@@ -50,6 +50,7 @@ use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 
 use Modules\Brand\Entities\BrandProduct;
+use Modules\Brand\Entities\BrandOutlet;
 
 use App\Http\Models\User;
 use App\Http\Models\Campaign;
@@ -1044,6 +1045,10 @@ class ApiPromoCampaign extends Controller
 	            DB::rollBack();
 	            return response()->json($createFilterOutlet);
 	        }
+
+	        if ($createFilterOutlet['status'] != 'success') {
+	        	return $createFilterOutlet;
+	        }
         }
         else
         {
@@ -1055,10 +1060,10 @@ class ApiPromoCampaign extends Controller
         	$dataPromoCampaign['min_basket_size'] 		= $post['min_basket_size']??null;
         }
 
-		$image = $table::where($id_table, $id_post)->first();
+		$data_promo = $table::where($id_table, $id_post)->first();
 
 		if (!empty($post['id_deals'])) {
-			if (!empty($image['deals_total_claimed']) ) {
+			if (!empty($data_promo['deals_total_claimed']) ) {
 				return [
 	                'status'  => 'fail',
 	                'message' => 'Cannot update deals because someone has already claimed a voucher'
@@ -1166,6 +1171,33 @@ class ApiPromoCampaign extends Controller
         }
 
         DB::commit();
+
+        $outlets = $data_promo->{$source.'_outlets'};
+        $products = $createFilterProduct['products'] ?? false;
+    	if (isset($data_promo->deals_list_outlet)) {
+    		$outlets = explode(',', $data_promo->deals_list_outlet);
+    		if (in_array('all', $outlets)) {
+    			$outlets = [];
+    		}
+    	}
+
+        if ( !empty($outlets) 
+        	&& !empty($products) 
+        	&& $data_promo['is_all_outlet'] != 1 
+        	&& ($data_promo[$source.'_product_discount']['is_all_product']??0) != 1 
+        ) {
+        	unset($createFilterProduct['products']);
+
+	        $check_brand_product = app($this->promo)->checkBrandProduct($outlets, $products);
+        	if ($check_brand_product['status'] == false) {
+        		$createFilterProduct['brand_product_error'] = array_merge($createFilterProduct['messages']??[],$check_brand_product['messages']??['Outlet tidak mempunyai produk dengan brand yang sesuai.']);
+
+        		if ($source == 'promo_campaign') {
+        			PromoCampaign::where('id_promo_campaign', $id_post)->update(['step_complete' => 0]);
+        		}
+        	}
+        }
+
         return response()->json($createFilterProduct);
     }
 
@@ -1213,6 +1245,10 @@ class ApiPromoCampaign extends Controller
 			        else {
 			            $update = false;
 			        }
+
+			        if ($update && $update['status'] != 'success') {
+			        	$update = false;
+			        }
     			}
 
     			break;
@@ -1248,7 +1284,7 @@ class ApiPromoCampaign extends Controller
                     'message' => 'Create Filter Outlet Failed'
                 ];
                 DB::rollBack();
-                return response()->json($result);
+                return $result;
             }
         } else {
             $dataOutlet = [];
@@ -1268,7 +1304,7 @@ class ApiPromoCampaign extends Controller
                     'message' => 'Create Filter Outlet Failed'
                 ];
                 DB::rollBack();
-                return response()->json($result);
+                return $result;
             }
         }
         return $result;
@@ -1440,7 +1476,7 @@ class ApiPromoCampaign extends Controller
             try {
                 $table_product_discount_rule::insert($data);
                 $table_product_discount::insert($dataProduct);
-                $result = ['status'  => 'success'];
+                $result = ['status'  => 'success', 'products' => $dataProduct];
             } catch (\Exception $e) {
                 $result = [
                     'status'  => 'fail',
@@ -1535,7 +1571,7 @@ class ApiPromoCampaign extends Controller
         try {
             $table_tier_discount_rule::insert($data);
             $table_tier_discount_product::insert($dataProduct);
-            $result = ['status'  => 'success'];
+            $result = ['status'  => 'success', 'products' => $dataProduct];
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
@@ -1639,14 +1675,13 @@ class ApiPromoCampaign extends Controller
         try {
             $table_buyxgety_discount_rule::insert($data);
             $table_buyxgety_discount_product::insert($data_product);
-            $result = ['status'  => 'success'];
+            $result = ['status'  => 'success', 'products' => $data_product];
         } catch (\Illuminate\Database\QueryException $e) {
             $result = [
                 'status'  => 'fail',
                 'message' => $e->getMessage()
             ];
             DB::rollBack();
-            return response()->json($result);
         }
         return $result;
     }
@@ -2015,11 +2050,17 @@ class ApiPromoCampaign extends Controller
             $data = Outlet::select('id_outlet', DB::raw('CONCAT(outlet_code, " - ", outlet_name) AS outlet'));
 
             if (!empty($post['brand'])) {
-                foreach ($post['brand'] as $value) {
-	                $data = $data->whereHas('brands',function($query) use ($value){
-			                    $query->where('brands.id_brand',$value);
-			                });
-	            }
+            	if (($post['brand_rule']??false) == 'or') {
+		            $data = $data->whereHas('brands',function($query) use ($post){
+				                    $query->whereIn('brands.id_brand',$post['brand']);
+				                });
+            	}else{
+	                foreach ($post['brand'] as $value) {
+		                $data = $data->whereHas('brands',function($query) use ($value){
+				                    $query->where('brands.id_brand',$value);
+				                });
+		            }
+            	}
             }
             
             $data = $data->get()->toArray();
@@ -2263,7 +2304,11 @@ class ApiPromoCampaign extends Controller
 						}, 
                         'dealVoucher.deals.deals_product_discount_rules', 
                         'dealVoucher.deals.deals_tier_discount_rules', 
-                        'dealVoucher.deals.deals_buyxgety_rules'
+                        'dealVoucher.deals.deals_buyxgety_rules',
+                        'dealVoucher.deals.deals_discount_bill_rules', 
+						'dealVoucher.deals.deals_discount_delivery_rules',
+						'dealVoucher.deals.deals_payment_method',
+						'dealVoucher.deals.deals_shipment_method'
                     ])
         			->first();
 			
@@ -2295,7 +2340,7 @@ class ApiPromoCampaign extends Controller
         }
         elseif (!$request->promo_code && !$request->id_deals_user && $request->id_subscription_user) 
         {
-        	$subs = app($this->subscription)->checkSubscription($request->id_subscription_user, 1, 1, 1, null, null, 1);
+        	$subs = app($this->subscription)->checkSubscription($request->id_subscription_user, 'outlet', 'product', 'product_detail', null, null, 'brand', 'promo_rule');
 
         	if(!$subs){
 	            return [
@@ -2496,6 +2541,11 @@ class ApiPromoCampaign extends Controller
 	        	$applied_product = $query[$source.'_buyxgety_product_requirement'];
 	        	$product = $applied_product['product']['product_name']??'product tertentu';
 	        }
+	        elseif ( !empty($query[$source.'_discount_bill_rules']) )
+	        {
+	        	$applied_product = '*';
+	        	$product = 'semua product';
+	        }
 	        else
 	        {
 	        	$applied_product = [];
@@ -2514,33 +2564,39 @@ class ApiPromoCampaign extends Controller
     {
     	$brand = $query['brand']['name_brand']??null;
 
-    	$payment_method = null;
-    	if (!empty($query[$source.'_payment_method'])) {
+    	$payment_text = null;
+    	if (!empty($query[$source.'_payment_method']) && $query['is_all_payment'] != 1) {
     		$available_payment = config('payment_method');
     		$payment_list = [];
     		foreach ($available_payment as $key => $value) {
     			$payment_list[$value['payment_method']] = $value['text'];
     		}
-    		$payment_method = '';
+    		$payment_text = '';
     		$payment_count 	= count($query[$source.'_payment_method']);
     		$i = 1;
     		foreach ($query[$source.'_payment_method'] as $key => $value) {
     			if ($i == 1) {
-    				$payment_method .= $payment_list[$value['payment_method']];
+    				$payment_text .= $payment_list[$value['payment_method']];
     			}
     			elseif ($i == $payment_count) {
-    				$payment_method .= ' atau '.$payment_list[$value['payment_method']];
+    				$payment_text .= ' atau '.$payment_list[$value['payment_method']];
     			}
     			else {
-    				$payment_method .= ', '.$payment_list[$value['payment_method']];
+    				$payment_text .= ', '.$payment_list[$value['payment_method']];
     			}
 
     			$i++;
     		}
+    		if ($payment_text) {
+    			$payment_text = 'pembayaran menggunakan '.$payment_text;
+    		}
+    	}else{
+    		// $payment_text = 'semua metode pembayaran';
+    		$payment_text = null;
     	}
 
-    	$shipment_method = null;
-    	if (!empty($query[$source.'_shipment_method'])) {
+    	$shipment_text = null;
+    	if (!empty($query[$source.'_shipment_method']) && $query['is_all_shipment'] != 1) {
     		$shipment_list = array_column($query[$source.'_shipment_method'], 'shipment_method');
     		$shipment_list = array_flip($shipment_list);
 
@@ -2554,22 +2610,38 @@ class ApiPromoCampaign extends Controller
     		}
     		$shipment_list = array_flip($shipment_list);
 
-    		$shipment_method = '';
+    		$shipment_text = '';
     		$shipment_count = count($shipment_list);
     		$i = 1;
     		foreach ($shipment_list as $key => $value) {
     			if ($i == 1) {
-    				$shipment_method .= $value;
+    				$shipment_text .= $value;
     			}
     			elseif ($i == $shipment_count) {
-    				$shipment_method .= ' atau '.$value;
+    				$shipment_text .= ' atau '.$value;
     			}
     			else {
-    				$shipment_method .= ', '.$value;
+    				$shipment_text .= ', '.$value;
     			}
     			$i++;
     		}
+
+    		if ($shipment_text) {
+    			$shipment_text = $shipment_text.' order';
+    		}
+    	}else{
+    		// $shipment_text = 'semua tipe order';
+    		$shipment_text = null;
     	}
+
+		$global_text = '';
+		if (isset($payment_text) && isset($shipment_text)) {
+			$global_text.='berlaku untuk %payment_text% dan %shipment_text%';
+		}elseif (isset($payment_text)) {
+			$global_text.='berlaku untuk %payment_text%';
+		}elseif (isset($shipment_text)) {
+			$global_text.='berlaku untuk %shipment_text%';
+		}
 
     	if ($source == 'subscription') 
     	{
@@ -2589,7 +2661,7 @@ class ApiPromoCampaign extends Controller
         	}
 
         	$key = $brand ? 'description_product_discount_brand_no_qty' : 'description_product_discount_no_qty';
-    		$key_null = $brand ? 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%.' : 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%.';
+    		$key_null = $brand ? 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%.' : 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%';
     		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
     		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'brand'=>$brand]);
@@ -2609,10 +2681,10 @@ class ApiPromoCampaign extends Controller
 
 	        	if ( empty($qty) ) {
         			$key = 'description_product_discount_brand_no_qty';
-    				$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%.';
+    				$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%';
 	        	}else{
 	        		$key = 'description_product_discount_brand';
-	    			$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk di %brand%.';
+	    			$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk di %brand%';
 	        	}
 
 	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
@@ -2636,7 +2708,7 @@ class ApiPromoCampaign extends Controller
 					}
 	    		}
 	    		$key = 'description_tier_discount_brand';
-	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax% di %brand%.';
+	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax% di %brand%';
 	    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
 	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
@@ -2658,7 +2730,7 @@ class ApiPromoCampaign extends Controller
 					}
 	    		}
 	    		$key = 'description_buyxgety_discount_brand';
-	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %min% - %max% di %brand.';
+	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %min% - %max% di %brand';
 	    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
 	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
@@ -2675,17 +2747,9 @@ class ApiPromoCampaign extends Controller
 	        		$discount = 'Rp '.number_format(($query[$source.'_discount_bill_rules']['discount_value']??0),0,',','.');
 	        	}
 
-				$text = 'Anda berhak mendapatkan potongan %discount% ';
+				$text = 'Anda berhak mendapatkan potongan %discount%';
 
-				if (isset($payment_method) && isset($shipment_method)) {
-					$text.='berlaku untuk pembayaran menggunakan %payment_method% dan %shipment_method% order';
-				}elseif (isset($payment_method)) {
-					$text.='berlaku untuk pembayaran menggunakan %payment_method%';
-				}elseif (isset($shipment_method)) {
-					$text.='berlaku untuk %shipment_method% order';
-				}
-
-	    		$desc = MyHelper::simpleReplace($text,['discount'=>$discount, 'payment_method'=>$payment_method, 'shipment_method'=>$shipment_method]);
+	    		$desc = MyHelper::simpleReplace($text,['discount'=>$discount]);
 	    	}
 	    	elseif ($query['promo_type'] == 'Discount delivery')
 	        {
@@ -2698,23 +2762,23 @@ class ApiPromoCampaign extends Controller
 	        		$discount = 'Rp '.number_format(($query[$source.'_discount_delivery_rules']['discount_value']??0),0,',','.');
 	        	}
 
-				$text = 'Anda berhak mendapatkan potongan ongkos kirim %discount% ';
+				$text = 'Anda berhak mendapatkan potongan ongkos kirim %discount%';
 
-				if (isset($payment_method) && isset($shipment_method)) {
-					$text.='berlaku untuk pembayaran menggunakan %payment_method% dan %shipment_method% order';
-				}elseif (isset($payment_method)) {
-					$text.='berlaku untuk pembayaran menggunakan %payment_method%';
-				}elseif (isset($shipment_method)) {
-					$text.='berlaku untuk %shipment_method% order';
-				}
-
-	    		$desc = MyHelper::simpleReplace($text,['discount'=>$discount, 'payment_method'=>$payment_method, 'shipment_method'=>$shipment_method]);
+	    		$desc = MyHelper::simpleReplace($text,['discount'=>$discount]);
 	    	}
 	    	else
 	    	{
 	    		$key = null;
-	    		$desc = 'no description';
+	    		$desc = null;
 	    	}
+    	}
+
+    	if ($desc) {
+	    	$text = $desc.' '.$global_text;
+
+	    	$desc = MyHelper::simpleReplace($text,['payment_text'=>$payment_text, 'shipment_text'=>$shipment_text]);
+    	}else{
+    		$desc = 'no description';
     	}
 
     	return $desc;
@@ -2776,7 +2840,7 @@ class ApiPromoCampaign extends Controller
         return $code;
     }
 
-	public function checkVoucher($id_deals_user=null, $outlet=null, $product=null, $brand=null)
+	public function checkVoucher($id_deals_user=null, $outlet=null, $promo_rule=null, $brand=null)
     {
     	$deals = new DealsUser;
 
@@ -2803,7 +2867,7 @@ class ApiPromoCampaign extends Controller
         	$deals = $deals->with(['dealVoucher.deals.outlets_active']);
 	    }
 
-	    if (!empty($product)) {
+	    if (!empty($promo_rule)) {
         	$deals = $deals->with([
                     'dealVoucher.deals.outlets_active',
                     'dealVoucher.deals.deals_product_discount', 
@@ -2820,7 +2884,11 @@ class ApiPromoCampaign extends Controller
 					}, 
                     'dealVoucher.deals.deals_buyxgety_product_requirement.product' => function($q) {
 						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-					}
+					},
+					'dealVoucher.deals.deals_discount_bill_rules',
+					'dealVoucher.deals.deals_discount_delivery_rules',
+					'dealVoucher.deals.deals_payment_method',
+					'dealVoucher.deals.deals_shipment_method'
                 ]);
 	    }
 

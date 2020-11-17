@@ -97,7 +97,9 @@ class Subscription extends Eloquent
         'subscription_type',
         'subscription_discount_type',
         'is_all_shipment',
-        'is_all_payment'
+        'is_all_payment',
+        'product_rule',
+        'brand_rule'
 	];
 
 	protected $appends  = [
@@ -253,4 +255,13 @@ class Subscription extends Eloquent
     {
         return $this->hasMany(\Modules\Subscription\Entities\SubscriptionPaymentMethod::class, 'id_subscription', 'id_subscription');
     }
+
+    public function brands(){
+		return $this->belongsToMany(\Modules\Brand\Entities\Brand::class,'subscription_brands','id_subscription','id_brand');
+	}
+
+	public function subscription_brands()
+	{
+        return $this->hasMany(\Modules\Subscription\Entities\SubscriptionBrand::class, 'id_subscription', 'id_subscription');
+	}
 }

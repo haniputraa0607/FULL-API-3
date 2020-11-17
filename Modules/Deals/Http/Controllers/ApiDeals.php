@@ -23,6 +23,7 @@ use Modules\Brand\Entities\Brand;
 use App\Http\Models\DealsPromotionTemplate;
 use Modules\ProductVariant\Entities\ProductGroup;
 use App\Http\Models\Product;
+use Modules\Promotion\Entities\DealsPromotionBrand;
 
 use Modules\Deals\Entities\DealsProductDiscount;
 use Modules\Deals\Entities\DealsProductDiscountRule;
@@ -65,6 +66,7 @@ class ApiDeals extends Controller
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->promotion_deals      = "Modules\Promotion\Http\Controllers\ApiPromotionDeals";
         $this->deals_claim    = "Modules\Deals\Http\Controllers\ApiDealsClaim";
+        $this->promo       	= "Modules\PromoCampaign\Http\Controllers\ApiPromo";
     }
 
     public $saveImage = "img/deals/";
@@ -278,6 +280,10 @@ class ApiDeals extends Controller
         	$data['id_brand'] = $post['id_brand'];
         }
 
+        if (isset($post['brand_rule'])) {
+        	$data['brand_rule'] = $post['brand_rule'];
+        }
+
         return $data;
     }
 
@@ -311,7 +317,6 @@ class ApiDeals extends Controller
         }else{
         	$save = Deal::create($data);
         }
-
         if ($save) {
             if (isset($data['id_outlet']) && $data['is_all_outlet'] == 0) {
                 if (isset($data['id_outlet'])) {
@@ -1073,7 +1078,26 @@ class ApiDeals extends Controller
         $data['step_complete'] = 0;
         $data['last_updated_by'] = auth()->user()->id;
 
-        if ( isset($deals['id_brand']) && isset($data['id_brand']) && ($deals['id_brand'] != $data['id_brand']) ) {
+        $del_rule 	= false;
+        if ($data['id_brand'] && is_array($data['id_brand'])) {
+           	$brand_now 	= $deals->deals_brands->pluck('id_brand')->toArray();
+           	$brand_new	= $data['id_brand'];
+        	$data_brand = $brand_new;
+
+           	$check_brand = array_merge(array_diff($brand_now, $brand_new), array_diff($brand_new, $brand_now));
+
+       		if (!empty($check_brand)) {
+       			$del_rule = true;
+       		}
+        }
+
+        if ( $data['is_online'] == 0 
+    		|| (isset($data['id_brand']) 
+	    		&& ((!is_array($data['id_brand']) && $data['id_brand'] != $deals['id_brand']) 
+	    			|| (is_array($data['id_brand']) && $del_rule)
+	    			) 
+	    		)
+        ) {
         	app($this->promo_campaign)->deleteAllProductRule('deals', $id);
         }
 
@@ -1107,6 +1131,14 @@ class ApiDeals extends Controller
             unset($data['id_outlet']);
         }
 
+        if (isset($data['id_brand'])) {
+        	$save_brand = $this->saveBrand($deals, $data['id_brand']);
+        	unset($data['id_brand']);
+        	if (!$save_brand) {
+                return false;
+            }
+        }
+
         $save = Deal::where('id_deals', $id)->update($data);
 
         return $save;
@@ -1128,7 +1160,6 @@ class ApiDeals extends Controller
     /* UPDATE REQUEST */
     function updateReq(Update $request)
     {
-// return $update;
         DB::beginTransaction();
         if ($request->json('id_deals')) {
         	$save = $this->update($request->json('id_deals'), $request->json()->all());
@@ -1288,7 +1319,17 @@ class ApiDeals extends Controller
 
     function saveBrand($deals, $id_brand)
     {
-    	$id_deals = $deals->id_deals;
+
+    	if (isset($deals->id_deals_promotion_template)) {
+    		$table = new DealsPromotionBrand;
+    		$id_deals = $deals->id_deals_promotion_template;
+
+    	}else{
+    		$table = new DealsBrand;
+    		$id_deals = $deals->id_deals;
+    	}
+    	$delete = $table::where('id_deals', $id_deals)->delete();
+
         $data_brand = [];
 
         foreach ($id_brand as $value) {
@@ -1299,7 +1340,7 @@ class ApiDeals extends Controller
         }
 
         if (!empty($data_brand)) {
-            $save = DealsBrand::insert($data_brand);
+            $save = $table::insert($data_brand);
 
             return $save;
         } else {
@@ -1472,7 +1513,11 @@ class ApiDeals extends Controller
     	}
 
         if ( ($post['step'] == 1 || $post['step'] == 'all') && ($deals_type != 'Promotion') ){
-			$deals = $deals->with(['outlets', $table.'_brands']);
+			$deals = $deals->with(['outlets']);
+        }
+
+        if ( ($post['step'] == 1 || $post['step'] == 'all') ){
+			$deals = $deals->with([$table.'_brands']);
         }
 
         if ($post['step'] == 2 || $post['step'] == 'all') {
@@ -1766,16 +1811,17 @@ class ApiDeals extends Controller
 			return [
 				'status'	=> 'fail',
 				'step' 		=> $step,
-				'messages' 	=> [$errors]
+				'messages' 	=> $errors
 			];
 		}
     }
 
-    public function checkComplete($id, &$step, &$errors, $promo_type)
+    public function checkComplete($id, &$step, &$errors = [], $promo_type)
     {
+    	$errors = [];
     	$deals = $this->getDealsData($id, 'all', $promo_type);
     	if (!$deals) {
-    		$errors = 'Deals not found';
+    		$errors[] = 'Deals not found';
     		return false;
     	}
 
@@ -1783,7 +1829,7 @@ class ApiDeals extends Controller
     		return app($this->promotion_deals)->checkComplete($deals, $step, $errors);
     	}
 
-    	$deals = $deals->toArray();
+    	$deals = $deals->load('deals_outlets')->toArray();
     	if ( $deals['is_online'] == 1)
     	{
 	    	if ( empty($deals['deals_product_discount_rules']) 
@@ -1793,24 +1839,42 @@ class ApiDeals extends Controller
 	    		&& empty($deals['deals_discount_delivery_rules'])
 	    	){
 	    		$step = 2;
-	    		$errors = 'Deals not complete';
+	    		$errors[] = 'Deals not complete';
 	    		return false;
 	    	}
+	    	else{
+	    		$products = $deals['deals_product_discount']??$deals['deals_tier_discount_product']??$deals['deals_buyxgety_product_requirement'];
+
+		    	if (!empty($deals['deals_outlets']) 
+		    		&& !empty($products) 
+		    		&& $deals['is_all_outlet'] != 1 
+		    		&& ($deals['deals_product_discount_rules']['is_all_product']??0) != 1
+		    	) {
+			        $check_brand_product = app($this->promo)->checkBrandProduct($deals['deals_outlets'], $products);
+		        	if ($check_brand_product['status'] == false) {
+		        		$step = 2;
+		        		$errors = array_merge($errors,$check_brand_product['messages']??['Outlet tidak mempunyai produk dengan brand yang sesuai.']);
+			    		return false;
+		        	}
+		        }
+	    		
+	    	}
     	}
+
 
     	if ( $deals['is_offline'] == 1)
     	{
     		if ( empty($deals['deals_promo_id_type']) && empty($deals['deals_promo_id']) )
 	    	{
 	    		$step = 2;
-	    		$errors = 'Deals not complete';
+	    		$errors[] = 'Deals not complete';
 	    		return false;
 	    	}
     	}
 
     	if ( empty($deals['deals_content']) || empty($deals['deals_description'])) {
     		$step = 3;
-	    	$errors = 'Deals not complete';
+	    	$errors[] = 'Deals not complete';
     		return false;
     	}
 
@@ -1854,8 +1918,44 @@ class ApiDeals extends Controller
         $data['step_complete'] = 0;
         $data['last_updated_by'] = auth()->user()->id;
 
-        if ($data['is_online'] == 0 || $deals['id_brand'] != $data['id_brand']) {
+        $del_rule 	= false;
+        if ($data['id_brand'] && is_array($data['id_brand'])) {
+           	$brand_now 	= $deals->deals_promotion_brands->pluck('id_brand')->toArray();
+           	$brand_new	= $data['id_brand'];
+        	$data_brand = $brand_new;
+
+           	$check_brand = array_merge(array_diff($brand_now, $brand_new), array_diff($brand_new, $brand_now));
+
+       		if (!empty($check_brand)) {
+       			$del_rule = true;
+       		}
+        }
+        if ( $data['is_online'] == 0 
+    		|| (isset($data['id_brand']) 
+	    		&& ((!is_array($data['id_brand']) && $data['id_brand'] != $deals['id_brand']) 
+	    			|| (is_array($data['id_brand']) && $del_rule)
+	    			) 
+	    		)
+        ) {
         	app($this->promo_campaign)->deleteAllProductRule('deals_promotion', $id);
+        }
+
+        if(!isset($data['id_brand'])){
+            $configBrand = Configs::where('config_name', 'use brand')->select('is_active')->first();
+            if(isset($configBrand['is_active']) && $configBrand['is_active'] != '1'){
+                $brand = Brand::select('id_brand')->first();
+                if(isset($brand['id_brand'])){
+                    $data['id_brand'] = $brand['id_brand'];
+                }
+            }
+        }
+
+        if (isset($data['id_brand']) && is_array($data['id_brand'])) {
+        	$save_brand = $this->saveBrand($deals, $data['id_brand']);
+        	unset($data['id_brand']);
+        	if (!$save_brand) {
+                return false;
+            }
         }
 
         // error

@@ -90,7 +90,7 @@ class PromoCampaignTools{
 
 		$promo_brand = $promo->{$source.'_brands'}->pluck('id_brand')->toArray();
 		// $outlet = $this->checkOutletRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet, $promo->id_brand);
-		$outlet = $this->checkOutletBrandRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet, $promo_brand);
+		$outlet = $this->checkOutletBrandRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet, $promo_brand, $promo->brand_rule);
 
 		if(!$outlet){
 			$errors[]='Promo tidak dapat digunakan di outlet ini.';
@@ -870,10 +870,14 @@ class PromoCampaignTools{
 				// load required relationship
 				$promo->load($source.'_discount_bill_rules');
 				$promo_rules = $promo[$source.'_discount_bill_rules'];
+				$promo_brand_flipped = array_flip($promo_brand);
 				// get jumlah harga
 				$total_price=0;
 				foreach ($trxs as  $id_trx => &$trx) {
-					$product = $this->getProductPrice($id_outlet, $trx['id_product']);
+					if (!isset($promo_brand_flipped[$trx['id_brand']])) {
+						continue;
+					}
+					$product = $this->getProductPrice($id_outlet, $trx['id_product'], $trx['id_product_variant_group']);
 					$price = $trx['qty'] * $product['product_price']??0;
 					$total_price += $price;
 				}
@@ -889,6 +893,16 @@ class PromoCampaignTools{
 						$discount += $total_price;
 					}
 				}
+
+				if($discount<=0){
+					$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
+					$message = MyHelper::simpleReplace($message,['product'=>'product bertanda khusus']);
+
+					$errors[]= $message;
+					$errorProduct = 'all';
+					return false;
+				}
+
 				break;
 
 			case 'Discount delivery':
@@ -1298,14 +1312,19 @@ class PromoCampaignTools{
         }
     }
 
-    public function checkOutletBrandRule($id_outlet, $all_outlet, $outlets, $brands)
+    public function checkOutletBrandRule($id_outlet, $all_outlet, $promo_outlets, $promo_brands, $brand_rule = 'and')
     {
-    	$outlet_brands = BrandOutlet::where('id_outlet', $id_outlet)->pluck('id_brand')->toArray();
+    	$outlet_brands 	= BrandOutlet::where('id_outlet', $id_outlet)->pluck('id_brand')->toArray();
+    	$check_brand 	= array_diff($promo_brands, $outlet_brands);
 
-    	$check_brand = array_diff($brands, $outlet_brands);
-
-    	if ($check_brand) {
-    		return false;
+    	if ($brand_rule == 'or') {
+    		if (count($check_brand) == count($promo_brands)) {
+	    		return false;
+	    	}
+    	}else{
+	    	if (!empty($check_brand)) {
+    			return false;
+    		}
     	}
 
         if ($all_outlet == '1') 
@@ -1314,7 +1333,7 @@ class PromoCampaignTools{
         } 
         else 
         {
-            foreach ($outlets as $value) 
+            foreach ($promo_outlets as $value) 
             {
                 if ( $value['id_outlet'] == $id_outlet ) 
                 {
@@ -1884,7 +1903,6 @@ class PromoCampaignTools{
         if ((empty($post['promo_code']) && empty($post['id_deals_user']) && empty($post['id_subscription_user']))) {
         	return $result;
         }
-
         $promo_error = null;
         if ((!empty($post['promo_code']) && !empty($post['id_deals_user']) && !empty($post['id_subscription_user'])) 
             || (!empty($post['promo_code']) && !empty($post['id_deals_user']) && empty($post['id_subscription_user'])) 
@@ -1906,9 +1924,10 @@ class PromoCampaignTools{
     		$all_outlet 	= $code['promo_campaign']['is_all_outlet']??0;
     		$promo_outlet 	= $code['promo_campaign']['promo_campaign_outlets']??[];
     		$id_brand_promo	= $code['promo_campaign']['id_brand']??null;
+    		$brand_rule		= $code['promo_campaign']['brand_rule']??'and';
 
     		// if promo doesn't have product related rule, return data
-    		if ($code->promo_type != 'Product discount' && $code->promo_type != 'Tier discount' && $code->promo_type != 'Buy X Get Y') {
+    		if ($code->promo_type != 'Product discount' && $code->promo_type != 'Tier discount' && $code->promo_type != 'Buy X Get Y' && $code->promo_type != 'Discount bill') {
                 return $result;
     		}
 
@@ -1923,11 +1942,13 @@ class PromoCampaignTools{
     		$all_outlet 	= $code['dealVoucher']['deals']['is_all_outlet']??0;
     		$promo_outlet 	= $code['dealVoucher']['deals']['outlets_active']??[];
     		$id_brand_promo = $code['dealVoucher']['deals']['id_brand']??null;
+    		$brand_rule		= $code['dealVoucher']['deals']['brand_rule']??'and';
 
     		// if promo doesn't have product related rule, return data
     		if ($code->dealVoucher->deals->promo_type != 'Product discount' 
     			&& $code->dealVoucher->deals->promo_type != 'Tier discount' 
     			&& $code->dealVoucher->deals->promo_type != 'Buy X Get Y'
+    			&& $code->dealVoucher->deals->promo_type != 'Discount bill'
     		) {
                 return $result;
     		}
@@ -1938,8 +1959,12 @@ class PromoCampaignTools{
                 $promo_error = 'Promo not valid';
                 return $result;
             }
-            $source = 'subscription';
-            $id_brand_promo = $code->subscription_user->subscription->id_brand;
+            $source 		= 'subscription';
+            $brands 		= $code->subscription_user->subscription->subscription_brands->pluck('id_brand')->toArray();
+    		$all_outlet 	= $code['subscription_user']['subscription']['is_all_outlet']??0;
+    		$promo_outlet 	= $code['subscription_user']['subscription']['outlets_active']??[];
+    		$id_brand_promo	= $code['subscription_user']['subscription']['id_brand']??null;
+    		$brand_rule		= $code['subscription_user']['subscription']['brand_rule']??'and';
         }
 
         if (($code['promo_campaign']['date_end'] ?? $code['voucher_expired_at'] ?? $code['subscription_expired_at']) < date('Y-m-d H:i:s')) {
@@ -1952,7 +1977,7 @@ class PromoCampaignTools{
         if (!empty($id_brand_promo)) {
 			$check_outlet = $this->checkOutletRule($post['id_outlet'], $all_outlet, $promo_outlet, $id_brand_promo);
 		}else{
-			$check_outlet = $this->checkOutletBrandRule($post['id_outlet'], $all_outlet, $promo_outlet, $brands);
+			$check_outlet = $this->checkOutletBrandRule($post['id_outlet'], $all_outlet, $promo_outlet, $brands, $brand_rule);
 		}
 
 		if (!$check_outlet) {
