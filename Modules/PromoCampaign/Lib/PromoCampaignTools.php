@@ -870,9 +870,13 @@ class PromoCampaignTools{
 				// load required relationship
 				$promo->load($source.'_discount_bill_rules');
 				$promo_rules = $promo[$source.'_discount_bill_rules'];
+				$promo_brand_flipped = array_flip($promo_brand);
 				// get jumlah harga
 				$total_price=0;
 				foreach ($trxs as  $id_trx => &$trx) {
+					if (!isset($promo_brand_flipped[$trx['id_brand']])) {
+						continue;
+					}
 					$product = $this->getProductPrice($id_outlet, $trx['id_product']);
 					$price = $trx['qty'] * $product['product_price']??0;
 					$total_price += $price;
@@ -889,6 +893,16 @@ class PromoCampaignTools{
 						$discount += $total_price;
 					}
 				}
+
+				if($discount<=0){
+					$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
+					$message = MyHelper::simpleReplace($message,['product'=>'product bertanda khusus']);
+
+					$errors[]= $message;
+					$errorProduct = 'all';
+					return false;
+				}
+
 				break;
 
 			case 'Discount delivery':
