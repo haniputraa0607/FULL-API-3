@@ -61,6 +61,12 @@ class SendCampaignJob implements ShouldQueue
         $campaign=$this->data['campaign'];
         $type=$this->data['type'];
         $recipient=$this->data['recipient'];
+        $countPush = 0;
+        $countInbox = 0;
+        $countEmail = 0;
+        $countWhatsApp = 0;
+        $countSms = 0;
+
         switch ($type) {
             case 'email':
                 foreach($recipient as $key => $receipient){
@@ -190,11 +196,7 @@ class SendCampaignJob implements ShouldQueue
                         $outbox['email_sent_send_at'] = date("Y-m-d H:i:s");
 
                         $logs = CampaignEmailSent::create($outbox);
-                        DB::table('campaigns')
-                           ->where('id_campaign', $campaign['id_campaign'])
-                           ->update([
-                               'campaign_email_count_sent' => DB::raw('campaign_email_count_sent + 1')
-                           ]);
+                        $countEmail++;
                     }catch(\Exception $e){
                         \Log::error($e);
                     }
@@ -279,12 +281,7 @@ class SendCampaignJob implements ShouldQueue
                     $outbox['sms_sent_send_at'] = date("Y-m-d H:i:s");
 
                     $logs = CampaignSmsSent::create($outbox);
-
-                    DB::table('campaigns')
-                       ->where('id_campaign', $campaign['id_campaign'])
-                       ->update([
-                           'campaign_sms_count_sent' => DB::raw('campaign_sms_count_sent + 1')
-                       ]);
+                    $countSms++;
                 }
                 break;
 
@@ -351,25 +348,28 @@ class SendCampaignJob implements ShouldQueue
 
                     }
 
-                    $deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);
-
                     $subject = app($autocrm)->TextReplace($campaign['campaign_push_subject'], $receipient);
                     $content = app($autocrm)->TextReplace($campaign['campaign_push_content'], $receipient);
                     $deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);
 
                     if (!empty($deviceToken)) {
                         if (isset($deviceToken['token']) && !empty($deviceToken['token'])) {
-                            $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptional);
+                            try{
+                                $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptional);
 
-                            if (isset($push['success']) && $push['success'] > 0) {
-                                $push = [];
-                                $push['id_campaign'] = $campaign['id_campaign'];
-                                $push['push_sent_to'] = $receipient;
-                                $push['push_sent_subject'] = $subject;
-                                $push['push_sent_content'] = $content;
-                                $push['push_sent_send_at'] = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
+                                if (isset($push['success']) && $push['success'] > 0) {
+                                    $push = [];
+                                    $push['id_campaign'] = $campaign['id_campaign'];
+                                    $push['push_sent_to'] = $receipient;
+                                    $push['push_sent_subject'] = $subject;
+                                    $push['push_sent_content'] = $content;
+                                    $push['push_sent_send_at'] = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
 
-                            $logs = CampaignPushSent::create($push);
+                                    $logs = CampaignPushSent::create($push);
+                                    $countPush++;
+                                }
+                            }catch(\Exception $e){
+                                \Log::error($e);
                             }
                         }
                     }
@@ -408,6 +408,7 @@ class SendCampaignJob implements ShouldQueue
                     $inbox['updated_at'] = date("Y-m-d H:i:s");
 
                     $inboxQuery = UserInbox::insert($inbox);
+                    $countInbox++;
                 }
                 break;
 
@@ -456,11 +457,7 @@ class SendCampaignJob implements ShouldQueue
                                 }
                             }
 
-                            DB::table('campaigns')
-                            ->where('id_campaign', $campaign['id_campaign'])
-                            ->update([
-                                'campaign_whatsapp_count_sent' => DB::raw('campaign_whatsapp_count_sent + 1')
-                            ]);
+                            $countWhatsApp++;
                         }
                     }
                 }
@@ -470,6 +467,32 @@ class SendCampaignJob implements ShouldQueue
                 // print("Do nothing\n");
                 break;
         }
+
+        /*update Coun */
+        DB::table('campaigns')
+            ->where('id_campaign', $campaign['id_campaign'])
+            ->update([
+                'campaign_email_count_sent' => DB::raw('campaign_email_count_sent + '.$countEmail)
+            ]);
+
+        DB::table('campaigns')
+            ->where('id_campaign', $campaign['id_campaign'])
+            ->update([
+                'campaign_sms_count_sent' => DB::raw('campaign_sms_count_sent + '.$countSms)
+            ]);
+
+        DB::table('campaigns')
+            ->where('id_campaign', $campaign['id_campaign'])
+            ->update([
+                'campaign_whatsapp_count_sent' => DB::raw('campaign_whatsapp_count_sent + '.$countWhatsApp)
+            ]);
+
+        DB::table('campaigns')
+            ->where('id_campaign', $campaign['id_campaign'])
+            ->update([
+                'campaign_push_count_sent' => DB::raw('campaign_push_count_sent + '.$countPush)
+            ]);
+
         return true;
     }
 }

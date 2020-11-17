@@ -408,15 +408,18 @@ class ApiCategoryController extends Controller
             ->orderBy('products.id_product')
             ->get();
 
-        $promo_data = $this->applyPromo($post, $products, $promo_error);
-
-        if ($promo_data) {
-            $products = $promo_data;
-        }
-
         // grouping by id
         $result = [];
+        $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $post['id_outlet'])->first();
+        if (!$outlet) {
+            return [
+                'status' => 'fail', 
+                'messages' => ['Outlet not found']
+            ];
+        }
         foreach ($products as $product) {
+            $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+            $product['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
             $product['product_price_raw'] = (int) $product['product_price'];
             $product->append('photo');
             $product = $product->toArray();
@@ -454,11 +457,21 @@ class ApiCategoryController extends Controller
                 }
             }
         }
+
+        // check promo
+       	$pct = new PromoCampaignTools;
+        $promo_data = $pct->applyPromoProduct($post, $result, $promo_error);
+
+        if ($promo_data) {
+            $result = $promo_data;
+        }
+
         // get detail of every key
         foreach ($result as $id_brand => $categories) {
             foreach ($categories as $id_category => $products) {
                 if (!is_numeric($id_category)) {
                     // berarti ini promo category
+                    $products['list'] = array_filter($products['list']);
                     usort($products['list'], function ($a, $b) {
                         return $a['position'] <=> $b['position'];
                     });
