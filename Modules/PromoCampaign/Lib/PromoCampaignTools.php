@@ -102,7 +102,8 @@ class PromoCampaignTools{
 
 			$check_shipment = $this->checkShipmentRule($promo->is_all_shipment??0, $request->type, $promo_shipment);
 			if(!$check_shipment){
-				$errors[]='Promo cannot be used for this shipment method';
+				// $errors[]='Promo cannot be used for this shipment method';
+				$errors[]='Promo tidak dapat digunakan untuk tipe order ini';
 				return false;
 			}
 		}
@@ -113,7 +114,8 @@ class PromoCampaignTools{
 			$check_payment 	= $this->checkPaymentRule($promo->is_all_payment??0, $payment_method, $promo_payment);
 
 			if(!$check_payment){
-				$errors[]='Promo cannot be used for this payment method';
+				// $errors[]='Promo cannot be used for this payment method';
+				$errors[]='Promo tidak dapat digunakan untuk metode pembayaran ini';
 				return false;
 			}
 		}

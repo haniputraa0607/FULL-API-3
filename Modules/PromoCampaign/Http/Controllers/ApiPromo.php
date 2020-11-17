@@ -298,17 +298,19 @@ class ApiPromo extends Controller
 		return ($available_deals+$available_subs);
     }
 
-    public function checkMinBasketSize($promo_source, $query, $subtotal)
+    public function checkMinBasketSize($promo_source, $query, $subtotal_per_brand)
     {
     	$check = false;
     	$min_basket_size = 0;
     	switch ($promo_source) {
     		case 'promo_code':
     			$min_basket_size = $query->min_basket_size;
+    			$promo_brand = $query->promo_campaign->promo_campaign_brands->pluck('id_brand')->toArray();
     			break;
     		
     		case 'voucher_online':
     			$min_basket_size = $query->dealVoucher->deals->min_basket_size;
+    			$promo_brand = $query->dealVoucher->deals->deals_brands->pluck('id_brand')->toArray();
     			break;
     		
     		default:
@@ -316,8 +318,19 @@ class ApiPromo extends Controller
     			break;
     	}
 
-    	if (empty($min_basket_size) || $subtotal >= $min_basket_size) {
+    	if (empty($min_basket_size)) {
     		$check = true;
+    	}else{
+    		$promo_brand_flipped = array_flip($promo_brand);
+    		foreach ($subtotal_per_brand as $key => $value) {
+    			if (!isset($promo_brand_flipped[$key])) {
+    				continue;
+    			}
+    			if ($value >= $min_basket_size) {
+    				$check = true;
+    				break;
+    			}
+    		}
     	}
     	
     	return $check;
