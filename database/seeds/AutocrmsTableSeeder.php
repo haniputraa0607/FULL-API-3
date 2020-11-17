@@ -277,7 +277,7 @@ Subject :
 Message :
 <br>
 %enquiry_message%</p><p>Please respond to this customer within 24 hours.<br></p>',
-                'custom_text_replace'=>'%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%',
+                'custom_text_replace'=>'%enquiry_id%;%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-04-23 06:42:19',
             ),
@@ -352,7 +352,7 @@ Subject :
 Message :
 <br>
 %enquiry_message%</p><p>Please respond to this customer within 24 hours.<br></p>',
-                'custom_text_replace'=>'%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%',
+                'custom_text_replace'=>'%enquiry_id%;%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-04-27 09:55:11',
             ),
@@ -427,7 +427,7 @@ Subject :
 Message :
 <br>
 %enquiry_message%</p><p>Please respond to this customer within 24 hours.<br></p>',
-                'custom_text_replace'=>'%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%',
+                'custom_text_replace'=>'%enquiry_id%;%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-04-23 06:42:39',
             ),
@@ -859,7 +859,7 @@ Message :
                 'autocrm_forward_email' => '',
                 'autocrm_forward_email_subject' => '',
                 'autocrm_forward_email_content' => '',
-                'custom_text_replace'=>'%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%;%visiting_time%;%outlet_name%',
+                'custom_text_replace'=>'%enquiry_id%;%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%;%visiting_time%;%outlet_name%',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
@@ -919,7 +919,7 @@ Message :
                 'autocrm_forward_email' => '',
                 'autocrm_forward_email_subject' => '',
                 'autocrm_forward_email_content' => '',
-                'custom_text_replace'=>'%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%',
+                'custom_text_replace'=>'%enquiry_id%;%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
@@ -949,7 +949,7 @@ Message :
                 'autocrm_forward_email' => '',
                 'autocrm_forward_email_subject' => '',
                 'autocrm_forward_email_content' => '',
-                'custom_text_replace'=>'%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%;%position%',
+                'custom_text_replace'=>'%enquiry_id%;%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%;%position%',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
