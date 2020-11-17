@@ -186,6 +186,7 @@ class ApiEnquiries extends Controller
         if ($save) {
 
 			$data['attachment'] = [];
+			$data['id_enquiry'] = $save->id_enquiry;
 			// save many file
         	if (isset($data['many_upload_file'])) {
         		$files = $this->saveFiles($save->id_enquiry, $data['many_upload_file']);
