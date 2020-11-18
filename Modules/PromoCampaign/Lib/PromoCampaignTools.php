@@ -1892,21 +1892,27 @@ class PromoCampaignTools{
     	}
     }
 
-    public function applyPromoProduct($post, $brand_products, &$promo_error)
+    public function applyPromoProduct($post, $list_products, $list_product_source, &$promo_error)
     {
-    	$result = $brand_products;
+    	$result = $list_products;
 
         // set default flag to 0
-        foreach ($result as $id_brand => $categories) {
-        	foreach ($categories as $id_category => $products) {
-        		foreach ($products['list']??$products as $key => $value) {
-        			if (!is_numeric($id_category)) {
-        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 0;
-        			}else{
-        				$result[$id_brand][$id_category][$key]['is_promo'] = 0;
-        			}
-        		}
-        	}
+        if ($list_product_source == 'list_product') {
+	        foreach ($result as $id_brand => $categories) {
+	        	foreach ($categories as $id_category => $products) {
+	        		foreach ($products['list']??$products as $key => $value) {
+	        			if (!is_numeric($id_category)) {
+	        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 0;
+	        			}else{
+	        				$result[$id_brand][$id_category][$key]['is_promo'] = 0;
+	        			}
+	        		}
+	        	}
+	        }
+        }else{
+        	foreach ($result as $key => $value) {
+	            $result[$key]['is_promo'] = 0;
+	        }
         }
 
         // return data if not using promo
@@ -1996,6 +2002,21 @@ class PromoCampaignTools{
 		}
 
         $applied_product = app($this->promo_campaign)->getProduct($source, ($code['promo_campaign'] ?? $code['deal_voucher']['deals'] ?? $code['subscription_user']['subscription']))['applied_product'] ?? [];
+
+        if ($list_product_source == 'list_product') {
+        	$result = $this->checkListProduct($applied_product, $id_brand_promo, $brands, $result);
+        }else{
+        	$result = $this->checkListProduct2($applied_product, $id_brand_promo, $brands, $result);
+        }
+
+        return $result;
+    }
+
+    public function checkListProduct($applied_product, $id_brand_promo, $brands, $list_product)
+    {
+    	$result = $list_product;
+
+        // set default flag to 0
 
         $promo_product = [];
         $promo_product_position = 1;
@@ -2101,6 +2122,50 @@ class PromoCampaignTools{
         }
 
         return $result;
+    }
+
+    public function checkListProduct2($applied_product, $id_brand_promo, $brands, $list_product)
+    {
+    	$products = $list_product;
+
+        if (!empty($id_brand_promo)) { // single brand
+			foreach ($products as $key => $product) {
+				if ($product['id_brand'] != $id_brand_promo){
+					continue;
+				}
+				if ($applied_product == '*') { // all product
+    				$products[$key]['is_promo'] = 1;
+				}else{
+					if (isset($applied_product['id_product'])) { // single product
+						if ($applied_product['id_product'] == $product['id_product']) {
+	        				$products[$key]['is_promo'] = 1;
+						}
+					}else{ // multiple product
+						foreach ($applied_product as $val) {
+							if ($val['id_product'] == $product['id_product']) {
+		        				$products[$key]['is_promo'] = 1;
+							}
+						}
+					}
+				}
+			}
+        }else{ // multi brand
+			foreach ($products as $key => $product) {
+				if ($applied_product == '*') { // all product
+					if (in_array($product['id_brand'], $brands)) {
+        				$products[$key]['is_promo'] = 1;
+					}
+				}else{
+					foreach ($applied_product as $val) { // multiple product
+						if ($val['id_brand'] == $product['id_brand'] && $val['id_product'] == $product['id_product']) {
+	        				$products[$key]['is_promo'] = 1;
+						}
+					}
+				}
+			}
+        }
+
+        return $products;
     }
 }
 ?>
