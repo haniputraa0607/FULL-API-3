@@ -1716,7 +1716,7 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([],'Outlet not found');
         }
         //get product
-        $product = Product::select('id_product','product_code','product_name','product_description','product_code','product_visibility')
+        $product = Product::select('id_product','product_code','product_name','product_description','product_code','product_visibility','product_photo_detail')
         ->where('id_product',$post['id_product'])
         ->whereHas('brand_category')
         ->whereRaw('products.id_product in (CASE
@@ -1734,7 +1734,7 @@ class ApiProductController extends Controller
         }else{
             // toArray error jika $product Null,
             $product = $product->toArray();
-            $product['photo'] = $product['product_photo_detail'];
+            $product['photo'] = $product['product_photo_detail']??'';
         }
         $product['product_detail'] = ProductDetail::where(['id_product' => $post['id_product'], 'id_outlet' => $post['id_outlet']])->first();
 
