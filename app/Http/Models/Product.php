@@ -67,9 +67,6 @@ class Product extends Model
 	public function getPhotoAttribute() {
 		return config('url.storage_url_api').($this->photos[0]['product_photo']??'img/product/item/default.png');
 	}
-	public function getProductPhotoDetailAttribute() {
-        return config('url.api_url') ."img/product/item/detail/". $this->product_photo_detail;
-	}
 	public function product_category()
 	{
 		return $this->belongsTo(\App\Http\Models\ProductCategory::class, 'id_product_category');
