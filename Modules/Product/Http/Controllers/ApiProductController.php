@@ -71,6 +71,18 @@ class ApiProductController extends Controller
     	} else {
             $data['product_code'] = MyHelper::createrandom(3);
         }
+
+        if(isset($post['product_photo_detail'])){
+            $upload = MyHelper::uploadPhotoStrict($post['photo'], 'img/product/item/detail/', 720, 360, $data['product_code'].'-'.strtotime("now"));
+
+    	    if (isset($upload['status']) && $upload['status'] == "success") {
+    	        $data['product_photo_detail'] = $upload['path'];
+    	    }
+    	    else {
+    	        $data['product_photo_detail'] = null;
+    	    }
+        }
+
     	if (isset($post['product_name'])) {
     		$data['product_name'] = $post['product_name'];
     	}
@@ -1712,7 +1724,7 @@ class ApiProductController extends Controller
                     is NULL THEN products.id_product
                     ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_status = "Active" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
                 END)')
-        ->with(['photos','brand_category'=>function($query) use ($post){
+        ->with(['brand_category'=>function($query) use ($post){
             $query->where('id_product',$post['id_product']);
             $query->where('id_brand',$post['id_brand']);
         }])
@@ -1721,8 +1733,8 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([]);
         }else{
             // toArray error jika $product Null,
-            $product = $product->append('photo')->toArray();
-            unset($product['photos']);
+            $product = $product->toArray();
+            $product['photo'] = $product['product_photo_detail'];
         }
         $product['product_detail'] = ProductDetail::where(['id_product' => $post['id_product'], 'id_outlet' => $post['id_outlet']])->first();
 

@@ -52,7 +52,8 @@ class Product extends Model
 		'product_code',
 		'product_name',
 		'product_name_pos',
-		'product_description',
+        'product_description',
+        'product_photo_detail',
 		'product_video',
 		'product_weight',
 		'product_allow_sync',
@@ -65,6 +66,9 @@ class Product extends Model
 	];
 	public function getPhotoAttribute() {
 		return config('url.storage_url_api').($this->photos[0]['product_photo']??'img/product/item/default.png');
+	}
+	public function getProductPhotoDetailAttribute() {
+        return config('url.api_url') ."img/product/item/detail/". $this->product_photo_detail;
 	}
 	public function product_category()
 	{
