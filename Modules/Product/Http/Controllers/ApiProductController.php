@@ -1724,7 +1724,7 @@ class ApiProductController extends Controller
                     is NULL THEN products.id_product
                     ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_status = "Active" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
                 END)')
-        ->with(['photos','brand_category'=>function($query) use ($post){
+        ->with(['brand_category'=>function($query) use ($post){
             $query->where('id_product',$post['id_product']);
             $query->where('id_brand',$post['id_brand']);
         }])
@@ -1733,8 +1733,8 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([]);
         }else{
             // toArray error jika $product Null,
-            $product = $product->append('photo')->toArray();
-            unset($product['photos']);
+            $product = $product->toArray();
+            $product['photo'] = $product['product_photo_detail'];
         }
         $product['product_detail'] = ProductDetail::where(['id_product' => $post['id_product'], 'id_outlet' => $post['id_outlet']])->first();
 
