@@ -100,7 +100,7 @@ class ApiSubscriptionUse extends Controller
     	return $subs;
     }
 
-    public function calculate($request, $id_subscription_user, $grandtotal, $subtotal, $item, $id_outlet, &$errors, &$errorProduct=0, &$product="", &$applied_product="", $delivery_fee=0)
+    public function calculate($request, $id_subscription_user, $subtotal, $subtotal_per_brand, $item, $id_outlet, &$errors, &$errorProduct=0, &$product="", &$applied_product="", $delivery_fee=0)
     {
     	if (empty($id_subscription_user)) {
     		return 0;
@@ -130,16 +130,6 @@ class ApiSubscriptionUse extends Controller
     		return 0;
     	}
 
-    	// check minimal transaction 
-    	if ( !empty($subs['subscription_user']['subscription']['subscription_minimal_transaction']) && $subs['subscription_user']['subscription']['subscription_minimal_transaction'] > $subtotal) {
-
-    		// $errors[] = 'Total transaction is not meet minimum transasction to use Subscription';
-    		$errors[] = 'Total transaksi belum mencapai syarat minimum untuk menggunakan Subscription ini.';
-    		$errorProduct = 'all';
-
-    		return 0;	
-    	}
-
     	// check daily usage limit
     	if ( !empty($subs['subscription_user']['subscription']['daily_usage_limit']) ) {
 			$subs_voucher_today = SubscriptionUserVoucher::where('id_subscription_user', '=', $id_subscription_user)
@@ -151,7 +141,7 @@ class ApiSubscriptionUse extends Controller
 			}
     	}
 
-    	// check outlet
+    	// check outlet & brands
 		$pct = new PromoCampaignTools;
 		if (!empty($subs['subscription_user']['subscription']['id_brand'])) {
 			$check_outlet = $pct->checkOutletRule($id_outlet, $subs['subscription_user']['subscription']['is_all_outlet'], $subs['subscription_user']['subscription']['outlets_active'], $subs['subscription_user']['subscription']['id_brand']);
@@ -165,17 +155,17 @@ class ApiSubscriptionUse extends Controller
 								$subs['subscription_user']['subscription']['brand_rule']
 							);
 
-			if ( !$check_outlet ) {
-	    		$errors[] = 'Cannot use subscription at this outlet';
-	    		return 0;
-	    	}
 		}
+		if ( !$check_outlet ) {
+    		$errors[] = 'Cannot use subscription at this outlet';
+    		return 0;
+    	}
 
 	    // check product
+	    $check = false;
 		if (!empty($subs['subscription_user']['subscription']['id_brand'])) {
 	    	if ( !empty($subs['subscription_user']['subscription']['subscription_products']) ) {
 	    		$promo_product = $subs['subscription_user']['subscription']['subscription_products'];
-	    		$check = false;
 	    		foreach ($promo_product as $key => $value) 
 	    		{
 	    			foreach ($item as $key2 => $value2) 
@@ -190,16 +180,39 @@ class ApiSubscriptionUse extends Controller
 	    				break;
 	    			}
 	    		}
+	    	}else{
+	    		$id_brand = !empty($subs['subscription_user']['subscription']['id_brand']);
+	    		foreach ($item as $key => $value) 
+    			{
+    				if ($value['id_brand'] == $id_brand) 
+    				{
+    					$check = true;
+    					break;
+    				}
+    			}
 	    	}
 		}else{
-			if ( !empty($subs['subscription_user']['subscription']['subscription_products']) ) {
+			if ( !empty($subs['subscription_user']['subscription']['subscription_products']) ) { 
+				// selected item
 	    		$promo_product = $subs['subscription_user']['subscription']['subscription_products'];
 				$check = $pct->checkProductRule($subs_obj->subscription_user->subscription, $promo_brands, $promo_product, $item);
+	    	}else{ 
+	    		// all item
+	    		$promo_brand_flipped = array_flip($promo_brands);
+	    		foreach ($item as $key => $value) 
+    			{
+    				if (isset($promo_brand_flipped[$value['id_brand']])) 
+    				{
+    					$check = true;
+    					break;
+    				}
+    			}
 	    	}
 		}
+
 		if (!$check) {
 			$pct = new PromoCampaignTools;
-			$total_product = count($promo_product);
+			$total_product = count($promo_product??[]);
 			if ($total_product == 1) {
 				$product = $promo_product[0]['product']['product_name'] ?? 'product bertanda khusus';
 			}else{
@@ -220,6 +233,32 @@ class ApiSubscriptionUse extends Controller
 			$errorProduct = 'all';
 			return 0;
 		}
+
+		// check minimal transaction 
+    	if ( !empty($subs['subscription_user']['subscription']['subscription_minimal_transaction']) )
+    	{
+    		$min_basket_size = $subs['subscription_user']['subscription']['subscription_minimal_transaction'];
+    		$check_min_trx = false;
+    		$promo_brand_flipped = array_flip($promo_brands);
+
+    		foreach ($subtotal_per_brand as $key => $value) {
+    			if (!isset($promo_brand_flipped[$key])) {
+    				continue;
+    			}
+    			if ($value >= $min_basket_size) {
+    				$check_min_trx = true;
+    				break;
+    			}
+    		}
+
+    		if (!$check_min_trx) {
+    			// $errors[] = 'Total transaction is not meet minimum transasction to use Subscription';
+	    		$errors[] = 'Total transaksi belum mencapai syarat minimum untuk menggunakan Subscription ini.';
+	    		$errorProduct = 'all';
+
+	    		return 0;	
+    		}
+    	}
 
     	// check shipment
     	if (isset($subs['subscription_user']['subscription']['is_all_shipment']) && isset($request['type']) ) {
@@ -288,14 +327,14 @@ class ApiSubscriptionUse extends Controller
 		    	{
 		    		$result = $subs['subscription_user']['subscription']['subscription_voucher_nominal'];
 
-		    		if ( $result > $grandtotal ) 
+		    		if ( $result > $subtotal ) 
 					{
-						$result = $grandtotal;
+						$result = $subtotal;
 					}
 		    	}
 		    	elseif( !empty($subs['subscription_user']['subscription']['subscription_voucher_percent']) )
 		    	{
-		    		$result = $grandtotal * ($subs['subscription_user']['subscription']['subscription_voucher_percent']/100);
+		    		$result = $subtotal * ($subs['subscription_user']['subscription']['subscription_voucher_percent']/100);
 
 		    		if ( !empty($subs['subscription_user']['subscription']['subscription_voucher_percent_max']) ) 
 		    		{
@@ -333,12 +372,12 @@ class ApiSubscriptionUse extends Controller
 		$subs_type = $data_subs['subscription']['subscription_discount_type'];
 
 		if ($subs_type != 'payment_method') {
-        	$check_subs = $this->calculate($request, $request->id_subscription_user, $post['subtotal'], $post['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product, $post['delivery_fee']??0);
+        	$check_subs = $this->calculate($request, $request->id_subscription_user, $post['subtotal'], $post['sub']['subtotal_per_brand'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product, $post['delivery_fee']??0);
 
         	if (!empty($subs_error)) {
                 return [
                     'status'    => 'fail',
-                    'messages'  => ['Promo not valid']
+                    'messages'  => $subs_error ?? ['Promo not valid']
                 ];
 	        }
 

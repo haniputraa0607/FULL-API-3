@@ -349,10 +349,11 @@ class ApiOnlineTransaction extends Controller
 	                $discount_promo=$pct->validatePromo($request, $code->id_promo_campaign, $request->id_outlet, $post['item'], $errors);
 
 	                if ( !empty($errore) || !empty($errors)) {
+	                	$errors = array_merge($errore??[], $errors??[]);
 	                    DB::rollback();
 	                    return [
 	                        'status'=>'fail',
-	                        'messages'=>['Promo code not valid']
+	                        'messages'=>$errors??['Promo code not valid']
 	                    ];
 	                }
 
@@ -387,7 +388,7 @@ class ApiOnlineTransaction extends Controller
 						DB::rollback();
 	                    return [
 	                        'status'=>'fail',
-	                        'messages'=>['Voucher is not valid']
+	                        'messages'=> $errors??['Voucher is not valid']
 	                    ];
 		            }
 
@@ -421,6 +422,7 @@ class ApiOnlineTransaction extends Controller
         foreach ($grandTotal as $keyTotal => $valueTotal) {
             if ($valueTotal == 'subtotal') {
                 $post['sub'] = app($this->setting_trx)->countTransaction($valueTotal, $post, $discount_promo);
+			// dd($post);
                 // $post['sub'] = $this->countTransaction($valueTotal, $post);
                 if (gettype($post['sub']) != 'array') {
                     $mes = ['Data Not Valid'];
@@ -448,9 +450,9 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
 
-                $post['subtotal'] = array_sum($post['sub']);
+                $post['subtotal'] = array_sum($post['sub']['subtotal']);
                 $post['subtotal'] = $post['subtotal'] - $totalDisProduct;
-                
+
                 // Additional Plastic Payment
                 if(isset($post['is_plastic_checked']) && $post['is_plastic_checked'] == true){
                     $plastic = app($this->plastic)->check($post);
@@ -638,18 +640,6 @@ class ApiOnlineTransaction extends Controller
             'discount' => $post['discount'],
         ];
 
-        if ($promo_valid) {
-        	// check minimum subtotal
-        	$check_promo = app($this->promo)->checkMinBasketSize($promo_source, $code??$deals, $post['subtotal']);
-        	if (!$check_promo) {
-				DB::rollback();
-                return [
-                    'status'=>'fail',
-                    'messages'=>['Promo is not valid']
-                ];
-        	}
-        }
-
         // return $detailPayment;
         $post['grandTotal'] = (int)$post['subtotal'] + (int)$post['discount'] + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'] + (int)$post['discount_delivery'];
         // return $post;
@@ -798,16 +788,16 @@ class ApiOnlineTransaction extends Controller
         		$post['grandTotal'] = $post['grandTotal'] + (int) $post['discount_delivery'];
         	}
         	// check minimum subtotal
-        	$check_min_basket = app($this->promo)->checkMinBasketSize($promo_source, $code??$deals, $post['subtotal']);
+        	$check_min_basket = app($this->promo)->checkMinBasketSize($promo_source, $code??$deals, $post['sub']['subtotal_per_brand']);
+
         	if (!$check_min_basket) {
 				DB::rollback();
                 return [
                     'status'=>'fail',
-                    'messages'=>['Promo is not valid']
+                    'messages'=>['Total pembelian minimum belum terpenuhi']
                 ];
         	}
         }
-
         // check promo subscription type discount and discount delivery
         if ( $request->json('id_subscription_user') )
         {
@@ -941,7 +931,7 @@ class ApiOnlineTransaction extends Controller
         // add payment subscription
         if ( $request->json('id_subscription_user') )
         {
-        	$subscription_total = app($this->subscription_use)->calculate($request, $request->id_subscription_user, $insertTransaction['transaction_subtotal'], $insertTransaction['transaction_subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
+        	$subscription_total = app($this->subscription_use)->calculate($request, $request->id_subscription_user, $insertTransaction['transaction_subtotal'], $post['sub']['subtotal_per_brand'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
 
 	        if (!empty($subs_error)) {
 	        	DB::rollback();
@@ -2246,7 +2236,8 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-        $promo_missing_product = false;
+        $promo_missing_product 	= false;
+        $subtotal_per_brand 	= [];
         foreach ($discount_promo['item']??$post['item'] as &$item) {
             // get detail product
             $product = Product::select([
@@ -2477,11 +2468,17 @@ class ApiOnlineTransaction extends Controller
             $tree_promo[$product['id_brand']]['products'][] = $product;
             $subtotal_promo += $product['product_price_total'];
 
+            if (isset($subtotal_per_brand[$item['id_brand']])) {
+            	$subtotal_per_brand[$item['id_brand']] += $product['product_price_total'];
+            }else{
+            	$subtotal_per_brand[$item['id_brand']] = $product['product_price_total'];
+            }
+
             // return $product;
         }
 
         if ($promo_valid) {
-        	$check_promo = app($this->promo)->checkMinBasketSize($promo_source, $code??$deals, $subtotal);
+        	$check_promo = app($this->promo)->checkMinBasketSize($promo_source, $code??$deals, $subtotal_per_brand);
         	if ($check_promo) {
         		$tree = $tree_promo;
         		$subtotal = $subtotal_promo;
@@ -2572,7 +2569,7 @@ class ApiOnlineTransaction extends Controller
         if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user)
         {
         	$promo_source = 'subscription';
-	        $check_subs = app($this->subscription_use)->calculate($request_promo, $request->id_subscription_user, $result['subtotal'], $result['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product, $result['shipping']);
+	        $check_subs = app($this->subscription_use)->calculate($request_promo, $request->id_subscription_user, $result['subtotal'], $subtotal_per_brand, $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product, $result['shipping']);
 
 	        if (!empty($subs_error)) {
 	        	$error = $subs_error;

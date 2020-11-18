@@ -130,6 +130,7 @@ class ApiSettingTransactionV2 extends Controller
             $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet',$data['id_outlet'])->first();
             $different_price = $outlet->outlet_different_price;
             $dataSubtotal = [];
+            $dataSubtotalPerBrand = [];
             if ($discount_promo['item'] ?? false) {
                 $loopable = &$discount_promo['item'];
             } else {
@@ -230,9 +231,18 @@ class ApiSettingTransactionV2 extends Controller
                 $price = (($productPrice['product_price'] + $mod_subtotal + $valueData['transaction_variant_subtotal']) * $valueData['qty']);
                 $valueData['transaction_product_subtotal'] = $price;
                 array_push($dataSubtotal, $price);
+
+                if (isset($dataSubtotalPerBrand[$valueData['id_brand']])) {
+                	$dataSubtotalPerBrand[$valueData['id_brand']] += $price;
+                }else{
+                	$dataSubtotalPerBrand[$valueData['id_brand']] = $price;
+                }
             }
 
-            return $dataSubtotal;
+            return [
+            	'subtotal' => $dataSubtotal,
+            	'subtotal_per_brand' => $dataSubtotalPerBrand
+            ];
         }
 
         if ($value == 'discount') {
