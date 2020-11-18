@@ -1744,7 +1744,7 @@ class ApiDeals extends Controller
         $end        = $all;
         $next       = true;
 
-        if ($all > count($deals)) {
+        if ($all >= count($deals)) {
             $end = count($deals);
             $next = false;
         }
@@ -1764,7 +1764,7 @@ class ApiDeals extends Controller
         $result['next_page_url'] = null;
         if ($next == true) {
             $next_page = (int) $page + 1;
-            $result['next_page_url'] = ENV('APP_API_URL') . 'api/deals/list?page=' . $next_page;
+            $result['next_page_url'] = ENV('APP_API_URL') . 'api/deals/list/v2?page=' . $next_page;
         }
 
         if(!$result['total']){
