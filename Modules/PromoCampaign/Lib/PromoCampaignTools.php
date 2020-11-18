@@ -1174,7 +1174,15 @@ class PromoCampaignTools{
 		$user = $this->userFilter($id_user, $promo->user_type, $promo->specific_user, $phone);
 
         if(!$user){
-        	$errors[]='User not found';
+        	if ($promo->specific_user == 'New user') 
+	    	{
+        		$errors[]='Promo hanya berlaku untuk pengguna baru';
+	    	}
+	    	else
+	    	{
+        		$errors[]='Promo tidak tersedia';
+	    	}
+
     		return false;
         }
 
