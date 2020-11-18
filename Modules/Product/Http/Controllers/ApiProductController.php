@@ -73,7 +73,7 @@ class ApiProductController extends Controller
         }
 
         if(isset($post['product_photo_detail'])){
-            $upload = MyHelper::uploadPhotoStrict($post['photo'], 'img/product/item/detail/', 720, 360, $data['product_code'].'-'.strtotime("now"));
+            $upload = MyHelper::uploadPhotoStrict($post['product_photo_detail'], 'img/product/item/detail/', 720, 360, $data['product_code'].'-'.strtotime("now"));
 
     	    if (isset($upload['status']) && $upload['status'] == "success") {
     	        $data['product_photo_detail'] = $upload['path'];
@@ -1350,12 +1350,23 @@ class ApiProductController extends Controller
     	if ($checkCode) {
             $checkSetting = Setting::where('key', 'image_override')->first();
             if ($checkSetting['value'] == 1) {
-                $productPhoto = ProductPhoto::where('id_product', $checkCode->id_product)->first();
-                if (file_exists($productPhoto->product_photo)) {
-                    unlink($productPhoto->product_photo);
+                if(isset($post['detail'])){
+                    if ($checkCode->product_photo_detail && file_exists($checkCode->product_photo_detail)) {
+                        unlink($checkCode->product_photo_detail);
+                    }
+                }else{
+                    $productPhoto = ProductPhoto::where('id_product', $checkCode->id_product)->first();
+                    if (file_exists($productPhoto->product_photo)) {
+                        unlink($productPhoto->product_photo);
+                    }
                 }
             }
-            $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300, $post['name'].'-'.strtotime("now"));
+
+            if(isset($post['detail'])){
+                $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300, $post['name'].'-'.strtotime("now"));
+            }else{
+                $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 720, 360, $post['name'].'-'.strtotime("now"));
+            }
 
     	    if (isset($upload['status']) && $upload['status'] == "success") {
     	        $data['product_photo'] = $upload['path'];
