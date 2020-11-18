@@ -808,6 +808,7 @@ class ApiPromoCampaign extends Controller
 			if ($del_rule) {
 				$delete_rule = $this->deleteAllProductRule('promo_campaign', $post['id_promo_campaign']);
 				$delete_outlet_rule = $this->deleteOutletRule('promo_campaign', $post['id_promo_campaign']);
+				$post['step_complete'] = 0;
 				if (!$delete_rule || !$delete_outlet_rule) {
 	           		return response()->json([
 	                    'status'  => 'fail',

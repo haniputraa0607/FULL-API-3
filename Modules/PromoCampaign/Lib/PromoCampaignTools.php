@@ -1174,7 +1174,15 @@ class PromoCampaignTools{
 		$user = $this->userFilter($id_user, $promo->user_type, $promo->specific_user, $phone);
 
         if(!$user){
-        	$errors[]='User not found';
+        	if ($promo->specific_user == 'New user') 
+	    	{
+        		$errors[]='Promo hanya berlaku untuk pengguna baru';
+	    	}
+	    	else
+	    	{
+        		$errors[]='Promo tidak tersedia';
+	    	}
+
     		return false;
         }
 
@@ -1884,21 +1892,27 @@ class PromoCampaignTools{
     	}
     }
 
-    public function applyPromoProduct($post, $brand_products, &$promo_error)
+    public function applyPromoProduct($post, $list_products, $list_product_source, &$promo_error)
     {
-    	$result = $brand_products;
+    	$result = $list_products;
 
         // set default flag to 0
-        foreach ($result as $id_brand => $categories) {
-        	foreach ($categories as $id_category => $products) {
-        		foreach ($products['list']??$products as $key => $value) {
-        			if (!is_numeric($id_category)) {
-        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 0;
-        			}else{
-        				$result[$id_brand][$id_category][$key]['is_promo'] = 0;
-        			}
-        		}
-        	}
+        if ($list_product_source == 'list_product') {
+	        foreach ($result as $id_brand => $categories) {
+	        	foreach ($categories as $id_category => $products) {
+	        		foreach ($products['list']??$products as $key => $value) {
+	        			if (!is_numeric($id_category)) {
+	        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 0;
+	        			}else{
+	        				$result[$id_brand][$id_category][$key]['is_promo'] = 0;
+	        			}
+	        		}
+	        	}
+	        }
+        }else{
+        	foreach ($result as $key => $value) {
+	            $result[$key]['is_promo'] = 0;
+	        }
         }
 
         // return data if not using promo
@@ -1989,6 +2003,23 @@ class PromoCampaignTools{
 
         $applied_product = app($this->promo_campaign)->getProduct($source, ($code['promo_campaign'] ?? $code['deal_voucher']['deals'] ?? $code['subscription_user']['subscription']))['applied_product'] ?? [];
 
+        if ($list_product_source == 'list_product') {
+        	$result = $this->checkListProduct($applied_product, $id_brand_promo, $brands, $result);
+        }else{
+        	$result = $this->checkListProduct2($applied_product, $id_brand_promo, $brands, $result);
+        }
+
+        return $result;
+    }
+
+    public function checkListProduct($applied_product, $id_brand_promo, $brands, $list_product)
+    {
+    	$result = $list_product;
+
+        // set default flag to 0
+
+        $promo_product = [];
+        $promo_product_position = 1;
         if (!empty($id_brand_promo)) { // single brand
         	foreach ($result as $id_brand => $categories) {
 				foreach ($categories as $id_category => $products) {
@@ -2001,6 +2032,8 @@ class PromoCampaignTools{
 		        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 1;
 		        			}else{
 		        				$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+		        				$promo_product[] = ['position' => $promo_product_position]+$result[$id_brand][$id_category][$key];
+		        				$promo_product_position++;
 		        			}
 						}else{
 							if (isset($applied_product['id_product'])) { // single product
@@ -2009,6 +2042,8 @@ class PromoCampaignTools{
 				        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 1;
 				        			}else{
 				        				$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+		        						$promo_product[] = ['position' => $promo_product_position]+$result[$id_brand][$id_category][$key];
+		        						$promo_product_position++;
 				        			}
 								}
 							}else{ // multiple product
@@ -2018,6 +2053,8 @@ class PromoCampaignTools{
 					        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 1;
 					        			}else{
 					        				$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+		        							$promo_product[] = ['position' => $promo_product_position]+$result[$id_brand][$id_category][$key];
+		        							$promo_product_position++;
 					        			}
 									}
 								}
@@ -2036,6 +2073,8 @@ class PromoCampaignTools{
 			        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 1;
 			        			}else{
 			        				$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+			        				$promo_product[] = ['position' => $promo_product_position]+$result[$id_brand][$id_category][$key];
+			        				$promo_product_position++;
 			        			}
 							}
 						}else{
@@ -2045,6 +2084,8 @@ class PromoCampaignTools{
 				        				$result[$id_brand][$id_category]['list'][$key]['is_promo'] = 1;
 				        			}else{
 				        				$result[$id_brand][$id_category][$key]['is_promo'] = 1;
+			        					$promo_product[] = ['position' => $promo_product_position]+$result[$id_brand][$id_category][$key];
+			        					$promo_product_position++;
 				        			}
 								}
 							}
@@ -2054,7 +2095,77 @@ class PromoCampaignTools{
 			}
         }
 
+        if (!empty($promo_product)) {
+        	$new_promo_category['applied_promo'] = [
+        		'category' => [
+        			"product_category_name" => "Promo",
+	                "product_category_order" => -2000000,
+	                "id_product_category" => null,
+	                "url_product_category_photo" => ""		
+        		],
+        		'list'	=> $promo_product
+        	];
+        	$brand = array_keys($result);
+        	$brand_list = Brand::select('id_brand', 'name_brand', 'code_brand', 'order_brand')->whereIn('id_brand',$brand)->get()->toArray();
+	        if ($brand_list) {
+	        	usort($brand_list, function ($a, $b) {
+		            return $a['order_brand'] <=> $b['order_brand'];
+		        });
+		        $brand_list = array_column($brand_list, 'id_brand');
+		        foreach ($result as $key => &$value) {
+		        	if ($key == $brand_list[0]) {
+			        	$value = $value + $new_promo_category;
+			        	break;
+		        	}
+		        }
+	        }
+        }
+
         return $result;
+    }
+
+    public function checkListProduct2($applied_product, $id_brand_promo, $brands, $list_product)
+    {
+    	$products = $list_product;
+
+        if (!empty($id_brand_promo)) { // single brand
+			foreach ($products as $key => $product) {
+				if ($product['id_brand'] != $id_brand_promo){
+					continue;
+				}
+				if ($applied_product == '*') { // all product
+    				$products[$key]['is_promo'] = 1;
+				}else{
+					if (isset($applied_product['id_product'])) { // single product
+						if ($applied_product['id_product'] == $product['id_product']) {
+	        				$products[$key]['is_promo'] = 1;
+						}
+					}else{ // multiple product
+						foreach ($applied_product as $val) {
+							if ($val['id_product'] == $product['id_product']) {
+		        				$products[$key]['is_promo'] = 1;
+							}
+						}
+					}
+				}
+			}
+        }else{ // multi brand
+			foreach ($products as $key => $product) {
+				if ($applied_product == '*') { // all product
+					if (in_array($product['id_brand'], $brands)) {
+        				$products[$key]['is_promo'] = 1;
+					}
+				}else{
+					foreach ($applied_product as $val) { // multiple product
+						if ($val['id_brand'] == $product['id_brand'] && $val['id_product'] == $product['id_product']) {
+	        				$products[$key]['is_promo'] = 1;
+						}
+					}
+				}
+			}
+        }
+
+        return $products;
     }
 }
 ?>
