@@ -2180,7 +2180,8 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
 
-                $post['subtotal'] = array_sum($post['sub']);
+                // $post['subtotal'] = array_sum($post['sub']);
+                $post['subtotal'] = array_sum($post['sub']['subtotal']);
                 $post['subtotal'] = $post['subtotal'] - $totalDisProduct;
             } elseif ($valueTotal == 'discount') {
                 // $post['dis'] = $this->countTransaction($valueTotal, $post);

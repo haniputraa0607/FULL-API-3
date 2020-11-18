@@ -460,7 +460,7 @@ class ApiCategoryController extends Controller
 
         // check promo
        	$pct = new PromoCampaignTools;
-        $promo_data = $pct->applyPromoProduct($post, $result, $promo_error);
+        $promo_data = $pct->applyPromoProduct($post, $result, 'list_product', $promo_error);
 
         if ($promo_data) {
             $result = $promo_data;
@@ -569,6 +569,13 @@ class ApiCategoryController extends Controller
             ->orderBy('products.position')
             ->orderBy('products.id_product')
             ->get();
+
+        $pct = new PromoCampaignTools;
+        $promo_data = $pct->applyPromoProduct($post, $products, 'search_product', $promo_error);
+
+        if ($promo_data) {
+            $products = $promo_data;
+        }
 
         $result = [];
         foreach ($products as $product) {
