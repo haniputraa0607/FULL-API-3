@@ -71,6 +71,18 @@ class ApiProductController extends Controller
     	} else {
             $data['product_code'] = MyHelper::createrandom(3);
         }
+
+        if(isset($post['product_photo_detail'])){
+            $upload = MyHelper::uploadPhotoStrict($post['photo'], 'img/product/item/detail/', 720, 360, $data['product_code'].'-'.strtotime("now"));
+
+    	    if (isset($upload['status']) && $upload['status'] == "success") {
+    	        $data['product_photo_detail'] = $upload['path'];
+    	    }
+    	    else {
+    	        $data['product_photo_detail'] = null;
+    	    }
+        }
+
     	if (isset($post['product_name'])) {
     		$data['product_name'] = $post['product_name'];
     	}
