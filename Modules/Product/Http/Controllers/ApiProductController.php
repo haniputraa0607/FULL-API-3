@@ -1716,7 +1716,7 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([],'Outlet not found');
         }
         //get product
-        $product = Product::select('id_product','product_code','product_name','product_description','product_code','product_visibility')
+        $product = Product::select('id_product','product_code','product_name','product_description','product_code','product_visibility','product_photo_detail')
         ->where('id_product',$post['id_product'])
         ->whereHas('brand_category')
         ->whereRaw('products.id_product in (CASE
