@@ -1363,9 +1363,9 @@ class ApiProductController extends Controller
             }
 
             if(isset($post['detail'])){
-                $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300, $post['name'].'-'.strtotime("now"));
+                $upload = MyHelper::uploadPhotoStrict($post['photo'], 'img/product/item/detail/', 720, 360, $post['name'].'-'.strtotime("now"));
             }else{
-                $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 720, 360, $post['name'].'-'.strtotime("now"));
+                $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300, $post['name'].'-'.strtotime("now"));
             }
 
     	    if (isset($upload['status']) && $upload['status'] == "success") {
@@ -1386,9 +1386,13 @@ class ApiProductController extends Controller
     		]);
     	}
     	else {
-            $data['id_product']          = $checkCode->id_product;
-            $data['product_photo_order'] = $this->cekUrutanPhoto($checkCode->id_product);
-            $save                        = ProductPhoto::updateOrCreate(['id_product' => $checkCode->id_product],$data);
+            if(isset($post['detail'])){
+                $save = Product::where('id_product', $checkCode->id_product)->update(['product_photo_detail' => $data['product_photo']]);
+            }else{
+                $data['id_product']          = $checkCode->id_product;
+                $data['product_photo_order'] = $this->cekUrutanPhoto($checkCode->id_product);
+                $save                        = ProductPhoto::updateOrCreate(['id_product' => $checkCode->id_product],$data);
+            }
     		return response()->json(MyHelper::checkCreate($save));
     	}
     }
