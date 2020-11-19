@@ -1672,22 +1672,33 @@ class ApiProductController extends Controller
     public function photoDefault(Request $request){
         $post = $request->json()->all();
 
-         //create photo
-         if (!file_exists('img/product/item/')) {
-            mkdir('img/product/item/', 0777, true);
+        
+        //product detail
+        if(isset($post['photo_detail'])){
+            if (!file_exists('img/product/item/detail')) {
+                mkdir('img/product/item/detail', 0777, true);
+            }
+            $upload = MyHelper::uploadPhotoStrict($post['photo_detail'], 'img/product/item/detail/', 720, 360, 'default', '.png');
         }
-         $upload = MyHelper::uploadPhotoStrict($post['photo'], 'img/product/item/', 300, 300, 'default', '.png');
+        
+        //product
+        if(isset($post['photo'])){
+            if (!file_exists('img/product/item/')) {
+                mkdir('img/product/item/', 0777, true);
+            }
+            $upload = MyHelper::uploadPhotoStrict($post['photo'], 'img/product/item/', 300, 300, 'default', '.png');
+        }
 
-         if (isset($upload['status']) && $upload['status'] == "success") {
+        if (isset($upload['status']) && $upload['status'] == "success") {
             $result = [
                 'status'   => 'success',
             ];
-         }
-         else {
-             $result = [
-                 'status'   => 'fail',
-                 'messages' => ['fail upload image']
-             ];
+        }
+        else {
+            $result = [
+                'status'   => 'fail',
+                'messages' => ['fail upload image']
+            ];
 
         }
         return response()->json($result);
@@ -1761,7 +1772,11 @@ class ApiProductController extends Controller
         }else{
             // toArray error jika $product Null,
             $product = $product->toArray();
-            $product['photo'] = $product['product_photo_detail']??'';
+            if($product['product_photo_detail']){
+                $product['photo'] = config('url.storage_url_api').$product['product_photo_detail'];
+            }else{
+                $product['photo'] = config('url.storage_url_api').'img/product/item/detail/default.png';
+            }
         }
         $product['product_detail'] = ProductDetail::where(['id_product' => $post['id_product'], 'id_outlet' => $post['id_outlet']])->first();
 
