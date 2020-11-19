@@ -338,7 +338,7 @@ class ApiOnlineTransaction extends Controller
             {
 	            $promo_type = $code->promo_type;
 	            $post['id_promo_campaign_promo_code'] = $code->id_promo_campaign_promo_code;
-            	if ($code->promo_type != 'Discount delivery') {
+            	if ($code->promo_type != 'Discount delivery' && $code->promo_type != 'Discount bill') {
 	                if($code->promo_type == "Referral"){
 	                    $promo_code_ref = $request->json('promo_code');
 	                    $use_referral = true;
@@ -381,7 +381,7 @@ class ApiOnlineTransaction extends Controller
 			if($deals)
 			{
 				$promo_type = $deals->dealVoucher->deals->promo_type;
-				if ($promo_type != 'Discount delivery') {
+				if ($promo_type != 'Discount delivery' && $promo_type != 'Discount bill') {
 					$discount_promo=$pct->validatePromo($request, $deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals');
 
 					if ( !empty($errors) ) {
@@ -422,7 +422,6 @@ class ApiOnlineTransaction extends Controller
         foreach ($grandTotal as $keyTotal => $valueTotal) {
             if ($valueTotal == 'subtotal') {
                 $post['sub'] = app($this->setting_trx)->countTransaction($valueTotal, $post, $discount_promo);
-			// dd($post);
                 // $post['sub'] = $this->countTransaction($valueTotal, $post);
                 if (gettype($post['sub']) != 'array') {
                     $mes = ['Data Not Valid'];
@@ -777,15 +776,16 @@ class ApiOnlineTransaction extends Controller
         }
 
         if ($promo_valid) {
-        	if (($promo_type??false) == 'Discount delivery') {
-        		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $post['subtotal']);
+        	if (($promo_type??false) == 'Discount delivery' || ($promo_type??false) == 'Discount bill') {
+        		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $post['sub']['subtotal_per_brand']);
 
         		if ($check_promo['status'] == 'fail') {
 					DB::rollback();
         			return $check_promo;
         		}
         		$post['discount_delivery'] = (-$check_promo['data']['discount_delivery'])??0;
-        		$post['grandTotal'] = $post['grandTotal'] + (int) $post['discount_delivery'];
+        		$post['discount'] = (-$check_promo['data']['discount'])??0;
+        		$post['grandTotal'] = $post['grandTotal'] + (int) $post['discount_delivery'] + (int) $post['discount'];
         	}
         	// check minimum subtotal
         	$check_min_basket = app($this->promo)->checkMinBasketSize($promo_source, $code??$deals, $post['sub']['subtotal_per_brand']);
@@ -2060,6 +2060,7 @@ class ApiOnlineTransaction extends Controller
         $promo_source = null;
         $promo_valid = false;
         $promo_discount = 0;
+        $promo_type = null;
         $request_promo = $request->except('type');
         if($request->promo_code && !$request->id_subscription_user && !$request->id_deals_user){
         	$code = app($this->promo_campaign)->checkPromoCode($request->promo_code, 1, 1);
@@ -2072,29 +2073,35 @@ class ApiOnlineTransaction extends Controller
 	        	}
 	        	else
 	        	{
-		            $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
+	        		$promo_type = $code->promo_type;
+					if ($promo_type != 'Discount bill') {
+			            $validate_user = $pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
 
-		            if ($validate_user) {
-			            $discount_promo=$pct->validatePromo($request_promo, $code->id_promo_campaign, $request->id_outlet, $post['item'], $errors, 'promo_campaign', $errorProduct, $post['shipping']+$shippingGoSend);
+			            if ($validate_user) {
+				            $discount_promo=$pct->validatePromo($request_promo, $code->id_promo_campaign, $request->id_outlet, $post['item'], $errors, 'promo_campaign', $errorProduct, $post['shipping']+$shippingGoSend);
 
-			            $promo_source = 'promo_code';
-			            if ( !empty($errore) || !empty($errors) ) {
-			            	$promo_error = app($this->promo_campaign)->promoError('transaction', $errore, $errors, $errorProduct);
-			            	if ($errorProduct) {
-				            	$promo_error['product_label'] = app($this->promo_campaign)->getProduct('promo_campaign', $code['promo_campaign'])['product']??'';
-						        $promo_error['product'] = $pct->getRequiredProduct($code->id_promo_campaign)??null;
+				            $promo_source = 'promo_code';
+				            if ( !empty($errore) || !empty($errors) ) {
+				            	$promo_error = app($this->promo_campaign)->promoError('transaction', $errore, $errors, $errorProduct);
+				            	if ($errorProduct) {
+					            	$promo_error['product_label'] = app($this->promo_campaign)->getProduct('promo_campaign', $code['promo_campaign'])['product']??'';
+							        $promo_error['product'] = $pct->getRequiredProduct($code->id_promo_campaign)??null;
+							    }
+							    $promo_source = null;
+				            }
+						    else{
+						    	$promo_valid = true;
 						    }
-						    $promo_source = null;
+				            $promo_discount=$discount_promo['discount'];
 			            }
-					    else{
-					    	$promo_valid = true;
-					    }
-			            $promo_discount=$discount_promo['discount'];
-		            }
-		            else
-		            {
-		            	$promo_error = app($this->promo_campaign)->promoError('transaction', $errore);
-		            }
+			            else
+			            {
+			            	$promo_error = app($this->promo_campaign)->promoError('transaction', $errore);
+			            }
+			        }else{
+	            		$promo_source 	= 'promo_code';
+		                $promo_valid 	= true;	
+	            	}
 	        	}
             }
             else
@@ -2109,22 +2116,28 @@ class ApiOnlineTransaction extends Controller
 
 			if($deals)
 			{
-				$discount_promo=$pct->validatePromo($request_promo, $deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals', $errorProduct, $post['shipping']+$shippingGoSend);
+	        	$promo_type = $deals->dealVoucher->deals->promo_type;
+				if ($promo_type != 'Discount bill') {
+					$discount_promo=$pct->validatePromo($request_promo, $deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals', $errorProduct, $post['shipping']+$shippingGoSend);
 
-				$promo_source = 'voucher_online';
-				if ( !empty($errors) ) {
-					$code = $deals->toArray();
-	            	$promo_error = app($this->promo_campaign)->promoError('transaction', null, $errors, $errorProduct);
-	            	if ($errorProduct) {
-		            	$promo_error['product_label'] = app($this->promo_campaign)->getProduct('deals', $code['deal_voucher']['deals'])['product']??'';
-			        	$promo_error['product'] = $pct->getRequiredProduct($deals->dealVoucher->id_deals, 'deals')??null;
-	            	}
-	            	$promo_source = null;
-	            }
-	            else{
-			    	$promo_valid = true;
-			    }
-	            $promo_discount=$discount_promo['discount'];
+					$promo_source = 'voucher_online';
+					if ( !empty($errors) ) {
+						$code = $deals->toArray();
+		            	$promo_error = app($this->promo_campaign)->promoError('transaction', null, $errors, $errorProduct);
+		            	if ($errorProduct) {
+			            	$promo_error['product_label'] = app($this->promo_campaign)->getProduct('deals', $code['deal_voucher']['deals'])['product']??'';
+				        	$promo_error['product'] = $pct->getRequiredProduct($deals->dealVoucher->id_deals, 'deals')??null;
+		            	}
+		            	$promo_source = null;
+		            }
+		            else{
+				    	$promo_valid = true;
+				    }
+		            $promo_discount=$discount_promo['discount'];
+		        }else{
+					$promo_source 	= 'voucher_online';
+					$promo_valid 	= true;
+		        }
 	        }
 	        else
 	        {
@@ -2478,6 +2491,19 @@ class ApiOnlineTransaction extends Controller
             }
 
             // return $product;
+        }
+
+        if ($promo_valid) {
+        	if (($promo_type??false) == 'Discount bill') {
+        		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $subtotal_per_brand);
+
+        		if ($check_promo['status'] == 'fail') {
+	        		$promo_error = app($this->promo_campaign)->promoError('transaction', $check_promo['messages']??$error, null, 'all');
+        			$promo_valid = false;
+        		}else{
+        			$promo_discount = $check_promo['data']['discount']??0;
+        		}
+        	}
         }
 
         if ($promo_valid) {
