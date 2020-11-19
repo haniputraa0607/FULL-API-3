@@ -1139,9 +1139,7 @@ class ApiProductController extends Controller
     	$save = Product::where('id_product', $post['id_product'])->update($data);
 
     	if($save){
-            if(isset($data['product_variant_status']) && !empty($data['product_variant_status'])){
-                ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']], ['product_global_price' => 0]);
-            }else{
+            if($data['product_variant_status'] == 0){
                 $getGroup = ProductVariantGroup::where('id_product',$post['id_product'])->pluck('id_product_variant_group')->toArray();
                 if($getGroup){
                     ProductVariantPivot::whereIn('id_product_variant_group',$getGroup)->delete();
@@ -1177,8 +1175,10 @@ class ApiProductController extends Controller
             }
 
             if(isset($post['product_global_price'])){
+                $globalPrice = str_replace(".","",$post['product_global_price']);
+                $globalPrice = str_replace(",","",$post['product_global_price']);
                 ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']],
-                    ['product_global_price' => str_replace(".","",$post['product_global_price'])]);
+                    ['product_global_price' => $globalPrice]);
             }
         }
         if($save){
