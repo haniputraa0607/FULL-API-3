@@ -2241,6 +2241,7 @@ class ApiOnlineTransaction extends Controller
 
         $promo_missing_product 	= false;
         $subtotal_per_brand 	= [];
+        $totalItem = 0;
         foreach ($discount_promo['item']??$post['item'] as &$item) {
             // get detail product
             $product = Product::select([
@@ -2477,6 +2478,8 @@ class ApiOnlineTransaction extends Controller
             	$subtotal_per_brand[$item['id_brand']] = $product['product_price_total'];
             }
 
+            //calculate total item
+            $totalItem += $product['qty'];
             // return $product;
         }
 
@@ -2618,7 +2621,7 @@ class ApiOnlineTransaction extends Controller
 	        	$result['grandtotal'] = 0;
 	        }else{
 	        	$result['grandtotal'] = $result['grandtotal'] - $result['subscription'];
-	        }
+            }
         }
 
         $result['total_payment'] = $result['grandtotal'] - $result['used_point'];
@@ -2630,6 +2633,68 @@ class ApiOnlineTransaction extends Controller
 
         $result['subscription'] = (int) $result['subscription'];
         $result['discount'] = (int) $result['discount'];
+
+        $result['payment_detail'] = [];
+        
+        //subtotal
+        $result['payment_detail'][] = [
+            'name'          => 'Subtotal ('.$totalItem.' item)',
+            "is_discount"   => 0,
+            'amount'        => MyHelper::requestNumber($result['subtotal'],'_CURRENCY')
+        ];
+
+        //discount product / bill
+        if($result['discount'] > 0){
+            if($request->id_subscription_user){
+                $result['payment_detail'][] = [
+                    'name'          => 'Subscription',
+                    "is_discount"   => 1,
+                    'amount'        => '- '.MyHelper::requestNumber($result['discount'],'_CURRENCY')
+                ];
+            }else{
+                $result['payment_detail'][] = [
+                    'name'          => 'Diskon (Promo)',
+                    "is_discount"   => 1,
+                    'amount'        => '- '.MyHelper::requestNumber($result['discount'],'_CURRENCY')
+                ];
+            }
+        }
+
+        //delivery gosend
+        if($result['shipping'] > 0){
+            $result['payment_detail'][] = [
+                'name'          => 'Delivery (GO-SEND)',
+                "is_discount"   => 0,
+                'amount'        => MyHelper::requestNumber($result['shipping'],'_CURRENCY')
+            ];
+        }
+
+        //discount delivery
+        if($result['discount_delivery'] > 0){
+            if($request->id_subscription_user){
+                $result['payment_detail'][] = [
+                    'name'          => 'Subscription',
+                    "is_discount"   => 0,
+                    'amount'        => '- '.MyHelper::requestNumber($result['discount_delivery'],'_CURRENCY')
+                ];
+            }else{
+                $result['payment_detail'][] = [
+                    'name'          => 'Diskon (Delivery)',
+                    "is_discount"   => 0,
+                    'amount'        => '- '.MyHelper::requestNumber($result['discount_delivery'],'_CURRENCY')
+                ];
+            }
+        }
+
+        //add subscription to payment detail
+        if($request->id_subscription_user && $result['subscription'] > 0){
+            $result['payment_detail'][] = [
+                'name'          => 'Subscription',
+                "is_discount"   => 0,
+                'amount'        => '- '.MyHelper::requestNumber($result['subscription'],'_CURRENCY')
+            ];
+        }
+
         if (count($error_msg) > 1) {
             $error_msg = ['Produk, Varian, atau Topping yang anda pilih tidak tersedia. Silakan cek kembali pesanan anda'];
         }
