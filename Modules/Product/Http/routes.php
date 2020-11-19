@@ -26,6 +26,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
 {
     Route::any('be/list', 'ApiProductController@listProduct');
     Route::any('be/list/image', 'ApiProductController@listProductImage');
+    Route::any('be/list/image/detail', 'ApiProductController@listProductImageDetail');
     Route::any('be/imageOverride', 'ApiProductController@imageOverride');
     Route::post('category/assign', 'ApiProductController@categoryAssign');
     Route::post('price/update', 'ApiProductController@priceUpdate');
