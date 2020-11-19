@@ -2661,11 +2661,17 @@ class ApiPromoCampaign extends Controller
         		$discount = 'Rp '.number_format(($query['subscription_voucher_nominal']??0),0,',','.');
         	}
 
-        	$key = $brand ? 'description_product_discount_brand_no_qty' : 'description_product_discount_no_qty';
-    		$key_null = $brand ? 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%.' : 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%';
-    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
+			if ($query['subscription_discount_type'] == 'discount_delivery') {
+				$desc = 'Anda berhak mendapatkan potongan ongkos kirim %discount%';
+			}else{
+	        	$key = $brand ? 'description_product_discount_brand_no_qty' : 'description_product_discount_no_qty';
+	    		$key_null = $brand ? 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%' : 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%';
+	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
+	    		$desc = $key_null;
 
-    		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'brand'=>$brand]);
+			}
+
+	    	$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'brand'=>$brand]);
     	}
     	else
     	{
@@ -2682,10 +2688,10 @@ class ApiPromoCampaign extends Controller
 
 	        	if ( empty($qty) ) {
         			$key = 'description_product_discount_brand_no_qty';
-    				$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%';
+    				$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%';
 	        	}else{
 	        		$key = 'description_product_discount_brand';
-	    			$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk di %brand%';
+	    			$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk';
 	        	}
 
 	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
@@ -2709,7 +2715,7 @@ class ApiPromoCampaign extends Controller
 					}
 	    		}
 	    		$key = 'description_tier_discount_brand';
-	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax% di %brand%';
+	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%';
 	    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
 	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
@@ -2731,7 +2737,7 @@ class ApiPromoCampaign extends Controller
 					}
 	    		}
 	    		$key = 'description_buyxgety_discount_brand';
-	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %min% - %max% di %brand';
+	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%';
 	    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
 	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
@@ -2775,7 +2781,17 @@ class ApiPromoCampaign extends Controller
     	}
 
     	if ($desc) {
-	    	$text = $desc.' '.$global_text;
+    		$text = $desc;
+    		if (substr($text, -1) != '.') {
+    			$separator = '. ';
+    			$global_text = ucfirst($global_text);
+    		}else{
+    			$separator = ' ' ;
+    		}
+
+    		if ($global_text) {
+	    		$text = $text.$separator.$global_text;
+    		}
 
 	    	$desc = MyHelper::simpleReplace($text,['payment_text'=>$payment_text, 'shipment_text'=>$shipment_text]);
     	}else{
