@@ -1148,6 +1148,10 @@ class ApiProductController extends Controller
                 if($getGroup){
                     ProductVariantPivot::whereIn('id_product_variant_group',$getGroup)->delete();
                     ProductVariantGroup::where('id_product',$post['id_product'])->delete();
+                    $getAllOutlets = Outlet::get();
+                    foreach ($getAllOutlets as $o){
+                        Product::refreshVariantTree($post['id_product'], $o);
+                    }
                 }
             }
 
