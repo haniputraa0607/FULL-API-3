@@ -1733,6 +1733,9 @@ class PromoCampaignTools{
     	elseif ( $payment_type == "Midtrans" ) {
 	    	$payment_method =  $payment_detail;
     	}
+    	elseif ( $payment_type == "Shopeepay" ) {
+	    	$payment_method =  $payment_type;
+    	}
     	
     	return $payment_method;
     }
