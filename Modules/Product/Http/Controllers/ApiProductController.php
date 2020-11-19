@@ -939,6 +939,10 @@ class ApiProductController extends Controller
             $product->with(['global_price','product_special_price','product_tags','brands','product_promo_categories'=>function($q){$q->select('product_promo_categories.id_product_promo_category');}])->where('products.product_code', $post['product_code']);
         }
 
+        if (isset($post['update_price']) && $post['update_price'] == 1) {
+            $product->where('product_variant_status', 0);
+        }
+
         if (isset($post['product_name'])) {
             $product->where('products.product_name', 'LIKE', '%'.$post['product_name'].'%');
         }
