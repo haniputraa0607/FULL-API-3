@@ -2758,8 +2758,8 @@ class ApiTransaction extends Controller
 	                foreach ($list['transaction_vouchers'] as $valueVoc) {
 	                    $result['promo']['code'][$p++]   = $valueVoc['deals_voucher']['voucher_code'];
 	                    $result['payment_detail'][] = [
-	                        'name'          => 'Discount',
-	                        'desc'          => $valueVoc['deals_voucher']['voucher_code'],
+	                        'name'          => 'Diskon',
+	                        'desc'          => 'Promo',
 	                        "is_discount"   => 1,
 	                        'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
 	                    ];
@@ -2769,8 +2769,8 @@ class ApiTransaction extends Controller
 	            if (!empty($list['promo_campaign_promo_code'])) {
 	                $result['promo']['code'][$p++]   = $list['promo_campaign_promo_code']['promo_code'];
 	                $result['payment_detail'][] = [
-	                    'name'          => 'Discount',
-	                    'desc'          => $list['promo_campaign_promo_code']['promo_code'],
+	                    'name'          => 'Diskon',
+	                    'desc'          => 'Promo',
 	                    "is_discount"   => 1,
 	                    'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
 	                ];
@@ -2780,8 +2780,8 @@ class ApiTransaction extends Controller
 	            	$discount = $list['transaction_discount'];
 	                $result['promo']['code'][$p++]   = $list['subscription_user_voucher']['voucher_code'];
 	                $result['payment_detail'][] = [
-	                    'name'          => 'Discount',
-	                    'desc'          => $list['subscription_user_voucher']['voucher_code'],
+	                    'name'          => 'Subscription',
+	                    'desc'          => 'Diskon',
 	                    "is_discount"   => 1,
 	                    'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
 	                ];
@@ -2803,7 +2803,7 @@ class ApiTransaction extends Controller
 	                foreach ($list['transaction_vouchers'] as $valueVoc) {
 	                    $result['promo']['code'][$p++]   = $valueVoc['deals_voucher']['voucher_code'];
 	                    $result['payment_detail'][] = [
-	                        'name'          => 'Discount',
+	                        'name'          => 'Diskon',
 	                        'desc'          => 'Delivery',
 	                        "is_discount"   => 1,
 	                        'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
@@ -2814,7 +2814,7 @@ class ApiTransaction extends Controller
 	            if (!empty($list['promo_campaign_promo_code'])) {
 	                $result['promo']['code'][$p++]   = $list['promo_campaign_promo_code']['promo_code'];
 	                $result['payment_detail'][] = [
-	                    'name'          => 'Discount',
+	                    'name'          => 'Diskon',
 	                    'desc'          => 'Delivery',
 	                    "is_discount"   => 1,
 	                    'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
@@ -2825,7 +2825,7 @@ class ApiTransaction extends Controller
 	            	$discount = $list['transaction_discount'];
 	                $result['promo']['code'][$p++]   = $list['subscription_user_voucher']['voucher_code'];
 	                $result['payment_detail'][] = [
-	                    'name'          => 'Discount',
+	                    'name'          => 'Subscription',
 	                    'desc'          => 'Delivery',
 	                    "is_discount"   => 1,
 	                    'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
