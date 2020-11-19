@@ -29,7 +29,7 @@ class SendRecapManualy implements ShouldQueue
      */
     public function handle()
     {
-        if($this->data['type'] == 'recap_disburse'){
+        if($this->data['type'] == 'recap_to_admin'){
             app('Modules\Disburse\Http\Controllers\ApiDisburseController')->shortcutRecap($this->data['date']);
         }elseif($this->data['type'] == 'recap_transaction_to_outlet'){
             app('Modules\Disburse\Http\Controllers\ApiDisburseController')->cronSendEmailDisburse($this->data['date']);
