@@ -937,7 +937,7 @@ class ApiOnlineTransaction extends Controller
 	        	DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
-                    'messages'  => ['Promo not valid']
+                    'messages'  => $subs_error??['Promo not valid']
                 ]);
 	        }
 	        $subscription_type = $subscription_total['type'];
