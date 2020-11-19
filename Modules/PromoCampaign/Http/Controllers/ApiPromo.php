@@ -27,6 +27,7 @@ use Modules\Deals\Entities\DealsTierDiscountRule;
 use Modules\Deals\Entities\DealsBuyxgetyProductRequirement;
 use Modules\Deals\Entities\DealsBuyxgetyRule;
 
+use Modules\Subscription\Entities\Subscription;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 
@@ -411,8 +412,14 @@ class ApiPromo extends Controller
     			$promo_payment 	= $query->dealVoucher->deals->deals_payment_method->pluck('payment_method');
     			break;
     		
+    		case 'subscription':
+    			$promo = Subscription::join('subscription_users','subscriptions.id_subscription','=','subscription_users.id_subscription')->where('id_subscription_user', $query->id_subscription_user)->first();
+    			$promo_shipment = $promo->subscription_shipment_method->pluck('shipment_method');
+    			$promo_payment 	= $promo->subscription_payment_method->pluck('payment_method');
+    			break;
+    			
     		default:
-    			# code...
+    			return $result;
     			break;
     	}
 

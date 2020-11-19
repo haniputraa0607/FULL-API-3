@@ -2579,6 +2579,7 @@ class ApiOnlineTransaction extends Controller
 	        	$promo_error['product_label'] = $subs_product??'';
 	        	$result['subscription'] = 0;
 	        }else{
+	        	$promo_valid = true;
 	        	if ($check_subs['type'] == 'discount_delivery') {
 	        		$result['grandtotal'] -= $check_subs['value'];
 	        		$result['discount_delivery'] += $check_subs['value'];
@@ -2622,7 +2623,7 @@ class ApiOnlineTransaction extends Controller
 
         if ($promo_valid) {
         	// check available shipment, payment
-        	$result = app($this->promo)->getTransactionCheckPromoRule($result, $promo_source, $code??$deals);
+        	$result = app($this->promo)->getTransactionCheckPromoRule($result, $promo_source, $code??$deals??$request);
         }
 
         $result['subscription'] = (int) $result['subscription'];
