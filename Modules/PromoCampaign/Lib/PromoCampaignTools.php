@@ -44,7 +44,7 @@ class PromoCampaignTools{
 	 * @param  	array 		$error     	error message
 	 * @return 	array/boolean     modified array of trxs if can, otherwise false
 	 */
-	public function validatePromo($request, $id_promo, $id_outlet, $trxs, &$errors, $source='promo_campaign', &$errorProduct=0, $delivery_fee=0){
+	public function validatePromo($request, $id_promo, $id_outlet, $trxs, &$errors, $source='promo_campaign', &$errorProduct=0, $delivery_fee=0, $subtotal_per_brand=[]){
 		/**
 		 $trxs=[
 			{
@@ -875,14 +875,13 @@ class PromoCampaignTools{
 				$promo_brand_flipped = array_flip($promo_brand);
 				// get jumlah harga
 				$total_price=0;
-				foreach ($trxs as  $id_trx => &$trx) {
-					if (!isset($promo_brand_flipped[$trx['id_brand']])) {
-						continue;
-					}
-					$product = $this->getProductPrice($id_outlet, $trx['id_product'], $trx['id_product_variant_group']);
-					$price = $trx['qty'] * $product['product_price']??0;
-					$total_price += $price;
-				}
+				foreach ($subtotal_per_brand as $key => $value) {
+	    			if (!isset($promo_brand_flipped[$key])) {
+	    				continue;
+	    			}
+					$total_price += $value;
+	    		}
+
 				if($promo_rules->discount_type == 'Percent'){
 					$discount += ($total_price * $promo_rules->discount_value)/100;
 					if(!empty($promo_rules->max_percent_discount) && $discount > $promo_rules->max_percent_discount){

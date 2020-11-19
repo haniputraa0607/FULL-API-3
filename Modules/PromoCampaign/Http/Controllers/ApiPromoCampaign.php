@@ -2580,7 +2580,7 @@ class ApiPromoCampaign extends Controller
     				$payment_text .= $payment_list[$value['payment_method']];
     			}
     			elseif ($i == $payment_count) {
-    				$payment_text .= ' atau '.$payment_list[$value['payment_method']];
+    				$payment_text .= ' maupun '.$payment_list[$value['payment_method']];
     			}
     			else {
     				$payment_text .= ', '.$payment_list[$value['payment_method']];
@@ -2589,7 +2589,7 @@ class ApiPromoCampaign extends Controller
     			$i++;
     		}
     		if ($payment_text) {
-    			$payment_text = 'pembayaran menggunakan '.$payment_text;
+    			$payment_text = 'berlaku untuk pembayaran menggunakan '.$payment_text;
     		}
     	}else{
     		// $payment_text = 'semua metode pembayaran';
@@ -2606,7 +2606,7 @@ class ApiPromoCampaign extends Controller
     			unset($shipment_list['GO-SEND']);
     		}
     		if (isset($shipment_list['Pickup Order'])) {
-    			$shipment_list['Pickup'] = $shipment_list['Pickup Order'];
+    			$shipment_list['Pickup Up'] = $shipment_list['Pickup Order'];
     			unset($shipment_list['Pickup Order']);
     		}
     		$shipment_list = array_flip($shipment_list);
@@ -2619,7 +2619,7 @@ class ApiPromoCampaign extends Controller
     				$shipment_text .= $value;
     			}
     			elseif ($i == $shipment_count) {
-    				$shipment_text .= ' atau '.$value;
+    				$shipment_text .= ' maupun '.$value;
     			}
     			else {
     				$shipment_text .= ', '.$value;
@@ -2628,7 +2628,7 @@ class ApiPromoCampaign extends Controller
     		}
 
     		if ($shipment_text) {
-    			$shipment_text = $shipment_text.' order';
+    			$shipment_text = 'berlaku untuk '.$shipment_text;
     		}
     	}else{
     		// $shipment_text = 'semua tipe order';
@@ -2636,12 +2636,19 @@ class ApiPromoCampaign extends Controller
     	}
 
 		$global_text = '';
+		if ($source == 'promo_campaign') {
+			$promo = 'Kode Promo';
+		}elseif ($source == 'subscription') {
+			$promo = 'Subscription';
+		}elseif ($source == 'deals') {
+			$promo = 'Voucher';
+		}
 		if (isset($payment_text) && isset($shipment_text)) {
-			$global_text.='berlaku untuk %payment_text% dan %shipment_text%';
+			$global_text .= $promo.' '.'%shipment_text% dan %payment_text%';
 		}elseif (isset($payment_text)) {
-			$global_text.='berlaku untuk %payment_text%';
+			$global_text .= $promo.' '.'%payment_text%';
 		}elseif (isset($shipment_text)) {
-			$global_text.='berlaku untuk %shipment_text%';
+			$global_text .= $promo.' '.'%shipment_text%';
 		}
 
     	if ($source == 'subscription') 

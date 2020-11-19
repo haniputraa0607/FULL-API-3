@@ -337,7 +337,7 @@ class ApiPromo extends Controller
     	return $check;
     }
 
-    public function checkPromo($request, $user, $promo_source, $data_promo, $id_outlet, $item, $delivery_fee, $subtotal)
+    public function checkPromo($request, $user, $promo_source, $data_promo, $id_outlet, $item, $delivery_fee, $subtotal_per_brand)
     {
     	$pct = new PromoCampaignTools;
     	if ($promo_source == 'promo_code') {
@@ -374,13 +374,14 @@ class ApiPromo extends Controller
 			$errors, 
 			$source, 
 			$errorProduct, 
-			$delivery_fee
+			$delivery_fee,
+			$subtotal_per_brand
 		);
 
 		if ( !empty($errors) ) {
             return [
                 'status' 	=> 'fail',
-                'messages'	=> ['Promo is not valid']
+                'messages'	=> $errors??['Promo is not valid']
             ];
         }
 
@@ -417,7 +418,7 @@ class ApiPromo extends Controller
     			$promo_shipment = $promo->subscription_shipment_method->pluck('shipment_method');
     			$promo_payment 	= $promo->subscription_payment_method->pluck('payment_method');
     			break;
-    			
+
     		default:
     			return $result;
     			break;
