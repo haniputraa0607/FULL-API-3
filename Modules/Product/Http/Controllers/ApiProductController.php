@@ -1749,7 +1749,7 @@ class ApiProductController extends Controller
         }else{
             // toArray error jika $product Null,
             $product = $product->toArray();
-            $product['photo'] = $product['product_photo_detail']??'';
+            $product['photo'] = config('url.storage_url_api').$product['product_photo_detail']??'';
         }
         $product['product_detail'] = ProductDetail::where(['id_product' => $post['id_product'], 'id_outlet' => $post['id_outlet']])->first();
 
