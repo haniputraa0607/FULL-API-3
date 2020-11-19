@@ -35,6 +35,7 @@ use App\Http\Models\LogBalance;
 use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPaymentMidtran;
+use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\ProductVariant\Entities\TransactionProductVariant;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use App\Http\Models\DealsUser;
@@ -1793,6 +1794,14 @@ class ApiTransaction extends Controller
         }
 
         if($statusReturn == 1){
+            $columnsVariant = '';
+            $addAdditionalColumnVariant = '';
+            $getVariant = ProductVariant::whereNull('id_parent')->get()->toArray();
+            $getAllVariant = ProductVariant::select('id_product_variant', 'id_parent')->get()->toArray();
+            foreach ($getVariant as $v){
+                $columnsVariant .= '<td style="background-color: #dcdcdc;" width="10">'.$v['product_variant_name'].'</td>';
+                $addAdditionalColumnVariant .= '<td></td>';
+            }
             $query->whereNull('reject_at');
 
             $dataTrxDetail = '';
@@ -1809,16 +1818,24 @@ class ApiTransaction extends Controller
                     $payment = 'Shopeepay';
                 }
 
-                $variant = TransactionProductVariant::join('product_variants as pv', 'pv.id_product_variant', 'transaction_product_variants.id_product_variant')
-                                ->where('id_transaction_product', $val['id_transaction_product'])->pluck('product_variant_name')->toArray();
+                $variant = [];
+                $productCode = $val['product_code'];
+                if(!empty($val['id_product_variant_group'])){
+                    $getProductVariantGroup = ProductVariantGroup::where('id_product_variant_group', $val['id_product_variant_group'])->first();
+                    $productCode = $getProductVariantGroup['product_variant_group_code']??'';
+                }
 
+                $modifier = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                    ->where('id_transaction_product', $val['id_transaction_product'])->whereNotNull('transaction_product_modifiers.id_product_modifier_group')->pluck('product_modifiers.text')->toArray();
 
                 if(isset($post['detail']) && $post['detail'] == 1){
 
                     $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                         ->where('transaction_product_modifiers.id_transaction_product', $val['id_transaction_product'])
+                        ->whereNull('transaction_product_modifiers.id_product_modifier_group')
                         ->select('product_modifiers.text', 'transaction_product_modifiers.transaction_product_modifier_price')->get()->toArray();
 
+                    $addAdditionalColumn = '';
                     $promoName = '';
                     $promoType = '';
                     $promoCode = '';
@@ -1873,6 +1890,11 @@ class ApiTransaction extends Controller
                     $sameData .= '<td>'.date('d M Y', strtotime($val['transaction_date'])).'</td>';
                     $sameData .= '<td>'.date('H:i:s', strtotime($val['transaction_date'])).'</td>';
 
+                    //for check additional column
+                    if(isset($post['show_product_code']) && $post['show_product_code'] == 1){
+                        $addAdditionalColumn = "<td></td>";
+                    }
+
                     for($j=0;$j<$val['transaction_product_qty'];$j++){
                         $priceMod = 0;
                         $textMod = '';
@@ -1884,8 +1906,24 @@ class ApiTransaction extends Controller
                         $html .= $sameData;
                         $html .= '<td>'.$val['name_brand'].'</td>';
                         $html .= '<td>'.$val['product_category_name'].'</td>';
+                        if(isset($post['show_product_code']) && $post['show_product_code'] == 1){
+                            $html .= '<td>'.$productCode.'</td>';
+                        }
                         $html .= '<td>'.$val['product_name'].'</td>';
-                        $html .= '<td>'.implode(",",$variant).'</td>';
+                        $getTransactionVariant = TransactionProductVariant::join('product_variants as pv', 'pv.id_product_variant', 'transaction_product_variants.id_product_variant')
+                            ->where('id_transaction_product', $val['id_transaction_product'])->select('pv.*')->get()->toArray();
+                        foreach ($getTransactionVariant as $k=>$gtV){
+                            $getTransactionVariant[$k]['main_parent'] = $this->getParentVariant($getAllVariant, $gtV['id_product_variant']);
+                        }
+                        foreach ($getVariant as $v){
+                            $search = array_search($v['id_product_variant'], array_column($getTransactionVariant, 'main_parent'));
+                            if($search !== false){
+                                $html .= '<td>'.$getTransactionVariant[$search]['product_variant_name'].'</td>';
+                            }else{
+                                $html .= '<td></td>';
+                            }
+                        }
+                        $html .= '<td>'.implode(",",$modifier).'</td>';
                         $html .= '<td>'.$textMod.'</td>';
                         $html .= '<td>'.$val['transaction_product_price'].'</td>';
                         $html .= '<td>'.$priceMod.'</td>';
@@ -1914,7 +1952,9 @@ class ApiTransaction extends Controller
                                 $html .= $sameData;
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
+                                $html .= $addAdditionalColumn;
                                 $html .= '<td></td>';
+                                $html .= $addAdditionalColumnVariant;
                                 $html .= '<td></td>';
                                 $html .= '<td>'.$mod[$i]['text']??''.'</td>';
                                 $html .= '<td></td>';
@@ -1945,7 +1985,9 @@ class ApiTransaction extends Controller
                                 $html .= $sameData;
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
+                                $html .= $addAdditionalColumn;
                                 $html .= '<td>'.$getSubcription['subscription_title'].'(subscription)</td>';
+                                $html .= $addAdditionalColumnVariant;
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
@@ -1963,10 +2005,12 @@ class ApiTransaction extends Controller
 
                         if(!empty($val['transaction_shipment_go_send'])) {
                             $discountDelivery = 0;
+                            $promoDiscountDelivery = '';
                             if(abs($val['transaction_discount_delivery']) > 0){
+                                $promoDiscountDelivery = ' ('.$promoName.')';
                                 $discountDelivery = abs($val['transaction_discount_delivery']);
                             }
-                            $promoDiscountDelivery = '';
+
                             if(isset($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']) && !empty($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription'])){
                                 $promoDiscountDelivery = ' ('.$val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']['subscription_title'].')';
                             }
@@ -1974,7 +2018,9 @@ class ApiTransaction extends Controller
                             $html .= $sameData;
                             $html .= '<td></td>';
                             $html .= '<td></td>';
+                            $html .= $addAdditionalColumn;
                             $html .= '<td>Delivery'.$promoDiscountDelivery.'</td>';
+                            $html .= $addAdditionalColumnVariant;
                             $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                             $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
                             $html .= '<td>'.$discountDelivery.'</td>';
@@ -1987,7 +2033,9 @@ class ApiTransaction extends Controller
                         $html .= $sameData;
                         $html .= '<td></td>';
                         $html .= '<td></td>';
+                        $html .= $addAdditionalColumn;
                         $html .= '<td>Fee</td>';
+                        $html .= $addAdditionalColumnVariant;
                         $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                         $html .= '<td>'.($val['transaction_grandtotal']-$sub).'</td>';
                         $html .= '<td>'.(float)$val['fee_item'].'</td>';
@@ -2011,7 +2059,10 @@ class ApiTransaction extends Controller
                 }
                 $dataTrxDetail .= $html;
             }
-            return $dataTrxDetail;
+            return [
+                'list' => $dataTrxDetail,
+                'add_column' => $columnsVariant
+            ];
         }else{
             return $query;
         }
@@ -2036,6 +2087,7 @@ class ApiTransaction extends Controller
 
                 $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                     ->where('transaction_product_modifiers.id_transaction_product', $val['id_transaction_product'])
+                    ->whereNull('transaction_product_modifiers.id_product_modifier_group')
                     ->select('product_modifiers.text')->get()->toArray();
 
                 $promoName = '';
@@ -2191,6 +2243,30 @@ class ApiTransaction extends Controller
             yield $dt;
         }
     }
+
+    function getKeyVariant($arr, $id)
+    {
+        foreach ($arr as $key => $val) {
+            if ($val['id_product_variant'] === $id) {
+                return $key;
+            }
+        }
+        return null;
+    }
+
+    function getParentVariant($arr, $id)
+    {
+        $key = $this->getKeyVariant($arr, $id);
+        if ($arr[$key]['id_parent'] == 0)
+        {
+            return $id;
+        }
+        else
+        {
+            return $this->getParentVariant($arr, $arr[$key]['id_parent']);
+        }
+    }
+
 
     public function transactionDetail(TransactionDetail $request){
         if ($request->json('transaction_receipt_number') !== null) {

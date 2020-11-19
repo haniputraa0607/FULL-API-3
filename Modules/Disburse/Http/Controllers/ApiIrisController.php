@@ -852,6 +852,7 @@ class ApiIrisController extends Controller
                 $amount = 0;
                 $amountMDR = 0 ;
                 $transactionShipment = 0;
+                $discountDelivery = abs($data['transaction_discount_delivery']??0);
                 if(!empty($data['transaction_shipment_go_send'])){
                     $transactionShipment = $data['transaction_shipment_go_send'];
                 }
@@ -859,6 +860,7 @@ class ApiIrisController extends Controller
                 $charged = NULL;
 
                 if(!empty($data['transaction_multiple_payment']) || !empty($data['transaction_payment_subscription'])){
+
                     // ===== Calculate Fee Subscription ====== //
                     $totalChargedSubcriptionOutlet = 0;
                     $totalChargedSubcriptionCentral = 0;
@@ -899,6 +901,11 @@ class ApiIrisController extends Controller
                                 $amountMDR = $midtrans['gross_amount'];
                             }
 
+                            if(empty($payment)){
+                                DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
+                                return true;
+                            }
+
                             $keyMidtrans = array_search(strtoupper($payment), array_column($settingMDRAll, 'payment_name'));
                             if($keyMidtrans !== false){
                                 $feePGCentral = $settingMDRAll[$keyMidtrans]['mdr_central'];
@@ -931,6 +938,9 @@ class ApiIrisController extends Controller
                                         //calculate charged point to central
                                         $nominalBalanceCentral = $balanceNominal * (floatval($feePointCentral) / 100);
                                     }
+                                }else{
+                                    DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
+                                    return true;
                                 }
                             }else{
                                 $feePointCentral = 100;
@@ -945,6 +955,10 @@ class ApiIrisController extends Controller
                             }
 
                             $method =  $ipay88['payment_method'];
+                            if(empty($method)){
+                                DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
+                                return true;
+                            }
                             $keyipay88 = array_search(strtoupper($method), array_column($settingMDRAll, 'payment_name'));
                             if($keyipay88 !== false){
                                 $feePGCentral = $settingMDRAll[$keyipay88]['mdr_central'];
@@ -967,6 +981,9 @@ class ApiIrisController extends Controller
                                 $feePG = $settingMDRAll[$keyipayOvo]['mdr'];
                                 $feePGType = $settingMDRAll[$keyipayOvo]['percent_type'];
                                 $charged = $settingMDRAll[$keyipayOvo]['charged'];
+                            }else{
+                                DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
+                                return true;
                             }
                         }elseif (strtolower($payments['type']) == 'shopeepay'){
                             $shopeepay = TransactionPaymentShopeePay::where('id_transaction', $data['id_transaction'])->first();
@@ -982,42 +999,80 @@ class ApiIrisController extends Controller
                                 $feePG = $settingMDRAll[$keyshopee]['mdr'];
                                 $feePGType = $settingMDRAll[$keyshopee]['percent_type'];
                                 $charged = $settingMDRAll[$keyshopee]['charged'];
+                            }else{
+                                DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
+                                return true;
                             }
                         }
                     }
 
                     $totalChargedPromo = 0;
                     $totalChargedPromoCentral = 0;
-                    if(count($data['vouchers']) > 0){
+                    $totalChargedDiscountDelivery = 0;
+                    $totalChargedDiscountDeliveryCentral = 0;
+                    if(count($data['vouchers']) > 0 && (abs($data['transaction_discount']) > 0 || $discountDelivery > 0)){
                         $getDeal = Deal::where('id_deals', $data['vouchers'][0]['id_deals'])->first();
                         $feePromoCentral = $getDeal['charged_central'];
                         $feePromoOutlet = $getDeal['charged_outlet'];
-                        $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
-                        if((int) $feePromoCentral !== 100){
-                            $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
-                            $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
+                        if($discountDelivery > 0 ){
+                            if((int) $feePromoCentral !== 100){
+                                $totalChargedDiscountDelivery = ($discountDelivery * ($feePromoOutlet / 100));
+                                $totalChargedDiscountDeliveryCentral = ($discountDelivery * ($feePromoCentral / 100));
+                            }else{
+                                $totalChargedDiscountDeliveryCentral = $discountDelivery;
+                            }
                         }else{
-                            $totalChargedPromoCentral = $data['transaction_discount'];
+                            $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
+                            if((int) $feePromoCentral !== 100){
+                                $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
+                                $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
+                            }else{
+                                $totalChargedPromoCentral = $data['transaction_discount'];
+                            }
                         }
-                    }elseif (!empty($data['promo_campaign'])){
-                        $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
+                    }elseif (!empty($data['promo_campaign']) && (abs($data['transaction_discount']) > 0 || $discountDelivery > 0)){
                         $feePromoCentral = $data['promo_campaign']['charged_central'];
                         $feePromoOutlet = $data['promo_campaign']['charged_outlet'];
-                        if((int) $feePromoCentral !== 100){
-                            $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
-                            $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
+                        if($discountDelivery > 0 ){
+                            if((int) $feePromoCentral !== 100){
+                                $totalChargedDiscountDelivery = ($discountDelivery * ($feePromoOutlet / 100));
+                                $totalChargedDiscountDeliveryCentral = ($discountDelivery * ($feePromoCentral / 100));
+                            }else{
+                                $totalChargedDiscountDeliveryCentral = $discountDelivery;
+                            }
                         }else{
-                            $totalChargedPromoCentral = $data['transaction_discount'];
+                            $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
+                            if((int) $feePromoCentral !== 100){
+                                $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
+                                $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
+                            }else{
+                                $totalChargedPromoCentral = $data['transaction_discount'];
+                            }
+                        }
+                    }elseif (!empty($data['id_subscription_user_voucher']) && $discountDelivery > 0){
+                        $getSubcription = SubscriptionUserVoucher::join('subscription_users', 'subscription_users.id_subscription_user','subscription_user_vouchers.id_subscription_user')
+                            ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
+                            ->where('subscription_user_vouchers.id_subscription_user_voucher', $data['id_subscription_user_voucher'])
+                            ->groupBy('subscriptions.id_subscription')->select('subscriptions.*')->first();
+                        if($getSubcription){
+                            $feeSubcriptionCentral = $getSubcription['charged_central'];
+                            $feeSubcriptionOutlet = $getSubcription['charged_outlet'];
+                            if((int) $feeSubcriptionCentral !== 100){
+                                $totalChargedDiscountDelivery = ($discountDelivery * ($feeSubcriptionOutlet / 100));
+                                $totalChargedDiscountDeliveryCentral = ($discountDelivery * ($feeSubcriptionCentral / 100));
+                            }else{
+                                $totalChargedDiscountDeliveryCentral = $discountDelivery;
+                            }
                         }
                     }
 
                     //fee payment gateway
                     if($feePGType == 'Percent'){
-                        $totalFee = $amountMDR * (($feePGCentral + $feePG) / 100);
-                        $totalFeeForCentral = $amountMDR * ($feePGCentral/100);
+                        $totalFee = $amountMDR * (($feePGCentral + $feePG) / 100);//MDR
+                        $totalFeeForCentral = $amountMDR * ($feePGCentral/100);//MDR for central
                     }else{
-                        $totalFee = $feePGCentral + $feePG;
-                        $totalFeeForCentral = $feePGCentral;
+                        $totalFee = $feePGCentral + $feePG;//MDR
+                        $totalFeeForCentral = $feePGCentral;//MDR for central
                     }
 
                     $percentFee = 0;
@@ -1033,9 +1088,9 @@ class ApiIrisController extends Controller
 
                     $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
 
-                    $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet, 2);
-                    $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentral, 2);
-                    $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral, 2);
+                    $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet - $totalChargedDiscountDelivery, 2);//income outlet
+                    $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentral, 2);//income central
+                    $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral + $totalChargedDiscountDeliveryCentral, 2);//expense central
 
                     $dataInsert = [
                         'id_transaction' => $data['id_transaction'],
@@ -1049,6 +1104,8 @@ class ApiIrisController extends Controller
                         'point_use_expense' => $nominalBalance,
                         'subscription' => $totalChargedSubcriptionOutlet,
                         'subscription_central' => $totalChargedSubcriptionCentral,
+                        'discount_delivery_outlet' => $totalChargedDiscountDelivery,
+                        'discount_delivery_central' => $totalChargedDiscountDeliveryCentral,
                         'fee' => $percentFee,
                         'mdr' => $feePG,
                         'mdr_central' => $feePGCentral,
@@ -1060,6 +1117,7 @@ class ApiIrisController extends Controller
                         'charged_promo_outlet' => $feePromoOutlet,
                         'charged_subscription_central' => $feeSubcriptionCentral,
                         'charged_subscription_outlet' => $feeSubcriptionOutlet,
+                        'created_at' => date('Y-m-d H:i:s'),
                         'updated_at' => date('Y-m-d H:i:s')
                     ];
 

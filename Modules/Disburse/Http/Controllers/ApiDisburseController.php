@@ -960,10 +960,10 @@ class ApiDisburseController extends Controller
                 ->select('transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
                     'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
                     'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
-                    'transactions.transaction_discount', 'transactions.transaction_subtotal')
+                    'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code')
                 ->get()->toArray();
 
-            if(!empty($generateTrx)){
+            if(!empty($generateTrx['list'])){
                 $excelFile = 'Transaction_['.$start.'_'.$end.']['.$getOutlet['outlet_code'].'].xlsx';
                 $store  = (new MultipleSheetExport([
                     "Summary" => $summary,
@@ -1410,10 +1410,10 @@ class ApiDisburseController extends Controller
                             ->select('transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
                                 'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
                                 'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
-                                'transactions.transaction_discount', 'transactions.transaction_subtotal')
+                                'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code')
                             ->get()->toArray();
 
-                        if(!empty($generateTrx)){
+                        if(!empty($generateTrx['list'])){
                             $excelFile = 'Transaction_['.$yesterday.']_['.$outlet['outlet_code'].'].xlsx';
                             $store  = (new MultipleSheetExport([
                                 "Summary" => $summary,
@@ -1685,7 +1685,7 @@ class ApiDisburseController extends Controller
 
     public function sendRecap(Request $request){
         $post = $request->json()->all();
-        SendRecapManualy::dispatch(['date' => $post['date'], 'type' => 'recap_disburse'])->onConnection('disbursequeue');
+        SendRecapManualy::dispatch(['date' => $post['date'], 'type' => 'recap_to_admin'])->onConnection('disbursequeue');
 
         return 'Success';
     }
@@ -1704,6 +1704,7 @@ class ApiDisburseController extends Controller
             $filter['detail'] = 1;
             $filter['key'] = 'all';
             $filter['rule'] = 'and';
+            $filter['show_product_code'] = 1;
             $filter['conditions'] = [
                 [
                     'subject' => 'status',
@@ -1731,15 +1732,16 @@ class ApiDisburseController extends Controller
                 ->select('transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
                     'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
                     'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
-                    'transactions.transaction_discount', 'transactions.transaction_subtotal')
+                    'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code')
                 ->orderBy('outlets.outlet_code', 'asc')
                 ->get()->toArray();
 
             $getEmailTo = Setting::where('key', 'email_to_send_recap_transaction')->first();
 
-            if(!empty($dataDisburse) && !empty($generateTrx) && !empty($getEmailTo['value'])){
+            if(!empty($dataDisburse) && !empty($generateTrx['list']) && !empty($getEmailTo['value'])){
                 $excelFile = 'Transaction_['.$yesterday.'].xlsx';
                 $summary = $this->summaryCalculationFee($yesterday);
+                $generateTrx['show_product_code'] = 1;
                 $store  = (new MultipleSheetExport([
                     "Summary" => $summary,
                     "Calculation Fee" => $dataDisburse,
