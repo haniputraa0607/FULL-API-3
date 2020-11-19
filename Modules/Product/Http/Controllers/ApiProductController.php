@@ -1183,10 +1183,14 @@ class ApiProductController extends Controller
             }
 
             if(isset($post['product_global_price']) && !empty($post['product_global_price'])){
-                $globalPrice = str_replace(".","",$post['product_global_price']);
-                $globalPrice = str_replace(",","",$post['product_global_price']);
+                if(strpos($post['product_global_price'], '.') === false){
+                    $globalPrice = str_replace(",","",$post['product_global_price']);
+                }else{
+                    $globalPrice = str_replace(".","",$post['product_global_price']);
+                }
+
                 ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']],
-                    ['product_global_price' => $globalPrice]);
+                    ['product_global_price' => (int)$globalPrice]);
             }
         }
         if($save){
