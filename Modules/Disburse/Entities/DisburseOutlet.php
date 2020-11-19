@@ -23,6 +23,8 @@ class DisburseOutlet extends Model
         'total_delivery_price',
         'total_payment_charge',
         'total_point_use_expense',
-        'total_subscription'
+        'total_subscription',
+        'total_discount_delivery_charged',
+        'total_discount_delivery'
 	];
 }

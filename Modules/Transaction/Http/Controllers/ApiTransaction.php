@@ -35,6 +35,7 @@ use App\Http\Models\LogBalance;
 use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPaymentMidtran;
+use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\ProductVariant\Entities\TransactionProductVariant;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use App\Http\Models\DealsUser;
@@ -1599,11 +1600,11 @@ class ApiTransaction extends Controller
                 ->join('cities', 'cities.id_city', 'outlets.id_city')
                 ->leftJoin('cities as c', 'c.id_city', 'users.id_city')
                 ->join('provinces', 'cities.id_province', 'provinces.id_province')
-                ->with(['transaction_payment_subscription', 'vouchers', 'promo_campaign', 'point_refund', 'point_use'])
+                ->with(['transaction_payment_subscription', 'vouchers', 'promo_campaign', 'point_refund', 'point_use', 'subscription_user_voucher.subscription_user.subscription'])
                 ->addSelect('transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
                     'brands.name_brand', 'cities.city_name', 'c.city_name as user_city', 'provinces.province_name',
                     'disburse_outlet_transactions.fee_item', 'disburse_outlet_transactions.payment_charge', 'disburse_outlet_transactions.discount', 'disburse_outlet_transactions.subscription',
-                    'disburse_outlet_transactions.point_use_expense',
+                    'disburse_outlet_transactions.point_use_expense', 'disburse_outlet_transactions.discount_delivery_outlet',
                     'disburse_outlet_transactions.income_outlet', 'disburse_outlet_transactions.discount_central', 'disburse_outlet_transactions.subscription_central');
         }
 
@@ -1793,6 +1794,14 @@ class ApiTransaction extends Controller
         }
 
         if($statusReturn == 1){
+            $columnsVariant = '';
+            $addAdditionalColumnVariant = '';
+            $getVariant = ProductVariant::whereNull('id_parent')->get()->toArray();
+            $getAllVariant = ProductVariant::select('id_product_variant', 'id_parent')->get()->toArray();
+            foreach ($getVariant as $v){
+                $columnsVariant .= '<td style="background-color: #dcdcdc;" width="10">'.$v['product_variant_name'].'</td>';
+                $addAdditionalColumnVariant .= '<td></td>';
+            }
             $query->whereNull('reject_at');
 
             $dataTrxDetail = '';
@@ -1809,16 +1818,24 @@ class ApiTransaction extends Controller
                     $payment = 'Shopeepay';
                 }
 
-                $variant = TransactionProductVariant::join('product_variants as pv', 'pv.id_product_variant', 'transaction_product_variants.id_product_variant')
-                                ->where('id_transaction_product', $val['id_transaction_product'])->pluck('product_variant_name')->toArray();
+                $variant = [];
+                $productCode = $val['product_code'];
+                if(!empty($val['id_product_variant_group'])){
+                    $getProductVariantGroup = ProductVariantGroup::where('id_product_variant_group', $val['id_product_variant_group'])->first();
+                    $productCode = $getProductVariantGroup['product_variant_group_code']??'';
+                }
 
+                $modifier = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                    ->where('id_transaction_product', $val['id_transaction_product'])->whereNotNull('transaction_product_modifiers.id_product_modifier_group')->pluck('product_modifiers.text')->toArray();
 
                 if(isset($post['detail']) && $post['detail'] == 1){
 
                     $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                         ->where('transaction_product_modifiers.id_transaction_product', $val['id_transaction_product'])
+                        ->whereNull('transaction_product_modifiers.id_product_modifier_group')
                         ->select('product_modifiers.text', 'transaction_product_modifiers.transaction_product_modifier_price')->get()->toArray();
 
+                    $addAdditionalColumn = '';
                     $promoName = '';
                     $promoType = '';
                     $promoCode = '';
@@ -1873,6 +1890,11 @@ class ApiTransaction extends Controller
                     $sameData .= '<td>'.date('d M Y', strtotime($val['transaction_date'])).'</td>';
                     $sameData .= '<td>'.date('H:i:s', strtotime($val['transaction_date'])).'</td>';
 
+                    //for check additional column
+                    if(isset($post['show_product_code']) && $post['show_product_code'] == 1){
+                        $addAdditionalColumn = "<td></td>";
+                    }
+
                     for($j=0;$j<$val['transaction_product_qty'];$j++){
                         $priceMod = 0;
                         $textMod = '';
@@ -1884,8 +1906,24 @@ class ApiTransaction extends Controller
                         $html .= $sameData;
                         $html .= '<td>'.$val['name_brand'].'</td>';
                         $html .= '<td>'.$val['product_category_name'].'</td>';
+                        if(isset($post['show_product_code']) && $post['show_product_code'] == 1){
+                            $html .= '<td>'.$productCode.'</td>';
+                        }
                         $html .= '<td>'.$val['product_name'].'</td>';
-                        $html .= '<td>'.implode(",",$variant).'</td>';
+                        $getTransactionVariant = TransactionProductVariant::join('product_variants as pv', 'pv.id_product_variant', 'transaction_product_variants.id_product_variant')
+                            ->where('id_transaction_product', $val['id_transaction_product'])->select('pv.*')->get()->toArray();
+                        foreach ($getTransactionVariant as $k=>$gtV){
+                            $getTransactionVariant[$k]['main_parent'] = $this->getParentVariant($getAllVariant, $gtV['id_product_variant']);
+                        }
+                        foreach ($getVariant as $v){
+                            $search = array_search($v['id_product_variant'], array_column($getTransactionVariant, 'main_parent'));
+                            if($search !== false){
+                                $html .= '<td>'.$getTransactionVariant[$search]['product_variant_name'].'</td>';
+                            }else{
+                                $html .= '<td></td>';
+                            }
+                        }
+                        $html .= '<td>'.implode(",",$modifier).'</td>';
                         $html .= '<td>'.$textMod.'</td>';
                         $html .= '<td>'.$val['transaction_product_price'].'</td>';
                         $html .= '<td>'.$priceMod.'</td>';
@@ -1904,7 +1942,7 @@ class ApiTransaction extends Controller
                             $html .= '<td>'.($val['transaction_product_price']+$priceMod).'</td>';
                         }
 
-                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                         $html .= '</tr>';
 
                         $totalMod = count($mod);
@@ -1914,7 +1952,9 @@ class ApiTransaction extends Controller
                                 $html .= $sameData;
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
+                                $html .= $addAdditionalColumn;
                                 $html .= '<td></td>';
+                                $html .= $addAdditionalColumnVariant;
                                 $html .= '<td></td>';
                                 $html .= '<td>'.$mod[$i]['text']??''.'</td>';
                                 $html .= '<td></td>';
@@ -1925,7 +1965,7 @@ class ApiTransaction extends Controller
                                 $html .= '<td>'.($mod[$i]['transaction_product_modifier_price']??0).'</td>';
                                 $html .= '<td>0</td>';
                                 $html .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
-                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                                 $html .= '</tr>';
                             }
                         }
@@ -1945,7 +1985,9 @@ class ApiTransaction extends Controller
                                 $html .= $sameData;
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
+                                $html .= $addAdditionalColumn;
                                 $html .= '<td>'.$getSubcription['subscription_title'].'(subscription)</td>';
+                                $html .= $addAdditionalColumnVariant;
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
@@ -1956,22 +1998,34 @@ class ApiTransaction extends Controller
                                 $html .= '<td></td>';
                                 $html .= '<td>'.abs($val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
                                 $html .= '<td>'.(-$val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
-                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                                 $html .= '</tr>';
                             }
                         }
 
                         if(!empty($val['transaction_shipment_go_send'])) {
+                            $discountDelivery = 0;
+                            $promoDiscountDelivery = '';
+                            if(abs($val['transaction_discount_delivery']) > 0){
+                                $promoDiscountDelivery = ' ('.$promoName.')';
+                                $discountDelivery = abs($val['transaction_discount_delivery']);
+                            }
+
+                            if(isset($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']) && !empty($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription'])){
+                                $promoDiscountDelivery = ' ('.$val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']['subscription_title'].')';
+                            }
                             $html .= '<tr>';
                             $html .= $sameData;
                             $html .= '<td></td>';
                             $html .= '<td></td>';
-                            $html .= '<td>Delivery</td>';
+                            $html .= $addAdditionalColumn;
+                            $html .= '<td>Delivery'.$promoDiscountDelivery.'</td>';
+                            $html .= $addAdditionalColumnVariant;
                             $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                             $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
-                            $html .= '<td>0</td>';
-                            $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
-                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '<td>'.$discountDelivery.'</td>';
+                            $html .= '<td>'.($val['transaction_shipment_go_send']-$discountDelivery??0).'</td>';
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                             $html .= '</tr>';
                         }
 
@@ -1979,10 +2033,13 @@ class ApiTransaction extends Controller
                         $html .= $sameData;
                         $html .= '<td></td>';
                         $html .= '<td></td>';
+                        $html .= $addAdditionalColumn;
                         $html .= '<td>Fee</td>';
+                        $html .= $addAdditionalColumnVariant;
                         $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                         $html .= '<td>'.($val['transaction_grandtotal']-$sub).'</td>';
                         $html .= '<td>'.(float)$val['fee_item'].'</td>';
+                        $html .= '<td>'.(float)$val['discount_delivery_outlet'].'</td>';
                         $html .= '<td>'.(float)$paymentCharge.'</td>';
                         $html .= '<td>'.(float)$val['discount_central'].'</td>';
                         $html .= '<td>'.(float)$val['subscription_central'].'</td>';
@@ -2002,7 +2059,10 @@ class ApiTransaction extends Controller
                 }
                 $dataTrxDetail .= $html;
             }
-            return $dataTrxDetail;
+            return [
+                'list' => $dataTrxDetail,
+                'add_column' => $columnsVariant
+            ];
         }else{
             return $query;
         }
@@ -2027,6 +2087,7 @@ class ApiTransaction extends Controller
 
                 $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                     ->where('transaction_product_modifiers.id_transaction_product', $val['id_transaction_product'])
+                    ->whereNull('transaction_product_modifiers.id_product_modifier_group')
                     ->select('product_modifiers.text')->get()->toArray();
 
                 $promoName = '';
@@ -2041,6 +2102,10 @@ class ApiTransaction extends Controller
                     $promoName = $val['promo_campaign']['promo_title'];
                     $promoType = 'Promo Campaign';
                     $promoCode = $val['promo_campaign']['promo_code'];
+                }elseif (isset($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']) && !empty($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription'])){
+                    $promoName = $val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']['subscription_title'];
+                    $promoType = 'Subscription';
+                    $promoCode = '';
                 }
 
                 $paymentStatus = $val['transaction_payment_status'];
@@ -2120,8 +2185,10 @@ class ApiTransaction extends Controller
                     'Gross Sales' => $val['transaction_grandtotal'],
                     'Discounts' => $val['transaction_product_discount'],
                     'Delivery Fee' => $val['transaction_shipment_go_send']??'0',
+                    'Discount Delivery' => $val['transaction_discount_delivery']??'0',
                     'Subscription' => abs($val['transaction_payment_subscription']['subscription_nominal']??0),
-                    'Total Fee (fee item+fee payment+fee promo+fee subscription) ' => ($paymentCharge == 0? '' : (float)($val['fee_item'] + $paymentCharge + $val['discount'] + $val['subscription'])),
+                    'Total Fee (fee item+fee discount deliver+fee payment+fee promo+fee subscription) ' => ($paymentCharge == 0? '' : (float)($val['fee_item'] + $val['discount_delivery_outlet'] + $paymentCharge + $val['discount'] + $val['subscription'])),
+                    'Fee Discount Delivery' =>(float)$val['discount_delivery_outlet'],
                     'Fee Payment Gateway' =>(float)$paymentCharge,
                     'Net Sales (income outlet)' => (float)$val['income_outlet'],
                     'Payment' => $payment,
@@ -2176,6 +2243,30 @@ class ApiTransaction extends Controller
             yield $dt;
         }
     }
+
+    function getKeyVariant($arr, $id)
+    {
+        foreach ($arr as $key => $val) {
+            if ($val['id_product_variant'] === $id) {
+                return $key;
+            }
+        }
+        return null;
+    }
+
+    function getParentVariant($arr, $id)
+    {
+        $key = $this->getKeyVariant($arr, $id);
+        if ($arr[$key]['id_parent'] == 0)
+        {
+            return $id;
+        }
+        else
+        {
+            return $this->getParentVariant($arr, $arr[$key]['id_parent']);
+        }
+    }
+
 
     public function transactionDetail(TransactionDetail $request){
         if ($request->json('transaction_receipt_number') !== null) {
@@ -2758,8 +2849,8 @@ class ApiTransaction extends Controller
 	                foreach ($list['transaction_vouchers'] as $valueVoc) {
 	                    $result['promo']['code'][$p++]   = $valueVoc['deals_voucher']['voucher_code'];
 	                    $result['payment_detail'][] = [
-	                        'name'          => 'Discount',
-	                        'desc'          => $valueVoc['deals_voucher']['voucher_code'],
+	                        'name'          => 'Diskon',
+	                        'desc'          => 'Promo',
 	                        "is_discount"   => 1,
 	                        'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
 	                    ];
@@ -2769,8 +2860,8 @@ class ApiTransaction extends Controller
 	            if (!empty($list['promo_campaign_promo_code'])) {
 	                $result['promo']['code'][$p++]   = $list['promo_campaign_promo_code']['promo_code'];
 	                $result['payment_detail'][] = [
-	                    'name'          => 'Discount',
-	                    'desc'          => $list['promo_campaign_promo_code']['promo_code'],
+	                    'name'          => 'Diskon',
+	                    'desc'          => 'Promo',
 	                    "is_discount"   => 1,
 	                    'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
 	                ];
@@ -2780,8 +2871,8 @@ class ApiTransaction extends Controller
 	            	$discount = $list['transaction_discount'];
 	                $result['promo']['code'][$p++]   = $list['subscription_user_voucher']['voucher_code'];
 	                $result['payment_detail'][] = [
-	                    'name'          => 'Discount',
-	                    'desc'          => $list['subscription_user_voucher']['voucher_code'],
+	                    'name'          => 'Subscription',
+	                    'desc'          => 'Diskon',
 	                    "is_discount"   => 1,
 	                    'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
 	                ];
@@ -2803,7 +2894,7 @@ class ApiTransaction extends Controller
 	                foreach ($list['transaction_vouchers'] as $valueVoc) {
 	                    $result['promo']['code'][$p++]   = $valueVoc['deals_voucher']['voucher_code'];
 	                    $result['payment_detail'][] = [
-	                        'name'          => 'Discount',
+	                        'name'          => 'Diskon',
 	                        'desc'          => 'Delivery',
 	                        "is_discount"   => 1,
 	                        'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
@@ -2814,7 +2905,7 @@ class ApiTransaction extends Controller
 	            if (!empty($list['promo_campaign_promo_code'])) {
 	                $result['promo']['code'][$p++]   = $list['promo_campaign_promo_code']['promo_code'];
 	                $result['payment_detail'][] = [
-	                    'name'          => 'Discount',
+	                    'name'          => 'Diskon',
 	                    'desc'          => 'Delivery',
 	                    "is_discount"   => 1,
 	                    'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
@@ -2825,7 +2916,7 @@ class ApiTransaction extends Controller
 	            	$discount = $list['transaction_discount'];
 	                $result['promo']['code'][$p++]   = $list['subscription_user_voucher']['voucher_code'];
 	                $result['payment_detail'][] = [
-	                    'name'          => 'Discount',
+	                    'name'          => 'Subscription',
 	                    'desc'          => 'Delivery',
 	                    "is_discount"   => 1,
 	                    'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')

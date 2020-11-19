@@ -153,9 +153,9 @@ class ApiDealsVoucherWebviewController extends Controller
         $i = 0;
         foreach ($data['deals_voucher']['deal']['deals_content'] as $keyContent => $valueContent) {
             if (!empty($valueContent['deals_content_details'])) {
-                $result['deals_content'][$keyContent]['title'] = $valueContent['title'];
+                $result['deals_content'][$i]['title'] = $valueContent['title'];
                 foreach ($valueContent['deals_content_details'] as $key => $value) {
-                    $result['deals_content'][$keyContent]['detail'][$key] = $value['content'];
+                    $result['deals_content'][$i]['detail'][$key] = $value['content'];
                     // $content[$key] = '<li>'.$value['content'].'</li>';
                 }
                 // $result['deals_content'][$keyContent]['detail'] = '<ul style="color:#707070;">'.implode('', $content).'</ul>';
@@ -163,7 +163,6 @@ class ApiDealsVoucherWebviewController extends Controller
             }
         }
 
-        $i = !empty($keyContent) ? $keyContent+1 : $i;
         $result['deals_content'][$i]['is_outlet'] = 1;
         $result['deals_content'][$i]['title'] = 'Tempat Penukaran';
         $result['deals_content'][$i]['brand'] = $data['deals_voucher']['deal']['brand']['name_brand'];
