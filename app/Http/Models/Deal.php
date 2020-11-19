@@ -114,7 +114,8 @@ class Deal extends Model
         'min_basket_size',
         'is_all_shipment',
         'is_all_payment',
-        'product_rule'
+        'product_rule',
+        'brand_rule'
 	];
 
 	protected $appends  = ['url_deals_image', 'deals_status', 'deals_voucher_price_type', 'deals_voucher_price_pretty', 'url_webview'];
@@ -183,6 +184,11 @@ class Deal extends Model
 	public function outlets()
 	{
 		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'deals_outlets', 'id_deals', 'id_outlet');
+	}
+
+	public function deals_outlets()
+	{
+		return $this->hasMany(\App\Http\Models\DealsOutlet::class, 'id_deals');
 	}
 
 	public function outlets_active()

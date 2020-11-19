@@ -31,7 +31,7 @@ use Rap2hpoutre\FastExcel\FastExcel;
 use Rap2hpoutre\FastExcel\SheetCollection;
 use Illuminate\Support\Facades\Storage;
 use File;
-use Mail;
+use App\Lib\SendMail as Mail;
 use Maatwebsite\Excel\Excel;
 
 class ApiDisburseController extends Controller

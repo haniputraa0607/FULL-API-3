@@ -37,7 +37,7 @@ use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
-use Mail;
+use App\Lib\SendMail as Mail;
 use DOMDocument;
 use Illuminate\Support\Facades\Log;
 class ApiIrisController extends Controller

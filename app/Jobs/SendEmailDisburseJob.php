@@ -11,7 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Modules\Disburse\Entities\Disburse;
 use Modules\Disburse\Entities\DisburseOutlet;
 use DB;
-use Mail;
+use App\Lib\SendMail as Mail;
 use Rap2hpoutre\FastExcel\FastExcel;
 use File;
 use Storage;

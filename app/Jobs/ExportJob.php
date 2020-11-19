@@ -15,7 +15,7 @@ use Rap2hpoutre\FastExcel\FastExcel;
 use DB;
 use Storage;
 use Excel;
-use Mail;
+use App\Lib\SendMail as Mail;
 use Mailgun;
 use File;
 use Symfony\Component\HttpFoundation\Request;

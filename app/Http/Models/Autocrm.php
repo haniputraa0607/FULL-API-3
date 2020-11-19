@@ -41,10 +41,11 @@ class Autocrm extends Model
 		'autocrm_inbox_id_reference',
 		'autocrm_forward_email',
 		'autocrm_forward_email_subject',
-		'autocrm_forward_email_content'
+		'autocrm_forward_email_content',
+		'attachment_mail',
+		'attachment_forward'
 	];
 
-	
 	public function autocrm_rule_parents()
 	{
 		return $this->hasMany(\App\Http\Models\AutocrmRuleParent::class, 'id_autocrm')

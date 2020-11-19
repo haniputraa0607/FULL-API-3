@@ -92,7 +92,7 @@ class ApiConfirm extends Controller
                 }
                 $dataProductMidtrans = [
                     'id'       => $value['id_product'],
-                    'price'    => abs($value['transaction_product_price']+$value['transaction_modifier_subtotal']-($value['transaction_product_discount']/$value['transaction_product_qty'])),
+                    'price'    => abs($value['transaction_product_price']+$value['transaction_variant_subtotal']+$value['transaction_modifier_subtotal']-($value['transaction_product_discount']/$value['transaction_product_qty'])),
                     // 'name'     => $value['product']['product_name'].($more_name_text?'('.trim($more_name_text,',').')':''), // name + modifier too long
                     'name'     => $value['product']['product_name'],
                     'quantity' => $value['transaction_product_qty'],
@@ -143,10 +143,20 @@ class ApiConfirm extends Controller
             array_push($dataDetailProduct, $dataTax);
         }
 
-        if ($check['transaction_discount'] > 0) {
+        if ($check['transaction_discount'] != 0) {
             $dataDis = [
                 'id'       => null,
                 'price'    => -abs($check['transaction_discount']),
+                'name'     => 'Discount',
+                'quantity' => 1,
+            ];
+            array_push($dataDetailProduct, $dataDis);
+        }
+
+        if ($check['transaction_discount_delivery'] != 0) {
+            $dataDis = [
+                'id'       => null,
+                'price'    => -abs($check['transaction_discount_delivery']),
                 'name'     => 'Discount',
                 'quantity' => 1,
             ];

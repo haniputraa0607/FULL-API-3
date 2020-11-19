@@ -87,7 +87,8 @@ class PromoCampaign extends Eloquent
         'export_status',
         'is_all_shipment',
         'is_all_payment',
-        'product_rule'
+        'product_rule',
+        'brand_rule'
 	];
 
 	public function user()
