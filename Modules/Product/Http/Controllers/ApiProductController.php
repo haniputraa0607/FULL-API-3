@@ -939,6 +939,10 @@ class ApiProductController extends Controller
             $product->with(['global_price','product_special_price','product_tags','brands','product_promo_categories'=>function($q){$q->select('product_promo_categories.id_product_promo_category');}])->where('products.product_code', $post['product_code']);
         }
 
+        if (isset($post['update_price']) && $post['update_price'] == 1) {
+            $product->where('product_variant_status', 0);
+        }
+
         if (isset($post['product_name'])) {
             $product->where('products.product_name', 'LIKE', '%'.$post['product_name'].'%');
         }
@@ -1139,13 +1143,15 @@ class ApiProductController extends Controller
     	$save = Product::where('id_product', $post['id_product'])->update($data);
 
     	if($save){
-            if(isset($data['product_variant_status']) && !empty($data['product_variant_status'])){
-                ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']], ['product_global_price' => 0]);
-            }else{
+            if($data['product_variant_status'] == 0){
                 $getGroup = ProductVariantGroup::where('id_product',$post['id_product'])->pluck('id_product_variant_group')->toArray();
                 if($getGroup){
                     ProductVariantPivot::whereIn('id_product_variant_group',$getGroup)->delete();
                     ProductVariantGroup::where('id_product',$post['id_product'])->delete();
+                    $getAllOutlets = Outlet::get();
+                    foreach ($getAllOutlets as $o){
+                        Product::refreshVariantTree($post['id_product'], $o);
+                    }
                 }
             }
 
@@ -1176,9 +1182,11 @@ class ApiProductController extends Controller
 
             }
 
-            if(isset($post['product_global_price'])){
+            if(isset($post['product_global_price']) && !empty($post['product_global_price'])){
+                $globalPrice = str_replace(".","",$post['product_global_price']);
+                $globalPrice = str_replace(",","",$post['product_global_price']);
                 ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']],
-                    ['product_global_price' => str_replace(".","",$post['product_global_price'])]);
+                    ['product_global_price' => $globalPrice]);
             }
         }
         if($save){
