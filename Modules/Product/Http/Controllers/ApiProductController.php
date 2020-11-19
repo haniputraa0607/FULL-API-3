@@ -1174,7 +1174,7 @@ class ApiProductController extends Controller
 
             }
 
-            if(isset($post['product_global_price'])){
+            if(isset($post['product_global_price']) && !empty($post['product_global_price'])){
                 $globalPrice = str_replace(".","",$post['product_global_price']);
                 $globalPrice = str_replace(",","",$post['product_global_price']);
                 ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']],
