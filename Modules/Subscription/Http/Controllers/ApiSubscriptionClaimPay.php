@@ -124,240 +124,248 @@ class ApiSubscriptionClaimPay extends Controller
     /* CLAIM SUBSCRIPTION */
     function claim(Paid $request) {
 
-        $post     = $request->json()->all();
-        if (isset($post['pin']) && strtolower($post['payment_method']) == 'balance') {
-            if (!password_verify($post['pin'], $request->user()->password)) {
-                return [
-                    'status' => 'fail',
-                    'messages' => ['Incorrect PIN']
-                ];
-            }
-        }
-        $dataSubs = app($this->claim)->checkSubsData($request->json('id_subscription'));
-        $id_user  = $request->user()->id;
-        $dataSubsUser = app($this->claim)->checkSubsUser($id_user, $dataSubs);
+    	try {
+	        $post     = $request->json()->all();
+	        if (isset($post['pin']) && strtolower($post['payment_method']) == 'balance') {
+	            if (!password_verify($post['pin'], $request->user()->password)) {
+	                return [
+	                    'status' => 'fail',
+	                    'messages' => ['Incorrect PIN']
+	                ];
+	            }
+	        }
+	        $dataSubs = app($this->claim)->checkSubsData($request->json('id_subscription'));
+	        $id_user  = $request->user()->id;
+	        $dataSubsUser = app($this->claim)->checkSubsUser($id_user, $dataSubs);
 
-        if (empty($dataSubs)) {
-            return response()->json([
-                'status'   => 'fail',
-                'messages' => ['Subscription not found']
-            ]);
-        }
-        else {
-            DB::beginTransaction();
-            // CEK VALID DATE
-            if (app($this->claim)->checkValidDate($dataSubs)) {
+	        if (empty($dataSubs)) {
+	            return response()->json([
+	                'status'   => 'fail',
+	                'messages' => ['Subscription tidak ditemukan']
+	            ]);
+	        }
+	        else {
 
-                //Check if paid type subscription
-                if (!empty($dataSubs->subscription_price_cash) || !empty($dataSubs->subscription_price_point)) {
+	            // CEK VALID DATE
+	            if (app($this->claim)->checkValidDate($dataSubs)) {
 
-                    if (($dataSubsUser[0]['paid_status']??false) == 'Pending') {
-                        DB::rollback();
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['Your subscription is pending, Please complete your subscription payment.']
-                        ]);
-                    }
-                    // CEK LIMIT USER
-                    if (app($this->claim)->checkUserLimit($dataSubs, $dataSubsUser)) {
+	                //Check if paid type subscription
+	                if (!empty($dataSubs->subscription_price_cash) || !empty($dataSubs->subscription_price_point)) {
 
-                        // CEK IF USER SUBSCRIPTION IS EXPIRED OR NULL
-                        if (app($this->claim)->checkSubsUserExpired($dataSubs, $dataSubsUser)) {
+	                    if (($dataSubsUser[0]['paid_status']??false) == 'Pending') {
+	                        DB::rollback();
+	                        return response()->json([
+	                            'status'   => 'fail',
+	                            'messages' => ['Your subscription is pending, Please complete your subscription payment.']
+	                        ]);
+	                    }
+	                    // CEK LIMIT USER
+	                    if (app($this->claim)->checkUserLimit($dataSubs, $dataSubsUser)) {
 
-                            //check if type is point
-                            if (!empty($dataSubs->subscription_price_point)) {
-                                if (!app($this->claim)->checkSubsPoint($dataSubs, $request->user()->id)) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'   => 'fail',
-                                        'messages' => ['Your point not enough.']
-                                    ]);
-                                }
-                            } 
-                            // elseif ( $post['payment_method'] == 'balance' ) {
+	                        // CEK IF USER SUBSCRIPTION IS EXPIRED OR NULL
+	                        if (app($this->claim)->checkSubsUserExpired($dataSubs, $dataSubsUser)) {
 
-                            //     DB::rollback();
-                            //     return response()->json([
-                            //         'status'   => 'fail',
-                            //         'messages' => ['You can\'t buy this subscription with point.']
-                            //     ]);
-                            // }
+	                            //check if type is point
+	                            if (!empty($dataSubs->subscription_price_point)) {
+	                                if (!app($this->claim)->checkSubsPoint($dataSubs, $request->user()->id)) {
+	                                    DB::rollback();
+	                                    return response()->json([
+	                                        'status'   => 'fail',
+	                                        'messages' => ['Your point not enough.']
+	                                    ]);
+	                                }
+	                            } 
+	                            // elseif ( $post['payment_method'] == 'balance' ) {
 
-                            //CEK IF BALANCE O
-                            if(isset($post['balance']) && $post['balance'] == true){
-                                if(app($this->claim)->getPoint($request->user()->id) <= 0){
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'   => 'fail',
-                                        'messages' => ['Your need more point.']
-                                    ]);
-                                }
-                            }
+	                            //     DB::rollback();
+	                            //     return response()->json([
+	                            //         'status'   => 'fail',
+	                            //         'messages' => ['You can\'t buy this subscription with point.']
+	                            //     ]);
+	                            // }
 
-                            $id_subscription = $dataSubs->id_subscription;
+	                            //CEK IF BALANCE O
+	                            if(isset($post['balance']) && $post['balance'] == true){
+	                                if(app($this->claim)->getPoint($request->user()->id) <= 0){
+	                                    DB::rollback();
+	                                    return response()->json([
+	                                        'status'   => 'fail',
+	                                        'messages' => ['Your need more point.']
+	                                    ]);
+	                                }
+	                            }
 
-                            // count claimed subscription by id_subscription (how many times subscription are claimed)
-                            $subsClaimed = 0;
-                            if ($dataSubs->subscription_total != null) {
-                                $subsVoucher = SubscriptionUser::where('id_subscription', '=', $id_subscription)->where('paid_status', '=', 'Completed')->count();
-                                if ($subsVoucher > 0) {
-                                    $subsClaimed = $subsVoucher;
-                                    if(is_float($subsClaimed)){ // if miss calculate use deals_total_claimed
-                                        $subsClaimed = $dataSubs->subscription_bought;
-                                    }
-                                }
-                            }
+	                            $id_subscription = $dataSubs->id_subscription;
 
-                            // check available voucher
-                            if ($dataSubs->subscription_total > $subsClaimed || $dataSubs->subscription_total == null) {
-                                // create subscription user and subscription voucher x times
-                                $user_voucher_array = [];
+	                            // count claimed subscription by id_subscription (how many times subscription are claimed)
+	                            $subsClaimed = 0;
+	                            if ($dataSubs->subscription_total != null) {
+	                                $subsVoucher = SubscriptionUser::where('id_subscription', '=', $id_subscription)->where('paid_status', '=', 'Completed')->count();
+	                                if ($subsVoucher > 0) {
+	                                    $subsClaimed = $subsVoucher;
+	                                    if(is_float($subsClaimed)){ // if miss calculate use deals_total_claimed
+	                                        $subsClaimed = $dataSubs->subscription_bought;
+	                                    }
+	                                }
+	                            }
 
-                                // create user Subscription
-                                $user_subs = app($this->claim)->createSubscriptionUser($id_user, $dataSubs);
-                                $voucher = $user_subs;
+	                            // check available voucher
+					            DB::beginTransaction();
+	                            if ($dataSubs->subscription_total > $subsClaimed || $dataSubs->subscription_total == null) {
+	                                // create subscription user and subscription voucher x times
+	                                $user_voucher_array = [];
 
-                                if (!$user_subs) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'   => 'fail',
-                                        'messages' => ['Failed to save data.']
-                                    ]);
-                                }
+	                                // create user Subscription
+	                                $user_subs = app($this->claim)->createSubscriptionUser($id_user, $dataSubs);
+	                                $voucher = $user_subs;
 
-                                $subs_receipt = 'SUBS-'.time().sprintf("%05d", $voucher->id_subscription_user);
-                                $updateSubs = SubscriptionUser::where('id_subscription_user', '=', $voucher->id_subscription_user)->update(['subscription_user_receipt_number' => $subs_receipt]);
+	                                if (!$user_subs) {
+	                                    DB::rollback();
+	                                    return response()->json([
+	                                        'status'   => 'fail',
+	                                        'messages' => ['Failed to save data.']
+	                                    ]);
+	                                }
 
-                                if (!$updateSubs) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'   => 'fail',
-                                        'messages' => ['Failed to update data.']
-                                    ]);
-                                }
+	                                $subs_receipt = 'SUBS-'.time().sprintf("%05d", $voucher->id_subscription_user);
+	                                $updateSubs = SubscriptionUser::where('id_subscription_user', '=', $voucher->id_subscription_user)->update(['subscription_user_receipt_number' => $subs_receipt]);
 
-                                $voucher['subscription_user_receipt_number'] = $subs_receipt;
+	                                if (!$updateSubs) {
+	                                    DB::rollback();
+	                                    return response()->json([
+	                                        'status'   => 'fail',
+	                                        'messages' => ['Failed to update data.']
+	                                    ]);
+	                                }
 
-                                for ($i=1; $i <= $dataSubs->subscription_voucher_total; $i++) {
+	                                $voucher['subscription_user_receipt_number'] = $subs_receipt;
 
-                                    // generate voucher code
-                                    do {
-                                        $code = app($this->voucher)->generateCode($id_subscription);
-                                        $voucherCode = SubscriptionUserVoucher::where('id_subscription_user', '=', $voucher->id_subscription_user)
-                                                     ->where('voucher_code', $code)
-                                                     ->first();
-                                    } while (!empty($voucherCode));
+	                                for ($i=1; $i <= $dataSubs->subscription_voucher_total; $i++) {
 
-                                    // create user voucher
-                                    $subs_voucher = SubscriptionUserVoucher::create([
-                                        'id_subscription_user' => $voucher->id_subscription_user,
-                                        'voucher_code'         => strtoupper($code)
-                                    ]);
+	                                    // generate voucher code
+	                                    do {
+	                                        $code = app($this->voucher)->generateCode($id_subscription);
+	                                        $voucherCode = SubscriptionUserVoucher::where('id_subscription_user', '=', $voucher->id_subscription_user)
+	                                                     ->where('voucher_code', $code)
+	                                                     ->first();
+	                                    } while (!empty($voucherCode));
 
-                                    if ($subs_voucher) {
-                                        $subs_voucher_data = SubscriptionUser::with(['user', 'subscription_user_vouchers'])->where('id_subscription_user', $voucher->id_subscription_user)->first();
+	                                    // create user voucher
+	                                    $subs_voucher = SubscriptionUserVoucher::create([
+	                                        'id_subscription_user' => $voucher->id_subscription_user,
+	                                        'voucher_code'         => strtoupper($code)
+	                                    ]);
 
-                                        // add notif mobile
-                                        // $addNotif = MyHelper::addUserNotification($create->id_user,'voucher');
-                                    }
+	                                    if ($subs_voucher) {
+	                                        $subs_voucher_data = SubscriptionUser::with(['user', 'subscription_user_vouchers'])->where('id_subscription_user', $voucher->id_subscription_user)->first();
 
-                                    if (!$subs_voucher) {
-                                        DB::rollback();
-                                        return response()->json([
-                                            'status'   => 'fail',
-                                            'messages' => ['Failed to save data.']
-                                        ]);
-                                    }
+	                                        // add notif mobile
+	                                        // $addNotif = MyHelper::addUserNotification($create->id_user,'voucher');
+	                                    }
 
-                                    // keep user voucher in order to return in response
-                                    array_push($user_voucher_array, $subs_voucher_data);
+	                                    if (!$subs_voucher) {
+	                                        DB::rollback();
+	                                        return response()->json([
+	                                            'status'   => 'fail',
+	                                            'messages' => ['Failed to save data.']
+	                                        ]);
+	                                    }
 
-                                }   // end of for
+	                                    // keep user voucher in order to return in response
+	                                    array_push($user_voucher_array, $subs_voucher_data);
 
-                                // update deals total bought
-                                $updateSubs = app($this->claim)->updateSubs($dataSubs);
-                            }
-                            else {
-                                DB::rollback();
-                                return response()->json([
-                                    'status'   => 'fail',
-                                    // 'messages' => ['Subscription is runs out.']
-                                    'messages' => ['Halo Kak, Mohon Maaf Voucher Telah Habis. Yuk Gunakan Voucher Lainnya pada Page Subscriptions 😊🙏']
-                                ]);
-                            }
+	                                }   // end of for
 
-                            if ($voucher) {
+	                                // update deals total bought
+	                                $updateSubs = app($this->claim)->updateSubs($dataSubs);
+	                            }
+	                            else {
+	                                DB::rollback();
+	                                return response()->json([
+	                                    'status'   => 'fail',
+	                                    // 'messages' => ['Subscription is runs out.']
+	                                    'messages' => ['Halo Kak, Mohon Maaf Voucher Telah Habis. Yuk Gunakan Voucher Lainnya pada Page Subscriptions 😊🙏']
+	                                ]);
+	                            }
 
-                                if (!empty($dataSubs->subscription_price_point)){
-                                    $req['payment_method'] = 'balance';
-                                }else{
-                                    $req['payment_method'] = $post['payment_method'];
-                                }
-                                $req['id_subscription_user'] =  $voucher['id_subscription_user'];
-                                $payNow = new PayNow($req);
+	                            if ($voucher) {
 
-                                DB::commit();
-                                return $this->bayarSekarang($payNow);
-                            }
-                            else {
-                                DB::rollback();
-                                return response()->json([
-                                    'status'   => 'fail',
-                                    'messages' => ['Transaction is failed.']
-                                ]);
-                            }
-                            return response()->json(MyHelper::checkCreate($voucher));
-                            DB::commit();
+	                                if (!empty($dataSubs->subscription_price_point)){
+	                                    $req['payment_method'] = 'balance';
+	                                }else{
+	                                    $req['payment_method'] = $post['payment_method'];
+	                                }
+	                                $req['id_subscription_user'] =  $voucher['id_subscription_user'];
+	                                $payNow = new PayNow($req);
 
-                        }
-                        else {
-                        	switch ($dataSubs->new_purchase_after) {
-				        		case 'Empty':
-				        			$msg = 'telah habis digunakan';
-				        			break;
-				        		case 'Empty Expired':
-				        			$msg = 'telah habis digunakan atau telah mencapai tanggal batas pemakaian';
-				        			break;
-				        		default:
-				        			$msg = 'telah mencapai tanggal batas pemakaian';
-				        			break;
-				        	}
-                            DB::rollback();
-                            return response()->json([
-                                'status'   => 'fail',
-                                // 'messages' => ['You have participated, you can buy this subscription again after your previous subscription is '.$msg]
-                                'messages' => ['Subscriptions sudah dimiliki. Subscriptions tidak bisa didapatkan sebelum Subscriptions yang dimiliki saat ini '.$msg.'.']
-                            ]);
-                        }
-                    }
-                    else {
-                        DB::rollback();
-                        return response()->json([
-                            'status'   => 'fail',
-                            // 'messages' => ['You have reach max limit to buy this subscription.']
-                            'messages' => ['Anda telah mencapai batas maksimal untuk mendapatkan Subscription ini.']
-                        ]);
-                    }
+	                                DB::commit();
+	                                return $this->bayarSekarang($payNow);
+	                            }
+	                            else {
+	                                DB::rollback();
+	                                return response()->json([
+	                                    'status'   => 'fail',
+	                                    'messages' => ['Transaction is failed.']
+	                                ]);
+	                            }
+	                            return response()->json(MyHelper::checkCreate($voucher));
+	                            DB::commit();
 
-                }
-                else {
-                    DB::rollback();
-                    return response()->json([
-                        'status' => 'fail',
-                        'messages' => ['This is a free subscription.']
-                    ]);
-                }
-            }
-            else {
-                DB::rollback();
-                return response()->json([
-                    'status' => 'fail',
-                    // 'messages' => ['Date valid '.date('d F Y', strtotime($dataSubs->subscription_start)).' until '.date('d F Y', strtotime($dataSubs->subscription_end))]
-                    'messages' => ['Tanggal berlaku '.date('d F Y', strtotime($dataSubs->subscription_start)).' sampai '.date('d F Y', strtotime($dataSubs->subscription_end))]
-                ]);
-            }
+	                        }
+	                        else {
+	                        	switch ($dataSubs->new_purchase_after) {
+					        		case 'Empty':
+					        			$msg = 'telah habis digunakan';
+					        			break;
+					        		case 'Empty Expired':
+					        			$msg = 'telah habis digunakan atau telah mencapai tanggal batas pemakaian';
+					        			break;
+					        		default:
+					        			$msg = 'telah mencapai tanggal batas pemakaian';
+					        			break;
+					        	}
+	                            DB::rollback();
+	                            return response()->json([
+	                                'status'   => 'fail',
+	                                // 'messages' => ['You have participated, you can buy this subscription again after your previous subscription is '.$msg]
+	                                'messages' => ['Subscriptions sudah dimiliki. Subscriptions tidak bisa didapatkan sebelum Subscriptions yang dimiliki saat ini '.$msg.'.']
+	                            ]);
+	                        }
+	                    }
+	                    else {
+	                        DB::rollback();
+	                        return response()->json([
+	                            'status'   => 'fail',
+	                            // 'messages' => ['You have reach max limit to buy this subscription.']
+	                            'messages' => ['Anda telah mencapai batas maksimal untuk mendapatkan Subscription ini.']
+	                        ]);
+	                    }
 
-        }
+	                }
+	                else {
+	                    DB::rollback();
+	                    return response()->json([
+	                        'status' => 'fail',
+	                        'messages' => ['This is a free subscription.']
+	                    ]);
+	                }
+	            }
+	            else {
+	                DB::rollback();
+	                return response()->json([
+	                    'status' => 'fail',
+	                    // 'messages' => ['Date valid '.date('d F Y', strtotime($dataSubs->subscription_start)).' until '.date('d F Y', strtotime($dataSubs->subscription_end))]
+	                    'messages' => ['Tanggal berlaku '.date('d F Y', strtotime($dataSubs->subscription_start)).' sampai '.date('d F Y', strtotime($dataSubs->subscription_end))]
+	                ]);
+	            }
+	        }
+        } catch (\Exception $e) {
+    		\Log::error($e);
+    		return response()->json([
+	            'status'   => 'fail',
+	            'messages' => ['Proses pembelian subscription gagal, silakan mencoba kembali']
+	        ]);	
+    	}
     }
 
     /* BAYAR SEKARANG */
