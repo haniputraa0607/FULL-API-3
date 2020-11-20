@@ -2490,7 +2490,7 @@ class ApiPromoCampaign extends Controller
     	{
     		if ( !empty($query['is_all_product']) || empty($query['subscription_products']) ) {
     			$applied_product = '*';
-	        	$product = 'semua product';
+	        	$product = 'semua product bertanda khusus';
     		}
     		elseif( !empty($query['subscription_products']) )
     		{
@@ -2524,7 +2524,7 @@ class ApiPromoCampaign extends Controller
 	    	if ( ($query[$source.'_product_discount_rules']['is_all_product']??false) == 1 || ($query['promo_type']??false) == 'Referral') 
 	        {
 	        	$applied_product = '*';
-	        	$product = 'semua product';
+	        	$product = 'semua product bertanda khusus';
 	        }
 	        elseif ( !empty($query[$source.'_product_discount']) )
 	        {
@@ -2545,7 +2545,7 @@ class ApiPromoCampaign extends Controller
 	        elseif ( !empty($query[$source.'_discount_bill_rules']) )
 	        {
 	        	$applied_product = '*';
-	        	$product = 'semua product';
+	        	$product = 'semua product bertanda khusus';
 	        }
 	        else
 	        {

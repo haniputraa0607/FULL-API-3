@@ -125,9 +125,11 @@ class ApiProductModifierGroupController extends Controller
             }
 
             if(!empty($post['data_modifier'])){
+                $dataModifier = array_values($post['data_modifier']);
                 $insertModifier = [];
-                foreach ($post['data_modifier'] as $modifier){
+                foreach ($dataModifier as $keyMod=> $modifier){
                     $insertModifier[] = [
+                        'product_modifier_order' => $keyMod,
                         'id_product_modifier_group' => $id_product_modifier_group,
                         'modifier_type' => 'Modifier Group',
                         'type' => 'Modifier Group',
@@ -205,8 +207,9 @@ class ApiProductModifierGroupController extends Controller
             }
 
             if(!empty($post['data_modifier'])){
+                $dataModifier = array_values($post['data_modifier']);
                 $insertModifier = [];
-                foreach ($post['data_modifier'] as $modifier){
+                foreach ($dataModifier as $keyMod => $modifier){
                     if(!isset($modifier['name']) && isset($modifier['code']) && !empty($modifier['code'])){
                         $delete = ProductModifier::where('code', $modifier['code'])->delete();
                         if(!$delete){
@@ -218,6 +221,7 @@ class ApiProductModifierGroupController extends Controller
                         }
                     }elseif (isset($modifier['name']) && !empty($modifier['name']) && isset($modifier['code']) && !empty($modifier['code'])){
                         $dtUpdate = [
+                            'product_modifier_order' => $keyMod,
                             'text' => $modifier['name'],
                             'product_modifier_visibility' => (isset($modifier['visibility']) ? 'Visible': 'Hidden'),
                             'updated_at' => date('Y-m-d H:i:s')
@@ -235,6 +239,7 @@ class ApiProductModifierGroupController extends Controller
                         }
                     }else{
                         $update = ProductModifier::create([
+                            'product_modifier_order' => $keyMod,
                             'id_product_modifier_group' => $id_product_modifier_group,
                             'modifier_type' => 'Modifier Group',
                             'type' => 'Modifier Group',
