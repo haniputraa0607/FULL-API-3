@@ -2606,7 +2606,7 @@ class ApiPromoCampaign extends Controller
     			unset($shipment_list['GO-SEND']);
     		}
     		if (isset($shipment_list['Pickup Order'])) {
-    			$shipment_list['Pickup Up'] = $shipment_list['Pickup Order'];
+    			$shipment_list['Pick Up'] = $shipment_list['Pickup Order'];
     			unset($shipment_list['Pickup Order']);
     		}
     		$shipment_list = array_flip($shipment_list);
@@ -2673,7 +2673,7 @@ class ApiPromoCampaign extends Controller
 			}else{
 	        	$key = $brand ? 'description_product_discount_brand_no_qty' : 'description_product_discount_no_qty';
 	    		$key_null = $brand ? 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%' : 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%';
-	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
+	    		// $desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 	    		$desc = $key_null;
 
 			}
@@ -2701,7 +2701,8 @@ class ApiPromoCampaign extends Controller
 	    			$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk';
 	        	}
 
-	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
+	    		// $desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
+	    		$desc = $key_null;
 
 	    		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'qty'=>$qty, 'brand'=>$brand]);
 	    	}
@@ -2724,7 +2725,8 @@ class ApiPromoCampaign extends Controller
 	    		$key = 'description_tier_discount_brand';
 	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%';
 	    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
-	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
+	    		// $desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
+	    		$desc = $key_null;
 
 	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax, 'brand'=>$brand]);
 	    	}
@@ -2745,8 +2747,9 @@ class ApiPromoCampaign extends Controller
 	    		}
 	    		$key = 'description_buyxgety_discount_brand';
 	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%';
-	    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
-	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
+	    		$minmax = $min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
+	    		// $desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
+	    		$desc = $key_null;
 
 	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax, 'brand'=>$brand]);
 	    	}

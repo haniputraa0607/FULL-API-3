@@ -458,14 +458,6 @@ class ApiCategoryController extends Controller
             }
         }
 
-        // check promo
-       	$pct = new PromoCampaignTools;
-        $promo_data = $pct->applyPromoProduct($post, $result, 'list_product', $promo_error);
-
-        if ($promo_data) {
-            $result = $promo_data;
-        }
-
         // get detail of every key
         foreach ($result as $id_brand => $categories) {
             foreach ($categories as $id_category => $products) {
@@ -508,6 +500,14 @@ class ApiCategoryController extends Controller
         usort($result, function ($a, $b) {
             return $a['brand']['order_brand'] <=> $b['brand']['order_brand'];
         });
+
+        // check promo
+       	$pct = new PromoCampaignTools;
+        $promo_data = $pct->applyPromoProduct($post, $result, 'list_product2', $promo_error);
+
+        if ($promo_data) {
+            $result = $promo_data;
+        }
 
         $result = MyHelper::checkGet($result);
         $result['promo_error'] = $promo_error;

@@ -79,6 +79,7 @@ class ApiConfirm extends Controller
         $countGrandTotal = $check['transaction_grandtotal'];
 
         if (isset($check['productTransaction'])) {
+            $totalPriceProduct = 0;
             foreach ($check['productTransaction'] as $key => $value) {
                 // get modifiers name
                 $mods           = TransactionProductModifier::select('qty', 'text')->where('id_transaction_product', $value['id_transaction_product'])->get()->toArray();
@@ -97,6 +98,8 @@ class ApiConfirm extends Controller
                     'name'     => $value['product']['product_name'],
                     'quantity' => $value['transaction_product_qty'],
                 ];
+
+                $totalPriceProduct+= ($dataProductMidtrans['quantity'] * $dataProductMidtrans['price']);
 
                 array_push($productMidtrans, $dataProductMidtrans);
                 array_push($dataDetailProduct, $dataProductMidtrans);
@@ -143,26 +146,6 @@ class ApiConfirm extends Controller
             array_push($dataDetailProduct, $dataTax);
         }
 
-        if ($check['transaction_discount'] != 0) {
-            $dataDis = [
-                'id'       => null,
-                'price'    => -abs($check['transaction_discount']),
-                'name'     => 'Discount',
-                'quantity' => 1,
-            ];
-            array_push($dataDetailProduct, $dataDis);
-        }
-
-        if ($check['transaction_discount_delivery'] != 0) {
-            $dataDis = [
-                'id'       => null,
-                'price'    => -abs($check['transaction_discount_delivery']),
-                'name'     => 'Discount',
-                'quantity' => 1,
-            ];
-            array_push($dataDetailProduct, $dataDis);
-        }
-
         if ($check['transaction_payment_subscription']) {
             $countGrandTotal -= $check['transaction_payment_subscription']['subscription_nominal'];
             $dataDis = [
@@ -205,6 +188,26 @@ class ApiConfirm extends Controller
 
                 $detailPayment['balance'] = -$checkPaymentBalance['balance_nominal'];
             }
+        }
+
+        if ($check['transaction_discount'] != 0 && ($countGrandTotal < $totalPriceProduct)) {
+            $dataDis = [
+                'id'       => null,
+                'price'    => -abs($check['transaction_discount']),
+                'name'     => 'Discount',
+                'quantity' => 1,
+            ];
+            array_push($dataDetailProduct, $dataDis);
+        }
+
+        if ($check['transaction_discount_delivery'] != 0) {
+            $dataDis = [
+                'id'       => null,
+                'price'    => -abs($check['transaction_discount_delivery']),
+                'name'     => 'Discount',
+                'quantity' => 1,
+            ];
+            array_push($dataDetailProduct, $dataDis);
         }
 
         if ($check['trasaction_type'] == 'Delivery') {
@@ -252,14 +255,12 @@ class ApiConfirm extends Controller
                     'customer_details'    => $dataUser,
                     'shipping_address'    => $dataShipping,
                 );
-
                 $connectMidtrans = Midtrans::token($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $dataShipping, $dataDetailProduct, 'trx', $check['transaction_receipt_number']);
             } else {
                 $dataMidtrans = array(
                     'transaction_details' => $transaction_details,
                     'customer_details'    => $dataUser,
                 );
-
                 $connectMidtrans = Midtrans::token($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $ship=null, $dataDetailProduct, 'trx', $check['transaction_receipt_number']);
             }
 
