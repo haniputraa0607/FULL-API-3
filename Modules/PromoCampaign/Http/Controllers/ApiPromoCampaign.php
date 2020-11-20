@@ -2606,7 +2606,7 @@ class ApiPromoCampaign extends Controller
     			unset($shipment_list['GO-SEND']);
     		}
     		if (isset($shipment_list['Pickup Order'])) {
-    			$shipment_list['Pickup Up'] = $shipment_list['Pickup Order'];
+    			$shipment_list['Pick Up'] = $shipment_list['Pickup Order'];
     			unset($shipment_list['Pickup Order']);
     		}
     		$shipment_list = array_flip($shipment_list);
