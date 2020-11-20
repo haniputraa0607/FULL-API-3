@@ -3131,45 +3131,92 @@ class ApiOutletApp extends Controller
             'desc'   => $quantity . ' items',
             'amount' => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY'),
         ];
+
+        if ($list['transaction_discount']) {
+        	$discount = abs($list['transaction_discount']);
+            $p = 0;
+            if (!empty($list['transaction_vouchers'])) {
+                foreach ($list['transaction_vouchers'] as $valueVoc) {
+                    $result['promo']['code'][$p++]   = $valueVoc['deals_voucher']['voucher_code'];
+                    $result['payment_detail'][] = [
+                        'name'          => 'Diskon (Promo)',
+                        'desc'          => null,
+                        "is_discount"   => 1,
+                        'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                    ];
+                }
+            }
+
+            if (!empty($list['promo_campaign_promo_code'])) {
+                $result['promo']['code'][$p++]   = $list['promo_campaign_promo_code']['promo_code'];
+                $result['payment_detail'][] = [
+                    'name'          => 'Diskon (Promo)',
+                    'desc'          => null,
+                    "is_discount"   => 1,
+                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                ];
+            }
+
+            if (!empty($list['id_subscription_user_voucher']) && !empty($list['transaction_discount'])) {
+                $result['payment_detail'][] = [
+                    'name'          => 'Subscription (Diskon)',
+                    'desc'          => null,
+                    "is_discount"   => 1,
+                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                ];
+            }
+        }
+
         if ($list['transaction_shipment_go_send'] > 0) {
             $result['payment_detail'][] = [
-                'name'      => 'Delivery',
+                'name'      => 'Delivery (GO-SEND)',
                 'desc'      => $list['detail']['pickup_by'],
                 'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'],'_CURRENCY')
             ];
         }
 
-        $p = 0;
-        $result['promo_name'] = null;
-        if (!empty($list['transaction_vouchers'])) {
-            foreach ($list['transaction_vouchers'] as $valueVoc) {
-        		$result['promo_name'] = $valueVoc['deals_voucher']['deal']['deals_title'];
-                $result['promo']['code'][$p++] = $valueVoc['deals_voucher']['voucher_code'];
-                $result['payment_detail'][]    = [
-                    'name'        => 'Discount',
-                    'desc'        => $valueVoc['deals_voucher']['voucher_code'],
-                    "is_discount" => 1,
-                    'amount'      => MyHelper::requestNumber($discount, '_CURRENCY'),
+        if ($list['transaction_discount_delivery']) {
+        	$discount = abs($list['transaction_discount_delivery']);
+            $p = 0;
+            if (!empty($list['transaction_vouchers'])) {
+                foreach ($list['transaction_vouchers'] as $valueVoc) {
+                    $result['promo']['code'][$p++]   = $valueVoc['deals_voucher']['voucher_code'];
+                    $result['payment_detail'][] = [
+                        'name'          => 'Diskon (Delivery)',
+                        'desc'          => null,
+                        "is_discount"   => 1,
+                        'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                    ];
+                }
+            }
+
+            if (!empty($list['promo_campaign_promo_code'])) {
+                $result['promo']['code'][$p++]   = $list['promo_campaign_promo_code']['promo_code'];
+                $result['payment_detail'][] = [
+                    'name'          => 'Diskon (Delivery)',
+                    'desc'          => null,
+                    "is_discount"   => 1,
+                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                ];
+            }
+
+            if (!empty($list['id_subscription_user_voucher']) && !empty($list['transaction_discount_delivery'])) {
+                $result['payment_detail'][] = [
+                    'name'          => 'Subscription (Delivery)',
+                    'desc'          => null,
+                    "is_discount"   => 1,
+                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
                 ];
             }
         }
 
-        if (!empty($list['promo_campaign_promo_code'])) {
-        	$result['promo_name'] = $list['promo_campaign_promo_code']['promo_campaign']['promo_title'];
-            $result['promo']['code'][$p++] = $list['promo_campaign_promo_code']['promo_code'];
-            $result['payment_detail'][]    = [
-                'name'        => 'Discount',
-                'desc'        => $list['promo_campaign_promo_code']['promo_code'],
-                "is_discount" => 1,
-                'amount'      => MyHelper::requestNumber($discount, '_CURRENCY'),
-            ];
-        }
-
         if (!empty($list['transaction_payment_subscription'])) {
+        	$payment_subscription = abs($list['transaction_payment_subscription']['subscription_nominal']);
         	$result['promo_name'] = $list['transaction_payment_subscription']['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'];
-            $list['payment'][] = [
+            $result['payment_detail'][] = [
                 'name'      => 'Subscription',
-                'amount'    => $list['transaction_payment_subscription']['subscription_nominal']
+                'desc'		=> null,
+                'amount'    => '- '.MyHelper::requestNumber($payment_subscription,'_CURRENCY')
             ];
         }
 
