@@ -1911,6 +1911,14 @@ class PromoCampaignTools{
 	        		}
 	        	}
 	        }
+        }elseif ($list_product_source == 'list_product2') {
+        	foreach ($result as $key => $categories) {
+        		foreach ($categories['list'] as $key2 => $products) {
+        			foreach ($products['list'] as $key3 => $product) {
+        				$result[$key]['list'][$key2]['list'][$key3]['is_promo'] = 0;
+        			}
+        		}
+        	}
         }else{
         	foreach ($result as $key => $value) {
 	            $result[$key]['is_promo'] = 0;
@@ -2007,8 +2015,10 @@ class PromoCampaignTools{
 
         if ($list_product_source == 'list_product') {
         	$result = $this->checkListProduct($applied_product, $id_brand_promo, $brands, $result);
-        }else{
+        }elseif ($list_product_source == 'search_product') {
         	$result = $this->checkListProduct2($applied_product, $id_brand_promo, $brands, $result);
+        }elseif($list_product_source == 'list_product2'){
+        	$result = $this->checkListProduct3($applied_product, $brands, $result);
         }
 
         return $result;
@@ -2168,6 +2178,80 @@ class PromoCampaignTools{
         }
 
         return $products;
+    }
+
+    public function checkListProduct3($applied_product, $brands, $list_product)
+    {
+    	$result = $list_product;
+
+        $promo_product = []; // store unique product that get promo
+        $flagged_product = []; // to check if product is in promo product or not
+		foreach ($result as $key => $categories) {
+			foreach ($categories['list'] as $key2 => $products) {
+				foreach ($products['list'] as $key3 => $product) {
+					if ($applied_product == '*') { // all product
+						if (in_array($product['id_brand'], $brands)) {
+		        			$result[$key]['list'][$key2]['list'][$key3]['is_promo'] = 1;
+		        			if (isset($flagged_product[$product['id_brand']][$product['id_product']])) {
+		        				continue;
+		        			}
+		        			// if promo for all product, doesnt create promo category
+		        			// $promo_product[] = $result[$key]['list'][$key2]['list'][$key3];
+		        			$flagged_product[$product['id_brand']][$product['id_product']] = 1;
+						}
+					}else{
+						foreach ($applied_product as $val) { // selected multiple product
+							if ($val['id_brand'] == $product['id_brand'] && $val['id_product'] == $product['id_product']) {
+			        			$result[$key]['list'][$key2]['list'][$key3]['is_promo'] = 1;
+								if (isset($flagged_product[$product['id_brand']][$product['id_product']])) {
+			        				continue;
+			        			}
+			        			$promo_product[] = $result[$key]['list'][$key2]['list'][$key3];
+			        			$flagged_product[$product['id_brand']][$product['id_product']] = 1;
+							}
+						}
+					}
+				}
+			}
+		}
+
+        $brand_get_promo = [];
+        if (!empty($promo_product)) {
+        	$promo_category = [
+        		'category' => [
+        			"product_category_name" => "Promo",
+	                "product_category_order" => -2000000,
+	                "id_product_category" => null,
+	                "url_product_category_photo" => ""
+        		],
+        		'list'	=> $promo_product
+        	];
+
+        	$promo_brand = [
+        		"brand" => [
+	                "id_brand" => 0,
+	                "name_brand" => "Promo",
+	                "code_brand" => "0",
+	                "order_brand" => 0
+	            ],
+	            "list" => [$promo_category]
+        	];
+
+        	$brand_get_promo[] = $promo_brand;
+        }
+
+    	$brand_not_get_promo = [];
+		foreach ($result as $value) {
+			if (isset($flagged_product[$value['brand']['id_brand']])) {
+				$brand_get_promo[] = $value;
+			}else{
+				$brand_not_get_promo[] = $value;
+			}
+		}
+
+		$result = array_merge($brand_get_promo, $brand_not_get_promo);
+
+        return $result;
     }
 }
 ?>
