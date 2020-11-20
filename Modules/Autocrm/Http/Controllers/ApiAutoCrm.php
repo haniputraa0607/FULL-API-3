@@ -32,7 +32,7 @@ use App\Lib\ValueFirst;
 use Validator;
 use Hash;
 use DB;
-use Mail;
+use App\Lib\SendMail as Mail;
 
 class ApiAutoCrm extends Controller
 {
@@ -147,7 +147,7 @@ class ApiAutoCrm extends Controller
 								}
 							});
 						}catch(\Exception $e){
-							
+							\Log::error($e);
 						}
 					}else{
 					    try{

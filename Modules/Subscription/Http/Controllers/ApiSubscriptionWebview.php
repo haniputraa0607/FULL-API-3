@@ -123,10 +123,10 @@ class ApiSubscriptionWebview extends Controller
         $content_key = $this->replaceText($subs);
         foreach ($subs['subscription_content'] as $keyContent => $valueContent) {
             if (!empty($valueContent['subscription_content_details'])) {
-                $result['subscription_content'][$keyContent]['title'] = $valueContent['title'];
+                $result['subscription_content'][$i]['title'] = $valueContent['title'];
                 foreach ($valueContent['subscription_content_details'] as $key => $value) {
                 	$content = MyHelper::simpleReplace($value['content'],$content_key);
-                    $result['subscription_content'][$keyContent]['detail'][$key] = $content;
+                    $result['subscription_content'][$i]['detail'][$key] = $content;
                     // $content[$key] = '<li>'.$value['content'].'</li>';
                 }
                 // $result['deals_content'][$keyContent]['detail'] = '<ul style="color:#707070;">'.implode('', $content).'</ul>';
@@ -134,7 +134,6 @@ class ApiSubscriptionWebview extends Controller
             }
         }
 
-        $i = !empty($keyContent) ? $keyContent+1 : $i;
         $result['subscription_content'][$i]['is_outlet']    = 1;
         $result['subscription_content'][$i]['title']        = 'Tempat Penukaran';
 
@@ -294,7 +293,6 @@ class ApiSubscriptionWebview extends Controller
             }
         }
 
-        $i = !empty($keyContent) ? $keyContent+2 : $i;
         $result['subscription_content'][$i]['is_outlet']    = 1;
         $result['subscription_content'][$i]['title']        = 'Tempat Penukaran';
 

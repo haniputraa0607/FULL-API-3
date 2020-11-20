@@ -20,7 +20,7 @@ use App\Lib\ValueFirst;
 use Hash;
 use App\Lib\PushNotificationHelper;
 use DB;
-use Mail;
+use App\Lib\SendMail as Mail;
 use File;
 
 use Modules\Enquiries\Http\Requests\Create;
@@ -186,6 +186,7 @@ class ApiEnquiries extends Controller
         if ($save) {
 
 			$data['attachment'] = [];
+			$data['id_enquiry'] =(string)$save->id_enquiry;
 			// save many file
         	if (isset($data['many_upload_file'])) {
         		$files = $this->saveFiles($save->id_enquiry, $data['many_upload_file']);
@@ -555,6 +556,7 @@ class ApiEnquiries extends Controller
 			$data['brand']['name_brand']="";
 		}
         $send = app($this->autocrm)->SendAutoCRM('Enquiry '.$data['enquiry_subject'], $data['enquiry_phone'], [
+                                                                'enquiry_id' => $data['id_enquiry'],
                                                                 'enquiry_subject' => $data['enquiry_subject'],
                                                                 'enquiry_message' => $data['enquiry_content'],
                                                                 'enquiry_phone'   => $data['enquiry_phone'],

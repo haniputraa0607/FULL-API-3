@@ -38,6 +38,7 @@ class DealsBuyxgetyProductRequirement extends Eloquent
 	protected $fillable = [
 		'id_deals',
 		'id_product',
+		'id_brand',
 		'id_product_category'
 	];
 
@@ -54,5 +55,10 @@ class DealsBuyxgetyProductRequirement extends Eloquent
 	public function product_category()
 	{
 		return $this->belongsTo(\App\Http\Models\ProductCategory::class, 'id_product_category');
+	}
+
+	public function brand()
+	{
+		return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
 	}
 }
