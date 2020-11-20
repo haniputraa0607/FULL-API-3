@@ -51,7 +51,7 @@ class ApiSubscriptionWebview extends Controller
             $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet');
 
         	if (($subs['brand_rule']??false) == 'or') {
-	            $outlets = $outlets->whereHas('brands',function($query) use ($post){
+	            $outlets = $outlets->whereHas('brands',function($query) use ($list_outlet){
 		                    $query->whereIn('brands.id_brand',$list_outlet);
 		                });
         	}else{
@@ -252,7 +252,7 @@ class ApiSubscriptionWebview extends Controller
             $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet');
 
         	if (($subs['subscription']['brand_rule']??false) == 'or') {
-	            $outlets = $outlets->whereHas('brands',function($query) use ($post){
+	            $outlets = $outlets->whereHas('brands',function($query) use ($list_outlet){
 		                    $query->whereIn('brands.id_brand',$list_outlet);
 		                });
         	}else{
