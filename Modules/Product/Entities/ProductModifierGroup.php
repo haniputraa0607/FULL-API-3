@@ -23,6 +23,6 @@ class ProductModifierGroup extends Model
 
     public function product_modifier()
     {
-        return $this->hasMany(ProductModifier::class, 'id_product_modifier_group');
+        return $this->hasMany(ProductModifier::class, 'id_product_modifier_group')->orderBy('product_modifier_order', 'asc');
     }
 }
