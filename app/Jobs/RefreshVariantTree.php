@@ -63,6 +63,11 @@ class RefreshVariantTree implements ShouldQueue
                     Product::refreshVariantTree($p['id_product'], $o);
                 }
             }
+        }elseif(isset($this->data['type']) && $this->data['type'] == 'specific_product'){
+            $getAllOutlets = Outlet::get();
+            foreach ($getAllOutlets as $o){
+                Product::refreshVariantTree($this->data['id_product'], $o);
+            }
         }else{
             $products = Product::where('product_variant_status', 1)->get()->toArray();
             foreach ($products as $p){
