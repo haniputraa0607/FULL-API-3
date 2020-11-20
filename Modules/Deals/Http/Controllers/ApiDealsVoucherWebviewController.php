@@ -59,7 +59,8 @@ class ApiDealsVoucherWebviewController extends Controller
         			'deals_voucher.deal.outlets' => function($q) {
         				$q->where('outlet_status', 'Active');
         			}, 
-        			'deals_voucher.deal.outlets.city'
+        			'deals_voucher.deal.outlets.city',
+        			'deals_voucher.deal.deals_brands'
         		])
         		->where('id_deals_user', $request->id_deals_user)
         		->get()
@@ -72,12 +73,31 @@ class ApiDealsVoucherWebviewController extends Controller
             ];
         }
 
-        if($voucher['deals_voucher']['deal']['is_all_outlet'] == 1){
+        if( $voucher['deals_voucher']['deal']['is_all_outlet'] == 1 && isset($voucher['deals_voucher']['deal']['id_brand']) ){
             $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
                 ->join('deals', 'deals.id_brand', '=', 'brand_outlet.id_brand')
                 ->where('deals.id_deals', $voucher['deals_voucher']['deal']['id_deals'])
                 ->where('outlet_status', 'Active')
                 ->select('outlets.*')->with('city')->get()->toArray();
+            $voucher['deals_voucher']['deal']['outlets'] = $outlets;
+        }
+        elseif ($voucher['deals_voucher']['deal']['is_all_outlet'] == 1 && isset($voucher['deals_voucher']['deal']['deals_brands'])) {
+        	$list_outlet = array_column($voucher['deals_voucher']['deal']['deals_brands'], 'id_brand');
+            $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet');
+
+        	if (($deals['brand_rule']??false) == 'or') {
+	            $outlets = $outlets->whereHas('brands',function($query) use ($post){
+		                    $query->whereIn('brands.id_brand',$list_outlet);
+		                });
+        	}else{
+                foreach ($list_outlet as $value) {
+	                $outlets = $outlets->whereHas('brands',function($query) use ($value){
+			                    $query->where('brands.id_brand',$value);
+			                });
+	            }
+        	}
+
+            $outlets = $outlets->where('outlet_status','Active')->select('outlets.*')->with('city')->groupBy('id_outlet')->get()->toArray();
             $voucher['deals_voucher']['deal']['outlets'] = $outlets;
         }
 
