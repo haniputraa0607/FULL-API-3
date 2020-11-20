@@ -2700,13 +2700,13 @@ class ApiOnlineTransaction extends Controller
             if($request->id_subscription_user){
                 $result['payment_detail'][] = [
                     'name'          => 'Subscription (Delivery)',
-                    "is_discount"   => 0,
+                    "is_discount"   => 1,
                     'amount'        => '- '.MyHelper::requestNumber($result['discount_delivery'],'_CURRENCY')
                 ];
             }else{
                 $result['payment_detail'][] = [
                     'name'          => 'Diskon (Delivery)',
-                    "is_discount"   => 0,
+                    "is_discount"   => 1,
                     'amount'        => '- '.MyHelper::requestNumber($result['discount_delivery'],'_CURRENCY')
                 ];
             }
@@ -2716,7 +2716,7 @@ class ApiOnlineTransaction extends Controller
         if($request->id_subscription_user && $result['subscription'] > 0){
             $result['payment_detail'][] = [
                 'name'          => 'Subscription',
-                "is_discount"   => 0,
+                "is_discount"   => 1,
                 'amount'        => '- '.MyHelper::requestNumber($result['subscription'],'_CURRENCY')
             ];
         }
