@@ -636,6 +636,7 @@ class ApiProductVariantGroupController extends Controller
             if($delete){
                 $delete = ProductVariantGroup::where('id_product',$getId['id_product'])->delete();
             }
+            RefreshVariantTree::dispatch(['type' => 'specific_product', 'id_product' => $getId['id_product']])->allOnConnection('database');
             return response()->json(MyHelper::checkDelete($delete));
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
@@ -646,10 +647,12 @@ class ApiProductVariantGroupController extends Controller
         $post = $request->json()->all();
 
         if(isset($post['id_product_variant_group']) && !empty($post['id_product_variant_group'])){
+            $getIdProduct = ProductVariantGroup::where('id_product_variant_group', $post['id_product_variant_group'])->first();
             $delete = ProductVariantPivot::where('id_product_variant_group',$post['id_product_variant_group'])->delete();
             if($delete){
                 $delete = ProductVariantGroup::where('id_product_variant_group',$post['id_product_variant_group'])->delete();
             }
+            RefreshVariantTree::dispatch(['type' => 'specific_product', 'id_product' => $getIdProduct['id_product']])->allOnConnection('database');
             return response()->json(MyHelper::checkDelete($delete));
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
