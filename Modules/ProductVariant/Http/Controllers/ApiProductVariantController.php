@@ -45,7 +45,7 @@ class ApiProductVariantController extends Controller
         if(isset($post['page'])){
             $product_variant = $product_variant->orderBy('updated_at', 'desc')->paginate($request->length?:10);
         }else{
-            $product_variant = $product_variant->get()->toArray();
+            $product_variant = $product_variant->orderBy('product_variant_order', 'asc')->get()->toArray();
         }
 
         return MyHelper::checkGet($product_variant);
