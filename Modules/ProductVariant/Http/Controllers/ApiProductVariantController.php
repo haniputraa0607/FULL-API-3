@@ -237,11 +237,13 @@ class ApiProductVariantController extends Controller
             $data = ProductVariant::orderBy('product_variant_order', 'asc')->where(function ($q){
                 $q->whereNull('id_parent')->orWhere('id_parent', 0);
             })->with('product_variant_child')->get()->toArray();
+            RefreshVariantTree::dispatch([])->allOnConnection('database');
             return MyHelper::checkGet($data);
         }else{
             foreach ($request->position as $position => $id_product_variant) {
                 ProductVariant::where('id_product_variant', $id_product_variant)->update(['product_variant_order' => $position]);
             }
+            RefreshVariantTree::dispatch([])->allOnConnection('database');
             return MyHelper::checkUpdate(true);
         }
     }
