@@ -1292,13 +1292,14 @@ class ApiDisburseController extends Controller
             ->whereDate('transactions.transaction_date', '<=',$date_end)
             ->where('transactions.transaction_payment_status', 'Completed')
             ->whereNull('transaction_pickups.reject_at')
+            ->whereNull('id_product_variant_group')
             ->selectRaw('COUNT(transactions.id_transaction) total_trx, SUM(transactions.transaction_grandtotal) as total_gross_sales,
                         SUM(tps.subscription_nominal) as total_subscription, 
                         SUM(transactions.transaction_subtotal) as total_sub_total, 
                         SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
                         SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
                         SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription,
-                        SUM(transactions.transaction_discount_delivery) total_discount_delivery, SUM(discount_delivery_outlet) total_fee_discount_delivery');
+                        SUM(transactions.transaction_discount_delivery) total_discount_delivery');
 
         if($id_outlet){
             $summaryFee = $summaryFee->where('id_outlet', $id_outlet);
@@ -1512,7 +1513,7 @@ class ApiDisburseController extends Controller
                         SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
                         SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
                         SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription,
-                        SUM(transactions.transaction_discount_delivery) total_discount_delivery, SUM(discount_delivery_outlet) total_fee_discount_delivery');
+                        SUM(transactions.transaction_discount_delivery) total_discount_delivery');
 
         if($id_outlet){
             $summaryFee = $summaryFee->where('id_outlet', $id_outlet);
@@ -1536,6 +1537,7 @@ class ApiDisburseController extends Controller
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
             ->where('transaction_payment_status', 'Completed')
+            ->whereNull('id_product_variant_group')
             ->whereNull('reject_at')
             ->whereDate('transaction_date', $date)
             ->where('transactions.id_outlet', $id_outlet)

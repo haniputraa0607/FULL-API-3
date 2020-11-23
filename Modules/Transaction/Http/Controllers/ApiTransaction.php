@@ -1604,7 +1604,7 @@ class ApiTransaction extends Controller
                 ->addSelect('transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
                     'brands.name_brand', 'cities.city_name', 'c.city_name as user_city', 'provinces.province_name',
                     'disburse_outlet_transactions.fee_item', 'disburse_outlet_transactions.payment_charge', 'disburse_outlet_transactions.discount', 'disburse_outlet_transactions.subscription',
-                    'disburse_outlet_transactions.point_use_expense', 'disburse_outlet_transactions.discount_delivery_outlet',
+                    'disburse_outlet_transactions.point_use_expense',
                     'disburse_outlet_transactions.income_outlet', 'disburse_outlet_transactions.discount_central', 'disburse_outlet_transactions.subscription_central');
         }
 
@@ -1916,7 +1916,7 @@ class ApiTransaction extends Controller
                         $getTransactionVariant = TransactionProductVariant::join('product_variants as pv', 'pv.id_product_variant', 'transaction_product_variants.id_product_variant')
                             ->where('id_transaction_product', $val['id_transaction_product'])->select('pv.*')->get()->toArray();
                         foreach ($getTransactionVariant as $k=>$gtV){
-                            $getTransactionVariant[$k]['main_parent'] = $this->getParentVariant($getAllVariant, $gtV['id_product_variant']);
+                            $getTransactionVariant[$k]['main_parent'] = '58';//$this->getParentVariant($getAllVariant, $gtV['id_product_variant']);
                         }
                         foreach ($getVariant as $v){
                             $search = array_search($v['id_product_variant'], array_column($getTransactionVariant, 'main_parent'));
@@ -1945,7 +1945,7 @@ class ApiTransaction extends Controller
                             $html .= '<td>'.($val['transaction_product_price']+$priceMod).'</td>';
                         }
 
-                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                         $html .= '</tr>';
 
                         $totalMod = count($mod);
@@ -1968,7 +1968,7 @@ class ApiTransaction extends Controller
                                 $html .= '<td>'.($mod[$i]['transaction_product_modifier_price']??0).'</td>';
                                 $html .= '<td>0</td>';
                                 $html .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
-                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                                 $html .= '</tr>';
                             }
                         }
@@ -2001,7 +2001,7 @@ class ApiTransaction extends Controller
                                 $html .= '<td></td>';
                                 $html .= '<td>'.abs($val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
                                 $html .= '<td>'.(-$val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
-                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                                 $html .= '</tr>';
                             }
                         }
@@ -2028,7 +2028,7 @@ class ApiTransaction extends Controller
                             $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
                             $html .= '<td>'.$discountDelivery.'</td>';
                             $html .= '<td>'.($val['transaction_shipment_go_send']-$discountDelivery??0).'</td>';
-                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                             $html .= '</tr>';
                         }
 
@@ -2042,7 +2042,6 @@ class ApiTransaction extends Controller
                         $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                         $html .= '<td>'.($val['transaction_grandtotal']-$sub).'</td>';
                         $html .= '<td>'.(float)$val['fee_item'].'</td>';
-                        $html .= '<td>'.(float)$val['discount_delivery_outlet'].'</td>';
                         $html .= '<td>'.(float)$paymentCharge.'</td>';
                         $html .= '<td>'.(float)$val['discount_central'].'</td>';
                         $html .= '<td>'.(float)$val['subscription_central'].'</td>';
@@ -2190,8 +2189,7 @@ class ApiTransaction extends Controller
                     'Delivery Fee' => $val['transaction_shipment_go_send']??'0',
                     'Discount Delivery' => $val['transaction_discount_delivery']??'0',
                     'Subscription' => abs($val['transaction_payment_subscription']['subscription_nominal']??0),
-                    'Total Fee (fee item+fee discount deliver+fee payment+fee promo+fee subscription) ' => ($paymentCharge == 0? '' : (float)($val['fee_item'] + $val['discount_delivery_outlet'] + $paymentCharge + $val['discount'] + $val['subscription'])),
-                    'Fee Discount Delivery' =>(float)$val['discount_delivery_outlet'],
+                    'Total Fee (fee item+fee discount deliver+fee payment+fee promo+fee subscription) ' => ($paymentCharge == 0? '' : (float)($val['fee_item'] + $paymentCharge + $val['discount'] + $val['subscription'])),
                     'Fee Payment Gateway' =>(float)$paymentCharge,
                     'Net Sales (income outlet)' => (float)$val['income_outlet'],
                     'Payment' => $payment,
