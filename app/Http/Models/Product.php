@@ -303,7 +303,7 @@ class Product extends Model
             } else {
                 $modifiers->leftJoin('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
             }
-            $modifiers = $modifiers->order('product_modifiers.product_modifier_order', 'asc')->get()->toArray();
+            $modifiers = $modifiers->orderBy('product_modifiers.product_modifier_order', 'asc')->get()->toArray();
             if (!$modifiers) {
                 unset($modifier_groups[$key]);
             }

@@ -60,7 +60,7 @@ class RefreshVariantTree implements ShouldQueue
             foreach ($products as $p){
                 $getAllOutlets = Outlet::get();
                 foreach ($getAllOutlets as $o) {
-                    Product::refreshVariantTree($p['id_product'], $o);
+                    Product::refreshVariantTree($p, $o);
                 }
             }
         }elseif(isset($this->data['type']) && $this->data['type'] == 'specific_product'){
