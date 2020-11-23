@@ -338,6 +338,9 @@ class ApiDealsClaim extends Controller
 	        			->where('paid_status', '!=', 'Cancelled')
 	        			->count();
         $update = Deal::where('id_deals', $dataDeals->id_deals)->update(['deals_total_claimed' => $total_claimed + 1]);
+
+        $update = is_int($update) ? true : false;
+
         return $update;
 
     }
