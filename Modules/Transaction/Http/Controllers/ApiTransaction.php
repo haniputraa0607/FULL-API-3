@@ -1826,7 +1826,10 @@ class ApiTransaction extends Controller
                 }
 
                 $modifier = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
-                    ->where('id_transaction_product', $val['id_transaction_product'])->whereNotNull('transaction_product_modifiers.id_product_modifier_group')->pluck('product_modifiers.text')->toArray();
+                    ->join('product_modifier_groups', 'product_modifiers.id_product_modifier_group', 'transaction_product_modifiers.id_product_modifier_group')
+                    ->where('id_transaction_product', $val['id_transaction_product'])->whereNotNull('transaction_product_modifiers.id_product_modifier_group')
+                    ->select(DB::raw("CONCAT(product_modifier_groups.product_modifier_group_name, ': ', product_modifiers.text) as 'mod_name'"))
+                    ->pluck('mod_name')->toArray();
 
                 if(isset($post['detail']) && $post['detail'] == 1){
 
