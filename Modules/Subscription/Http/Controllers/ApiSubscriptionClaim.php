@@ -417,6 +417,7 @@ class ApiSubscriptionClaim extends Controller
     function updateSubs($dataSubs) {
     	$total_bought_subs = SubscriptionUser::where('id_subscription', '=', $dataSubs->id_subscription)->where('paid_status', '!=', 'Cancelled')->count();
         $update = Subscription::where('id_subscription', $dataSubs->id_subscription)->update(['subscription_bought' => $total_bought_subs]);
+        $update = is_int($update) ? true : false;
         return $update;
     }
 

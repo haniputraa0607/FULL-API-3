@@ -64,6 +64,7 @@ use App\Http\Models\Deal;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsPromotionTemplate;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantPivot;
 
 use Modules\PromoCampaign\Http\Requests\Step1PromoCampaignRequest;
 use Modules\PromoCampaign\Http\Requests\Step2PromoCampaignRequest;
@@ -2485,12 +2486,13 @@ class ApiPromoCampaign extends Controller
 
     public function getProduct($source, $query, $id_outlet=null)
     {
-    	// return $query;
+    	$default_product = $query['product_rule'] === 'and' ? 'semua product bertanda khusus' : 'product bertanda khusus';
+
     	if ($source == 'subscription') 
     	{
     		if ( !empty($query['is_all_product']) || empty($query['subscription_products']) ) {
     			$applied_product = '*';
-	        	$product = 'semua product bertanda khusus';
+	        	$product = $default_product;
     		}
     		elseif( !empty($query['subscription_products']) )
     		{
@@ -2508,9 +2510,9 @@ class ApiPromoCampaign extends Controller
 
     			$product_total = count($query['subscription_products']);
     			if ($product_total == 1) {
-	        		$product = $query['subscription_products'][0]['product']['product_name'] ?? 'product tertentu';
+	        		$product = $query['subscription_products'][0]['product']['product_name'] ?? $default_product;
     			}else{
-	        		$product = 'product tertentu';
+	        		$product = $default_product;
     			}
     		}
     		else
@@ -2524,28 +2526,39 @@ class ApiPromoCampaign extends Controller
 	    	if ( ($query[$source.'_product_discount_rules']['is_all_product']??false) == 1 || ($query['promo_type']??false) == 'Referral') 
 	        {
 	        	$applied_product = '*';
-	        	$product = 'semua product bertanda khusus';
+	        	$product = $default_product;
 	        }
 	        elseif ( !empty($query[$source.'_product_discount']) )
 	        {
 	        	$applied_product = $query[$source.'_product_discount'];
-	        	// $product = $applied_product[0]['product']['product_name']??'product tertentu';
-	        	$product = 'product tertentu';
+	        	if (count($applied_product) == 1) {
+	        		$product = $applied_product[0]['product']['product_name'] ?? $default_product;
+	        	}else{
+	        		$product = $default_product;
+	        	}
 	        }
 	        elseif ( !empty($query[$source.'_tier_discount_product']) )
 	        {
 	        	$applied_product = $query[$source.'_tier_discount_product'];
-	        	$product = $applied_product['product']['product_name']??'product tertentu';
+	        	if (count($applied_product) == 1) {
+	        		$product = $applied_product[0]['product']['product_name'] ?? $default_product;
+	        	}else{
+	        		$product = $default_product;
+	        	}
 	        }
 	        elseif ( !empty($query[$source.'_buyxgety_product_requirement']) )
 	        {
 	        	$applied_product = $query[$source.'_buyxgety_product_requirement'];
-	        	$product = $applied_product['product']['product_name']??'product tertentu';
+	        	if (count($applied_product) == 1) {
+	        		$product = $applied_product[0]['product']['product_name'] ?? $default_product;
+	        	}else{
+	        		$product = $default_product;
+	        	}
 	        }
 	        elseif ( !empty($query[$source.'_discount_bill_rules']) )
 	        {
 	        	$applied_product = '*';
-	        	$product = 'semua product bertanda khusus';
+	        	$product = $default_product;
 	        }
 	        else
 	        {
@@ -2695,10 +2708,12 @@ class ApiPromoCampaign extends Controller
 
 	        	if ( empty($qty) ) {
         			$key = 'description_product_discount_brand_no_qty';
-    				$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%';
+    				// $key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%';
+    				$key_null = 'Diskon %discount% untuk pembelian %product%';
 	        	}else{
 	        		$key = 'description_product_discount_brand';
-	    			$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk';
+	    			// $key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk';
+	    			$key_null = 'Diskon %discount% untuk pembelian %product%. Maksimal %qty% item untuk setiap produk';
 	        	}
 
 	    		// $desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
@@ -2710,30 +2725,53 @@ class ApiPromoCampaign extends Controller
 	    	{
 	    		$min_qty = null;
 	    		$max_qty = null;
+	    		$discount_rule = [];
 
 	    		foreach ($query[$source.'_tier_discount_rules'] as $key => $rule) {
-					$min_req=$rule['min_qty'];
-					$max_req=$rule['max_qty'];
+					$min_req = $rule['min_qty'];
+					$max_req = $rule['max_qty'];
 
-					if($min_qty===null||$rule['min_qty']<$min_qty){
-						$min_qty=$min_req;
+					if($min_qty === null || $rule['min_qty'] < $min_qty){
+						$min_qty = $min_req;
+						$min_rule = $rule;
 					}
-					if($max_qty===null||$rule['max_qty']>$max_qty){
-						$max_qty=$max_req;
+					if($max_qty === null || $rule['max_qty'] > $max_qty){
+						$max_qty = $max_req;
+						$max_rule = $rule;
 					}
+
+					if ($rule['discount_type'] == 'Percent') {
+		        		$discount_rule[] = ($rule['discount_value']??0).'%';
+		        	}else{
+		        		$discount_rule[] = 'Rp '.number_format(($rule['discount_value']??0),0,',','.');
+		        	}
 	    		}
+
+	    		// if single rule
+	    		if (count($discount_rule) == 1) {
+	    			$discount = $discount_rule[0];
+	    		}else{
+	    			$discount_first = reset($discount_rule);
+	    			$discount_last 	= end($discount_rule);
+	    			$discount = $discount_first.' sampai '.$discount_last;
+	    		}
+
 	    		$key = 'description_tier_discount_brand';
-	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%';
-	    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
+	    		// $key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%';
+	    		$key_null = 'Diskon %discount% setelah pembelian minimal %min_qty% %product%';
+
+	    		$minmax = $min_qty != $max_qty ? "$min_qty - $max_qty" : $min_qty;
 	    		// $desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 	    		$desc = $key_null;
 
-	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax, 'brand'=>$brand]);
+	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax, 'brand'=>$brand, 'min_qty' => $min_qty, 'discount' => $discount]);
 	    	}
 	    	elseif ($query['promo_type'] == 'Buy X Get Y') 
 	    	{
 	    		$min_qty = null;
 	    		$max_qty = null;
+	    		$discount_rule = [];
+	    		$product_benefit = null;
 	    		foreach ($query[$source.'_buyxgety_rules'] as $key => $rule) {
 					$min_req=$rule['min_qty_requirement'];
 					$max_req=$rule['max_qty_requirement'];
@@ -2744,14 +2782,65 @@ class ApiPromoCampaign extends Controller
 					if($max_qty===null||$rule['max_qty_requirement']>$max_qty){
 						$max_qty=$max_req;
 					}
+
+					if ($rule['discount_type'] == 'percent') {
+						if ($rule['discount_value'] == 100) {
+							$discount_rule[] = 'gratis '.$rule['benefit_qty'].' item';
+						}else{
+		        			$discount_rule[] = ($rule['discount_value']??0).'%';
+						}
+		        	}else{
+		        		$discount_rule[] = 'Rp '.number_format(($rule['discount_value']??0),0,',','.');
+		        	}
+
+		        	$product_benefit[$rule['id_brand']][$rule['benefit_id_product']][$rule['id_product_variant_group']] = [
+		        		'id_brand' => $rule['id_brand'],
+		        		'id_product' => $rule['benefit_id_product'],
+		        		'id_product_variant_group' => $rule['id_product_variant_group']
+		        	];
 	    		}
+
+	    		if(count($product_benefit) == 1){
+	    			$product_benefit = Product::where('id_product', $query[$source.'_buyxgety_rules'][0]['benefit_id_product'])->select('product_name')->first();
+	    			$variant = ProductVariantPivot::join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
+	    						->where('id_product_variant_group', $query[$source.'_buyxgety_rules'][0]['id_product_variant_group'])->pluck('product_variant_name');
+
+	    			if ($product_benefit) {
+	    				$product_benefit = $product_benefit['product_name'];
+	    				if ($variant) {
+	    					$variant = implode(',', $variant->toArray());
+	    					$product_benefit = $product_benefit.' '.$variant;
+	    				}
+	    			}
+	    		}else{
+	    			$product_benefit = 'product tertentu';
+	    		}
+
+	    		$discount = '';
+	    		$discount_count = count($discount_rule);
+	    		$i = 1;
+	    		foreach ($discount_rule as $key => $value) {
+	    			if ($i == 1) {
+	    				$discount .= $value;
+	    			}
+	    			elseif ($i == $discount_count) {
+	    				$discount .= ' atau '.$value;
+	    			}
+	    			else {
+	    				$discount .= ', '.$value;
+	    			}
+
+	    			$i++;
+	    		}
+
 	    		$key = 'description_buyxgety_discount_brand';
-	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%';
-	    		$minmax = $min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
+	    		// $key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%';
+	    		$key_null = 'Diskon %discount% untuk %product_benefit% setelah pembelian minimal %min_qty% %product%';
+	    		$minmax = $min_qty != $max_qty? "$min_qty - $max_qty" : $min_qty;
 	    		// $desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 	    		$desc = $key_null;
 
-	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax, 'brand'=>$brand]);
+	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax, 'brand'=>$brand, 'min_qty' => $min_qty, 'discount' => $discount, 'product_benefit' => $product_benefit]);
 	    	}
 	    	elseif ($query['promo_type'] == 'Discount bill') 
 	    	{
