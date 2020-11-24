@@ -489,7 +489,9 @@ class ApiProductVariantGroupController extends Controller
             ->leftJoin('product_variant_group_special_prices','outlets.id_outlet','=','product_variant_group_special_prices.id_outlet')
             ->where('outlet_different_price',1)->get()->toArray();
         $data = ProductVariantGroup::join('products', 'products.id_product', 'product_variant_groups.id_product')
-            ->select('product_variant_groups.product_variant_group_price as global_price', 'products.product_name', 'products.product_code', 'product_variant_groups.product_variant_group_code', 'product_variant_groups.id_product_variant_group')
+            ->leftJoin('product_global_price', 'product_global_price.id_product', 'product_variant_groups.id_product')
+            ->select('products.id_product', 'product_global_price.product_global_price as product_price', 'product_variant_groups.product_variant_group_price as global_price', 'products.product_name', 'products.product_code', 'product_variant_groups.product_variant_group_code', 'product_variant_groups.id_product_variant_group')
+            ->where('product_variant_status', 1)
             ->with(['product_variant_pivot'])->get()->toArray();
 
         $arrProductVariant = [];
@@ -504,8 +506,13 @@ class ApiProductVariantGroupController extends Controller
                 'global_price' => $pv['global_price']
             ];
 
+            if(empty((int)$pv['global_price']) && !empty($pv['product_price'])){
+                $arrProductVariant[$key]['global_price'] = $pv['product_price'];
+            }
+
             foreach ($different_outlet as $o){
-                $arrProductVariant[$key]['price_'.$o['outlet_code']] = 0;
+                $getSpecialPrice = ProductSpecialPrice::where('id_product', $pv['id_product'])->where('id_outlet', $o['id_outlet'])->first();
+                $arrProductVariant[$key]['price_'.$o['outlet_code']] = $getSpecialPrice['product_special_price']??0;
                 foreach ($different_outlet_price as $key_o => $o_price){
                     if($o_price['id_product_variant_group'] == $pv['id_product_variant_group'] && $o_price['outlet_code'] == $o['outlet_code']){
                         $arrProductVariant[$key]['price_'.$o['outlet_code']] = $o_price['product_variant_group_price'];
