@@ -2772,15 +2772,16 @@ class ApiPromoCampaign extends Controller
 	    		$max_qty = null;
 	    		$discount_rule = [];
 	    		$product_benefit = null;
-	    		foreach ($query[$source.'_buyxgety_rules'] as $key => $rule) {
-					$min_req=$rule['min_qty_requirement'];
-					$max_req=$rule['max_qty_requirement'];
+	    		$promo_rules = $query[$source.'_buyxgety_rules'];
+	    		foreach ($promo_rules as $key => $rule) {
+					$min_req = $rule['min_qty_requirement'];
+					$max_req = $rule['max_qty_requirement'];
 
-					if($min_qty===null||$rule['min_qty_requirement']<$min_qty){
-						$min_qty=$min_req;
+					if($min_qty === null || $rule['min_qty_requirement'] < $min_qty){
+						$min_qty = $min_req;
 					}
-					if($max_qty===null||$rule['max_qty_requirement']>$max_qty){
-						$max_qty=$max_req;
+					if($max_qty === null || $rule['max_qty_requirement'] > $max_qty){
+						$max_qty = $max_req;
 					}
 
 					if ($rule['discount_type'] == 'percent') {
@@ -2800,23 +2801,41 @@ class ApiPromoCampaign extends Controller
 		        	];
 	    		}
 
-	    		if(count($product_benefit) == 1){
-	    			$product_benefit = Product::where('id_product', $query[$source.'_buyxgety_rules'][0]['benefit_id_product'])->select('product_name')->first();
+	    		$discount = '';
+	    		if(count($promo_rules) == 1){ // only 1 rule available
+	    			$product_benefit = Product::where('id_product', $promo_rules[0]['benefit_id_product'])->select('product_name')->first();
 	    			$variant = ProductVariantPivot::join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
-	    						->where('id_product_variant_group', $query[$source.'_buyxgety_rules'][0]['id_product_variant_group'])->pluck('product_variant_name');
+	    						->where('id_product_variant_group', $promo_rules[0]['id_product_variant_group'])->pluck('product_variant_name');
 
-	    			if ($product_benefit) {
-	    				$product_benefit = $product_benefit['product_name'];
-	    				if ($variant) {
-	    					$variant = implode(',', $variant->toArray());
-	    					$product_benefit = $product_benefit.' '.$variant;
+    				$product_benefit = $product_benefit['product_name']??'';
+    				if ($variant->isNotEmpty()) {
+    					$variant = implode(',', $variant->toArray());
+    					$product_benefit = $product_benefit.' '.$variant;
+    				}
+
+	    			if ($promo_rules[0]['discount_type'] == 'percent') {
+	    				if ($promo_rules[0]['discount_value'] == 100) {
+	    					$discount = 'Gratis '.$promo_rules[0]['benefit_qty'];
+	    				}else{
+	    					$discount = 'Diskon '.$promo_rules[0]['discount_value'].'%';
 	    				}
+	    			}else{
+	    				$discount = 'Diskon '.MyHelper::requestNumber($promo_rules[0]['discount_value'],'_CURRENCY');
 	    			}
+
+		    		$req_product = $query[$source.'_buyxgety_product_requirement'];
+		    		if (count($req_product) == 1 && count($promo_rules) == 1 && $req_product[0]['id_product'] == $promo_rules[0]['benefit_id_product']) {
+		    			$product_benefit = $product_benefit.' selanjutnya';
+		    		}
+
+		    		$desc = '%discount% %product_benefit% setelah pembelian minimal %min_qty% %product%';
 	    		}else{
+	    			// multi rule
 	    			$product_benefit = 'product tertentu';
+	    			$desc = 'Diskon untuk %product_benefit% setelah pembelian minimal %min_qty% %product%';
 	    		}
 
-	    		$discount = '';
+	    		/*$discount = '';
 	    		$discount_count = count($discount_rule);
 	    		$i = 1;
 	    		foreach ($discount_rule as $key => $value) {
@@ -2831,14 +2850,14 @@ class ApiPromoCampaign extends Controller
 	    			}
 
 	    			$i++;
-	    		}
+	    		}*/
 
 	    		$key = 'description_buyxgety_discount_brand';
 	    		// $key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%';
-	    		$key_null = 'Diskon %discount% untuk %product_benefit% setelah pembelian minimal %min_qty% %product%';
+	    		// $key_null = 'Diskon %discount% untuk %product_benefit% setelah pembelian minimal %min_qty% %product%';
 	    		$minmax = $min_qty != $max_qty? "$min_qty - $max_qty" : $min_qty;
 	    		// $desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
-	    		$desc = $key_null;
+	    		// $desc = $key_null;
 
 	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax, 'brand'=>$brand, 'min_qty' => $min_qty, 'discount' => $discount, 'product_benefit' => $product_benefit]);
 	    	}
