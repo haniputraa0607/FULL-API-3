@@ -51,7 +51,9 @@ class DealsPromotionBuyxgetyRule extends Eloquent
 		'benefit_qty',
 		'discount_type',
 		'discount_value',
-		'max_percent_discount'
+		'max_percent_discount',
+		'id_product_variant_group',
+		'id_brand'
 	];
 
 	public function product()
@@ -62,5 +64,10 @@ class DealsPromotionBuyxgetyRule extends Eloquent
 	public function deals_promotion_template()
 	{
 		return $this->belongsTo(\App\Http\Models\DealsPromotionTemplate::class, 'id_deals');
+	}
+
+	public function brand()
+	{
+		return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
 	}
 }

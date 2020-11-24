@@ -16,6 +16,9 @@ use Modules\Subscription\Entities\SubscriptionContent;
 use Modules\Subscription\Entities\SubscriptionContentDetail;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
+use Modules\Subscription\Entities\SubscriptionShipmentMethod;
+use Modules\Subscription\Entities\SubscriptionPaymentMethod;
+use Modules\Subscription\Entities\SubscriptionBrand;
 use Modules\Deals\Entities\DealsContent;
 use Modules\Deals\Entities\DealsContentDetail;
 use Modules\Promotion\Entities\DealsPromotionContent;
@@ -37,7 +40,9 @@ class ApiSubscription extends Controller
     function __construct()
     {
         date_default_timezone_set('Asia/Jakarta');
-        $this->user     = "Modules\Users\Http\Controllers\ApiUser";
+        $this->user = "Modules\Users\Http\Controllers\ApiUser";
+        $this->promo_campaign = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+        $this->promo = "Modules\PromoCampaign\Http\Controllers\ApiPromo";
     }
 
     public $saveImage = "img/subscription/";
@@ -143,6 +148,18 @@ class ApiSubscription extends Controller
             $data['id_product'] = $post['id_product'];
         }
 
+        if (isset($post['product_rule'])) {
+        	$data['product_rule'] = $post['product_rule'];
+        }
+
+        if (isset($post['payment_method'])) {
+            $data['payment_method'] = $post['payment_method'];
+        }
+
+        if (isset($post['shipment_method'])) {
+            $data['shipment_method'] = $post['shipment_method'];
+        }
+
         if (isset($post['subscription_total'])) {
             $data['subscription_total'] = $post['subscription_total'];
         }
@@ -240,6 +257,11 @@ class ApiSubscription extends Controller
     	if ( ($data['subscription_type']??false) == 'welcome') {
         	$data['user_limit'] = 1;
         }
+
+        if (isset($post['brand_rule'])) {
+        	$data['brand_rule'] = $post['brand_rule'];
+        }
+
         $data['subscription_step_complete'] = 0;
         return $data;
     }
@@ -432,9 +454,20 @@ class ApiSubscription extends Controller
             return response()->json($data);
         }
 
+        $subs = Subscription::find($data['id_subscription']);
+
+        if (isset($data['id_brand'])) {
+            // DELETE
+            $this->deleteBrand($data['id_subscription']);
+            // SAVE
+            $save_brand = $this->saveBrand($subs['id_subscription'], $data['id_brand']);
+            unset($data['id_brand']);
+        }
+
         if (isset($data['id_outlet'])) {
 
             $data['is_all_outlet'] = null;
+	        $outlets = $data['id_outlet'];
             // DELETE
             $this->deleteOutlet($data['id_subscription']);
             if ( ($data['id_outlet'][0]??0) == 'all') 
@@ -445,7 +478,6 @@ class ApiSubscription extends Controller
             {
                 // SAVE
                 $data['is_all_outlet'] = 0;
-                $subs=Subscription::find($data['id_subscription']);
                 $saveOutlet = $this->saveOutlet($subs['id_subscription'], $data['id_outlet']);
             }
             unset($data['id_outlet']);
@@ -454,6 +486,7 @@ class ApiSubscription extends Controller
         if (isset($data['id_product'])) {
 
             $data['is_all_product'] = null;
+        	$products = $data['id_product'];
             // DELETE
             $this->deleteProduct($data['id_subscription']);
             if ( ($data['id_product'][0]??0) == 'all') 
@@ -464,10 +497,47 @@ class ApiSubscription extends Controller
             {
                 // SAVE
                 $data['is_all_product'] = 0;
-                $subs=Subscription::find($data['id_subscription']);
                 $saveOutlet = $this->saveProduct($subs['id_subscription'], $data['id_product']);
             }
             unset($data['id_product']);
+        }
+
+        $delete_payment = SubscriptionPaymentMethod::where('id_subscription', $data['id_subscription'])->delete();
+        if (isset($data['payment_method'])) {
+        	if(in_array('all', $data['payment_method'])){
+                $data['is_all_payment'] = 1;
+        	}
+        	else
+            {
+                $data['is_all_payment'] = 0;
+                $saveOutlet = $this->savePayment($subs['id_subscription'], $data['payment_method']);
+            }
+            unset($data['payment_method']);
+        }else{
+        	$data['is_all_payment'] = 1;
+        }
+
+        $delete_shipment = SubscriptionShipmentMethod::where('id_subscription', $data['id_subscription'])->delete();
+        if (isset($data['shipment_method'])) {
+        	if(in_array('all', $data['shipment_method'])){
+                $data['is_all_shipment'] = 1;
+        	}
+        	else
+            {
+                $data['is_all_shipment'] = 0;
+                $saveOutlet = $this->saveShipment($subs['id_subscription'], $data['shipment_method']);
+            }
+            unset($data['shipment_method']);
+        }else{
+        	$data['is_all_shipment'] = 1;
+        }
+
+        $brand_product_messages = [];
+        if (!empty($outlets) && !empty($products) && $data['is_all_outlet'] != 1 && $data['is_all_product'] != 1) {
+        	$check_brand_product = app($this->promo)->checkBrandProduct($outlets, $products);
+        	if ($check_brand_product['status'] == false) {
+        		$brand_product_messages = $check_brand_product['messages']??['Outlet tidak mempunyai produk dengan brand yang sesuai.'];
+        	}
         }
 
         $save = Subscription::where('id_subscription', $data['id_subscription'])->update($data);
@@ -477,7 +547,14 @@ class ApiSubscription extends Controller
         } else {
             DB::rollback();
         }
-        return response()->json(MyHelper::checkCreate($save));
+
+        $save = MyHelper::checkCreate($save);
+
+        if (!empty($brand_product_messages)) {
+        	$save['brand_product_error'] = $brand_product_messages;
+        }
+
+        return response()->json($save);
     }
 
     public function updateContent(Step3Subscription $request)
@@ -698,6 +775,29 @@ class ApiSubscription extends Controller
 
     }
 
+    /* SAVE BRAND */
+    function saveBrand($id_subs, $id_brand = [])
+    {
+        $data = [];
+
+        foreach ($id_brand as $value) {
+            array_push($data, [
+                'id_brand' => $value,
+                'id_subscription'  => $id_subs
+            ]);
+        }
+
+        if (!empty($data)) {
+            $save = SubscriptionBrand::insert($data);
+
+            return $save;
+        } else {
+            return false;
+        }
+
+        return true;
+    }
+
     /* SAVE OUTLET */
     function saveOutlet($id_subs, $id_outlet = [])
     {
@@ -730,10 +830,11 @@ class ApiSubscription extends Controller
 
         foreach ($id_product as $value) {
             array_push($dataProduct, [
-                'id_product' => $value,
-                'id_subscription'  => $id_subs,
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
+                'id_subscription'=> $id_subs,
+                'id_product'	 => app($this->promo_campaign)->splitBrandProduct($value, 'product'),
+                'id_brand'    	 => app($this->promo_campaign)->splitBrandProduct($value, 'brand'),
+                'created_at' 	 => date('Y-m-d H:i:s'),
+                'updated_at' 	 => date('Y-m-d H:i:s')
             ]);
         }
 
@@ -746,6 +847,64 @@ class ApiSubscription extends Controller
         }
 
         return true;
+    }
+
+    /* SAVE PAYMENT */
+    function savePayment($id_subs, $payment = [])
+    {
+        $data_payment = [];
+
+        foreach ($payment as $value) {
+            array_push($data_payment, [
+                'payment_method' => $value,
+                'id_subscription'  => $id_subs,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+        }
+
+        if (!empty($data_payment)) {
+            $save = SubscriptionPaymentMethod::insert($data_payment);
+
+            return $save;
+        } else {
+            return false;
+        }
+
+        return true;
+    }
+
+    /* SAVE SHIPMENT */
+    function saveShipment($id_subs, $shipment = [])
+    {
+        $data_shipment = [];
+
+        foreach ($shipment as $value) {
+            array_push($data_shipment, [
+                'shipment_method' => $value,
+                'id_subscription'  => $id_subs,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+        }
+
+        if (!empty($data_shipment)) {
+            $save = SubscriptionShipmentMethod::insert($data_shipment);
+
+            return $save;
+        } else {
+            return false;
+        }
+
+        return true;
+    }
+
+    /* DELETE OUTLET */
+    function deleteBrand($id_subscription)
+    {
+        $delete = SubscriptionBrand::where('id_subscription', $id_subscription)->delete();
+
+        return $delete;
     }
 
     /* DELETE OUTLET */
@@ -799,13 +958,16 @@ class ApiSubscription extends Controller
 	                            'outlet_name'
 	                        );
 	                    },
-	                    'products' => function($q){
+	                    'subscription_products.product' => function($q){
 	                    	$q->select(
 	                    		'products.id_product',
 	                    		'product_code',
 	                    		'product_name'
 	                    	);
-	                    }
+	                    },
+	                    'subscription_shipment_method',
+	                    'subscription_payment_method',
+	                    'subscription_brands'
 	                ])
                     ->first()
                     ->toArray();
@@ -845,14 +1007,18 @@ class ApiSubscription extends Controller
                                 'outlet_email'
                             );
                         },
-                        'products' => function($q){
+                        'subscription_products.product' => function($q){
 	                    	$q->select(
 	                    		'products.id_product',
 	                    		'product_code',
 	                    		'product_name'
 	                    	);
 	                    },
-	                    'brand'
+	                    'subscription_products.brand',
+	                    'brand',
+	                    'subscription_shipment_method',
+	                    'subscription_payment_method',
+	                    'brands'
                     ])
                     ->withCount(['subscription_users' => function($q) {
                     	$q->where('paid_status','!=','Cancelled');
@@ -2009,7 +2175,8 @@ class ApiSubscription extends Controller
 	                    		'product_code',
 	                    		'product_name'
 	                    	);
-	                    }
+	                    },
+	                    'subscription_products'
 	                ])
 	                ->first();
     	}
@@ -2039,23 +2206,23 @@ class ApiSubscription extends Controller
 			return [
 				'status'	=> 'fail',
 				'step' 		=> $step,
-				'messages' 	=> [$errors]
+				'messages' 	=> $errors
 			];
 		}
     }
 
-    function checkComplete($id, &$step, &$errors)
+    function checkComplete($id, &$step, &$errors=[])
     {
     	$subs = $this->getSubscriptionData($id, 'all');
     	if (!$subs) {
-    		$errors = 'Subscription not found';
+    		$errors[] = 'Subscription not found';
     		return false;
     	}
 
     	$subs = $subs->toArray();
 
 		$step = 2;
-		$errors = 'Subscription not complete';
+		$errors[] = 'Subscription not complete';
 
 		do {
 			if( !isset($subs['is_free']) && empty($subs['subscription_price_cash']) && empty($subs['subscription_price_point']) ) break;
@@ -2064,15 +2231,23 @@ class ApiSubscription extends Controller
 			if( !isset($subs['subscription_voucher_total']) ) break;
 			if( empty($subs['subscription_voucher_nominal']) && empty($subs['subscription_voucher_percent']) ) break;
 
+			if (!empty($subs['outlets']) && !empty($subs['subscription_products']) && $subs['is_all_outlet'] != 1 && $subs['is_all_product'] != 1) {
+ 	        	$check_brand_product = app($this->promo)->checkBrandProduct($subs['outlets'], $subs['subscription_products']);
+	        	if ($check_brand_product['status'] == false) {
+	        		$errors = array_merge($errors,$check_brand_product['messages']??['Outlet tidak mempunyai produk dengan brand yang sesuai.']);
+	        		break;
+	        	}
+	        }
+
 			$step = null;
-			$errors = null;
+			$errors = [];
 		} while (false);
 
 		if (!empty($step)) return false;
 
     	if ( empty($subs['subscription_content']) || empty($subs['subscription_description']) ) {
     		$step = 3;
-	    	$errors = 'Subscription not complete';
+	    	$errors[] = 'Subscription not complete';
     		return false;
     	}
 

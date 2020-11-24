@@ -52,6 +52,8 @@
                         }else{
                             $promoName = $val['transaction_payment_subscription']['subscription_title'];
                         }
+                    }elseif(isset($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']) && !empty($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription'])) {
+                        $promoName = $val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']['subscription_title'];
                     }elseif($val['discount_central'] > 0){
                         $promoName = 'Unknown Promo';
                     }
@@ -61,7 +63,11 @@
                 </td>
                 <td style="text-align: left">
                     <?php
-                    echo (float)$discount;
+                        if(!empty(abs($val['transaction_discount_delivery']))){
+                            echo (float)abs($val['transaction_discount_delivery']);
+                        }else{
+                            echo (float)$discount;
+                        }
                     ?>
                 </td>
                 <td style="text-align: left">{{$val['transaction_shipment_go_send']}}</td>

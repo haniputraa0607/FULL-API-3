@@ -43,6 +43,7 @@ class DealsPromotionBuyxgetyProductRequirement extends Eloquent
 		'id_deals',
 		'product_type',
 		'id_product',
+		'id_brand',
 		'id_product_category'
 	];
 
@@ -81,4 +82,9 @@ class DealsPromotionBuyxgetyProductRequirement extends Eloquent
         	}]);
         }
     }
+
+    public function brand()
+	{
+		return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
+	}
 }

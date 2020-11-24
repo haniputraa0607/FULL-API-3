@@ -130,6 +130,7 @@ class ApiSettingTransactionV2 extends Controller
             $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet',$data['id_outlet'])->first();
             $different_price = $outlet->outlet_different_price;
             $dataSubtotal = [];
+            $dataSubtotalPerBrand = [];
             if ($discount_promo['item'] ?? false) {
                 $loopable = &$discount_promo['item'];
             } else {
@@ -186,7 +187,7 @@ class ApiSettingTransactionV2 extends Controller
                 }
                 $mod_subtotal = 0;
                 if ($valueData['id_product_variant_group'] ?? false) {
-                    $product_variant_group = ProductVariantGroup::where('id_product_variant_group', $valueData['id_product_variant_group']);
+                    $product_variant_group = ProductVariantGroup::where('product_variant_groups.id_product_variant_group', $valueData['id_product_variant_group']);
                     if ($different_price) {
                         $product_variant_group->join('product_variant_group_special_prices', 'product_variant_group_special_prices.id_product_variant_group', 'product_variant_groups.id_product_variant_group')->select('product_variant_groups.id_product_variant_group', 'product_variant_groups.id_product', 'product_variant_group_special_prices.product_variant_group_price');
                     } else {
@@ -200,20 +201,20 @@ class ApiSettingTransactionV2 extends Controller
                             'product' => $product['product_name']
                         ]);
                     }
-                    $variants = Product::getVariantPrice($product_variant_group, Product::getVariantTree($valueData['id_product'], $outlet)['variants_tree']??[]);
+                    $variantTree = Product::getVariantTree($valueData['id_product'], $outlet);
+                    $variants = Product::getVariantPrice($product_variant_group, $variantTree['variants_tree']??[]);
                     if (!$variants) {
-                        return response()->json([
-                            'status' => 'fail',
-                            'messages' => ['Price Variant Not Found'],
-                            'product' => $product['product_name']
-                        ]);
+                        $valueData['variants'] = [];
+                    } else {
+                        $valueData['variants'] = $variants;
                     }
-                    $valueData['variants'] = $variants;
+                    $productPrice['product_price'] = $variantTree['base_price'] ?? $productPrice['product_price'];
                     $valueData['transaction_variant_subtotal'] = $product_variant_group->product_variant_group_price - $productPrice['product_price'];
                 } else {
                     $valueData['variants'] = [];
                     $valueData['transaction_variant_subtotal'] = 0;
                 }
+                $valueData['transaction_product_price'] = $productPrice['product_price'];
                 foreach ($valueData['modifiers'] as $modifier) {
                     $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                     $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
@@ -230,9 +231,18 @@ class ApiSettingTransactionV2 extends Controller
                 $price = (($productPrice['product_price'] + $mod_subtotal + $valueData['transaction_variant_subtotal']) * $valueData['qty']);
                 $valueData['transaction_product_subtotal'] = $price;
                 array_push($dataSubtotal, $price);
+
+                if (isset($dataSubtotalPerBrand[$valueData['id_brand']])) {
+                	$dataSubtotalPerBrand[$valueData['id_brand']] += $price;
+                }else{
+                	$dataSubtotalPerBrand[$valueData['id_brand']] = $price;
+                }
             }
 
-            return $dataSubtotal;
+            return [
+            	'subtotal' => $dataSubtotal,
+            	'subtotal_per_brand' => $dataSubtotalPerBrand
+            ];
         }
 
         if ($value == 'discount') {

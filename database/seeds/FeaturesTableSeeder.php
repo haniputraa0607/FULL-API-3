@@ -2870,7 +2870,67 @@ class FeaturesTableSeeder extends Seeder
                     'order' => 112,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
-                )
+                ),
+            287 =>
+                array(
+                    'id_feature' => 288,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Product Bundling',
+                    'show_hide' => 1,
+                    'order' => 113,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            288 =>
+                array(
+                    'id_feature' => 289,
+                    'feature_type' => 'Detail',
+                    'feature_module' => 'Product Bundling',
+                    'show_hide' => 1,
+                    'order' => 113,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            289 =>
+                array(
+                    'id_feature' => 290,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Product Bundling',
+                    'show_hide' => 1,
+                    'order' => 113,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            290 =>
+                array(
+                    'id_feature' => 291,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Product Bundling',
+                    'show_hide' => 1,
+                    'order' => 113,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            291 =>
+                array(
+                    'id_feature' => 292,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Product Bundling',
+                    'show_hide' => 1,
+                    'order' => 113,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            292 =>
+                array(
+                    'id_feature' => 293,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Auto CRM Voucher',
+                    'show_hide' => 1,
+                    'order' => 114,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
         ));
     }
 }

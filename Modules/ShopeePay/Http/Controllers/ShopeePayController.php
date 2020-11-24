@@ -355,6 +355,19 @@ class ShopeePayController extends Controller
                         } else {
                             $checkFraud = app($this->setting_fraud)->checkFraudTrxOnline($userData, $singleTrx);
                         }
+
+                        //inset pickup_at when pickup_type = right now
+                        if ($singleTrx['trasaction_type'] == 'Pickup Order') {
+                            $detailTrx = TransactionPickup::where('id_transaction', $singleTrx->id_transaction)->first();
+                            if ($detailTrx['pickup_type'] == 'right now') {
+                                $settingTime = MyHelper::setting('processing_time');
+                                if ($settingTime) {
+                                    $updatePickup = $detailTrx->update(['pickup_at' => date('Y-m-d H:i:s', strtotime('+ ' . $settingTime . 'minutes'))]);
+                                } else {
+                                    $updatePickup = $detailTrx->update(['pickup_at' => date('Y-m-d H:i:s')]);
+                                }
+                            }
+                        }
                     }
                     DB::commit();
                     $singleTrx->load('outlet');

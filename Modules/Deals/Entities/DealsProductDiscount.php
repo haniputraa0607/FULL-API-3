@@ -38,7 +38,8 @@ class DealsProductDiscount extends Eloquent
 	protected $fillable = [
 		'id_deals',
 		'id_product',
-		'id_product_category'
+		'id_product_category',
+		'id_brand'
 	];
 
 	public function deal()
@@ -54,5 +55,10 @@ class DealsProductDiscount extends Eloquent
 	public function product_category()
 	{
 		return $this->belongsTo(\App\Http\Models\ProductCategory::class, 'id_product_category');
+	}
+
+	public function brand()
+	{
+		return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
 	}
 }

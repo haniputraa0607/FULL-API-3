@@ -2732,7 +2732,7 @@ class ApiOutletController extends Controller
     public function applyPromo($promo_post, $data_outlet, &$promo_error)
     {
     	// check promo
-    	$post = $promo_post;
+    	$post 	= $promo_post;
     	$outlet = $data_outlet;
 
     	// give all product flag is_promo = 0
@@ -2741,11 +2741,10 @@ class ApiOutletController extends Controller
 		}
 
 		$promo_error = null;
-		if (
-				(!empty($post['promo_code']) && empty($post['id_deals_user']) && empty($post['id_subscription_user']) ) ||
-        		(empty($post['promo_code']) && !empty($post['id_deals_user']) && empty($post['id_subscription_user']) ) ||
-        		(empty($post['promo_code']) && empty($post['id_deals_user']) && !empty($post['id_subscription_user']) )
-			) {
+		if ((!empty($post['promo_code']) && empty($post['id_deals_user']) && empty($post['id_subscription_user'])) 
+			|| (empty($post['promo_code']) && !empty($post['id_deals_user']) && empty($post['id_subscription_user'])) 
+			|| (empty($post['promo_code']) && empty($post['id_deals_user']) && !empty($post['id_subscription_user']))
+		) {
         // if (isset($post['promo_code'])) {
         	if (!empty($post['promo_code']))
         	{
@@ -2772,20 +2771,41 @@ class ApiOutletController extends Controller
 	        		return false;
 	        	}
 
+	        	if ($source == 'promo_campaign') {
+	        		$brands 		= $code->promo_campaign->promo_campaign_brands()->pluck('id_brand')->toArray();
+	        		$all_outlet 	= $code['promo_campaign']['is_all_outlet']??0;
+	        		$promo_outlet 	= $code['promo_campaign']['promo_campaign_outlets']??[];
+	        		$id_brand 		= $code['promo_campaign']['id_brand']??null;
+	        		$brand_rule		= $code['promo_campaign']['brand_rule']??'and';
+	        	}elseif($source == 'deals'){
+	        		$brands 		= $code->dealVoucher->deals->deals_brands()->pluck('id_brand')->toArray();
+	        		$all_outlet 	= $code['dealVoucher']['deals']['is_all_outlet']??0;
+	        		$promo_outlet 	= $code['dealVoucher']['deals']['outlets_active']??[];
+	        		$id_brand 		= $code['dealVoucher']['deals']['id_brand']??null;
+	        		$brand_rule		= $code['dealVoucher']['deals']['brand_rule']??'and';
+	        	}elseif($source == 'subscription'){
+	        		$brands 		= $code->subscription_user->subscription->subscription_brands->pluck('id_brand')->toArray();
+	        		$all_outlet 	= $code['subscription_user']['subscription']['is_all_outlet']??0;
+	        		$promo_outlet 	= $code['subscription_user']['subscription']['outlets_active']??[];
+	        		$id_brand 		= $code['subscription_user']['subscription']['id_brand']??null;
+	        		$brand_rule		= $code['subscription_user']['subscription']['brand_rule']??'and';
+	        	}
+
 	        	// if valid give flag is_promo = 1
+	        	$code_obj = $code;
 	        	$code = $code->toArray();
 	        	$pct = new PromoCampaignTools;
 
-				$all_outlet = $code['promo_campaign']['is_all_outlet']??$code['subscription_user']['subscription']['is_all_outlet']??$code['deal_voucher']['deals']['is_all_outlet']??0;
-				$id_brand 	= $code['promo_campaign']['id_brand']??$code['subscription_user']['subscription']['id_brand']??$code['deal_voucher']['deals']['id_brand']??null;
-				$promo_outlet 	= $code['promo_campaign']['promo_campaign_outlets']??$code['deal_voucher']['deals']['outlets_active']??$code['subscription_user']['subscription']['outlets_active']??[];
-
 				foreach ($outlet as $key => $value) {
-					$check_outlet = $pct->checkOutletRule($value['id_outlet'], $all_outlet, $promo_outlet, $id_brand);
+					if (isset($id_brand)) {
+						$check_outlet = $pct->checkOutletRule($value['id_outlet'], $all_outlet, $promo_outlet, $id_brand);
+					}else{
+						$check_outlet = $pct->checkOutletBrandRule($value['id_outlet'], $all_outlet, $promo_outlet, $brands, $brand_rule);
+					}
+					
 					if ($check_outlet) {
 						$outlet[$key]['is_promo'] = 1;
 					}
-
 				}
 	        }
 	    }elseif (
