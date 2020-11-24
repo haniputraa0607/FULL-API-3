@@ -162,6 +162,7 @@ class ApiSubscriptionClaim extends Controller
 	                                    ]);
 	                                }
 
+	                                /* dikomen karena log point, sekarang masih belum dipakai
 	                                // UPDATE POINT
 	                                if (!$this->updatePoint($voucher)) {
 	                                    DB::rollback();
@@ -169,7 +170,7 @@ class ApiSubscriptionClaim extends Controller
 	                                        'status'   => 'fail',
 	                                        'messages' => ['Proses pembelian subscription gagal, silakan mencoba kembali']
 	                                    ]);
-	                                }
+	                                }*/
 
 	                                DB::commit();
 

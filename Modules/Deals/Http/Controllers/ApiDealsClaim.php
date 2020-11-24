@@ -176,13 +176,14 @@ class ApiDealsClaim extends Controller
 		                        }
 
 		                        // UPDATE POINT
+		                        /* dikomen karena log point, sekarang masih belum dipakai
 		                        if (!$this->updatePoint($voucher)) {
 		                            DB::rollback();
 		                            return response()->json([
 		                                'status'   => 'fail',
 		                                'messages' => ['Proses pengambilan voucher gagal, silakan mencoba kembali']
 		                            ]);
-		                        }
+		                        }*/
 
 		                        // dd($user_voucher_array);
 		                        DB::commit();
