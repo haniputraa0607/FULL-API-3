@@ -1754,7 +1754,7 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([],'Outlet not found');
         }
         //get product
-        $product = Product::select('id_product','product_code','product_name','product_description','product_code','product_visibility','product_photo_detail')
+        $product = Product::select('id_product','product_code','product_name','product_description','product_code','product_visibility','product_photo_detail', 'product_variant_status')
         ->where('id_product',$post['id_product'])
         ->whereHas('brand_category')
         ->whereRaw('products.id_product in (CASE
@@ -1863,7 +1863,11 @@ class ApiProductController extends Controller
                 $product['product_price'] = $productGlobalPrice['product_global_price'];
             }
         }
-        $product['variants'] = Product::getVariantTree($product['id_product'], $outlet)['variants_tree']??null;
+        if ($product['product_variant_status']) {
+            $product['variants'] = Product::getVariantTree($product['id_product'], $outlet)['variants_tree']??null;
+        } else {
+            $product['variants'] = null;
+        }
         $product['selected_available'] = 1;
         if ($post['selected']['id_product_variant_group'] ?? false) {
             $product['selected_available'] = (!!Product::getVariantParentId($post['selected']['id_product_variant_group'], $product['variants'], $post['selected']['extra_modifiers'] ?? []))?1:0;
