@@ -2595,7 +2595,7 @@ class ApiOnlineTransaction extends Controller
         $result['points'] = (int) $balance;
         $result['total_promo'] = app($this->promo)->availablePromo();
         $result['pickup_type'] = 1;
-        $result['delivery_type'] = 1;
+        $result['delivery_type'] = $outlet['delivery_order'];
         $result['available_payment'] = null;
 
         if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user)
