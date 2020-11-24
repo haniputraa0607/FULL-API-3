@@ -2820,6 +2820,56 @@ class FeaturesTableSeeder extends Seeder
                     'order' => 111,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            282 =>
+                array(
+                    'id_feature' => 283,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Product Modifier Group',
+                    'show_hide' => 1,
+                    'order' => 112,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            283 =>
+                array(
+                    'id_feature' => 284,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Product Modifier Group',
+                    'show_hide' => 1,
+                    'order' => 112,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            284 =>
+                array(
+                    'id_feature' => 285,
+                    'feature_type' => 'Detail',
+                    'feature_module' => 'Product Modifier Group',
+                    'show_hide' => 1,
+                    'order' => 112,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            285 =>
+                array(
+                    'id_feature' => 286,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Product Modifier Group',
+                    'show_hide' => 1,
+                    'order' => 112,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            286 =>
+                array(
+                    'id_feature' => 287,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Product Modifier Group',
+                    'show_hide' => 1,
+                    'order' => 112,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
                 )
         ));
     }

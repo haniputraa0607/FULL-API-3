@@ -300,7 +300,12 @@ class ApiSubscriptionClaim extends Controller
         elseif ( isset($subs->new_purchase_after) ) {
         	switch ($subs->new_purchase_after) {
         		case 'Empty':
-        			$available = SubscriptionUserVoucher::where('id_subscription_user', $subsUser[0]->id_subscription_user)->whereNotNull('used_at')->count();
+        			$available = SubscriptionUserVoucher::where('id_subscription_user', $subsUser[0]->id_subscription_user)
+        						->join('transactions','transactions.id_transaction','=','subscription_user_vouchers.id_transaction')
+        						->where('transaction_payment_status', 'Completed')
+        						->whereNotNull('used_at')
+        						->count();
+
         			if ($available == $subs->subscription_voucher_total) return true;
         			if (isset($subsUser[0]['subscription_expired_at']) && strtotime($subsUser[0]['subscription_expired_at']) <= strtotime($now)){
 			            return true;
@@ -312,7 +317,11 @@ class ApiSubscriptionClaim extends Controller
 			        }
         			break;
         		case 'Empty Expired':
-        			$available = SubscriptionUserVoucher::where('id_subscription_user', $subsUser[0]->id_subscription_user)->whereNotNull('used_at')->count();
+        			$available = SubscriptionUserVoucher::where('id_subscription_user', $subsUser[0]->id_subscription_user)
+        						->join('transactions','transactions.id_transaction','=','subscription_user_vouchers.id_transaction')
+        						->where('transaction_payment_status', 'Completed')
+        						->whereNotNull('used_at')
+        						->count();
         			if ($available == $subs->subscription_voucher_total) return true;
         			if (isset($subsUser[0]['subscription_expired_at']) && strtotime($subsUser[0]['subscription_expired_at']) <= strtotime($now)){
 			            return true;

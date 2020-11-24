@@ -108,6 +108,9 @@ class ApiCronTrxController extends Controller
                         'Status' => '0',
                         'requery_response' => 'Cancelled by cron'
                     ],false,false);
+                    if ($trx_ipay) {
+                        \Modules\IPay88\Lib\IPay88::create()->void($trx_ipay);
+                    }
                     continue;                
                 }
                 // $detail = $this->getHtml($singleTrx, $productTrx, $user->name, $user->phone, $singleTrx->created_at, $singleTrx->transaction_receipt_number);
@@ -252,8 +255,10 @@ class ApiCronTrxController extends Controller
                                     $message->from($setting['email_sender']);
                                 }
 
-                                if(!empty($setting['email_reply_to'])){
+                                if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
                                     $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                                }else if(!empty($setting['email_reply_to'])){
+                                    $message->replyTo($setting['email_reply_to']);
                                 }
 
                                 if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
@@ -480,7 +485,14 @@ class ApiCronTrxController extends Controller
                 ->whereNull('reject_at')
                 ->whereNull('taken_by_system_at')
                 ->whereDate('transactions.transaction_date',date('Y-m-d'))
-                ->where('transaction_date','<',$max_time)
+                ->where(function($query) use ($max_time) {
+                    $query->where(function($query2) use ($max_time) {
+                        $query2->whereNotNull('completed_at')->where('completed_at', '<', $max_time);
+                    })
+                    ->orWhere(function($query2) use ($max_time) {
+                        $query2->whereNull('completed_at')->where('transaction_date', '<', $max_time);
+                    });
+                })
                 ->get();
 
             $reason = 'auto reject order by system';

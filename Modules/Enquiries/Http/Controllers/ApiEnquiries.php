@@ -2,10 +2,12 @@
 
 namespace Modules\Enquiries\Http\Controllers;
 
+use App\Http\Models\AutocrmPushLog;
 use App\Http\Models\Enquiry;
 use App\Http\Models\EnquiriesPhoto;
 use App\Http\Models\Setting;
 use App\Http\Models\Outlet;
+use App\Http\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -18,7 +20,7 @@ use App\Lib\ValueFirst;
 use Hash;
 use App\Lib\PushNotificationHelper;
 use DB;
-use Mail;
+use App\Lib\SendMail as Mail;
 use File;
 
 use Modules\Enquiries\Http\Requests\Create;
@@ -184,6 +186,7 @@ class ApiEnquiries extends Controller
         if ($save) {
 
 			$data['attachment'] = [];
+			$data['id_enquiry'] =(string)$save->id_enquiry;
 			// save many file
         	if (isset($data['many_upload_file'])) {
         		$files = $this->saveFiles($save->id_enquiry, $data['many_upload_file']);
@@ -340,9 +343,11 @@ class ApiEnquiries extends Controller
 						$message->from($setting['email_sender']);
 					}
 
-					if(!empty($setting['email_reply_to'])){
-						$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-					}
+					if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                                }else if(!empty($setting['email_reply_to'])){
+                                    $message->replyTo($setting['email_reply_to']);
+                                }
 
 					if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
 						$message->cc($setting['email_cc'], $setting['email_cc_name']);
@@ -457,15 +462,26 @@ class ApiEnquiries extends Controller
                     }
 					// return $dataOptional;
 
-					$deviceToken = array($check['enquiry_device_token']);
+                    $deviceToken = PushNotificationHelper::searchDeviceToken("phone", $check['enquiry_phone']);
 
 
                     $subject = app($this->autocrm)->TextReplace($post['reply_push_subject'], $check['enquiry_phone'], $aditionalVariabel);
                     $content = app($this->autocrm)->TextReplace($post['reply_push_content'], $check['enquiry_phone'], $aditionalVariabel);
 
-					if (!empty($deviceToken)) {
-							$push = PushNotificationHelper::sendPush($deviceToken, $subject, $content, $image, $dataOptional);
-							// return $push;
+                    if (!empty($deviceToken)) {
+                        if (isset($deviceToken['token']) && !empty($deviceToken['token'])) {
+                            $push = PushNotificationHelper::sendPush($deviceToken, $subject, $content, $image, $dataOptional);
+                            $getUser = User::where('phone', $check['enquiry_phone'])->first();
+                            if (isset($push['success']) && $push['success'] > 0 && $getUser) {
+                                $logData = [];
+                                $logData['id_user'] = $getUser['id'];
+                                $logData['push_log_to'] = $getUser['phone'];
+                                $logData['push_log_subject'] = $subject;
+                                $logData['push_log_content'] = $content;
+
+                                $logs = AutocrmPushLog::create($logData);
+                            }
+                        }
 					}
 				} catch (\Exception $e) {
 					return response()->json(MyHelper::throwError($e));
@@ -540,6 +556,7 @@ class ApiEnquiries extends Controller
 			$data['brand']['name_brand']="";
 		}
         $send = app($this->autocrm)->SendAutoCRM('Enquiry '.$data['enquiry_subject'], $data['enquiry_phone'], [
+                                                                'enquiry_id' => $data['id_enquiry'],
                                                                 'enquiry_subject' => $data['enquiry_subject'],
                                                                 'enquiry_message' => $data['enquiry_content'],
                                                                 'enquiry_phone'   => $data['enquiry_phone'],

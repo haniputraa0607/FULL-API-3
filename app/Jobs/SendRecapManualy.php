@@ -33,6 +33,10 @@ class SendRecapManualy implements ShouldQueue
             app('Modules\Disburse\Http\Controllers\ApiDisburseController')->shortcutRecap($this->data['date']);
         }elseif($this->data['type'] == 'recap_transaction_to_outlet'){
             app('Modules\Disburse\Http\Controllers\ApiDisburseController')->cronSendEmailDisburse($this->data['date']);
+        }elseif($this->data['type'] == 'recap_transaction_each_outlet'){
+            app('Modules\Disburse\Http\Controllers\ApiDisburseController')->exportToOutlet($this->data['data']);
+        }elseif($this->data['type'] == 'recap_disburse_each_outlet'){
+            app('Modules\Disburse\Http\Controllers\ApiDisburseController')->sendDisburseWithRangeDate($this->data['data']);
         }
 
         return 'success';

@@ -27,4 +27,12 @@ class ProductVariantGroup extends Model
     {
         return $this->hasMany(ProductVariantPivot::class, 'id_product_variant_group', 'id_product_variant_group')->select('id_product_variant_group','id_product_variant');
     }
+
+    public function getProductVariantGroupStockStatusAttribute($value)
+    {
+        if(!$value){
+            return 'Available';
+        }
+        return $value;
+    }
 }

@@ -26,6 +26,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Validator;
 use Hash;
 use DB;
@@ -797,6 +798,7 @@ class ApiProductController extends Controller
                 $data['products'] = ProductModifier::select('product_modifiers.id_product_modifier','type','code','text as name','global_prices.global_price')
                     ->leftJoin('product_modifier_brands','product_modifier_brands.id_product_modifier','=','product_modifiers.id_product_modifier')
                     ->leftJoin(DB::raw('('.$subquery.') as global_prices'),'product_modifiers.id_product_modifier','=','global_prices.id_product_modifier')
+                    ->whereNotIn('type', ['Modifier Group'])
                     ->where(function($q) use ($post){
                         $q->where('id_brand',$post['id_brand'])
                             ->orWhere('modifier_type','<>','Global Brand');
@@ -820,6 +822,7 @@ class ApiProductController extends Controller
                 $data['brand'] = Brand::where('id_brand',$post['id_brand'])->first();
                 $data['products'] = ProductModifier::select('type','code','text as name')
                     ->leftJoin('product_modifier_brands','product_modifier_brands.id_product_modifier','=','product_modifiers.id_product_modifier')
+                    ->whereNotIn('type', ['Modifier Group'])
                     ->where(function($q) use ($post){
                         $q->where('id_brand',$post['id_brand'])
                             ->orWhere('modifier_type','<>','Global Brand');
@@ -1123,6 +1126,10 @@ class ApiProductController extends Controller
     	$save = Product::where('id_product', $post['id_product'])->update($data);
 
     	if($save){
+            if(isset($data['product_variant_status']) && !empty($data['product_variant_status'])){
+                ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']], ['product_global_price' => 0]);
+            }
+
             if(isset($post['photo'])){
                 //delete all photo
                 $delete = $this->deletePhoto($post['id_product']);

@@ -806,7 +806,7 @@ class ApiConfirm extends Controller
 
                             $update = TransactionPaymentOvo::where('id_transaction', $trx['id_transaction'])->update($dataUpdate);
                             if($update){
-                                $updatePaymentStatus = Transaction::where('id_transaction', $trx['id_transaction'])->update(['transaction_payment_status' => 'Completed']);
+                                $updatePaymentStatus = Transaction::where('id_transaction', $trx['id_transaction'])->update(['transaction_payment_status' => 'Completed', 'completed_at' => date('Y-m-d H:i:s')]);
                                 if($updatePaymentStatus){
                                     $userData = User::where('id', $trx['id_user'])->first();
                                     $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;

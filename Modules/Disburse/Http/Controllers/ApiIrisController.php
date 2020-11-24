@@ -37,7 +37,7 @@ use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
-use Mail;
+use App\Lib\SendMail as Mail;
 use DOMDocument;
 use Illuminate\Support\Facades\Log;
 class ApiIrisController extends Controller
@@ -99,6 +99,7 @@ class ApiIrisController extends Controller
                  -today is not holiday when return true
                  -cron runs on weekdays
                 */
+                $arrSuccess = [];
                 $currentDate = date('Y-m-d');
                 $day = date('D', strtotime($currentDate));
                 $getHoliday = $this->getHoliday();
@@ -1089,9 +1090,11 @@ class ApiIrisController extends Controller
                         $message->from($setting['email_sender']);
                     }
 
-                    if(!empty($setting['email_reply_to'])){
-                        $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-                    }
+                    if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                                }else if(!empty($setting['email_reply_to'])){
+                                    $message->replyTo($setting['email_reply_to']);
+                                }
 
                     if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
                         $message->cc($setting['email_cc'], $setting['email_cc_name']);

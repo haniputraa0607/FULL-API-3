@@ -211,6 +211,7 @@ class ApiOrder extends Controller
                             ->where('id_outlet', $outlet['id_outlet'])
                             ->where('order_id', $post['order_id'])
                             ->whereDate('transaction_date', date('Y-m-d'))
+                            ->where('transactions.id_outlet', $outlet->id_outlet)
                             ->with('user', 'productTransaction.product.product_category', 'productTransaction.product.product_discounts', 'outlet')->first();
 
         $qr     = $list['order_id'];
@@ -356,6 +357,7 @@ class ApiOrder extends Controller
         $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
                             ->where('order_id', $post['order_id'])
                             ->whereDate('transaction_date', date('Y-m-d'))
+                            ->where('transactions.id_outlet', $outlet->id_outlet)
                             ->first();
 
         if(!$order){
@@ -430,6 +432,7 @@ class ApiOrder extends Controller
         $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
                             ->where('order_id', $post['order_id'])
                             ->whereDate('transaction_date', date('Y-m-d'))
+                            ->where('transactions.id_outlet', $outlet->id_outlet)
                             ->first();
 
         if(!$order){
@@ -546,6 +549,7 @@ class ApiOrder extends Controller
         $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
                             ->where('order_id', $post['order_id'])
                             ->whereDate('transaction_date', date('Y-m-d'))
+                            ->where('transactions.id_outlet', $outlet->id_outlet)
                             ->first();
 
         if(!$order){
@@ -767,6 +771,7 @@ class ApiOrder extends Controller
         $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
                             ->where('order_id', $post['order_id'])
                             ->whereDate('transaction_date', date('Y-m-d'))
+                            ->where('transactions.id_outlet', $outlet->id_outlet)
                             ->first();
 
         if(!$order){

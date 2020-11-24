@@ -32,7 +32,7 @@ use App\Lib\ValueFirst;
 use Validator;
 use Hash;
 use DB;
-use Mail;
+use App\Lib\SendMail as Mail;
 
 class ApiAutoCrm extends Controller
 {
@@ -121,9 +121,11 @@ class ApiAutoCrm extends Controller
 									$message->from($setting['email_sender']);
 								}
 
-								if(!empty($setting['email_reply_to'])){
-									$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-								}
+								if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                                }else if(!empty($setting['email_reply_to'])){
+                                    $message->replyTo($setting['email_reply_to']);
+                                }
 
 								if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
 									$message->cc($setting['email_cc'], $setting['email_cc_name']);
@@ -145,7 +147,7 @@ class ApiAutoCrm extends Controller
 								}
 							});
 						}catch(\Exception $e){
-							
+							\Log::error($e);
 						}
 					}else{
 					    try{
@@ -158,9 +160,11 @@ class ApiAutoCrm extends Controller
 									$message->from($setting['email_sender']);
 								}
 
-								if(!empty($setting['email_reply_to'])){
-									$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-								}
+								if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                                }else if(!empty($setting['email_reply_to'])){
+                                    $message->replyTo($setting['email_reply_to']);
+                                }
 
 								if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
 									$message->cc($setting['email_cc'], $setting['email_cc_name']);
@@ -237,9 +241,11 @@ class ApiAutoCrm extends Controller
 									$message->from($setting['email_sender']);
 								}
 
-								if(!empty($setting['email_reply_to'])){
-									$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-								}
+								if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                                }else if(!empty($setting['email_reply_to'])){
+                                    $message->replyTo($setting['email_reply_to']);
+                                }
 
 								if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
 									$message->cc($setting['email_cc'], $setting['email_cc_name']);
@@ -1193,8 +1199,10 @@ class ApiAutoCrm extends Controller
                                     $message->from($setting['email_sender']);
                                 }
 
-                                if(!empty($setting['email_reply_to'])){
+                                if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
                                     $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                                }else if(!empty($setting['email_reply_to'])){
+                                    $message->replyTo($setting['email_reply_to']);
                                 }
 
                                 if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
