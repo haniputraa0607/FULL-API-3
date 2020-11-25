@@ -151,6 +151,7 @@ class ApiSubscriptionClaim extends Controller
 	                                    }   // end of for
 
 	                                    // update deals total bought
+	                                	DB::commit();
 	                                    $updateSubs = $this->updateSubs($dataSubs);
 	                                }
 	                                else {
@@ -172,7 +173,6 @@ class ApiSubscriptionClaim extends Controller
 	                                    ]);
 	                                }*/
 
-	                                DB::commit();
 
 	                                if(\Module::collections()->has('Autocrm')) {
 	                                    $phone=$request->user()->phone;

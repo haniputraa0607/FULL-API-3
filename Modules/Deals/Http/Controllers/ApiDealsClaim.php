@@ -187,6 +187,9 @@ class ApiDealsClaim extends Controller
 
 		                        // dd($user_voucher_array);
 		                        DB::commit();
+		                        if ($voucher) {
+		                        	$updateDeals = $this->updateDeals($dataDeals);
+		                        }
 
 		                        // assign deals subscription vouchers to response
 		                        if ($dataDeals->deals_type == "Subscription") {
@@ -338,7 +341,7 @@ class ApiDealsClaim extends Controller
 	        			->join('deals_users', 'deals_users.id_deals_voucher','=','deals_vouchers.id_deals_voucher')
 	        			->where('paid_status', '!=', 'Cancelled')
 	        			->count();
-        $update = Deal::where('id_deals', $dataDeals->id_deals)->update(['deals_total_claimed' => $total_claimed + 1]);
+        $update = Deal::where('id_deals', $dataDeals->id_deals)->update(['deals_total_claimed' => $total_claimed]);
 
         $update = is_int($update) ? true : false;
 
@@ -453,7 +456,9 @@ class ApiDealsClaim extends Controller
 
             if ($updateVoucher) {
                 // UPDATE DEALS
-                $updateDeals = $this->updateDeals($dataDeals);
+                // $updateDeals = $this->updateDeals($dataDeals);
+                // update deals moved to after commit create voucher
+                $updateDeals = true;
 
                 if ($updateDeals) {
                     // CREATE USER VOUCHER

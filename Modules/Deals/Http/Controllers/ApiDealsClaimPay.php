@@ -298,6 +298,8 @@ class ApiDealsClaimPay extends Controller
 	                            $payNow = new PayNow($req);
 
 	                            DB::commit();
+	                            // update deals total claim
+	                            $updateDeals = app($this->claim)->updateDeals($dataDeals);
 	                            return $this->bayarSekarang($payNow);
 	                        }
 	                        else {

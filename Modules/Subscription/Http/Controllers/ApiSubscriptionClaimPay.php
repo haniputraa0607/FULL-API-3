@@ -275,9 +275,6 @@ class ApiSubscriptionClaimPay extends Controller
 	                                    array_push($user_voucher_array, $subs_voucher_data);
 
 	                                }   // end of for
-
-	                                // update deals total bought
-	                                $updateSubs = app($this->claim)->updateSubs($dataSubs);
 	                            }
 	                            else {
 	                                DB::rollback();
@@ -299,6 +296,8 @@ class ApiSubscriptionClaimPay extends Controller
 	                                $payNow = new PayNow($req);
 
 	                                DB::commit();
+	                                // update subscription total bought
+	                                $updateSubs = app($this->claim)->updateSubs($dataSubs);
 	                                return $this->bayarSekarang($payNow);
 	                            }
 	                            else {

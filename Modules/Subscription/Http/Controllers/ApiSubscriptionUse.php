@@ -230,6 +230,9 @@ class ApiSubscriptionUse extends Controller
 			$getProduct  = app($this->promo_campaign)->getProduct('subscription',$subs['subscription_user']['subscription'], $id_outlet);
 			$product = $getProduct['product']??'';
 			$applied_product = $getProduct['applied_product'][0]??'';
+			if ($applied_product == '*') {
+				$applied_product = null;
+			}
 			$errorProduct = 'all';
 			return 0;
 		}
