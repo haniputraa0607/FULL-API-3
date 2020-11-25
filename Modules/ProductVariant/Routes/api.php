@@ -27,13 +27,15 @@ Route::group([ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scop
     Route::post('list', 'ApiProductVariantGroupController@listProductWithVariant');
     Route::post('product-delete', 'ApiProductVariantGroupController@deleteVariantFromProduct');
 
-    Route::any('/', ['uses' => 'ApiProductVariantGroupController@productVariantGroup']);
+    Route::any('/', ['uses' => 'ApiProductVariantGroupController@productVariantGroupListCreate']);
+    Route::any('list-group', ['uses' => 'ApiProductVariantGroupController@productVariantGroupList']);
+    Route::post('remove', ['uses' => 'ApiProductVariantGroupController@removeProductVariantGroup']);
     Route::post('delete', ['uses' => 'ApiProductVariantGroupController@deleteProductVariantGroup']);
     Route::any('list-price', ['uses' => 'ApiProductVariantGroupController@listPrice']);
     Route::any('update-price', ['uses' => 'ApiProductVariantGroupController@updatePrice']);
     Route::post('list-detail', 'ApiProductVariantGroupController@listDetail');
     Route::post('update-detail', 'ApiProductVariantGroupController@updateDetail');
-    Route::get('export', 'ApiProductVariantGroupController@export');
+    Route::post('export', 'ApiProductVariantGroupController@export');
     Route::post('import', 'ApiProductVariantGroupController@import');
     Route::post('export-price', 'ApiProductVariantGroupController@exportPrice');
     Route::post('import-price', ['uses' => 'ApiProductVariantGroupController@importPrice']);
