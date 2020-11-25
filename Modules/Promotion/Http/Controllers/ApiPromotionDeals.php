@@ -169,6 +169,8 @@ class ApiPromotionDeals extends Controller
 	                'promotion_contents.deals',
 	                'brand',
 	                'deals_promotion_discount_bill_rules',
+	                'deals_promotion_discount_bill_products.product',
+	                'deals_promotion_discount_bill_products.brand',
 	                'deals_promotion_discount_delivery_rules',
 	                'deals_promotion_shipment_method',
 	                'deals_promotion_payment_method',

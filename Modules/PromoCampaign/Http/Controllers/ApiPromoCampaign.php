@@ -32,6 +32,7 @@ use Modules\Deals\Entities\DealsTierDiscountRule;
 use Modules\Deals\Entities\DealsBuyxgetyProductRequirement;
 use Modules\Deals\Entities\DealsBuyxgetyRule;
 use Modules\Deals\Entities\DealsDiscountBillRule;
+use Modules\Deals\Entities\DealsDiscountBillProduct;
 use Modules\Deals\Entities\DealsDiscountDeliveryRule;
 use Modules\Deals\Entities\DealsShipmentMethod;
 use Modules\Deals\Entities\DealsPaymentMethod;
@@ -43,6 +44,7 @@ use Modules\Promotion\Entities\DealsPromotionTierDiscountRule;
 use Modules\Promotion\Entities\DealsPromotionBuyxgetyProductRequirement;
 use Modules\Promotion\Entities\DealsPromotionBuyxgetyRule;
 use Modules\Promotion\Entities\DealsPromotionDiscountBillRule;
+use Modules\Promotion\Entities\DealsPromotionDiscountBillProduct;
 use Modules\Promotion\Entities\DealsPromotionDiscountDeliveryRule;
 use Modules\Promotion\Entities\DealsPromotionShipmentMethod;
 use Modules\Promotion\Entities\DealsPromotionPaymentMethod;
@@ -1141,7 +1143,7 @@ class ApiPromoCampaign extends Controller
             }
         } elseif ($post['promo_type'] == 'Discount bill') {
             try {
-                $createFilterProduct = $this->createDiscountBill($id_post, $post['discount_type'], $post['discount_value'], $post['max_percent_discount'], $source, $table, $id_table, $post['filter_product_bill'], $post['multiple_product']);
+                $createFilterProduct = $this->createDiscountBill($id_post, $post['discount_type'], $post['discount_value'], $post['max_percent_discount'], $source, $table, $id_table, $post['filter_product_bill'], $post['multiple_product']??[]);
             } catch (Exception $e) {
                 $createFilterProduct = [
                     'status'  => 'fail',
@@ -1354,7 +1356,6 @@ class ApiPromoCampaign extends Controller
 		        PromoCampaignProductDiscount::where('id_promo_campaign', '=', $id_post)->delete();
 		        PromoCampaignBuyxgetyProductRequirement::where('id_promo_campaign', '=', $id_post)->delete();
 		        PromoCampaignDiscountBillProduct::where('id_promo_campaign', '=', $id_post)->delete();
-
 	    	}
 	    	elseif ($source == 'deals') 
 	    	{
@@ -1367,7 +1368,7 @@ class ApiPromoCampaign extends Controller
 		        DealsTierDiscountProduct::where('id_deals', '=', $id_post)->delete();
 		        DealsProductDiscount::where('id_deals', '=', $id_post)->delete();
 		        DealsBuyxgetyProductRequirement::where('id_deals', '=', $id_post)->delete();
-
+		        DealsDiscountBillProduct::where('id_deals', '=', $id_post)->delete();
 	    	}
 	    	elseif ($source == 'deals_promotion')
 	    	{
@@ -1380,7 +1381,7 @@ class ApiPromoCampaign extends Controller
 		        DealsPromotionTierDiscountProduct::where('id_deals', '=', $id_post)->delete();
 		        DealsPromotionProductDiscount::where('id_deals', '=', $id_post)->delete();
 		        DealsPromotionBuyxgetyProductRequirement::where('id_deals', '=', $id_post)->delete();
-
+		        DealsPromotionDiscountBillProduct::where('id_deals', '=', $id_post)->delete();
 	    	}
 
 	    	return true;
@@ -2035,6 +2036,7 @@ class ApiPromoCampaign extends Controller
                             'outlets',
                             'brands',
                             'promo_campaign_discount_bill_rules',
+                            'promo_campaign_discount_bill_products',
                             'promo_campaign_discount_delivery_rules',
                             'promo_campaign_shipment_method',
                             'promo_campaign_payment_method',
