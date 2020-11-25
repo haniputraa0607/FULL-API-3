@@ -2629,7 +2629,9 @@ class ApiOutletApp extends Controller
             // 'user.city.province',
             'user',
             'productTransaction.product.product_category',
-            'productTransaction.modifiers',
+            'productTransaction.modifiers' => function($query) {
+                $query->orderByRaw('CASE WHEN id_product_modifier_group IS NULL THEN 1 ELSE 0 END');
+            },
             'productTransaction.variants' => function($query){
                 $query->select('id_transaction_product','transaction_product_variants.id_product_variant','transaction_product_variants.id_product_variant','product_variants.product_variant_name', 'transaction_product_variant_price')->join('product_variants','product_variants.id_product_variant','=','transaction_product_variants.id_product_variant');
             },
