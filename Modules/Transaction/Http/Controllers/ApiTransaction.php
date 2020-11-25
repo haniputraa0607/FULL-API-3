@@ -2921,14 +2921,7 @@ class ApiTransaction extends Controller
 	            }
             }
 
-            if (!empty($list['transaction_payment_subscription'])) {
-            	$payment_subscription = abs($list['transaction_payment_subscription']['subscription_nominal']);
-                $result['payment_detail'][] = [
-                    'name'      => 'Subscription',
-                    'desc'		=> null,
-	                'amount'    => '- '.MyHelper::requestNumber($payment_subscription,'_CURRENCY')
-                ];
-            }
+           
 
             $result['promo']['discount'] = $discount;
             $result['promo']['discount'] = MyHelper::requestNumber($discount,'_CURRENCY');
@@ -3090,6 +3083,14 @@ class ApiTransaction extends Controller
                         ];
                     }
                 }
+            }
+
+            if (!empty($list['transaction_payment_subscription'])) {
+            	$payment_subscription = abs($list['transaction_payment_subscription']['subscription_nominal']);
+                $result['transaction_payment'][] = [
+                    'name'      => 'Subscription',
+	                'amount'    => MyHelper::requestNumber($payment_subscription,'_CURRENCY')
+                ];
             }
 
             return response()->json(MyHelper::checkGet($result));

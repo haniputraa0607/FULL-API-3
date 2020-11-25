@@ -2867,6 +2867,15 @@ class ApiOutletApp extends Controller
                 break;
         }
 
+        if (!empty($list['transaction_payment_subscription'])) {
+        	$payment_subscription = abs($list['transaction_payment_subscription']['subscription_nominal']);
+        	$result['promo_name'] = $list['transaction_payment_subscription']['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'];
+            $list['payment'][] = [
+                'name'      => 'Subscription',
+                'amount'    => $payment_subscription
+            ];
+        }
+
         array_splice($exp, 0, 0, 'transaction_subtotal');
         array_splice($label, 0, 0, 'Cart Total');
 
@@ -3208,16 +3217,6 @@ class ApiOutletApp extends Controller
                     'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
                 ];
             }
-        }
-
-        if (!empty($list['transaction_payment_subscription'])) {
-        	$payment_subscription = abs($list['transaction_payment_subscription']['subscription_nominal']);
-        	$result['promo_name'] = $list['transaction_payment_subscription']['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'];
-            $result['payment_detail'][] = [
-                'name'      => 'Subscription',
-                'desc'		=> null,
-                'amount'    => '- '.MyHelper::requestNumber($payment_subscription,'_CURRENCY')
-            ];
         }
 
         $result['promo']['discount'] = $discount;
