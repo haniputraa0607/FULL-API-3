@@ -38,7 +38,8 @@ class DealsDiscountBillRule extends Eloquent
 		'id_deals',
 		'discount_type',
 		'discount_value',
-		'max_percent_discount'
+		'max_percent_discount',
+		'is_all_product'
 	];
 
 	public function deal()
