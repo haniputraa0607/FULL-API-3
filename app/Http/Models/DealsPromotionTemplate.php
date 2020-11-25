@@ -192,4 +192,9 @@ class DealsPromotionTemplate extends Model
 	{
         return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionBrand::class, 'id_deals', 'id_deals_promotion_template');
 	}
+
+	public function deals_promotion_discount_bill_products()
+	{
+		return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionDiscountBillProduct::class, 'id_deals', 'id_deals_promotion_template');
+	}
 }

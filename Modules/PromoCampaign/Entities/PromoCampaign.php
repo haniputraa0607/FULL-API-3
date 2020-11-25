@@ -227,7 +227,8 @@ class PromoCampaign extends Eloquent
         return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignShipmentMethod::class, 'id_promo_campaign', 'id_promo_campaign');
     }
 
-    public function brands(){
+    public function brands()
+    {
 		return $this->belongsToMany(\Modules\Brand\Entities\Brand::class,'promo_campaign_brands','id_promo_campaign','id_brand');
 	}
 
@@ -235,4 +236,9 @@ class PromoCampaign extends Eloquent
 	{
         return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignBrand::class, 'id_promo_campaign', 'id_promo_campaign');
 	}
+
+	public function promo_campaign_discount_bill_products()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignDiscountBillProduct::class, 'id_promo_campaign', 'id_promo_campaign');
+    }
 }

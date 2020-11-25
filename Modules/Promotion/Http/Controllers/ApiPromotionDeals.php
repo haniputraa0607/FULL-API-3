@@ -28,6 +28,7 @@ use Modules\Deals\Entities\DealsTierDiscountRule;
 use Modules\Deals\Entities\DealsBuyxgetyProductRequirement;
 use Modules\Deals\Entities\DealsBuyxgetyRule;
 use Modules\Deals\Entities\DealsDiscountBillRule;
+use Modules\Deals\Entities\DealsDiscountBillProduct;
 use Modules\Deals\Entities\DealsDiscountDeliveryRule;
 use Modules\Deals\Entities\DealsUserLimit;
 use Modules\Deals\Entities\DealsContent;
@@ -169,6 +170,8 @@ class ApiPromotionDeals extends Controller
 	                'promotion_contents.deals',
 	                'brand',
 	                'deals_promotion_discount_bill_rules',
+	                'deals_promotion_discount_bill_products.product',
+	                'deals_promotion_discount_bill_products.brand',
 	                'deals_promotion_discount_delivery_rules',
 	                'deals_promotion_shipment_method',
 	                'deals_promotion_payment_method',
@@ -232,6 +235,7 @@ class ApiPromotionDeals extends Controller
 		$dataDeals['is_all_shipment'] 		= $dealsTemplate['is_all_shipment'];
 		$dataDeals['is_all_payment'] 		= $dealsTemplate['is_all_payment'];
 		$dataDeals['min_basket_size'] 		= $dealsTemplate['min_basket_size'];
+		$dataDeals['product_rule'] 			= $dealsTemplate['product_rule'];
 		$dataDeals['brand_rule'] 			= $dealsTemplate['brand_rule'];
 
 		if ($post['duration'][$key] == 'duration') {
@@ -608,13 +612,21 @@ class ApiPromotionDeals extends Controller
     	$dealsTemplate = $query;
 
     	$promotion_rule = $dealsTemplate->deals_promotion_discount_bill_rules;
+    	$product_rule 	= $dealsTemplate->deals_promotion_discount_bill_products;
 
 		$rule['id_deals'] 				= $id_deals;
 		$rule['discount_type'] 			= $promotion_rule['discount_type'];
 		$rule['discount_value'] 		= $promotion_rule['discount_value'];
 		$rule['max_percent_discount'] 	= $promotion_rule['max_percent_discount'];
+		$rule['is_all_product'] 		= $promotion_rule['is_all_product'];
 
 		$saveRule = DealsDiscountBillRule::updateOrCreate(['id_deals' => $id_deals],$rule);
+
+		if (!$rule['is_all_product']) 
+		{
+			$table = new DealsDiscountBillProduct;
+			$saveRule = $this->insertMultiProductRequirement($product_rule, $id_deals, $table);
+		}
 
 		if ($saveRule) {
 			return true;
