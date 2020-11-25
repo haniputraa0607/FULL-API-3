@@ -2682,13 +2682,10 @@ class ApiPromoCampaign extends Controller
         	}
 
 			if ($query['subscription_discount_type'] == 'discount_delivery') {
-				$desc = 'Anda berhak mendapatkan potongan ongkos kirim %discount%';
+				$desc = 'Diskon ongkos kirim %discount%';
 			}else{
-	        	$key = $brand ? 'description_product_discount_brand_no_qty' : 'description_product_discount_no_qty';
-	    		$key_null = $brand ? 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%' : 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%';
 	    		// $desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
-	    		$desc = $key_null;
-
+	    		$desc = 'Diskon %discount% untuk pembelian %product%';
 			}
 
 	    	$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'brand'=>$brand]);
@@ -2872,9 +2869,9 @@ class ApiPromoCampaign extends Controller
 	        		$discount = 'Rp '.number_format(($query[$source.'_discount_bill_rules']['discount_value']??0),0,',','.');
 	        	}
 
-				$text = 'Anda berhak mendapatkan potongan %discount%';
+				$text = 'Diskon %discount% untuk pembelian %product%';
 
-	    		$desc = MyHelper::simpleReplace($text,['discount'=>$discount]);
+	    		$desc = MyHelper::simpleReplace($text,['discount'=>$discount, 'product'=>$product]);
 	    	}
 	    	elseif ($query['promo_type'] == 'Discount delivery')
 	        {
@@ -2887,7 +2884,7 @@ class ApiPromoCampaign extends Controller
 	        		$discount = 'Rp '.number_format(($query[$source.'_discount_delivery_rules']['discount_value']??0),0,',','.');
 	        	}
 
-				$text = 'Anda berhak mendapatkan potongan ongkos kirim %discount%';
+				$text = 'Diskon ongkos kirim %discount%';
 
 	    		$desc = MyHelper::simpleReplace($text,['discount'=>$discount]);
 	    	}
