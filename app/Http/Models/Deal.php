@@ -299,4 +299,9 @@ class Deal extends Model
 	{
         return $this->hasMany(\Modules\Deals\Entities\DealsBrand::class, 'id_deals', 'id_deals');
 	}
+
+	public function deals_discount_bill_products()
+	{
+		return $this->hasMany(\Modules\Deals\Entities\DealsDiscountBillProduct::class, 'id_deals', 'id_deals');
+	}
 }
