@@ -99,7 +99,15 @@ class PromoCampaignTools{
 
 		if (isset($request['type'])) {
 			$promo_shipment = $promo->{$source.'_shipment_method'}->pluck('shipment_method');
-
+			if ($promo->promo_type == 'Discount delivery') {
+				if ($request->type == 'GO-SEND') {
+					$errors[]='Promo tidak dapat digunakan untuk Pick Up';
+					return false;
+				}
+				if (count($promo_shipment) == 1 && $promo_shipment[0] == 'GO-SEND') {
+					$promo->is_all_shipment = 1;
+				}
+			}
 			$check_shipment = $this->checkShipmentRule($promo->is_all_shipment??0, $request->type, $promo_shipment);
 			if(!$check_shipment){
 				// $errors[]='Promo cannot be used for this shipment method';
