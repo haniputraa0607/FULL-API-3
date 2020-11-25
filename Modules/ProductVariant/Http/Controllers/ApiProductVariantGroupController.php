@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Http\Models\Product;
+use Modules\Brand\Entities\Brand;
 use Modules\ProductVariant\Entities\ProductVariant;
 use DB;
 use Illuminate\Support\Facades\Log;
@@ -21,7 +22,7 @@ use Modules\Product\Entities\ProductGlobalPrice;
 
 class ApiProductVariantGroupController extends Controller
 {
-    public function productVariantGroup(Request $request){
+    public function productVariantGroupListCreate(Request $request){
         $post = $request->all();
         if(isset($request->product_code) && !empty($request->product_code)){
 
@@ -111,6 +112,97 @@ class ApiProductVariantGroupController extends Controller
             }
         }else{
             return response()->json(['status' => 'fail', 'messages'=> ['Incompleted Data']]);
+        }
+    }
+
+    public function productVariantGroupList(Request $request){
+        $post = $request->all();
+        $get = ProductVariantGroup::join('products', 'products.id_product', 'product_variant_groups.id_product')
+            ->join('brand_product', 'brand_product.id_product', 'products.id_product')
+            ->join('brands', 'brand_product.id_brand', 'brands.id_brand')
+            ->select('product_variant_groups.*', 'products.product_name', 'products.product_code', 'brands.name_brand')
+            ->orderBy('brands.order_brand', 'asc')
+            ->with(['product_variant_pivot']);
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $param = array_column($post['conditions'], 'parameter');
+            $get = $get->whereIn('id_product_variant_group', function($query) use ($param){
+                $query->select('id_product_variant_group')
+                    ->from('product_variant_pivot')
+                    ->join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
+                    ->whereIn('product_variant_name', $param);
+            });
+        }
+
+        $get = $get->paginate($request->length?:10);
+        return response()->json(MyHelper::checkGet($get));
+    }
+
+    public function removeProductVariantGroup(Request $request){
+        $post = $request->all();
+        if(isset($post['id_product_variant']) && !empty($post['id_product_variant'])){
+            $failed = 0;
+            $success = 0;
+            $messages = [];
+            if(strpos($post['id_product_variant'],"all") !== false){
+                $productVariant = ProductVariantGroup::orderBy('created_at', 'desc');
+
+                if(isset($post['conditions']) && !empty($post['conditions'])){
+                    $param = array_column($post['conditions'], 'parameter');
+                    $productVariant = $productVariant->whereIn('id_product_variant_group', function($query) use ($param){
+                        $query->select('id_product_variant_group')
+                            ->from('product_variant_pivot')
+                            ->join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
+                            ->whereIn('product_variant_name', $param);
+                    });
+                }
+
+                $productVariant = $productVariant->get()->toArray();
+                foreach ($productVariant as $pv){
+                    try{
+                        $delete = ProductVariantGroup::where('id_product_variant_group',$pv['id_product_variant_group'])->delete();
+                        if($delete){
+                            ProductVariantPivot::where('id_product_variant_group',$pv['id_product_variant_group'])->delete();
+
+                        }
+                        $success++;
+                    }catch (\Exception $e){
+                        $failed++;
+                        $messages[] = $pv['product_variant_group_code'].' - Cannot delete because product variant already use';
+                    }
+                }
+
+                return response()->json([
+                    'success' => $success,
+                    'fail' => $failed,
+                    'messages' => $messages
+                ]);
+            }else{
+                $explode = explode(',', $post['id_product_variant']);
+                $productVariant = ProductVariantGroup::whereIn('id_product_variant_group', $explode)->get()->toArray();
+
+                foreach ($productVariant as $pv){
+                    try{
+                        $delete = ProductVariantGroup::where('id_product_variant_group',$pv['id_product_variant_group'])->delete();
+                        if($delete){
+                            ProductVariantPivot::where('id_product_variant_group',$pv['id_product_variant_group'])->delete();
+
+                        }
+                        $success++;
+                    }catch (\Exception $e){
+                        $failed++;
+                        $messages[] = $pv['product_variant_group_code'].' - Cannot delete because product variant already use';
+                    }
+                }
+
+                return response()->json([
+                    'success' => $success,
+                    'fail' => $failed,
+                    'messages' => $messages
+                ]);
+            }
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
         }
     }
 
@@ -313,7 +405,16 @@ class ApiProductVariantGroupController extends Controller
     }
 
     public function export(Request $request){
-        $data = Product::with(['product_variant_group'])->get()->toArray();
+        $post      = $request->json()->all();
+        $data = Product::with(['product_variant_group']);
+        $dataBrand = [];
+        if(isset($post['id_brand']) && !empty($post['id_brand'])){
+            $dataBrand = Brand::where('brands.id_brand', $post['id_brand'])->first();
+            $data = $data->join('brand_product', 'brand_product.id_product', 'products.id_product')
+                ->join('brands', 'brand_product.id_brand', 'brands.id_brand')
+                ->where('brands.id_brand', $post['id_brand']);
+        }
+        $data = $data->get()->toArray();
         $parent = ProductVariant::whereNull('id_parent')->with(['product_variant_child'])->get()->toArray();
 
         $arr = [];
@@ -339,7 +440,19 @@ class ApiProductVariantGroupController extends Controller
                 $arr[$key][$p['product_variant_name'].' '.$name] = implode(',', $variant);
             }
         }
-        return response()->json(MyHelper::checkGet($arr));
+
+        if($arr){
+            return response()->json([
+                'status' => 'success',
+                'result' => [
+                    'brand' => $dataBrand,
+                    'products' => $arr
+                ]
+            ]);
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+        }
+
     }
 
     public function import(Request $request){
@@ -353,7 +466,7 @@ class ApiProductVariantGroupController extends Controller
             'more_msg' => [],
             'more_msg_extended' => []
         ];
-        $data = $post['data'][0]??[];
+        $data = $post['data']??[];
 
         $getAllVariant = ProductVariant::whereNotNull('id_parent')->get()->toArray();
         foreach ($data as $key => $value) {
@@ -484,6 +597,7 @@ class ApiProductVariantGroupController extends Controller
     }
 
     public function exportPrice(Request $request){
+        $post = $request->json()->all();
         $different_outlet = Outlet::where('outlet_different_price',1)->get()->toArray();
         $different_outlet_price = Outlet::select('outlet_code','id_product_variant_group','product_variant_group_price')
             ->leftJoin('product_variant_group_special_prices','outlets.id_outlet','=','product_variant_group_special_prices.id_outlet')
@@ -492,7 +606,16 @@ class ApiProductVariantGroupController extends Controller
             ->leftJoin('product_global_price', 'product_global_price.id_product', 'product_variant_groups.id_product')
             ->select('products.id_product', 'product_global_price.product_global_price as product_price', 'product_variant_groups.product_variant_group_price as global_price', 'products.product_name', 'products.product_code', 'product_variant_groups.product_variant_group_code', 'product_variant_groups.id_product_variant_group')
             ->where('product_variant_status', 1)
-            ->with(['product_variant_pivot'])->get()->toArray();
+            ->with(['product_variant_pivot']);
+
+        $dataBrand = [];
+        if(isset($post['id_brand']) && !empty($post['id_brand'])){
+            $dataBrand = Brand::where('brands.id_brand', $post['id_brand'])->first();
+            $data = $data->join('brand_product', 'brand_product.id_product', 'products.id_product')
+                ->join('brands', 'brand_product.id_brand', 'brands.id_brand')
+                ->where('brands.id_brand', $post['id_brand']);
+        }
+        $data = $data->get()->toArray();
 
         $arrProductVariant = [];
         foreach ($data as $key => $pv) {
@@ -524,7 +647,17 @@ class ApiProductVariantGroupController extends Controller
             }
         }
 
-        return response()->json(MyHelper::checkGet($arrProductVariant));
+        if($arrProductVariant){
+            return response()->json([
+                'status' => 'success',
+                'result' => [
+                    'brand' => $dataBrand,
+                    'products_variant' => $arrProductVariant
+                ]
+            ]);
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+        }
     }
 
     public function importPrice(Request $request){
@@ -533,13 +666,15 @@ class ApiProductVariantGroupController extends Controller
             'updated' => 0,
             'create' => 0,
             'no_update' => 0,
+            'updated_price' => 0,
+            'updated_price_fail' => 0,
             'invalid' => 0,
             'failed' => 0,
             'not_found' => 0,
             'more_msg' => [],
             'more_msg_extended' => []
         ];
-        $data = $post['data'][0]??[];
+        $data = $post['data']??[];
 
         foreach ($data as $key => $value) {
             if(empty($value['current_product_variant_code'])){
@@ -592,8 +727,6 @@ class ApiProductVariantGroupController extends Controller
                     }else{
                         $id_outlet = Outlet::select('id_outlet')->where('outlet_code',$outlet_code)->pluck('id_outlet')->first();
                         if(!$id_outlet){
-                            $result['updated_price_fail']++;
-                            $result['more_msg_extended'][] = "Failed create new price for product variant group {$value['product_variant_code']} at outlet $outlet_code failed";
                             continue;
                         }
                         $update = ProductVariantGroupSpecialPrice::create([
@@ -603,9 +736,9 @@ class ApiProductVariantGroupController extends Controller
                         ]);
                     }
                     if($update){
-                        $result['updated']++;
+                        $result['updated_price']++;
                     }else{
-                        $result['no_update']++;
+                        $result['updated_price_fail']++;
                         $result['more_msg_extended'][] = "Failed set price for product variant group {$value['product_variant_code']} at outlet $outlet_code failed";
                     }
                 }
@@ -628,6 +761,14 @@ class ApiProductVariantGroupController extends Controller
         }
         if($result['failed']){
             $response[] = 'Failed create '.$result['failed'].' product variant group';
+        }
+
+        if($result['updated_price']){
+            $response[] = 'Update '.$result['updated_price'].' product price outlet';
+        }
+
+        if($result['updated_price_fail']){
+            $response[] = 'Update '.$result['updated_price_fail'].' product price outlet fail';
         }
         $response = array_merge($response,$result['more_msg_extended']);
         return MyHelper::checkGet($response);
