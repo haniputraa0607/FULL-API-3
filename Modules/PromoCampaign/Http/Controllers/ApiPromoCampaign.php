@@ -19,6 +19,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignTag;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
 use Modules\PromoCampaign\Entities\UserReferralCode;
 use Modules\PromoCampaign\Entities\PromoCampaignDiscountBillRule;
+use Modules\PromoCampaign\Entities\PromoCampaignDiscountBillProduct;
 use Modules\PromoCampaign\Entities\PromoCampaignDiscountDeliveryRule;
 use Modules\PromoCampaign\Entities\PromoCampaignShipmentMethod;
 use Modules\PromoCampaign\Entities\PromoCampaignPaymentMethod;
@@ -316,6 +317,8 @@ class ApiPromoCampaign extends Controller
             'outlets',
             'promo_campaign_product_discount_rules',
             'promo_campaign_discount_bill_rules',
+            'promo_campaign_discount_bill_products.product',
+            'promo_campaign_discount_bill_products.brand',
             'promo_campaign_discount_delivery_rules',
             'promo_campaign_product_discount.product.category',
             'promo_campaign_product_discount.brand',
@@ -1138,7 +1141,7 @@ class ApiPromoCampaign extends Controller
             }
         } elseif ($post['promo_type'] == 'Discount bill') {
             try {
-                $createFilterProduct = $this->createDiscountBill($id_post, $post['discount_type'], $post['discount_value'], $post['max_percent_discount'], $source, $table, $id_table);
+                $createFilterProduct = $this->createDiscountBill($id_post, $post['discount_type'], $post['discount_value'], $post['max_percent_discount'], $source, $table, $id_table, $post['filter_product_bill'], $post['multiple_product']);
             } catch (Exception $e) {
                 $createFilterProduct = [
                     'status'  => 'fail',
@@ -1350,6 +1353,7 @@ class ApiPromoCampaign extends Controller
 		        PromoCampaignTierDiscountProduct::where('id_promo_campaign', '=', $id_post)->delete();
 		        PromoCampaignProductDiscount::where('id_promo_campaign', '=', $id_post)->delete();
 		        PromoCampaignBuyxgetyProductRequirement::where('id_promo_campaign', '=', $id_post)->delete();
+		        PromoCampaignDiscountBillProduct::where('id_promo_campaign', '=', $id_post)->delete();
 
 	    	}
 	    	elseif ($source == 'deals') 
@@ -1688,9 +1692,8 @@ class ApiPromoCampaign extends Controller
         return $result;
     }
 
-    public function createDiscountBill($id_post, $discount_type, $discount_value, $max_percent_discount, $source, $table, $id_table)
+    public function createDiscountBill($id_post, $discount_type, $discount_value, $max_percent_discount, $source, $table, $id_table, $filter_product, $products)
     {
-
     	$delete_rule = $this->deleteAllProductRule($source, $id_post);
 
     	if (!$delete_rule) {
@@ -1705,14 +1708,17 @@ class ApiPromoCampaign extends Controller
     	if ($source == 'promo_campaign') 
     	{
 	        $table_discount_bill_rule = new PromoCampaignDiscountBillRule;
+	        $table_discount_bill_product = new PromoCampaignDiscountBillProduct;
     	}
     	elseif ($source == 'deals') 
     	{
 	        $table_discount_bill_rule = new DealsDiscountBillRule;
+	        $table_discount_bill_product = new DealsDiscountBillProduct;
     	}
     	elseif ($source == 'deals_promotion')
     	{
     		$table_discount_bill_rule = new DealsPromotionDiscountBillRule;
+    		$table_discount_bill_product = new DealsPromotionDiscountBillProduct;
 	        $id_table = 'id_deals';
     	}
 
@@ -1726,12 +1732,30 @@ class ApiPromoCampaign extends Controller
             'discount_type'     	=> $discount_type,
             'discount_value'    	=> $discount_value,
             'max_percent_discount'  => $max_percent_discount,
+            'is_all_product'		=> ($filter_product == 'All Product') ? 1 : 0,
             'created_at'        	=> date('Y-m-d H:i:s'),
             'updated_at'        	=> date('Y-m-d H:i:s')
         ];
 
+        if ($filter_product != 'All Product') {
+	        $data_product = [];
+			foreach ($products as $key => $value) {
+				$temp_data = [
+					'id_product'	=> $this->splitBrandProduct($value, 'product'),
+					'id_brand'		=> $this->splitBrandProduct($value, 'brand'),
+			    	$id_table		=> $id_post,
+			    	'created_at'	=> date('Y-m-d H:i:s'),
+			    	'updated_at'	=> date('Y-m-d H:i:s'),
+				];
+				$data_product[] = $temp_data;
+			}
+        }
+
         try {
             $table_discount_bill_rule::insert($data);
+            if ($filter_product != 'All Product') {
+            	$table_discount_bill_product::insert($data_product);
+            }
             $result = ['status'  => 'success'];
         } catch (\Exception $e) {
             $result = [
@@ -1739,7 +1763,6 @@ class ApiPromoCampaign extends Controller
                 'message' => 'Create Discount Failed'
             ];
             DB::rollBack();
-            return response()->json($result);
         }
         
         return $result;
