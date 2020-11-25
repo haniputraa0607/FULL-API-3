@@ -3169,7 +3169,7 @@ class ApiOutletApp extends Controller
 
         if ($list['transaction_shipment_go_send'] > 0) {
             $result['payment_detail'][] = [
-                'name'      => 'Delivery (GO-SEND)',
+                'name'      => 'Delivery',
                 'desc'      => $list['detail']['pickup_by'],
                 'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'],'_CURRENCY')
             ];
