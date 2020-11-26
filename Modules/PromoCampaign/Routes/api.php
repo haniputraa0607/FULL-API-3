@@ -35,6 +35,8 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be'], 'pref
     
     Route::post('export/create', 'ApiPromoCampaign@exportCreate');
     Route::any('export/action', 'ApiPromoCampaign@actionExport');
+
+    Route::post('extend-period', 'ApiPromo@extendPeriod');
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be'], 'prefix' => 'promo-setting'], function () {
