@@ -522,4 +522,65 @@ class ApiPromo extends Controller
 
 		return $result;
     }
+
+    public function extendPeriod(Request $request)
+    {
+    	$post = $request->json()->all();
+    	$error_msg = [];
+    	$end_period = null;
+    	$publish_end_period = null;
+
+    	if (isset($post['end_period']) && !empty($post['end_period'])) {
+            $end_period	= date('Y-m-d H:i:s', strtotime($post['end_period']));
+        }
+
+        if (isset($post['publish_end_period']) && !empty($post['publish_end_period'])) {
+            $publish_end_period = date('Y-m-d H:i:s', strtotime($post['publish_end_period']));
+        }
+
+        if ($end_period < date('Y-m-d H:i:s')) {
+        	$error_msg[] = 'End period must be a date after '.date('Y-m-d H:i:s').'.';
+        }
+
+        if (isset($post['publish_end_period']) && $publish_end_period < date('Y-m-d H:i:s')) {
+        	$error_msg[] = 'Publish end period must be a date after '.date('Y-m-d H:i:s').'.';
+        }
+
+        if (!empty($error_msg)) {
+        	return [
+        		'status' => 'fail',
+        		'messages' => $error_msg
+        	];
+        }
+
+    	if (isset($post['id_deals'])) {
+    		$table 		= new Deal;
+    		$id_table 	= 'id_deals';
+    		$id_post 	= $post['id_deals'];
+
+    		$data['deals_end'] = $end_period;
+    		$data['deals_publish_end'] = $publish_end_period;
+    	}
+    	if (isset($post['id_promo_campaign'])) {
+    		$table 		= new PromoCampaign;
+    		$id_table 	= 'id_promo_campaign';
+    		$id_post 	= $post['id_promo_campaign'];
+
+    		$data['date_end'] = $end_period;
+    	}
+    	if (isset($post['id_subscription'])) {
+    		$table 		= new Subscription;
+    		$id_table 	= 'id_subscription';
+    		$id_post 	= $post['id_subscription'];
+
+    		$data['subscription_end'] = $end_period;
+    		$data['subscription_publish_end'] = $publish_end_period;
+    	}
+
+    	$extend = $table::where($id_table,$id_post)->update($data);
+
+    	$extend = MyHelper::checkUpdate($extend);
+
+    	return $extend;
+    }
 }
