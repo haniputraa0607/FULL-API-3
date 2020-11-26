@@ -607,6 +607,7 @@ class ApiProductVariantGroupController extends Controller
             ->select('products.id_product', 'product_global_price.product_global_price as product_price', 'product_variant_groups.product_variant_group_price as global_price', 'products.product_name', 'products.product_code', 'product_variant_groups.product_variant_group_code', 'product_variant_groups.id_product_variant_group')
             ->where('product_variant_status', 1)
             ->where('product_visibility', 'Visible')
+            ->orderBy('products.product_code', 'asc')
             ->with(['product_variant_pivot']);
 
         $dataBrand = [];
