@@ -2253,6 +2253,7 @@ class ApiOnlineTransaction extends Controller
         }
 
         $promo_missing_product 	= false;
+        $missing_bonus_product 	= false;
         $subtotal_per_brand 	= [];
         $totalItem = 0;
         foreach ($discount_promo['item']??$post['item'] as &$item) {
@@ -2329,6 +2330,9 @@ class ApiOnlineTransaction extends Controller
             }
             if(!$product){
                 $missing_product++;
+                if (isset($item['bonus']) && $item['bonus'] == 1) {
+        			$missing_bonus_product 	= true;
+        		}
                 if ($item['is_promo'] ?? false) {
                 	$promo_missing_product = true;
                 }
@@ -2338,6 +2342,9 @@ class ApiOnlineTransaction extends Controller
             $product = $product->toArray();
             if($product['product_stock_status']!='Available'){
             	if ((isset($item['bonus']) && $item['bonus'] == 1) || (isset($item['is_promo']) && $item['is_promo'] == 1)) {
+            		if (isset($item['bonus']) && $item['bonus'] == 1) {
+            			$missing_bonus_product 	= true;
+            		}
             		$promo_missing_product = true;
             		continue;
             	}
@@ -2540,7 +2547,8 @@ class ApiOnlineTransaction extends Controller
     		$promo_source = null;
     		$discount_promo['discount_delivery'] = 0;
     		$error = ['Promo tidak berlaku karena product tidak tersedia'];
-        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, 'all');
+    		$promo_error_product = $missing_bonus_product ? 0 : 'all';
+        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, $promo_error_product);
         }elseif($missing_product){
             $error_msg[] = MyHelper::simpleReplace(
                 '%missing_product% products not found',
