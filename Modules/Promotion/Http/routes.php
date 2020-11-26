@@ -4,7 +4,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
 {
     Route::post('create', ['middleware' => 'feature_control:111', 'uses' => 'ApiPromotion@CreatePromotion']);
     Route::post('step1', ['middleware' => 'feature_control:111', 'uses' => 'ApiPromotion@ShowPromotionStep1']);
-    Route::post('step2', ['middleware' => 'feature_control:111', 'uses' => 'ApiPromotion@ShowPromotionStep2']);
+    Route::post('step2', ['middleware' => 'feature_control:110,111', 'uses' => 'ApiPromotion@ShowPromotionStep2']);
     Route::post('step3', ['middleware' => 'feature_control:111', 'uses' => 'ApiPromotion@ShowCampaignStep2']);
     Route::post('update', ['middleware' => 'feature_control:112', 'uses' => 'ApiPromotion@update']);
 

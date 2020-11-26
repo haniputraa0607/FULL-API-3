@@ -1026,7 +1026,7 @@ class ApiPromotion extends Controller
 			if(isset($post['promotion_channel'][0]) && in_array('deals', $post['promotion_channel'][0]))
 			{
 				$createDeals = app($this->promotionDeals)->createDeals($post, $id_promotion_content);
-				$warnings  = $createDeals['warnings'];
+				$warnings  = $createDeals['warnings']??[];
 				if( ($createDeals['status']??true) != 'success' ){
 					DB::rollBack();
 					$result = [

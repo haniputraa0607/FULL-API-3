@@ -38,6 +38,7 @@ class PromoCampaignBuyxgetyProductRequirement extends Eloquent
 	protected $fillable = [
 		'id_promo_campaign',
 		'id_product',
+		'id_brand',
 		'id_product_category'
 	];
 
@@ -54,5 +55,10 @@ class PromoCampaignBuyxgetyProductRequirement extends Eloquent
 	public function promo_campaign()
 	{
 		return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaign::class, 'id_promo_campaign');
+	}
+
+	public function brand()
+	{
+		return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
 	}
 }

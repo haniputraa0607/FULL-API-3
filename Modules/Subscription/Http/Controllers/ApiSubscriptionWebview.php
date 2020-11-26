@@ -36,12 +36,33 @@ class ApiSubscriptionWebview extends Controller
         				$q->where('is_active',1);
         			},
         			'subscription_content.subscription_content_details',
-        			'brand'
+        			'brand',
+        			'subscription_brands'
         		])
         		->find($request->get('id_subscription'));
 
         if (empty($subs)) {
         	return MyHelper::checkGet($subs);
+        }
+
+        $outlets = $subs['outlets']->toArray();
+        if ($subs['is_all_outlet'] == 1 && isset($subs['subscription_brands'])) {
+        	$list_outlet = array_column($subs['subscription_brands']->toArray(), 'id_brand');
+            $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet');
+
+        	if (($subs['brand_rule']??false) == 'or') {
+	            $outlets = $outlets->whereHas('brands',function($query) use ($list_outlet){
+		                    $query->whereIn('brands.id_brand',$list_outlet);
+		                });
+        	}else{
+                foreach ($list_outlet as $value) {
+	                $outlets = $outlets->whereHas('brands',function($query) use ($value){
+			                    $query->where('brands.id_brand',$value);
+			                });
+	            }
+        	}
+
+            $outlets = $outlets->where('outlet_status','Active')->select('outlets.*')->with('city')->groupBy('id_outlet')->get()->toArray();
         }
 
         $subs = $subs->append(
@@ -50,6 +71,8 @@ class ApiSubscriptionWebview extends Controller
 					'subscription_minimal_transaction_pretty'
 				)
         		->toArray();
+
+        $subs['outlets'] = $outlets;
 
         $subs = $this->renderOutletCity($subs);
 
@@ -123,10 +146,10 @@ class ApiSubscriptionWebview extends Controller
         $content_key = $this->replaceText($subs);
         foreach ($subs['subscription_content'] as $keyContent => $valueContent) {
             if (!empty($valueContent['subscription_content_details'])) {
-                $result['subscription_content'][$keyContent]['title'] = $valueContent['title'];
+                $result['subscription_content'][$i]['title'] = $valueContent['title'];
                 foreach ($valueContent['subscription_content_details'] as $key => $value) {
                 	$content = MyHelper::simpleReplace($value['content'],$content_key);
-                    $result['subscription_content'][$keyContent]['detail'][$key] = $content;
+                    $result['subscription_content'][$i]['detail'][$key] = $content;
                     // $content[$key] = '<li>'.$value['content'].'</li>';
                 }
                 // $result['deals_content'][$keyContent]['detail'] = '<ul style="color:#707070;">'.implode('', $content).'</ul>';
@@ -134,11 +157,10 @@ class ApiSubscriptionWebview extends Controller
             }
         }
 
-        $i = !empty($keyContent) ? $keyContent+1 : $i;
         $result['subscription_content'][$i]['is_outlet']    = 1;
         $result['subscription_content'][$i]['title']        = 'Tempat Penukaran';
 
-        if ($subs['is_all_outlet'] == true) {
+        if ($subs['is_all_outlet'] == true && isset($subs['id_brand'])) {
             $result['subscription_content'][$i]['detail'][] = 'Berlaku untuk semua outlet';
         } else {
             foreach ($subs['outlet_by_city'] as $keyCity => $valueCity) {
@@ -215,6 +237,7 @@ class ApiSubscriptionWebview extends Controller
 	        				$q->where('is_active',1);
 	        			},
 						'subscription.subscription_content.subscription_content_details',
+						'subscription.subscription_brands',
 					])
         			->where('id_subscription_user', $request->id_subscription_user)
         			->first();
@@ -223,13 +246,33 @@ class ApiSubscriptionWebview extends Controller
         	return MyHelper::checkGet($subs);
         }
 
+        $outlets = $subs['subscription']['outlets']->toArray();
+        if ($subs['subscription']['is_all_outlet'] == 1 && isset($subs['subscription']['subscription_brands'])) {
+        	$list_outlet = array_column($subs['subscription']['subscription_brands']->toArray(), 'id_brand');
+            $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet');
+
+        	if (($subs['subscription']['brand_rule']??false) == 'or') {
+	            $outlets = $outlets->whereHas('brands',function($query) use ($list_outlet){
+		                    $query->whereIn('brands.id_brand',$list_outlet);
+		                });
+        	}else{
+                foreach ($list_outlet as $value) {
+	                $outlets = $outlets->whereHas('brands',function($query) use ($value){
+			                    $query->where('brands.id_brand',$value);
+			                });
+	            }
+        	}
+
+            $outlets = $outlets->where('outlet_status','Active')->select('outlets.*')->with('city')->groupBy('id_outlet')->get()->toArray();
+        }
+
         $subs->subscription = $subs->subscription->append(
 								'subscription_voucher_benefit_pretty',
 								'subscription_voucher_max_benefit_pretty',
 								'subscription_minimal_transaction_pretty'
 							);
         $subs = $subs->toArray();
-
+        $subs['subscription']['outlets'] = $outlets;
         $subs_outlet = $this->renderOutletCity($subs['subscription']);
         $subs['subscription']['outlet_by_city'] = $subs_outlet['outlet_by_city']??[];
 
@@ -294,11 +337,10 @@ class ApiSubscriptionWebview extends Controller
             }
         }
 
-        $i = !empty($keyContent) ? $keyContent+2 : $i;
         $result['subscription_content'][$i]['is_outlet']    = 1;
         $result['subscription_content'][$i]['title']        = 'Tempat Penukaran';
 
-        if ($subs['subscription']['is_all_outlet'] == true) {
+        if ($subs['subscription']['is_all_outlet'] == true && isset($subs['subscription']['id_brand'])) {
             $result['subscription_content'][$i]['detail'][] = 'Berlaku untuk semua outlet';
         } else {
             foreach ($subs['subscription']['outlet_by_city'] as $keyCity => $valueCity) {

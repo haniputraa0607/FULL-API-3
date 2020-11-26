@@ -38,7 +38,8 @@ class PromoCampaignTierDiscountProduct extends Eloquent
 	protected $fillable = [
 		'id_promo_campaign',
 		'id_product',
-		'id_product_category'
+		'id_product_category',
+		'id_brand'
 	];
 
 	public function product()
@@ -54,5 +55,10 @@ class PromoCampaignTierDiscountProduct extends Eloquent
 	public function promo_campaign()
 	{
 		return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaign::class, 'id_promo_campaign');
+	}
+
+	public function brand()
+	{
+		return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
 	}
 }

@@ -54,6 +54,7 @@ use Modules\Product\Entities\ProductStockStatusUpdate;
 use Modules\Product\Entities\ProductModifierStockStatusUpdate;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
+use Modules\ProductVariant\Entities\ProductVariantPivot;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
 use Modules\Shift\Entities\Shift;
@@ -1000,6 +1001,39 @@ class ApiOutletApp extends Controller
             }
         }
 
+        $updated     = 0;
+        if(isset($request->variants) && !empty($request->variants)){
+            $outlet = Outlet::where('id_outlet', $outlet['id_outlet'])->first();
+            foreach ($request->variants as $v){
+                if(isset($v['available']) && !empty($v['available'])){
+                    foreach ($v['available'] as $availableProductVariant){
+                        $status = 'Available';
+                        $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $availableProductVariant], ['product_variant_group_stock_status' => $status]);
+                    }
+                    Product::refreshVariantTree($v['id_product'], $outlet);
+                }
+
+                if(isset($v['sold_out']) && !empty($v['sold_out'])){
+                    foreach ($v['sold_out'] as $soldOutProductVariant){
+                        $status = 'Sold Out';
+                        $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $soldOutProductVariant], ['product_variant_group_stock_status' => $status]);
+                    }
+                    Product::refreshVariantTree($v['id_product'], $outlet);
+                }
+            }
+        }
+
+        if(isset($post['sold_out']) && !empty($post['sold_out'])){
+            $sold = array_unique($post['sold_out']);
+            foreach ($sold as $s){
+                $productVariantGroup = ProductVariantGroup::where('id_product', $s)->get()->toArray();
+                foreach ($productVariantGroup as $pvg){
+                    $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $pvg['id_product_variant_group']], ['product_variant_group_stock_status' => 'Sold Out']);
+                }
+                Product::refreshVariantTree($s, $outlet);
+            }
+        }
+
         if (!$is_modifier) {
             $updated     = 0;
             $date_time   = date('Y-m-d H:i:s');
@@ -1437,10 +1471,40 @@ class ApiOutletApp extends Controller
                 $data = $products->paginate(30)->toArray();
                 if (empty($data['data'])) {
                     return MyHelper::checkGet($data['data']);
+                }else{
+                    foreach ($data['data'] as $key => $dt){
+                        $variants = ProductVariantGroup::leftJoin('product_variant_group_details as pvgd', 'pvgd.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
+                            ->where('id_product', $dt['id_product'])
+                            ->where('id_outlet', $outlet['id_outlet'])
+                            ->select([
+                                'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
+                                DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
+                                DB::raw('(CASE
+                        WHEN pvgd.product_variant_group_visibility is NULL THEN product_variant_groups.product_variant_group_visibility
+                        ELSE pvgd.product_variant_group_visibility END) as product_variant_group_visibility'),
+                                DB::raw('(CASE
+                        WHEN pvgd.product_variant_group_stock_status is NULL THEN "Sold Out"
+                        ELSE pvgd.product_variant_group_stock_status END) as product_variant_group_stock_status')])->get()->toArray();
+
+                        $data['data'][$key]['product_variant_group'] = $variants;
+                    }
                 }
                 return MyHelper::checkGet($data);
             } else {
-                return MyHelper::checkGet($products->get()->toArray());
+                $data = $products->get()->toArray();
+                foreach ($data as $key => $dt){
+                    $variants = ProductVariantGroup::leftJoin('product_variant_group_details as pvgd', 'pvgd.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
+                        ->where('id_product', $dt['id_product'])
+                        ->where('id_outlet', $outlet['id_outlet'])
+                        ->select(['product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
+                            DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR " - ") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
+                            DB::raw('(CASE
+                        WHEN pvgd.product_variant_group_stock_status is NULL THEN "Sold Out"
+                        ELSE pvgd.product_variant_group_stock_status END) as product_variant_group_stock_status')])->get()->toArray();
+
+                    $data[$key]['product_variant_group'] = $variants;
+                }
+                return MyHelper::checkGet($data);
             }
         } else {
             // modifiers
@@ -2565,7 +2629,9 @@ class ApiOutletApp extends Controller
             // 'user.city.province',
             'user',
             'productTransaction.product.product_category',
-            'productTransaction.modifiers',
+            'productTransaction.modifiers' => function($query) {
+                $query->orderByRaw('CASE WHEN id_product_modifier_group IS NULL THEN 1 ELSE 0 END');
+            },
             'productTransaction.variants' => function($query){
                 $query->select('id_transaction_product','transaction_product_variants.id_product_variant','transaction_product_variants.id_product_variant','product_variants.product_variant_name', 'transaction_product_variant_price')->join('product_variants','product_variants.id_product_variant','=','transaction_product_variants.id_product_variant');
             },
@@ -2801,6 +2867,15 @@ class ApiOutletApp extends Controller
             default:
                 $list['payment'] = [];
                 break;
+        }
+
+        if (!empty($list['transaction_payment_subscription'])) {
+        	$payment_subscription = abs($list['transaction_payment_subscription']['subscription_nominal']);
+        	$result['promo_name'] = $list['transaction_payment_subscription']['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'];
+            $list['payment'][] = [
+                'name'      => 'Subscription',
+                'amount'    => $payment_subscription
+            ];
         }
 
         array_splice($exp, 0, 0, 'transaction_subtotal');
@@ -3067,6 +3142,42 @@ class ApiOutletApp extends Controller
             'desc'   => $quantity . ' items',
             'amount' => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY'),
         ];
+
+        if ($list['transaction_discount']) {
+        	$discount = abs($list['transaction_discount']);
+            $p = 0;
+            if (!empty($list['transaction_vouchers'])) {
+                foreach ($list['transaction_vouchers'] as $valueVoc) {
+                    $result['promo']['code'][$p++]   = $valueVoc['deals_voucher']['voucher_code'];
+                    $result['payment_detail'][] = [
+                        'name'          => 'Diskon (Promo)',
+                        'desc'          => null,
+                        "is_discount"   => 1,
+                        'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                    ];
+                }
+            }
+
+            if (!empty($list['promo_campaign_promo_code'])) {
+                $result['promo']['code'][$p++]   = $list['promo_campaign_promo_code']['promo_code'];
+                $result['payment_detail'][] = [
+                    'name'          => 'Diskon (Promo)',
+                    'desc'          => null,
+                    "is_discount"   => 1,
+                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                ];
+            }
+
+            if (!empty($list['id_subscription_user_voucher']) && !empty($list['transaction_discount'])) {
+                $result['payment_detail'][] = [
+                    'name'          => 'Subscription (Diskon)',
+                    'desc'          => null,
+                    "is_discount"   => 1,
+                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                ];
+            }
+        }
+
         if ($list['transaction_shipment_go_send'] > 0) {
             $result['payment_detail'][] = [
                 'name'      => 'Delivery',
@@ -3075,38 +3186,39 @@ class ApiOutletApp extends Controller
             ];
         }
 
-        $p = 0;
-        $result['promo_name'] = null;
-        if (!empty($list['transaction_vouchers'])) {
-            foreach ($list['transaction_vouchers'] as $valueVoc) {
-        		$result['promo_name'] = $valueVoc['deals_voucher']['deal']['deals_title'];
-                $result['promo']['code'][$p++] = $valueVoc['deals_voucher']['voucher_code'];
-                $result['payment_detail'][]    = [
-                    'name'        => 'Discount',
-                    'desc'        => $valueVoc['deals_voucher']['voucher_code'],
-                    "is_discount" => 1,
-                    'amount'      => MyHelper::requestNumber($discount, '_CURRENCY'),
+        if ($list['transaction_discount_delivery']) {
+        	$discount = abs($list['transaction_discount_delivery']);
+            $p = 0;
+            if (!empty($list['transaction_vouchers'])) {
+                foreach ($list['transaction_vouchers'] as $valueVoc) {
+                    $result['promo']['code'][$p++]   = $valueVoc['deals_voucher']['voucher_code'];
+                    $result['payment_detail'][] = [
+                        'name'          => 'Diskon (Delivery)',
+                        'desc'          => null,
+                        "is_discount"   => 1,
+                        'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                    ];
+                }
+            }
+
+            if (!empty($list['promo_campaign_promo_code'])) {
+                $result['promo']['code'][$p++]   = $list['promo_campaign_promo_code']['promo_code'];
+                $result['payment_detail'][] = [
+                    'name'          => 'Diskon (Delivery)',
+                    'desc'          => null,
+                    "is_discount"   => 1,
+                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
                 ];
             }
-        }
 
-        if (!empty($list['promo_campaign_promo_code'])) {
-        	$result['promo_name'] = $list['promo_campaign_promo_code']['promo_campaign']['promo_title'];
-            $result['promo']['code'][$p++] = $list['promo_campaign_promo_code']['promo_code'];
-            $result['payment_detail'][]    = [
-                'name'        => 'Discount',
-                'desc'        => $list['promo_campaign_promo_code']['promo_code'],
-                "is_discount" => 1,
-                'amount'      => MyHelper::requestNumber($discount, '_CURRENCY'),
-            ];
-        }
-
-        if (!empty($list['transaction_payment_subscription'])) {
-        	$result['promo_name'] = $list['transaction_payment_subscription']['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'];
-            $list['payment'][] = [
-                'name'      => 'Subscription',
-                'amount'    => $list['transaction_payment_subscription']['subscription_nominal']
-            ];
+            if (!empty($list['id_subscription_user_voucher']) && !empty($list['transaction_discount_delivery'])) {
+                $result['payment_detail'][] = [
+                    'name'          => 'Subscription (Delivery)',
+                    'desc'          => null,
+                    "is_discount"   => 1,
+                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                ];
+            }
         }
 
         $result['promo']['discount'] = $discount;

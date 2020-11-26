@@ -32,7 +32,8 @@ class ApiDealsWebview extends Controller
         			'deals_content' => function($q){
         				$q->where('is_active',1);
         			},
-        			'deals_content.deals_content_details'
+        			'deals_content.deals_content_details',
+        			'deals_brands'
         		])
         		->where('id_deals', $request->id_deals)
         		->get()
@@ -40,12 +41,31 @@ class ApiDealsWebview extends Controller
 
         $deals['outlet_by_city'] = [];
 
-        if ($deals['is_all_outlet'] == 1) {
+        if ($deals['is_all_outlet'] == 1 && isset($deals['id_outlet'])) {
             $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
                 ->join('deals', 'deals.id_brand', '=', 'brand_outlet.id_brand')
                 ->where('deals.id_deals', $deals['id_deals'])
                 ->where('outlet_status','Active')
                 ->select('outlets.*')->with('city')->get()->toArray();
+            $deals['outlets'] = $outlets;
+
+        }elseif ($deals['is_all_outlet'] == 1 && isset($deals['deals_brands'])) {
+        	$list_outlet = array_column($deals['deals_brands'], 'id_brand');
+            $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet');
+
+        	if (($deals['brand_rule']??false) == 'or') {
+	            $outlets = $outlets->whereHas('brands',function($query) use ($list_outlet){
+		                    $query->whereIn('brands.id_brand',$list_outlet);
+		                });
+        	}else{
+                foreach ($list_outlet as $value) {
+	                $outlets = $outlets->whereHas('brands',function($query) use ($value){
+			                    $query->where('brands.id_brand',$value);
+			                });
+	            }
+        	}
+
+            $outlets = $outlets->where('outlet_status','Active')->select('outlets.*')->with('city')->groupBy('id_outlet')->get()->toArray();
             $deals['outlets'] = $outlets;
         }
 
@@ -153,9 +173,9 @@ class ApiDealsWebview extends Controller
         $i = 0;
         foreach ($deals['deals_content'] as $keyContent => $valueContent) {
             if (!empty($valueContent['deals_content_details'])) {
-                $result['deals_content'][$keyContent]['title'] = $valueContent['title'];
+                $result['deals_content'][$i]['title'] = $valueContent['title'];
                 foreach ($valueContent['deals_content_details'] as $key => $value) {
-                    $result['deals_content'][$keyContent]['detail'][$key] = $value['content'];
+                    $result['deals_content'][$i]['detail'][$key] = $value['content'];
                     // $content[$key] = '<li>'.$value['content'].'</li>';
                 }
                 // $result['deals_content'][$keyContent]['detail'] = '<ul style="color:#707070;">'.implode('', $content).'</ul>';
@@ -163,7 +183,6 @@ class ApiDealsWebview extends Controller
             }
         }
 
-        $i = !empty($keyContent) ? $keyContent+1 : $i;
         $result['deals_content'][$i]['title'] = 'Tempat Penukaran';
         $result['deals_content'][$i]['is_outlet'] = 1;
         $result['deals_content'][$i]['brand'] = $deals['brand']['name_brand'];

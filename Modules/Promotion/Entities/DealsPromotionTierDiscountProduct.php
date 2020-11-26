@@ -43,7 +43,8 @@ class DealsPromotionTierDiscountProduct extends Eloquent
 		'id_deals',
 		'product_type',
 		'id_product',
-		'id_product_category'
+		'id_product_category',
+		'id_brand'
 	];
 
 	public function deals_promotion_template()
@@ -81,4 +82,9 @@ class DealsPromotionTierDiscountProduct extends Eloquent
         	}]);
         }
     }
+
+    public function brand()
+	{
+		return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
+	}
 }

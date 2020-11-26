@@ -14,7 +14,8 @@ use Illuminate\Http\Request;
 */
 
 Route::group([ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be'], 'prefix' => 'product-variant'], function () {
-    Route::any('/', ['middleware' => 'feature_control:32', 'uses' => 'ApiProductVariantController@index']);
+    Route::any('/', ['middleware' => 'feature_control:278', 'uses' => 'ApiProductVariantController@index']);
+    Route::post('position', ['middleware' => 'feature_control:281', 'uses' => 'ApiProductVariantController@position']);
     Route::post('store', ['middleware' => 'feature_control:279', 'uses' => 'ApiProductVariantController@store']);
     Route::post('edit', ['middleware' => 'feature_control:281', 'uses' => 'ApiProductVariantController@edit']);
     Route::post('update', ['middleware' => 'feature_control:281', 'uses' => 'ApiProductVariantController@update']);
@@ -23,12 +24,18 @@ Route::group([ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scop
 });
 
 Route::group([ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be'], 'prefix' => 'product-variant-group'], function () {
-    Route::any('/', ['uses' => 'ApiProductVariantGroupController@productVariantGroup']);
+    Route::post('list', 'ApiProductVariantGroupController@listProductWithVariant');
+    Route::post('product-delete', 'ApiProductVariantGroupController@deleteVariantFromProduct');
+
+    Route::any('/', ['uses' => 'ApiProductVariantGroupController@productVariantGroupListCreate']);
+    Route::any('list-group', ['uses' => 'ApiProductVariantGroupController@productVariantGroupList']);
+    Route::post('remove', ['uses' => 'ApiProductVariantGroupController@removeProductVariantGroup']);
+    Route::post('delete', ['uses' => 'ApiProductVariantGroupController@deleteProductVariantGroup']);
     Route::any('list-price', ['uses' => 'ApiProductVariantGroupController@listPrice']);
     Route::any('update-price', ['uses' => 'ApiProductVariantGroupController@updatePrice']);
     Route::post('list-detail', 'ApiProductVariantGroupController@listDetail');
     Route::post('update-detail', 'ApiProductVariantGroupController@updateDetail');
-    Route::get('export', 'ApiProductVariantGroupController@export');
+    Route::post('export', 'ApiProductVariantGroupController@export');
     Route::post('import', 'ApiProductVariantGroupController@import');
     Route::post('export-price', 'ApiProductVariantGroupController@exportPrice');
     Route::post('import-price', ['uses' => 'ApiProductVariantGroupController@importPrice']);

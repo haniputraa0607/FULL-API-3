@@ -6,6 +6,7 @@ use App\Http\Models\Outlet;
 use App\Http\Models\ProductModifier;
 use App\Http\Models\ProductModifierGlobalPrice;
 use App\Http\Models\ProductModifierPrice;
+use App\Jobs\RefreshVariantTree;
 use App\Lib\MyHelper;
 use DB;
 use Illuminate\Http\Request;
@@ -124,14 +125,17 @@ class ApiProductModifierGroupController extends Controller
             }
 
             if(!empty($post['data_modifier'])){
+                $dataModifier = array_values($post['data_modifier']);
                 $insertModifier = [];
-                foreach ($post['data_modifier'] as $modifier){
+                foreach ($dataModifier as $keyMod=> $modifier){
                     $insertModifier[] = [
+                        'product_modifier_order' => $keyMod,
                         'id_product_modifier_group' => $id_product_modifier_group,
                         'modifier_type' => 'Modifier Group',
                         'type' => 'Modifier Group',
                         'code' => MyHelper::createrandom(5).strtotime(date('Y-m-d H:i:s')),
                         'text' => $modifier['name'],
+                        'text_detail_trx' => $modifier['name_detail_trx'],
                         'product_modifier_visibility' => (isset($modifier['visibility']) ? 'Visible': 'Hidden'),
                         'created_at' => date('Y-m-d H:i:s'),
                         'updated_at' => date('Y-m-d H:i:s')
@@ -151,6 +155,7 @@ class ApiProductModifierGroupController extends Controller
                 }
             }
             DB::commit();
+            RefreshVariantTree::dispatch(['type' => 'refresh_product'])->allOnConnection('database');
             return response()->json(MyHelper::checkCreate($create));
         }else{
             return response()->json([ 'status'   => 'fail', 'messages' => ['Incompleted Data']]);
@@ -174,13 +179,6 @@ class ApiProductModifierGroupController extends Controller
             }
 
             $delete = ProductModifierGroupPivot::where('id_product_modifier_group', $post['id_product_modifier_group'])->delete();
-            if(!$delete){
-                DB::rollback();
-                return [
-                    'status'   => 'fail',
-                    'messages' => ['Failed delete product modifier group pivot'],
-                ];
-            }
 
             $id_product_modifier_group = $post['id_product_modifier_group'];
             $dataInsertModifierGroupPivot = [];
@@ -210,8 +208,9 @@ class ApiProductModifierGroupController extends Controller
             }
 
             if(!empty($post['data_modifier'])){
+                $dataModifier = array_values($post['data_modifier']);
                 $insertModifier = [];
-                foreach ($post['data_modifier'] as $modifier){
+                foreach ($dataModifier as $keyMod => $modifier){
                     if(!isset($modifier['name']) && isset($modifier['code']) && !empty($modifier['code'])){
                         $delete = ProductModifier::where('code', $modifier['code'])->delete();
                         if(!$delete){
@@ -223,7 +222,9 @@ class ApiProductModifierGroupController extends Controller
                         }
                     }elseif (isset($modifier['name']) && !empty($modifier['name']) && isset($modifier['code']) && !empty($modifier['code'])){
                         $dtUpdate = [
+                            'product_modifier_order' => $keyMod,
                             'text' => $modifier['name'],
+                            'text_detail_trx' => $modifier['name_detail_trx'],
                             'product_modifier_visibility' => (isset($modifier['visibility']) ? 'Visible': 'Hidden'),
                             'updated_at' => date('Y-m-d H:i:s')
                         ];
@@ -240,11 +241,13 @@ class ApiProductModifierGroupController extends Controller
                         }
                     }else{
                         $update = ProductModifier::create([
+                            'product_modifier_order' => $keyMod,
                             'id_product_modifier_group' => $id_product_modifier_group,
                             'modifier_type' => 'Modifier Group',
                             'type' => 'Modifier Group',
                             'code' => MyHelper::createrandom(5).strtotime(date('Y-m-d H:i:s')),
                             'text' => $modifier['name'],
+                            'text_detail_trx' => $modifier['name_detail_trx'],
                             'product_modifier_visibility' => (isset($modifier['visibility']) ? 'Visible': 'Hidden'),
                             'created_at' => date('Y-m-d H:i:s'),
                             'updated_at' => date('Y-m-d H:i:s')
@@ -261,6 +264,7 @@ class ApiProductModifierGroupController extends Controller
                 }
             }
             DB::commit();
+            RefreshVariantTree::dispatch(['type' => 'refresh_product'])->allOnConnection('database');
             return response()->json(MyHelper::checkUpdate($create));
         }else{
             return response()->json([ 'status'   => 'fail', 'messages' => ['Incompleted Data ID']]);
@@ -291,6 +295,7 @@ class ApiProductModifierGroupController extends Controller
             }
 
             DB::commit();
+            RefreshVariantTree::dispatch(['type' => 'refresh_product'])->allOnConnection('database');
             return response()->json(MyHelper::checkDelete($delete));
         }else{
             return response()->json([ 'status'   => 'fail', 'messages' => ['Incompleted Data ID']]);
@@ -405,7 +410,7 @@ class ApiProductModifierGroupController extends Controller
             $mod = [];
             if(!empty($dt['product_modifier'])){
                 foreach ($dt['product_modifier'] as $m){
-                    $mod[] = $m['text'].'('.$m['code'].')';
+                    $mod[] = $m['text'].'-'.$m['text_detail_trx'].'('.$m['code'].')';
                 }
             }
 
@@ -523,11 +528,13 @@ class ApiProductModifierGroupController extends Controller
                             $codeMod = str_replace(')',"", $codeMod);
                             $name = substr($modifier,0,$check);
                             $getModifier = ProductModifier::where('code', $codeMod)->first();
+                            $explodename = explode('-',$name);
                             $dataMod = [
                                 'id_product_modifier_group' => $id_product_modifier_group,
                                 'modifier_type' => 'Modifier Group',
                                 'type' => 'Modifier Group',
-                                'text' => $name,
+                                'text' => $explodename[0]??$name??'',
+                                'text_detail_trx' => $explodename[1]??'',
                                 'product_modifier_visibility' => 'Visible',
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'updated_at' => date('Y-m-d H:i:s')
@@ -549,12 +556,14 @@ class ApiProductModifierGroupController extends Controller
                                 }
                             }
                         }else{
+                            $explodename = explode('-',$modifier);
                             $create = ProductModifier::create([
                                 'id_product_modifier_group' => $id_product_modifier_group,
                                 'modifier_type' => 'Modifier Group',
                                 'type' => 'Modifier Group',
                                 'code' => MyHelper::createrandom(5).strtotime(date('Y-m-d H:i:s')),
-                                'text' => $modifier,
+                                'text' => $explodename[0]??$modifier??'',
+                                'text_detail_trx' => $explodename[1]??'',
                                 'product_modifier_visibility' => 'Visible',
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'updated_at' => date('Y-m-d H:i:s')
@@ -571,6 +580,7 @@ class ApiProductModifierGroupController extends Controller
             }
             DB::commit();
         }
+        RefreshVariantTree::dispatch(['type' => 'refresh_product'])->allOnConnection('database');
         $response = [];
 
         if($result['updated']){
@@ -717,7 +727,7 @@ class ApiProductModifierGroupController extends Controller
                 }
             }
         }
-
+        RefreshVariantTree::dispatch(['type' => 'refresh_product'])->allOnConnection('database');
         $response = [];
 
         if($result['updated']){

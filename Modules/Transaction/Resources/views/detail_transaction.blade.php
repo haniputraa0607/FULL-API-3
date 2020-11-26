@@ -15,7 +15,14 @@
         <th style="background-color: #dcdcdc;" width="10"> Transaction Time </th>
         <th style="background-color: #dcdcdc;" width="10"> Brand </th>
         <th style="background-color: #dcdcdc;" width="10"> Category </th>
+        @if(isset($data['show_product_code']) && $data['show_product_code'] == 1)
+            <th style="background-color: #dcdcdc;" width="10"> Items Code </th>
+        @endif
         <th style="background-color: #dcdcdc;" width="10"> Items </th>
+        @if(isset($data['add_column']))
+            <?php echo $data['add_column'] ?>
+        @endif
+        <th style="background-color: #dcdcdc;" width="10"> Modifier Group </th>
         <th style="background-color: #dcdcdc;" width="10"> Modifier </th>
         <th style="background-color: #dcdcdc;" width="10"> Item Price </th>
         <th style="background-color: #dcdcdc;" width="10"> Modifier Price </th>
@@ -44,8 +51,8 @@
     </tr>
     </thead>
     <tbody>
-    @if(!empty($data))
-        <?php echo $data?>
+    @if(isset($data['list']) && !empty($data['list']))
+        <?php echo $data['list']?>
     @else
         <tr><td colspan="10" style="text-align: center">Data Not Available</td></tr>
     @endif

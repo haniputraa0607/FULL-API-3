@@ -27,6 +27,7 @@ use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantPivot;
 use Validator;
 use Hash;
 use DB;
@@ -70,6 +71,18 @@ class ApiProductController extends Controller
     	} else {
             $data['product_code'] = MyHelper::createrandom(3);
         }
+
+        if(isset($post['product_photo_detail'])){
+            $upload = MyHelper::uploadPhotoStrict($post['product_photo_detail'], 'img/product/item/detail/', 720, 360, $data['product_code'].'-'.strtotime("now"));
+
+    	    if (isset($upload['status']) && $upload['status'] == "success") {
+    	        $data['product_photo_detail'] = $upload['path'];
+    	    }
+    	    else {
+    	        $data['product_photo_detail'] = null;
+    	    }
+        }
+
     	if (isset($post['product_name'])) {
     		$data['product_name'] = $post['product_name'];
     	}
@@ -926,6 +939,10 @@ class ApiProductController extends Controller
             $product->with(['global_price','product_special_price','product_tags','brands','product_promo_categories'=>function($q){$q->select('product_promo_categories.id_product_promo_category');}])->where('products.product_code', $post['product_code']);
         }
 
+        if (isset($post['update_price']) && $post['update_price'] == 1) {
+            $product->where('product_variant_status', 0);
+        }
+
         if (isset($post['product_name'])) {
             $product->where('products.product_name', 'LIKE', '%'.$post['product_name'].'%');
         }
@@ -1126,8 +1143,16 @@ class ApiProductController extends Controller
     	$save = Product::where('id_product', $post['id_product'])->update($data);
 
     	if($save){
-            if(isset($data['product_variant_status']) && !empty($data['product_variant_status'])){
-                ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']], ['product_global_price' => 0]);
+            if($data['product_variant_status'] == 0){
+                $getGroup = ProductVariantGroup::where('id_product',$post['id_product'])->pluck('id_product_variant_group')->toArray();
+                if($getGroup){
+                    ProductVariantPivot::whereIn('id_product_variant_group',$getGroup)->delete();
+                    ProductVariantGroup::where('id_product',$post['id_product'])->delete();
+                }
+                $getAllOutlets = Outlet::get();
+                foreach ($getAllOutlets as $o){
+                    Product::refreshVariantTree($post['id_product'], $o);
+                }
             }
 
             if(isset($post['photo'])){
@@ -1157,9 +1182,15 @@ class ApiProductController extends Controller
 
             }
 
-            if(isset($post['product_global_price'])){
+            if(isset($post['product_global_price']) && !empty($post['product_global_price'])){
+                if(strpos($post['product_global_price'], '.') === false){
+                    $globalPrice = str_replace(",","",$post['product_global_price']);
+                }else{
+                    $globalPrice = str_replace(".","",$post['product_global_price']);
+                }
+
                 ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']],
-                    ['product_global_price' => str_replace(".","",$post['product_global_price'])]);
+                    ['product_global_price' => (int)$globalPrice]);
             }
         }
         if($save){
@@ -1331,12 +1362,23 @@ class ApiProductController extends Controller
     	if ($checkCode) {
             $checkSetting = Setting::where('key', 'image_override')->first();
             if ($checkSetting['value'] == 1) {
-                $productPhoto = ProductPhoto::where('id_product', $checkCode->id_product)->first();
-                if (file_exists($productPhoto->product_photo)) {
-                    unlink($productPhoto->product_photo);
+                if(isset($post['detail'])){
+                    if ($checkCode->product_photo_detail && file_exists($checkCode->product_photo_detail)) {
+                        unlink($checkCode->product_photo_detail);
+                    }
+                }else{
+                    $productPhoto = ProductPhoto::where('id_product', $checkCode->id_product)->first();
+                    if (file_exists($productPhoto->product_photo)) {
+                        unlink($productPhoto->product_photo);
+                    }
                 }
             }
-            $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300, $post['name'].'-'.strtotime("now"));
+
+            if(isset($post['detail'])){
+                $upload = MyHelper::uploadPhotoStrict($post['photo'], 'img/product/item/detail/', 720, 360, $post['name'].'-'.strtotime("now"));
+            }else{
+                $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300, $post['name'].'-'.strtotime("now"));
+            }
 
     	    if (isset($upload['status']) && $upload['status'] == "success") {
     	        $data['product_photo'] = $upload['path'];
@@ -1356,9 +1398,13 @@ class ApiProductController extends Controller
     		]);
     	}
     	else {
-            $data['id_product']          = $checkCode->id_product;
-            $data['product_photo_order'] = $this->cekUrutanPhoto($checkCode->id_product);
-            $save                        = ProductPhoto::updateOrCreate(['id_product' => $checkCode->id_product],$data);
+            if(isset($post['detail'])){
+                $save = Product::where('id_product', $checkCode->id_product)->update(['product_photo_detail' => $data['product_photo']]);
+            }else{
+                $data['id_product']          = $checkCode->id_product;
+                $data['product_photo_order'] = $this->cekUrutanPhoto($checkCode->id_product);
+                $save                        = ProductPhoto::updateOrCreate(['id_product' => $checkCode->id_product],$data);
+            }
     		return response()->json(MyHelper::checkCreate($save));
     	}
     }
@@ -1626,22 +1672,33 @@ class ApiProductController extends Controller
     public function photoDefault(Request $request){
         $post = $request->json()->all();
 
-         //create photo
-         if (!file_exists('img/product/item/')) {
-            mkdir('img/product/item/', 0777, true);
+        
+        //product detail
+        if(isset($post['photo_detail'])){
+            if (!file_exists('img/product/item/detail')) {
+                mkdir('img/product/item/detail', 0777, true);
+            }
+            $upload = MyHelper::uploadPhotoStrict($post['photo_detail'], 'img/product/item/detail/', 720, 360, 'default', '.png');
         }
-         $upload = MyHelper::uploadPhotoStrict($post['photo'], 'img/product/item/', 300, 300, 'default', '.png');
+        
+        //product
+        if(isset($post['photo'])){
+            if (!file_exists('img/product/item/')) {
+                mkdir('img/product/item/', 0777, true);
+            }
+            $upload = MyHelper::uploadPhotoStrict($post['photo'], 'img/product/item/', 300, 300, 'default', '.png');
+        }
 
-         if (isset($upload['status']) && $upload['status'] == "success") {
+        if (isset($upload['status']) && $upload['status'] == "success") {
             $result = [
                 'status'   => 'success',
             ];
-         }
-         else {
-             $result = [
-                 'status'   => 'fail',
-                 'messages' => ['fail upload image']
-             ];
+        }
+        else {
+            $result = [
+                'status'   => 'fail',
+                'messages' => ['fail upload image']
+            ];
 
         }
         return response()->json($result);
@@ -1697,7 +1754,7 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([],'Outlet not found');
         }
         //get product
-        $product = Product::select('id_product','product_code','product_name','product_description','product_code','product_visibility')
+        $product = Product::select('id_product','product_code','product_name','product_description','product_code','product_visibility','product_photo_detail', 'product_variant_status')
         ->where('id_product',$post['id_product'])
         ->whereHas('brand_category')
         ->whereRaw('products.id_product in (CASE
@@ -1705,7 +1762,7 @@ class ApiProductController extends Controller
                     is NULL THEN products.id_product
                     ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_status = "Active" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
                 END)')
-        ->with(['photos','brand_category'=>function($query) use ($post){
+        ->with(['brand_category'=>function($query) use ($post){
             $query->where('id_product',$post['id_product']);
             $query->where('id_brand',$post['id_brand']);
         }])
@@ -1714,8 +1771,12 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([]);
         }else{
             // toArray error jika $product Null,
-            $product = $product->append('photo')->toArray();
-            unset($product['photos']);
+            $product = $product->toArray();
+            if($product['product_photo_detail']){
+                $product['photo'] = config('url.storage_url_api').$product['product_photo_detail'];
+            }else{
+                $product['photo'] = config('url.storage_url_api').'img/product/item/detail/default.png';
+            }
         }
         $product['product_detail'] = ProductDetail::where(['id_product' => $post['id_product'], 'id_outlet' => $post['id_outlet']])->first();
 
@@ -1802,7 +1863,16 @@ class ApiProductController extends Controller
                 $product['product_price'] = $productGlobalPrice['product_global_price'];
             }
         }
-        $product['variants'] = Product::getVariantTree($product['id_product'], $outlet)['variants_tree']??null;
+        if ($product['product_variant_status']) {
+            $product['variants'] = Product::getVariantTree($product['id_product'], $outlet)['variants_tree']??null;
+        } else {
+            $product['variants'] = null;
+        }
+        $product['selected_available'] = 1;
+        if ($post['selected']['id_product_variant_group'] ?? false) {
+            $product['selected_available'] = (!!Product::getVariantParentId($post['selected']['id_product_variant_group'], $product['variants'], $post['selected']['extra_modifiers'] ?? []))?1:0;
+        }
+        $product['popup_message'] = $product['selected_available'] ? '' : 'Varian yang dipilih tidak tersedia';
         $product['modifiers'] = $product_modifiers->get()->toArray();
         foreach ($product['modifiers'] as $key => &$modifier) {
             $modifier['price'] = (int) $modifier['price'];

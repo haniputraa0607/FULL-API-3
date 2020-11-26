@@ -86,7 +86,9 @@ class PromoCampaign extends Eloquent
         'export_url',
         'export_status',
         'is_all_shipment',
-        'is_all_payment'
+        'is_all_payment',
+        'product_rule',
+        'brand_rule'
 	];
 
 	public function user()
@@ -150,10 +152,20 @@ class PromoCampaign extends Eloquent
 
 	public function promo_campaign_buyxgety_product_requirement()
     {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignBuyxgetyProductRequirement::class, 'id_promo_campaign', 'id_promo_campaign');
+    }
+
+    public function promo_campaign_buyxgety_product_requirement_v1()
+    {
         return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignBuyxgetyProductRequirement::class, 'id_promo_campaign', 'id_promo_campaign');
     }
 
     public function promo_campaign_tier_discount_product()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignTierDiscountProduct::class, 'id_promo_campaign', 'id_promo_campaign');
+    }
+
+    public function promo_campaign_tier_discount_product_v1()
     {
         return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaignTierDiscountProduct::class, 'id_promo_campaign', 'id_promo_campaign');
     }
@@ -213,5 +225,20 @@ class PromoCampaign extends Eloquent
     public function promo_campaign_shipment_method()
     {
         return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignShipmentMethod::class, 'id_promo_campaign', 'id_promo_campaign');
+    }
+
+    public function brands()
+    {
+		return $this->belongsToMany(\Modules\Brand\Entities\Brand::class,'promo_campaign_brands','id_promo_campaign','id_brand');
+	}
+
+	public function promo_campaign_brands()
+	{
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignBrand::class, 'id_promo_campaign', 'id_promo_campaign');
+	}
+
+	public function promo_campaign_discount_bill_products()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignDiscountBillProduct::class, 'id_promo_campaign', 'id_promo_campaign');
     }
 }
