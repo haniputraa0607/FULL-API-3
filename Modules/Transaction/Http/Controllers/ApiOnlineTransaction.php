@@ -2253,6 +2253,7 @@ class ApiOnlineTransaction extends Controller
         }
 
         $promo_missing_product 	= false;
+        $missing_bonus_product 	= false;
         $subtotal_per_brand 	= [];
         $totalItem = 0;
         foreach ($discount_promo['item']??$post['item'] as &$item) {
@@ -2329,6 +2330,9 @@ class ApiOnlineTransaction extends Controller
             }
             if(!$product){
                 $missing_product++;
+                if (isset($item['bonus']) && $item['bonus'] == 1) {
+        			$missing_bonus_product 	= true;
+        		}
                 if ($item['is_promo'] ?? false) {
                 	$promo_missing_product = true;
                 }
@@ -2337,6 +2341,13 @@ class ApiOnlineTransaction extends Controller
             $product->append('photo');
             $product = $product->toArray();
             if($product['product_stock_status']!='Available'){
+            	if ((isset($item['bonus']) && $item['bonus'] == 1) || (isset($item['is_promo']) && $item['is_promo'] == 1)) {
+            		if (isset($item['bonus']) && $item['bonus'] == 1) {
+            			$missing_bonus_product 	= true;
+            		}
+            		$promo_missing_product = true;
+            		continue;
+            	}
                 $error_msg[] = MyHelper::simpleReplace(
                     'Produk %product_name% tidak tersedia',
                     [
@@ -2530,22 +2541,21 @@ class ApiOnlineTransaction extends Controller
             }
         }
         // return $tree;
-        if($missing_product){
-	        if ($promo_missing_product) {
-	        	$promo_valid = false;
-	    		$promo_discount = 0;
-	    		$promo_source = null;
-	    		$discount_promo['discount_delivery'] = 0;
-	    		$error = ['Promo tidak berlaku karena product tidak tersedia'];
-	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, 'all');
-	        }else{
-	            $error_msg[] = MyHelper::simpleReplace(
-	                '%missing_product% products not found',
-	                [
-	                    'missing_product' => $missing_product
-	                ]
-	            );
-	        }
+        if ($promo_missing_product) {
+        	$promo_valid = false;
+    		$promo_discount = 0;
+    		$promo_source = null;
+    		$discount_promo['discount_delivery'] = 0;
+    		$error = ['Promo tidak berlaku karena product tidak tersedia'];
+    		$promo_error_product = $missing_bonus_product ? 0 : 'all';
+        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, $promo_error_product);
+        }elseif($missing_product){
+            $error_msg[] = MyHelper::simpleReplace(
+                '%missing_product% products not found',
+                [
+                    'missing_product' => $missing_product
+                ]
+            );
         }
 
         $outlet['today']['status'] = $outlet_status?'open':'closed';

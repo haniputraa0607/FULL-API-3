@@ -295,7 +295,7 @@ class Product extends Model
                     $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
                 })
                 ->groupBy('product_modifiers.id_product_modifier');
-            if ($outlet['outlet_diferent_price']) {
+            if ($outlet['outlet_different_price']) {
                 $modifiers->leftJoin('product_modifier_prices', function($join) use ($outlet) {
                     $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier')
                         ->where('product_modifier_prices.id_outlet',$outlet['id_outlet']);
