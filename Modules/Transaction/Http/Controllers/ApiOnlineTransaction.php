@@ -1145,7 +1145,7 @@ class ApiOnlineTransaction extends Controller
                 foreach ($valueProduct['modifiers'] as $modifier) {
                     $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                     $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
-                    $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status',\DB::raw('coalesce(product_modifier_price, 0) as product_modifier_price'), 'id_product_modifier_group', 'modifier_type')
+                    $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text', 'text_detail_trx','product_modifier_stock_status',\DB::raw('coalesce(product_modifier_price, 0) as product_modifier_price'), 'id_product_modifier_group', 'modifier_type')
                         // product visible
                         ->leftJoin('product_modifier_details', function($join) use ($post) {
                             $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
@@ -1195,7 +1195,7 @@ class ApiOnlineTransaction extends Controller
                         'id_user'=>$insertTransaction['id_user'],
                         'type'=>$mod['type']??'',
                         'code'=>$mod['code']??'',
-                        'text'=>$mod['text']??'',
+                        'text'=>$mod['text_detail_trx']??'',
                         'qty'=>$qty_product_modifier,
                         'transaction_product_modifier_price'=>$mod['product_modifier_price']*$qty_product_modifier,
                         'datetime'=>$insertTransaction['transaction_date']??date(),
@@ -2362,7 +2362,7 @@ class ApiOnlineTransaction extends Controller
             foreach ($item['modifiers']??[] as $key => $modifier) {
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
-                $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status',\DB::raw('coalesce(product_modifier_price, 0) as product_modifier_price'), 'modifier_type')
+                $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text_detail_trx as text','product_modifier_stock_status',\DB::raw('coalesce(product_modifier_price, 0) as product_modifier_price'), 'modifier_type')
                     // product visible
                     ->leftJoin('product_modifier_details', function($join) use ($post) {
                         $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')

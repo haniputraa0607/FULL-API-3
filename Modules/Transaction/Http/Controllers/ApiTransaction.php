@@ -1852,7 +1852,7 @@ class ApiTransaction extends Controller
                         $promoType = 'Promo Campaign';
                         $promoCode = $val['promo_campaign']['promo_code'];
                     }
-
+                    $promoName = htmlspecialchars($promoName);
                     $status = $val['transaction_payment_status'];
                     if(!is_null($val['reject_at'])){
                         $status = 'Reject';
@@ -1916,7 +1916,7 @@ class ApiTransaction extends Controller
                         $getTransactionVariant = TransactionProductVariant::join('product_variants as pv', 'pv.id_product_variant', 'transaction_product_variants.id_product_variant')
                             ->where('id_transaction_product', $val['id_transaction_product'])->select('pv.*')->get()->toArray();
                         foreach ($getTransactionVariant as $k=>$gtV){
-                            $getTransactionVariant[$k]['main_parent'] = '58';//$this->getParentVariant($getAllVariant, $gtV['id_product_variant']);
+                            $getTransactionVariant[$k]['main_parent'] = $this->getParentVariant($getAllVariant, $gtV['id_product_variant']);
                         }
                         foreach ($getVariant as $v){
                             $search = array_search($v['id_product_variant'], array_column($getTransactionVariant, 'main_parent'));
@@ -1989,7 +1989,7 @@ class ApiTransaction extends Controller
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
                                 $html .= $addAdditionalColumn;
-                                $html .= '<td>'.$getSubcription['subscription_title'].'(subscription)</td>';
+                                $html .= '<td>'.htmlspecialchars($getSubcription['subscription_title']).'(subscription)</td>';
                                 $html .= $addAdditionalColumnVariant;
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';

@@ -1292,7 +1292,6 @@ class ApiDisburseController extends Controller
             ->whereDate('transactions.transaction_date', '<=',$date_end)
             ->where('transactions.transaction_payment_status', 'Completed')
             ->whereNull('transaction_pickups.reject_at')
-            ->whereNull('id_product_variant_group')
             ->selectRaw('COUNT(transactions.id_transaction) total_trx, SUM(transactions.transaction_grandtotal) as total_gross_sales,
                         SUM(tps.subscription_nominal) as total_subscription, 
                         SUM(transactions.transaction_subtotal) as total_sub_total, 
@@ -1325,6 +1324,7 @@ class ApiDisburseController extends Controller
             ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
             ->where('transaction_payment_status', 'Completed')
             ->whereNull('reject_at')
+            ->whereNull('id_product_variant_group')
             ->whereDate('transaction_date', '>=',$date_start)
             ->whereDate('transaction_date', '<=',$date_end)
             ->where('transactions.id_outlet', $id_outlet)

@@ -24,6 +24,7 @@ class ProductModifier extends Model
 		'type',
 		'code',
 		'text',
+        'text_detail_trx',
 		'product_modifier_visibility',
         'product_modifier_order',
 		'created_at',
