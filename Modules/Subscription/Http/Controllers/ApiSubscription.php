@@ -880,12 +880,27 @@ class ApiSubscription extends Controller
         $data_shipment = [];
 
         foreach ($shipment as $value) {
+        	if ($value == 'Pickup Order') {
+        		continue;
+        	}
+
             array_push($data_shipment, [
                 'shipment_method' => $value,
-                'id_subscription'  => $id_subs,
+                'id_subscription' => $id_subs,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ]);
+        }
+
+        if (empty($data_shipment)) {
+        	$delivery_gosend = [
+                'id_subscription' => $id_subs,
+            	'shipment_method' => 'GO-SEND',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+        	];
+        	
+        	$data_shipment[] = $delivery_gosend;
         }
 
         if (!empty($data_shipment)) {
