@@ -437,7 +437,7 @@ class ApiProductVariantGroupController extends Controller
                         $variant[] = $pg['product_variant_name'];
                     }
                 }
-                $arr[$key][$p['product_variant_name'].' '.$name] = implode(',', $variant);
+                $arr[$key][$p['id_product_variant'].'-'.$p['product_variant_name'].' '.$name] = implode(',', $variant);
             }
         }
 
@@ -468,7 +468,6 @@ class ApiProductVariantGroupController extends Controller
         ];
         $data = $post['data']??[];
 
-        $getAllVariant = ProductVariant::whereNotNull('id_parent')->get()->toArray();
         foreach ($data as $key => $value) {
             if(empty($value['product_code'])){
                 $result['invalid']++;
@@ -487,9 +486,15 @@ class ApiProductVariantGroupController extends Controller
                 unset($value['product_name']);
                 unset($value['use_product_variant_status']);
                 $newArr = [];
-                foreach ($value as $new){
-                    $explode = explode(",",$new);
-                    $newArr[] = $explode;
+                foreach ($value as $keyCom=>$new){
+                    if(!empty($new)){
+                        $keyCom = explode("-",$keyCom)[0];
+                        $explode = explode(",",$new);
+                        foreach ($explode as $k=>$x){
+                            $explode[$k] = $keyCom.'-'.$x;
+                        }
+                        $newArr[] = $explode;
+                    }
                 }
                 $arrCombinations = $this->combinations($newArr);
 
@@ -498,9 +503,11 @@ class ApiProductVariantGroupController extends Controller
                         //search id product variant for insert into product variant pivot
                         $arrTmp = [];
                         foreach ($group as $g){
-                            $searchId = array_search($g, array_column($getAllVariant, 'product_variant_name'));
+                            $id = explode('-',$g)[0]??'';
+                            $name = explode('-',$g)[1]??'';
+                            $searchId = ProductVariant::where('id_parent', $id)->where('product_variant_name', $name)->first();
                             if($searchId !== false){
-                                $arrTmp[] = $getAllVariant[$searchId]['id_product_variant'];
+                                $arrTmp[] = $searchId['id_product_variant'];
                             }
                         }
 
