@@ -99,7 +99,15 @@ class PromoCampaignTools{
 
 		if (isset($request['type'])) {
 			$promo_shipment = $promo->{$source.'_shipment_method'}->pluck('shipment_method');
-
+			if ($promo->promo_type == 'Discount delivery') {
+				if ($request->type == 'GO-SEND') {
+					$errors[]='Promo tidak dapat digunakan untuk Pick Up';
+					return false;
+				}
+				if (count($promo_shipment) == 1 && $promo_shipment[0] == 'GO-SEND') {
+					$promo->is_all_shipment = 1;
+				}
+			}
 			$check_shipment = $this->checkShipmentRule($promo->is_all_shipment??0, $request->type, $promo_shipment);
 			if(!$check_shipment){
 				// $errors[]='Promo cannot be used for this shipment method';
@@ -870,9 +878,58 @@ class PromoCampaignTools{
 
 			case 'Discount bill':
 				// load required relationship
-				$promo->load($source.'_discount_bill_rules');
+				$promo->load($source.'_discount_bill_products', $source.'_discount_bill_rules');
 				$promo_rules = $promo[$source.'_discount_bill_rules'];
 				$promo_brand_flipped = array_flip($promo_brand);
+
+				if ($promo->product_rule === 'and') {
+					$product_name = 'semua product bertanda khusus';
+				}else {
+					$product_name = 'product bertanda khusus';
+				}
+
+				if(!$promo_rules->is_all_product){
+					if ($promo[$source.'_discount_bill_products']->isEmpty()) {
+						$errors[]='Produk tidak ditemukan';
+						return false;
+					}
+					$promo_product = $promo[$source.'_discount_bill_products']->toArray();
+					$promo_product_count = count($promo_product);
+
+					if ($promo_product_count == 1) {
+						$product_error_applied = 1;
+					}else{
+						$product_error_applied = 'all';
+					}
+
+					$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
+
+					// promo product not available in cart?
+					if (!$check_product) {
+						$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
+						$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
+						$errors[]= $message;
+						$errorProduct = $product_error_applied;
+						return false;
+					}
+				}else{
+					$promo_product = "*";
+					$product_error_applied = 'all';
+				}
+
+				$get_promo_product = $this->getPromoProduct($trxs, $promo_brand, $promo_product);
+				$product = $get_promo_product['product'];
+
+				// product not found? buat jaga-jaga kalau sesuatu yang tidak diinginkan terjadi
+				if(!$product){
+					$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
+					$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
+
+					$errors[] = $message;
+					$errorProduct = $product_error_applied;
+					return false;
+				}
+
 				// get jumlah harga
 				$total_price=0;
 				foreach ($subtotal_per_brand as $key => $value) {

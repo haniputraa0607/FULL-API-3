@@ -266,6 +266,17 @@ class ApiSubscriptionUse extends Controller
     	// check shipment
     	if (isset($subs['subscription_user']['subscription']['is_all_shipment']) && isset($request['type']) ) {
     		$promo_shipment = $subs_obj->subscription_user->subscription->subscription_shipment_method->pluck('shipment_method');
+
+    		if ($subs['subscription_user']['subscription']['subscription_discount_type'] == 'discount_delivery') {
+				if ($request['type'] == 'Pickup Order') {
+					$errors[]='Promo tidak dapat digunakan untuk Pick Up';
+					return false;
+				}
+				if (count($promo_shipment) == 1 && $promo_shipment[0] == 'Pickup Order') {
+					$subs['subscription_user']['subscription']['is_all_shipment'] = 1;
+				}
+			}
+
     		$check_shipment = $pct->checkShipmentRule($subs['subscription_user']['subscription']['is_all_shipment'], $request['type'], $promo_shipment);
 
     		if(!$check_shipment){
