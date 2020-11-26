@@ -2337,6 +2337,10 @@ class ApiOnlineTransaction extends Controller
             $product->append('photo');
             $product = $product->toArray();
             if($product['product_stock_status']!='Available'){
+            	if ((isset($item['bonus']) && $item['bonus'] == 1) || (isset($item['is_promo']) && $item['is_promo'] == 1)) {
+            		$promo_missing_product = true;
+            		continue;
+            	}
                 $error_msg[] = MyHelper::simpleReplace(
                     'Produk %product_name% tidak tersedia',
                     [
@@ -2530,22 +2534,20 @@ class ApiOnlineTransaction extends Controller
             }
         }
         // return $tree;
-        if($missing_product){
-	        if ($promo_missing_product) {
-	        	$promo_valid = false;
-	    		$promo_discount = 0;
-	    		$promo_source = null;
-	    		$discount_promo['discount_delivery'] = 0;
-	    		$error = ['Promo tidak berlaku karena product tidak tersedia'];
-	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, 'all');
-	        }else{
-	            $error_msg[] = MyHelper::simpleReplace(
-	                '%missing_product% products not found',
-	                [
-	                    'missing_product' => $missing_product
-	                ]
-	            );
-	        }
+        if ($promo_missing_product) {
+        	$promo_valid = false;
+    		$promo_discount = 0;
+    		$promo_source = null;
+    		$discount_promo['discount_delivery'] = 0;
+    		$error = ['Promo tidak berlaku karena product tidak tersedia'];
+        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, 'all');
+        }elseif($missing_product){
+            $error_msg[] = MyHelper::simpleReplace(
+                '%missing_product% products not found',
+                [
+                    'missing_product' => $missing_product
+                ]
+            );
         }
 
         $outlet['today']['status'] = $outlet_status?'open':'closed';
