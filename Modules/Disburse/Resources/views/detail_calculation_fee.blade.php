@@ -58,7 +58,7 @@
                         $promoName = 'Unknown Promo';
                     }
 
-                    echo $promoName;
+                    echo htmlspecialchars($promoName);
                     ?>
                 </td>
                 <td style="text-align: left">

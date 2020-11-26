@@ -3308,6 +3308,9 @@ class ApiPromoCampaign extends Controller
         } else {
             $data_shipment = [];
             foreach ($post['shipment_method'] as $key => $value) {
+            	if ($value == 'Pickup Order') {
+            		continue;
+            	}
             	$temp_data = [
 	                $id_table => $id_post,
 	            	'shipment_method' => $value,
@@ -3315,6 +3318,17 @@ class ApiPromoCampaign extends Controller
 	                'updated_at' => date('Y-m-d H:i:s')
             	];
             	$data_shipment[] = $temp_data;
+            }
+
+            if (empty($data_shipment)) {
+            	$delivery_gosend = [
+	                $id_table => $id_post,
+	            	'shipment_method' => 'GO-SEND',
+	                'created_at' => date('Y-m-d H:i:s'),
+	                'updated_at' => date('Y-m-d H:i:s')
+            	];
+            	
+            	$data_shipment[] = $delivery_gosend;
             }
             
             try {

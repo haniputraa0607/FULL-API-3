@@ -135,6 +135,7 @@ class ApiProductModifierGroupController extends Controller
                         'type' => 'Modifier Group',
                         'code' => MyHelper::createrandom(5).strtotime(date('Y-m-d H:i:s')),
                         'text' => $modifier['name'],
+                        'text_detail_trx' => $modifier['name_detail_trx'],
                         'product_modifier_visibility' => (isset($modifier['visibility']) ? 'Visible': 'Hidden'),
                         'created_at' => date('Y-m-d H:i:s'),
                         'updated_at' => date('Y-m-d H:i:s')
@@ -223,6 +224,7 @@ class ApiProductModifierGroupController extends Controller
                         $dtUpdate = [
                             'product_modifier_order' => $keyMod,
                             'text' => $modifier['name'],
+                            'text_detail_trx' => $modifier['name_detail_trx'],
                             'product_modifier_visibility' => (isset($modifier['visibility']) ? 'Visible': 'Hidden'),
                             'updated_at' => date('Y-m-d H:i:s')
                         ];
@@ -245,6 +247,7 @@ class ApiProductModifierGroupController extends Controller
                             'type' => 'Modifier Group',
                             'code' => MyHelper::createrandom(5).strtotime(date('Y-m-d H:i:s')),
                             'text' => $modifier['name'],
+                            'text_detail_trx' => $modifier['name_detail_trx'],
                             'product_modifier_visibility' => (isset($modifier['visibility']) ? 'Visible': 'Hidden'),
                             'created_at' => date('Y-m-d H:i:s'),
                             'updated_at' => date('Y-m-d H:i:s')
@@ -407,7 +410,7 @@ class ApiProductModifierGroupController extends Controller
             $mod = [];
             if(!empty($dt['product_modifier'])){
                 foreach ($dt['product_modifier'] as $m){
-                    $mod[] = $m['text'].'('.$m['code'].')';
+                    $mod[] = $m['text'].'-'.$m['text_detail_trx'].'('.$m['code'].')';
                 }
             }
 
@@ -525,11 +528,13 @@ class ApiProductModifierGroupController extends Controller
                             $codeMod = str_replace(')',"", $codeMod);
                             $name = substr($modifier,0,$check);
                             $getModifier = ProductModifier::where('code', $codeMod)->first();
+                            $explodename = explode('-',$name);
                             $dataMod = [
                                 'id_product_modifier_group' => $id_product_modifier_group,
                                 'modifier_type' => 'Modifier Group',
                                 'type' => 'Modifier Group',
-                                'text' => $name,
+                                'text' => $explodename[0]??$name??'',
+                                'text_detail_trx' => $explodename[1]??'',
                                 'product_modifier_visibility' => 'Visible',
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'updated_at' => date('Y-m-d H:i:s')
@@ -551,12 +556,14 @@ class ApiProductModifierGroupController extends Controller
                                 }
                             }
                         }else{
+                            $explodename = explode('-',$modifier);
                             $create = ProductModifier::create([
                                 'id_product_modifier_group' => $id_product_modifier_group,
                                 'modifier_type' => 'Modifier Group',
                                 'type' => 'Modifier Group',
                                 'code' => MyHelper::createrandom(5).strtotime(date('Y-m-d H:i:s')),
-                                'text' => $modifier,
+                                'text' => $explodename[0]??$modifier??'',
+                                'text_detail_trx' => $explodename[1]??'',
                                 'product_modifier_visibility' => 'Visible',
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'updated_at' => date('Y-m-d H:i:s')
