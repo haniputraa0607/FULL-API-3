@@ -2071,10 +2071,13 @@ class PromoCampaignTools{
         $applied_product = app($this->promo_campaign)->getProduct($source, ($code['promo_campaign'] ?? $code['deal_voucher']['deals'] ?? $code['subscription_user']['subscription']))['applied_product'] ?? [];
 
         if ($list_product_source == 'list_product') {
+        	// used on list product result, before ordering and check category
         	$result = $this->checkListProduct($applied_product, $id_brand_promo, $brands, $result);
         }elseif ($list_product_source == 'search_product') {
+        	// used on search product
         	$result = $this->checkListProduct2($applied_product, $id_brand_promo, $brands, $result);
         }elseif($list_product_source == 'list_product2'){
+        	// used on list product, after ordering and check category
         	$result = $this->checkListProduct3($applied_product, $brands, $result);
         }
 
