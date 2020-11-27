@@ -1798,8 +1798,8 @@ class ApiProductController extends Controller
                 }
             }
         }
-
-        if(isset($product['product_detail']['product_detail_visibility']) && $product['product_detail']['product_detail_visibility']!='Visible'){
+        // return $product;
+        if(isset($product['product_detail']['product_detail_visibility']) && $product['product_detail']['product_detail_visibility']=='Hidden'){
             return MyHelper::checkGet([]);
         }
         unset($product['product_detail']);
