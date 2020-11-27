@@ -2265,6 +2265,7 @@ class ApiPromoCampaign extends Controller
 						'promo_campaign.promo_campaign_tier_discount_rules',
 						'promo_campaign.promo_campaign_buyxgety_rules',
 						'promo_campaign.promo_campaign_discount_bill_rules',
+						'promo_campaign.promo_campaign_discount_bill_products',
 						'promo_campaign.promo_campaign_discount_delivery_rules',
 						'promo_campaign.promo_campaign_payment_method',
 						'promo_campaign.promo_campaign_shipment_method'
@@ -2333,6 +2334,7 @@ class ApiPromoCampaign extends Controller
                         'dealVoucher.deals.deals_tier_discount_rules', 
                         'dealVoucher.deals.deals_buyxgety_rules',
                         'dealVoucher.deals.deals_discount_bill_rules', 
+                        'dealVoucher.deals.deals_discount_bill_products', 
 						'dealVoucher.deals.deals_discount_delivery_rules',
 						'dealVoucher.deals.deals_payment_method',
 						'dealVoucher.deals.deals_shipment_method'
@@ -2582,8 +2584,18 @@ class ApiPromoCampaign extends Controller
 	        }
 	        elseif ( !empty($query[$source.'_discount_bill_rules']) )
 	        {
-	        	$applied_product = '*';
-	        	$product = $default_product;
+	        	if ($query[$source.'_discount_bill_rules']['is_all_product'] === 0) {
+	        		$applied_product = $query[$source.'_discount_bill_products'];
+		        	if (count($applied_product) == 1) {
+		        		$product = $applied_product[0]['product']['product_name'] ?? $default_product;
+		        	}else{
+		        		$product = $default_product;
+		        	}
+	        	}
+	        	else{
+		        	$applied_product = '*';
+		        	$product = $default_product;
+	        	}
 	        }
 	        else
 	        {
@@ -2982,6 +2994,7 @@ class ApiPromoCampaign extends Controller
 						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 					},
 					'promo_campaign.promo_campaign_discount_bill_rules',
+					'promo_campaign.promo_campaign_discount_bill_products',
 					'promo_campaign.promo_campaign_discount_delivery_rules',
 					'promo_campaign.promo_campaign_payment_method',
 					'promo_campaign.promo_campaign_shipment_method'
@@ -3043,6 +3056,7 @@ class ApiPromoCampaign extends Controller
 						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 					},
 					'dealVoucher.deals.deals_discount_bill_rules',
+					'dealVoucher.deals.deals_discount_bill_products',
 					'dealVoucher.deals.deals_discount_delivery_rules',
 					'dealVoucher.deals.deals_payment_method',
 					'dealVoucher.deals.deals_shipment_method'
