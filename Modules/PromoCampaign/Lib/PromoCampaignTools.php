@@ -101,11 +101,11 @@ class PromoCampaignTools{
 		if (isset($request['type'])) {
 			$promo_shipment = $promo->{$source.'_shipment_method'}->pluck('shipment_method');
 			if ($promo->promo_type == 'Discount delivery') {
-				if ($request->type == 'GO-SEND') {
+				if ($request->type == 'Pickup Order') {
 					$errors[]='Promo tidak dapat digunakan untuk Pick Up';
 					return false;
 				}
-				if (count($promo_shipment) == 1 && $promo_shipment[0] == 'GO-SEND') {
+				if (count($promo_shipment) == 1 && $promo_shipment[0] == 'Pickup Order') {
 					$promo->is_all_shipment = 1;
 				}
 			}
