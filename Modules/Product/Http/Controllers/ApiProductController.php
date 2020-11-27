@@ -1798,7 +1798,7 @@ class ApiProductController extends Controller
                 }
             }
         }
-        // return $product;
+        
         if(isset($product['product_detail']['product_detail_visibility']) && $product['product_detail']['product_detail_visibility']=='Hidden'){
             return MyHelper::checkGet([]);
         }
