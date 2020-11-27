@@ -19,6 +19,7 @@ use App\Http\Models\DealsUser;
 use App\Http\Models\Outlet;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
+use Modules\Product\Entities\ProductDetail;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 use Modules\Brand\Entities\BrandOutlet;
@@ -183,6 +184,7 @@ class PromoCampaignTools{
 			}
 		}
 
+		$missing_product_messages = null;
 		switch ($promo->promo_type) {
 			case 'Product discount':
 				// load required relationship
@@ -205,11 +207,7 @@ class PromoCampaignTools{
 					$promo_product = $promo[$source.'_product_discount']->toArray();
 					$promo_product_count = count($promo_product);
 
-					if ($promo_product_count == 1) {
-						$product_error_applied = 1;
-					}else{
-						$product_error_applied = 'all';
-					}
+					$product_error_applied = $this->checkProductErrorApplied($promo_product, $id_outlet, $missing_product_messages);
 
 					$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
 
@@ -217,7 +215,7 @@ class PromoCampaignTools{
 					if (!$check_product) {
 						$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
 						$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
-						$errors[]= $message;
+						$errors[]= $missing_product_messages ?? $message;
 						$errorProduct = $product_error_applied;
 						return false;
 					}
@@ -234,7 +232,7 @@ class PromoCampaignTools{
 					$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
 
-					$errors[] = $message;
+					$errors[] = $missing_product_messages ?? $message;
 					$errorProduct = $product_error_applied;
 					return false;
 				}
@@ -324,7 +322,7 @@ class PromoCampaignTools{
 					$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>'product bertanda khusus']);
 
-					$errors[]= $message;
+					$errors[]= $missing_product_messages ?? $message;
 					$errorProduct = $product_error_applied;
 					return false;
 				}
@@ -358,11 +356,7 @@ class PromoCampaignTools{
 				$promo_product_id = array_column($promo_product_array, 'id_product');
 				$promo_product_count = count($promo_product);
 
-				if ($promo_product_count == 1) {
-					$product_error_applied = 1;
-				}else{
-					$product_error_applied = 'all';
-				}
+				$product_error_applied = $this->checkProductErrorApplied($promo_product, $id_outlet, $missing_product_messages);
 
 				$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
 
@@ -376,7 +370,7 @@ class PromoCampaignTools{
 				if (!$check_product) {
 					$message = $this->getMessage('error_tier_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
-					$errors[]= $message;
+					$errors[]= $missing_product_messages ?? $message;
 					$errorProduct = $product_error_applied;
 					return false;		
 				}
@@ -391,7 +385,7 @@ class PromoCampaignTools{
 					$message = $this->getMessage('error_tier_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
-					$errors[]= $message;
+					$errors[]= $missing_product_messages ?? $message;
 					$errorProduct = $product_error_applied;
 					return false;
 				}
@@ -491,7 +485,7 @@ class PromoCampaignTools{
 					$message = $this->getMessage('error_tier_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
-					$errors[]= $message;
+					$errors[]= $missing_product_messages ?? $message;
 					$errorProduct = $product_error_applied;
 					return false;
 				}
@@ -590,13 +584,7 @@ class PromoCampaignTools{
 					return false;
 				}
 
-				$promo_product_count = count($promo_product);
-
-				if ($promo_product_count == 1) {
-					$product_error_applied = 1;
-				}else{
-					$product_error_applied = 'all';
-				}
+				$product_error_applied = $this->checkProductErrorApplied($promo_product, $id_outlet, $missing_product_messages);
 
 				// sum total quantity of same product
 				foreach ($trxs as $key => $value) 
@@ -644,7 +632,7 @@ class PromoCampaignTools{
 					$message = $this->getMessage('error_buyxgety_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 					
-					$errors[]= $message;
+					$errors[]= $missing_product_messages ?? $message;
 					$errorProduct = $product_error_applied;
 					return false;		
 				}
@@ -659,7 +647,7 @@ class PromoCampaignTools{
 					$message = $this->getMessage('error_buyxgety_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
-					$errors[]= $message;
+					$errors[]= $missing_product_messages ?? $message;
 					$errorProduct = $product_error_applied;
 					return false;
 				}
@@ -757,7 +745,7 @@ class PromoCampaignTools{
 					$message = $this->getMessage('error_buyxgety_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
-					$errors[]= $message;
+					$errors[]= $missing_product_messages ?? $message;
 					$errorProduct = $product_error_applied;
 					return false;
 				}
@@ -896,11 +884,7 @@ class PromoCampaignTools{
 					$promo_product = $promo[$source.'_discount_bill_products']->toArray();
 					$promo_product_count = count($promo_product);
 
-					if ($promo_product_count == 1) {
-						$product_error_applied = 1;
-					}else{
-						$product_error_applied = 'all';
-					}
+					$product_error_applied = $this->checkProductErrorApplied($promo_product, $id_outlet, $missing_product_messages);
 
 					$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
 
@@ -908,7 +892,7 @@ class PromoCampaignTools{
 					if (!$check_product) {
 						$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
 						$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
-						$errors[]= $message;
+						$errors[]= $missing_product_messages ?? $message;
 						$errorProduct = $product_error_applied;
 						return false;
 					}
@@ -925,7 +909,7 @@ class PromoCampaignTools{
 					$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
 
-					$errors[] = $message;
+					$errors[] = $missing_product_messages ?? $message;
 					$errorProduct = $product_error_applied;
 					return false;
 				}
@@ -951,7 +935,6 @@ class PromoCampaignTools{
 						$discount += $total_price;
 					}
 				}
-
 				if($discount<=0){
 					$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>'product bertanda khusus']);
@@ -1554,6 +1537,24 @@ class PromoCampaignTools{
 	                END)')
 			        ->first();
 
+		$product_detail = ProductDetail::where([
+							'id_product' => $id_product, 
+							'id_outlet' => $id_outlet,
+							'product_detail_visibility' =>'Visible',
+							'product_detail_status' =>'Active',
+							'product_detail_stock_status' =>'Available'
+						])->first();
+
+		if (!$product_detail) {
+			$product = false;
+		}
+
+		$check_price = $this->getProductPrice($id_outlet, $id_product, $id_product_variant_group=null, $id_brand);
+
+		if (!$check_price) {
+			$product = false;
+		}
+
 		if ($product && !empty($brand)) {
 
 			$product_brand = Brand::join('brand_product', 'brand_product.id_brand', '=', 'brands.id_brand')
@@ -1609,6 +1610,9 @@ class PromoCampaignTools{
 	        }
         }
 
+        if ($productPrice && $productPrice['product_price'] === 0) {
+        	$productPrice = false;
+        }
 		return $productPrice;
     }
 
@@ -2312,6 +2316,23 @@ class PromoCampaignTools{
 		$result = array_merge($brand_get_promo, $brand_not_get_promo);
 
         return $result;
+    }
+
+    public function checkProductErrorApplied($promo_product, $id_outlet, &$missing_product_messages)
+    {
+    	$promo_product_count = count($promo_product);
+		if ($promo_product_count == 1) {
+			$product_error_applied = 1;
+			$check_promo_product_availability = $this->getOneProduct($id_outlet, $promo_product[0]['id_product'], $promo_product[0]['id_brand']);
+			if(!$check_promo_product_availability){
+				$product_error_applied 	= 0;
+				$missing_product_messages	= 'Promo tidak dapat digunakan di outlet ini karena produk tidak tersedia';
+			}
+		}else{
+			$product_error_applied = 'all';
+		}
+
+		return $product_error_applied;
     }
 }
 ?>
