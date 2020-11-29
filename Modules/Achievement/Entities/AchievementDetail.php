@@ -18,6 +18,7 @@ class AchievementDetail extends Model
         'name',
         'logo_badge',
         'id_product',
+        'id_product_variant_group',
         'product_total',
         'trx_nominal',
         'trx_total',
@@ -30,6 +31,10 @@ class AchievementDetail extends Model
     public function product()
     {
         return $this->belongsTo('App\Http\Models\Product', 'id_product');
+    }
+    public function product_variant_group()
+    {
+        return $this->belongsTo('Modules\ProductVariant\Entities\ProductVariantGroup', 'id_product_variant_group');
     }
     public function outlet()
     {
