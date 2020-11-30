@@ -777,7 +777,7 @@ class ApiOnlineTransaction extends Controller
 
         if ($promo_valid) {
         	if (($promo_type??false) == 'Discount delivery' || ($promo_type??false) == 'Discount bill') {
-        		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $post['sub']['subtotal_per_brand']);
+        		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $post['sub']['subtotal_per_brand'], $promo_error_product);
 
         		if ($check_promo['status'] == 'fail') {
 					DB::rollback();
@@ -2521,10 +2521,10 @@ class ApiOnlineTransaction extends Controller
 
         if ($promo_valid) {
         	if (($promo_type??false) == 'Discount bill') {
-        		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $subtotal_per_brand);
+        		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $subtotal_per_brand, $promo_error_product);
 
         		if ($check_promo['status'] == 'fail') {
-	        		$promo_error = app($this->promo_campaign)->promoError('transaction', $check_promo['messages']??$error, null, 'all');
+	        		$promo_error = app($this->promo_campaign)->promoError('transaction', $check_promo['messages']??$error, null, $promo_error_product ?? 0);
         			$promo_valid = false;
         		}else{
         			$promo_discount = $check_promo['data']['discount']??0;
