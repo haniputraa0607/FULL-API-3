@@ -1923,4 +1923,9 @@ class ApiProductController extends Controller
             }
         }
     }
+
+    public function listProductAjaxSimple(){
+        return MyHelper::checkGet(Product::select('id_product', 'product_name')->get());
+    }
+
 }

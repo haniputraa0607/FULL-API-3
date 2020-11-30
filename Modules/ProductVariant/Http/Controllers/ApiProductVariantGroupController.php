@@ -138,6 +138,28 @@ class ApiProductVariantGroupController extends Controller
         return response()->json(MyHelper::checkGet($get));
     }
 
+    public function productVariantGroupListAjax($idProduct){
+        $get = ProductVariantGroup::where('id_product', $idProduct)
+            ->with('product_variant_pivot_simple')
+            ->select('product_variant_groups.id_product_variant_group')
+            ->get();
+
+        $result=[];
+        foreach($get as $i => $data){
+            $dataResult=null;
+            $dataResult['id_product_variant_group'] = $data['id_product_variant_group'];
+            $dataResult['product_variant_group_name'] = '';
+            foreach($data['product_variant_pivot_simple'] as $key => $variant){
+                if($key > 0){
+                    $dataResult['product_variant_group_name']=$dataResult['product_variant_group_name'].' ';
+                }
+                $dataResult['product_variant_group_name']=$dataResult['product_variant_group_name'].$variant['product_variant_name'];
+            }
+            $result[] = $dataResult;
+        }
+        return response()->json(MyHelper::checkGet($result));
+    }
+
     public function removeProductVariantGroup(Request $request){
         $post = $request->all();
         if(isset($post['id_product_variant']) && !empty($post['id_product_variant'])){
