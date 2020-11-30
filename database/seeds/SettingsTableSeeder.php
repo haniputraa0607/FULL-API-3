@@ -917,7 +917,7 @@ class SettingsTableSeeder extends Seeder
                     'id_setting' => 102,
                     'key' => 'disburse_date',
                     'value' => NULL,
-                    'value_text' => '{"last_date_disburse":null,"start_date_cut_of":"20","end_date_cut_of":"21"}',
+                    'value_text' => '{"last_date_disburse":null,"date_cut_of":"20"}',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 )

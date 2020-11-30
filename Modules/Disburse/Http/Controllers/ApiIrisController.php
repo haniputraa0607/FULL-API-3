@@ -109,8 +109,7 @@ class ApiIrisController extends Controller
                     $getSettingDate = Setting::where('key', 'disburse_date')->first();
                     $getSettingDate = (array)json_decode($getSettingDate['value_text']??'');
                     $lastDate = $getSettingDate['last_date_disburse']??null;
-                    $startCutOf = $getSettingDate['start_date_cut_of']??20;
-                    $endCutOf = $getSettingDate['end_date_cut_of']??21;
+                    $dateCutOf = $getSettingDate['date_cut_of']??20;
                     $monthDb = date('n', strtotime($lastDate));
                     $monthCurrent = date('n');
 
@@ -122,18 +121,10 @@ class ApiIrisController extends Controller
                          -today is not holiday when return true
                          -cron runs on weekdays
                         */
-                        $endYear = date('Y');
-                        $endMonth = date('n');
-                        if($endMonth == 1){
-                            $startMonth = 12;
-                            $startYear = $endYear - 1;
-                        }else{
-                            $startMonth = $endMonth - 1;
-                            $startYear = $endYear;
-                        }
 
-                        $startDateForQuery = date('Y-m-d', strtotime($startYear.'-'.$startMonth.'-'.$startCutOf));
-                        $endDateForQuery = date('Y-m-d', strtotime($endYear.'-'.$endMonth.'-'.$endCutOf));
+                        $year = date('Y');
+                        $month = date('m');
+                        $dateForQuery = date('Y-m-d', strtotime($year.'-'.$month.'-'.$dateCutOf));
                         $feeDisburse = (int)$getSettingFeeDisburse['value'];
 
                         $getData = Transaction::join('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
@@ -159,8 +150,7 @@ class ApiIrisController extends Controller
                                 $q->where('transactions.transaction_flag_invalid', 'Valid')
                                     ->orWhereNull('transactions.transaction_flag_invalid');
                             })
-                            ->whereDate('transactions.transaction_date', '>=', $startDateForQuery)
-                            ->whereDate('transactions.transaction_date', '<=', $endDateForQuery)
+                            ->whereDate('transactions.transaction_date', '<=', $dateForQuery)
                             ->select('disburse_outlet_transactions.*', 'transaction_shipment_go_send', 'transactions.transaction_date', 'transactions.id_outlet', 'transactions.id_transaction', 'transactions.transaction_subtotal',
                                 'transactions.transaction_grandtotal', 'transactions.transaction_discount', 'transactions.id_promo_campaign_promo_code',
                                 'bank_name.bank_code', 'outlets.status_franchise', 'outlets.outlet_special_status', 'outlets.outlet_special_fee',
