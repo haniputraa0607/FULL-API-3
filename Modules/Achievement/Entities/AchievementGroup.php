@@ -28,4 +28,9 @@ class AchievementGroup extends Model
     public function getIdAchievementGroupAttribute($value) {
         return \App\Lib\MyHelper::encSlug($value);
     }
+
+    public function achievement_detail()
+    {
+        return $this->hasMany(AchievementDetail::class, 'id_achievement_group', 'id_achievement_group');
+    }
 }

@@ -23,6 +23,13 @@ class ProductVariantGroup extends Model
             ->join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
     }
 
+    public function product_variant_pivot_simple()
+    {
+        return $this->hasMany(ProductVariantPivot::class, 'id_product_variant_group', 'id_product_variant_group')
+            ->join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
+            ->select('product_variants.id_product_variant', 'product_variant_pivot.id_product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'product_variant_name');
+    }
+
     public function id_product_variants()
     {
         return $this->hasMany(ProductVariantPivot::class, 'id_product_variant_group', 'id_product_variant_group')->select('id_product_variant_group','id_product_variant');

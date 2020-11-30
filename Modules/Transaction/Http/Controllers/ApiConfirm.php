@@ -971,7 +971,7 @@ class ApiConfirm extends Controller
                     }
 
                     //send autocrm transaction fail
-                    $dataPickup = TransactionPickup::where('id_transaction', $dataTrx['id_transaction'])->first();
+                    $dataPickup = TransactionPickup::where('id_transaction', $trx['id_transaction'])->first();
                     $send = app($this->autocrm)->SendAutoCRM('Transaction Expired', $usere->phone, [
                         'notif_type' => 'trx',
                         'header_label' => 'Gagal',
