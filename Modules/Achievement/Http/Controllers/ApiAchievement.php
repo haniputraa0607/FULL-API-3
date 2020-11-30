@@ -661,6 +661,9 @@ class ApiAchievement extends Controller
                             unset($value['value_total']);
                             break;
                     }
+                    if(isset($post['rule']['id_product_variant_group'])){
+                        $value['id_product_variant_group'] = $post['rule']['id_product_variant_group'];
+                    }
                     $achievementDetail[$key] = AchievementDetail::create($value);
                 }
             } catch (\Exception $e) {
@@ -1418,18 +1421,32 @@ class ApiAchievement extends Controller
                 return false;
             }
 
-            //check if using product total
-            if (!is_null($achievement['product_total']) && $achievement['order_by'] != 'total_product') {
-                $totalQty = 0;
-                foreach($dataTrx['product_transaction'] as $product){
-                    if($product['id_product'] <= $achievement['id_product']){
-                        if($product['id_product'] == $achievement['id_product']){
+            //search product & sum total product
+            $totalQty = 0;
+            foreach($dataTrx['product_transaction'] as $product){
+                if($product['id_product'] <= $achievement['id_product']){
+                    if($product['id_product'] == $achievement['id_product']){
+                        //check variant
+                        if($achievement['id_product_variant_group'] != null){
+                            if($achievement['id_product_variant_group'] == $product['id_product_variant_group']){
+                                $totalQty += $product['transaction_product_qty'];
+                            }
+                        }else{
                             $totalQty += $product['transaction_product_qty'];
                         }
-                    }else{
-                        break;
                     }
+                }else{
+                    break;
                 }
+            }
+
+            //product not found
+            if($totalQty == 0){
+                return false;
+            }
+
+            //check if using product total
+            if (!is_null($achievement['product_total']) && $achievement['order_by'] != 'total_product') {
                 //compare the quantity of products with the achievements needed
                 if($achievement['product_total'] < $totalQty){
                     return false;
@@ -1464,7 +1481,11 @@ class ApiAchievement extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Add Achievement Success',
-            'data' => AchievementGroup::where('id_achievement_group', MyHelper::decSlug($request['id_achievement_group']))->first(),
+            'data' => AchievementGroup::where('achievement_groups.id_achievement_group', MyHelper::decSlug($request['id_achievement_group']))
+                    ->join('achievement_details', 'achievement_details.id_achievement_group', 'achievement_groups.id_achievement_group')
+                    ->leftJoin('outlets', 'outlets.id_outlet', 'achievement_details.id_outlet')
+                    ->leftJoin('provinces', 'provinces.id_province', 'achievement_details.id_province')
+                    ->first(),
         ]);
     }
 
@@ -1478,7 +1499,7 @@ class ApiAchievement extends Controller
         try {
             $data['group'] = AchievementGroup::where('id_achievement_group', MyHelper::decSlug($request['id_achievement_group']))->first();
             $data['category'] = AchievementCategory::select('name')->where('id_achievement_category', $data['group']->id_achievement_category)->first();
-            $data['detail'] = AchievementDetail::with('product', 'outlet', 'province')->where('id_achievement_group', MyHelper::decSlug($request['id_achievement_group']))->get()->toArray();
+            $data['detail'] = AchievementDetail::with('product', 'product_variant_group.product_variant_pivot_simple', 'outlet', 'province')->where('id_achievement_group', MyHelper::decSlug($request['id_achievement_group']))->get()->toArray();
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -1572,6 +1593,19 @@ class ApiAchievement extends Controller
         DB::beginTransaction();
         try {
             AchievementGroup::where('id_achievement_group', MyHelper::decSlug($post['id_achievement_group']))->update($post['group']);
+
+            //update Detail
+            $data = [];
+            if(isset($post['rule']['id_product'])){
+                $data['id_product'] = $post['rule']['id_product'];
+            }
+            if(isset($post['rule']['id_product_variant_group'])){
+                $data['id_product_variant_group'] = $post['rule']['id_product_variant_group'];
+            }
+            if(isset($post['rule']['product_total'])){
+                $data['product_total'] = $post['rule']['product_total'];
+            }
+            AchievementDetail::where('id_achievement_group', MyHelper::decSlug($post['id_achievement_group']))->update($data);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -1579,6 +1613,7 @@ class ApiAchievement extends Controller
                 'message' => 'Update Achievement Failed',
                 'error' => $e->getMessage(),
             ]);
+            \Log::error($e);
         }
         DB::commit();
         
