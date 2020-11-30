@@ -337,7 +337,7 @@ class ApiPromo extends Controller
     	return $check;
     }
 
-    public function checkPromo($request, $user, $promo_source, $data_promo, $id_outlet, $item, $delivery_fee, $subtotal_per_brand)
+    public function checkPromo($request, $user, $promo_source, $data_promo, $id_outlet, $item, $delivery_fee, $subtotal_per_brand, &$error_product)
     {
     	$pct = new PromoCampaignTools;
     	if ($promo_source == 'promo_code') {
@@ -373,7 +373,7 @@ class ApiPromo extends Controller
 			$item, 
 			$errors, 
 			$source, 
-			$errorProduct, 
+			$error_product, 
 			$delivery_fee,
 			$subtotal_per_brand
 		);
