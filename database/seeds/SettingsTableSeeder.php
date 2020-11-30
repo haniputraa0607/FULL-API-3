@@ -911,6 +911,15 @@ class SettingsTableSeeder extends Seeder
                     'value_text' => NULL,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            101 =>
+                array(
+                    'id_setting' => 102,
+                    'key' => 'disburse_date',
+                    'value' => NULL,
+                    'value_text' => '{"last_date_disburse":null,"date_cut_of":"20"}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
                 )
         ));
     }
