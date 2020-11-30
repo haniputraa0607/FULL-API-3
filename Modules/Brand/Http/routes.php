@@ -2,7 +2,7 @@
 
 Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' => 'api/brand', 'namespace' => 'Modules\Brand\Http\Controllers'], function () {
     Route::any('/', ['middleware' => 'feature_control:155', 'uses' => 'ApiBrandController@index']);
-    Route::any('be/list', ['middleware' => 'feature_control:155', 'uses' => 'ApiBrandController@listBrand']);
+    Route::any('be/list', ['uses' => 'ApiBrandController@listBrand']);
     Route::post('store', ['middleware' => 'feature_control:156', 'uses' => 'ApiBrandController@store']);
     Route::post('show', ['middleware' => 'feature_control:159', 'uses' => 'ApiBrandController@show']);
     Route::post('reorder', 'ApiBrandController@reOrder');
