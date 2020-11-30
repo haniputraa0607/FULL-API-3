@@ -1840,16 +1840,37 @@ class ApiTransaction extends Controller
                     $promoName = '';
                     $promoType = '';
                     $promoCode = '';
+
+                    $promoName2 = '';
+                    $promoType2 = '';
+                    $promoCode2 = '';
                     if(count($val['vouchers']) > 0){
                         $getDeal = Deal::where('id_deals', $val['vouchers'][0]['id_deals'])->first();
-                        $promoName = $getDeal['deals_title'];
-                        $promoType = 'Deals';
-                        $promoCode = $val['vouchers'][0]['voucher_code'];
+                        if($getDeal['promo_type'] == 'Discount bill' || $getDeal['promo_type'] == 'Discount delivery'){
+                            $promoName2 = $getDeal['deals_title'];
+                            $promoType2 = 'Deals';
+                            $promoCode2 = $val['vouchers'][0]['voucher_code'];
+                        }else{
+                            $promoName = $getDeal['deals_title'];
+                            $promoType = 'Deals';
+                            $promoCode = $val['vouchers'][0]['voucher_code'];
+                        }
+
                     }elseif (!empty($val['promo_campaign'])){
-                        $promoName = $val['promo_campaign']['promo_title'];
-                        $promoType = 'Promo Campaign';
-                        $promoCode = $val['promo_campaign']['promo_code'];
+                        if($val['promo_campaign']['promo_type'] == 'Discount bill' || $val['promo_campaign']['promo_type'] == 'Discount delivery'){
+                            $promoName2 = $val['promo_campaign']['promo_title'];
+                            $promoType2 = 'Promo Campaign';
+                            $promoCode2 = $val['promo_campaign']['promo_code'];
+                        }else{
+                            $promoName = $val['promo_campaign']['promo_title'];
+                            $promoType = 'Promo Campaign';
+                            $promoCode = $val['promo_campaign']['promo_code'];
+                        }
+                    }elseif(isset($val['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'])){
+                        $promoName2 = htmlspecialchars($val['subscription_user_voucher']['subscription_user']['subscription']['subscription_title']);
+                        $promoType2 = 'Subscription';
                     }
+
                     $promoName = htmlspecialchars($promoName);
                     $status = $val['transaction_payment_status'];
                     if(!is_null($val['reject_at'])){
@@ -2002,13 +2023,34 @@ class ApiTransaction extends Controller
                                 $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                                 $html .= '</tr>';
                             }
+                        }elseif(!empty($promoName2)){
+                            $sub  = $val['transaction_discount']??0;
+                            $html .= '<tr>';
+                            $html .= $sameData;
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= $addAdditionalColumn;
+                            $html .= '<td>'.htmlspecialchars($promoName2).'('.$promoType2.')'.'</td>';
+                            $html .= $addAdditionalColumnVariant;
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td>'.abs(abs($val['transaction_discount'])??0).'</td>';
+                            $html .= '<td>'.(-abs($val['transaction_discount'])??0).'</td>';
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '</tr>';
                         }
 
                         if(!empty($val['transaction_shipment_go_send'])) {
                             $discountDelivery = 0;
                             $promoDiscountDelivery = '';
                             if(abs($val['transaction_discount_delivery']) > 0){
-                                $promoDiscountDelivery = ' ('.$promoName.')';
+                                $promoDiscountDelivery = ' ('.(empty($promoName) ? $promoName2 : $promoName).')';
                                 $discountDelivery = abs($val['transaction_discount_delivery']);
                             }
 
@@ -2102,8 +2144,8 @@ class ApiTransaction extends Controller
                     $promoName = $val['promo_campaign']['promo_title'];
                     $promoType = 'Promo Campaign';
                     $promoCode = $val['promo_campaign']['promo_code'];
-                }elseif (isset($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']) && !empty($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription'])){
-                    $promoName = $val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']['subscription_title'];
+                }elseif (isset($val['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'])){
+                    $promoName = $val['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'];
                     $promoType = 'Subscription';
                     $promoCode = '';
                 }

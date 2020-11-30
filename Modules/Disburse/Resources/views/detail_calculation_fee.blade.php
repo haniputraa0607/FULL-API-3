@@ -52,8 +52,8 @@
                         }else{
                             $promoName = $val['transaction_payment_subscription']['subscription_title'];
                         }
-                    }elseif(isset($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']) && !empty($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription'])) {
-                        $promoName = $val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']['subscription_title'];
+                    }elseif(isset($val['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'])) {
+                        $promoName = $val['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'];
                     }elseif($val['discount_central'] > 0){
                         $promoName = 'Unknown Promo';
                     }
