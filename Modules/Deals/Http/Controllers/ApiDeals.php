@@ -284,6 +284,10 @@ class ApiDeals extends Controller
         	$data['brand_rule'] = $post['brand_rule'];
         }
 
+        if (isset($post['product_type'])) {
+        	$data['product_type'] = $post['product_type'];
+        }
+
         return $data;
     }
 
@@ -1524,17 +1528,22 @@ class ApiDeals extends Controller
 			$deals = $deals->with([
                 $table.'_product_discount.product',
                 $table.'_product_discount.brand',
+                $table.'_product_discount.product_variant_pivot.product_variant',
                 $table.'_product_discount_rules',
                 $table.'_tier_discount_product.product',
                 $table.'_tier_discount_product.brand',
+                $table.'_tier_discount_product.product_variant_pivot.product_variant',
                 $table.'_tier_discount_rules',
                 $table.'_buyxgety_product_requirement.product',
                 $table.'_buyxgety_product_requirement.brand',
+                $table.'_buyxgety_product_requirement.product_variant_pivot.product_variant',
                 $table.'_buyxgety_rules.product',
                 $table.'_buyxgety_rules.brand',
+                $table.'_buyxgety_rules.product_variant_pivot.product_variant',
                 $table.'_discount_bill_rules',
                 $table.'_discount_bill_products.product',
                 $table.'_discount_bill_products.brand',
+                $table.'_discount_bill_products.product_variant_pivot.product_variant',
                 $table.'_discount_delivery_rules',
                 $table.'_shipment_method',
                 $table.'_payment_method',
