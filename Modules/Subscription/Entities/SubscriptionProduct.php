@@ -39,7 +39,8 @@ class SubscriptionProduct extends Eloquent
 		'id_subscription',
 		'id_product',
 		'id_product_category',
-		'id_brand'
+		'id_brand',
+		'id_product_variant_group'
 	];
 
 	public function product()
@@ -60,5 +61,10 @@ class SubscriptionProduct extends Eloquent
 	public function brand()
 	{
 		return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
+	}
+
+	public function product_variant_pivot()
+	{
+		return $this->hasMany(\Modules\ProductVariant\Entities\ProductVariantPivot::class, 'id_product_variant_group', 'id_product_variant_group');
 	}
 }
