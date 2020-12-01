@@ -126,11 +126,23 @@ class ApiProductVariantGroupController extends Controller
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
             $param = array_column($post['conditions'], 'parameter');
-            $get = $get->whereIn('id_product_variant_group', function($query) use ($param){
+            $count = count($param);
+            $paramValue = '';
+            foreach ($param as $index => $p){
+                if($index !== $count-1){
+                    $paramValue .= 'pv.product_variant_name = "'.$p.'" OR ';
+                }else{
+                    $paramValue .= 'pv.product_variant_name = "'.$p.'"';
+                }
+            }
+
+            $get = $get->whereIn('id_product_variant_group', function($query) use ($paramValue,$count){
                 $query->select('id_product_variant_group')
-                    ->from('product_variant_pivot')
-                    ->join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
-                    ->whereIn('product_variant_name', $param);
+                    ->from('product_variant_pivot as pvp')
+                    ->join('product_variants as pv', 'pv.id_product_variant', 'pvp.id_product_variant')
+                    ->groupBy('pvp.id_product_variant_group')
+                    ->whereRaw($paramValue)
+                    ->havingRaw('COUNT(*) = '.$count);
             });
         }
 
@@ -171,11 +183,23 @@ class ApiProductVariantGroupController extends Controller
 
                 if(isset($post['conditions']) && !empty($post['conditions'])){
                     $param = array_column($post['conditions'], 'parameter');
-                    $productVariant = $productVariant->whereIn('id_product_variant_group', function($query) use ($param){
+                    $count = count($param);
+                    $paramValue = '';
+                    foreach ($param as $index => $p){
+                        if($index !== $count-1){
+                            $paramValue .= 'pv.product_variant_name = "'.$p.'" OR ';
+                        }else{
+                            $paramValue .= 'pv.product_variant_name = "'.$p.'"';
+                        }
+                    }
+
+                    $productVariant = $productVariant->whereIn('id_product_variant_group', function($query) use ($paramValue,$count){
                         $query->select('id_product_variant_group')
-                            ->from('product_variant_pivot')
-                            ->join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
-                            ->whereIn('product_variant_name', $param);
+                            ->from('product_variant_pivot as pvp')
+                            ->join('product_variants as pv', 'pv.id_product_variant', 'pvp.id_product_variant')
+                            ->groupBy('pvp.id_product_variant_group')
+                            ->whereRaw($paramValue)
+                            ->havingRaw('COUNT(*) = '.$count);
                     });
                 }
 
