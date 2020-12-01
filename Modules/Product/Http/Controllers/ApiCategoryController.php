@@ -357,7 +357,7 @@ class ApiCategoryController extends Controller
             $post['id_outlet'] = Setting::where('key', 'default_outlet')->pluck('value')->first();
         }
         $products = Product::select([
-            'products.id_product', 'products.product_name', 'products.product_code', 'products.product_description',
+            'products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status',
             DB::raw('(CASE
                         WHEN (select outlets.outlet_different_price from outlets  where outlets.id_outlet = ' . $post['id_outlet'] . ' ) = 1 
                         THEN (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = ' . $post['id_outlet'] . ' )
@@ -418,8 +418,10 @@ class ApiCategoryController extends Controller
             ];
         }
         foreach ($products as $product) {
-            $variantTree = Product::getVariantTree($product['id_product'], $outlet);
-            $product['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
+            if ($product->product_variant_status) {
+                $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                $product['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
+            }
             $product['product_price_raw'] = (int) $product['product_price'];
             $product->append('photo');
             $product = $product->toArray();
@@ -523,7 +525,7 @@ class ApiCategoryController extends Controller
         }
         $products = Product::select([
             'products.id_product', 'products.product_name', 'products.product_code', 'products.product_description',
-            'brand_product.id_product_category', 'brand_product.id_brand',
+            'brand_product.id_product_category', 'brand_product.id_brand', 'product_variant_status',
             DB::raw('(CASE
                         WHEN (select outlets.outlet_different_price from outlets  where outlets.id_outlet = ' . $post['id_outlet'] . ' ) = 1 
                         THEN (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = ' . $post['id_outlet'] . ' )
@@ -578,9 +580,14 @@ class ApiCategoryController extends Controller
         }
 
         $result = [];
+        $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $post['id_outlet'])->first();
         foreach ($products as $product) {
             $product->append('photo');
             $product['id_outlet'] = $post['id_outlet'];
+            if ($product->product_variant_status) {
+                $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                $product['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
+            }
             $result[$product->id_product_category]['list'][] = $product;
             if (!isset($result[$product->id_product_category]['category'])) {
                 $result[$product->id_product_category]['category'] = ProductCategory::select('id_product_category', 'product_category_name')->find($product->id_product_category);

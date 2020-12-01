@@ -241,7 +241,7 @@ class PromoCampaignTools{
 				foreach ($product as $key => $value) {
 					$product[$key]['price'] = null;
 					$product[$key]['product_price'] = null;
-					$product_price = $this->getProductPrice($id_outlet, $value['id_product'], $value['id_product_variant_group']);
+					$product_price = $this->getProductPrice($id_outlet, $value['id_product'], $value['id_product_variant_group'], $value['id_brand']);
 					if(!$product_price){
 						$errors[]='Produk tidak ditemukan';
 						continue;
@@ -494,7 +494,7 @@ class PromoCampaignTools{
 				foreach ($product as $key => $value) {
 					$product[$key]['price'] = null;
 					$product[$key]['product_price'] = null;
-					$product_price = $this->getProductPrice($id_outlet, $value['id_product'], $value['id_product_variant_group']);
+					$product_price = $this->getProductPrice($id_outlet, $value['id_product'], $value['id_product_variant_group'], $value['id_brand']);
 					if(!$product_price){
 						$errors[]='Produk tidak ditemukan';
 						continue;
@@ -1827,19 +1827,36 @@ class PromoCampaignTools{
     	}
     	$promo_product_id = array_column($promo_product_array, 'id_product');
     	// merge total quantity of same product
+		$merge_product_array = [];
 		$merge_product = [];
 		foreach ($trxs as $key => $value) {
-			if (isset($merge_product[$value['id_brand']][$value['id_product']])) {
-				$merge_product[$value['id_brand']][$value['id_product']] += $value['qty'];
+			/*if (isset($merge_product_array[$value['id_brand']][$value['id_product']])) {
+				$merge_product_array[$value['id_brand']][$value['id_product']] += $value['qty'];
 			}
 			else {
-				$merge_product[$value['id_brand']][$value['id_product']] = $value['qty'];
+				$merge_product_array[$value['id_brand']][$value['id_product']] = $value['qty'];
+			}*/
+
+			if (isset($merge_product[$value['id_brand'].'-'.$value['id_product'].'-'.$value['id_product_variant_group']])) {
+				$merge_product[$value['id_brand'].'-'.$value['id_product'].'-'.$value['id_product_variant_group']] += $value['qty'];
+			}else{
+				$merge_product[$value['id_brand'].'-'.$value['id_product'].'-'.$value['id_product_variant_group']] = $value['qty'];
 			}
 		}
 
+		$check_product = [];
+		foreach ($merge_product as $key => $product_qty) {
+			foreach ($promo_product_array as $val) {
+				$promo_key = $val['id_brand'].'-'.$val['id_product'].'-'.$val['id_product_variant_group'];
+				if ( $key == $promo_key ) {
+					$check_product[$val['id_brand'].'-'.$val['id_product'].'-'.$val['id_product_variant_group']] = $product_qty;
+				}
+			}
+		}
+		/*
 		// check merged product with rule brand and rule product
-		$check_product = [];				
-		foreach ($merge_product as $key => $val) { // key = id_brand
+		$check_product = [];
+		foreach ($merge_product_array as $key => $val) { // key = id_brand
 			if (!in_array($key, $promo_brand)) {
 				continue;
 			}
@@ -1856,7 +1873,7 @@ class PromoCampaignTools{
 					$check_product[$key.'-'.$key2] = $key;
 				}
 			}
-		}
+		}*/
 
 		// promo product not available in cart?
 		if ($promo->product_rule === 'and') {
@@ -1891,8 +1908,8 @@ class PromoCampaignTools{
 			}
 
 			if (isset($promo_product_array)) {
-				foreach ($promo_product_array as $key2 => $value2) {
-					if ($value2['id_brand'] == $trx['id_brand'] && $value2['id_product'] == $trx['id_product']) {
+				foreach ($promo_product_array as $key2 => $val) {
+					if ($val['id_brand'] == $trx['id_brand'] && $val['id_product'] == $trx['id_product'] && $val['id_product_variant_group'] == $trx['id_product_variant_group']) {
 						$product[$key] = $trx;
 						$total_product += $trx['qty'];
 						$trx['is_promo'] = 1;
