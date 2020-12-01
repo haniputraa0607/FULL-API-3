@@ -1600,7 +1600,7 @@ class ApiPromoCampaign extends Controller
         	}
         	$dataProduct[] = $temp;
         }
-        \Log::info($dataProduct);
+
         try {
             $table_tier_discount_rule::insert($data);
             $table_tier_discount_product::insert($dataProduct);

@@ -32,6 +32,8 @@ use Modules\Subscription\Http\Requests\Step3Subscription;
 use Modules\Subscription\Http\Requests\DetailSubscription;
 use Modules\Subscription\Http\Requests\DeleteSubscription;
 use Modules\Subscription\Http\Requests\UpdateCompleteSubscription;
+
+use Modules\ProductVariant\Entities\ProductVariantGroup;
 use DB;
 
 class ApiSubscription extends Controller
@@ -260,6 +262,10 @@ class ApiSubscription extends Controller
 
         if (isset($post['brand_rule'])) {
         	$data['brand_rule'] = $post['brand_rule'];
+        }
+
+        if (isset($post['product_type'])) {
+        	$data['product_type'] = $post['product_type'];
         }
 
         $data['subscription_step_complete'] = 0;
@@ -497,7 +503,7 @@ class ApiSubscription extends Controller
             {
                 // SAVE
                 $data['is_all_product'] = 0;
-                $saveOutlet = $this->saveProduct($subs['id_subscription'], $data['id_product']);
+                $saveOutlet = $this->saveProduct($subs['id_subscription'], $data['id_product'], $subs['product_type']);
             }
             unset($data['id_product']);
         }
@@ -824,18 +830,30 @@ class ApiSubscription extends Controller
     }
 
     /* SAVE PRODUCT */
-    function saveProduct($id_subs, $id_product = [])
+    function saveProduct($id_subs, $id_product = [], $product_type = 'single')
     {
         $dataProduct = [];
 
         foreach ($id_product as $value) {
-            array_push($dataProduct, [
+        	$temp_data = [
                 'id_subscription'=> $id_subs,
-                'id_product'	 => app($this->promo_campaign)->splitBrandProduct($value, 'product'),
                 'id_brand'    	 => app($this->promo_campaign)->splitBrandProduct($value, 'brand'),
                 'created_at' 	 => date('Y-m-d H:i:s'),
                 'updated_at' 	 => date('Y-m-d H:i:s')
-            ]);
+            ];
+
+        	if ($product_type == 'variant') {
+                $temp_data['id_product_variant_group'] = app($this->promo_campaign)->splitBrandProduct($value, 'product');
+                $data_product	= ProductVariantGroup::where('id_product_variant_group', $temp_data['id_product_variant_group'])->select('id_product')->first();
+                if (!$data_product) {
+                	continue;
+                }
+                $temp_data['id_product'] = $data_product['id_product'];
+        	}else{
+        		$temp_data['id_product']	= app($this->promo_campaign)->splitBrandProduct($value, 'product');
+                $temp_data['id_product_variant_group'] = null;
+        	}
+            array_push($dataProduct, $temp_data);
         }
 
         if (!empty($dataProduct)) {
@@ -1030,6 +1048,7 @@ class ApiSubscription extends Controller
 	                    	);
 	                    },
 	                    'subscription_products.brand',
+	                    'subscription_products.product_variant_pivot.product_variant',
 	                    'brand',
 	                    'subscription_shipment_method',
 	                    'subscription_payment_method',
