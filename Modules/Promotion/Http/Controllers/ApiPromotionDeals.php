@@ -157,13 +157,18 @@ class ApiPromotionDeals extends Controller
 				->with([
 	                'deals_promotion_product_discount.product',
 	                'deals_promotion_product_discount.brand',
+	                'deals_promotion_product_discount.product_variant_pivot.product_variant',
 	                'deals_promotion_product_discount_rules',
 	                'deals_promotion_tier_discount_product.product',
 	                'deals_promotion_tier_discount_product.brand',
+	                'deals_promotion_tier_discount_product.product_variant_pivot.product_variant',
 	                'deals_promotion_tier_discount_rules',
 	                'deals_promotion_buyxgety_product_requirement.product',
 	                'deals_promotion_buyxgety_product_requirement.brand',
+	                'deals_promotion_buyxgety_product_requirement.product_variant_pivot.product_variant',
 	                'deals_promotion_buyxgety_rules.product',
+	                'deals_promotion_buyxgety_rules.brand',
+	                'deals_promotion_buyxgety_rules.product_variant_pivot.product_variant',
 	                'deals_promotion_content',
 	                'deals_promotion_content.deals_promotion_content_details',
 	                'created_by_user',
@@ -172,6 +177,7 @@ class ApiPromotionDeals extends Controller
 	                'deals_promotion_discount_bill_rules',
 	                'deals_promotion_discount_bill_products.product',
 	                'deals_promotion_discount_bill_products.brand',
+	                'deals_promotion_discount_bill_products.product_variant_pivot.product_variant',
 	                'deals_promotion_discount_delivery_rules',
 	                'deals_promotion_shipment_method',
 	                'deals_promotion_payment_method',
@@ -237,6 +243,7 @@ class ApiPromotionDeals extends Controller
 		$dataDeals['min_basket_size'] 		= $dealsTemplate['min_basket_size'];
 		$dataDeals['product_rule'] 			= $dealsTemplate['product_rule'];
 		$dataDeals['brand_rule'] 			= $dealsTemplate['brand_rule'];
+		$dataDeals['product_type'] 			= $dealsTemplate['product_type'];
 
 		if ($post['duration'][$key] == 'duration') {
 			$dataDeals['deals_voucher_duration'] = $post['deals_voucher_expiry_duration'][$key];
@@ -773,7 +780,8 @@ class ApiPromotionDeals extends Controller
 				'id_deals' => $id_deals,
 				'id_product' => $value['id_product'],
 				'id_brand' => $value['id_brand'],
-				'id_product_category' => $value['id_product_category']
+				'id_product_category' => $value['id_product_category'],
+				'id_product_variant_group' => $value['id_product_variant_group']
 			];
 		}
 		$delRule 	= $table::where('id_deals', $id_deals)->delete();
