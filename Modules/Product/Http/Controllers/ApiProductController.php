@@ -1863,8 +1863,8 @@ class ApiProductController extends Controller
                 $product['product_price'] = $productGlobalPrice['product_global_price'];
             }
         }
-            $product['variants'] = Product::getVariantTree($product['id_product'], $outlet)['variants_tree']??null;
         if ($product['product_variant_status']) {
+            $product['variants'] = Product::getVariantTree($product['id_product'], $outlet)['variants_tree']??null;
         } else {
             $product['variants'] = null;
         }
