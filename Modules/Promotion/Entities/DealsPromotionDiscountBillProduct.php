@@ -41,7 +41,8 @@ class DealsPromotionDiscountBillProduct extends Eloquent
 		'id_deals',
 		'id_product',
 		'id_product_category',
-		'id_brand'
+		'id_brand',
+		'id_product_variant_group'
 	];
 
 	public function deals_promotion_template()
@@ -62,5 +63,10 @@ class DealsPromotionDiscountBillProduct extends Eloquent
 	public function brand()
 	{
 		return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
+	}
+
+	public function product_variant_pivot()
+	{
+		return $this->hasMany(\Modules\ProductVariant\Entities\ProductVariantPivot::class, 'id_product_variant_group', 'id_product_variant_group');
 	}
 }
