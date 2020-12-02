@@ -2467,7 +2467,6 @@ class ApiOnlineTransaction extends Controller
 
             $product['id_product_variant_group'] = $item['id_product_variant_group'] ?? null;
             if ($product['id_product_variant_group']) {
-                $product['product_price'] = $item['transaction_product_price'];
                 $product['selected_variant'] = Product::getVariantParentId($item['id_product_variant_group'], Product::getVariantTree($item['id_product'], $outlet)['variants_tree'], array_column($product['extra_modifiers']??[], 'id_product_variant'));
             } else {
                 $product['selected_variant'] = [];
@@ -2497,8 +2496,7 @@ class ApiOnlineTransaction extends Controller
             $product['product_price_total'] = $item['transaction_product_subtotal'];
             $product['product_price_raw'] = (int) $product['product_price'];
             $product['product_price_raw_total'] = (int) $product['product_price']+$mod_price;
-            // $product['product_price'] = MyHelper::requestNumber($product['product_price']+$mod_price, '_CURRENCY');
-            $product['product_price'] = (int) $product['product_price'];
+            $product['product_price'] = MyHelper::requestNumber($product['product_price']+$mod_price, '_CURRENCY');
 
             if (!$product['bonus']) {
             	$tree[$product['id_brand']]['products'][]=$product;
