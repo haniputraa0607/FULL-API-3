@@ -917,9 +917,9 @@ class PromoCampaignTools{
 				// get jumlah harga
 				$total_price=0;
 				foreach ($subtotal_per_brand as $key => $value) {
-	    			if (!isset($promo_brand_flipped[$key])) {
+	    			/*if (!isset($promo_brand_flipped[$key])) {
 	    				continue;
-	    			}
+	    			}*/
 					$total_price += $value;
 	    		}
 
