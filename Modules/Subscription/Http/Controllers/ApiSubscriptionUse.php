@@ -243,12 +243,13 @@ class ApiSubscriptionUse extends Controller
     		$min_basket_size = $subs['subscription_user']['subscription']['subscription_minimal_transaction'];
     		$check_min_trx = false;
     		$promo_brand_flipped = array_flip($promo_brands);
-
+    		$subtotal = 0;
     		foreach ($subtotal_per_brand as $key => $value) {
     			if (!isset($promo_brand_flipped[$key])) {
     				continue;
     			}
-    			if ($value >= $min_basket_size) {
+    			$subtotal += $value;
+    			if ($subtotal >= $min_basket_size) {
     				$check_min_trx = true;
     				break;
     			}
