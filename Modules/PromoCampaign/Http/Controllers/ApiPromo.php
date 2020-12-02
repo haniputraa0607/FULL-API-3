@@ -332,6 +332,7 @@ class ApiPromo extends Controller
     				$check = true;
     				break;
     			}
+    		}
     	}
     	
     	return $check;

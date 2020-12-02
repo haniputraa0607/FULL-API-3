@@ -2631,6 +2631,32 @@ class ApiPromoCampaign extends Controller
     	}
     	else
     	{
+    		if ( ($query[$source.'_product_discount_rules']['is_all_product']??false) == 1 
+    			|| ($query['promo_type']??false) == 'Referral' 
+    			|| ($query[$source.'_discount_bill_rules']['is_all_product']??false) == 1
+    		) {
+	        	$applied_product = '*';
+	        	$product = $default_product;
+	        }else{
+	    		$applied_product = $query[$source.'_product_discount'] ?: $query[$source.'_tier_discount_product'] ?: $query[$source.'_buyxgety_product_requirement'] ?: $query[$source.'_discount_bill_products'] ?: [];
+
+	    		if(empty($applied_product)){
+	        		$product = [];
+	    		}elseif (count($applied_product) == 1) {
+	        		$product = $applied_product[0]['product']['product_name'] ?? $default_product;
+	        		if (isset($applied_product[0]['id_product_variant_group'])) {
+	        			$variant = ProductVariantPivot::join('product_variants as pv', 'pv.id_product_variant', 'product_variant_pivot.id_product_variant')
+	        						->where('product_variant_pivot.id_product_variant_group', $applied_product[0]['id_product_variant_group'])
+	        						->pluck('product_variant_name')->toArray();
+	        			$variant_text = implode(' ', $variant);
+	        			$product .= ' '.$variant_text;
+	        		}
+	        	}else{
+	        		$product = $default_product;
+	        	}
+	        }
+
+	    	/*
 	    	if ( ($query[$source.'_product_discount_rules']['is_all_product']??false) == 1 || ($query['promo_type']??false) == 'Referral') 
 	        {
 	        	$applied_product = '*';
@@ -2682,7 +2708,7 @@ class ApiPromoCampaign extends Controller
 	        {
 	        	$applied_product = [];
 	        	$product = [];
-	        }
+	        }*/
     	}
 
         $result = [
@@ -2924,7 +2950,7 @@ class ApiPromoCampaign extends Controller
 
     				$product_benefit = $product_benefit['product_name']??'';
     				if ($variant->isNotEmpty()) {
-    					$variant = implode(',', $variant->toArray());
+    					$variant = implode(' ', $variant->toArray());
     					$product_benefit = $product_benefit.' '.$variant;
     				}
 
