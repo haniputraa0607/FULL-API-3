@@ -2145,6 +2145,7 @@ class ApiPromoCampaign extends Controller
         		$data = ProductVariantGroup::leftJoin('brand_product', 'product_variant_groups.id_product', '=', 'brand_product.id_product')
 	            		->join('brands', 'brands.id_brand', '=', 'brand_product.id_brand')
 	            		->join('products', 'products.id_product', '=', 'product_variant_groups.id_product')
+	            		->where('products.product_variant_status', 1)
 	            		->with('product_variant_pivot_simple')
 	            		->orderBy('brands.id_brand');
 
