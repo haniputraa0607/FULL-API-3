@@ -323,11 +323,13 @@ class ApiPromo extends Controller
     		$check = true;
     	}else{
     		$promo_brand_flipped = array_flip($promo_brand);
+    		$subtotal = 0;
     		foreach ($subtotal_per_brand as $key => $value) {
     			if (!isset($promo_brand_flipped[$key])) {
     				continue;
     			}
-    			if ($value >= $min_basket_size) {
+    			$subtotal += $value;
+    			if ($subtotal >= $min_basket_size) {
     				$check = true;
     				break;
     			}
