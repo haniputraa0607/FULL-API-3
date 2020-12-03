@@ -2624,6 +2624,13 @@ class ApiPromoCampaign extends Controller
     			$product_total = count($query['subscription_products']);
     			if ($product_total == 1) {
 	        		$product = $query['subscription_products'][0]['product']['product_name'] ?? $default_product;
+	        		if (isset($query['subscription_products'][0]['id_product_variant_group'])) {
+	        			$variant = ProductVariantPivot::join('product_variants as pv', 'pv.id_product_variant', 'product_variant_pivot.id_product_variant')
+	        						->where('product_variant_pivot.id_product_variant_group', $query['subscription_products'][0]['id_product_variant_group'])
+	        						->pluck('product_variant_name')->toArray();
+	        			$variant_text = implode(' ', $variant);
+	        			$product .= ' '.$variant_text;
+	        		}
     			}else{
 	        		$product = $default_product;
     			}
