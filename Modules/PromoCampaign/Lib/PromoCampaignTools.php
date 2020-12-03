@@ -2099,7 +2099,7 @@ class PromoCampaignTools{
         	$result = $this->checkListProduct2($applied_product, $id_brand_promo, $brands, $result);
         }elseif($list_product_source == 'list_product2'){
         	// used on list product, after ordering and check category
-        	$result = $this->checkListProduct3($applied_product, $brands, $result);
+        	$result = $this->checkListProduct3($applied_product, $id_brand_promo, $brands, $result);
         }
 
         return $result;
@@ -2261,7 +2261,7 @@ class PromoCampaignTools{
         return $products;
     }
 
-    public function checkListProduct3($applied_product, $brands, $list_product)
+    public function checkListProduct3($applied_product, $id_brand_promo, $brands, $list_product)
     {
     	$result = $list_product;
 
@@ -2271,7 +2271,7 @@ class PromoCampaignTools{
 			foreach ($categories['list'] as $key2 => $products) {
 				foreach ($products['list'] as $key3 => $product) {
 					if ($applied_product == '*') { // all product
-						if (in_array($product['id_brand'], $brands)) {
+						if (in_array($product['id_brand'], $brands) || $product['id_brand'] == $id_brand_promo) {
 		        			$result[$key]['list'][$key2]['list'][$key3]['is_promo'] = 1;
 		        			if (isset($flagged_product[$product['id_brand']][$product['id_product']])) {
 		        				continue;
@@ -2282,7 +2282,7 @@ class PromoCampaignTools{
 						}
 					}else{
 						foreach ($applied_product as $val) { // selected multiple product
-							if ($val['id_brand'] == $product['id_brand'] && $val['id_product'] == $product['id_product']) {
+							if (($val['id_brand'] == $product['id_brand'] || $product['id_brand'] == $id_brand_promo) && $val['id_product'] == $product['id_product']) {
 			        			$result[$key]['list'][$key2]['list'][$key3]['is_promo'] = 1;
 								if (isset($flagged_product[$product['id_brand']][$product['id_product']])) {
 			        				continue;
