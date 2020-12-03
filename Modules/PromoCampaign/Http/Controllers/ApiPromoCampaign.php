@@ -2970,7 +2970,11 @@ class ApiPromoCampaign extends Controller
 	    			}
 
 		    		$req_product = $query[$source.'_buyxgety_product_requirement'];
-		    		if (count($req_product) == 1 && count($promo_rules) == 1 && $req_product[0]['id_product'] == $promo_rules[0]['benefit_id_product']) {
+		    		if (count($req_product) == 1 
+		    			&& count($promo_rules) == 1 
+		    			&& $req_product[0]['id_product'] == $promo_rules[0]['benefit_id_product']
+		    			&& (($promo_rules[0]['discount_value'] != 100 && $promo_rules[0]['discount_type'] == 'percent') || $promo_rules[0]['discount_type'] != 'percent')
+		    		) {
 		    			$product_benefit = $product_benefit.' selanjutnya';
 		    		}
 
