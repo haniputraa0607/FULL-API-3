@@ -2343,11 +2343,13 @@ class ApiPromoCampaign extends Controller
 						'promo_campaign.promo_campaign_tier_discount_product.product' => function($q) {
 							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 						},
+						'promo_campaign.promo_campaign_discount_bill_products.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
 						'promo_campaign.promo_campaign_product_discount_rules',
 						'promo_campaign.promo_campaign_tier_discount_rules',
 						'promo_campaign.promo_campaign_buyxgety_rules',
 						'promo_campaign.promo_campaign_discount_bill_rules',
-						'promo_campaign.promo_campaign_discount_bill_products',
 						'promo_campaign.promo_campaign_discount_delivery_rules',
 						'promo_campaign.promo_campaign_payment_method',
 						'promo_campaign.promo_campaign_shipment_method'
@@ -2412,11 +2414,13 @@ class ApiPromoCampaign extends Controller
                         'dealVoucher.deals.deals_buyxgety_product_requirement.product' => function($q) {
 							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 						}, 
+						'dealVoucher.deals.deals_discount_bill_products.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						}, 
                         'dealVoucher.deals.deals_product_discount_rules', 
                         'dealVoucher.deals.deals_tier_discount_rules', 
                         'dealVoucher.deals.deals_buyxgety_rules',
                         'dealVoucher.deals.deals_discount_bill_rules', 
-                        'dealVoucher.deals.deals_discount_bill_products', 
 						'dealVoucher.deals.deals_discount_delivery_rules',
 						'dealVoucher.deals.deals_payment_method',
 						'dealVoucher.deals.deals_shipment_method'
@@ -3102,7 +3106,9 @@ class ApiPromoCampaign extends Controller
 						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 					},
 					'promo_campaign.promo_campaign_discount_bill_rules',
-					'promo_campaign.promo_campaign_discount_bill_products',
+					'promo_campaign.promo_campaign_discount_bill_products.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					},
 					'promo_campaign.promo_campaign_discount_delivery_rules',
 					'promo_campaign.promo_campaign_payment_method',
 					'promo_campaign.promo_campaign_shipment_method'
@@ -3164,7 +3170,9 @@ class ApiPromoCampaign extends Controller
 						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 					},
 					'dealVoucher.deals.deals_discount_bill_rules',
-					'dealVoucher.deals.deals_discount_bill_products',
+					'dealVoucher.deals.deals_discount_bill_products.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					},
 					'dealVoucher.deals.deals_discount_delivery_rules',
 					'dealVoucher.deals.deals_payment_method',
 					'dealVoucher.deals.deals_shipment_method'
