@@ -2618,12 +2618,19 @@ class ApiPromoCampaign extends Controller
     			}
 
     			$applied_product = $query['subscription_products'];
-    			$applied_product[0]['id_brand'] = $query['id_brand'] ?? $brand['id_brand'];
+    			// $applied_product[0]['id_brand'] = $query['id_brand'] ?? $brand['id_brand'];
     			$applied_product[0]['product_code'] = $applied_product[0]['product']['product_code'];
 
     			$product_total = count($query['subscription_products']);
     			if ($product_total == 1) {
 	        		$product = $query['subscription_products'][0]['product']['product_name'] ?? $default_product;
+	        		if (isset($query['subscription_products'][0]['id_product_variant_group'])) {
+	        			$variant = ProductVariantPivot::join('product_variants as pv', 'pv.id_product_variant', 'product_variant_pivot.id_product_variant')
+	        						->where('product_variant_pivot.id_product_variant_group', $query['subscription_products'][0]['id_product_variant_group'])
+	        						->pluck('product_variant_name')->toArray();
+	        			$variant_text = implode(' ', $variant);
+	        			$product .= ' '.$variant_text;
+	        		}
     			}else{
 	        		$product = $default_product;
     			}
@@ -2970,7 +2977,11 @@ class ApiPromoCampaign extends Controller
 	    			}
 
 		    		$req_product = $query[$source.'_buyxgety_product_requirement'];
-		    		if (count($req_product) == 1 && count($promo_rules) == 1 && $req_product[0]['id_product'] == $promo_rules[0]['benefit_id_product']) {
+		    		if (count($req_product) == 1 
+		    			&& count($promo_rules) == 1 
+		    			&& $req_product[0]['id_product'] == $promo_rules[0]['benefit_id_product']
+		    			&& (($promo_rules[0]['discount_value'] != 100 && $promo_rules[0]['discount_type'] == 'percent') || $promo_rules[0]['discount_type'] != 'percent')
+		    		) {
 		    			$product_benefit = $product_benefit.' selanjutnya';
 		    		}
 
