@@ -2618,7 +2618,7 @@ class ApiPromoCampaign extends Controller
     			}
 
     			$applied_product = $query['subscription_products'];
-    			$applied_product[0]['id_brand'] = $query['id_brand'] ?? $brand['id_brand'];
+    			// $applied_product[0]['id_brand'] = $query['id_brand'] ?? $brand['id_brand'];
     			$applied_product[0]['product_code'] = $applied_product[0]['product']['product_code'];
 
     			$product_total = count($query['subscription_products']);
