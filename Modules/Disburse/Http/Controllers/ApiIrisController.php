@@ -99,15 +99,17 @@ class ApiIrisController extends Controller
             $arrSuccess = [];
             $arrReferenceNoFailed = [];
             $getCurrenDay = date('d');
-            if($getCurrenDay >= 25){
+            $getSettingDate = Setting::where('key', 'disburse_date')->first();
+            $getSettingDate = (array)json_decode($getSettingDate['value_text']??'');
+            $getMinSendDate = $getSettingDate['min_date_send_disburse']??25;
+
+            if($getCurrenDay >= (int)$getMinSendDate){
                 $currentDate = date('Y-m-d');
                 $day = date('D', strtotime($currentDate));
                 $getHoliday = $this->getHoliday();
 
                 if($day != 'Sat' && $day != 'Sun' && array_search($currentDate, $getHoliday) === false){
                     $getSettingFeeDisburse = Setting::where('key', 'disburse_setting_fee_transfer')->first();
-                    $getSettingDate = Setting::where('key', 'disburse_date')->first();
-                    $getSettingDate = (array)json_decode($getSettingDate['value_text']??'');
                     $lastDate = $getSettingDate['last_date_disburse']??null;
                     $dateCutOf = $getSettingDate['date_cut_of']??20;
                     $monthDb = date('n', strtotime($lastDate));

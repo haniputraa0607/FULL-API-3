@@ -228,7 +228,8 @@ class ApiOutletController extends Controller
             	$closes[$key] = $this->setOneTimezone($closes[$key], $post['time_zone_utc']);
                 $data['open'] = $opens[$key];
                 $data['close'] = $closes[$key];
-                $data['is_close'] = $is_closed[$key];
+                $data['is_closed'] = $is_closed[$key];
+
                 $saveSchedule = OutletSchedule::updateOrCreate(['id_outlet' => $save['id_outlet'], 'day' => $value], $data);
                 if (!$saveSchedule) {
                     DB::rollBack();
