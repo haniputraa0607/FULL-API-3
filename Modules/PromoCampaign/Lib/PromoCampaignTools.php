@@ -1827,7 +1827,9 @@ class PromoCampaignTools{
     	}
     	$promo_product_id = array_column($promo_product_array, 'id_product');
     	// merge total quantity of same product
-		$merge_product_array = [];
+		// $merge_product_array 	= [];
+		$merge_product_only 	= []; // for product only
+		$merge_product_variant 	= []; // for product + variant
 		$merge_product = [];
 		foreach ($trxs as $key => $value) {
 			/*if (isset($merge_product_array[$value['id_brand']][$value['id_product']])) {
@@ -1837,19 +1839,33 @@ class PromoCampaignTools{
 				$merge_product_array[$value['id_brand']][$value['id_product']] = $value['qty'];
 			}*/
 
-			if (isset($merge_product[$value['id_brand'].'-'.$value['id_product'].'-'.$value['id_product_variant_group']])) {
-				$merge_product[$value['id_brand'].'-'.$value['id_product'].'-'.$value['id_product_variant_group']] += $value['qty'];
+			if (isset($merge_product_only[$value['id_brand'].'-'.$value['id_product']])) {
+				$merge_product_only[$value['id_brand'].'-'.$value['id_product']] += $value['qty'];
 			}else{
-				$merge_product[$value['id_brand'].'-'.$value['id_product'].'-'.$value['id_product_variant_group']] = $value['qty'];
+				$merge_product_only[$value['id_brand'].'-'.$value['id_product']] = $value['qty'];
+			}
+
+			if (isset($merge_product_variant[$value['id_brand'].'-'.$value['id_product'].'-'.$value['id_product_variant_group']])) {
+				$merge_product_variant[$value['id_brand'].'-'.$value['id_product'].'-'.$value['id_product_variant_group']] += $value['qty'];
+			}else{
+				$merge_product_variant[$value['id_brand'].'-'.$value['id_product'].'-'.$value['id_product_variant_group']] = $value['qty'];
 			}
 		}
 
+		$merge_product = $promo->product_type == 'single' ? $merge_product_only : $merge_product_variant;
 		$check_product = [];
 		foreach ($merge_product as $key => $product_qty) {
 			foreach ($promo_product_array as $val) {
-				$promo_key = $val['id_brand'].'-'.$val['id_product'].'-'.$val['id_product_variant_group'];
-				if ( $key == $promo_key ) {
-					$check_product[$val['id_brand'].'-'.$val['id_product'].'-'.$val['id_product_variant_group']] = $product_qty;
+				if ($promo->product_type == 'single') {
+					$promo_key = $val['id_brand'].'-'.$val['id_product'];
+					if ( $key == $promo_key ) {
+						$check_product[$val['id_brand'].'-'.$val['id_product']] = $product_qty;
+					}
+				}else{
+					$promo_key = $val['id_brand'].'-'.$val['id_product'].'-'.$val['id_product_variant_group'];
+					if ( $key == $promo_key ) {
+						$check_product[$val['id_brand'].'-'.$val['id_product'].'-'.$val['id_product_variant_group']] = $product_qty;
+					}
 				}
 			}
 		}
@@ -1909,7 +1925,10 @@ class PromoCampaignTools{
 
 			if (isset($promo_product_array)) {
 				foreach ($promo_product_array as $key2 => $val) {
-					if ($val['id_brand'] == $trx['id_brand'] && $val['id_product'] == $trx['id_product'] && $val['id_product_variant_group'] == $trx['id_product_variant_group']) {
+					if ($val['id_brand'] == $trx['id_brand'] 
+						&& $val['id_product'] == $trx['id_product'] 
+						&& (empty($val['id_product_variant_group']) || $val['id_product_variant_group'] == $trx['id_product_variant_group'])
+					) {
 						$product[$key] = $trx;
 						$total_product += $trx['qty'];
 						$trx['is_promo'] = 1;
