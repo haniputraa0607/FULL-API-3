@@ -26,6 +26,9 @@ use Modules\Brand\Entities\BrandOutlet;
 use Modules\Brand\Entities\BrandProduct;
 use Modules\Brand\Entities\Brand;
 
+use Modules\Product\Entities\ProductModifierGroupPivot;
+use Modules\ProductVariant\Entities\ProductVariantPivot;
+
 use App\Lib\MyHelper;
 use Modules\IPay88\Lib\IPay88;
 use Modules\PromoCampaign\Lib\PromoCampaignToolsV1;
@@ -772,6 +775,47 @@ class PromoCampaignTools{
 					'max_percent_discount'=>$benefit_max_value
 				];
 
+				if (!$promo_rule->id_product_variant_group) {
+					$benefit_variant = $this->getCheapestVariant($id_outlet, $benefit_product->id_product);
+				}
+
+				$extra_modifier_product = ProductModifierGroupPivot::where('id_product', $benefit_product->id_product)
+        								->leftJoin('product_modifiers','product_modifiers.id_product_modifier_group','=','product_modifier_group_pivots.id_product_modifier_group')
+        								->where('product_modifiers.product_modifier_visibility','Visible')
+        								->get();
+        		$extra_modifier = [];
+        		$used_modifier = [];
+        		foreach ($extra_modifier_product as $key => $value) {
+        			if (empty($used_modifier[$value['id_product_modifier_group']])) {
+        				$extra_modifier[] = [
+        					'id_product_modifier' => $value['id_product_modifier'],
+        					'qty' => 1
+        				];
+
+        				$used_modifier[$value['id_product_modifier_group']] = 1;
+        			}
+        		}
+        		
+        		if ($promo_rule->id_product_variant_group || $benefit_variant) {
+	        		$variant = ProductVariantPivot::where('id_product_variant_group', ($promo_rule->id_product_variant_group ?? $benefit_variant))->get();
+	        		
+	        		foreach ($variant as $key => $value) {
+						$extra_modifier_variant = ProductModifierGroupPivot::where('id_product_variant', $value['id_product_variant'])
+		        								->leftJoin('product_modifiers','product_modifiers.id_product_modifier_group','=','product_modifier_group_pivots.id_product_modifier_group')
+		        								->where('product_modifiers.product_modifier_visibility','Visible')
+		        								->orderBy('product_modifier_order')
+		        								->orderBy('id_product_modifier')
+		        								->first();
+						if ($extra_modifier_variant) {
+		        			// $extra_modifier[] = $extra_modifier_variant['id_product_modifier'];
+		        			$extra_modifier[] = [
+	        					'id_product_modifier' => $extra_modifier_variant['id_product_modifier'],
+	        					'qty' => 1
+	        				];
+						}
+	        		}
+        		}
+
 				// add product benefit
 				$benefit_item = [
 					'id_custom' 	=> isset(end($trxs)['id_custom']) ? end($trxs)['id_custom']+1 : '',
@@ -782,7 +826,8 @@ class PromoCampaignTools{
 					'is_free'		=> ($promo_rule->discount_type == "percent" && $promo_rule->discount_value == 100) ? 1 : 0,
 					'modifiers'		=> [],
 					'bonus'			=> 1,
-					'id_product_variant_group' => $promo_rule->id_product_variant_group
+					'id_product_variant_group' => $promo_rule->id_product_variant_group ?? $benefit_variant ?? null,
+					'modifiers' => $extra_modifier ?? []
 				];
 				// $benefit_item['id_product']	= $benefit_product->id_product;
 				// $benefit_item['id_brand'] 	= $benefit_product->brands[0]->id_brand??'';
