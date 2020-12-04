@@ -2763,6 +2763,12 @@ class ApiOutletApp extends Controller
                                 $payment['amount']    = $PayIpay->amount / 100;
                                 $list['payment'][] = $payment;
                                 break;
+                            case 'Shopeepay':
+                                $shopeePay = TransactionPaymentShopeePay::find($mp['id_payment']);
+                                $payment['name']    = 'ShopeePay';
+                                $payment['amount']  = $shopeePay->amount / 100;
+                                $list['payment'][]  = $payment;
+                                break;
                             case 'Offline':
                                 $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
                                 foreach ($payment as $key => $value) {
@@ -2852,6 +2858,24 @@ class ApiOutletApp extends Controller
                         $list['balance'] = $dataPay['balance_nominal'];
                         $payment[$dataKey]['name']          = 'Balance';
                         $payment[$dataKey]['amount']        = $dataPay['balance_nominal'];
+                    }
+                }
+                $list['payment'] = $payment;
+                break;
+            case 'Shopeepay':
+                $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+                $payment = [];
+                foreach($multiPayment as $dataKey => $dataPay){
+                    if($dataPay['type'] == 'Shopeepay'){
+                        $payShopee = TransactionPaymentShopeePay::find($dataPay['id_payment']);
+                        $payment[$dataKey]['name']      = 'ShopeePay';
+                        $payment[$dataKey]['amount']    = $payShopee->amount / 100;
+                    }else{
+                        $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
+                        $payment[$dataKey]              = $dataPay;
+                        $list['balance']                = $dataPay['balance_nominal'];
+                        $payment[$dataKey]['name']      = 'Balance';
+                        $payment[$dataKey]['amount']    = $dataPay['balance_nominal'];
                     }
                 }
                 $list['payment'] = $payment;

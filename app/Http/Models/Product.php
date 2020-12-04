@@ -527,10 +527,7 @@ class Product extends Model
         }
 
         if (!$variant) {
-            $variant = self::getVariantTree($product_variant_group->id_product)['variants_tree'];
-            if(!$variant) {
-                return [];
-            }
+            return [];
         }
         foreach ($variant['childs'] as $child) {
             $next_variants = $variants;
