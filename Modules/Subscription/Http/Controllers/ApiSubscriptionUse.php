@@ -213,18 +213,11 @@ class ApiSubscriptionUse extends Controller
 		if (!$check) {
 			$pct = new PromoCampaignTools;
 			$total_product = count($promo_product??[]);
-			if ($total_product == 1) {
-				$product = $promo_product[0]['product']['product_name'] ?? 'product bertanda khusus';
-			}else{
-				if ($subs_obj->subscription_user->subscription->product_rule == 'and') {
-					$product = 'semua product bertanda khusus';
-				}else{
-					$product = 'product bertanda khusus';
-				}
-			}
+			$product_name = $pct->getProductName($promo_product, $subs_obj->subscription_user->subscription->product_rule);
 
-			$message = $pct->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
-			$message = MyHelper::simpleReplace($message,['product'=>$product]);
+			// $message = $pct->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product_name%</b>.';
+			$message = 'Promo hanya akan berlaku jika anda membeli <b>%product_name%</b>.';
+			$message = MyHelper::simpleReplace($message,['product_name'=>$product_name]);
 			$errors[] = $message;
 			
 			$getProduct  = app($this->promo_campaign)->getProduct('subscription',$subs['subscription_user']['subscription'], $id_outlet);
