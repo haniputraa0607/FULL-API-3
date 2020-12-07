@@ -22,6 +22,7 @@ use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\Product\Entities\ProductDetail;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
+use Modules\ProductVariant\Entities\ProductVariantPivot;
 use Modules\Brand\Entities\BrandOutlet;
 use Modules\Brand\Entities\BrandProduct;
 use Modules\Brand\Entities\Brand;
@@ -190,14 +191,11 @@ class PromoCampaignTools{
 				// load required relationship
 				$promo->load($source.'_product_discount',$source.'_product_discount_rules');
 				$promo_rules=$promo[$source.'_product_discount_rules'];
+				$promo_product = $promo[$source.'_product_discount']->toArray();
 				$max_product = $promo_rules->max_product;
 				$qty_promo_available = [];
 
-				if ($promo->product_rule === 'and') {
-					$product_name = 'semua product bertanda khusus';
-				}else {
-					$product_name = 'product bertanda khusus';
-				}
+				$product_name = $this->getProductName($promo_product, $promo->product_rule);
 
 				if(!$promo_rules->is_all_product){
 					if ($promo[$source.'_product_discount']->isEmpty()) {
@@ -361,11 +359,7 @@ class PromoCampaignTools{
 				$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
 
 				// promo product not available in cart?
-				if ($promo->product_rule === 'and') {
-					$product_name = 'semua product bertanda khusus';
-				}else {
-					$product_name = 'product bertanda khusus';
-				}
+				$product_name = $this->getProductName($promo_product, $promo->product_rule);
 
 				if (!$check_product) {
 					$message = $this->getMessage('error_tier_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
@@ -622,11 +616,7 @@ class PromoCampaignTools{
 				$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
 
 				// promo product not available in cart?
-				if ($promo->product_rule === 'and') {
-					$product_name = 'semua product bertanda khusus';
-				}else {
-					$product_name = 'product bertanda khusus';
-				}
+				$product_name = $this->getProductName($promo_product, $promo->product_rule);
 
 				if (!$check_product) {
 					$message = $this->getMessage('error_buyxgety_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
@@ -869,12 +859,9 @@ class PromoCampaignTools{
 				$promo->load($source.'_discount_bill_products', $source.'_discount_bill_rules');
 				$promo_rules = $promo[$source.'_discount_bill_rules'];
 				$promo_brand_flipped = array_flip($promo_brand);
+				$promo_product = $promo[$source.'_discount_bill_products']->toArray();
 
-				if ($promo->product_rule === 'and') {
-					$product_name = 'semua product bertanda khusus';
-				}else {
-					$product_name = 'product bertanda khusus';
-				}
+				$product_name = $this->getProductName($promo_product, $promo->product_rule);
 
 				if(!$promo_rules->is_all_product){
 					if ($promo[$source.'_discount_bill_products']->isEmpty()) {
@@ -2369,6 +2356,36 @@ class PromoCampaignTools{
 		}
 
 		return $product_error_applied;
+    }
+
+    public function getProductName($promo_product, $product_rule)
+    {
+    	$product_name = '';
+    	if (count($promo_product) == 1) {
+    		$promo_product[0]['product_name'] = 
+    		$product = Product::where('id_product', $promo_product[0]['id_product'])->first();
+    		$product_name = $product->product_name;
+
+    		if ($promo_product[0]['id_product_variant_group']) {
+    			$variant = ProductVariantPivot::join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
+    						->where('id_product_variant_group', $promo_product[0]['id_product_variant_group'])->pluck('product_variant_name');
+
+				if ($variant->isNotEmpty()) {
+					$variant = implode(' ', $variant->toArray());
+					$product_name = $product_name.' '.$variant;
+				}
+    		}
+    	}
+
+    	if (empty($product_name)) {
+	    	if ($product_rule === 'and') {
+				$product_name = 'semua product bertanda khusus';
+			}else {
+				$product_name = 'product bertanda khusus';
+			}
+    	}
+
+    	return $product_name;
     }
 }
 ?>
