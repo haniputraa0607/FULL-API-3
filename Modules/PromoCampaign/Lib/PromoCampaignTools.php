@@ -507,21 +507,43 @@ class PromoCampaignTools{
 				foreach ($product as $key => $value) {
 
 					if (!empty($promo_qty_each)) {
-						if (!isset($qty_each[$value['id_brand']][$value['id_product']])) {
-							$qty_each[$value['id_brand']][$value['id_product']] = $promo_qty_each;
-						}
 
-						if ($qty_each[$value['id_brand']][$value['id_product']] < 0) {
-							$qty_each[$value['id_brand']][$value['id_product']] = 0;
-						}
+						if ($promo->product_type == 'variant') {
 
-						if ($qty_each[$value['id_brand']][$value['id_product']] > $value['qty']) {
-							$promo_qty = $value['qty'];
+							if (!isset($qty_each[$value['id_brand']][$value['id_product']][$value['id_product_variant_group']])) {
+								$qty_each[$value['id_brand']][$value['id_product']][$value['id_product_variant_group']] = $promo_qty_each;
+							}
+
+							if ($qty_each[$value['id_brand']][$value['id_product']][$value['id_product_variant_group']] < 0) {
+								$qty_each[$value['id_brand']][$value['id_product']][$value['id_product_variant_group']] = 0;
+							}
+
+							if ($qty_each[$value['id_brand']][$value['id_product']][$value['id_product_variant_group']] > $value['qty']) {
+								$promo_qty = $value['qty'];
+							}else{
+								$promo_qty = $qty_each[$value['id_brand']][$value['id_product']][$value['id_product_variant_group']];
+							}
+
+							$qty_each[$value['id_brand']][$value['id_product']][$value['id_product_variant_group']] -= $value['qty'];
+
 						}else{
-							$promo_qty = $qty_each[$value['id_brand']][$value['id_product']];
-						}
 
-						$qty_each[$value['id_brand']][$value['id_product']] -= $value['qty'];
+							if (!isset($qty_each[$value['id_brand']][$value['id_product']])) {
+								$qty_each[$value['id_brand']][$value['id_product']] = $promo_qty_each;
+							}
+
+							if ($qty_each[$value['id_brand']][$value['id_product']] < 0) {
+								$qty_each[$value['id_brand']][$value['id_product']] = 0;
+							}
+
+							if ($qty_each[$value['id_brand']][$value['id_product']] > $value['qty']) {
+								$promo_qty = $value['qty'];
+							}else{
+								$promo_qty = $qty_each[$value['id_brand']][$value['id_product']];
+							}
+
+							$qty_each[$value['id_brand']][$value['id_product']] -= $value['qty'];
+						}
 						
 					}else{
 						if ($total_promo_qty < 0) {
@@ -561,6 +583,9 @@ class PromoCampaignTools{
 					if(in_array($trx['id_product'], $product_id)){
 						// add discount
 						$trx['promo_qty'] = $product[$key]['promo_qty'];
+						if ($trx['promo_qty'] == 0) {
+							continue;
+						}
 						$discount += $this->discount_product($product[$key]['product_price'],$promo_rule,$trx, $modifier);
 					}
 				}
@@ -1927,7 +1952,7 @@ class PromoCampaignTools{
 					) {
 						$product[$key] = $trx;
 						$total_product += $trx['qty'];
-						$trx['is_promo'] = 1;
+						// $trx['is_promo'] = 1;
 						break;
 					}
 				}
