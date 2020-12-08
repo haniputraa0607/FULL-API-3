@@ -32,6 +32,7 @@ use Modules\Deals\Entities\DealsTierDiscountProduct;
 use Modules\Deals\Entities\DealsTierDiscountRule;
 use Modules\Deals\Entities\DealsBuyxgetyProductRequirement;
 use Modules\Deals\Entities\DealsBuyxgetyRule;
+use Modules\Deals\Entities\DealsBuyxgetyProductModifier;
 use Modules\Deals\Entities\DealsDiscountBillRule;
 use Modules\Deals\Entities\DealsDiscountBillProduct;
 use Modules\Deals\Entities\DealsDiscountDeliveryRule;
@@ -44,6 +45,7 @@ use Modules\Promotion\Entities\DealsPromotionTierDiscountProduct;
 use Modules\Promotion\Entities\DealsPromotionTierDiscountRule;
 use Modules\Promotion\Entities\DealsPromotionBuyxgetyProductRequirement;
 use Modules\Promotion\Entities\DealsPromotionBuyxgetyRule;
+use Modules\Promotion\Entities\DealsPromotionBuyxgetyProductModifier;
 use Modules\Promotion\Entities\DealsPromotionDiscountBillRule;
 use Modules\Promotion\Entities\DealsPromotionDiscountBillProduct;
 use Modules\Promotion\Entities\DealsPromotionDiscountDeliveryRule;
@@ -1641,18 +1643,21 @@ class ApiPromoCampaign extends Controller
 	        $table_buyxgety_discount_rule = new PromoCampaignBuyxgetyRule;
 	        $table_buyxgety_discount_product = new PromoCampaignBuyxgetyProductRequirement;
 	        $table_buyxgety_modifier = new PromoCampaignBuyxgetyProductModifier;
+	        $id_rule_table = 'id_promo_campaign_buyxgety_rule';
     	}
     	elseif ($source == 'deals') 
     	{
 	        $table_buyxgety_discount_rule = new DealsBuyxgetyRule;
 	        $table_buyxgety_discount_product = new DealsBuyxgetyProductRequirement;
 	        $table_buyxgety_modifier = new DealsBuyxgetyProductModifier;
+	        $id_rule_table = 'id_deals_buyxgety_rule';
     	}
     	elseif ($source == 'deals_promotion')
     	{
 	        $table_buyxgety_discount_rule = new DealsPromotionBuyxgetyRule;
 	        $table_buyxgety_discount_product = new DealsPromotionBuyxgetyProductRequirement;
 	        $table_buyxgety_modifier = new DealsPromotionBuyxgetyProductModifier;
+	        $id_rule_table = 'id_deals_buyxgety_rule';
 	        $id_table = 'id_deals';
     	}
 
@@ -1715,7 +1720,7 @@ class ApiPromoCampaign extends Controller
 	        		foreach ($extra_modifier[$key] as $modifier) {
 	        			$extra_mod_data[] = [
 							'id_product_modifier' => $modifier,
-							'id_promo_campaign_buyxgety_rule' => $save_rule['id_promo_campaign_buyxgety_rule'],
+							$id_rule_table 	=> $save_rule[$id_rule_table],
 							'created_at'	=> date('Y-m-d H:i:s'),
 			    			'updated_at'	=> date('Y-m-d H:i:s')
 	        			];
@@ -1752,7 +1757,7 @@ class ApiPromoCampaign extends Controller
         } catch (\Illuminate\Database\QueryException $e) {
             $result = [
                 'status'  => 'fail',
-                'message' => $e->getMessage()
+                'message' => 'Create Buy X get Y rules failed'
             ];
             \Log::error($e);
             DB::rollBack();
@@ -2320,7 +2325,7 @@ class ApiPromoCampaign extends Controller
         			$result = array_merge($result, $new_data);
         		}
 
-        		$data = $result;
+        		$data = $result ?: $variant_data;
         	}
         }
         else 
