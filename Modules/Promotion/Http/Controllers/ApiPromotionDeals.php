@@ -169,6 +169,7 @@ class ApiPromotionDeals extends Controller
 	                'deals_promotion_buyxgety_rules.product',
 	                'deals_promotion_buyxgety_rules.brand',
 	                'deals_promotion_buyxgety_rules.product_variant_pivot.product_variant',
+	                'deals_promotion_buyxgety_rules.deals_buyxgety_product_modifiers.modifier',
 	                'deals_promotion_content',
 	                'deals_promotion_content.deals_promotion_content_details',
 	                'created_by_user',

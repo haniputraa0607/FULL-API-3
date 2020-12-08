@@ -338,6 +338,7 @@ class ApiPromoCampaign extends Controller
             'promo_campaign_buyxgety_rules.product',
             'promo_campaign_buyxgety_rules.brand',
             'promo_campaign_buyxgety_rules.product_variant_pivot.product_variant',
+            'promo_campaign_buyxgety_rules.promo_campaign_buyxgety_product_modifiers.modifier',
             'promo_campaign_buyxgety_product_requirement.product',
             'promo_campaign_buyxgety_product_requirement.brand',
             'promo_campaign_buyxgety_product_requirement.product_variant_pivot.product_variant',

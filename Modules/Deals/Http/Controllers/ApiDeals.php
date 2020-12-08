@@ -1540,7 +1540,7 @@ class ApiDeals extends Controller
                 $table.'_buyxgety_rules.product',
                 $table.'_buyxgety_rules.brand',
                 $table.'_buyxgety_rules.product_variant_pivot.product_variant',
-                $table.'_buyxgety_rules.deals_buyxgety_product_modifiers',
+                $table.'_buyxgety_rules.deals_buyxgety_product_modifiers.modifier',
                 $table.'_discount_bill_rules',
                 $table.'_discount_bill_products.product',
                 $table.'_discount_bill_products.brand',
