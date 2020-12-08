@@ -754,7 +754,14 @@ class PromoCampaignTools{
 				$benefit_product_price = $this->getProductPrice($id_outlet, $promo_rule->benefit_id_product, $promo_rule->id_product_variant_group, $promo_rule->id_brand);
 
 				$benefit=null;
-				$extra_modifier = $promo_rule->{$source.'_buyxgety_product_modifiers'}->pluck('id_product_modifier');
+				$promo_modifier = $promo_rule->{$source.'_buyxgety_product_modifiers'};
+				$benefit_modifier = [];
+				foreach ($promo_modifier as $value) {
+					$benefit_modifier[] = [
+    					'id_product_modifier' => $value['id_product_modifier'],
+    					'qty' => 1
+    				];
+				}
 
 				$rule=(object) [
 					'max_qty'=>$benefit_qty,
@@ -774,7 +781,7 @@ class PromoCampaignTools{
 					'modifiers'		=> [],
 					'bonus'			=> 1,
 					'id_product_variant_group' => $promo_rule->id_product_variant_group,
-					'modifier' => $extra_modifier
+					'modifiers' => $benefit_modifier
 				];
 				// $benefit_item['id_product']	= $benefit_product->id_product;
 				// $benefit_item['id_brand'] 	= $benefit_product->brands[0]->id_brand??'';
