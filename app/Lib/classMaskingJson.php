@@ -50,11 +50,11 @@ class classMaskingJson {
 		}
 
         $phone = null;
-        if(isset($this->data['number'])){
-            if(substr($this->data['number'], 0, 2) == '62'){
-                $phone = '0'.substr($this->data['number'],2);
+        if(isset($this->data['datapacket'][0]['number'])){
+            if(substr($this->data['datapacket'][0]['number'], 0, 2) == '62'){
+                $phone = '0'.substr($this->data['datapacket'][0]['number'],2);
             }else{
-                $phone = $this->data['number'];
+                $phone = $this->data['datapacket'][0]['number'];
             }
         }
 		$log=[
