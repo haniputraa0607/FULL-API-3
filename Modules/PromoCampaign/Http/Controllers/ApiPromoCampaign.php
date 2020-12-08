@@ -2232,72 +2232,95 @@ class ApiPromoCampaign extends Controller
         								->leftJoin('product_modifiers','product_modifiers.id_product_modifier_group','=','product_modifier_group_pivots.id_product_modifier_group')
         								->where('product_modifiers.product_modifier_visibility','Visible')
         								->get();
+
+        	$extra_modifier_product_group = [];
+        	foreach ($extra_modifier_product as $val) {
+        		$extra_modifier_product_group[$val['id_product_modifier_group']][$val['id_product_modifier']] = $val['text_detail_trx'];
+        	}
+
         	if ($data) {
         		$variant_data = [];
         		foreach ($data as $key => $value) {
         			$variant_name 	= $value->product_variant_pivot->pluck('product_variant_name')->toArray();
         			$variant_id 	= $value->product_variant_pivot->pluck('id_product_variant')->toArray();
+        			$extra_modifier_variant_group = [];
+        			$name = implode(', ', $variant_name);
 
         			$extra_modifier_variant = ProductModifierGroupPivot::whereIn('id_product_variant', $variant_id)
         								->leftJoin('product_modifiers','product_modifiers.id_product_modifier_group','=','product_modifier_group_pivots.id_product_modifier_group')
         								->where('product_modifiers.product_modifier_visibility','Visible')
         								->get();
 
-        			$name = implode(', ', $variant_name);
+        			foreach ($extra_modifier_variant as $val) {
+		        		$extra_modifier_variant_group[$val['id_product_modifier_group']][$val['id_product_modifier']] = $val['text_detail_trx'];
+		        	}
 
         			$temp_data = [
         				'id_product_variant_group' => $value['id_product_variant_group'],
         				'product_variant_group_code' => $value['product_variant_group_code'],
         				'product_variant_group_name' => $name,
-        				'extra_modifier_variant'=> $extra_modifier_variant
+        				'extra_modifier_variant'=> $extra_modifier_variant_group
         			];
         			$variant_data[] = $temp_data;
         		}
-
-        		$new_data = [];
+				
+				$result = [];
         		foreach ($variant_data as $variant) {
-        			foreach ($extra_modifier_product as $val) {
-						$temp_data = [
-							'id_product_variant_group' => $variant['id_product_variant_group'].'-'.$val['id_product_modifier'],
-							'product_variant_group_name' => $variant['product_variant_group_name'].', '.$val['text_detail_trx']
-						];
-						$new_data[] = $temp_data;
-        			}
-
-        			if (!empty($new_data)) {
-						$data = $new_data;
-						$new_data = [];
-        				foreach ($data as $val2) {
-        					foreach ($variant['extra_modifier_variant'] as $val) {
+        			// apply extra modifier product
+					$new_data = [];
+        			foreach ($extra_modifier_product_group as $id_extra_mod_product_group => $modifier_product) {
+    					if (!empty($new_data)) {
+    						$data = $new_data;
+    						$new_data = [];
+	    					foreach ($modifier_product as $id_extra_mod_product => $mod_name) {
+	    						foreach ($data as $value) {
+	    							$temp_data = [
+										'id_product_variant_group' => $value['id_product_variant_group'].'-'.$id_extra_mod_product,
+										'product_variant_group_name' => $value['product_variant_group_name'].', '.$mod_name
+									];
+									$new_data[] = $temp_data;
+	    						}
+	        				}
+    					}else{
+	    					foreach ($modifier_product as $id_extra_mod_product => $mod_name) {
 								$temp_data = [
-									'id_product_variant_group' => $val2['id_product_variant_group'].'-'.$val['id_product_modifier'],
-									'product_variant_group_name' => $val2['product_variant_group_name'].', '.$val['text_detail_trx']
+									'id_product_variant_group' => $variant['id_product_variant_group'].'-'.$id_extra_mod_product,
+									'product_variant_group_name' => $variant['product_variant_group_name'].', '.$mod_name
 								];
 								$new_data[] = $temp_data;
-        					}
-        				}
-        			}else{
-        				foreach ($variant['extra_modifier_variant'] as $val) {
-							$temp_data = [
-								'id_product_variant_group' => $variant['id_product_variant_group'].'-'.$val['id_product_modifier'],
-								'product_variant_group_name' => $variant['product_variant_group_name'].', '.$val['text_detail_trx']
-							];
-							$new_data[] = $temp_data;
+    						}
     					}
         			}
-        			/*$variant_list = [];
-        			foreach ($extra_modifier_variant as $key => $value) {
-        				if (!empty($variant_modifier_name)) {
-        					foreach ($variant_modifier_name as $key => $value) {
-        						$variant_list['']
-        					}
-        				}else{
 
-        				}
-        			}*/
-        			// $temp_data = []
+					// apply extra modifier variant
+					foreach ($variant['extra_modifier_variant'] as $id_extra_mod_variant_group => $modifier_variant) {
+    					if (!empty($new_data)) {
+    						$data = $new_data;
+    						$new_data = [];
+	    					foreach ($modifier_variant as $id_extra_mod_variant => $mod_name) {
+	    						foreach ($data as $value) {
+	    							$temp_data = [
+										'id_product_variant_group' => $value['id_product_variant_group'].'-'.$id_extra_mod_variant,
+										'product_variant_group_name' => $value['product_variant_group_name'].', '.$mod_name
+									];
+									$new_data[] = $temp_data;
+	    						}
+	        				}
+    					}else{
+	    					foreach ($modifier_variant as $id_extra_mod_variant => $mod_name) {
+								$temp_data = [
+									'id_product_variant_group' => $variant['id_product_variant_group'].'-'.$id_extra_mod_variant,
+									'product_variant_group_name' => $variant['product_variant_group_name'].', '.$mod_name
+								];
+								$new_data[] = $temp_data;
+    						}
+    					}
+        			}
+
+        			$result = array_merge($result, $new_data);
         		}
-        		$data = $new_data;
+
+        		$data = $result;
         	}
         }
         else 
