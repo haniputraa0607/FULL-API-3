@@ -36,6 +36,7 @@ use Modules\Deals\Entities\DealsContentDetail;
 use Modules\Deals\Entities\DealsShipmentMethod;
 use Modules\Deals\Entities\DealsPaymentMethod;
 use Modules\Deals\Entities\DealsBrand;
+use Modules\Deals\Entities\DealsBuyxgetyProductModifier;
 
 use Modules\Promotion\Http\Requests\DetailPromotion;
 use Modules\Promotion\Http\Requests\DeleteDealsPromotionTemplate;
@@ -169,6 +170,7 @@ class ApiPromotionDeals extends Controller
 	                'deals_promotion_buyxgety_rules.product',
 	                'deals_promotion_buyxgety_rules.brand',
 	                'deals_promotion_buyxgety_rules.product_variant_pivot.product_variant',
+	                'deals_promotion_buyxgety_rules.deals_buyxgety_product_modifiers.modifier',
 	                'deals_promotion_content',
 	                'deals_promotion_content.deals_promotion_content_details',
 	                'created_by_user',
@@ -586,9 +588,10 @@ class ApiPromotionDeals extends Controller
 			$saveRule = $this->insertMultiProductRequirement($product_rule, $id_deals, $table);
 		}
 
-		foreach ( $promotion_rule as $key => $value ) {
+		$delRule = DealsBuyxgetyRule::where('id_deals', $id_deals)->delete();
 
-			$ruleBenefit[] = [
+		foreach ( $promotion_rule as $value ) {
+			$ruleBenefit = [
 				'id_deals'				=> $id_deals,
 				'min_qty_requirement'	=> $value['min_qty_requirement'],
 				'max_qty_requirement' 	=> $value['max_qty_requirement'],
@@ -602,10 +605,20 @@ class ApiPromotionDeals extends Controller
 				'created_at' 			=> date('Y-m-d H:i:s'),
     			'updated_at' 			=> date('Y-m-d H:i:s')
 			];
-		}
 
-		$delRule = DealsBuyxgetyRule::where('id_deals', $id_deals)->delete();
-		$saveRule = DealsBuyxgetyRule::insert($ruleBenefit);
+			$saveRule = DealsBuyxgetyRule::create($ruleBenefit);
+
+			$ruleModifier = [];
+			foreach ($value->deals_buyxgety_product_modifiers as $mod) {
+    			$ruleModifier[] = [
+					'id_product_modifier' => $mod['id_product_modifier'],
+					'id_deals_buyxgety_rule' => $saveRule['id_deals_buyxgety_rule'],
+					'created_at'	=> date('Y-m-d H:i:s'),
+	    			'updated_at'	=> date('Y-m-d H:i:s')
+    			];
+			}
+			$saveRule = DealsBuyxgetyProductModifier::insert($ruleModifier);
+		}
 
 		if ($saveRule) {
 			return true;

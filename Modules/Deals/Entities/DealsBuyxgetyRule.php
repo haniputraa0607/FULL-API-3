@@ -75,4 +75,9 @@ class DealsBuyxgetyRule extends Eloquent
 	{
 		return $this->hasMany(\Modules\ProductVariant\Entities\ProductVariantPivot::class, 'id_product_variant_group', 'id_product_variant_group');
 	}
+
+	public function deals_buyxgety_product_modifiers()
+	{
+		return $this->hasMany(\Modules\Deals\Entities\DealsBuyxgetyProductModifier::class, 'id_deals_buyxgety_rule', 'id_deals_buyxgety_rule');
+	}
 }

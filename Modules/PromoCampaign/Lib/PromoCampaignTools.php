@@ -22,6 +22,7 @@ use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\Product\Entities\ProductDetail;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
+use Modules\ProductVariant\Entities\ProductVariantPivot;
 use Modules\Brand\Entities\BrandOutlet;
 use Modules\Brand\Entities\BrandProduct;
 use Modules\Brand\Entities\Brand;
@@ -190,14 +191,11 @@ class PromoCampaignTools{
 				// load required relationship
 				$promo->load($source.'_product_discount',$source.'_product_discount_rules');
 				$promo_rules=$promo[$source.'_product_discount_rules'];
+				$promo_product = $promo[$source.'_product_discount']->toArray();
 				$max_product = $promo_rules->max_product;
 				$qty_promo_available = [];
 
-				if ($promo->product_rule === 'and') {
-					$product_name = 'semua product bertanda khusus';
-				}else {
-					$product_name = 'product bertanda khusus';
-				}
+				$product_name = $this->getProductName($promo_product, $promo->product_rule);
 
 				if(!$promo_rules->is_all_product){
 					if ($promo[$source.'_product_discount']->isEmpty()) {
@@ -361,11 +359,7 @@ class PromoCampaignTools{
 				$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
 
 				// promo product not available in cart?
-				if ($promo->product_rule === 'and') {
-					$product_name = 'semua product bertanda khusus';
-				}else {
-					$product_name = 'product bertanda khusus';
-				}
+				$product_name = $this->getProductName($promo_product, $promo->product_rule);
 
 				if (!$check_product) {
 					$message = $this->getMessage('error_tier_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
@@ -513,21 +507,43 @@ class PromoCampaignTools{
 				foreach ($product as $key => $value) {
 
 					if (!empty($promo_qty_each)) {
-						if (!isset($qty_each[$value['id_brand']][$value['id_product']])) {
-							$qty_each[$value['id_brand']][$value['id_product']] = $promo_qty_each;
-						}
 
-						if ($qty_each[$value['id_brand']][$value['id_product']] < 0) {
-							$qty_each[$value['id_brand']][$value['id_product']] = 0;
-						}
+						if ($promo->product_type == 'variant') {
 
-						if ($qty_each[$value['id_brand']][$value['id_product']] > $value['qty']) {
-							$promo_qty = $value['qty'];
+							if (!isset($qty_each[$value['id_brand']][$value['id_product']][$value['id_product_variant_group']])) {
+								$qty_each[$value['id_brand']][$value['id_product']][$value['id_product_variant_group']] = $promo_qty_each;
+							}
+
+							if ($qty_each[$value['id_brand']][$value['id_product']][$value['id_product_variant_group']] < 0) {
+								$qty_each[$value['id_brand']][$value['id_product']][$value['id_product_variant_group']] = 0;
+							}
+
+							if ($qty_each[$value['id_brand']][$value['id_product']][$value['id_product_variant_group']] > $value['qty']) {
+								$promo_qty = $value['qty'];
+							}else{
+								$promo_qty = $qty_each[$value['id_brand']][$value['id_product']][$value['id_product_variant_group']];
+							}
+
+							$qty_each[$value['id_brand']][$value['id_product']][$value['id_product_variant_group']] -= $value['qty'];
+
 						}else{
-							$promo_qty = $qty_each[$value['id_brand']][$value['id_product']];
-						}
 
-						$qty_each[$value['id_brand']][$value['id_product']] -= $value['qty'];
+							if (!isset($qty_each[$value['id_brand']][$value['id_product']])) {
+								$qty_each[$value['id_brand']][$value['id_product']] = $promo_qty_each;
+							}
+
+							if ($qty_each[$value['id_brand']][$value['id_product']] < 0) {
+								$qty_each[$value['id_brand']][$value['id_product']] = 0;
+							}
+
+							if ($qty_each[$value['id_brand']][$value['id_product']] > $value['qty']) {
+								$promo_qty = $value['qty'];
+							}else{
+								$promo_qty = $qty_each[$value['id_brand']][$value['id_product']];
+							}
+
+							$qty_each[$value['id_brand']][$value['id_product']] -= $value['qty'];
+						}
 						
 					}else{
 						if ($total_promo_qty < 0) {
@@ -567,6 +583,9 @@ class PromoCampaignTools{
 					if(in_array($trx['id_product'], $product_id)){
 						// add discount
 						$trx['promo_qty'] = $product[$key]['promo_qty'];
+						if ($trx['promo_qty'] == 0) {
+							continue;
+						}
 						$discount += $this->discount_product($product[$key]['product_price'],$promo_rule,$trx, $modifier);
 					}
 				}
@@ -622,11 +641,7 @@ class PromoCampaignTools{
 				$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
 
 				// promo product not available in cart?
-				if ($promo->product_rule === 'and') {
-					$product_name = 'semua product bertanda khusus';
-				}else {
-					$product_name = 'product bertanda khusus';
-				}
+				$product_name = $this->getProductName($promo_product, $promo->product_rule);
 
 				if (!$check_product) {
 					$message = $this->getMessage('error_buyxgety_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
@@ -764,6 +779,14 @@ class PromoCampaignTools{
 				$benefit_product_price = $this->getProductPrice($id_outlet, $promo_rule->benefit_id_product, $promo_rule->id_product_variant_group, $promo_rule->id_brand);
 
 				$benefit=null;
+				$promo_modifier = $promo_rule->{$source.'_buyxgety_product_modifiers'};
+				$benefit_modifier = [];
+				foreach ($promo_modifier as $value) {
+					$benefit_modifier[] = [
+    					'id_product_modifier' => $value['id_product_modifier'],
+    					'qty' => 1
+    				];
+				}
 
 				$rule=(object) [
 					'max_qty'=>$benefit_qty,
@@ -782,7 +805,8 @@ class PromoCampaignTools{
 					'is_free'		=> ($promo_rule->discount_type == "percent" && $promo_rule->discount_value == 100) ? 1 : 0,
 					'modifiers'		=> [],
 					'bonus'			=> 1,
-					'id_product_variant_group' => $promo_rule->id_product_variant_group
+					'id_product_variant_group' => $promo_rule->id_product_variant_group,
+					'modifiers' => $benefit_modifier
 				];
 				// $benefit_item['id_product']	= $benefit_product->id_product;
 				// $benefit_item['id_brand'] 	= $benefit_product->brands[0]->id_brand??'';
@@ -869,12 +893,9 @@ class PromoCampaignTools{
 				$promo->load($source.'_discount_bill_products', $source.'_discount_bill_rules');
 				$promo_rules = $promo[$source.'_discount_bill_rules'];
 				$promo_brand_flipped = array_flip($promo_brand);
+				$promo_product = $promo[$source.'_discount_bill_products']->toArray();
 
-				if ($promo->product_rule === 'and') {
-					$product_name = 'semua product bertanda khusus';
-				}else {
-					$product_name = 'product bertanda khusus';
-				}
+				$product_name = $this->getProductName($promo_product, $promo->product_rule);
 
 				if(!$promo_rules->is_all_product){
 					if ($promo[$source.'_discount_bill_products']->isEmpty()) {
@@ -1931,7 +1952,7 @@ class PromoCampaignTools{
 					) {
 						$product[$key] = $trx;
 						$total_product += $trx['qty'];
-						$trx['is_promo'] = 1;
+						// $trx['is_promo'] = 1;
 						break;
 					}
 				}
@@ -2369,6 +2390,36 @@ class PromoCampaignTools{
 		}
 
 		return $product_error_applied;
+    }
+
+    public function getProductName($promo_product, $product_rule)
+    {
+    	$product_name = '';
+    	if (count($promo_product) == 1) {
+    		$promo_product[0]['product_name'] = 
+    		$product = Product::where('id_product', $promo_product[0]['id_product'])->first();
+    		$product_name = $product->product_name;
+
+    		if ($promo_product[0]['id_product_variant_group']) {
+    			$variant = ProductVariantPivot::join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
+    						->where('id_product_variant_group', $promo_product[0]['id_product_variant_group'])->pluck('product_variant_name');
+
+				if ($variant->isNotEmpty()) {
+					$variant = implode(' ', $variant->toArray());
+					$product_name = $product_name.' '.$variant;
+				}
+    		}
+    	}
+
+    	if (empty($product_name)) {
+	    	if ($product_rule === 'and') {
+				$product_name = 'semua product bertanda khusus';
+			}else {
+				$product_name = 'product bertanda khusus';
+			}
+    	}
+
+    	return $product_name;
     }
 }
 ?>
