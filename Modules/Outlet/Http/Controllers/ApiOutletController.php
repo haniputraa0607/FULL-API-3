@@ -1626,7 +1626,7 @@ class ApiOutletController extends Controller
             	$now = $this->getOneTimezone(date('H:i'), $outlet['time_zone_utc']);
             	$now = date('H:i:01', strtotime($now));
 
-            	if (date('H:i', strtotime($outlet['today']['close'])) > date('H:i', strtotime($outlet['today']['open']))) {
+            	if (date('H:i', strtotime($outlet['today']['close'])) >= date('H:i', strtotime($outlet['today']['open']))) {
 		            if($outlet['today']['open'] && $now < date('H:i', strtotime($outlet['today']['open']))){
 		                $outlet['today']['status'] = 'closed';
 		                $outlet['today']['status_detail'] = 'Hari ini buka pada '.$outlet['today']['open'];
