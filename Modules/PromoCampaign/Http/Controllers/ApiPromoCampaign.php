@@ -1709,12 +1709,9 @@ class ApiPromoCampaign extends Controller
 	            if (isset($rule['id_product_variant_group'])) {
 	        		$extra_modifier[$key] = explode('-', $rule['id_product_variant_group']);
 	            	$data[$key]['id_product_variant_group'] = $extra_modifier[$key][0] ?? null;
-	        		\Log::info($extra_modifier);
 	        	}
 
-				\Log::info([$data[$key]]);
 		        $save_rule = $table_buyxgety_discount_rule::create($data[$key]);
-				\Log::info([$save_rule]);
 				if ($data[$key]['id_product_variant_group']) {
 	        		$extra_mod_data = [];
 	        		unset($extra_modifier[$key][0]);
@@ -2185,7 +2182,6 @@ class ApiPromoCampaign extends Controller
 	            		->where('products.product_variant_status', 1)
 	            		->with('product_variant_pivot_simple')
 	            		->orderBy('brands.id_brand');
-
 	            if (!empty($post['brand'])) {
 	                $data = $data->whereIn('brands.id_brand',$post['brand']);
 	            }
@@ -3548,6 +3544,11 @@ class ApiPromoCampaign extends Controller
 
         $table_shipment::where($id_table, '=', $id_post)->delete();
 
+        if ($post['promo_type'] == 'Discount delivery') {
+        	$post['filter_shipment'] = 'selected_shipment';
+        	$post['shipment_method'] = $post['shipment_method'] ?? [];
+        }
+
         if ($post['filter_shipment'] == 'all_shipment') {
             try {
             	if ($source == 'deals_promotion') {
@@ -3565,7 +3566,7 @@ class ApiPromoCampaign extends Controller
         } else {
             $data_shipment = [];
             foreach ($post['shipment_method'] as $key => $value) {
-            	if ($value == 'Pickup Order') {
+            	if ($value == 'Pickup Order' && $post['promo_type'] == 'Discount delivery') {
             		continue;
             	}
             	$temp_data = [
@@ -3578,6 +3579,15 @@ class ApiPromoCampaign extends Controller
             }
 
             if (empty($data_shipment)) {
+            	if ($post['promo_type'] != 'Discount delivery') {
+            		$delivery_pickup = [
+		                $id_table => $id_post,
+		            	'shipment_method' => 'Pickup Order',
+		                'created_at' => date('Y-m-d H:i:s'),
+		                'updated_at' => date('Y-m-d H:i:s')
+	            	];
+            		$data_shipment[] = $delivery_pickup;
+            	}
             	$delivery_gosend = [
 	                $id_table => $id_post,
 	            	'shipment_method' => 'GO-SEND',

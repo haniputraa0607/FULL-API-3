@@ -524,19 +524,10 @@ class ApiSubscription extends Controller
         }
 
         $delete_shipment = SubscriptionShipmentMethod::where('id_subscription', $data['id_subscription'])->delete();
-        if (isset($data['shipment_method'])) {
-        	if(in_array('all', $data['shipment_method'])){
-                $data['is_all_shipment'] = 1;
-        	}
-        	else
-            {
-                $data['is_all_shipment'] = 0;
-                $saveOutlet = $this->saveShipment($subs['id_subscription'], $data['shipment_method']);
-            }
-            unset($data['shipment_method']);
-        }else{
-        	$data['is_all_shipment'] = 1;
-        }
+        $saveShipment = $this->saveShipment($subs['id_subscription'], $data['shipment_method'] ?? [], $data);
+        $data['is_all_shipment'] = $saveShipment;
+
+        unset($data['shipment_method']);
 
         $brand_product_messages = [];
         if (!empty($outlets) && !empty($products) && $data['is_all_outlet'] != 1 && $data['is_all_product'] != 1) {
@@ -893,43 +884,61 @@ class ApiSubscription extends Controller
     }
 
     /* SAVE SHIPMENT */
-    function saveShipment($id_subs, $shipment = [])
+    function saveShipment($id_subs, $shipment = [], $data_subs)
     {
         $data_shipment = [];
+        $data = $data_subs;
 
-        foreach ($shipment as $value) {
-        	if ($value == 'Pickup Order') {
-        		continue;
-        	}
+        if(in_array('all', $shipment) && $data['subscription_discount_type'] != 'discount_delivery'){
+            $data['is_all_shipment'] = 1;
+    	}
+    	else{
+            $data['is_all_shipment'] = 0;
 
-            array_push($data_shipment, [
-                'shipment_method' => $value,
-                'id_subscription' => $id_subs,
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
+	        $shipment = array_flip($shipment);
+	        unset($shipment['all']);
+	        $shipment = array_flip($shipment);
+
+	        foreach ($shipment as $value) {
+	        	if ($value == 'Pickup Order' && $data['subscription_discount_type'] == 'discount_delivery') {
+	        		continue;
+	        	}
+
+	            array_push($data_shipment, [
+	                'shipment_method' => $value,
+	                'id_subscription' => $id_subs,
+	                'created_at' => date('Y-m-d H:i:s'),
+	                'updated_at' => date('Y-m-d H:i:s')
+	            ]);
+	        }
+
+	        if (empty($data_shipment)) {
+	        	if ($data['subscription_discount_type'] != 'discount_delivery') {
+	        		$delivery_pickup = [
+	                	'id_subscription' => $id_subs,
+		            	'shipment_method' => 'Pickup Order',
+		                'created_at' => date('Y-m-d H:i:s'),
+		                'updated_at' => date('Y-m-d H:i:s')
+	            	];
+	        		$data_shipment[] = $delivery_pickup;
+	        	}
+
+	        	$delivery_gosend = [
+	                'id_subscription' => $id_subs,
+	            	'shipment_method' => 'GO-SEND',
+	                'created_at' => date('Y-m-d H:i:s'),
+	                'updated_at' => date('Y-m-d H:i:s')
+	        	];
+	        	
+	        	$data_shipment[] = $delivery_gosend;
+	        }
+
+	        if (!empty($data_shipment)) {
+	            $save = SubscriptionShipmentMethod::insert($data_shipment);
+	        }
         }
 
-        if (empty($data_shipment)) {
-        	$delivery_gosend = [
-                'id_subscription' => $id_subs,
-            	'shipment_method' => 'GO-SEND',
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-        	];
-        	
-        	$data_shipment[] = $delivery_gosend;
-        }
-
-        if (!empty($data_shipment)) {
-            $save = SubscriptionShipmentMethod::insert($data_shipment);
-
-            return $save;
-        } else {
-            return false;
-        }
-
-        return true;
+        return $data['is_all_shipment'];
     }
 
     /* DELETE OUTLET */
