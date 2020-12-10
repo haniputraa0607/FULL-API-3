@@ -1100,7 +1100,7 @@ class ApiOutletController extends Controller
         $grabfood = $request->json('grabfood');  
 
         $product = Product::with(['global_price', 'product_special_price'])->where('product_visibility', 'Visible')->select('id_product','product_name', 'product_code', 'id_product_category','product_description','product_video','product_allow_sync', 'position');
-        $outlet = Outlet::with(['today'])->distinct('outlets.id_outlet')->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::with(['today'])->distinct('outlets.id_outlet')->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude','outlets.delivery_order')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         $outlet->whereHas('brands',function($query){
             $query->where('brand_active','1');
         });
@@ -1305,7 +1305,7 @@ class ApiOutletController extends Controller
         $grabfood = $request->json('grabfood');
 
         // outlet
-        $outlet = Outlet::with(['today'])->distinct('outlets.id_outlet')->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude','time_zone_utc')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::with(['today'])->distinct('outlets.id_outlet')->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude','time_zone_utc','delivery_order')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
 
         $outlet->whereHas('brands',function($query){
             $query->where('brand_active','1');
@@ -2778,18 +2778,21 @@ class ApiOutletController extends Controller
 	        		$promo_outlet 	= $code['promo_campaign']['promo_campaign_outlets']??[];
 	        		$id_brand 		= $code['promo_campaign']['id_brand']??null;
 	        		$brand_rule		= $code['promo_campaign']['brand_rule']??'and';
+	        		$promo_type 	= $code['promo_campaign']['promo_type'];
 	        	}elseif($source == 'deals'){
 	        		$brands 		= $code->dealVoucher->deals->deals_brands()->pluck('id_brand')->toArray();
 	        		$all_outlet 	= $code['dealVoucher']['deals']['is_all_outlet']??0;
 	        		$promo_outlet 	= $code['dealVoucher']['deals']['outlets_active']??[];
 	        		$id_brand 		= $code['dealVoucher']['deals']['id_brand']??null;
 	        		$brand_rule		= $code['dealVoucher']['deals']['brand_rule']??'and';
+	        		$promo_type		= $code['dealVoucher']['deals']['promo_type'];
 	        	}elseif($source == 'subscription'){
 	        		$brands 		= $code->subscription_user->subscription->subscription_brands->pluck('id_brand')->toArray();
 	        		$all_outlet 	= $code['subscription_user']['subscription']['is_all_outlet']??0;
 	        		$promo_outlet 	= $code['subscription_user']['subscription']['outlets_active']??[];
 	        		$id_brand 		= $code['subscription_user']['subscription']['id_brand']??null;
 	        		$brand_rule		= $code['subscription_user']['subscription']['brand_rule']??'and';
+	        		$promo_type		= $code['subscription_user']['subscription']['subscription_discount_type'];
 	        	}
 
 	        	// if valid give flag is_promo = 1
@@ -2798,6 +2801,12 @@ class ApiOutletController extends Controller
 	        	$pct = new PromoCampaignTools;
 
 				foreach ($outlet as $key => $value) {
+					if ($promo_type == 'discount_delivery' || $promo_type == 'Discount delivery') {
+						if (empty($value['delivery_order'])) {
+							continue;
+						}
+					}
+
 					if (isset($id_brand)) {
 						$check_outlet = $pct->checkOutletRule($value['id_outlet'], $all_outlet, $promo_outlet, $id_brand);
 					}else{
