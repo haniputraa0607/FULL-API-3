@@ -24,6 +24,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignDiscountDeliveryRule;
 use Modules\PromoCampaign\Entities\PromoCampaignShipmentMethod;
 use Modules\PromoCampaign\Entities\PromoCampaignPaymentMethod;
 use Modules\PromoCampaign\Entities\PromoCampaignBrand;
+use Modules\PromoCampaign\Entities\PromoCampaignBuyxgetyProductModifier;
 
 use Modules\Deals\Entities\DealsProductDiscount;
 use Modules\Deals\Entities\DealsProductDiscountRule;
@@ -31,6 +32,7 @@ use Modules\Deals\Entities\DealsTierDiscountProduct;
 use Modules\Deals\Entities\DealsTierDiscountRule;
 use Modules\Deals\Entities\DealsBuyxgetyProductRequirement;
 use Modules\Deals\Entities\DealsBuyxgetyRule;
+use Modules\Deals\Entities\DealsBuyxgetyProductModifier;
 use Modules\Deals\Entities\DealsDiscountBillRule;
 use Modules\Deals\Entities\DealsDiscountBillProduct;
 use Modules\Deals\Entities\DealsDiscountDeliveryRule;
@@ -43,6 +45,7 @@ use Modules\Promotion\Entities\DealsPromotionTierDiscountProduct;
 use Modules\Promotion\Entities\DealsPromotionTierDiscountRule;
 use Modules\Promotion\Entities\DealsPromotionBuyxgetyProductRequirement;
 use Modules\Promotion\Entities\DealsPromotionBuyxgetyRule;
+use Modules\Promotion\Entities\DealsPromotionBuyxgetyProductModifier;
 use Modules\Promotion\Entities\DealsPromotionDiscountBillRule;
 use Modules\Promotion\Entities\DealsPromotionDiscountBillProduct;
 use Modules\Promotion\Entities\DealsPromotionDiscountDeliveryRule;
@@ -68,6 +71,8 @@ use App\Http\Models\DealsUser;
 use App\Http\Models\DealsPromotionTemplate;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantPivot;
+
+use Modules\Product\Entities\ProductModifierGroupPivot;
 
 use Modules\PromoCampaign\Http\Requests\Step1PromoCampaignRequest;
 use Modules\PromoCampaign\Http\Requests\Step2PromoCampaignRequest;
@@ -321,16 +326,22 @@ class ApiPromoCampaign extends Controller
             'promo_campaign_discount_bill_rules',
             'promo_campaign_discount_bill_products.product',
             'promo_campaign_discount_bill_products.brand',
+            'promo_campaign_discount_bill_products.product_variant_pivot.product_variant',
             'promo_campaign_discount_delivery_rules',
             'promo_campaign_product_discount.product.category',
             'promo_campaign_product_discount.brand',
+            'promo_campaign_product_discount.product_variant_pivot.product_variant',
             'promo_campaign_tier_discount_rules',
             'promo_campaign_tier_discount_product.product',
             'promo_campaign_tier_discount_product.brand',
+            'promo_campaign_tier_discount_product.product_variant_pivot.product_variant',
             'promo_campaign_buyxgety_rules.product',
             'promo_campaign_buyxgety_rules.brand',
+            'promo_campaign_buyxgety_rules.product_variant_pivot.product_variant',
+            'promo_campaign_buyxgety_rules.promo_campaign_buyxgety_product_modifiers.modifier',
             'promo_campaign_buyxgety_product_requirement.product',
             'promo_campaign_buyxgety_product_requirement.brand',
+            'promo_campaign_buyxgety_product_requirement.product_variant_pivot.product_variant',
             'promo_campaign_shipment_method',
             'promo_campaign_payment_method',
             'brands',
@@ -1068,7 +1079,7 @@ class ApiPromoCampaign extends Controller
         }
 
 		$data_promo = $table::where($id_table, $id_post)->first();
-
+		$product_type = $data_promo['product_type'] ?? 'single';
 		if (!empty($post['id_deals'])) {
 			if (!empty($data_promo['deals_total_claimed']) ) {
 				return [
@@ -1105,9 +1116,9 @@ class ApiPromoCampaign extends Controller
         if ($post['promo_type'] == 'Product discount') {
 
             if ($post['filter_product'] == 'All Product') {
-                $createFilterProduct = $this->createProductFilter('all_product', 1, $id_post, null, $post['discount_type'], $post['discount_value'], $post['max_product'], $post['max_percent_discount'], $source, $table, $id_table);
+                $createFilterProduct = $this->createProductFilter('all_product', 1, $id_post, null, $post['discount_type'], $post['discount_value'], $post['max_product'], $post['max_percent_discount'], $source, $table, $id_table, $product_type);
             } elseif ($post['filter_product'] == 'Selected') {
-                $createFilterProduct = $this->createProductFilter('selected', 0, $id_post, $post['multiple_product'], $post['discount_type'], $post['discount_value'], $post['max_product'], $post['max_percent_discount'], $source, $table, $id_table);
+                $createFilterProduct = $this->createProductFilter('selected', 0, $id_post, $post['multiple_product'], $post['discount_type'], $post['discount_value'], $post['max_product'], $post['max_percent_discount'], $source, $table, $id_table, $product_type);
             } else {
                 $createFilterProduct = [
                     'status'  => 'fail',
@@ -1119,7 +1130,7 @@ class ApiPromoCampaign extends Controller
         } elseif ($post['promo_type'] == 'Tier discount') {
 
             try {
-                $createFilterProduct = $this->createPromoTierDiscount($id_post, array($post['product']), $post['discount_type'], $post['promo_rule'], $source, $table, $id_table);
+                $createFilterProduct = $this->createPromoTierDiscount($id_post, array($post['product']), $post['discount_type'], $post['promo_rule'], $source, $table, $id_table, $product_type);
             } catch (Exception $e) {
                 $createFilterProduct = [
                     'status'  => 'fail',
@@ -1131,7 +1142,7 @@ class ApiPromoCampaign extends Controller
 
         } elseif ($post['promo_type'] == 'Buy X Get Y') {
             try {
-                $createFilterProduct = $this->createBuyXGetYDiscount($id_post, $post['product'], $post['promo_rule'], $source, $table, $id_table);
+                $createFilterProduct = $this->createBuyXGetYDiscount($id_post, $post['product'], $post['promo_rule'], $source, $table, $id_table, $product_type);
 
             } catch (Exception $e) {
                 $createFilterProduct = [
@@ -1143,7 +1154,7 @@ class ApiPromoCampaign extends Controller
             }
         } elseif ($post['promo_type'] == 'Discount bill') {
             try {
-                $createFilterProduct = $this->createDiscountBill($id_post, $post['discount_type'], $post['discount_value'], $post['max_percent_discount'], $source, $table, $id_table, $post['filter_product_bill'], $post['multiple_product']??[]);
+                $createFilterProduct = $this->createDiscountBill($id_post, $post['discount_type'], $post['discount_value'], $post['max_percent_discount'], $source, $table, $id_table, $post['filter_product_bill'], $post['multiple_product']??[], $product_type);
             } catch (Exception $e) {
                 $createFilterProduct = [
                     'status'  => 'fail',
@@ -1409,9 +1420,8 @@ class ApiPromoCampaign extends Controller
     	}
     }
 
-    public function createProductFilter($parameter, $operator, $id_post, $product, $discount_type, $discount_value, $max_product, $max_percent_discount, $source, $table, $id_table)
+    public function createProductFilter($parameter, $operator, $id_post, $product, $discount_type, $discount_value, $max_product, $max_percent_discount, $source, $table, $id_table, $product_type)
     {
-
     	$delete_rule = $this->deleteAllProductRule($source, $id_post);
 
     	if (!$delete_rule) {
@@ -1474,12 +1484,23 @@ class ApiPromoCampaign extends Controller
         } else {
             $dataProduct = [];
             for ($i = 0; $i < count($product); $i++) {
-                $dataProduct[$i]['id_product']	= $this->splitBrandProduct(($product)[$i], 'product');
+            	if ($product_type == 'variant') {
+	                $dataProduct[$i]['id_product_variant_group'] = $this->splitBrandProduct(($product)[$i], 'product');
+	                $data_product	= ProductVariantGroup::where('id_product_variant_group', $dataProduct[$i]['id_product_variant_group'])->select('id_product')->first();
+	                if (!$data_product) {
+	                	continue;
+	                }
+	                $dataProduct[$i]['id_product'] = $data_product['id_product'];
+            	}else{
+            		$dataProduct[$i]['id_product']	= $this->splitBrandProduct(($product)[$i], 'product');
+	                $dataProduct[$i]['id_product_variant_group'] = null;
+            	}
                 $dataProduct[$i]['id_brand']    = $this->splitBrandProduct(($product)[$i], 'brand');
                 $dataProduct[$i][$id_table]    	= $id_post;
                 $dataProduct[$i]['created_at']  = date('Y-m-d H:i:s');
                 $dataProduct[$i]['updated_at']  = date('Y-m-d H:i:s');
             }
+
             try {
                 $table_product_discount_rule::insert($data);
                 $table_product_discount::insert($dataProduct);
@@ -1496,7 +1517,7 @@ class ApiPromoCampaign extends Controller
         return $result;
     }
 
-    public function createPromoTierDiscount($id_post, $product, $discount_type, $rules, $source, $table, $id_table)
+    public function createPromoTierDiscount($id_post, $product, $discount_type, $rules, $source, $table, $id_table, $product_type)
     {
         if (!$rules) {
             return [
@@ -1566,15 +1587,26 @@ class ApiPromoCampaign extends Controller
         $dataProduct = [];
         foreach ($product[0] as $key => $value) {
         	$temp = [
-        		'id_product' 	=> $this->splitBrandProduct($value, 'product'),
         		'id_brand' 		=> $this->splitBrandProduct($value, 'brand'),
         		$id_table 		=> $id_post,
         		'created_at' 	=> date('Y-m-d H:i:s'),
             	'updated_at' 	=> date('Y-m-d H:i:s')
         	];
+
+        	if ($product_type == 'variant') {
+                $temp['id_product_variant_group'] = $this->splitBrandProduct($value, 'product');
+                $data_product	= ProductVariantGroup::where('id_product_variant_group', $temp['id_product_variant_group'])->select('id_product')->first();
+                if (!$data_product) {
+                	continue;
+                }
+                $temp['id_product'] = $data_product['id_product'];
+        	}else{
+        		$temp['id_product']	= $this->splitBrandProduct($value, 'product');
+                $temp['id_product_variant_group'] = null;
+        	}
         	$dataProduct[] = $temp;
         }
-        
+
         try {
             $table_tier_discount_rule::insert($data);
             $table_tier_discount_product::insert($dataProduct);
@@ -1588,7 +1620,7 @@ class ApiPromoCampaign extends Controller
         return $result;
     }
 
-    public function createBuyXGetYDiscount($id_post, $product, $rules, $source, $table, $id_table)
+    public function createBuyXGetYDiscount($id_post, $product, $rules, $source, $table, $id_table, $product_type)
     {
         if (!$rules) {
             return [
@@ -1611,89 +1643,127 @@ class ApiPromoCampaign extends Controller
     	{
 	        $table_buyxgety_discount_rule = new PromoCampaignBuyxgetyRule;
 	        $table_buyxgety_discount_product = new PromoCampaignBuyxgetyProductRequirement;
+	        $table_buyxgety_modifier = new PromoCampaignBuyxgetyProductModifier;
+	        $id_rule_table = 'id_promo_campaign_buyxgety_rule';
     	}
     	elseif ($source == 'deals') 
     	{
 	        $table_buyxgety_discount_rule = new DealsBuyxgetyRule;
 	        $table_buyxgety_discount_product = new DealsBuyxgetyProductRequirement;
+	        $table_buyxgety_modifier = new DealsBuyxgetyProductModifier;
+	        $id_rule_table = 'id_deals_buyxgety_rule';
     	}
     	elseif ($source == 'deals_promotion')
     	{
 	        $table_buyxgety_discount_rule = new DealsPromotionBuyxgetyRule;
 	        $table_buyxgety_discount_product = new DealsPromotionBuyxgetyProductRequirement;
+	        $table_buyxgety_modifier = new DealsPromotionBuyxgetyProductModifier;
+	        $id_rule_table = 'id_deals_buyxgety_rule';
 	        $id_table = 'id_deals';
     	}
 
-        $data = [];
-        foreach ($rules as $key => $rule) {
+    	try {
+	        $data = [];
+	        $extra_modifier = [];
+	        foreach ($rules as $key => $rule) {
 
-            $data[$key] = [
-                $id_table   	=> $id_post,
-                // 'benefit_id_product'  	=> $rule['benefit_id_product'] == 0 ? $product : $rule['benefit_id_product'],
-                'benefit_id_product'  		=> $this->splitBrandProduct($rule['benefit_id_product'], 'product'),
-                'id_brand'  				=> $this->splitBrandProduct($rule['benefit_id_product'], 'brand'),
-                'id_product_variant_group'  => $rule['id_product_variant_group'] ?? null,
-                'max_qty_requirement' 		=> $rule['max_qty_requirement'],
-                'min_qty_requirement' 		=> $rule['min_qty_requirement'],
-                'benefit_qty'         		=> $rule['benefit_qty'],
-                'max_percent_discount'  	=> $rule['max_percent_discount']
-            ];
+	            $data[$key] = [
+	                $id_table   	=> $id_post,
+	                // 'benefit_id_product'  	=> $rule['benefit_id_product'] == 0 ? $product : $rule['benefit_id_product'],
+	                'benefit_id_product'  		=> $this->splitBrandProduct($rule['benefit_id_product'], 'product'),
+	                'id_brand'  				=> $this->splitBrandProduct($rule['benefit_id_product'], 'brand'),
+	                'id_product_variant_group' 	=> null,
+	                'max_qty_requirement' 		=> $rule['max_qty_requirement'],
+	                'min_qty_requirement' 		=> $rule['min_qty_requirement'],
+	                'benefit_qty'         		=> $rule['benefit_qty'],
+	                'max_percent_discount'  	=> $rule['max_percent_discount']
+	            ];
 
-            if ($rule['benefit_type'] == "percent") 
-            {
-                $data[$key]['discount_type'] = 'percent';
-                $data[$key]['discount_value'] = $rule['discount_percent'];
-                $data[$key]['benefit_qty'] = 1;
-            }
-            elseif($rule['benefit_type'] == "nominal")
-            {
-            	$data[$key]['discount_type'] = 'nominal';
-                $data[$key]['discount_value'] = $rule['discount_nominal'];
-                $data[$key]['benefit_qty'] = 1;
-                $data[$key]['max_percent_discount'] = null;
-            }
-            elseif($rule['benefit_type'] == "free")
-            {
-                $data[$key]['discount_type'] = 'percent';
-                $data[$key]['discount_value'] = 100;
-                $data[$key]['max_percent_discount'] = null;
-            }
-            else
-            {
-                $data[$key]['discount_type'] = 'nominal';
-                $data[$key]['discount_value'] = 0;
-                $data[$key]['benefit_qty'] = 1;
-            }
 
-        }
-	
-		$data_product = [];
-		foreach ($product as $key => $value) {
-			$temp_data = [
-				'id_product'	=> $this->splitBrandProduct($value, 'product'),
-				'id_brand'		=> $this->splitBrandProduct($value, 'brand'),
-		    	$id_table		=> $id_post,
-		    	'created_at'	=> date('Y-m-d H:i:s'),
-		    	'updated_at'	=> date('Y-m-d H:i:s'),
-			];
-			$data_product[] = $temp_data;
-		}
+	            if ($rule['benefit_type'] == "percent") 
+	            {
+	                $data[$key]['discount_type'] = 'percent';
+	                $data[$key]['discount_value'] = $rule['discount_percent'];
+	                $data[$key]['benefit_qty'] = 1;
+	            }
+	            elseif($rule['benefit_type'] == "nominal")
+	            {
+	            	$data[$key]['discount_type'] = 'nominal';
+	                $data[$key]['discount_value'] = $rule['discount_nominal'];
+	                $data[$key]['benefit_qty'] = 1;
+	                $data[$key]['max_percent_discount'] = null;
+	            }
+	            elseif($rule['benefit_type'] == "free")
+	            {
+	                $data[$key]['discount_type'] = 'percent';
+	                $data[$key]['discount_value'] = 100;
+	                $data[$key]['max_percent_discount'] = null;
+	            }
+	            else
+	            {
+	                $data[$key]['discount_type'] = 'nominal';
+	                $data[$key]['discount_value'] = 0;
+	                $data[$key]['benefit_qty'] = 1;
+	            }
 
-        try {
-            $table_buyxgety_discount_rule::insert($data);
+	            if (isset($rule['id_product_variant_group'])) {
+	        		$extra_modifier[$key] = explode('-', $rule['id_product_variant_group']);
+	            	$data[$key]['id_product_variant_group'] = $extra_modifier[$key][0] ?? null;
+	        	}
+
+		        $save_rule = $table_buyxgety_discount_rule::create($data[$key]);
+				if ($data[$key]['id_product_variant_group']) {
+	        		$extra_mod_data = [];
+	        		unset($extra_modifier[$key][0]);
+	        		foreach ($extra_modifier[$key] as $modifier) {
+	        			$extra_mod_data[] = [
+							'id_product_modifier' => $modifier,
+							$id_rule_table 	=> $save_rule[$id_rule_table],
+							'created_at'	=> date('Y-m-d H:i:s'),
+			    			'updated_at'	=> date('Y-m-d H:i:s')
+	        			];
+	        		}
+	        		$table_buyxgety_modifier::insert($extra_mod_data);
+	    		}
+	        }
+
+			$data_product = [];
+			foreach ($product as $key => $value) {
+				$temp_data = [
+					'id_brand'		=> $this->splitBrandProduct($value, 'brand'),
+			    	$id_table		=> $id_post,
+			    	'created_at'	=> date('Y-m-d H:i:s'),
+			    	'updated_at'	=> date('Y-m-d H:i:s')
+				];
+				if ($product_type == 'variant') {
+	                $temp_data['id_product_variant_group'] = $this->splitBrandProduct($value, 'product');
+	                $temp_product	= ProductVariantGroup::where('id_product_variant_group', $temp_data['id_product_variant_group'])->select('id_product')->first();
+	                if (!$temp_product) {
+	                	continue;
+	                }
+	                $temp_data['id_product'] = $temp_product->toArray()['id_product'];
+	        	}else{
+	        		$temp_data['id_product']	= $this->splitBrandProduct($value, 'product');
+	                $temp_data['id_product_variant_group'] = null;
+	        	}
+				$data_product[] = $temp_data;
+			}
+
+            // $table_buyxgety_discount_rule::insert($data);
             $table_buyxgety_discount_product::insert($data_product);
             $result = ['status'  => 'success', 'products' => $data_product];
         } catch (\Illuminate\Database\QueryException $e) {
             $result = [
                 'status'  => 'fail',
-                'message' => $e->getMessage()
+                'message' => 'Create Buy X get Y rules failed'
             ];
+            \Log::error($e);
             DB::rollBack();
         }
         return $result;
     }
 
-    public function createDiscountBill($id_post, $discount_type, $discount_value, $max_percent_discount, $source, $table, $id_table, $filter_product, $products)
+    public function createDiscountBill($id_post, $discount_type, $discount_value, $max_percent_discount, $source, $table, $id_table, $filter_product, $products, $product_type)
     {
     	$delete_rule = $this->deleteAllProductRule($source, $id_post);
 
@@ -1742,12 +1812,23 @@ class ApiPromoCampaign extends Controller
 	        $data_product = [];
 			foreach ($products as $key => $value) {
 				$temp_data = [
-					'id_product'	=> $this->splitBrandProduct($value, 'product'),
 					'id_brand'		=> $this->splitBrandProduct($value, 'brand'),
 			    	$id_table		=> $id_post,
 			    	'created_at'	=> date('Y-m-d H:i:s'),
 			    	'updated_at'	=> date('Y-m-d H:i:s'),
 				];
+
+				if ($product_type == 'variant') {
+	                $temp_data['id_product_variant_group'] = $this->splitBrandProduct($value, 'product');
+	                $temp_product	= ProductVariantGroup::where('id_product_variant_group', $temp_data['id_product_variant_group'])->select('id_product')->first();
+	                if (!$temp_product) {
+	                	continue;
+	                }
+	                $temp_data['id_product'] = $temp_product->toArray()['id_product'];
+	        	}else{
+	        		$temp_data['id_product']	= $this->splitBrandProduct($value, 'product');
+	                $temp_data['id_product_variant_group'] = null;
+	        	}
 				$data_product[] = $temp_data;
 			}
         }
@@ -2032,7 +2113,7 @@ class ApiPromoCampaign extends Controller
                             'promo_campaign_tier_discount_product', 
                             'promo_campaign_tier_discount_rules', 
                             'promo_campaign_buyxgety_product_requirement', 
-                            'promo_campaign_buyxgety_rules',
+                            'promo_campaign_buyxgety_rules.promo_campaign_buyxgety_product_modifiers',
                             'outlets',
                             'brands',
                             'promo_campaign_discount_bill_rules',
@@ -2094,17 +2175,51 @@ class ApiPromoCampaign extends Controller
         } 
         elseif ($post['get'] == 'Product') 
         {
-            $data = Product::select('products.id_product', 'brands.id_brand' ,DB::raw('CONCAT(name_brand, " - ", product_code, " - ", product_name) AS product'),DB::raw('CONCAT(products.id_product, ".", brands.id_brand) AS id_product'))
-            		->leftJoin('brand_product', 'products.id_product', '=', 'brand_product.id_product')
-            		->join('brands', 'brands.id_brand', '=', 'brand_product.id_brand')
-            		->groupBy('brand_product.id_brand_product')
-            		->orderBy('brands.id_brand');
+        	if (($post['product_type']??false) == 'variant') {
+        		$data = ProductVariantGroup::leftJoin('brand_product', 'product_variant_groups.id_product', '=', 'brand_product.id_product')
+	            		->join('brands', 'brands.id_brand', '=', 'brand_product.id_brand')
+	            		->join('products', 'products.id_product', '=', 'product_variant_groups.id_product')
+	            		->where('products.product_variant_status', 1)
+	            		->with('product_variant_pivot_simple')
+	            		->orderBy('brands.id_brand');
+	            if (!empty($post['brand'])) {
+	                $data = $data->whereIn('brands.id_brand',$post['brand']);
+	            }
 
-	        if (!empty($post['brand'])) {
-                $data = $data->whereIn('brands.id_brand',$post['brand']);
-            }
+            	$data = $data->get()->toArray();
+	            if ($data) {
+	            	$result = [];
+		            foreach ($data as $value) {
+		            	$variant = '';
+		            	if (!empty($value)) {
+			            	$variant = array_column($value['product_variant_pivot_simple'], 'product_variant_name');
+			            	$variant = ' '.implode(',', $variant);
+		            	}
 
-            $data = $data->get()->toArray();
+		            	$result[] = [
+		            		'id_product'=> $value['id_product_variant_group'],
+		            		'id_brand' 	=> $value['id_brand'],
+		            		'product' 	=> $value['name_brand'].' - '.$value['product_code'].' - '.$value['product_name'].$variant
+		            	];
+		            }
+
+		            return $result;
+	            }
+
+        	}else{
+	            $data = Product::select('products.id_product', 'brands.id_brand' ,DB::raw('CONCAT(name_brand, " - ", product_code, " - ", product_name) AS product'),DB::raw('CONCAT(products.id_product, ".", brands.id_brand) AS id_product'))
+	            		->leftJoin('brand_product', 'products.id_product', '=', 'brand_product.id_product')
+	            		->join('brands', 'brands.id_brand', '=', 'brand_product.id_brand')
+	            		->groupBy('brand_product.id_brand_product')
+	            		->orderBy('brands.id_brand');
+
+		        if (!empty($post['brand'])) {
+	                $data = $data->whereIn('brands.id_brand',$post['brand']);
+	            }
+
+            	$data = $data->get()->toArray();
+        	}
+
         }
         elseif ($post['get'] == 'Product Variant') {
         	$data = ProductVariantGroup::where('id_product', $post['id_product'])
@@ -2115,22 +2230,101 @@ class ApiPromoCampaign extends Controller
         			->with(['product_variant_pivot'])
         			->get();
 
+        	$extra_modifier_product = ProductModifierGroupPivot::where('id_product', $post['id_product'])
+        								->leftJoin('product_modifiers','product_modifiers.id_product_modifier_group','=','product_modifier_group_pivots.id_product_modifier_group')
+        								->where('product_modifiers.product_modifier_visibility','Visible')
+        								->get();
+
+        	$extra_modifier_product_group = [];
+        	foreach ($extra_modifier_product as $val) {
+        		$extra_modifier_product_group[$val['id_product_modifier_group']][$val['id_product_modifier']] = $val['text_detail_trx'];
+        	}
+
         	if ($data) {
-        		$new_data = [];
+        		$variant_data = [];
         		foreach ($data as $key => $value) {
-        			$name = $value->product_variant_pivot->pluck('product_variant_name')->toArray();
-        			$name = implode(', ', $name);
+        			$variant_name 	= $value->product_variant_pivot->pluck('product_variant_name')->toArray();
+        			$variant_id 	= $value->product_variant_pivot->pluck('id_product_variant')->toArray();
+        			$extra_modifier_variant_group = [];
+        			$name = implode(', ', $variant_name);
+
+        			$extra_modifier_variant = ProductModifierGroupPivot::whereIn('id_product_variant', $variant_id)
+        								->leftJoin('product_modifiers','product_modifiers.id_product_modifier_group','=','product_modifier_group_pivots.id_product_modifier_group')
+        								->where('product_modifiers.product_modifier_visibility','Visible')
+        								->get();
+
+        			foreach ($extra_modifier_variant as $val) {
+		        		$extra_modifier_variant_group[$val['id_product_modifier_group']][$val['id_product_modifier']] = $val['text_detail_trx'];
+		        	}
 
         			$temp_data = [
         				'id_product_variant_group' => $value['id_product_variant_group'],
         				'product_variant_group_code' => $value['product_variant_group_code'],
-        				'product_variant_group_name' => $name
+        				'product_variant_group_name' => $name,
+        				'extra_modifier_variant'=> $extra_modifier_variant_group
         			];
-        			$new_data[] = $temp_data;
+        			$variant_data[] = $temp_data;
         		}
-        		$data = $new_data;
+				
+				$result = [];
+        		foreach ($variant_data as $variant) {
+        			// apply extra modifier product
+					$new_data = [];
+        			foreach ($extra_modifier_product_group as $id_extra_mod_product_group => $modifier_product) {
+    					if (!empty($new_data)) {
+    						$data = $new_data;
+    						$new_data = [];
+	    					foreach ($modifier_product as $id_extra_mod_product => $mod_name) {
+	    						foreach ($data as $value) {
+	    							$temp_data = [
+										'id_product_variant_group' => $value['id_product_variant_group'].'-'.$id_extra_mod_product,
+										'product_variant_group_name' => $value['product_variant_group_name'].', '.$mod_name
+									];
+									$new_data[] = $temp_data;
+	    						}
+	        				}
+    					}else{
+	    					foreach ($modifier_product as $id_extra_mod_product => $mod_name) {
+								$temp_data = [
+									'id_product_variant_group' => $variant['id_product_variant_group'].'-'.$id_extra_mod_product,
+									'product_variant_group_name' => $variant['product_variant_group_name'].', '.$mod_name
+								];
+								$new_data[] = $temp_data;
+    						}
+    					}
+        			}
+
+					// apply extra modifier variant
+					foreach ($variant['extra_modifier_variant'] as $id_extra_mod_variant_group => $modifier_variant) {
+    					if (!empty($new_data)) {
+    						$data = $new_data;
+    						$new_data = [];
+	    					foreach ($modifier_variant as $id_extra_mod_variant => $mod_name) {
+	    						foreach ($data as $value) {
+	    							$temp_data = [
+										'id_product_variant_group' => $value['id_product_variant_group'].'-'.$id_extra_mod_variant,
+										'product_variant_group_name' => $value['product_variant_group_name'].', '.$mod_name
+									];
+									$new_data[] = $temp_data;
+	    						}
+	        				}
+    					}else{
+	    					foreach ($modifier_variant as $id_extra_mod_variant => $mod_name) {
+								$temp_data = [
+									'id_product_variant_group' => $variant['id_product_variant_group'].'-'.$id_extra_mod_variant,
+									'product_variant_group_name' => $variant['product_variant_group_name'].', '.$mod_name
+								];
+								$new_data[] = $temp_data;
+    						}
+    					}
+        			}
+
+        			$result = array_merge($result, $new_data);
+        		}
+
+        		$data = $result ?: $variant_data;
         	}
-        } 
+        }
         else 
         {
             $data = 'null';
@@ -2261,11 +2455,13 @@ class ApiPromoCampaign extends Controller
 						'promo_campaign.promo_campaign_tier_discount_product.product' => function($q) {
 							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 						},
+						'promo_campaign.promo_campaign_discount_bill_products.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
 						'promo_campaign.promo_campaign_product_discount_rules',
 						'promo_campaign.promo_campaign_tier_discount_rules',
 						'promo_campaign.promo_campaign_buyxgety_rules',
 						'promo_campaign.promo_campaign_discount_bill_rules',
-						'promo_campaign.promo_campaign_discount_bill_products',
 						'promo_campaign.promo_campaign_discount_delivery_rules',
 						'promo_campaign.promo_campaign_payment_method',
 						'promo_campaign.promo_campaign_shipment_method'
@@ -2330,11 +2526,13 @@ class ApiPromoCampaign extends Controller
                         'dealVoucher.deals.deals_buyxgety_product_requirement.product' => function($q) {
 							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 						}, 
+						'dealVoucher.deals.deals_discount_bill_products.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						}, 
                         'dealVoucher.deals.deals_product_discount_rules', 
                         'dealVoucher.deals.deals_tier_discount_rules', 
                         'dealVoucher.deals.deals_buyxgety_rules',
                         'dealVoucher.deals.deals_discount_bill_rules', 
-                        'dealVoucher.deals.deals_discount_bill_products', 
 						'dealVoucher.deals.deals_discount_delivery_rules',
 						'dealVoucher.deals.deals_payment_method',
 						'dealVoucher.deals.deals_shipment_method'
@@ -2532,12 +2730,19 @@ class ApiPromoCampaign extends Controller
     			}
 
     			$applied_product = $query['subscription_products'];
-    			$applied_product[0]['id_brand'] = $query['id_brand'] ?? $brand['id_brand'];
+    			// $applied_product[0]['id_brand'] = $query['id_brand'] ?? $brand['id_brand'];
     			$applied_product[0]['product_code'] = $applied_product[0]['product']['product_code'];
 
     			$product_total = count($query['subscription_products']);
     			if ($product_total == 1) {
 	        		$product = $query['subscription_products'][0]['product']['product_name'] ?? $default_product;
+	        		if (isset($query['subscription_products'][0]['id_product_variant_group'])) {
+	        			$variant = ProductVariantPivot::join('product_variants as pv', 'pv.id_product_variant', 'product_variant_pivot.id_product_variant')
+	        						->where('product_variant_pivot.id_product_variant_group', $query['subscription_products'][0]['id_product_variant_group'])
+	        						->pluck('product_variant_name')->toArray();
+	        			$variant_text = implode(' ', $variant);
+	        			$product .= ' '.$variant_text;
+	        		}
     			}else{
 	        		$product = $default_product;
     			}
@@ -2550,6 +2755,32 @@ class ApiPromoCampaign extends Controller
     	}
     	else
     	{
+    		if ( ($query[$source.'_product_discount_rules']['is_all_product']??false) == 1 
+    			|| ($query['promo_type']??false) == 'Referral' 
+    			|| ($query[$source.'_discount_bill_rules']['is_all_product']??false) == 1
+    		) {
+	        	$applied_product = '*';
+	        	$product = $default_product;
+	        }else{
+	    		$applied_product = $query[$source.'_product_discount'] ?: $query[$source.'_tier_discount_product'] ?: $query[$source.'_buyxgety_product_requirement'] ?: $query[$source.'_discount_bill_products'] ?: [];
+
+	    		if(empty($applied_product)){
+	        		$product = [];
+	    		}elseif (count($applied_product) == 1) {
+	        		$product = $applied_product[0]['product']['product_name'] ?? $default_product;
+	        		if (isset($applied_product[0]['id_product_variant_group'])) {
+	        			$variant = ProductVariantPivot::join('product_variants as pv', 'pv.id_product_variant', 'product_variant_pivot.id_product_variant')
+	        						->where('product_variant_pivot.id_product_variant_group', $applied_product[0]['id_product_variant_group'])
+	        						->pluck('product_variant_name')->toArray();
+	        			$variant_text = implode(' ', $variant);
+	        			$product .= ' '.$variant_text;
+	        		}
+	        	}else{
+	        		$product = $default_product;
+	        	}
+	        }
+
+	    	/*
 	    	if ( ($query[$source.'_product_discount_rules']['is_all_product']??false) == 1 || ($query['promo_type']??false) == 'Referral') 
 	        {
 	        	$applied_product = '*';
@@ -2601,7 +2832,7 @@ class ApiPromoCampaign extends Controller
 	        {
 	        	$applied_product = [];
 	        	$product = [];
-	        }
+	        }*/
     	}
 
         $result = [
@@ -2843,7 +3074,7 @@ class ApiPromoCampaign extends Controller
 
     				$product_benefit = $product_benefit['product_name']??'';
     				if ($variant->isNotEmpty()) {
-    					$variant = implode(',', $variant->toArray());
+    					$variant = implode(' ', $variant->toArray());
     					$product_benefit = $product_benefit.' '.$variant;
     				}
 
@@ -2858,7 +3089,11 @@ class ApiPromoCampaign extends Controller
 	    			}
 
 		    		$req_product = $query[$source.'_buyxgety_product_requirement'];
-		    		if (count($req_product) == 1 && count($promo_rules) == 1 && $req_product[0]['id_product'] == $promo_rules[0]['benefit_id_product']) {
+		    		if (count($req_product) == 1 
+		    			&& count($promo_rules) == 1 
+		    			&& $req_product[0]['id_product'] == $promo_rules[0]['benefit_id_product']
+		    			&& (($promo_rules[0]['discount_value'] != 100 && $promo_rules[0]['discount_type'] == 'percent') || $promo_rules[0]['discount_type'] != 'percent')
+		    		) {
 		    			$product_benefit = $product_benefit.' selanjutnya';
 		    		}
 
@@ -2994,7 +3229,9 @@ class ApiPromoCampaign extends Controller
 						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 					},
 					'promo_campaign.promo_campaign_discount_bill_rules',
-					'promo_campaign.promo_campaign_discount_bill_products',
+					'promo_campaign.promo_campaign_discount_bill_products.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					},
 					'promo_campaign.promo_campaign_discount_delivery_rules',
 					'promo_campaign.promo_campaign_payment_method',
 					'promo_campaign.promo_campaign_shipment_method'
@@ -3056,7 +3293,9 @@ class ApiPromoCampaign extends Controller
 						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 					},
 					'dealVoucher.deals.deals_discount_bill_rules',
-					'dealVoucher.deals.deals_discount_bill_products',
+					'dealVoucher.deals.deals_discount_bill_products.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					},
 					'dealVoucher.deals.deals_discount_delivery_rules',
 					'dealVoucher.deals.deals_payment_method',
 					'dealVoucher.deals.deals_shipment_method'
@@ -3305,6 +3544,11 @@ class ApiPromoCampaign extends Controller
 
         $table_shipment::where($id_table, '=', $id_post)->delete();
 
+        if ($post['promo_type'] == 'Discount delivery') {
+        	$post['filter_shipment'] = 'selected_shipment';
+        	$post['shipment_method'] = $post['shipment_method'] ?? [];
+        }
+
         if ($post['filter_shipment'] == 'all_shipment') {
             try {
             	if ($source == 'deals_promotion') {
@@ -3322,7 +3566,7 @@ class ApiPromoCampaign extends Controller
         } else {
             $data_shipment = [];
             foreach ($post['shipment_method'] as $key => $value) {
-            	if ($value == 'Pickup Order') {
+            	if ($value == 'Pickup Order' && $post['promo_type'] == 'Discount delivery') {
             		continue;
             	}
             	$temp_data = [
@@ -3335,6 +3579,15 @@ class ApiPromoCampaign extends Controller
             }
 
             if (empty($data_shipment)) {
+            	if ($post['promo_type'] != 'Discount delivery') {
+            		$delivery_pickup = [
+		                $id_table => $id_post,
+		            	'shipment_method' => 'Pickup Order',
+		                'created_at' => date('Y-m-d H:i:s'),
+		                'updated_at' => date('Y-m-d H:i:s')
+	            	];
+            		$data_shipment[] = $delivery_pickup;
+            	}
             	$delivery_gosend = [
 	                $id_table => $id_post,
 	            	'shipment_method' => 'GO-SEND',
@@ -3439,6 +3692,24 @@ class ApiPromoCampaign extends Controller
     	}else{
     		if ($type == 'product') {
     			$result = $id_brand_product;
+    		}
+    	}
+
+    	return $result;
+    }
+
+    function splitProductVariant($id_product_variant_group){
+    	$result = null;
+    	if (strpos($id_product_variant_group, '-') !== false) {
+    		$split = explode('-', $id_product_variant_group);
+    		if ($type == 'product') {
+    			$result = $split[1];
+    		}else{
+    			$result = $split[0];
+    		}
+    	}else{
+    		if ($type == 'product') {
+    			$result = $id_product_variant_group;
     		}
     	}
 

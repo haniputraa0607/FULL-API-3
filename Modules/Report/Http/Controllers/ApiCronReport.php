@@ -1159,7 +1159,7 @@ class ApiCronReport extends Controller
                 DB::raw('"Shopeepay" as payment_type'),
                 DB::raw('COUNT(deals_payment_shopee_pays.id_deals_user) as payment_count'),
                 DB::raw('SUM(deals_payment_shopee_pays.amount / 100) as payment_nominal'),
-                DB::raw("'Shopee Pay' AS payment")
+                DB::raw("'ShopeePay' AS payment")
             )
             ->whereDate('deals_payment_shopee_pays.created_at', $date)
             ->where('deals_users.paid_status', 'Completed')
@@ -1174,10 +1174,10 @@ class ApiCronReport extends Controller
         $dataPaymentSubcsriptionShopee = SubscriptionPaymentShopeePay::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_payment_shopee_pays.id_subscription_user')
             ->select(
                 DB::raw('DATE(subscription_payment_shopee_pays.created_at) as date'),
-                DB::raw('"Shopeepay" as payment_type'),
+                DB::raw('"ShopeePay" as payment_type'),
                 DB::raw('COUNT(subscription_payment_shopee_pays.id_subscription_user) as payment_count'),
                 DB::raw('SUM(subscription_payment_shopee_pays.amount / 100) as payment_nominal'),
-                DB::raw("'Shopee Pay' AS payment")
+                DB::raw("'ShopeePay' AS payment")
             )
             ->whereDate('subscription_payment_shopee_pays.created_at', $date)
             ->where('subscription_users.paid_status', 'Completed')
@@ -1195,10 +1195,10 @@ class ApiCronReport extends Controller
                 'transactions.id_outlet',
                 DB::raw('DATE(transactions.transaction_date) as trx_date'),
                 DB::raw('0 as refund_with_point'),
-                DB::raw('"Shopeepay" as payment_type'),
+                DB::raw('"ShopeePay" as payment_type'),
                 DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
                 DB::raw('SUM(transaction_payment_shopee_pays.amount / 100) as trx_payment_nominal'),
-                DB::raw("'Shopee Pay' AS trx_payment")
+                DB::raw("'ShopeePay' AS trx_payment")
             )
             ->whereDate('transactions.transaction_date', $date)
             ->where('transactions.transaction_payment_status', 'Completed')
@@ -1221,7 +1221,7 @@ class ApiCronReport extends Controller
                 DB::raw('"Shopeepay" as payment_type'),
                 DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
                 DB::raw('SUM(transaction_payment_shopee_pays.amount / 100) as trx_payment_nominal'),
-                DB::raw("'Shopee Pay' AS trx_payment")
+                DB::raw("'ShopeePay' AS trx_payment")
             )
             ->whereDate('transactions.transaction_date', $date)
             ->where('transactions.transaction_payment_status', 'Completed')
@@ -1240,7 +1240,7 @@ class ApiCronReport extends Controller
                 DB::raw('DATE(transactions.transaction_date) as trx_date'),
                 DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
                 DB::raw('SUM(transaction_payment_shopee_pays.amount / 100) as trx_payment_nominal'),
-                DB::raw("'Shopee Pay' AS trx_payment")
+                DB::raw("'ShopeePay' AS trx_payment")
             )
             ->whereDate('transactions.transaction_date', $date)
             ->where('transactions.transaction_payment_status', 'Completed')
@@ -2047,7 +2047,7 @@ class ApiCronReport extends Controller
                 DB::raw('"'.$year.'" as trx_year'),
                 DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
                 DB::raw('SUM(transaction_payment_shopee_pays.amount / 100) as trx_payment_nominal'),
-                DB::raw("'Shopee Pay' AS trx_payment")
+                DB::raw("'ShopeePay' AS trx_payment")
             )
             ->whereMonth('transactions.transaction_date', $month)
             ->whereYear('transactions.transaction_date', $year)
@@ -2068,7 +2068,7 @@ class ApiCronReport extends Controller
                 DB::raw('"'.$year.'" as trx_year'),
                 DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
                 DB::raw('SUM(transaction_payment_shopee_pays.amount / 100) as trx_payment_nominal'),
-                DB::raw("'Shopee Pay' AS trx_payment")
+                DB::raw("'ShopeePay' AS trx_payment")
             )
             ->whereMonth('transactions.transaction_date', $month)
             ->whereYear('transactions.transaction_date', $year)
