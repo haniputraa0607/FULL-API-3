@@ -22,7 +22,6 @@ use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\Product\Entities\ProductDetail;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
-use Modules\ProductVariant\Entities\ProductVariantPivot;
 use Modules\Brand\Entities\BrandOutlet;
 use Modules\Brand\Entities\BrandProduct;
 use Modules\Brand\Entities\Brand;
