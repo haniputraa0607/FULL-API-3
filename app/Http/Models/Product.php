@@ -214,11 +214,11 @@ class Product extends Model
      */
     public static function getVariantTree($id_product, $outlet, $with_index = false)
     {
-        $cache_name = self::getCacheName($id_product, $outlet, $with_index);
-        // retrieve from cache if available
-        if (Cache::has($cache_name)) {
-            return Cache::get($cache_name);
-        }
+        // $cache_name = self::getCacheName($id_product, $outlet, $with_index);
+        // // retrieve from cache if available
+        // if (Cache::has($cache_name)) {
+        //     return Cache::get($cache_name);
+        // }
         // get list variants available in products
         $list_variants = ProductVariant::select('product_variants.id_product_variant')
             ->join('product_variant_pivot', 'product_variant_pivot.id_product_variant', '=', 'product_variants.id_product_variant')
@@ -335,7 +335,7 @@ class Product extends Model
             'variants_tree' => $variants,
         ];
         // save to cache
-        Cache::forever($cache_name, $result);
+        // Cache::forever($cache_name, $result);
         // return the result
         return $result;
     }
