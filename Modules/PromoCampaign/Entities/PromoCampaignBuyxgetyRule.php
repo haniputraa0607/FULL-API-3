@@ -67,4 +67,14 @@ class PromoCampaignBuyxgetyRule extends Eloquent
 	{
 		return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
 	}
+
+	public function product_variant_pivot()
+	{
+		return $this->hasMany(\Modules\ProductVariant\Entities\ProductVariantPivot::class, 'id_product_variant_group', 'id_product_variant_group');
+	}
+
+	public function promo_campaign_buyxgety_product_modifiers()
+	{
+		return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignBuyxgetyProductModifier::class, 'id_promo_campaign_buyxgety_rule', 'id_promo_campaign_buyxgety_rule');
+	}
 }

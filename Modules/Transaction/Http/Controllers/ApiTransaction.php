@@ -2465,7 +2465,7 @@ class ApiTransaction extends Controller
                                     break;
                                 case 'Shopeepay':
                                     $shopeePay = TransactionPaymentShopeePay::find($mp['id_payment']);
-                                    $payment['name']    = 'Shopee Pay';
+                                    $payment['name']    = 'ShopeePay';
                                     $payment['amount']  = $shopeePay->amount / 100;
                                     $payment['reject']  = $shopeePay->err_reason?:'payment expired';
                                     $list['payment'][]  = $payment;
@@ -2565,7 +2565,7 @@ class ApiTransaction extends Controller
                     foreach($multiPayment as $dataKey => $dataPay){
                         if($dataPay['type'] == 'Shopeepay'){
                             $payShopee = TransactionPaymentShopeePay::find($dataPay['id_payment']);
-                            $payment[$dataKey]['name']      = 'Shopee Pay';
+                            $payment[$dataKey]['name']      = 'ShopeePay';
                             $payment[$dataKey]['amount']    = $payShopee->amount / 100;
                             $payment[$dataKey]['reject']    = $payShopee->err_reason?:'payment expired';
                         }else{
@@ -3190,7 +3190,7 @@ class ApiTransaction extends Controller
                 case 'Shopeepay':
                     $payment = DealsPaymentShopeePay::where('id_deals_user', $id)->first();
                     $result['payment'][] = [
-                        'name'      => 'Shopee Pay',
+                        'name'      => 'ShopeePay',
                         'amount'    =>  MyHelper::requestNumber($payment->amount,'_CURRENCY')
                     ];
                     break;
