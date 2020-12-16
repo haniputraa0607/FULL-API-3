@@ -16,6 +16,12 @@ class AchievementCategory extends Model
     
     public function achievement_group()
     {
-        return $this->hasMany(AchievementGroup::class, 'id_achievement_category', 'id_achievement_category');
+        $now = date('Y-m-d H:i:s');
+        return $this->hasMany(AchievementGroup::class, 'id_achievement_category', 'id_achievement_category')
+                    ->where('publish_start', '<=', $now)
+                    ->where( function($q) use($now) {
+                        $q->where('publish_end', '>', $now)
+                            ->orWhereNull('publish_end');
+                    });
     }
 }
