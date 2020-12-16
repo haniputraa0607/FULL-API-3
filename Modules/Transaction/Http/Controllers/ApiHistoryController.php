@@ -1045,8 +1045,8 @@ class ApiHistoryController extends Controller
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
-                $dataList['outlet'] = 'Welcome Point';
-                $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
+                $dataList['outlet'] = $value['source'];
+                $dataList['amount'] = ($value['balance'] < 0 ? '- ': '+ ').number_format(abs($value['balance']), 0, ',', '.');
             }
 
             $dataList['date_v2'] = MyHelper::indonesian_date_v2($dataList['date'], 'd F Y H:i');
