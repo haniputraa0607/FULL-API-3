@@ -82,6 +82,8 @@ class ApiNotification extends Controller {
             // TRANSACTION
             $transac = Transaction::with('user.memberships', 'logTopup')->where('transaction_receipt_number', $midtrans['order_id'])->first();
 
+            $old_payment_status = $transac->transaction_payment_status;
+
             if (empty($transac)) {
                 DB::rollback();
                 return response()->json([
@@ -240,6 +242,10 @@ class ApiNotification extends Controller {
                 if (count($checkType) > 0) {
                     foreach ($checkType as $key => $value) {
                         if ($value['type'] == 'Balance') {
+                            if ($old_payment_status != 'Pending') {
+                                DB::commit();
+                                return response()->json(['status' => 'success']);
+                            }
                             $checkBalance = TransactionPaymentBalance::where('id_transaction_payment_balance', $value['id_payment'])->first();
                             if (!empty($checkBalance)) {
                                 $insertDataLogCash = app($this->balance)->addLogBalance($newTrx['id_user'], $checkBalance['balance_nominal'], $newTrx['id_transaction'], 'Rejected Order', $newTrx['transaction_grandtotal']);
