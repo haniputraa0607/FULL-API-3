@@ -107,13 +107,13 @@ class ApiCustomPageController extends Controller
         }
 
         if (isset($post['custom_page_event_date_start'])) {
-            $data['custom_page_event_date_start'] = $post['custom_page_event_date_start'];
+            $data['custom_page_event_date_start'] = date('Y-m-d', strtotime($post['custom_page_event_date_start']));
         } else {
             $data['custom_page_event_date_start'] = null;
         }
 
         if (isset($post['custom_page_event_date_end'])) {
-            $data['custom_page_event_date_end'] = $post['custom_page_event_date_end'];
+            $data['custom_page_event_date_end'] = date('Y-m-d', strtotime($post['custom_page_event_date_end']));
         } else {
             $data['custom_page_event_date_end'] = null;
         }
