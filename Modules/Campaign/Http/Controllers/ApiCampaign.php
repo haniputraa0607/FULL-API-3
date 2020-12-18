@@ -129,10 +129,11 @@ class ApiCampaign extends Controller
 		$data['id_user'] 				= $user['id'];
 
 		if(!empty($post['campaign_send_at'])){
-			$datetimearr 				= explode(' - ',$post['campaign_send_at']);
-			$datearr 					= explode(' ',$datetimearr[0]);
-			$date 						= date("Y-m-d", strtotime($datearr[2].", ".$datearr[1]." ".$datearr[0]));
-			$data['campaign_send_at'] 	= $date." ".$datetimearr[1].":00";
+//			$datetimearr 				= explode(' - ',$post['campaign_send_at']);
+//			$datearr 					= explode(' ',$datetimearr[0]);
+//			$date 						= date("Y-m-d", strtotime($datearr[2].", ".$datearr[1]." ".$datearr[0]));
+//			$data['campaign_send_at'] 	= $date." ".$datetimearr[1].":00";
+            $data['campaign_send_at'] 	= date('Y-m-d H:i:s', strtotime(str_replace('-', '', $post['campaign_send_at'])));
 		} else $data['campaign_send_at'] = null;
 
 		// $data['campaign_rule'] 		= $post['rule'];
