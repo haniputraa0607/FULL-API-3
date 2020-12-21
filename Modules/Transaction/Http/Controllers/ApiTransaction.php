@@ -3568,8 +3568,13 @@ class ApiTransaction extends Controller
         $longitude = $request->json('longitude');
 
         // get place from google maps . max 20
+        $key_maps = env('GMAPS_PLACE_KEY');
+        if (env('GMAPS_PLACE_KEY_TOTAL')) {
+            $weekNow = date('W') % env('GMAPS_PLACE_KEY_TOTAL');
+            $key_maps = env('GMAPS_PLACE_KEY'.$weekNow, $key_maps);
+        }
         $param = [
-            'key'=>env('GMAPS_PLACE_KEY'),
+            'key'=>$key_maps,
             'location'=>sprintf('%s,%s',$request->json('latitude'),$request->json('longitude')),
             'rankby'=>'distance'
         ];
@@ -3690,8 +3695,13 @@ class ApiTransaction extends Controller
 
         if (!$user_address) {
             // get place from google maps . max 20
+            $key_maps = env('GMAPS_PLACE_KEY');
+            if (env('GMAPS_PLACE_KEY_TOTAL')) {
+                $weekNow = date('W') % env('GMAPS_PLACE_KEY_TOTAL');
+                $key_maps = env('GMAPS_PLACE_KEY'.$weekNow, $key_maps);
+            }
             $param = [
-                'key'=>env('GMAPS_PLACE_KEY'),
+                'key'=>$key_maps,
                 'location'=>sprintf('%s,%s',$request->json('latitude'),$request->json('longitude')),
                 'rankby'=>'distance'
             ];
