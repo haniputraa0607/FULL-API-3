@@ -418,7 +418,7 @@ class ApiCategoryController extends Controller
             ];
         }
         foreach ($products as $product) {
-            if ($product->product_variant_status) {
+            if ($product->product_variant_status && $product->product_stock_status == 'Available') {
                 $variantTree = Product::getVariantTree($product['id_product'], $outlet);
                 $product['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
             }
