@@ -106,9 +106,10 @@ class ApiIrisController extends Controller
             if($getCurrenDay >= (int)$getMinSendDate){
                 $currentDate = date('Y-m-d');
                 $day = date('D', strtotime($currentDate));
-                $getHoliday = $this->getHoliday();
+                //$getHoliday = $this->getHoliday();
 
-                if($day != 'Sat' && $day != 'Sun' && array_search($currentDate, $getHoliday) === false){
+                //if($day != 'Sat' && $day != 'Sun' && array_search($currentDate, $getHoliday) === false){
+                if($day != 'Sat' && $day != 'Sun'){
                     $getSettingFeeDisburse = Setting::where('key', 'disburse_setting_fee_transfer')->first();
                     $lastDate = $getSettingDate['last_date_disburse']??null;
                     $dateCutOf = $getSettingDate['date_cut_of']??20;
