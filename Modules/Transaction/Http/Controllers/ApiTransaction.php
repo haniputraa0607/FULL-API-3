@@ -3585,6 +3585,7 @@ class ApiTransaction extends Controller
 
         if($gmaps['status'] === 'OK'){
             $gmaps = $gmaps['results'];
+            MyHelper::sendGmapsData($gmaps);
         }else{
             $gmaps = [];
         };
@@ -3712,6 +3713,7 @@ class ApiTransaction extends Controller
 
             if($gmaps['status'] === 'OK'){
                 $gmaps = $gmaps['results'];
+                MyHelper::sendGmapsData($gmaps);
             }else{
                 return MyHelper::checkGet([]);
             };
