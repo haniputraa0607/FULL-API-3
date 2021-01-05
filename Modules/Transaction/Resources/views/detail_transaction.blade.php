@@ -52,7 +52,7 @@
     </thead>
     <tbody>
     @if(isset($data['list']) && !empty($data['list']))
-        <?php echo $data['list']?>
+        <?php echo str_replace('&', ' &amp; ', $data['list'])?>
     @else
         <tr><td colspan="10" style="text-align: center">Data Not Available</td></tr>
     @endif
