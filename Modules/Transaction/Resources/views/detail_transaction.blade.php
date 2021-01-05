@@ -52,7 +52,10 @@
     </thead>
     <tbody>
     @if(isset($data['list']) && !empty($data['list']))
-        <?php echo str_replace('&', ' &amp; ', $data['list'])?>
+        <?php
+            libxml_use_internal_errors(true);
+            echo $data['list'];
+        ?>
     @else
         <tr><td colspan="10" style="text-align: center">Data Not Available</td></tr>
     @endif

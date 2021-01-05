@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
+use Modules\Transaction\Entities\LogInvalidTransaction;
 use Queue;
 use App\Lib\Midtrans;
 
@@ -446,6 +447,42 @@ class ApiCronTrxController extends Controller
             //update taken_by_sistem_at
             $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
                                         ->update(['taken_by_system_at' => date('Y-m-d 00:00:00')]);
+
+            //change status transaction to invalid transaction
+            $dataTrx = Transaction::join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+                ->join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+                ->leftJoin('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
+                ->whereDate('transaction_date', '<', date('Y-m-d'))
+                ->where('trasaction_type', 'Pickup Order')
+                ->where('transactions.transaction_payment_status', 'Completed')
+                ->whereNull('receive_at')
+                ->whereNull('reject_at')
+                ->where(function ($q){
+                    $q->whereNotNull('transaction_pickups.taken_at')
+                        ->orWhereNotNull('transaction_pickups.taken_by_system_at');
+                })
+                ->whereNull('transactions.transaction_flag_invalid')
+                ->whereNull('dot.id_disburse_outlet')
+                ->pluck('transactions.id_transaction')->toArray();
+
+            if(!empty($dataTrx)){
+                $updateTrx = Transaction::whereIn('id_transaction', $dataTrx)
+                    ->update(['transaction_flag_invalid' => 'Invalid']);
+                if($updateTrx){
+                    $dtLog = [];
+                    foreach ($dataTrx as $idTransaction){
+                        $dtLog[] = [
+                            'id_transaction' => $idTransaction,
+                            'reason' => 'failed reject [by system]',
+                            'tansaction_flag' => 'Invalid',
+                            'updated_date' => date('Y-m-d H:i:s'),
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ];
+                    }
+                    LogInvalidTransaction::insert($dtLog);
+                }
+            }
 
             $log->success('success');
             return response()->json(['status' => 'success']);
