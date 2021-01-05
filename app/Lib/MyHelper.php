@@ -2995,11 +2995,15 @@ class MyHelper{
         $url = env('API_PLACE_RECEIVER').'api/place';
         $token = env('API_PLACE_RECEIVER_TOKEN');
         $data_send = json_encode(['places' => $data]);
-        $path = tempnam(sys_get_temp_dir(), 'FORCURL2');
+		$logAppsPath = storage_path('tmp');
+        if (!file_exists($logAppsPath)) {
+               mkdir($logAppsPath, 0777, true);
+        }
+        $path = tempnam($logAppsPath, 'FORCURL');;
         $temp = fopen($path, 'w');
         fwrite($temp, $data_send);
         fclose($temp);
-
+		chmod($path, 0777);
         $command = "(curl --location --request POST '$url' --header 'Content-Type: application/json' --header 'Accept: application/json' --header 'Authorization: $token' -d @$path; rm $path) > /dev/null &";
 
         // print $command; die();
