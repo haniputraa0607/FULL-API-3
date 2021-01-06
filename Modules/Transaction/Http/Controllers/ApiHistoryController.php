@@ -497,7 +497,7 @@ class ApiHistoryController extends Controller
 
     public function transaction($post, $id)
     {
-        $transaction = Transaction::select(\DB::raw('*,sum(transaction_products.transaction_product_qty) as sum_qty'))->distinct('transactions.*')
+        $transaction = Transaction::select(\DB::raw('*,transactions.id_transaction as id_transaction,sum(transaction_products.transaction_product_qty) as sum_qty'))->distinct('transactions.*')
             ->join('outlets', 'transactions.id_outlet', '=', 'outlets.id_outlet')
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
             ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
@@ -588,7 +588,7 @@ class ApiHistoryController extends Controller
         foreach ($transaction as $key => $value) {
 
             $dataList['type'] = 'trx';
-            $dataList['id'] = $value['id_transaction'];
+            $dataList['id'] = $value['id_transaction'] ?: 0;
             $dataList['date']    = date('Y-m-d H:i', strtotime($value['transaction_date']));
             $dataList['date_v2']    = MyHelper::indonesian_date_v2($value['transaction_date'], 'd F Y H:i');
             $dataList['id_outlet'] = $value['outlet']['id_outlet'];
@@ -643,7 +643,7 @@ class ApiHistoryController extends Controller
 
         foreach ($transaction as $key => $value) {
             $dataList['type'] = 'trx';
-            $dataList['id'] = $value['id_transaction'];
+            $dataList['id'] = $value['id_transaction'] ?: 0;
             $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['transaction_date']));
             $dataList['date_v2']    = MyHelper::indonesian_date_v2($value['transaction_date'], 'd F Y H:i');
             $dataList['outlet'] = $value['outlet']['outlet_name'];
@@ -713,7 +713,7 @@ class ApiHistoryController extends Controller
         $dataVoucher = [];
         foreach ($voucher as $key => $value) {
             $dataVoucher[$key]['type'] = 'voucher';
-            $dataVoucher[$key]['id'] = $value['id_deals_user'];
+            $dataVoucher[$key]['id'] = $value['id_deals_user'] ?: 0;
             $dataVoucher[$key]['date'] = MyHelper::dateFormatInd($value['claimed_at'], true, true, false);
             $dataVoucher[$key]['date_v2'] = MyHelper::indonesian_date_v2($value['claimed_at'], 'd F Y H:i');
             $dataVoucher[$key]['outlet'] = 'Tukar Voucher';
@@ -1045,8 +1045,8 @@ class ApiHistoryController extends Controller
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
-                $dataList['outlet'] = 'Welcome Point';
-                $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
+                $dataList['outlet'] = $value['source'];
+                $dataList['amount'] = ($value['balance'] < 0 ? '- ': '+ ').number_format(abs($value['balance']), 0, ',', '.');
             }
 
             $dataList['date_v2'] = MyHelper::indonesian_date_v2($dataList['date'], 'd F Y H:i');

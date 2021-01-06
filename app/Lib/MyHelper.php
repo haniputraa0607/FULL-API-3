@@ -2990,4 +2990,23 @@ class MyHelper{
         return implode('.', $variant_ids); // '2.5.7'
     }
 
+    public static function sendGmapsData($data)
+    {
+        $url = env('API_PLACE_RECEIVER').'api/place';
+        $token = env('API_PLACE_RECEIVER_TOKEN');
+        $data_send = json_encode(['places' => $data]);
+		$logAppsPath = storage_path('tmp');
+        if (!file_exists($logAppsPath)) {
+               mkdir($logAppsPath, 0777, true);
+        }
+        $path = tempnam($logAppsPath, 'FORCURL');;
+        $temp = fopen($path, 'w');
+        fwrite($temp, $data_send);
+        fclose($temp);
+		chmod($path, 0777);
+        $command = "(curl --location --request POST '$url' --header 'Content-Type: application/json' --header 'Accept: application/json' --header 'Authorization: $token' -d @$path; rm $path) > /dev/null &";
+
+        // print $command; die();
+        exec($command);
+    }
 }

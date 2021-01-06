@@ -563,8 +563,8 @@ class ApiConfirm extends Controller
                     'redirect'                  => true,
                     'timer_shopeepay'           => (int) MyHelper::setting('shopeepay_validity_period', 'value', 300),
                     'message_timeout_shopeepay' => 'Sorry, your payment has expired',
-                    'redirect_url_app'          => $paymentShopeepay->redirect_url_app,
-                    'redirect_url_http'         => $paymentShopeepay->redirect_url_http,
+                    'redirect_url_app'          => $paymentShopeepay->redirect_url_app ?: 'shopeeid://main',
+                    'redirect_url_http'         => $paymentShopeepay->redirect_url_http ?: 'https://wsa.wallet.airpay.co.id/universal-link/wallet/pay',
                 ],
             ];
         } else {

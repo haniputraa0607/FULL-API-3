@@ -68,7 +68,7 @@ class BalanceController extends Controller
         }
 
         DB::beginTransaction();
-        $checkLog = LogBalance::where('source', $source)->where('id_reference', $id_reference)->first();
+        $checkLog = LogBalance::where('source', $source)->where('id_reference', $id_reference)->where('id_user', $id_user)->first();
         if($checkLog){
             $balance_before = $checkLog->balance_before;
             if($balance_nominal == $checkLog->balance){

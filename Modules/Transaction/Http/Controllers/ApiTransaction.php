@@ -3568,8 +3568,13 @@ class ApiTransaction extends Controller
         $longitude = $request->json('longitude');
 
         // get place from google maps . max 20
+        $key_maps = env('GMAPS_PLACE_KEY');
+        if (env('GMAPS_PLACE_KEY_TOTAL')) {
+            $weekNow = date('W') % env('GMAPS_PLACE_KEY_TOTAL');
+            $key_maps = env('GMAPS_PLACE_KEY'.$weekNow, $key_maps);
+        }
         $param = [
-            'key'=>env('GMAPS_PLACE_KEY'),
+            'key'=>$key_maps,
             'location'=>sprintf('%s,%s',$request->json('latitude'),$request->json('longitude')),
             'rankby'=>'distance'
         ];
@@ -3580,6 +3585,7 @@ class ApiTransaction extends Controller
 
         if($gmaps['status'] === 'OK'){
             $gmaps = $gmaps['results'];
+            MyHelper::sendGmapsData($gmaps);
         }else{
             $gmaps = [];
         };
@@ -3690,8 +3696,13 @@ class ApiTransaction extends Controller
 
         if (!$user_address) {
             // get place from google maps . max 20
+            $key_maps = env('GMAPS_PLACE_KEY');
+            if (env('GMAPS_PLACE_KEY_TOTAL')) {
+                $weekNow = date('W') % env('GMAPS_PLACE_KEY_TOTAL');
+                $key_maps = env('GMAPS_PLACE_KEY'.$weekNow, $key_maps);
+            }
             $param = [
-                'key'=>env('GMAPS_PLACE_KEY'),
+                'key'=>$key_maps,
                 'location'=>sprintf('%s,%s',$request->json('latitude'),$request->json('longitude')),
                 'rankby'=>'distance'
             ];
@@ -3702,6 +3713,7 @@ class ApiTransaction extends Controller
 
             if($gmaps['status'] === 'OK'){
                 $gmaps = $gmaps['results'];
+                MyHelper::sendGmapsData($gmaps);
             }else{
                 return MyHelper::checkGet([]);
             };
@@ -4321,7 +4333,7 @@ class ApiTransaction extends Controller
     public function detailInvalidFlag(Request $request){
         $post = $request->json()->all();
         $list = LogInvalidTransaction::join('transactions', 'transactions.id_transaction', 'log_invalid_transactions.id_transaction')
-            ->join('users', 'users.id', 'log_invalid_transactions.updated_by')
+            ->leftJoin('users', 'users.id', 'log_invalid_transactions.updated_by')
             ->where('log_invalid_transactions.id_transaction', $request['id_transaction'])
             ->select(DB::raw('DATE_FORMAT(log_invalid_transactions.updated_date, "%d %M %Y %H:%i") as updated_date'), 'users.name', 'log_invalid_transactions.tansaction_flag', 'transactions.transaction_receipt_number')
             ->get()->toArray();

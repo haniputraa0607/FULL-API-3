@@ -159,7 +159,7 @@ class ApiInvalidTransactionController extends Controller
         $post = $request->json()->all();
 
         $list = LogInvalidTransaction::join('transactions', 'transactions.id_transaction', 'log_invalid_transactions.id_transaction')
-                ->join('users', 'users.id', 'log_invalid_transactions.updated_by')
+                ->LeftJoin('users', 'users.id', 'log_invalid_transactions.updated_by')
                 ->groupBy('log_invalid_transactions.id_transaction');
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
@@ -249,7 +249,7 @@ class ApiInvalidTransactionController extends Controller
     public function detailInvalidFlag(Request $request){
         $post = $request->json()->all();
         $list = LogInvalidTransaction::join('transactions', 'transactions.id_transaction', 'log_invalid_transactions.id_transaction')
-            ->join('users', 'users.id', 'log_invalid_transactions.updated_by')
+            ->leftJoin('users', 'users.id', 'log_invalid_transactions.updated_by')
             ->where('log_invalid_transactions.id_transaction', $request['id_transaction'])
             ->select(DB::raw('DATE_FORMAT(log_invalid_transactions.updated_date, "%d %M %Y %H:%i") as updated_date'), 'users.name', 'log_invalid_transactions.tansaction_flag', 'transactions.transaction_receipt_number', 'log_invalid_transactions.reason', 'transactions.image_invalid_flag')
             ->get()->toArray();
