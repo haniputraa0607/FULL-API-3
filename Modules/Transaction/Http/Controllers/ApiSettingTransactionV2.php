@@ -189,7 +189,10 @@ class ApiSettingTransactionV2 extends Controller
                 if ($valueData['id_product_variant_group'] ?? false) {
                     $product_variant_group = ProductVariantGroup::where('product_variant_groups.id_product_variant_group', $valueData['id_product_variant_group']);
                     if ($different_price) {
-                        $product_variant_group->join('product_variant_group_special_prices', 'product_variant_group_special_prices.id_product_variant_group', 'product_variant_groups.id_product_variant_group')->select('product_variant_groups.id_product_variant_group', 'product_variant_groups.id_product', 'product_variant_group_special_prices.product_variant_group_price');
+                        $product_variant_group->join('product_variant_group_special_prices', function($join) use ($data) {
+                            $join->on('product_variant_group_special_prices.id_product_variant_group', '=', 'product_variant_groups.id_product_variant_group')
+                                ->where('id_outlet', $data['id_outlet']);
+                        })->select('product_variant_groups.id_product_variant_group', 'product_variant_groups.id_product', 'product_variant_group_special_prices.product_variant_group_price');
                     } else {
                         $product_variant_group->select('product_variant_groups.id_product_variant_group', 'product_variant_groups.id_product', 'product_variant_groups.product_variant_group_price');
                     }
