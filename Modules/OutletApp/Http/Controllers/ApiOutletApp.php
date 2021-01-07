@@ -2042,7 +2042,7 @@ class ApiOutletApp extends Controller
         }
         DB::commit();
 
-        return response()->json(MyHelper::checkUpdate($pickup));
+        return MyHelper::checkUpdate($pickup);
     }
 
     public function listSchedule(Request $request)
@@ -2377,6 +2377,15 @@ class ApiOutletApp extends Controller
         $updateGoSend = TransactionPickupGoSend::find($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
         $maxRetry = Setting::select('value')->where('key', 'booking_delivery_max_retry')->pluck('value')->first()?:5;
         if ($fromRetry && $updateGoSend->retry_count >= $maxRetry) {
+            // kirim notifikasi
+            $dataNotif = [
+                'subject' => 'Driver Not Found',
+                'string_body' => $trx['transaction_pickup']['order_id'] . ' - '. $trx['transaction_receipt_number'],
+                'type' => 'trx',
+                'id_reference'=> $trx['id_transaction']
+            ];
+            $this->outletNotif($dataNotif,$trx->id_outlet);
+
             return ['status'  => 'fail', 'messages' => ['Retry reach limit']];
         }
 
@@ -3929,7 +3938,7 @@ class ApiOutletApp extends Controller
  
     }
   
-  public function setTimezone($data, $time_zone_utc){
+    public function setTimezone($data, $time_zone_utc){
         $default_time_zone_utc = 7;
         $time_diff = $time_zone_utc - $default_time_zone_utc;
 
@@ -3937,5 +3946,90 @@ class ApiOutletApp extends Controller
         $data['close'] = date('H:i', strtotime('-'.$time_diff.' hour', strtotime($data['close'])));
 
         return $data;
+    }
+
+    public function cronDriverNotFound()
+    {
+        $log = MyHelper::logCron('Driver Not Found Reject Order');
+        try {
+            // dd(date('Y-m-d H:i:s', strtotime('-30minutes')));
+            // dd(date('Y-m-d'));
+            $transactions = Transaction::select([
+                    'transaction_pickup_go_sends.updated_at',
+                    'order_id',
+                    'transaction_receipt_number',
+                    'transactions.id_transaction',
+                    'id_outlet',
+                    'transaction_date'
+                ])->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+                ->join('transaction_pickup_go_sends', 'transaction_pickup_go_sends.id_transaction_pickup', '=', 'transaction_pickups.id_transaction_pickup')
+                ->whereNull('transaction_pickups.reject_at')
+                ->whereDate('transaction_date', date('Y-m-d'))
+                ->where([
+                    'transaction_payment_status' => 'Completed',
+                    'transaction_pickup_go_sends.latest_status' => 'no_driver',
+                    'retry_count' => '5',
+                ])
+                ->where('transaction_pickup_go_sends.updated_at', '<', date('Y-m-d H:i:s', strtotime('-30minutes')))
+                ->with('outlet')
+                ->get();
+            $processed = [
+                'found' => $transactions->count(),
+                'cancelled' => 0,
+                'failed_cancel' => 0,
+                'errors' => [],
+            ];
+            foreach ($transactions as $transaction) {
+                $difference = ceil((time() - strtotime($transaction['updated_at']))/60) - 30;
+                if(!$difference) {
+                    continue;
+                }
+                if ($difference < 5) {
+                    // kirim notifikasi
+                    $dataNotif = [
+                        'subject' => 'Driver Not Found',
+                        'string_body' => $transaction['order_id'] . ' - '. $transaction['transaction_receipt_number'],
+                        'type' => 'trx',
+                        'id_reference'=> $transaction['id_transaction']
+                    ];
+                    $this->outletNotif($dataNotif, $transaction->id_outlet);
+                } else {
+                    // reject order
+                    $params = [
+                        'order_id' => $transaction['order_id'],
+                        'reason'   => 'auto reject order by system [no driver]'
+                    ];
+                    // mocking request object and create fake request
+                    $fake_request = new DetailOrder();
+                    $fake_request->setJson(new \Symfony\Component\HttpFoundation\ParameterBag($params));
+                    $fake_request->merge(['user' => $transaction->outlet]);
+                    $fake_request->setUserResolver(function () use ($transaction) {
+                        return $transaction->outlet;
+                    });
+
+                    $reject = $this->rejectOrder($fake_request);
+
+                    if ($reject['status'] == 'success') {
+                        $dataNotif = [
+                            'subject' => 'Order Cancelled',
+                            'string_body' => $transaction['order_id'] . ' - '. $transaction['transaction_receipt_number'],
+                            'type' => 'trx',
+                            'id_reference'=> $transaction['id_transaction']
+                        ];
+                        $this->outletNotif($dataNotif,$transaction->id_outlet);
+                        $processed['cancelled']++;
+                    } else {
+                        $processed['failed_cancel']++;
+                        $processed['errors'][] = $reject['messages'] ?? 'Something went wrong';
+                    }
+                }
+            }
+
+            $log->success($processed);
+            return $processed;
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+            return ['status' => 'fail', 'messages' => [$e->getMessage()]];
+        }
     }
 }
