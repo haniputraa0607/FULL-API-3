@@ -3950,7 +3950,7 @@ class ApiOutletApp extends Controller
 
     public function cronDriverNotFound()
     {
-        $log = MyHelper::logCron('Cancel Transaction');
+        $log = MyHelper::logCron('Driver Not Found Reject Order');
         try {
             // dd(date('Y-m-d H:i:s', strtotime('-30minutes')));
             // dd(date('Y-m-d'));
