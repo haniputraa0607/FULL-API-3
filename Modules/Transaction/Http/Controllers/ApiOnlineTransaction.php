@@ -22,6 +22,9 @@ use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionProductModifier;
+use Modules\ProductBundling\Entities\BundlingOutlet;
+use Modules\ProductBundling\Entities\BundlingProduct;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\TransactionProductVariant;
 use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
@@ -80,6 +83,7 @@ use Modules\Transaction\Http\Requests\Transaction\ConfirmPayment;
 use Modules\Transaction\Http\Requests\CheckTransaction;
 use Modules\ProductVariant\Entities\ProductVariant;
 use App\Http\Models\TransactionMultiplePayment;
+use Modules\ProductBundling\Entities\Bundling;
 
 class ApiOnlineTransaction extends Controller
 {
@@ -2586,7 +2590,13 @@ class ApiOnlineTransaction extends Controller
             'today' => $outlet['today']
         ];
         $result['item'] = array_values($tree);
-        
+
+        // check bundling product
+        $itemBundlings = $this->checkBundlingProduct($post, $outlet);
+        $result['item_bundling'] = $itemBundlings['item_bundling']??[];
+        $totalItem = $totalItem + $itemBundlings['total_item_bundling']??0;
+        $error_msg = array_merge($error_msg, $itemBundlings['error_message']??[]);
+
         // Additional Plastic Payment
         $plastic = app($this->plastic)->check($post);
         $result['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
@@ -2602,8 +2612,9 @@ class ApiOnlineTransaction extends Controller
                 'messages' => ['Invalid Order Type']
             ];
         }
-        
+
         $subtotal += $result['plastic']['plastic_price_total'] ?? 0;
+        $subtotal += $itemBundlings['subtotal_bundling']??0;
 
         $result['is_advance_order'] = $is_advance;
         $result['subtotal'] = $subtotal;
@@ -2749,6 +2760,273 @@ class ApiOnlineTransaction extends Controller
             $error_msg = ['Produk, Varian, atau Topping yang anda pilih tidak tersedia. Silakan cek kembali pesanan anda'];
         }
         return MyHelper::checkGet($result)+['messages'=>$error_msg,'promo_error'=>$promo_error];
+    }
+
+    public function checkBundlingProduct($post, $outlet){
+        $error_msg = [];
+        $subTotalBundling = 0;
+        $totalItemBundling = 0;
+        foreach ($post['item_bundling'] as $key=>$bundling){
+            $getBundling = Bundling::where('id_bundling', $bundling['id_bundling'])->whereRaw('NOW() >= start_date AND NOW() <= end_date')->first();
+            if(empty($getBundling)){
+                $error_msg[] = MyHelper::simpleReplace(
+                    'Product bundling %bundling_name% tidak tersedia',
+                    [
+                        'bundling_name' => $bundling['bundling_name']
+                    ]
+                );
+                unset($post['item_bundling'][$key]);
+                continue;
+            }
+
+            //check outlet available
+            $getBundlingOutlet = BundlingOutlet::where('id_bundling', $bundling['id_bundling'])->where('id_outlet', $post['id_outlet'])->count();
+
+            if(empty($getBundlingOutlet)){
+                $error_msg[] = MyHelper::simpleReplace(
+                    'Bundling %bundling_name% tidak bisa digunakan di outlet %outlet_name%',
+                    [
+                        'bundling_name' => $bundling['bundling_name'],
+                        'outlet_name' => $outlet['outlet_name']
+                    ]
+                );
+                unset($post['item_bundling'][$key]);
+                continue;
+            }
+
+            //check count product in bundling
+            $getBundlingProduct = BundlingProduct::where('id_bundling', $bundling['id_bundling'])->count();
+
+            if($getBundlingProduct !== count($bundling['products'])){
+                $error_msg[] = MyHelper::simpleReplace(
+                    'Jumlah product pada bundling %bundling_name% tidak sesuai',
+                    [
+                        'bundling_name' => $bundling['bundling_name']
+                    ]
+                );
+                unset($post['item_bundling'][$key]);
+                continue;
+            }
+
+            $bundlingBasePrice = 0;
+            $products = [];
+            //check product from bundling
+            foreach ($bundling['products'] as $p){
+                $product = BundlingProduct::join('products', 'products.id_product', 'bundling_product.id_product')
+                    ->leftJoin('product_global_price as pgp', 'pgp.id_product', '=', 'products.id_product')
+                    ->join('bundling', 'bundling.id_bundling', 'bundling_product.id_bundling')
+                    ->where('bundling_product.id_bundling_product', $p['id_bundling_product'])
+                    ->select('products.product_visibility', 'pgp.product_global_price',  'products.product_variant_status',
+                        'bundling_product.*', 'bundling.bundling_name', 'bundling.bundling_code', 'products.*')
+                    ->first();
+                $getProductDetail = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first();
+                $product['visibility_outlet'] = $getProductDetail['product_detail_visibility']??null;
+
+                if($product['visibility_outlet'] == 'Hidden' || (empty($product['visibility_outlet']) && $product['product_visibility'] == 'Hidden')){
+                    $error_msg[] = MyHelper::simpleReplace(
+                        'Produk %product_name% pada bundling %bundling_name% tidak tersedia',
+                        [
+                            'product_name' => $p['product_name'],
+                            'bundling_name' => $bundling['bundling_name']
+                        ]
+                    );
+                    unset($post['item_bundling'][$key]);
+                    continue 2;
+                }
+                $product['note'] = $p['note']??'';
+                $price = $product['product_global_price'];
+                if($outlet['outlet_different_price'] == 1){
+                    $price = ProductSpecialPrice::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
+                }
+                if ($product['product_variant_status'] && $getProductDetail['product_detail_stock_status'] == 'Available') {
+                    $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                    $price = $variantTree['base_price']??0;
+                }
+
+                $price = (float)$price??0;
+                //calculate discount produk
+                if(strtolower($product['bundling_product_discount_type']) == 'nominal'){
+                    $calculate = ($price - $product['bundling_product_discount']);
+                }else{
+                    $discount = $price*($product['bundling_product_discount']/100);
+                    $calculate = ($price - $discount);
+                }
+                $calculate = $calculate * $product['bundling_product_qty'];
+                $bundlingBasePrice = $bundlingBasePrice + $calculate;
+
+                // get modifier
+                $mod_price = 0;
+                $modifiers = [];
+                $removed_modifier = [];
+                $missing_modifier = 0;
+                foreach ($p['modifiers']??[] as $key => $modifier) {
+                    $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
+                    $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
+                    $mod = ProductModifier::select('product_modifiers.id_product_modifier','code',
+                        DB::raw('(CASE
+                        WHEN product_modifiers.text_detail_trx IS NOT NULL 
+                        THEN product_modifiers.text_detail_trx
+                        ELSE product_modifiers.text
+                    END) as text'),
+                        'product_modifier_stock_status',\DB::raw('coalesce(product_modifier_price, 0) as product_modifier_price'), 'modifier_type')
+                        // product visible
+                        ->leftJoin('product_modifier_details', function($join) use ($post) {
+                            $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+                                ->where('product_modifier_details.id_outlet',$post['id_outlet']);
+                        })
+                        ->where(function($q) {
+                            $q->where(function($q){
+                                $q->where(function($query){
+                                    $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
+                                        ->orWhere(function($q){
+                                            $q->whereNull('product_modifier_details.product_modifier_visibility')
+                                                ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                                        });
+                                });
+                            })->orWhere('product_modifiers.modifier_type', '=', 'Modifier Group');
+                        })
+                        ->where(function($q){
+                            $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+                        })
+                        ->groupBy('product_modifiers.id_product_modifier');
+                    if($outlet['outlet_different_price']){
+                        $mod->leftJoin('product_modifier_prices',function($join) use ($post){
+                            $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                            $join->where('product_modifier_prices.id_outlet',$post['id_outlet']);
+                        });
+                    }else{
+                        $mod->leftJoin('product_modifier_global_prices',function($join) use ($post){
+                            $join->on('product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                        });
+                    }
+                    $mod = $mod->find($id_product_modifier);
+                    if(!$mod){
+                        $missing_modifier++;
+                        continue;
+                    }
+                    $mod = $mod->toArray();
+                    $scope = $mod['modifier_type'];
+                    $mod['qty'] = $qty_product_modifier;
+                    $mod['product_modifier_price'] = (int) $mod['product_modifier_price'];
+                    if ($scope != 'Modifier Group') {
+                        if ($mod['product_modifier_stock_status'] != 'Sold Out') {
+                            $modifiers[]=$mod;
+                        } else {
+                            $removed_modifier[] = $mod['text'];
+                        }
+                    }
+                    $mod_price+=$mod['qty']*$mod['product_modifier_price'];
+                }
+
+                if($missing_modifier){
+                    $error_msg[] = MyHelper::simpleReplace(
+                        '%missing_modifier% topping untuk produk %product_name% pada bundling %bundling_name% tidak tersedia',
+                        [
+                            'missing_modifier' => $missing_modifier,
+                            'product_name' => $product['product_name'],
+                            'bundling_name' => $bundling['bundling_name']
+                        ]
+                    );
+                    unset($post['item_bundling'][$key]);
+                    continue 2;
+                }
+                if($removed_modifier){
+                    $error_msg[] = MyHelper::simpleReplace(
+                        'Topping %removed_modifier% untuk produk %product_name% pada bundling %bundling_name% tidak tersedia',
+                        [
+                            'removed_modifier' => implode(',',$removed_modifier),
+                            'product_name' => $product['product_name'],
+                            'bundling_name' => $bundling['bundling_name']
+                        ]
+                    );
+                    unset($post['item_bundling'][$key]);
+                    continue 2;
+                }
+
+                $id_product_variant_group = $product['id_product_variant_group']??null;
+                $product['selected_variant'] = [];
+                $variants = [];
+                if(!empty($id_product_variant_group)){
+                    $variants = ProductVariantGroup::join('product_variant_pivot as pvp', 'pvp.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
+                        ->join('product_variants as pv', 'pv.id_product_variant', 'pvp.id_product_variant')
+                        ->select('pv.id_product_variant', 'product_variant_name')
+                        ->where('product_variant_groups.id_product_variant_group', $id_product_variant_group)
+                        ->orderBy('pv.product_variant_order', 'asc')
+                        ->get()->toArray();
+                    $product['selected_variant'] = array_column($variants, 'id_product_variant');
+                }
+
+                $extraModifier = [];
+                if(!empty($p['extra_modifiers'])){
+                    $extraModifier = ProductModifier::join('product_modifier_groups as pmg', 'pmg.id_product_modifier_group', 'product_modifiers.id_product_modifier_group')
+                                    ->join('product_modifier_group_pivots as pmgp', 'pmgp.id_product_modifier_group', 'pmg.id_product_modifier_group')
+                                    ->select('product_modifiers.*', 'pmgp.id_product', 'pmgp.id_product_variant')
+                                    ->whereIn('product_modifiers.id_product_modifier', $p['extra_modifiers'])
+                                    ->where(function ($q) use ($product){
+                                        $q->whereIn('pmgp.id_product_variant', $product['selected_variant'])
+                                            ->orWhere('pmgp.id_product', $product['id_product']);
+                                    })
+                                    ->get()->toArray();
+                    foreach ($extraModifier as $m){
+                        $variants[] = [
+                            'id_product_variant' => $m['id_product_modifier'],
+                            'id_product_variant_group' => $m['id_product_modifier_group'],
+                            'product_variant_name' => $m['text_detail_trx']
+                        ];
+                    }
+                }
+
+                if((count($p['extra_modifiers']) != count($extraModifier))){
+                    $variantsss = ProductVariant::join('product_variant_pivot', 'product_variant_pivot.id_product_variant', 'product_variants.id_product_variant')->select('product_variant_name')->where('id_product_variant_group', $product['id_product_variant_group'])->pluck('product_variant_name')->toArray();
+                    $modifiersss = ProductModifier::whereIn('id_product_modifier', array_column($extraModifier, 'id_product_modifier'))->where('modifier_type', 'Modifier Group')->pluck('text')->toArray();
+                    $error_msg[] = MyHelper::simpleReplace(
+                        'Varian %variants% untuk %product_name% tidak tersedia pada bundling %bundling_name%',
+                        [
+                            'variants' => implode(', ', array_merge($variantsss, $modifiersss)),
+                            'product_name' => $product['product_name'],
+                            'bundling_name' => $bundling['bundling_name']
+                        ]
+                    );
+                    unset($post['item_bundling'][$key]);
+                    continue 2;
+                }
+
+                $product['variants'] = $variants;
+                $products[] = [
+                    "id_brand" => $product['id_brand'],
+                    "id_product" => $product['id_product'],
+                    "id_bundling_product" => $product['id_bundling_product'],
+                    "id_product_variant_group" => $product['id_product_variant_group'],
+                    "modifiers" => $modifiers,
+                    "extra_modifiers" => array_column($extraModifier, 'id_product_modifier'),
+                    "product_name" => $product['product_name'],
+                    "note" => $product['note'],
+                    "product_code" => $product['product_code'],
+                    "selected_variant" => array_merge($product['selected_variant'], $p['extra_modifiers']),
+                    "variants"=> $product['variants']
+                ];
+            }
+
+            $total = $bundlingBasePrice * $bundling['bundling_qty'];
+            $post['item_bundling'][$key] = [
+                "id_bundling" => $getBundling['id_bundling'],
+                "bundling_name" => $getBundling['bundling_name'],
+                "bundling_code" => $getBundling['bundling_code'],
+                "bundling_base_price" => $bundlingBasePrice,
+                "bundling_qty" => $bundling['bundling_qty'],
+                "bundling_price_total" => $total,
+                "products" => $products
+            ];
+            $subTotalBundling = $total;
+            $totalItemBundling = $totalItemBundling + $bundling['bundling_qty'];
+        }
+
+        return [
+            'total_item_bundling' => $totalItemBundling,
+            'subtotal_bundling' => $subTotalBundling,
+            'item_bundling' => $post['item_bundling'],
+            'error_message' => $error_msg
+        ];
     }
 
     public function saveLocation($latitude, $longitude, $id_user, $id_transaction, $id_outlet){

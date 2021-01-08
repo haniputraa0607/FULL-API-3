@@ -12,27 +12,16 @@ use Illuminate\Http\Request;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
-
-Route::middleware('auth:api')->get('/productbundling', function (Request $request) {
-    return $request->user();
+Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:apps']], 'prefix' => 'product-bundling'], function()
+{
+    Route::any('detail', 'ApiBundlingController@detailForApps');
 });
 
-// Route::prefix('bundling')->group(function() {
-//     Route::post('store', 'ApiBundlingController@store');
-// });
-
-// Route::group(['prefix' => 'bundling', 'middleware' => ['auth:api', 'log_activities'] ], function(){
-// 	Route::post('store', 'ApiBundlingController@store');
-// });
-
-Route::group(['prefix' => 'product-bundling', 'middleware' => 'log_activities'], function()
+Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'product-bundling'], function()
 {
-
-    Route::group(['middleware' => 'auth:api'], function() {
-        Route::post('store', 'ApiBundlingController@store');
-        Route::get('list', 'ApiBundlingController@index');
-        Route::post('brandproduct', 'ApiBundlingController@brandProduct');
-        // Route::get('brandproduct', 'ApiBundlingController@brandProduct')->name('brand.product');
-    });
-
+    Route::get('list', 'ApiBundlingController@index');
+    Route::post('store', 'ApiBundlingController@store');
+    Route::post('be/detail', 'ApiBundlingController@detail');
+    Route::post('update', 'ApiBundlingController@update');
+    Route::any('outlet-available', 'ApiBundlingController@outletAvailable');
 });
