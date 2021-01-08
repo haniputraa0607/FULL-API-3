@@ -3096,9 +3096,11 @@ class ApiTransaction extends Controller
                         'date'  => MyHelper::dateFormatInd($status['date'])
                     ];
                     if ($status['text'] == 'Order rejected') {
-                        if(strpos($list['detail']['reject_reason'], 'auto reject order by system') !== false){
+                        if (strpos($list['detail']['reject_reason'], 'auto reject order by system [no driver]') !== false) {
+                            $result['detail']['detail_status'][$keyStatus]['text'] = 'Maaf Pesanan Telah Ditolak karena driver tidak ditemukan, Mohon untuk Melakukan Pemesanannya Kembali';
+                        } elseif (strpos($list['detail']['reject_reason'], 'auto reject order by system') !== false) {
                             $result['detail']['detail_status'][$keyStatus]['text'] = 'Maaf Pesanan Telah Ditolak, Mohon untuk Melakukan Pemesanannya Kembali';
-                        }else{
+                        } else {
                             $result['detail']['detail_status'][$keyStatus]['text'] = 'Pesanan telah ditolak karena '.strtolower($list['detail']['reject_reason']);
                         }
 
