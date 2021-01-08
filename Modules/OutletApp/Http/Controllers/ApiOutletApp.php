@@ -3032,7 +3032,7 @@ class ApiOutletApp extends Controller
                 $result['rejectable']              = 1;
             }
 
-            if ($list['transaction_pickup_go_send']) {
+            if ($list['transaction_pickup_go_send'] && !$list['detail']['reject_at']) {
                 // $result['transaction_status'] = 5;
                 $result['delivery_info'] = [
                     'driver'            => null,

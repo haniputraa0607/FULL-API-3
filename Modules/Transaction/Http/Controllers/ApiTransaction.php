@@ -2725,7 +2725,7 @@ class ApiTransaction extends Controller
                     $result['transaction_status'] = 5;
                     $result['transaction_status_text'] = 'PESANAN MASUK. MENUNGGU JILID UNTUK MENERIMA ORDER';
                 }
-                if ($list['detail']['ready_at'] != null && $list['transaction_pickup_go_send']) {
+                if ($list['detail']['ready_at'] != null && $list['transaction_pickup_go_send'] && !$list['detail']['reject_at']) {
                     // $result['transaction_status'] = 5;
                     $result['delivery_info'] = [
                         'driver' => null,
@@ -3096,9 +3096,11 @@ class ApiTransaction extends Controller
                         'date'  => MyHelper::dateFormatInd($status['date'])
                     ];
                     if ($status['text'] == 'Order rejected') {
-                        if(strpos($list['detail']['reject_reason'], 'auto reject order by system') !== false){
+                        if (strpos($list['detail']['reject_reason'], 'auto reject order by system [no driver]') !== false) {
+                            $result['detail']['detail_status'][$keyStatus]['text'] = 'Maaf Pesanan Telah Ditolak karena driver tidak ditemukan, Mohon untuk Melakukan Pemesanannya Kembali';
+                        } elseif (strpos($list['detail']['reject_reason'], 'auto reject order by system') !== false) {
                             $result['detail']['detail_status'][$keyStatus]['text'] = 'Maaf Pesanan Telah Ditolak, Mohon untuk Melakukan Pemesanannya Kembali';
-                        }else{
+                        } else {
                             $result['detail']['detail_status'][$keyStatus]['text'] = 'Pesanan telah ditolak karena '.strtolower($list['detail']['reject_reason']);
                         }
 
