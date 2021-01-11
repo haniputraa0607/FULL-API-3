@@ -14,11 +14,6 @@ class BundlingOutlet extends Model
         'id_outlet'
     ];
 
-    protected $casts = [
-        'id_bundling' => 'integer',
-        'id_outlet' => 'integer'
-    ];
-
     public function outlets()
     {
         return $this->hasOne(Outlet::class, 'id_outlet', 'id_outlet');
