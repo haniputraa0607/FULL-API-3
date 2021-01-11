@@ -1653,7 +1653,7 @@ class ApiOutletApp extends Controller
         return response()->json(MyHelper::checkGet($result));
     }
 
-    public function rejectOrder(DetailOrder $request)
+    public function rejectOrder(DetailOrder $request, $dateNow = null)
     {
         $post = $request->json()->all();
 
@@ -1661,7 +1661,7 @@ class ApiOutletApp extends Controller
 
         $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->where('order_id', $post['order_id'])
-            ->whereDate('transaction_date', date('Y-m-d'))
+            ->whereDate('transaction_date', $dateNow ?? date('Y-m-d'))
             ->where('transactions.id_outlet', $outlet->id_outlet)
             ->first();
 
