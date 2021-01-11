@@ -40,6 +40,10 @@
         <td>: {{(float)$summary_fee['total_income_subscription']}}</td>
     </tr>
     <tr>
+        <td width="30"><b>Total Income Bundling Product</b></td>
+        <td>: {{(float)$summary_fee['total_income_bundling_product']??0}}</td>
+    </tr>
+    <tr>
         <td width="30"><b>Total Income Outlet</b></td>
         <td>: {{(float)$summary_fee['total_income_outlet']}}</td>
     </tr>

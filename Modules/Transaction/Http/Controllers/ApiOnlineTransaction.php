@@ -69,6 +69,7 @@ use Guzzle\Http\Message\Request as RequestGuzzle;
 use Guzzle\Http\Message\Response as ResponseGuzzle;
 use Guzzle\Http\Exception\ServerErrorResponseException;
 
+use Modules\Transaction\Entities\TransactionBundlingProduct;
 use Modules\UserFeedback\Entities\UserFeedbackLog;
 
 use DB;
@@ -442,6 +443,12 @@ class ApiOnlineTransaction extends Controller
                         if ($post['sub']->original['messages'] == ['Price Product Not Valid']) {
                             if (isset($post['sub']->original['product'])) {
                                 $mes = ['Price Product Not Valid with product '.$post['sub']->original['product'].' at outlet '.$outlet['outlet_name']];
+                            }
+                        }
+
+                        if ($post['sub']->original['messages'] == ['Price Bundling Product Not Valid']) {
+                            if (isset($post['sub']->original['product'])) {
+                                $mes = ['Price Product '.$post['sub']->original['product'].' Not Valid with Bundling '.$post['sub']->original['bundling_name']];
                             }
                         }
                     }
@@ -1264,6 +1271,9 @@ class ApiOnlineTransaction extends Controller
             array_push($userTrxProduct, $dataUserTrxProduct);
         }
 
+        //process add product bundling
+        $this->insertBundlingProduct($post['item_bundling']??[], $insertTransaction, $outlet, $post, $productMidtrans, $userTrxProduct);
+
         array_push($dataDetailProduct, $productMidtrans);
 
         $dataShip = [
@@ -1314,7 +1324,6 @@ class ApiOnlineTransaction extends Controller
                 'messages'  => ['Insert Product Transaction Failed']
             ]);
         }
-
         if (isset($post['receive_at']) && $post['receive_at']) {
             $post['receive_at'] = date('Y-m-d H:i:s', strtotime($post['receive_at']));
         } else {
@@ -2851,7 +2860,6 @@ class ApiOnlineTransaction extends Controller
                     $discount = $price*($product['bundling_product_discount']/100);
                     $calculate = ($price - $discount);
                 }
-                $calculate = $calculate * $product['bundling_product_qty'];
                 $bundlingBasePrice = $bundlingBasePrice + $calculate;
 
                 // get modifier
@@ -2991,6 +2999,7 @@ class ApiOnlineTransaction extends Controller
                     continue 2;
                 }
 
+                $bundlingBasePrice = $bundlingBasePrice+$mod_price;
                 $product['variants'] = $variants;
                 $products[] = [
                     "id_brand" => $product['id_brand'],
@@ -3714,5 +3723,239 @@ class ApiOnlineTransaction extends Controller
                 'new_reversal_detail' => $reversal
             ]
         ];
+    }
+
+    function insertBundlingProduct($data, $trx, $outlet, $post, &$productMidtrans, &$userTrxProduct){
+        $type = $post['type'];
+        $totalWeight = 0;
+        foreach ($data as $itemBundling){
+            $dataItemBundling = [
+                'id_transaction' => $trx['id_transaction'],
+                'id_bundling' => $itemBundling['id_bundling'],
+                'id_outlet' => $trx['id_outlet'],
+                'transaction_bundling_product_base_price' => $itemBundling['transaction_bundling_product_base_price'],
+                'transaction_bundling_product_subtotal' => $itemBundling['transaction_bundling_product_subtotal'],
+                'transaction_bundling_product_qty' => $itemBundling['bundling_qty'],
+                'transaction_bundling_product_total_discount' => $itemBundling['transaction_bundling_product_total_discount']
+            ];
+
+            $createTransactionBundling = TransactionBundlingProduct::create($dataItemBundling);
+
+            if(!$createTransactionBundling){
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Insert Bundling Product Failed']
+                ]);
+            }
+
+            foreach ($itemBundling['products'] as $itemProduct){
+                $checkProduct = Product::where('id_product', $itemProduct['id_product'])->first();
+                if (empty($checkProduct)) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Product Not Found']
+                    ]);
+                }
+
+                $checkDetailProduct = ProductDetail::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $trx['id_outlet']])->first();
+                if (!empty($checkDetailProduct) && $checkDetailProduct['product_detail_stock_status'] == 'Sold Out') {
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Product '.$checkProduct['product_name'].' sudah habis, silakan pilih yang lain']
+                    ]);
+                }
+
+                if(!isset($itemProduct['note'])){
+                    $itemProduct['note'] = null;
+                }
+
+                $productPrice = 0;
+
+                if($outlet['outlet_different_price']){
+                    $checkPriceProduct = ProductSpecialPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $post['id_outlet']])->first();
+                    if(!isset($checkPriceProduct['product_special_price'])){
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => ['Product Price Not Valid']
+                        ]);
+                    }
+                    $productPrice = $checkPriceProduct['product_special_price'];
+                }else{
+                    $checkPriceProduct = ProductGlobalPrice::where(['id_product' => $checkProduct['id_product']])->first();
+
+                    if(isset($checkPriceProduct['product_global_price'])){
+                        $productPrice = $checkPriceProduct['product_global_price'];
+                    }else{
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => ['Product Price Not Valid']
+                        ]);
+                    }
+                }
+
+                $dataProduct = [
+                    'id_transaction'               => $trx['id_transaction'],
+                    'id_product'                   => $checkProduct['id_product'],
+                    'type'                         => $checkProduct['product_type'],
+                    'id_product_variant_group'     => $itemProduct['id_product_variant_group']??null,
+                    'id_brand'                     => $itemProduct['id_brand'],
+                    'id_outlet'                    => $trx['id_outlet'],
+                    'id_user'                      => $trx['id_user'],
+                    'transaction_product_qty'      => 1,
+                    'transaction_product_price'    => $itemProduct['transaction_product_price'],
+                    'transaction_product_price_base' => NULL,
+                    'transaction_product_price_tax'  => NULL,
+                    'transaction_product_discount'   => 0,
+                    'transaction_product_base_discount' => 0,
+                    'transaction_product_qty_discount'  => 0,
+                    'transaction_product_subtotal' => $itemProduct['transaction_product_subtotal'],
+                    'transaction_variant_subtotal' => $itemProduct['transaction_variant_subtotal'],
+                    'transaction_product_note'     => $itemProduct['note'],
+                    'id_transaction_bundling_product' => $createTransactionBundling['id_transaction_bundling_product'],
+                    'id_bundling_product' => $itemProduct['id_bundling_product'],
+                    'transaction_product_bundling_discount' => $itemProduct['transaction_product_bundling_discount'],
+                    'transaction_product_bundling_charged_outlet' => $itemProduct['transaction_product_bundling_charged_outlet'],
+                    'transaction_product_bundling_charged_central' => $itemProduct['transaction_product_bundling_charged_central'],
+                    'created_at'                   => date('Y-m-d', strtotime($trx['transaction_date'])).' '.date('H:i:s'),
+                    'updated_at'                   => date('Y-m-d H:i:s')
+                ];
+
+                $trx_product = TransactionProduct::create($dataProduct);
+                if (!$trx_product) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Insert Product Transaction Failed']
+                    ]);
+                }
+                if(strtotime($trx['transaction_date'])){
+                    $trx_product->created_at = strtotime($trx['transaction_date']);
+                }
+                $insert_modifier = [];
+                $mod_subtotal = 0;
+                $more_mid_text = '';
+                if(isset($itemProduct['modifiers'])){
+                    foreach ($itemProduct['modifiers'] as $modifier) {
+                        $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
+                        $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
+                        $mod = ProductModifier::select('product_modifiers.id_product_modifier','code',
+                            DB::raw('(CASE
+                        WHEN product_modifiers.text_detail_trx IS NOT NULL 
+                        THEN product_modifiers.text_detail_trx
+                        ELSE product_modifiers.text
+                    END) as text'),
+                            'product_modifier_stock_status',\DB::raw('coalesce(product_modifier_price, 0) as product_modifier_price'), 'id_product_modifier_group', 'modifier_type')
+                            // product visible
+                            ->leftJoin('product_modifier_details', function($join) use ($post) {
+                                $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+                                    ->where('product_modifier_details.id_outlet',$post['id_outlet']);
+                            })
+                            ->where(function($query){
+                                $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
+                                    ->orWhere(function($q){
+                                        $q->whereNull('product_modifier_details.product_modifier_visibility')
+                                            ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                                    });
+                            })
+                            ->where(function($q) {
+                                $q->where(function($q){
+                                    $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                                })->orWhere('product_modifiers.modifier_type', '=', 'Modifier Group');
+                            })
+                            ->where(function($q){
+                                $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+                            })
+                            ->groupBy('product_modifiers.id_product_modifier');
+                        if($outlet['outlet_different_price']){
+                            $mod->leftJoin('product_modifier_prices',function($join) use ($post){
+                                $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                                $join->where('product_modifier_prices.id_outlet',$post['id_outlet']);
+                            });
+                        }else{
+                            $mod->leftJoin('product_modifier_global_prices',function($join) use ($post){
+                                $join->on('product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                            });
+                        }
+                        $mod = $mod->find($id_product_modifier);
+                        if(!$mod){
+                            return [
+                                'status' => 'fail',
+                                'messages' => ['Modifier not found']
+                            ];
+                        }
+                        $mod = $mod->toArray();
+                        $insert_modifier[] = [
+                            'id_transaction_product'=>$trx_product['id_transaction_product'],
+                            'id_transaction'=>$trx['id_transaction'],
+                            'id_product'=>$checkProduct['id_product'],
+                            'id_product_modifier'=>$id_product_modifier,
+                            'id_product_modifier_group'=>$mod['modifier_type'] == 'Modifier Group' ? $mod['id_product_modifier_group'] : null,
+                            'id_outlet'=>$trx['id_outlet'],
+                            'id_user'=>$trx['id_user'],
+                            'type'=>$mod['type']??'',
+                            'code'=>$mod['code']??'',
+                            'text'=>$mod['text']??'',
+                            'qty'=>$qty_product_modifier,
+                            'transaction_product_modifier_price'=>$mod['product_modifier_price']*$qty_product_modifier,
+                            'datetime'=>$trx['transaction_date']??date(),
+                            'trx_type'=>$type,
+                            'created_at'                   => date('Y-m-d H:i:s'),
+                            'updated_at'                   => date('Y-m-d H:i:s')
+                        ];
+                        $mod_subtotal += $mod['product_modifier_price']*$qty_product_modifier;
+                        if($qty_product_modifier>1){
+                            $more_mid_text .= ','.$qty_product_modifier.'x '.$mod['text'];
+                        }else{
+                            $more_mid_text .= ','.$mod['text'];
+                        }
+                    }
+
+                }
+
+                $trx_modifier = TransactionProductModifier::insert($insert_modifier);
+                if (!$trx_modifier) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Insert Product Modifier Transaction Failed']
+                    ]);
+                }
+                $insert_variants = [];
+                foreach ($itemProduct['variants'] as $id_product_variant => $product_variant_price) {
+                    $insert_variants[] = [
+                        'id_transaction_product' => $trx_product['id_transaction_product'],
+                        'id_product_variant' => $id_product_variant,
+                        'transaction_product_variant_price' => $product_variant_price,
+                        'created_at'                   => date('Y-m-d H:i:s'),
+                        'updated_at'                   => date('Y-m-d H:i:s')
+                    ];
+                }
+
+                $trx_variants = TransactionProductVariant::insert($insert_variants);
+                $trx_product->transaction_modifier_subtotal = $mod_subtotal;
+                $trx_product->save();
+                $dataProductMidtrans = [
+                    'id'       => $checkProduct['id_product'],
+                    'price'    => $productPrice + $mod_subtotal - ($trx_product['transaction_product_discount']/$trx_product['transaction_product_qty']),
+                    'name'     => $checkProduct['product_name'],
+                    'quantity' => 1,
+                ];
+                array_push($productMidtrans, $dataProductMidtrans);
+                $totalWeight += $checkProduct['product_weight'] * 1;
+
+                $dataUserTrxProduct = [
+                    'id_user'       => $trx['id_user'],
+                    'id_product'    => $checkProduct['id_product'],
+                    'product_qty'   => 1,
+                    'last_trx_date' => $trx['transaction_date']
+                ];
+                array_push($userTrxProduct, $dataUserTrxProduct);
+            }
+        }
     }
 }
