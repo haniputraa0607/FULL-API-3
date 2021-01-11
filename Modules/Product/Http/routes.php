@@ -45,6 +45,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     Route::post('export', 'ApiProductController@export');
     Route::post('import', 'ApiProductController@import');
     Route::post('ajax-product-brand', 'ApiProductController@ajaxProductBrand');
+    Route::post('product-brand', 'ApiProductController@getProductByBrand');
     Route::get('list/ajax', 'ApiProductController@listProductAjaxSimple');
 
     /* photo */

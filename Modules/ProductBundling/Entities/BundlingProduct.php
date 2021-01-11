@@ -13,16 +13,12 @@ class BundlingProduct extends Model
         'id_bundling',
         'id_product',
         'id_brand',
-        'jumlah',
-        'discount'
-    ];
-
-    protected $casts = [
-        'id_bundling' => 'integer',
-        'id_product' => 'integer',
-        'id_brand' => 'integer',
-        'jumlah' => 'integer',
-        'discount' => 'decimal:2'
+        'id_product_variant_group',
+        'bundling_product_qty',
+        'bundling_product_discount_type',
+        'bundling_product_discount',
+        'charged_central',
+        'charged_outlet'
     ];
 
     public function products()

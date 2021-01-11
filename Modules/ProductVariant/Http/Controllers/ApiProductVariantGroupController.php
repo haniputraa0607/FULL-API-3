@@ -150,7 +150,7 @@ class ApiProductVariantGroupController extends Controller
         return response()->json(MyHelper::checkGet($get));
     }
 
-    public function productVariantGroupListAjax($idProduct){
+    public function productVariantGroupListAjax($idProduct, $returnType = 'json'){
         $get = ProductVariantGroup::where('id_product', $idProduct)
             ->with('product_variant_pivot_simple')
             ->select('product_variant_groups.id_product_variant_group')
@@ -169,7 +169,12 @@ class ApiProductVariantGroupController extends Controller
             }
             $result[] = $dataResult;
         }
-        return response()->json(MyHelper::checkGet($result));
+
+        if($returnType == 'json'){
+            return response()->json(MyHelper::checkGet($result));
+        }else{
+            return $result;
+        }
     }
 
     public function removeProductVariantGroup(Request $request){
@@ -548,9 +553,18 @@ class ApiProductVariantGroupController extends Controller
                     foreach ($arrCombinations as $group){
                         //search id product variant for insert into product variant pivot
                         $arrTmp = [];
-                        foreach ($group as $g){
-                            $id = explode('-',$g)[0]??'';
-                            $name = explode('-',$g)[1]??'';
+                        if(is_array($group)){
+                            foreach ($group as $g){
+                                $id = explode('-',$g)[0]??'';
+                                $name = explode('-',$g)[1]??'';
+                                $searchId = ProductVariant::where('id_parent', $id)->where('product_variant_name', $name)->first();
+                                if($searchId !== false){
+                                    $arrTmp[] = $searchId['id_product_variant'];
+                                }
+                            }
+                        }else{
+                            $id = explode('-',$group)[0]??'';
+                            $name = explode('-',$group)[1]??'';
                             $searchId = ProductVariant::where('id_parent', $id)->where('product_variant_name', $name)->first();
                             if($searchId !== false){
                                 $arrTmp[] = $searchId['id_product_variant'];
