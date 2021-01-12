@@ -13,6 +13,7 @@ use Modules\Brand\Entities\BrandOutlet;
 use Modules\Brand\Entities\BrandProduct;
 use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductGlobalPrice;
+use Modules\Product\Entities\ProductModifierGroup;
 use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\ProductBundling\Entities\Bundling;
 use Modules\ProductBundling\Entities\BundlingOutlet;
@@ -36,8 +37,16 @@ class ApiBundlingController extends Controller
      */
     public function index(Bundling $bundling)
     {
-        $bundling = Bundling::with(['bundling_product'])->paginate(20);
-        
+        $bundling = Bundling::with(['bundling_product'])->paginate(20)->toArray();
+
+        foreach ($bundling['data'] as $key=>$b){
+            $idProd = array_column($b['bundling_product'], 'id_product');
+            $getBrands = BrandProduct::join('brands', 'brands.id_brand', 'brand_product.id_brand')
+                        ->whereIn('brand_product.id_product', $idProd)
+                        ->groupBy('brands.id_brand')->select('brands.id_brand', 'name_brand')
+                        ->get()->toArray();
+            $bundling['data'][$key]['brands'] = $getBrands;
+        }
         return MyHelper::checkGet($bundling);
     }
 
@@ -51,12 +60,24 @@ class ApiBundlingController extends Controller
         $post = $request->json()->all();
         if(isset($post['data_product']) && !empty($post['data_product'])){
             DB::beginTransaction();
+                $checkCode = Bundling::where('bundling_code', $post['bundling_code'])->first();
+                if(!empty($checkCode)){
+                    DB::rollback();
+                    return response()->json(['status' => 'fail', 'messages' => ['Bundling ID can not be same']]);
+                }
+
+                $isAllOutlet = 0;
+                if(in_array("all", $post['id_outlet'])){
+                    $isAllOutlet = 1;
+                }
                 //create bundling
                 $createBundling = [
+                    'bundling_code' => $post['bundling_code'],
                     'bundling_name' => $post['bundling_name'],
                     'start_date' => date('Y-m-d H:i:s', strtotime($post['bundling_start'])),
                     'end_date' => date('Y-m-d H:i:s', strtotime($post['bundling_end'])),
-                    'bundling_description' => $post['bundling_description']
+                    'bundling_description' => $post['bundling_description'],
+                    'all_outlet' => $isAllOutlet
                 ];
                 $create = Bundling::create($createBundling);
 
@@ -91,6 +112,8 @@ class ApiBundlingController extends Controller
 
                 //create bundling product
                 $bundlingProduct = [];
+                $beforePrice = 0;
+                $afterPrice = 0;
                 foreach ($post['data_product'] as $product){
                     $bundlingProduct[] = [
                         'id_bundling' => $create['id_bundling'],
@@ -105,6 +128,22 @@ class ApiBundlingController extends Controller
                         'created_at' => date('Y-m-d H:i:s'),
                         'updated_at' => date('Y-m-d H:i:s')
                     ];
+
+                    $price = ProductGlobalPrice::where('id_product', $product['id_product'])->first()['product_global_price']??0;
+                    if(!empty($product['id_product_variant_group'])){
+                        $price = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                    }
+
+                    $price = (float)$price;
+                    if(strtolower($product['discount_type']) == 'nominal'){
+                        $calculate = ($price - $product['discount']);
+                    }else{
+                        $discount = $price*($product['discount']/100);
+                        $calculate = ($price - $discount);
+                    }
+                    $calculate = $calculate * $product['qty'];
+                    $afterPrice = $afterPrice + $calculate;
+                    $beforePrice = $beforePrice + ($price * $product['qty']);
                 }
 
                 $insertBundlingProduct = BundlingProduct::insert($bundlingProduct);
@@ -113,21 +152,27 @@ class ApiBundlingController extends Controller
                     return response()->json(['status' => 'fail', 'messages' => ['Failed insert list product']]);
                 }
 
-                //create bundling outlet/outlet available
-                $bundlingOutlet = [];
-                foreach ($post['id_outlet'] as $outlet){
-                    $bundlingOutlet[] = [
-                        'id_bundling' => $create['id_bundling'],
-                        'id_outlet' => $outlet,
-                        'created_at' => date('Y-m-d H:i:s'),
-                        'updated_at' => date('Y-m-d H:i:s')
-                    ];
+                //update price
+                Bundling::where('id_bundling', $create['id_bundling'])->update(['bundling_price_before_discount' => $beforePrice, 'bundling_price_after_discount' => $afterPrice]);
+
+                if($isAllOutlet == 0){
+                    //create bundling outlet/outlet available
+                    $bundlingOutlet = [];
+                    foreach ($post['id_outlet'] as $outlet){
+                        $bundlingOutlet[] = [
+                            'id_bundling' => $create['id_bundling'],
+                            'id_outlet' => $outlet,
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ];
+                    }
+                    $bundlingOutlet = BundlingOutlet::insert($bundlingOutlet);
+                    if(!$bundlingOutlet){
+                        DB::rollback();
+                        return response()->json(['status' => 'fail', 'messages' => ['Failed insert outlet available']]);
+                    }
                 }
-                $bundlingOutlet = BundlingOutlet::insert($bundlingOutlet);
-                if(!$bundlingOutlet){
-                    DB::rollback();
-                    return response()->json(['status' => 'fail', 'messages' => ['Failed insert outlet available']]);
-                }
+
                 DB::commit();
             return response()->json(['status' => 'success']);
         }else{
@@ -156,6 +201,14 @@ class ApiBundlingController extends Controller
                         ->select('products.id_product', 'products.product_code', 'products.product_name')->get()->toArray();
                     $bp['product_variant'] = [];
                     $bp['product_variant'] = app($this->product_variant_group)->productVariantGroupListAjax($bp['id_product'], 'array');
+                    $bp['price'] = 0;
+                    if(!empty($bp['id_product_variant_group'])){
+                        $price = ProductVariantGroup::where('id_product_variant_group', $bp['id_product_variant_group'])->selectRaw('FORMAT(product_variant_group_price, 0) as price')->first();
+                        $bp['price'] = $price['price']??0;
+                    }elseif(!empty($bp['id_product'])){
+                        $price = ProductGlobalPrice::where('id_product', $bp['id_product'])->selectRaw('FORMAT(product_global_price, 0) as price')->first();
+                        $bp['price'] = $price['price']??0;
+                    }
                 }
             }
 
@@ -193,12 +246,19 @@ class ApiBundlingController extends Controller
         $post = $request->json()->all();
         if(isset($post['data_product']) && !empty($post['data_product'])){
             DB::beginTransaction();
+
+            $isAllOutlet = 0;
+            if(in_array("all", $post['id_outlet'])){
+                $isAllOutlet = 1;
+            }
+
             //update bundling
             $updateBundling = [
                 'bundling_name' => $post['bundling_name'],
                 'start_date' => date('Y-m-d H:i:s', strtotime($post['bundling_start'])),
                 'end_date' => date('Y-m-d H:i:s', strtotime($post['bundling_end'])),
-                'bundling_description' => $post['bundling_description']
+                'bundling_description' => $post['bundling_description'],
+                'all_outlet' => $isAllOutlet
             ];
             $update = Bundling::where('id_bundling', $post['id_bundling'])->update($updateBundling);
 
@@ -231,6 +291,8 @@ class ApiBundlingController extends Controller
                 }
             }
 
+            $afterPrice = 0;
+            $beforePrice = 0;
             //update bundling product
             foreach ($post['data_product'] as $product){
                 $bundlingProduct = [
@@ -256,7 +318,26 @@ class ApiBundlingController extends Controller
                     DB::rollback();
                     return response()->json(['status' => 'fail', 'messages' => ['Failed save list product']]);
                 }
+
+                $price = ProductGlobalPrice::where('id_product', $product['id_product'])->first()['product_global_price']??0;
+                if(!empty($product['id_product_variant_group'])){
+                    $price = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                }
+
+                $price = (float)$price;
+                if(strtolower($product['discount_type']) == 'nominal'){
+                    $calculate = ($price - $product['discount']);
+                }else{
+                    $discount = $price*($product['discount']/100);
+                    $calculate = ($price - $discount);
+                }
+                $calculate = $calculate * $product['qty'];
+                $afterPrice = $afterPrice + $calculate;
+                $beforePrice = $beforePrice + ($price * $product['qty']);
             }
+
+            //update price
+            Bundling::where('id_bundling', $post['id_bundling'])->update(['bundling_price_before_discount' => $beforePrice, 'bundling_price_after_discount' => $afterPrice]);
 
             //delete bundling outlet
             $delete = BundlingOutlet::where('id_bundling', $post['id_bundling'])->delete();
@@ -266,21 +347,24 @@ class ApiBundlingController extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['Failed delete outlet available']]);
             }
 
-            //create bundling outlet/outlet available
-            $bundlingOutlet = [];
-            foreach ($post['id_outlet'] as $outlet){
-                $bundlingOutlet[] = [
-                    'id_bundling' => $post['id_bundling'],
-                    'id_outlet' => $outlet,
-                    'created_at' => date('Y-m-d H:i:s'),
-                    'updated_at' => date('Y-m-d H:i:s')
-                ];
+            if($isAllOutlet == 0){
+                //create bundling outlet/outlet available
+                $bundlingOutlet = [];
+                foreach ($post['id_outlet'] as $outlet){
+                    $bundlingOutlet[] = [
+                        'id_bundling' => $post['id_bundling'],
+                        'id_outlet' => $outlet,
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+                }
+                $bundlingOutlet = BundlingOutlet::insert($bundlingOutlet);
+                if(!$bundlingOutlet){
+                    DB::rollback();
+                    return response()->json(['status' => 'fail', 'messages' => ['Failed insert outlet available']]);
+                }
             }
-            $bundlingOutlet = BundlingOutlet::insert($bundlingOutlet);
-            if(!$bundlingOutlet){
-                DB::rollback();
-                return response()->json(['status' => 'fail', 'messages' => ['Failed insert outlet available']]);
-            }
+
             DB::commit();
             return response()->json(['status' => 'success']);
         }else{
@@ -302,9 +386,20 @@ class ApiBundlingController extends Controller
         $post = $request->json()->all();
         if(isset($post['brands']) && !empty($post['brands'])){
             $idBrand = array_column($post['brands'], 'value');
+            $count = count($idBrand);
+            $paramValue = '';
+            foreach ($idBrand as $index => $p){
+                if($index !== $count-1){
+                    $paramValue .= 'bo.id_brand = "'.$p.'" OR ';
+                }else{
+                    $paramValue .= 'bo.id_brand = "'.$p.'"';
+                }
+            }
+
             $outlets = Outlet::join('brand_outlet as bo', 'bo.id_outlet', 'outlets.id_outlet')
-                ->groupBy('outlets.id_outlet')
-                ->whereIn('bo.id_brand', $idBrand)
+                ->groupBy('bo.id_outlet')
+                ->whereRaw($paramValue)
+                ->havingRaw('COUNT(*) >= '.$count)
                 ->select('outlets.id_outlet', 'outlets.outlet_code', 'outlets.outlet_name')
                 ->orderBy('outlets.outlet_code', 'asc')
                 ->get()->toArray();
@@ -366,12 +461,33 @@ class ApiBundlingController extends Controller
             }
 
             $variants = [];
+            $extraModifier = [];
+            $selectedExtraMod = [];
             if($p['product_variant_status'] && !empty($p['id_product_variant_group'])){
                 $variants = ProductVariantGroup::join('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
                     ->join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
                     ->where('product_variant_groups.id_product_variant_group', $p['id_product_variant_group'])
                     ->select('product_variants.id_product_variant', 'product_variant_pivot.id_product_variant_group', 'product_variant_name')
                     ->get()->toArray();
+                $idVariant = array_column($variants, 'id_product_variant');
+                $getExtraModifier = ProductModifierGroup::join('product_modifier_group_pivots', 'product_modifier_groups.id_product_modifier_group', 'product_modifier_group_pivots.id_product_modifier_group')
+                                    ->join('product_modifiers', 'product_modifiers.id_product_modifier_group', 'product_modifier_groups.id_product_modifier_group')
+                                    ->where('id_product', $p['id_product'])->orWhereIn('id_product_variant', $idVariant)
+                                    ->orderBy('product_modifiers.id_product_modifier_group', 'asc')
+                                    ->orderBy('product_modifier_order', 'asc')
+                                    ->select('id_product_modifier', 'text_detail_trx', 'product_modifiers.id_product_modifier_group')->get()->toArray();
+
+                foreach ($getExtraModifier as $em){
+                    $check = array_search($em['id_product_modifier_group'], array_column($selectedExtraMod, 'id_product_modifier_group'));
+                    if($check === false){
+                        $extraModifier[] = $em['id_product_modifier'];
+                        $selectedExtraMod[] = [
+                            'id_product_modifier_group' => $em['id_product_modifier_group'],
+                            'id_product_variant' => $em['id_product_modifier'],
+                            'product_variant_name' => $em['text_detail_trx']
+                        ];
+                    }
+                }
             }
 
             $price = (float)$price;
@@ -392,27 +508,45 @@ class ApiBundlingController extends Controller
                     'id_brand' => $p['id_brand'],
                     'id_bundling' => $p['id_bundling'],
                     'id_bundling_product' => $p['id_bundling_product'],
+                    'id_product_variant_group' => $p['id_product_variant_group'],
                     'product_name' => $p['product_name'],
                     'product_code' => $p['product_code'],
                     'product_description' => $p['product_description'],
-                    'variants' => $variants
+                    'extra_modifiers' => $extraModifier,
+                    'variants' => array_merge($variants, $selectedExtraMod)
                 ];
             }
         }
 
         $result = [
-            'bundling' => [
-                'id_bundling' => $getProductBundling[0]['id_bundling'],
-                'bundling_name' => $getProductBundling[0]['bundling_name'],
-                'bundling_code' => $getProductBundling[0]['bundling_code'],
-                'bundling_description' => $getProductBundling[0]['bundling_description'],
-                'bundling_image_detail' => (!empty($getProductBundling[0]['image_detail']) ? config('url.storage_url_api').$getProductBundling[0]['image_detail'] : ''),
-                'bundling_base_price' => $priceForList,
-                'bundling_base_price_no_discount' => $priceForListNoDiscount
-            ],
+            'id_bundling' => $getProductBundling[0]['id_bundling'],
+            'bundling_name' => $getProductBundling[0]['bundling_name'],
+            'bundling_code' => $getProductBundling[0]['bundling_code'],
+            'bundling_description' => $getProductBundling[0]['bundling_description'],
+            'bundling_image_detail' => (!empty($getProductBundling[0]['image_detail']) ? config('url.storage_url_api').$getProductBundling[0]['image_detail'] : ''),
+            'bundling_base_price' => $priceForList,
+            'bundling_base_price_no_discount' => $priceForListNoDiscount,
             'products' => $products
         ];
 
         return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function globalPrice(Request $request){
+        $post = $request->json()->all();
+        if(!isset($post['id_product']) && empty($post['id_product']) &&
+            !isset($post['id_product_variant_group']) && empty($post['id_product_variant_group'])){
+
+            return ['status' => 'fail','messages' => ['ID product and ID product variant group can not be empty']];
+        }
+
+        $price = [];
+        if(!empty($post['id_product'])){
+            $price = ProductGlobalPrice::where('id_product', $post['id_product'])->selectRaw('FORMAT(product_global_price, 0) as price')->first();
+        }elseif(!empty($post['id_product_variant_group'])){
+            $price = ProductVariantGroup::where('id_product_variant_group', $post['id_product_variant_group'])->selectRaw('FORMAT(product_variant_group_price, 0) as price')->first();
+        }
+
+        return response()->json(MyHelper::checkGet($price));
     }
 }

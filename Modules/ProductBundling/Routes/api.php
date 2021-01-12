@@ -24,4 +24,5 @@ Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'sco
     Route::post('be/detail', 'ApiBundlingController@detail');
     Route::post('update', 'ApiBundlingController@update');
     Route::any('outlet-available', 'ApiBundlingController@outletAvailable');
+    Route::post('global-price', 'ApiBundlingController@globalPrice');
 });
