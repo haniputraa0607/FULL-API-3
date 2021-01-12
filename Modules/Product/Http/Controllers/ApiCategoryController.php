@@ -609,14 +609,40 @@ class ApiCategoryController extends Controller
 
     function getBundling($post, $brands, $outlet, $resProduct){
         $resBundling = [];
-        $bundlings = Bundling::join('bundling_outlet as bo', 'bo.id_bundling', 'bundling.id_bundling')
+        $count = count($brands);
+        $paramValue = '';
+        foreach (array_values($brands) as $index => $p){
+            if($index !== $count-1){
+                $paramValue .= 'brand_product.id_brand = "'.$p.'" OR ';
+            }else{
+                $paramValue .= 'brand_product.id_brand = "'.$p.'"';
+            }
+        }
+
+        $bundlings1 = Bundling::join('bundling_product as bp', 'bp.id_bundling', 'bundling.id_bundling')
+            ->join('brand_product', 'brand_product.id_product', 'bp.id_product')
+            ->join('brand_outlet', 'brand_outlet.id_brand', 'brand_product.id_brand')
+            ->where('brand_outlet.id_outlet', $post['id_outlet'])
+            ->where('bundling.all_outlet', 1)
+            ->whereRaw('('.$paramValue.')')
+            ->havingRaw('COUNT(*) <= '.$count)
+            ->whereRaw('NOW() >= start_date AND NOW() <= end_date')
+            ->groupBy('brand_outlet.id_outlet')
+            ->pluck('bundling.id_bundling')->toArray();
+
+        $bundlings2 = Bundling::join('bundling_outlet as bo', 'bo.id_bundling', 'bundling.id_bundling')
             ->join('bundling_product as bp', 'bp.id_bundling', 'bundling.id_bundling')
             ->join('brand_product', 'brand_product.id_product', 'bp.id_product')
+            ->where('all_outlet', 0)
             ->where('bo.id_outlet', $post['id_outlet'])
-            ->whereIn('brand_product.id_brand', $brands)
+            ->whereRaw('('.$paramValue.')')
+            ->havingRaw('COUNT(*) <= '.$count)
             ->whereRaw('NOW() >= start_date AND NOW() <= end_date')
-            ->groupBy('bundling.id_bundling')
+            ->groupBy('bo.id_outlet')
             ->pluck('bundling.id_bundling')->toArray();
+
+        $bundlings = array_merge($bundlings1,$bundlings2);
+        $bundlings = array_unique($bundlings);
 
         //calculate price
         foreach ($bundlings as $bundling){
@@ -672,7 +698,7 @@ class ApiCategoryController extends Controller
                 "id_product" => null,
                 "product_name" => $getProduct[0]['bundling_name']??'',
                 "product_code" => $getProduct[0]['bundling_code']??'',
-                "product_description" => $getProduct[0]['bundling_code']??'',
+                "product_description" => $getProduct[0]['bundling_description']??'',
                 "product_variant_status" => null,
                 "product_price" => (int)$priceForList,
                 "product_stock_status" => ($stockStatus == 0 ? 'Sold Out' : 'Available'),
@@ -692,7 +718,7 @@ class ApiCategoryController extends Controller
                         "id_bundling" => $res['id_bundling'],
                         "id_product" => null,
                         "product_name" => $res['product_name'],
-                        "product_code" => $res['product_name'],
+                        "product_code" => $res['product_code'],
                         "product_description" => $res['product_description'],
                         "product_variant_status" => null,
                         "product_price" => $res['product_price'],
@@ -716,7 +742,7 @@ class ApiCategoryController extends Controller
                         "id_bundling" => $res['id_bundling'],
                         "id_product" => null,
                         "product_name" => $res['product_name'],
-                        "product_code" => $res['product_name'],
+                        "product_code" => $res['product_code'],
                         "product_description" => $res['product_description'],
                         "product_variant_status" => null,
                         "product_price" => $res['product_price'],

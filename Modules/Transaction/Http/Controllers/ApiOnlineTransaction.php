@@ -2601,10 +2601,13 @@ class ApiOnlineTransaction extends Controller
         $result['item'] = array_values($tree);
 
         // check bundling product
-        $itemBundlings = $this->checkBundlingProduct($post, $outlet);
-        $result['item_bundling'] = $itemBundlings['item_bundling']??[];
-        $totalItem = $totalItem + $itemBundlings['total_item_bundling']??0;
-        $error_msg = array_merge($error_msg, $itemBundlings['error_message']??[]);
+        $result['item_bundling'] = [];
+        if(!empty($post['item_bundling'])){
+            $itemBundlings = $this->checkBundlingProduct($post, $outlet);
+            $result['item_bundling'] = $itemBundlings['item_bundling']??[];
+            $totalItem = $totalItem + $itemBundlings['total_item_bundling']??0;
+            $error_msg = array_merge($error_msg, $itemBundlings['error_message']??[]);
+        }
 
         // Additional Plastic Payment
         $plastic = app($this->plastic)->check($post);
@@ -2775,7 +2778,7 @@ class ApiOnlineTransaction extends Controller
         $error_msg = [];
         $subTotalBundling = 0;
         $totalItemBundling = 0;
-        foreach ($post['item_bundling'] as $key=>$bundling){
+        foreach ($post['item_bundling']??[] as $key=>$bundling){
             $getBundling = Bundling::where('id_bundling', $bundling['id_bundling'])->whereRaw('NOW() >= start_date AND NOW() <= end_date')->first();
             if(empty($getBundling)){
                 $error_msg[] = MyHelper::simpleReplace(
@@ -2804,9 +2807,9 @@ class ApiOnlineTransaction extends Controller
             }
 
             //check count product in bundling
-            $getBundlingProduct = BundlingProduct::where('id_bundling', $bundling['id_bundling'])->count();
+            $getBundlingProduct = BundlingProduct::where('id_bundling', $bundling['id_bundling'])->pluck('bundling_product_qty')->toArray();
 
-            if($getBundlingProduct !== count($bundling['products'])){
+            if(array_sum($getBundlingProduct) !== count($bundling['products'])){
                 $error_msg[] = MyHelper::simpleReplace(
                     'Jumlah product pada bundling %bundling_name% tidak sesuai',
                     [
@@ -3018,6 +3021,7 @@ class ApiOnlineTransaction extends Controller
 
             $total = $bundlingBasePrice * $bundling['bundling_qty'];
             $post['item_bundling'][$key] = [
+                "id_custome" => $bundling['id_custom']??null,
                 "id_bundling" => $getBundling['id_bundling'],
                 "bundling_name" => $getBundling['bundling_name'],
                 "bundling_code" => $getBundling['bundling_code'],
