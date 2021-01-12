@@ -69,6 +69,7 @@ use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use function foo\func;
 use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\Product\Entities\ProductGlobalPrice;
+use App\Http\Models\TransactionPickupGoSendUpdate;
 
 class ApiOutletApp extends Controller
 {
@@ -1656,7 +1657,7 @@ class ApiOutletApp extends Controller
         return response()->json(MyHelper::checkGet($result));
     }
 
-    public function rejectOrder(DetailOrder $request)
+    public function rejectOrder(DetailOrder $request, $dateNow = null)
     {
         $post = $request->json()->all();
 
@@ -1664,7 +1665,7 @@ class ApiOutletApp extends Controller
 
         $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->where('order_id', $post['order_id'])
-            ->whereDate('transaction_date', date('Y-m-d'))
+            ->whereDate('transaction_date', $dateNow ?? date('Y-m-d'))
             ->where('transactions.id_outlet', $outlet->id_outlet)
             ->first();
 
@@ -2375,23 +2376,29 @@ class ApiOutletApp extends Controller
         $destination['address']   = $trx['transaction_pickup']['transaction_pickup_go_send']['destination_address'];
         $destination['note']      = $trx['transaction_pickup']['transaction_pickup_go_send']['destination_note'];
 
-        $packageDetail = Setting::where('key', 'go_send_package_detail')->first();
-
         //update id from go-send
         $updateGoSend = TransactionPickupGoSend::find($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
-        $maxRetry = Setting::select('value')->where('key', 'booking_delivery_max_retry')->pluck('value')->first()?:5;
-        if ($fromRetry && $updateGoSend->retry_count >= $maxRetry) {
-            // kirim notifikasi
-            $dataNotif = [
-                'subject' => 'Driver Not Found',
-                'string_body' => $trx['transaction_pickup']['order_id'] . ' - '. $trx['transaction_receipt_number'],
-                'type' => 'trx',
-                'id_reference'=> $trx['id_transaction']
-            ];
-            $this->outletNotif($dataNotif,$trx->id_outlet);
+        if ($fromRetry) {
+            $time_limit = 1200; // 20 minutes
+            $firstbook = TransactionPickupGoSendUpdate::select('created_at')->where('go_send_order_no', $updateGoSend->go_send_order_no)->orderBy('id_transaction_pickup_go_send_update')->pluck('created_at')->first();
+            if ((time() - strtotime($firstbook)) > $time_limit) {
+                if (!$updateGoSend->stop_booking_at) {
+                    $updateGoSend->update(['stop_booking_at' => date('Y-m-d H:i:s')]);
+                    // kirim notifikasi
+                    $dataNotif = [
+                        'subject' => 'Driver Not Found',
+                        'string_body' => $trx['transaction_pickup']['order_id'] . ' - '. $trx['transaction_receipt_number'],
+                        'type' => 'trx',
+                        'id_reference'=> $trx['id_transaction']
+                    ];
+                    $this->outletNotif($dataNotif,$trx->id_outlet);
+                }
 
-            return ['status'  => 'fail', 'messages' => ['Retry reach limit']];
+                return ['status'  => 'fail', 'messages' => ['Retry reach limit']];
+            }
         }
+
+        $packageDetail = Setting::where('key', 'go_send_package_detail')->first();
 
         if ($packageDetail) {
             $packageDetail = str_replace('%order_id%', $trx['transaction_pickup']['order_id'], $packageDetail['value']);
@@ -2439,6 +2446,7 @@ class ApiOutletApp extends Controller
             $updateGoSend->vehicle_number    = $status['vehicleNumber'] ?? null;
             $updateGoSend->live_tracking_url = $status['liveTrackingUrl'] ?? null;
             $updateGoSend->retry_count = $fromRetry?($updateGoSend->retry_count+1):0;
+            $updateGoSend->stop_booking_at = null;
             $updateGoSend->save();
 
             if (!$updateGoSend) {
@@ -4031,17 +4039,17 @@ class ApiOutletApp extends Controller
                     'transaction_receipt_number',
                     'transactions.id_transaction',
                     'id_outlet',
-                    'transaction_date'
+                    'transaction_date',
+                    'stop_booking_at'
                 ])->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
                 ->join('transaction_pickup_go_sends', 'transaction_pickup_go_sends.id_transaction_pickup', '=', 'transaction_pickups.id_transaction_pickup')
                 ->whereNull('transaction_pickups.reject_at')
                 ->whereDate('transaction_date', date('Y-m-d'))
+                ->whereNotNull('stop_booking_at')
                 ->where([
                     'transaction_payment_status' => 'Completed',
                     'transaction_pickup_go_sends.latest_status' => 'no_driver',
-                    'retry_count' => '5',
                 ])
-                ->where('transaction_pickup_go_sends.updated_at', '<', date('Y-m-d H:i:s', strtotime('-30minutes')))
                 ->with('outlet')
                 ->get();
             $processed = [
@@ -4051,7 +4059,7 @@ class ApiOutletApp extends Controller
                 'errors' => [],
             ];
             foreach ($transactions as $transaction) {
-                $difference = ceil((time() - strtotime($transaction['updated_at']))/60) - 30;
+                $difference = ceil((time() - strtotime($transaction['stop_booking_at']))/60);
                 if(!$difference) {
                     continue;
                 }
