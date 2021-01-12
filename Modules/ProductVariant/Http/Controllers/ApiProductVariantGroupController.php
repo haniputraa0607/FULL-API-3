@@ -151,7 +151,9 @@ class ApiProductVariantGroupController extends Controller
     }
 
     public function productVariantGroupListAjax($idProduct, $returnType = 'json'){
-        $get = ProductVariantGroup::where('id_product', $idProduct)
+        $get = ProductVariantGroup::join('products', 'products.id_product', 'product_variant_groups.id_product')
+            ->where('product_variant_groups.id_product', $idProduct)
+            ->where('products.product_variant_status', 1)
             ->with('product_variant_pivot_simple')
             ->select('product_variant_groups.id_product_variant_group')
             ->get();

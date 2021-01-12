@@ -15,6 +15,8 @@ class Bundling extends Model
     protected $fillable = [
         'bundling_code',
         'bundling_name',
+        'bundling_price_before_discount',
+        'bundling_price_after_discount',
         'image',
         'image_detail',
         'bundling_description',

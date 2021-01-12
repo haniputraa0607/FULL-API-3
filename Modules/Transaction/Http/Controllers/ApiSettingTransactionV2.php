@@ -312,7 +312,7 @@ class ApiSettingTransactionV2 extends Controller
                             $p['transaction_variant_subtotal'] = 0;
                         }
 
-                        foreach ($p['modifiers'] as $modifier) {
+                        foreach ($p['modifiers']??[] as $modifier) {
                             $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                             $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
                             if($different_price){
