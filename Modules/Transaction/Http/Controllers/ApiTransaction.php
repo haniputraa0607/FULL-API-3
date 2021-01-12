@@ -54,6 +54,7 @@ use Illuminate\Routing\Controller;
 
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use Modules\Transaction\Entities\LogInvalidTransaction;
+use Modules\Transaction\Entities\TransactionBundlingProduct;
 use Modules\Transaction\Http\Requests\RuleUpdate;
 
 use Modules\Transaction\Http\Requests\TransactionDetail;
@@ -1600,8 +1601,10 @@ class ApiTransaction extends Controller
                 ->join('cities', 'cities.id_city', 'outlets.id_city')
                 ->leftJoin('cities as c', 'c.id_city', 'users.id_city')
                 ->join('provinces', 'cities.id_province', 'provinces.id_province')
+                ->leftJoin('bundling_product','transaction_products.id_bundling_product','=','bundling_product.id_bundling_product')
+                ->leftJoin('bundling','bundling.id_bundling','=','bundling_product.id_bundling')
                 ->with(['transaction_payment_subscription', 'vouchers', 'promo_campaign', 'point_refund', 'point_use', 'subscription_user_voucher.subscription_user.subscription'])
-                ->addSelect('transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
+                ->addSelect('bundling.bundling_name', 'disburse_outlet_transactions.bundling_product_fee_central', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
                     'brands.name_brand', 'cities.city_name', 'c.city_name as user_city', 'provinces.province_name',
                     'disburse_outlet_transactions.fee_item', 'disburse_outlet_transactions.payment_charge', 'disburse_outlet_transactions.discount', 'disburse_outlet_transactions.subscription',
                     'disburse_outlet_transactions.point_use_expense',
@@ -1945,6 +1948,7 @@ class ApiTransaction extends Controller
                                 $html .= '<td></td>';
                             }
                         }
+                        $html .= '<td>'.$val['bundling_name'].'</td>';
                         $html .= '<td>'.implode(",",$modifier).'</td>';
                         $html .= '<td>'.$textMod.'</td>';
                         $html .= '<td>'.$val['transaction_product_price'].'</td>';
@@ -1964,7 +1968,7 @@ class ApiTransaction extends Controller
                             $html .= '<td>'.($val['transaction_product_price']+$priceMod).'</td>';
                         }
 
-                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                         $html .= '</tr>';
 
                         $totalMod = count($mod);
@@ -1978,6 +1982,7 @@ class ApiTransaction extends Controller
                                 $html .= '<td></td>';
                                 $html .= $addAdditionalColumnVariant;
                                 $html .= '<td></td>';
+                                $html .= '<td></td>';
                                 $html .= '<td>'.$mod[$i]['text']??''.'</td>';
                                 $html .= '<td></td>';
                                 $html .= '<td>'.$mod[$i]['transaction_product_modifier_price']??(int)'0'.'</td>';
@@ -1987,7 +1992,7 @@ class ApiTransaction extends Controller
                                 $html .= '<td>'.($mod[$i]['transaction_product_modifier_price']??0).'</td>';
                                 $html .= '<td>0</td>';
                                 $html .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
-                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                                 $html .= '</tr>';
                             }
                         }
@@ -2018,9 +2023,10 @@ class ApiTransaction extends Controller
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
+                                $html .= '<td></td>';
                                 $html .= '<td>'.abs($val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
                                 $html .= '<td>'.(-$val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
-                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                                 $html .= '</tr>';
                             }
                         }elseif(!empty($promoName2)){
@@ -2040,9 +2046,10 @@ class ApiTransaction extends Controller
                             $html .= '<td></td>';
                             $html .= '<td></td>';
                             $html .= '<td></td>';
+                            $html .= '<td></td>';
                             $html .= '<td>'.abs(abs($val['transaction_discount'])??0).'</td>';
                             $html .= '<td>'.(-abs($val['transaction_discount'])??0).'</td>';
-                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                             $html .= '</tr>';
                         }
 
@@ -2064,11 +2071,12 @@ class ApiTransaction extends Controller
                             $html .= $addAdditionalColumn;
                             $html .= '<td>Delivery'.$promoDiscountDelivery.'</td>';
                             $html .= $addAdditionalColumnVariant;
+                            $html .= '<td></td>';
                             $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                             $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
                             $html .= '<td>'.$discountDelivery.'</td>';
                             $html .= '<td>'.($val['transaction_shipment_go_send']-$discountDelivery??0).'</td>';
-                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                             $html .= '</tr>';
                         }
 
@@ -2079,12 +2087,14 @@ class ApiTransaction extends Controller
                         $html .= $addAdditionalColumn;
                         $html .= '<td>Fee</td>';
                         $html .= $addAdditionalColumnVariant;
+                        $html .= '<td></td>';
                         $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                         $html .= '<td>'.($val['transaction_grandtotal']-$sub).'</td>';
                         $html .= '<td>'.(float)$val['fee_item'].'</td>';
                         $html .= '<td>'.(float)$paymentCharge.'</td>';
                         $html .= '<td>'.(float)$val['discount_central'].'</td>';
                         $html .= '<td>'.(float)$val['subscription_central'].'</td>';
+                        $html .= '<td>'.(float)$val['bundling_product_fee_central'].'</td>';
                         $html .= '<td>'.(float)$val['income_outlet'].'</td>';
                         $html .= '<td>'.$payment.'</td>';
                         $html .= '<td>'.abs($poinUse).'</td>';
@@ -2353,6 +2363,70 @@ class ApiTransaction extends Controller
             $label = [];
             $label2 = [];
             $product_count=0;
+            //get item bundling
+            $listItemBundling = [];
+            $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
+                ->where('id_transaction', $id)->get()->toArray();
+            foreach ($getBundling as $key=>$bundling){
+                $listItemBundling[$key] = [
+                    'bundling_name' => $bundling['bundling_name'],
+                    'bundling_qty' => $bundling['transaction_bundling_product_qty'],
+                    'bundling_subtotal' => (int)$bundling['transaction_bundling_product_subtotal'],
+                    'bundling_sub_item' => '@'.(int)$bundling['transaction_bundling_product_base_price'],
+                ];
+
+                $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
+                        ->where('id_transaction_bundling_product', $bundling['id_transaction_bundling_product'])->get()->toArray();
+
+                $prod = [];
+                foreach ($bundlingProduct as $bp){
+                    $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                        ->whereNull('transaction_product_modifiers.id_product_modifier_group')
+                        ->where('id_transaction_product', $bp['id_transaction_product'])
+                        ->pluck('transaction_product_modifiers.text')->toArray();
+                    $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
+                            ->where('id_transaction_product', $bp['id_transaction_product'])
+                            ->pluck('product_variants.product_variant_name')->toArray();
+                    $variantNoPrice =  TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                        ->whereNotNull('transaction_product_modifiers.id_product_modifier_group')
+                        ->where('id_transaction_product', $bp['id_transaction_product'])
+                        ->pluck('transaction_product_modifiers.text')->toArray();
+
+                    $name = array_merge($variantPrice, $variantNoPrice, $mod);
+                    $check = array_search($bp['id_bundling_product'], array_column($prod, 'id_bundling_product'));
+                    if($check === false){
+                        if(!empty($name) || !empty($bp['transaction_product_note'])){
+                            $prod[] = [
+                                'id_bundling_product' => $bp['id_bundling_product'],
+                                'bundling_product_qty' => 1,
+                                'bundling_product_name' => $bp['product_name'],
+                                'products' => [
+                                    [
+                                        'product_name' => (empty(implode(', ', $name)) ? "" : implode(', ', $name)),
+                                        'product_note' => $bp['transaction_product_note']
+                                    ]
+                                ]
+                            ];
+                        }else{
+                            $prod[] = [
+                                'id_bundling_product' => $bp['id_bundling_product'],
+                                'bundling_product_qty' => 1,
+                                'bundling_product_name' => $bp['product_name'],
+                                'products' => []
+                            ];
+                        }
+                    }else{
+                        $prod[$check]['bundling_product_qty'] = $prod[$check]['bundling_product_qty'] + 1;
+                        $prod[$check]['products'][] = [
+                            'product_name' => implode(', ', $name),
+                            'product_note' => $bp['transaction_product_note']
+                        ];
+                    }
+                }
+
+                $listItemBundling[$key]['products'] = $prod;
+            }
+
             $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
                 $product_count += array_sum(array_column($val,'transaction_product_qty'));
                 $brand = Brand::select('name_brand')->find($key);
@@ -2820,6 +2894,8 @@ class ApiTransaction extends Controller
                 }
             }
 
+            $result['product_bundling_transaction_name'] = 'Bundling';
+            $result['product_bundling_transaction'] = $listItemBundling;
             $discount = 0;
             $quantity = 0;
             $keynya = 0;

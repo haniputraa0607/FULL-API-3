@@ -18,6 +18,7 @@
         <th style="background-color: #dcdcdc;" width="20"> MDR PG </th>
         <th style="background-color: #dcdcdc;" width="20"> Income Promo </th>
         <th style="background-color: #dcdcdc;" width="20"> Income Subscription </th>
+        <th style="background-color: #dcdcdc;" width="20"> Income Bundling Product </th>
         <th style="background-color: #dcdcdc;" width="20"> Income Outlet </th>
     </tr>
     </thead>
@@ -89,6 +90,7 @@
                 <td style="text-align: left">{{(float)$val['payment_charge']}}</td>
                 <td style="text-align: left">{{(float)$val['discount_central']}}</td>
                 <td style="text-align: left">{{(float)$val['subscription_central']}}</td>
+                <td style="text-align: left">{{(float)$val['bundling_product_fee_central']}}</td>
                 <td style="text-align: left">{{(float)$val['income_outlet']}}</td>
             </tr>
         @endforeach

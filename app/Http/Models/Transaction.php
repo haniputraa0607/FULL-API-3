@@ -160,7 +160,10 @@ class Transaction extends Model
 
     public function productTransaction() 
     {
-    	return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction')->where('type', 'Product')->orderBy('id_product');
+    	return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction')
+            ->where('type', 'Product')
+            ->whereNull('id_bundling_product')
+            ->orderBy('id_product');
 	}
 
 	public function plasticTransaction() 

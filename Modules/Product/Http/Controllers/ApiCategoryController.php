@@ -628,6 +628,7 @@ class ApiCategoryController extends Controller
                     'bundling_product.*', 'bundling.*')
                 ->get()->toArray();
 
+            $priceForListNoDiscount = 0;
             $priceForList = 0;
             $id_brand = [];
             $stockStatus = 1;
@@ -660,6 +661,7 @@ class ApiCategoryController extends Controller
                     }
                     $calculate = $calculate * $p['bundling_product_qty'];
                     $priceForList = $priceForList + $calculate;
+                    $priceForListNoDiscount = $priceForListNoDiscount + ($price * $p['bundling_product_qty']);
                 }else{
                     continue 2;
                 }
@@ -673,9 +675,10 @@ class ApiCategoryController extends Controller
                 "product_description" => $getProduct[0]['bundling_code']??'',
                 "product_variant_status" => null,
                 "product_price" => (int)$priceForList,
-                "product_stock_status" => ($stockStatus == 1 ? 'Sold Out' : 'Available'),
+                "product_stock_status" => ($stockStatus == 0 ? 'Sold Out' : 'Available'),
                 "product_price_raw" => (int)$priceForList,
                 "photo" => (!empty($getProduct[0]['image']) ? config('url.storage_url_api').$getProduct[0]['image'] : ''),
+                "product_price_no_discount" => $priceForListNoDiscount??0,
                 "is_promo" => 0,
                 "brands" => $id_brand,
                 "position" => 1
@@ -695,6 +698,7 @@ class ApiCategoryController extends Controller
                         "product_price" => $res['product_price'],
                         "product_stock_status" => $res['product_stock_status'],
                         "product_price_raw" => $res['product_price_raw'],
+                        "product_price_no_discount" => $res['product_price_no_discount'],
                         "photo" => $res['photo'],
                         "is_promo" => 0,
                         "position" => 1,
@@ -718,6 +722,7 @@ class ApiCategoryController extends Controller
                         "product_price" => $res['product_price'],
                         "product_stock_status" => $res['product_stock_status'],
                         "product_price_raw" => $res['product_price_raw'],
+                        "product_price_no_discount" => $res['product_price_no_discount'],
                         "photo" => $res['photo'],
                         "is_promo" => 0,
                         "position" => 1,

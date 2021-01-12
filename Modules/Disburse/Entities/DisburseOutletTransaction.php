@@ -22,6 +22,9 @@ class DisburseOutletTransaction extends Model
         'point_use_expense',//charged for outlet
         'subscription',//charged for outlet
         'subscription_central',
+        'bundling_product_total_discount',
+        'bundling_product_fee_outlet',
+        'bundling_product_fee_central',
         'fee', //percent fee of fee item
         'mdr_charged',
         'mdr',//percent fee of payment gateway
