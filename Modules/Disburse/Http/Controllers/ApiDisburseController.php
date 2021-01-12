@@ -1297,7 +1297,7 @@ class ApiDisburseController extends Controller
                         SUM(transactions.transaction_subtotal) as total_sub_total, 
                         SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
                         SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
-                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription,
+                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription, SUM(bundling_product_fee_central) total_income_bundling_product,
                         SUM(transactions.transaction_discount_delivery) total_discount_delivery');
 
         if($id_outlet){
@@ -1512,7 +1512,7 @@ class ApiDisburseController extends Controller
                         SUM(transactions.transaction_subtotal) as total_sub_total, 
                         SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
                         SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
-                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription,
+                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription, SUM(bundling_product_fee_central) total_income_bundling_product,
                         SUM(transactions.transaction_discount_delivery) total_discount_delivery');
 
         if($id_outlet){

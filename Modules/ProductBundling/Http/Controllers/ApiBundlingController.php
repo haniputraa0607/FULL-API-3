@@ -350,6 +350,7 @@ class ApiBundlingController extends Controller
             return ['status' => 'fail','messages' => ['Product not available in this outlet']];
         }
 
+        $priceForListNoDiscount = 0;
         $priceForList = 0;
         $products = [];
         foreach ($getProductBundling as $p){
@@ -364,33 +365,39 @@ class ApiBundlingController extends Controller
                 $price = $variantTree['base_price']??0;
             }
 
-            $variantDescription = '';
-            if(!empty($p['id_product_variant_group'])){
-                $variant = ProductVariantGroup::with(['product_variant_pivot'])->where('id_product_variant_group', $p['id_product_variant_group'])->first();
-                $variantDescription = implode(', ', array_column($variant['product_variant_pivot']->toArray()??[], 'product_variant_name'));
+            $variants = [];
+            if($p['product_variant_status'] && !empty($p['id_product_variant_group'])){
+                $variants = ProductVariantGroup::join('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
+                    ->join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
+                    ->where('product_variant_groups.id_product_variant_group', $p['id_product_variant_group'])
+                    ->select('product_variants.id_product_variant', 'product_variant_pivot.id_product_variant_group', 'product_variant_name')
+                    ->get()->toArray();
             }
 
             $price = (float)$price;
-            //calculate discount produk
-            if(strtolower($p['bundling_product_discount_type']) == 'nominal'){
-                $calculate = ($price - $p['bundling_product_discount']);
-            }else{
-                $discount = $price*($p['bundling_product_discount']/100);
-                $calculate = ($price - $discount);
-            }
-            $calculate = $calculate * $p['bundling_product_qty'];
-            $priceForList = $priceForList + $calculate;
+            for ($i=0;$i<$p['bundling_product_qty'];$i++){
+                $priceForListNoDiscount = $priceForListNoDiscount + $price;
 
-            $products[] = [
-                'id_product' => $p['id_product'],
-                'id_brand' => $p['id_brand'],
-                'id_bundling' => $p['id_bundling'],
-                'id_bundling_product' => $p['id_bundling_product'],
-                'product_name' => $p['product_name'],
-                'product_code' => $p['product_code'],
-                'product_description' => $p['product_description'],
-                'product_variant_description' => $variantDescription
-            ];
+                //calculate discount produk
+                if(strtolower($p['bundling_product_discount_type']) == 'nominal'){
+                    $calculate = ($price - $p['bundling_product_discount']);
+                }else{
+                    $discount = $price*($p['bundling_product_discount']/100);
+                    $calculate = ($price - $discount);
+                }
+                $priceForList = $priceForList + $calculate;
+
+                $products[] = [
+                    'id_product' => $p['id_product'],
+                    'id_brand' => $p['id_brand'],
+                    'id_bundling' => $p['id_bundling'],
+                    'id_bundling_product' => $p['id_bundling_product'],
+                    'product_name' => $p['product_name'],
+                    'product_code' => $p['product_code'],
+                    'product_description' => $p['product_description'],
+                    'variants' => $variants
+                ];
+            }
         }
 
         $result = [
@@ -400,7 +407,8 @@ class ApiBundlingController extends Controller
                 'bundling_code' => $getProductBundling[0]['bundling_code'],
                 'bundling_description' => $getProductBundling[0]['bundling_description'],
                 'bundling_image_detail' => (!empty($getProductBundling[0]['image_detail']) ? config('url.storage_url_api').$getProductBundling[0]['image_detail'] : ''),
-                'bundling_base_price' => $priceForList
+                'bundling_base_price' => $priceForList,
+                'bundling_base_price_no_discount' => $priceForListNoDiscount
             ],
             'products' => $products
         ];

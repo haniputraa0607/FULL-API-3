@@ -17,6 +17,8 @@ use App\Http\Models\ProductPrice;
 use App\Http\Models\Setting;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionMultiplePayment;
+use App\Http\Models\TransactionProduct;
+use App\Http\Models\TransactionProductModifier;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentMidtran;
@@ -55,10 +57,12 @@ use Modules\Product\Entities\ProductModifierStockStatusUpdate;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\ProductVariant\Entities\ProductVariantPivot;
+use Modules\ProductVariant\Entities\TransactionProductVariant;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
 use Modules\Shift\Entities\Shift;
 use Modules\Shift\Entities\UserOutletApp;
+use Modules\Transaction\Entities\TransactionBundlingProduct;
 use Modules\Transaction\Http\Requests\TransactionDetail;
 use Carbon\Carbon;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
@@ -3138,6 +3142,73 @@ class ApiOutletApp extends Controller
                 }
             }
         }
+
+        //get item bundling
+        $listItemBundling = [];
+        $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
+            ->where('id_transaction', $id)->get()->toArray();
+        foreach ($getBundling as $key=>$bundling){
+            $listItemBundling[$key] = [
+                'bundling_name' => $bundling['bundling_name'],
+                'bundling_qty' => $bundling['transaction_bundling_product_qty'],
+                'bundling_subtotal' => (int)$bundling['transaction_bundling_product_subtotal'],
+                'bundling_sub_item' => '@'.(int)$bundling['transaction_bundling_product_base_price'],
+            ];
+
+            $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
+                ->where('id_transaction_bundling_product', $bundling['id_transaction_bundling_product'])->get()->toArray();
+
+            $prod = [];
+            foreach ($bundlingProduct as $bp){
+                $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                    ->whereNull('transaction_product_modifiers.id_product_modifier_group')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->pluck('transaction_product_modifiers.text')->toArray();
+                $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->pluck('product_variants.product_variant_name')->toArray();
+                $variantNoPrice =  TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                    ->whereNotNull('transaction_product_modifiers.id_product_modifier_group')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->pluck('transaction_product_modifiers.text')->toArray();
+
+                $name = array_merge($variantPrice, $variantNoPrice, $mod);
+                $check = array_search($bp['id_bundling_product'], array_column($prod, 'id_bundling_product'));
+                if($check === false){
+                    if(!empty($name) || !empty($bp['transaction_product_note'])){
+                        $prod[] = [
+                            'id_bundling_product' => $bp['id_bundling_product'],
+                            'bundling_product_qty' => 1,
+                            'bundling_product_name' => $bp['product_name'],
+                            'products' => [
+                                [
+                                    'product_name' => (empty(implode(', ', $name)) ? "" : implode(', ', $name)),
+                                    'product_note' => $bp['transaction_product_note']
+                                ]
+                            ]
+                        ];
+                    }else{
+                        $prod[] = [
+                            'id_bundling_product' => $bp['id_bundling_product'],
+                            'bundling_product_qty' => 1,
+                            'bundling_product_name' => $bp['product_name'],
+                            'products' => []
+                        ];
+                    }
+                }else{
+                    $prod[$check]['bundling_product_qty'] = $prod[$check]['bundling_product_qty'] + 1;
+                    $prod[$check]['products'][] = [
+                        'product_name' => implode(', ', $name),
+                        'product_note' => $bp['transaction_product_note']
+                    ];
+                }
+            }
+
+            $listItemBundling[$key]['products'] = $prod;
+        }
+
+        $result['product_bundling_transaction_name'] = 'Bundling';
+        $result['product_bundling_transaction'] = $listItemBundling;
 
         $discount = 0;
         $quantity = 0;
