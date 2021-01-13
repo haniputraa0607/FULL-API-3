@@ -644,10 +644,12 @@ class ApiBundlingController extends Controller
             return ['status' => 'fail','messages' => ['Bundling detail not found']];
         }
 
-        //check available outlet
-        $availableOutlet = BundlingOutlet::where('id_outlet', $post['id_outlet'])->where('id_bundling', $post['id_bundling'])->first();
-        if (!$availableOutlet) {
-            return ['status' => 'fail','messages' => ['Product not available in this outlet']];
+        if($getProductBundling[0]['all_outlet'] != 1){
+            //check available outlet
+            $availableOutlet = BundlingOutlet::where('id_outlet', $post['id_outlet'])->where('id_bundling', $post['id_bundling'])->first();
+            if (!$availableOutlet) {
+                return ['status' => 'fail','messages' => ['Product not available in this outlet']];
+            }
         }
 
         $priceForListNoDiscount = 0;
