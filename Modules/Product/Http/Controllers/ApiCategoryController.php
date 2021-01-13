@@ -624,11 +624,8 @@ class ApiCategoryController extends Controller
             ->join('brand_outlet', 'brand_outlet.id_brand', 'brand_product.id_brand')
             ->where('brand_outlet.id_outlet', $post['id_outlet'])
             ->where('bundling.all_outlet', 1)
-            ->whereRaw('('.$paramValue.')')
-            ->havingRaw('COUNT(*) <= '.$count)
+            ->whereIn('brand_product.id_brand', $brands)
             ->whereRaw('NOW() >= start_date AND NOW() <= end_date')
-            ->groupBy('brand_outlet.id_outlet')
-            ->groupBy('brand_product.id_brand')
             ->pluck('bundling.id_bundling')->toArray();
 
         $bundlings2 = Bundling::join('bundling_outlet as bo', 'bo.id_bundling', 'bundling.id_bundling')
@@ -695,22 +692,24 @@ class ApiCategoryController extends Controller
                 }
             }
 
-            $resBundling[] = [
-                "id_bundling" => $bundling,
-                "id_product" => null,
-                "product_name" => $getProduct[0]['bundling_name']??'',
-                "product_code" => $getProduct[0]['bundling_code']??'',
-                "product_description" => $getProduct[0]['bundling_description']??'',
-                "product_variant_status" => null,
-                "product_price" => (int)$priceForList,
-                "product_stock_status" => ($stockStatus == 0 ? 'Sold Out' : 'Available'),
-                "product_price_raw" => (int)$priceForList,
-                "photo" => (!empty($getProduct[0]['image']) ? config('url.storage_url_api').$getProduct[0]['image'] : ''),
-                "product_price_no_discount" => $priceForListNoDiscount??0,
-                "is_promo" => 0,
-                "brands" => $id_brand,
-                "position" => 1
-            ];
+            if(count($brands) >= count($id_brand)){
+                $resBundling[] = [
+                    "id_bundling" => $bundling,
+                    "id_product" => null,
+                    "product_name" => $getProduct[0]['bundling_name']??'',
+                    "product_code" => $getProduct[0]['bundling_code']??'',
+                    "product_description" => $getProduct[0]['bundling_description']??'',
+                    "product_variant_status" => null,
+                    "product_price" => (int)$priceForList,
+                    "product_stock_status" => ($stockStatus == 0 ? 'Sold Out' : 'Available'),
+                    "product_price_raw" => (int)$priceForList,
+                    "photo" => (!empty($getProduct[0]['image']) ? config('url.storage_url_api').$getProduct[0]['image'] : ''),
+                    "product_price_no_discount" => $priceForListNoDiscount??0,
+                    "is_promo" => 0,
+                    "brands" => $id_brand,
+                    "position" => 1
+                ];
+            }
         }
 
         foreach ($resBundling as $res){
