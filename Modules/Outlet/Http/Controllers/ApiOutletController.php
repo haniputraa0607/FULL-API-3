@@ -2646,7 +2646,10 @@ class ApiOutletController extends Controller
             return ['status'=>'fail','messages'=>['Outlet not found']];
         }
         $return['outlet'] = $outlet;
-        $products = Product::join('product_prices','product_prices.id_product','=','products.id_product')->select('products.id_product','product_code','product_name','product_prices.max_order')->where('product_prices.id_outlet',$outlet->id_outlet);
+        $products = Product::leftJoin('product_detail',function($join) use ($outlet) {
+            $join->on('product_detail.id_product','=','products.id_product')
+                ->where('product_detail.id_outlet',$outlet->id_outlet);
+        })->select('products.id_product','product_code','product_name','product_detail.max_order');
 
         if($post['rule']??false){
             $filter = $this->filterListProduct($products,$post['rule'],$post['operator']??'and');
@@ -2687,7 +2690,7 @@ class ApiOutletController extends Controller
             return MyHelper::checkUpdate($update);
         }
         foreach ($post['products']??[] as $id_product => $max_order) {
-            $up = ProductPrice::where(['id_product'=>$id_product,'id_outlet'=>$outlet->id_outlet])->update([
+            $up = ProductDetail::updateOrCreate(['id_product'=>$id_product,'id_outlet'=>$outlet->id_outlet], [
                 'max_order' => $max_order
             ]);
             if(!$up){
