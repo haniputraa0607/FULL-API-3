@@ -2376,7 +2376,13 @@ class ApiOutletApp extends Controller
         $updateGoSend = TransactionPickupGoSend::find($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
         if ($fromRetry) {
             $time_limit = 1200; // 20 minutes
-            $firstbook = TransactionPickupGoSendUpdate::select('created_at')->where('go_send_order_no', $updateGoSend->go_send_order_no)->orderBy('id_transaction_pickup_go_send_update')->pluck('created_at')->first();
+
+            if ($updateGoSend->manual_order_no) {
+                $firstbook = TransactionPickupGoSendUpdate::select('created_at')->where('go_send_order_no', $updateGoSend->manual_order_no)->orderBy('id_transaction_pickup_go_send_update')->pluck('created_at')->first();
+            } else {
+                $firstbook = TransactionPickupGoSendUpdate::select('created_at')->where('id_transaction_pickup_go_send', $updateGoSend->id_transaction_pickup_go_send)->orderBy('id_transaction_pickup_go_send_update')->pluck('created_at')->first();
+            }
+
             if ((time() - strtotime($firstbook)) > $time_limit) {
                 if (!$updateGoSend->stop_booking_at) {
                     $updateGoSend->update(['stop_booking_at' => date('Y-m-d H:i:s')]);
@@ -2441,8 +2447,9 @@ class ApiOutletApp extends Controller
             $updateGoSend->driver_photo      = $status['driverPhoto'] ?? null;
             $updateGoSend->vehicle_number    = $status['vehicleNumber'] ?? null;
             $updateGoSend->live_tracking_url = $status['liveTrackingUrl'] ?? null;
-            $updateGoSend->retry_count = $fromRetry?($updateGoSend->retry_count+1):0;
-            $updateGoSend->stop_booking_at = null;
+            $updateGoSend->retry_count       = $fromRetry?($updateGoSend->retry_count+1):0;
+            $updateGoSend->manual_order_no   = $fromRetry?$updateGoSend->manual_order_no:$booking['orderNo'];
+            $updateGoSend->stop_booking_at   = null;
             $updateGoSend->save();
 
             if (!$updateGoSend) {
