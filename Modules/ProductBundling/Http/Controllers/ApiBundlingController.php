@@ -4,6 +4,7 @@ namespace Modules\ProductBundling\Http\Controllers;
 
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
+use App\Http\Models\TransactionProduct;
 use App\Lib\MyHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -23,6 +24,7 @@ use DB;
 use Modules\ProductBundling\Http\Requests\UpdateBundling;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
+use Modules\Transaction\Entities\TransactionBundlingProduct;
 
 class ApiBundlingController extends Controller
 {
@@ -35,10 +37,158 @@ class ApiBundlingController extends Controller
      * Display a listing of the resource.
      * @return Response
      */
-    public function index(Bundling $bundling)
+    public function index(Request $request)
     {
-        $bundling = Bundling::with(['bundling_product'])->paginate(20)->toArray();
+        $post = $request->json()->all();
+        $bundling = Bundling::with(['bundling_product']);
 
+        if(isset($post['date_start']) && !empty($post['date_start']) &&
+            isset($post['date_end']) && !empty($post['date_end'])){
+            $start_date = date('Y-m-d', strtotime($post['date_start']));
+            $end_date = date('Y-m-d', strtotime($post['date_end']));
+
+            $bundling = $bundling->whereRaw('(DATE(start_date) >= "'.$start_date.'" AND DATE(start_date) <= "'.$end_date.'" AND DATE(end_date) >= "'.$start_date.'" AND DATE(end_date) <= "'.$end_date.'")');
+        }
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'bundling_code'){
+                            if($row['operator'] == '='){
+                                $bundling->where('bundling_code', $row['parameter']);
+                            }else{
+                                $bundling->where('bundling_code', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'bundling_name'){
+                            if($row['operator'] == '='){
+                                $bundling->where('bundling_name', $row['parameter']);
+                            }else{
+                                $bundling->where('bundling_name', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'bundling_price_before_discount' || $row['subject'] == 'bundling_price_after_discount'){
+                            $bundling->where($row['subject'], $row['operator'], $row['parameter']);
+                        }
+
+                        if($row['subject'] == 'product_name'){
+                            $bundling->whereIn('bundling.id_bundling',function($sub) use ($row){
+                                $sub->select('bundling_product.id_bundling')->from('bundling_product')
+                                    ->join('products', 'products.id_product', 'bundling_product.id_product');
+                                if($row['operator'] == '='){
+                                    $sub->where('product_name',$row['parameter']);
+                                }else{
+                                    $sub->where('product_name', 'like', '%'.$row['parameter'].'%');
+                                }
+                            });
+                        }
+
+                        if($row['subject'] == 'outlet_name'){
+                            $bundling->whereIn('bundling.id_bundling',function($sub) use ($row){
+                                $sub->select('bundling_outlet.id_bundling')->from('bundling_outlet')
+                                    ->join('outlets', 'outlets.id_outlet', 'bundling_outlet.id_outlet');
+                                if($row['operator'] == '='){
+                                    $sub->where('outlet_name',$row['parameter']);
+                                }else{
+                                    $sub->where('outlet_name', 'like', '%'.$row['parameter'].'%');
+                                }
+                            });
+                        }
+
+                        if($row['subject'] == 'brand_name'){
+                            $bundling->whereIn('bundling.id_bundling',function($sub) use ($row){
+                                $sub->select('bundling_product.id_bundling')->from('bundling_product')
+                                    ->join('products', 'products.id_product', 'bundling_product.id_product')
+                                    ->join('brand_product', 'products.id_product', 'brand_product.id_product')
+                                    ->join('brands', 'brands.id_brand', 'brand_product.id_brand');
+                                if($row['operator'] == '='){
+                                    $sub->where('name_brand',$row['parameter']);
+                                }else{
+                                    $sub->where('name_brand', 'like', '%'.$row['parameter'].'%');
+                                }
+                            });
+                        }
+                    }
+                }
+            }else{
+                $bundling->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'bundling_code'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('bundling_code', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('bundling_code', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'bundling_name'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('bundling_name', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('bundling_name', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'bundling_price_before_discount' || $row['subject'] == 'bundling_price_after_discount'){
+                                $subquery->orWhere($row['subject'], $row['operator'], $row['parameter']);
+                            }
+
+                            if($row['subject'] == 'product_name'){
+                                $subquery->orWhereIn('bundling.id_bundling',function($sub) use ($row){
+                                    $sub->select('bundling_product.id_bundling')->from('bundling_product')
+                                        ->join('products', 'products.id_product', 'bundling_product.id_product');
+                                    if($row['operator'] == '='){
+                                        $sub->where('product_name',$row['parameter']);
+                                    }else{
+                                        $sub->where('product_name', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                });
+                            }
+
+                            if($row['subject'] == 'outlet_name'){
+                                $subquery->orWhereIn('bundling.id_bundling',function($sub) use ($row){
+                                    $sub->select('bundling_outlet.id_bundling')->from('bundling_outlet')
+                                        ->join('outlets', 'outlets.id_outlet', 'bundling_outlet.id_outlet');
+                                    if($row['operator'] == '='){
+                                        $sub->where('outlet_name',$row['parameter']);
+                                    }else{
+                                        $sub->where('outlet_name', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                });
+                            }
+
+                            if($row['subject'] == 'brand_name'){
+                                $subquery->orWhereIn('bundling.id_bundling',function($sub) use ($row){
+                                    $sub->select('bundling_product.id_bundling')->from('bundling_product')
+                                        ->join('products', 'products.id_product', 'bundling_product.id_product')
+                                        ->join('brand_product', 'products.id_product', 'brand_product.id_product')
+                                        ->join('brands', 'brands.id_brand', 'brand_product.id_brand');
+                                    if($row['operator'] == '='){
+                                        $sub->where('name_brand',$row['parameter']);
+                                    }else{
+                                        $sub->where('name_brand', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                });
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        if(isset($post['order_field']) && !empty($post['order_field'])){
+            $bundling->orderBy($post['order_field'], $post['order_method']);
+        }
+        $bundling = $bundling->paginate(20)->toArray();
         foreach ($bundling['data'] as $key=>$b){
             $idProd = array_column($b['bundling_product'], 'id_product');
             $getBrands = BrandProduct::join('brands', 'brands.id_brand', 'brand_product.id_brand')
@@ -123,6 +273,7 @@ class ApiBundlingController extends Controller
                         'bundling_product_qty' => $product['qty'],
                         'bundling_product_discount_type' => $product['discount_type'],
                         'bundling_product_discount' => $product['discount'],
+                        'bundling_product_maximum_discount' => $product['maximum_discount'],
                         'charged_central' => $product['charged_central'],
                         'charged_outlet' => $product['charged_outlet'],
                         'created_at' => date('Y-m-d H:i:s'),
@@ -139,6 +290,7 @@ class ApiBundlingController extends Controller
                         $calculate = ($price - $product['discount']);
                     }else{
                         $discount = $price*($product['discount']/100);
+                        $discount = ($discount > $product['maximum_discount'] && $product['maximum_discount'] > 0 ? $product['maximum_discount']:$discount);
                         $calculate = ($price - $discount);
                     }
                     $calculate = $calculate * $product['qty'];
@@ -212,12 +364,24 @@ class ApiBundlingController extends Controller
                 }
             }
 
+            $count = count($brands);
+            $paramValue = '';
+            foreach ($brands as $index => $p){
+                if($index !== $count-1){
+                    $paramValue .= 'bo.id_brand = "'.$p.'" OR ';
+                }else{
+                    $paramValue .= 'bo.id_brand = "'.$p.'"';
+                }
+            }
+
             $outletAvailable = Outlet::join('brand_outlet as bo', 'bo.id_outlet', 'outlets.id_outlet')
-                ->groupBy('outlets.id_outlet')
-                ->whereIn('bo.id_brand', $brands)
+                ->groupBy('bo.id_outlet')
+                ->whereRaw($paramValue)
+                ->havingRaw('COUNT(*) >= '.$count)
                 ->select('outlets.id_outlet', 'outlets.outlet_code', 'outlets.outlet_name')
                 ->orderBy('outlets.outlet_code', 'asc')
                 ->get()->toArray();
+
             $selectedOutletAvailable = BundlingOutlet::where('id_bundling', $post['id_bundling'])->pluck('id_outlet')->toArray();
 
             if(!empty($detail)){
@@ -225,7 +389,8 @@ class ApiBundlingController extends Controller
                                          'result' => [
                                              'detail' => $detail,
                                              'outlets' => $outletAvailable,
-                                             'selected_outlet' => $selectedOutletAvailable
+                                             'selected_outlet' => $selectedOutletAvailable,
+                                             'brand_tmp' => $brands
                                          ]]);
             }else{
                 return response()->json(['status' => 'fail', 'messages' => ['ID bundling can not be null']]);
@@ -295,21 +460,31 @@ class ApiBundlingController extends Controller
             $beforePrice = 0;
             //update bundling product
             foreach ($post['data_product'] as $product){
-                $bundlingProduct = [
-                    'id_bundling' => $post['id_bundling'],
-                    'id_brand' => $product['id_brand'],
-                    'id_product' => $product['id_product'],
-                    'id_product_variant_group' => $product['id_product_variant_group']??null,
-                    'bundling_product_qty' => $product['qty'],
-                    'bundling_product_discount_type' => $product['discount_type'],
-                    'bundling_product_discount' => $product['discount'],
-                    'charged_central' => $product['charged_central'],
-                    'charged_outlet' => $product['charged_outlet'],
-                    'updated_at' => date('Y-m-d H:i:s')
-                ];
                 if(isset($product['id_bundling_product']) && !empty($product['id_bundling_product'])){
+                    $bundlingProduct = [
+                        'bundling_product_qty' => $product['qty'],
+                        'bundling_product_discount_type' => $product['discount_type'],
+                        'bundling_product_discount' => $product['discount'],
+                        'bundling_product_maximum_discount' => $product['maximum_discount'],
+                        'charged_central' => $product['charged_central'],
+                        'charged_outlet' => $product['charged_outlet'],
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
                     $saveBundlingProduct = BundlingProduct::where('id_bundling_product', $product['id_bundling_product'])->update($bundlingProduct);
                 }else{
+                    $bundlingProduct = [
+                        'id_bundling' => $post['id_bundling'],
+                        'id_brand' => $product['id_brand'],
+                        'id_product' => $product['id_product'],
+                        'id_product_variant_group' => $product['id_product_variant_group']??null,
+                        'bundling_product_qty' => $product['qty'],
+                        'bundling_product_discount_type' => $product['discount_type'],
+                        'bundling_product_discount' => $product['discount'],
+                        'bundling_product_maximum_discount' => $product['maximum_discount'],
+                        'charged_central' => $product['charged_central'],
+                        'charged_outlet' => $product['charged_outlet'],
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
                     $bundlingProduct['created_at'] = date('Y-m-d H:i:s');
                     $saveBundlingProduct = BundlingProduct::create($bundlingProduct);
                 }
@@ -329,6 +504,7 @@ class ApiBundlingController extends Controller
                     $calculate = ($price - $product['discount']);
                 }else{
                     $discount = $price*($product['discount']/100);
+                    $discount = ($discount > $product['maximum_discount'] && $product['maximum_discount'] > 0 ? $product['maximum_discount']:$discount);
                     $calculate = ($price - $discount);
                 }
                 $calculate = $calculate * $product['qty'];
@@ -341,11 +517,6 @@ class ApiBundlingController extends Controller
 
             //delete bundling outlet
             $delete = BundlingOutlet::where('id_bundling', $post['id_bundling'])->delete();
-
-            if(!$delete){
-                DB::rollback();
-                return response()->json(['status' => 'fail', 'messages' => ['Failed delete outlet available']]);
-            }
 
             if($isAllOutlet == 0){
                 //create bundling outlet/outlet available
@@ -377,15 +548,49 @@ class ApiBundlingController extends Controller
      * @param int $id
      * @return Response
      */
-    public function destroy($id)
+    public function destroy(Request $request)
     {
-        //
+        $post = $request->json()->all();
+        if(isset($post['id_bundling']) && !empty($post['id_bundling'])){
+            $check = TransactionBundlingProduct::where('id_bundling', $post['id_bundling'])->first();
+            if($check){
+                return response()->json(['status' => 'fail', 'messages' => ['Bundling already use in transaction']]);
+            }
+
+            $delete = Bundling::where('id_bundling', $post['id_bundling'])->delete();
+            return response()->json(MyHelper::checkDelete($delete));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['ID bundling can not be empty']]);
+        }
+    }
+
+    public function destroyBundlingProduct(Request $request)
+    {
+        $post = $request->json()->all();
+        if(isset($post['id_bundling_product']) && !empty($post['id_bundling_product'])){
+            $check = TransactionProduct::where('id_bundling_product', $post['id_bundling_product'])->first();
+            if($check){
+                return response()->json(['status' => 'fail', 'messages' => ['Bundling product already use in transaction']]);
+            }
+
+            $delete = BundlingProduct::where('id_bundling_product', $post['id_bundling_product'])->delete();
+            return response()->json(MyHelper::checkDelete($delete));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['ID bundling product can not be empty']]);
+        }
     }
 
     public function outletAvailable(Request $request){
         $post = $request->json()->all();
         if(isset($post['brands']) && !empty($post['brands'])){
-            $idBrand = array_column($post['brands'], 'value');
+            $idBrandAjax = array_column($post['brands'], 'value');
+
+            if(!empty($post['brand_tmp']??[])){
+                $idBrand = array_unique(array_merge($idBrandAjax,$post['brand_tmp']));
+            }else{
+                $idBrand = $idBrandAjax;
+            }
+
             $count = count($idBrand);
             $paramValue = '';
             foreach ($idBrand as $index => $p){

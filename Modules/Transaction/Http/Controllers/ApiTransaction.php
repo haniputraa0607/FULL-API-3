@@ -2372,7 +2372,7 @@ class ApiTransaction extends Controller
                     'bundling_name' => $bundling['bundling_name'],
                     'bundling_qty' => $bundling['transaction_bundling_product_qty'],
                     'bundling_subtotal' => (int)$bundling['transaction_bundling_product_subtotal'],
-                    'bundling_sub_item' => '@'.(int)$bundling['transaction_bundling_product_base_price'],
+                    'bundling_sub_item' => '@'.MyHelper::requestNumber($bundling['transaction_bundling_product_base_price'],'_CURRENCY'),
                 ];
 
                 $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')

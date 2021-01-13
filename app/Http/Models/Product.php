@@ -365,7 +365,7 @@ class Product extends Model
             // variant has variant / this a parent variant?
             if ($variant['variant']) { // a parent
                 // get variant tree of variant childs
-                self::recursiveCheck($variant['variant'], $variant_groups, $current, $with_index);
+                self::recursiveCheck($variant['variant'], $variant_groups, $current, $with_index, $with_name_detail_trx);
                 // check if still a parent
                 if ($variant['variant']) { 
                     // assign price, from lowest price of variant with lower level, [previously saved in variant detail]
