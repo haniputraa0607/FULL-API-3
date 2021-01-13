@@ -112,6 +112,12 @@ class ApiOnlineTransaction extends Controller
 
     public function newTransaction(NewTransaction $request) {
         $post = $request->json()->all();
+        if(empty($post['item']) && empty($post['item_bundling'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Item or Item bundling can not be empty']
+            ]);
+        }
         $post['item'] = $this->mergeProducts($post['item']);
         if (isset($post['pin']) && strtolower($post['payment_type']) == 'balance') {
             if (!password_verify($post['pin'], $request->user()->password)) {
@@ -1898,6 +1904,12 @@ class ApiOnlineTransaction extends Controller
      */
     public function checkTransaction(CheckTransaction $request) {
         $post = $request->json()->all();
+        if(empty($post['item']) && empty($post['item_bundling'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Item or Item bundling can not be empty']
+            ]);
+        }
         $post['item'] = $this->mergeProducts($post['item']);
         $grandTotal = app($this->setting_trx)->grandTotal();
         $user = $request->user();
@@ -2601,10 +2613,12 @@ class ApiOnlineTransaction extends Controller
         $result['item'] = array_values($tree);
 
         // check bundling product
+        $result['item_bundling_detail'] = [];
         $result['item_bundling'] = [];
         if(!empty($post['item_bundling'])){
             $itemBundlings = $this->checkBundlingProduct($post, $outlet);
             $result['item_bundling'] = $itemBundlings['item_bundling']??[];
+            $result['item_bundling_detail'] = $itemBundlings['item_bundling_detail']??[];
             $totalItem = $totalItem + $itemBundlings['total_item_bundling']??0;
             $error_msg = array_merge($error_msg, $itemBundlings['error_message']??[]);
         }
@@ -2778,6 +2792,7 @@ class ApiOnlineTransaction extends Controller
         $error_msg = [];
         $subTotalBundling = 0;
         $totalItemBundling = 0;
+        $itemBundlingDetail = [];
         foreach ($post['item_bundling']??[] as $key=>$bundling){
             $getBundling = Bundling::where('id_bundling', $bundling['id_bundling'])->whereRaw('NOW() >= start_date AND NOW() <= end_date')->first();
             if(empty($getBundling)){
@@ -2821,7 +2836,9 @@ class ApiOnlineTransaction extends Controller
             }
 
             $bundlingBasePrice = 0;
+            $totalModPrice = 0;
             $products = [];
+            $productsBundlingDetail = [];
             //check product from bundling
             foreach ($bundling['products'] as $p){
                 $product = BundlingProduct::join('products', 'products.id_product', 'bundling_product.id_product')
@@ -2861,6 +2878,7 @@ class ApiOnlineTransaction extends Controller
                     $calculate = ($price - $product['bundling_product_discount']);
                 }else{
                     $discount = $price*($product['bundling_product_discount']/100);
+                    $discount = ($discount > $product['bundling_product_maximum_discount'] &&  $product['bundling_product_maximum_discount'] > 0? $product['bundling_product_maximum_discount']:$discount);
                     $calculate = ($price - $discount);
                 }
                 $bundlingBasePrice = $bundlingBasePrice + $calculate;
@@ -3002,7 +3020,7 @@ class ApiOnlineTransaction extends Controller
                     continue 2;
                 }
 
-                $bundlingBasePrice = $bundlingBasePrice+$mod_price;
+                $totalModPrice = $totalModPrice + $mod_price;
                 $product['variants'] = $variants;
                 $products[] = [
                     "id_brand" => $product['id_brand'],
@@ -3017,11 +3035,44 @@ class ApiOnlineTransaction extends Controller
                     "selected_variant" => array_merge($product['selected_variant'], $p['extra_modifiers']),
                     "variants"=> $product['variants']
                 ];
+
+                $variantsName = array_column($variants, 'product_variant_name');
+                $modName = array_column($modifiers, 'text');
+                $name = array_merge($variantsName, $modName);
+                $check = array_search($product['id_bundling_product'], array_column($productsBundlingDetail, 'id_bundling_product'));
+                if($check === false){
+                    if(!empty($name) || !empty($product['note'])){
+                        $productsBundlingDetail[] = [
+                            'id_bundling_product' => $product['id_bundling_product'],
+                            'bundling_product_qty' => 1,
+                            'bundling_product_name' => $product['product_name'],
+                            'products' => [
+                                [
+                                    'product_name' => (empty(implode(', ', $name)) ? "" : implode(', ', $name)),
+                                    'product_note' => $product['note']
+                                ]
+                            ]
+                        ];
+                    }else{
+                        $productsBundlingDetail[] = [
+                            'id_bundling_product' => $product['id_bundling_product'],
+                            'bundling_product_qty' => 1,
+                            'bundling_product_name' => $product['product_name'],
+                            'products' => []
+                        ];
+                    }
+                }else{
+                    $productsBundlingDetail[$check]['bundling_product_qty'] = $productsBundlingDetail[$check]['bundling_product_qty'] + 1;
+                    $productsBundlingDetail[$check]['products'][] = [
+                        'product_name' => implode(', ', $name),
+                        'product_note' => $product['note']
+                    ];
+                }
             }
 
-            $total = $bundlingBasePrice * $bundling['bundling_qty'];
+            $total = ($bundlingBasePrice * $bundling['bundling_qty']) + $totalModPrice;
             $post['item_bundling'][$key] = [
-                "id_custome" => $bundling['id_custom']??null,
+                "id_custom" => $bundling['id_custom']??null,
                 "id_bundling" => $getBundling['id_bundling'],
                 "bundling_name" => $getBundling['bundling_name'],
                 "bundling_code" => $getBundling['bundling_code'],
@@ -3029,6 +3080,15 @@ class ApiOnlineTransaction extends Controller
                 "bundling_qty" => $bundling['bundling_qty'],
                 "bundling_price_total" => $total,
                 "products" => $products
+            ];
+
+            $itemBundlingDetail[$key] = [
+                "id_custom" => $bundling['id_custom']??null,
+                'bundling_name' => $bundling['bundling_name'],
+                'bundling_qty' => $bundling['bundling_qty'],
+                'bundling_subtotal' => (int)$total,
+                'bundling_sub_item' => '@'.MyHelper::requestNumber($bundlingBasePrice,'_CURRENCY'),
+                "products" => $productsBundlingDetail
             ];
             $subTotalBundling = $total;
             $totalItemBundling = $totalItemBundling + $bundling['bundling_qty'];
@@ -3038,6 +3098,7 @@ class ApiOnlineTransaction extends Controller
             'total_item_bundling' => $totalItemBundling,
             'subtotal_bundling' => $subTotalBundling,
             'item_bundling' => $post['item_bundling'],
+            'item_bundling_detail' => $itemBundlingDetail,
             'error_message' => $error_msg
         ];
     }
@@ -3810,7 +3871,7 @@ class ApiOnlineTransaction extends Controller
                     'id_brand'                     => $itemProduct['id_brand'],
                     'id_outlet'                    => $trx['id_outlet'],
                     'id_user'                      => $trx['id_user'],
-                    'transaction_product_qty'      => 1,
+                    'transaction_product_qty'      => $itemBundling['bundling_qty'],
                     'transaction_product_price'    => $itemProduct['transaction_product_price'],
                     'transaction_product_price_base' => NULL,
                     'transaction_product_price_tax'  => NULL,

@@ -457,7 +457,7 @@ class ApiCategoryController extends Controller
                         $product['position'] = $promo_category['pivot']['position'];
                         unset($promo_category['pivot']);
                         if (!($result[$pivot['id_brand']]['promo' . $id_product_promo_category] ?? false)) {
-                            $promo_category['product_category_order'] -= 1000000;
+                            $promo_category['product_category_order'] -= 100000;
                             $result[$pivot['id_brand']]['promo' . $id_product_promo_category]['category'] = $promo_category;
                         }
                         $result[$pivot['id_brand']]['promo' . $id_product_promo_category]['list'][] = $product;
@@ -628,6 +628,7 @@ class ApiCategoryController extends Controller
             ->havingRaw('COUNT(*) <= '.$count)
             ->whereRaw('NOW() >= start_date AND NOW() <= end_date')
             ->groupBy('brand_outlet.id_outlet')
+            ->groupBy('brand_product.id_brand')
             ->pluck('bundling.id_bundling')->toArray();
 
         $bundlings2 = Bundling::join('bundling_outlet as bo', 'bo.id_bundling', 'bundling.id_bundling')
@@ -683,6 +684,7 @@ class ApiCategoryController extends Controller
                         $calculate = ($price - $p['bundling_product_discount']);
                     }else{
                         $discount = $price*($p['bundling_product_discount']/100);
+                        $discount = ($discount > $p['bundling_product_maximum_discount'] &&  $p['bundling_product_maximum_discount'] > 0? $p['bundling_product_maximum_discount']:$discount);
                         $calculate = ($price - $discount);
                     }
                     $calculate = $calculate * $p['bundling_product_qty'];
@@ -733,7 +735,7 @@ class ApiCategoryController extends Controller
                 }else{
                     $resProduct[$insert]['bundling']['category'] = [
                         "product_category_name" => "Bundling",
-                        "product_category_order" => -100000,
+                        "product_category_order" => -1000000,
                         "id_product_category" => null,
                         "url_product_category_photo" => ""
                     ];

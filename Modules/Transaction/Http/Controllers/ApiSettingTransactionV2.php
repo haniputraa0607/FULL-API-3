@@ -330,6 +330,7 @@ class ApiSettingTransactionV2 extends Controller
                             $calculate = ($price - $getProduct['bundling_product_discount']);
                         }else{
                             $discount = $price*($getProduct['bundling_product_discount']/100);
+                            $discount = ($discount > $getProduct['bundling_product_maximum_discount'] &&  $getProduct['bundling_product_maximum_discount'] > 0? $getProduct['bundling_product_maximum_discount']:$discount);
                             $calculate = ($price - $discount);
                         }
                         $p['transaction_product_price'] = $calculate;
