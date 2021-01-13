@@ -2806,19 +2806,21 @@ class ApiOnlineTransaction extends Controller
                 continue;
             }
 
-            //check outlet available
-            $getBundlingOutlet = BundlingOutlet::where('id_bundling', $bundling['id_bundling'])->where('id_outlet', $post['id_outlet'])->count();
+            if($getBundling['all_outlet'] != 1){
+                //check outlet available
+                $getBundlingOutlet = BundlingOutlet::where('id_bundling', $bundling['id_bundling'])->where('id_outlet', $post['id_outlet'])->count();
 
-            if(empty($getBundlingOutlet)){
-                $error_msg[] = MyHelper::simpleReplace(
-                    'Bundling %bundling_name% tidak bisa digunakan di outlet %outlet_name%',
-                    [
-                        'bundling_name' => $bundling['bundling_name'],
-                        'outlet_name' => $outlet['outlet_name']
-                    ]
-                );
-                unset($post['item_bundling'][$key]);
-                continue;
+                if(empty($getBundlingOutlet)){
+                    $error_msg[] = MyHelper::simpleReplace(
+                        'Bundling %bundling_name% tidak bisa digunakan di outlet %outlet_name%',
+                        [
+                            'bundling_name' => $bundling['bundling_name'],
+                            'outlet_name' => $outlet['outlet_name']
+                        ]
+                    );
+                    unset($post['item_bundling'][$key]);
+                    continue;
+                }
             }
 
             //check count product in bundling
@@ -3041,7 +3043,14 @@ class ApiOnlineTransaction extends Controller
                 $name = array_merge($variantsName, $modName);
                 $check = array_search($product['id_bundling_product'], array_column($productsBundlingDetail, 'id_bundling_product'));
                 if($check === false){
-                    if(!empty($name) || !empty($product['note'])){
+                    if(empty($name) && empty($product['note'])){
+                        $productsBundlingDetail[] = [
+                            'id_bundling_product' => $product['id_bundling_product'],
+                            'bundling_product_qty' => 1,
+                            'bundling_product_name' => $product['product_name'],
+                            'products' => []
+                        ];
+                    }else{
                         $productsBundlingDetail[] = [
                             'id_bundling_product' => $product['id_bundling_product'],
                             'bundling_product_qty' => 1,
@@ -3053,20 +3062,15 @@ class ApiOnlineTransaction extends Controller
                                 ]
                             ]
                         ];
-                    }else{
-                        $productsBundlingDetail[] = [
-                            'id_bundling_product' => $product['id_bundling_product'],
-                            'bundling_product_qty' => 1,
-                            'bundling_product_name' => $product['product_name'],
-                            'products' => []
-                        ];
                     }
                 }else{
                     $productsBundlingDetail[$check]['bundling_product_qty'] = $productsBundlingDetail[$check]['bundling_product_qty'] + 1;
-                    $productsBundlingDetail[$check]['products'][] = [
-                        'product_name' => implode(', ', $name),
-                        'product_note' => $product['note']
-                    ];
+                    if(!empty($name) || !empty($product['note'])){
+                        $productsBundlingDetail[$check]['products'][] = [
+                            'product_name' => implode(', ', $name),
+                            'product_note' => $product['note']
+                        ];
+                    }
                 }
             }
 
