@@ -19,10 +19,12 @@ Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'sco
 
 Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'product-bundling'], function()
 {
-    Route::get('list', 'ApiBundlingController@index');
+    Route::any('list', 'ApiBundlingController@index');
     Route::post('store', 'ApiBundlingController@store');
     Route::post('be/detail', 'ApiBundlingController@detail');
     Route::post('update', 'ApiBundlingController@update');
     Route::any('outlet-available', 'ApiBundlingController@outletAvailable');
     Route::post('global-price', 'ApiBundlingController@globalPrice');
+    Route::post('delete', 'ApiBundlingController@destroy');
+    Route::post('delete-product', 'ApiBundlingController@destroyBundlingProduct');
 });

@@ -17,6 +17,7 @@ class BundlingProduct extends Model
         'bundling_product_qty',
         'bundling_product_discount_type',
         'bundling_product_discount',
+        'bundling_product_maximum_discount',
         'charged_central',
         'charged_outlet'
     ];
