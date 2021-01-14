@@ -925,7 +925,7 @@ class ApiDisburseController extends Controller
                 ->whereNull('reject_at')
                 ->whereDate('transactions.transaction_date', '>=',$start)
                 ->whereDate('transactions.transaction_date', '<=',$end)
-                ->select('outlets.id_outlet', 'outlets.outlet_email', 'outlets.outlet_code')
+                ->select('outlets.id_outlet', 'outlets.outlet_email', 'outlets.outlet_code', 'outlets.outlet_name')
                 ->groupBy('outlets.id_outlet')
                 ->get()->toArray();
 
