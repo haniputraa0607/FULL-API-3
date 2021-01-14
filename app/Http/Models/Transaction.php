@@ -166,6 +166,14 @@ class Transaction extends Model
             ->orderBy('id_product');
 	}
 
+    public function productTransactionBundling()
+    {
+        return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction')
+            ->where('type', 'Product')
+            ->whereNotNull('id_bundling_product')
+            ->orderBy('id_product');
+    }
+
 	public function plasticTransaction() 
     {
     	return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction')->where('type', 'Plastic')->orderBy('id_product');

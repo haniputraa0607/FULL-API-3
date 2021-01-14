@@ -2368,15 +2368,16 @@ class ApiTransaction extends Controller
             $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
                 ->where('id_transaction', $id)->get()->toArray();
             foreach ($getBundling as $key=>$bundling){
+                $getPriceToping =  $bundling['transaction_bundling_product_subtotal']/$bundling['transaction_bundling_product_qty'];
                 $listItemBundling[$key] = [
                     'bundling_name' => $bundling['bundling_name'],
                     'bundling_qty' => $bundling['transaction_bundling_product_qty'],
                     'bundling_subtotal' => (int)$bundling['transaction_bundling_product_subtotal'],
-                    'bundling_sub_item' => '@'.MyHelper::requestNumber($bundling['transaction_bundling_product_base_price'],'_CURRENCY'),
+                    'bundling_sub_item' => '@'.MyHelper::requestNumber($getPriceToping,'_CURRENCY'),
                 ];
 
                 $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
-                        ->where('id_transaction_bundling_product', $bundling['id_transaction_bundling_product'])->get()->toArray();
+                    ->where('id_transaction_bundling_product', $bundling['id_transaction_bundling_product'])->get()->toArray();
 
                 $prod = [];
                 foreach ($bundlingProduct as $bp){
@@ -2385,8 +2386,8 @@ class ApiTransaction extends Controller
                         ->where('id_transaction_product', $bp['id_transaction_product'])
                         ->pluck('transaction_product_modifiers.text')->toArray();
                     $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
-                            ->where('id_transaction_product', $bp['id_transaction_product'])
-                            ->pluck('product_variants.product_variant_name')->toArray();
+                        ->where('id_transaction_product', $bp['id_transaction_product'])
+                        ->pluck('product_variants.product_variant_name')->toArray();
                     $variantNoPrice =  TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                         ->whereNotNull('transaction_product_modifiers.id_product_modifier_group')
                         ->where('id_transaction_product', $bp['id_transaction_product'])
@@ -2896,6 +2897,7 @@ class ApiTransaction extends Controller
 
             $result['product_bundling_transaction_name'] = 'Bundling';
             $result['product_bundling_transaction'] = $listItemBundling;
+            $result['product_transaction'] = [];
             $discount = 0;
             $quantity = 0;
             $keynya = 0;
