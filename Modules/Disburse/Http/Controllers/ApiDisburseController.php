@@ -1616,6 +1616,7 @@ class ApiDisburseController extends Controller
                                 }
                             });
                         }catch(\Exception $e){
+                            \Log::error($e);
                         }
 
                         foreach ($tmpPath as $t){
