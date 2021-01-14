@@ -465,7 +465,7 @@ class ApiBundlingController extends Controller
                         'bundling_product_qty' => $product['qty'],
                         'bundling_product_discount_type' => $product['discount_type'],
                         'bundling_product_discount' => $product['discount'],
-                        'bundling_product_maximum_discount' => $product['maximum_discount'],
+                        'bundling_product_maximum_discount' => $product['maximum_discount']??0,
                         'charged_central' => $product['charged_central'],
                         'charged_outlet' => $product['charged_outlet'],
                         'updated_at' => date('Y-m-d H:i:s')
@@ -480,7 +480,7 @@ class ApiBundlingController extends Controller
                         'bundling_product_qty' => $product['qty'],
                         'bundling_product_discount_type' => $product['discount_type'],
                         'bundling_product_discount' => $product['discount'],
-                        'bundling_product_maximum_discount' => $product['maximum_discount'],
+                        'bundling_product_maximum_discount' => $product['maximum_discount']??0,
                         'charged_central' => $product['charged_central'],
                         'charged_outlet' => $product['charged_outlet'],
                         'updated_at' => date('Y-m-d H:i:s')
