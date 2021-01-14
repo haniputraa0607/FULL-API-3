@@ -159,9 +159,9 @@ class Kernel extends ConsoleKernel
 
         /**
          * Check the status of Gosend which is not updated after 5 minutes
-         * run every 5 minutes
+         * run every 3 minutes
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiGosendController@cronCheckStatus')->cron('*/5 * * * *');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiGosendController@cronCheckStatus')->cron('*/3 * * * *');
 
         /**
          * Auto reject order when driver not found > 30minutes
