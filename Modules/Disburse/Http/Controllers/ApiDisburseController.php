@@ -918,128 +918,260 @@ class ApiDisburseController extends Controller
     public function exportToOutlet($post){
         $start = date('Y-m-d', strtotime($post['date_start']));
         $end = date('Y-m-d', strtotime($post['date_end']));
-        $getOutlet = Outlet::where('outlet_code', $post['outlet_code'])->first();
-        if($getOutlet && !empty($getOutlet['outlet_email'])){
-            $filter['date_start'] = $start;
-            $filter['date_end'] = $end;
-            $filter['detail'] = 1;
-            $filter['key'] = 'all';
-            $filter['rule'] = 'and';
-            $filter['conditions'] = [
-                [
-                    'subject' => 'id_outlet',
-                    'operator' => $getOutlet['id_outlet'],
-                    'parameter' => null
-                ],
-                [
-                    'subject' => 'status',
-                    'operator' => 'Completed',
-                    'parameter' => null
-                ]
-            ];
-
-            $summary = $this->summaryCalculationFeeWithRangeDate($start, $end, $getOutlet['id_outlet']);
-            $generateTrx = app($this->trx)->exportTransaction($filter, 1);
-            $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+        if(isset($post['all_outlet']) && !empty($post['all_outlet'])){
+            $transactions = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
                 ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-                ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
-                ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
-                ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
-                ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
-                ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
                 ->where('transaction_payment_status', 'Completed')
                 ->whereNull('reject_at')
-                ->where('transactions.id_outlet', $getOutlet['id_outlet'])
                 ->whereDate('transactions.transaction_date', '>=',$start)
                 ->whereDate('transactions.transaction_date', '<=',$end)
-                ->with(['transaction_payment_subscription'=> function($q){
-                    $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
-                        ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
-                        ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
-                }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
-                ->select('transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
-                    'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
-                    'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
-                    'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code')
+                ->select('outlets.id_outlet', 'outlets.outlet_email', 'outlets.outlet_code')
+                ->groupBy('outlets.id_outlet')
                 ->get()->toArray();
 
-            if(!empty($generateTrx['list'])){
-                $excelFile = 'Transaction_['.$start.'_'.$end.']['.$getOutlet['outlet_code'].'].xlsx';
-                $store  = (new MultipleSheetExport([
-                    "Summary" => $summary,
-                    "Calculation Fee" => $dataDisburse,
-                    "Detail Transaction" => $generateTrx
-                ]))->store('excel_email/'.$excelFile);
+            foreach ($transactions as $getOutlet){
+                $filter['date_start'] = $start;
+                $filter['date_end'] = $end;
+                $filter['detail'] = 1;
+                $filter['key'] = 'all';
+                $filter['rule'] = 'and';
+                $filter['conditions'] = [
+                    [
+                        'subject' => 'id_outlet',
+                        'operator' => $getOutlet['id_outlet'],
+                        'parameter' => null
+                    ],
+                    [
+                        'subject' => 'status',
+                        'operator' => 'Completed',
+                        'parameter' => null
+                    ]
+                ];
 
-                if($store){
-                    $tmpPath[] = storage_path('app/excel_email/'.$excelFile);
-                }
+                $summary = $this->summaryCalculationFeeWithRangeDate($start, $end, $getOutlet['id_outlet']);
+                $generateTrx = app($this->trx)->exportTransaction($filter, 1);
+                $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                    ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+                    ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
+                    ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
+                    ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
+                    ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
+                    ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
+                    ->where('transaction_payment_status', 'Completed')
+                    ->whereNull('reject_at')
+                    ->where('transactions.id_outlet', $getOutlet['id_outlet'])
+                    ->whereDate('transactions.transaction_date', '>=',$start)
+                    ->whereDate('transactions.transaction_date', '<=',$end)
+                    ->with(['transaction_payment_subscription'=> function($q){
+                        $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
+                            ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+                            ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
+                    }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
+                    ->select('transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
+                        'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
+                        'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
+                        'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code')
+                    ->get()->toArray();
 
-                if(!empty($tmpPath)){
-                    $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
-                    $setting = array();
-                    foreach ($getSetting as $key => $value) {
-                        if($value['key'] == 'email_setting_url'){
-                            $setting[$value['key']]  = (array)json_decode($value['value_text']);
-                        }else{
-                            $setting[$value['key']] = $value['value'];
-                        }
+                if(!empty($generateTrx['list'])){
+                    $excelFile = 'Transaction_['.$start.'_'.$end.']['.$getOutlet['outlet_code'].'].xlsx';
+                    $store  = (new MultipleSheetExport([
+                        "Summary" => $summary,
+                        "Calculation Fee" => $dataDisburse,
+                        "Detail Transaction" => $generateTrx
+                    ]))->store('excel_email/'.$excelFile);
+
+                    if($store){
+                        $tmpPath[] = storage_path('app/excel_email/'.$excelFile);
                     }
 
-                    $data = array(
-                        'customer' => '',
-                        'html_message' => 'Report Outlet '.$getOutlet['outlet_name'].', transaksi tanggal '.date('d M Y', strtotime($start)).' sampai '.date('d M Y', strtotime($end)),
-                        'setting' => $setting
-                    );
-
-                    $to = $getOutlet['outlet_email'];
-                    $subject = 'Report Transaksi ['.date('d M Y', strtotime($start)).' - '.date('d M Y', strtotime($end)).']';
-                    $name =  $getOutlet['outlet_name'];
-                    $variables['attachment'] = $tmpPath;
-
-                    try{
-                        Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
-                        {
-                            $message->to($to, $name)->subject($subject);
-                            if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-                                $message->from($setting['email_sender'], $setting['email_from']);
-                            }else if(!empty($setting['email_sender'])){
-                                $message->from($setting['email_sender']);
+                    if(!empty($tmpPath)){
+                        $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
+                        $setting = array();
+                        foreach ($getSetting as $key => $value) {
+                            if($value['key'] == 'email_setting_url'){
+                                $setting[$value['key']]  = (array)json_decode($value['value_text']);
+                            }else{
+                                $setting[$value['key']] = $value['value'];
                             }
+                        }
 
-                            if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+                        $data = array(
+                            'customer' => '',
+                            'html_message' => 'Report Outlet '.$getOutlet['outlet_name'].', transaksi tanggal '.date('d M Y', strtotime($start)).' sampai '.date('d M Y', strtotime($end)),
+                            'setting' => $setting
+                        );
+
+                        $to = $getOutlet['outlet_email'];
+                        $subject = 'Report Transaksi ['.date('d M Y', strtotime($start)).' - '.date('d M Y', strtotime($end)).']';
+                        $name =  $getOutlet['outlet_name'];
+                        $variables['attachment'] = $tmpPath;
+
+                        try{
+                            Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
+                            {
+                                $message->to($to, $name)->subject($subject);
+                                if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                                    $message->from($setting['email_sender'], $setting['email_from']);
+                                }else if(!empty($setting['email_sender'])){
+                                    $message->from($setting['email_sender']);
+                                }
+
+                                if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
                                     $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
                                 }else if(!empty($setting['email_reply_to'])){
                                     $message->replyTo($setting['email_reply_to']);
                                 }
 
-                            if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
-                                $message->cc($setting['email_cc'], $setting['email_cc_name']);
-                            }
-
-                            if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
-                                $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
-                            }
-
-                            // attachment
-                            if(isset($variables['attachment']) && !empty($variables['attachment'])){
-                                foreach($variables['attachment'] as $attach){
-                                    $message->attach($attach);
+                                if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+                                    $message->cc($setting['email_cc'], $setting['email_cc_name']);
                                 }
-                            }
-                        });
-                    }catch(\Exception $e){
-                    }
 
-                    foreach ($tmpPath as $t){
-                        File::delete($t);
+                                if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+                                    $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+                                }
+
+                                // attachment
+                                if(isset($variables['attachment']) && !empty($variables['attachment'])){
+                                    foreach($variables['attachment'] as $attach){
+                                        $message->attach($attach);
+                                    }
+                                }
+                            });
+                        }catch(\Exception $e){
+                        }
+
+                        foreach ($tmpPath as $t){
+                            File::delete($t);
+                        }
                     }
                 }
             }
-
             return 'success';
         }else{
-            return 'Outlet Not Found';
+            $getOutlet = Outlet::where('outlet_code', $post['outlet_code'])->first();
+            if($getOutlet && !empty($getOutlet['outlet_email'])){
+                $filter['date_start'] = $start;
+                $filter['date_end'] = $end;
+                $filter['detail'] = 1;
+                $filter['key'] = 'all';
+                $filter['rule'] = 'and';
+                $filter['conditions'] = [
+                    [
+                        'subject' => 'id_outlet',
+                        'operator' => $getOutlet['id_outlet'],
+                        'parameter' => null
+                    ],
+                    [
+                        'subject' => 'status',
+                        'operator' => 'Completed',
+                        'parameter' => null
+                    ]
+                ];
+
+                $summary = $this->summaryCalculationFeeWithRangeDate($start, $end, $getOutlet['id_outlet']);
+                $generateTrx = app($this->trx)->exportTransaction($filter, 1);
+                $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                    ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+                    ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
+                    ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
+                    ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
+                    ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
+                    ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
+                    ->where('transaction_payment_status', 'Completed')
+                    ->whereNull('reject_at')
+                    ->where('transactions.id_outlet', $getOutlet['id_outlet'])
+                    ->whereDate('transactions.transaction_date', '>=',$start)
+                    ->whereDate('transactions.transaction_date', '<=',$end)
+                    ->with(['transaction_payment_subscription'=> function($q){
+                        $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
+                            ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+                            ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
+                    }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
+                    ->select('transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
+                        'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
+                        'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
+                        'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code')
+                    ->get()->toArray();
+
+                if(!empty($generateTrx['list'])){
+                    $excelFile = 'Transaction_['.$start.'_'.$end.']['.$getOutlet['outlet_code'].'].xlsx';
+                    $store  = (new MultipleSheetExport([
+                        "Summary" => $summary,
+                        "Calculation Fee" => $dataDisburse,
+                        "Detail Transaction" => $generateTrx
+                    ]))->store('excel_email/'.$excelFile);
+
+                    if($store){
+                        $tmpPath[] = storage_path('app/excel_email/'.$excelFile);
+                    }
+
+                    if(!empty($tmpPath)){
+                        $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
+                        $setting = array();
+                        foreach ($getSetting as $key => $value) {
+                            if($value['key'] == 'email_setting_url'){
+                                $setting[$value['key']]  = (array)json_decode($value['value_text']);
+                            }else{
+                                $setting[$value['key']] = $value['value'];
+                            }
+                        }
+
+                        $data = array(
+                            'customer' => '',
+                            'html_message' => 'Report Outlet '.$getOutlet['outlet_name'].', transaksi tanggal '.date('d M Y', strtotime($start)).' sampai '.date('d M Y', strtotime($end)),
+                            'setting' => $setting
+                        );
+
+                        $to = $getOutlet['outlet_email'];
+                        $subject = 'Report Transaksi ['.date('d M Y', strtotime($start)).' - '.date('d M Y', strtotime($end)).']';
+                        $name =  $getOutlet['outlet_name'];
+                        $variables['attachment'] = $tmpPath;
+
+                        try{
+                            Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
+                            {
+                                $message->to($to, $name)->subject($subject);
+                                if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                                    $message->from($setting['email_sender'], $setting['email_from']);
+                                }else if(!empty($setting['email_sender'])){
+                                    $message->from($setting['email_sender']);
+                                }
+
+                                if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                                }else if(!empty($setting['email_reply_to'])){
+                                    $message->replyTo($setting['email_reply_to']);
+                                }
+
+                                if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+                                    $message->cc($setting['email_cc'], $setting['email_cc_name']);
+                                }
+
+                                if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+                                    $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+                                }
+
+                                // attachment
+                                if(isset($variables['attachment']) && !empty($variables['attachment'])){
+                                    foreach($variables['attachment'] as $attach){
+                                        $message->attach($attach);
+                                    }
+                                }
+                            });
+                        }catch(\Exception $e){
+                        }
+
+                        foreach ($tmpPath as $t){
+                            File::delete($t);
+                        }
+                    }
+                }
+
+                return 'success';
+            }else{
+                return 'Outlet Not Found';
+            }
         }
     }
 
