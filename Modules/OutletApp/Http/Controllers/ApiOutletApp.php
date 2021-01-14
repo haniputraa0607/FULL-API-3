@@ -2392,8 +2392,8 @@ class ApiOutletApp extends Controller
                     $updateGoSend->update(['stop_booking_at' => date('Y-m-d H:i:s')]);
                     // kirim notifikasi
                     $dataNotif = [
-                        'subject' => 'Driver Not Found',
-                        'string_body' => $trx['transaction_pickup']['order_id'] . ' - '. $trx['transaction_receipt_number'],
+                        'subject' => 'Order '.$trx['transaction_pickup']['order_id'],
+                        'string_body' => 'Driver tidak ditemukan. Segera pilih tindakan atau pesanan batal otomatis.',
                         'type' => 'trx',
                         'id_reference'=> $trx['id_transaction']
                     ];
@@ -4066,15 +4066,15 @@ class ApiOutletApp extends Controller
                 'errors' => [],
             ];
             foreach ($transactions as $transaction) {
-                $difference = ceil((time() - strtotime($transaction['stop_booking_at']))/60);
-                if(!$difference) {
+                if (date('Y-m-d H:i', time()) == date('Y-m-d H:i', strtotime($transaction['stop_booking_at']))) {
                     continue;
                 }
+                $difference = floor((time() - strtotime($transaction['stop_booking_at']))/60);
                 if ($difference < 5) {
                     // kirim notifikasi
                     $dataNotif = [
-                        'subject' => 'Driver Not Found',
-                        'string_body' => $transaction['order_id'] . ' - '. $transaction['transaction_receipt_number'],
+                        'subject' => 'Order '.$transaction['order_id'],
+                        'string_body' => 'Dalam ' . ( 5 - $difference ) . ' menit, pesanan batal otomatis. Segera pilih tindakan.',
                         'type' => 'trx',
                         'id_reference'=> $transaction['id_transaction']
                     ];
