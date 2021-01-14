@@ -301,14 +301,14 @@ class ApiSettingTransactionV2 extends Controller
                             $variantTree = Product::getVariantTree($getProduct['id_product'], $outlet);
                             $variants = Product::getVariantPrice($product_variant_group, $variantTree['variants_tree']??[]);
                             if (!$variants) {
-                                $p['variants'] = [];
-                            } else {
-                                $p['variants'] = $variants;
+                                $p['trx_variants'] = [];
+                            }else{
+                                $p['trx_variants'] = $variants;
                             }
                             $price = $variantTree['base_price'] ?? $price;
                             $p['transaction_variant_subtotal'] = $product_variant_group->product_variant_group_price - $price;
                         } else {
-                            $p['variants'] = [];
+                            $p['trx_variants'] = [];
                             $p['transaction_variant_subtotal'] = 0;
                         }
 
@@ -342,7 +342,7 @@ class ApiSettingTransactionV2 extends Controller
                         $p['transaction_product_bundling_charged_central'] = $getProduct['charged_central'];
                     }
 
-                    $bundlingSubtotal = ($bundlingBasePrice * $valueBundling['bundling_qty']) + $mod_subtotal;
+                    $bundlingSubtotal = ($bundlingBasePrice + $mod_subtotal) * $valueBundling['bundling_qty'];
                     array_push($dataSubtotal, $bundlingSubtotal);
                     $valueBundling['transaction_bundling_product_base_price'] = $bundlingBasePrice;
                     $valueBundling['transaction_bundling_product_subtotal'] = $bundlingSubtotal;

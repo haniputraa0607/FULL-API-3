@@ -461,7 +461,7 @@ use App\Lib\MyHelper;
                 <div class="col-12 text-right text-black-grey-light text-13-3px WorkSans-SemiBold" style="text-align: right"><b>{{ $data['transaction_receipt_number'] }}</b></div>
             </div>
             <div class="kotak" style="margin: 0px;border-radius: 10px;">
-                @foreach ($data['product_transaction'] as $trx)
+                @foreach ($data['product_transaction']??[] as $trx)
                     <div class="row" style="margin-bottom: 5%;">
                         <div class="col-12 text-13-3px WorkSans-Medium text-black">
                             <div class="round-grey bg-grey" style="border: 1px solid #aaaaaa;border-radius: 50%;width: 5px;height: 5px;display: inline-block;margin-right:3px;background-color: #aaaaaa"></div>

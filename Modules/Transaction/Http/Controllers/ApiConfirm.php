@@ -3,6 +3,7 @@
 namespace Modules\Transaction\Http\Controllers;
 
 use App\Http\Models\Configs;
+use App\Http\Models\TransactionProduct;
 use App\Jobs\FraudJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -29,7 +30,9 @@ use Modules\IPay88\Lib\IPay88;
 use App\Lib\MyHelper;
 use App\Lib\Midtrans;
 use App\Lib\Ovo;
+use Modules\ProductVariant\Entities\TransactionProductVariant;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
+use Modules\Transaction\Entities\TransactionBundlingProduct;
 use Modules\Transaction\Http\Requests\Transaction\ConfirmPayment;
 
 class ApiConfirm extends Controller
@@ -95,6 +98,38 @@ class ApiConfirm extends Controller
                     'id'       => $value['id_product'],
                     'price'    => abs($value['transaction_product_price']+$value['transaction_variant_subtotal']+$value['transaction_modifier_subtotal']-($value['transaction_product_discount']/$value['transaction_product_qty'])),
                     // 'name'     => $value['product']['product_name'].($more_name_text?'('.trim($more_name_text,',').')':''), // name + modifier too long
+                    'name'     => $value['product']['product_name'],
+                    'quantity' => $value['transaction_product_qty'],
+                ];
+
+                $totalPriceProduct+= ($dataProductMidtrans['quantity'] * $dataProductMidtrans['price']);
+
+                array_push($productMidtrans, $dataProductMidtrans);
+                array_push($dataDetailProduct, $dataProductMidtrans);
+            }
+        }
+
+        $checkItemBundling = Transaction::with('transaction_shipments', 'productTransactionBundling.product','outlet_name', 'transaction_payment_subscription')->where('id_transaction', $post['id'])->first();
+
+        if (isset($checkItemBundling['productTransactionBundling'])) {
+            $totalPriceProduct = 0;
+            foreach ($checkItemBundling['productTransactionBundling'] as $key => $value) {
+                // get modifiers name
+                $mods           = TransactionProductModifier::select('qty', 'text', 'transaction_product_modifier_price')->where('id_transaction_product', $value['id_transaction_product'])->get()->toArray();
+                $more_name_text = '';
+                $modPrice = 0;
+                foreach ($mods as $mod) {
+                    if ($mod['qty'] > 1) {
+                        $more_name_text .= ',' . $mod['qty'] . 'x ' . $mod['text'];
+                    } else {
+                        $more_name_text .= ',' . $mod['text'];
+                    }
+                    $modPrice = $modPrice + ($mod['transaction_product_modifier_price'] * $mod['qty']);
+                }
+
+                $dataProductMidtrans = [
+                    'id'       => $value['id_product'],
+                    'price'    => abs($value['transaction_product_price']+$modPrice),
                     'name'     => $value['product']['product_name'],
                     'quantity' => $value['transaction_product_qty'],
                 ];
