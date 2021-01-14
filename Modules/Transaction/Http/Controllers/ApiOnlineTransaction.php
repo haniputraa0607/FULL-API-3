@@ -25,6 +25,7 @@ use App\Http\Models\TransactionProductModifier;
 use Modules\ProductBundling\Entities\BundlingOutlet;
 use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 use Modules\ProductVariant\Entities\TransactionProductVariant;
 use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
@@ -1278,7 +1279,9 @@ class ApiOnlineTransaction extends Controller
         }
 
         //process add product bundling
-        $this->insertBundlingProduct($post['item_bundling']??[], $insertTransaction, $outlet, $post, $productMidtrans, $userTrxProduct);
+        if(!empty($post['item_bundling'])){
+            $this->insertBundlingProduct($post['item_bundling']??[], $insertTransaction, $outlet, $post, $productMidtrans, $userTrxProduct);
+        }
 
         array_push($dataDetailProduct, $productMidtrans);
 
@@ -2793,6 +2796,7 @@ class ApiOnlineTransaction extends Controller
         $subTotalBundling = 0;
         $totalItemBundling = 0;
         $itemBundlingDetail = [];
+        $itemBundling = [];
         foreach ($post['item_bundling']??[] as $key=>$bundling){
             $getBundling = Bundling::where('id_bundling', $bundling['id_bundling'])->whereRaw('NOW() >= start_date AND NOW() <= end_date')->first();
             if(empty($getBundling)){
@@ -2852,6 +2856,7 @@ class ApiOnlineTransaction extends Controller
                     ->first();
                 $getProductDetail = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first();
                 $product['visibility_outlet'] = $getProductDetail['product_detail_visibility']??null;
+                $id_product_variant_group = $product['id_product_variant_group']??null;
 
                 if($product['visibility_outlet'] == 'Hidden' || (empty($product['visibility_outlet']) && $product['product_visibility'] == 'Hidden')){
                     $error_msg[] = MyHelper::simpleReplace(
@@ -2869,9 +2874,12 @@ class ApiOnlineTransaction extends Controller
                 if($outlet['outlet_different_price'] == 1){
                     $price = ProductSpecialPrice::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
                 }
+
                 if ($product['product_variant_status'] && $getProductDetail['product_detail_stock_status'] == 'Available') {
-                    $variantTree = Product::getVariantTree($product['id_product'], $outlet);
-                    $price = $variantTree['base_price']??0;
+                    $price = ProductVariantGroup::where('id_product_variant_group', $id_product_variant_group)->first()['product_variant_group_price']??0;
+                    if($outlet['outlet_different_price'] == 1){
+                        $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $id_product_variant_group)->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                    }
                 }
 
                 $price = (float)$price??0;
@@ -2974,7 +2982,6 @@ class ApiOnlineTransaction extends Controller
                     continue 2;
                 }
 
-                $id_product_variant_group = $product['id_product_variant_group']??null;
                 $product['selected_variant'] = [];
                 $variants = [];
                 if(!empty($id_product_variant_group)){
@@ -3074,34 +3081,33 @@ class ApiOnlineTransaction extends Controller
                 }
             }
 
-            $total = ($bundlingBasePrice * $bundling['bundling_qty']) + $totalModPrice;
-            $post['item_bundling'][$key] = [
+            $itemBundling[] = [
                 "id_custom" => $bundling['id_custom']??null,
                 "id_bundling" => $getBundling['id_bundling'],
                 "bundling_name" => $getBundling['bundling_name'],
                 "bundling_code" => $getBundling['bundling_code'],
-                "bundling_base_price" => $bundlingBasePrice,
+                "bundling_base_price" => $bundlingBasePrice + $totalModPrice,
                 "bundling_qty" => $bundling['bundling_qty'],
-                "bundling_price_total" => $total,
+                "bundling_price_total" =>  ($bundlingBasePrice + $totalModPrice) * $bundling['bundling_qty'],
                 "products" => $products
             ];
 
-            $itemBundlingDetail[$key] = [
+            $itemBundlingDetail[] = [
                 "id_custom" => $bundling['id_custom']??null,
                 'bundling_name' => $bundling['bundling_name'],
                 'bundling_qty' => $bundling['bundling_qty'],
-                'bundling_subtotal' => (int)$total,
-                'bundling_sub_item' => '@'.MyHelper::requestNumber($bundlingBasePrice,'_CURRENCY'),
+                'bundling_subtotal' => ($bundlingBasePrice + $totalModPrice) * $bundling['bundling_qty'],
+                'bundling_sub_item' => '@'.MyHelper::requestNumber($bundlingBasePrice+$totalModPrice,'_CURRENCY'),
                 "products" => $productsBundlingDetail
             ];
-            $subTotalBundling = $total;
+            $subTotalBundling = $subTotalBundling + (($bundlingBasePrice + $totalModPrice) * $bundling['bundling_qty']);
             $totalItemBundling = $totalItemBundling + $bundling['bundling_qty'];
         }
 
         return [
             'total_item_bundling' => $totalItemBundling,
             'subtotal_bundling' => $subTotalBundling,
-            'item_bundling' => $post['item_bundling'],
+            'item_bundling' => $itemBundling,
             'item_bundling_detail' => $itemBundlingDetail,
             'error_message' => $error_msg
         ];
@@ -3843,28 +3849,45 @@ class ApiOnlineTransaction extends Controller
 
                 $productPrice = 0;
 
-                if($outlet['outlet_different_price']){
-                    $checkPriceProduct = ProductSpecialPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $post['id_outlet']])->first();
-                    if(!isset($checkPriceProduct['product_special_price'])){
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => ['Product Price Not Valid']
-                        ]);
-                    }
-                    $productPrice = $checkPriceProduct['product_special_price'];
-                }else{
-                    $checkPriceProduct = ProductGlobalPrice::where(['id_product' => $checkProduct['id_product']])->first();
+                $product = BundlingProduct::join('products', 'products.id_product', 'bundling_product.id_product')
+                    ->leftJoin('product_global_price as pgp', 'pgp.id_product', '=', 'products.id_product')
+                    ->join('bundling', 'bundling.id_bundling', 'bundling_product.id_bundling')
+                    ->where('bundling_product.id_bundling_product', $itemProduct['id_bundling_product'])
+                    ->select('products.product_visibility', 'pgp.product_global_price',  'products.product_variant_status',
+                        'bundling_product.*', 'bundling.bundling_name', 'bundling.bundling_code', 'products.*')
+                    ->first();
+                $getProductDetail = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first();
+                $product['visibility_outlet'] = $getProductDetail['product_detail_visibility']??null;
+                $id_product_variant_group = $product['id_product_variant_group']??null;
 
-                    if(isset($checkPriceProduct['product_global_price'])){
-                        $productPrice = $checkPriceProduct['product_global_price'];
-                    }else{
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => ['Product Price Not Valid']
-                        ]);
+                if($product['visibility_outlet'] == 'Hidden' || (empty($product['visibility_outlet']) && $product['product_visibility'] == 'Hidden')){
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Product '.$checkProduct['product_name'].'pada bundling '.$product['bundling_name'].' tidak tersedia']
+                    ]);
+                }
+
+                $price = $product['product_global_price'];
+                if($outlet['outlet_different_price'] == 1){
+                    $price = ProductSpecialPrice::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
+                }
+
+                if ($product['product_variant_status'] && $getProductDetail['product_detail_stock_status'] == 'Available') {
+                    $price = ProductVariantGroup::where('id_product_variant_group', $id_product_variant_group)->first()['product_variant_group_price']??0;
+                    if($outlet['outlet_different_price'] == 1){
+                        $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $id_product_variant_group)->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
                     }
+                }
+
+                $price = (float)$price??0;
+                //calculate discount produk
+                if(strtolower($product['bundling_product_discount_type']) == 'nominal'){
+                    $calculate = ($price - $product['bundling_product_discount']);
+                }else{
+                    $discount = $price*($product['bundling_product_discount']/100);
+                    $discount = ($discount > $product['bundling_product_maximum_discount'] &&  $product['bundling_product_maximum_discount'] > 0? $product['bundling_product_maximum_discount']:$discount);
+                    $calculate = ($price - $discount);
                 }
 
                 $dataProduct = [
@@ -3876,7 +3899,7 @@ class ApiOnlineTransaction extends Controller
                     'id_outlet'                    => $trx['id_outlet'],
                     'id_user'                      => $trx['id_user'],
                     'transaction_product_qty'      => $itemBundling['bundling_qty'],
-                    'transaction_product_price'    => $itemProduct['transaction_product_price'],
+                    'transaction_product_price'    => $calculate,
                     'transaction_product_price_base' => NULL,
                     'transaction_product_price_tax'  => NULL,
                     'transaction_product_discount'   => 0,
@@ -3995,7 +4018,7 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
                 $insert_variants = [];
-                foreach ($itemProduct['variants'] as $id_product_variant => $product_variant_price) {
+                foreach ($itemProduct['trx_variants'] as $id_product_variant => $product_variant_price) {
                     $insert_variants[] = [
                         'id_transaction_product' => $trx_product['id_transaction_product'],
                         'id_product_variant' => $id_product_variant,
@@ -4010,9 +4033,9 @@ class ApiOnlineTransaction extends Controller
                 $trx_product->save();
                 $dataProductMidtrans = [
                     'id'       => $checkProduct['id_product'],
-                    'price'    => $productPrice + $mod_subtotal - ($trx_product['transaction_product_discount']/$trx_product['transaction_product_qty']),
+                    'price'    => $calculate + $mod_subtotal,
                     'name'     => $checkProduct['product_name'],
-                    'quantity' => 1,
+                    'quantity' => $itemBundling['bundling_qty'],
                 ];
                 array_push($productMidtrans, $dataProductMidtrans);
                 $totalWeight += $checkProduct['product_weight'] * 1;
