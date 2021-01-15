@@ -3160,14 +3160,17 @@ class ApiOutletApp extends Controller
 
         //get item bundling
         $listItemBundling = [];
+        $quantityItemBundling = 0;
         $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
             ->where('id_transaction', $id)->get()->toArray();
         foreach ($getBundling as $key=>$bundling){
+            $quantityItemBundling = $quantityItemBundling + $bundling['transaction_bundling_product_qty'];
+            $getPriceToping =  $bundling['transaction_bundling_product_subtotal']/$bundling['transaction_bundling_product_qty'];
             $listItemBundling[$key] = [
                 'bundling_name' => $bundling['bundling_name'],
                 'bundling_qty' => $bundling['transaction_bundling_product_qty'],
                 'bundling_subtotal' => (int)$bundling['transaction_bundling_product_subtotal'],
-                'bundling_sub_item' => '@'.(int)$bundling['transaction_bundling_product_base_price'],
+                'bundling_sub_item' => '@'.MyHelper::requestNumber($getPriceToping,'_CURRENCY')
             ];
 
             $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
@@ -3224,6 +3227,7 @@ class ApiOutletApp extends Controller
 
         $result['product_bundling_transaction_name'] = 'Bundling';
         $result['product_bundling_transaction'] = $listItemBundling;
+        $result['product_transaction'] = [];
 
         $discount = 0;
         $quantity = 0;
@@ -3259,7 +3263,7 @@ class ApiOutletApp extends Controller
 
         $result['payment_detail'][] = [
             'name'   => 'Subtotal',
-            'desc'   => $quantity . ' items',
+            'desc'   => $quantity + $quantityItemBundling . ' items',
             'amount' => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY'),
         ];
 
