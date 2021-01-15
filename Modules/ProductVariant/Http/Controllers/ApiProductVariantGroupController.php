@@ -289,11 +289,31 @@ class ApiProductVariantGroupController extends Controller
                 foreach ($post['rule'] as $row){
                     if(isset($row['subject'])){
                         if($row['subject'] == 'product_variant_group_code'){
-                            $data->where('product_variant_groups.product_variant_group_code', $row['parameter']);
+                            if($row['operator'] == '='){
+                                $data->where('product_variant_groups.product_variant_group_code', $row['parameter']);
+                            }else{
+                                $data->where('product_variant_groups.product_variant_group_code', 'like', '%'.$row['parameter'].'%');
+                            }
                         }
 
                         if($row['subject'] == 'product_variant_group_visibility'){
                             $data->where('product_variant_groups.product_variant_group_visibility', $row['parameter']);
+                        }
+
+                        if($row['subject'] == 'product_code'){
+                            if($row['operator'] == '='){
+                                $data->where('products.product_code', $row['parameter']);
+                            }else{
+                                $data->where('products.product_code', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'product_name'){
+                            if($row['operator'] == '='){
+                                $data->where('products.product_name', $row['parameter']);
+                            }else{
+                                $data->where('products.product_name', 'like', '%'.$row['parameter'].'%');
+                            }
                         }
                     }
                 }
@@ -302,11 +322,31 @@ class ApiProductVariantGroupController extends Controller
                     foreach ($post['rule'] as $row){
                         if(isset($row['subject'])){
                             if($row['subject'] == 'product_variant_group_code'){
-                                $subquery->orWhere('product_variant_groups.product_variant_group_code', $row['parameter']);
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('product_variant_groups.product_variant_group_code', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('product_variant_groups.product_variant_group_code', 'like', '%'.$row['parameter'].'%');
+                                }
                             }
 
                             if($row['subject'] == 'product_variant_group_visibility'){
                                 $subquery->orWhere('product_variant_groups.product_variant_group_visibility', $row['parameter']);
+                            }
+
+                            if($row['subject'] == 'product_code'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('products.product_code', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('products.product_code', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'product_name'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('products.product_name', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('products.product_name', 'like', '%'.$row['parameter'].'%');
+                                }
                             }
                         }
                     }

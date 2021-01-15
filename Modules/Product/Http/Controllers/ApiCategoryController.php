@@ -692,6 +692,7 @@ class ApiCategoryController extends Controller
                 }
             }
 
+            $id_brand = array_unique($id_brand);
             if(count($brands) >= count($id_brand)){
                 $resBundling[] = [
                     "id_bundling" => $bundling,

@@ -2365,9 +2365,11 @@ class ApiTransaction extends Controller
             $product_count=0;
             //get item bundling
             $listItemBundling = [];
+            $quantityItemBundling = 0;
             $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
                 ->where('id_transaction', $id)->get()->toArray();
             foreach ($getBundling as $key=>$bundling){
+                $quantityItemBundling = $quantityItemBundling + $bundling['transaction_bundling_product_qty'];
                 $getPriceToping =  $bundling['transaction_bundling_product_subtotal']/$bundling['transaction_bundling_product_qty'];
                 $listItemBundling[$key] = [
                     'bundling_name' => $bundling['bundling_name'],
@@ -2957,7 +2959,7 @@ class ApiTransaction extends Controller
 
             $result['payment_detail'][] = [
                 'name'      => 'Subtotal',
-                'desc'      => $quantity . ' items',
+                'desc'      => $quantity+$quantityItemBundling . ' items',
                 'amount'    => MyHelper::requestNumber($list['transaction_subtotal'],'_CURRENCY')
             ];
 
