@@ -981,6 +981,7 @@ class ApiDisburseController extends Controller
                         "Detail Transaction" => $generateTrx
                     ]))->store('excel_email/'.$excelFile);
 
+                    $tmpPath = [];
                     if($store){
                         $tmpPath[] = storage_path('app/excel_email/'.$excelFile);
                     }
@@ -1615,6 +1616,7 @@ class ApiDisburseController extends Controller
                                 }
                             });
                         }catch(\Exception $e){
+                            \Log::error($e);
                         }
 
                         foreach ($tmpPath as $t){
