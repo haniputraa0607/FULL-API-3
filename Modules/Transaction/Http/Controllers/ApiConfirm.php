@@ -60,7 +60,7 @@ class ApiConfirm extends Controller
         $productMidtrans   = [];
         $dataDetailProduct = [];
 
-        $check = Transaction::with('transaction_shipments', 'productTransaction.product','outlet_name', 'transaction_payment_subscription')->where('id_transaction', $post['id'])->first();
+        $check = Transaction::with('transaction_shipments', 'productTransaction.product', 'productTransaction.product_variant_group','outlet_name', 'transaction_payment_subscription')->where('id_transaction', $post['id'])->first();
 
         if (empty($check)) {
             DB::rollback();
@@ -95,7 +95,7 @@ class ApiConfirm extends Controller
                     }
                 }
                 $dataProductMidtrans = [
-                    'id'       => $value['id_product'],
+                    'id'       => $value['product_variant_group']['product_variant_group_code'] ?? $value['product']['product_code'],
                     'price'    => abs($value['transaction_product_price']+$value['transaction_variant_subtotal']+$value['transaction_modifier_subtotal']-($value['transaction_product_discount']/$value['transaction_product_qty'])),
                     // 'name'     => $value['product']['product_name'].($more_name_text?'('.trim($more_name_text,',').')':''), // name + modifier too long
                     'name'     => $value['product']['product_name'],
@@ -128,7 +128,7 @@ class ApiConfirm extends Controller
                 }
 
                 $dataProductMidtrans = [
-                    'id'       => $value['id_product'],
+                    'id'       => $value['product_variant_group']['product_variant_group_code'] ?? $value['product']['product_code'],
                     'price'    => abs($value['transaction_product_price']+$modPrice),
                     'name'     => $value['product']['product_name'],
                     'quantity' => $value['transaction_product_qty'],
