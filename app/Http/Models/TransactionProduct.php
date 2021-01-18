@@ -60,6 +60,7 @@ class TransactionProduct extends Model
 		'transaction_variant_subtotal',
         'id_transaction_bundling_product',
         'id_bundling_product',
+        'transaction_product_bundling_price',
         'transaction_product_bundling_discount',
         'transaction_product_bundling_charged_outlet',
         'transaction_product_bundling_charged_central'

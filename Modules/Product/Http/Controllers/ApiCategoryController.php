@@ -20,9 +20,12 @@ use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
 use Modules\Product\Entities\ProductDetail;
+use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\ProductBundling\Entities\Bundling;
 use Modules\ProductBundling\Entities\BundlingProduct;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 use Validator;
 use Hash;
 use DB;
@@ -666,13 +669,18 @@ class ApiCategoryController extends Controller
 
                 if($p['visibility_outlet'] != 'Hidden' || (empty($p['visibility_outlet']) && $p['product_visibility'] !== 'Hidden')){
                     $id_brand[] = BrandProduct::where('id_product', $p['id_product'])->first()['id_brand'];
-                    $price = $p['product_global_price'];
-                    if($outlet['outlet_different_price'] == 1){
-                        $price = ProductSpecialPrice::where('id_product', $p['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
-                    }
-                    if ($p['product_variant_status'] && $getProductDetail['product_detail_stock_status'] == 'Available') {
-                        $variantTree = Product::getVariantTree($p['id_product'], $outlet);
-                        $price = $variantTree['base_price']??0;
+                    if($p['product_variant_status'] && !empty($p['id_product_variant_group'])){
+                        if($outlet['outlet_different_price'] == 1){
+                            $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $p['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                        }else{
+                            $price = ProductVariantGroup::where('id_product_variant_group', $p['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                        }
+                    }elseif(!empty($p['id_product'])){
+                        if($outlet['outlet_different_price'] == 1){
+                            $price = ProductSpecialPrice::where('id_product', $p['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
+                        }else{
+                            $price = $p['product_global_price'];
+                        }
                     }
 
                     $price = (float)$price;
