@@ -20,6 +20,7 @@ use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 
 use DB;
+use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 
 class ApiSettingTransactionV2 extends Controller
 {
@@ -266,9 +267,18 @@ class ApiSettingTransactionV2 extends Controller
                             ]);
                         }
 
-                        $price = $getProduct['product_global_price'];
-                        if($outlet['outlet_different_price'] == 1){
-                            $price = ProductSpecialPrice::where('id_product', $getProduct['id_product'])->where('id_outlet', $outlet['id_outlet'])->first()['product_special_price']??0;
+                        if($getProduct['product_variant_status'] && !empty($getProduct['id_product_variant_group'])){
+                            if($outlet['outlet_different_price'] == 1){
+                                $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $getProduct['id_product_variant_group'])->where('id_outlet', $outlet['id_outlet'])->first()['product_variant_group_price']??0;
+                            }else{
+                                $price = ProductVariantGroup::where('id_product_variant_group', $getProduct['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                            }
+                        }elseif(!empty($getProduct['id_product'])){
+                            if($outlet['outlet_different_price'] == 1){
+                                $price = ProductSpecialPrice::where('id_product', $getProduct['id_product'])->where('id_outlet', $outlet['id_outlet'])->first()['product_special_price']??0;
+                            }else{
+                                $price = ProductGlobalPrice::where('id_product', $getProduct['id_product'])->first()['product_global_price']??0;
+                            }
                         }
 
                         if(empty($price)){
@@ -305,20 +315,23 @@ class ApiSettingTransactionV2 extends Controller
                             }else{
                                 $p['trx_variants'] = $variants;
                             }
-                            $price = $variantTree['base_price'] ?? $price;
+                            $price = $price;
                             $p['transaction_variant_subtotal'] = $product_variant_group->product_variant_group_price - $price;
                         } else {
                             $p['trx_variants'] = [];
                             $p['transaction_variant_subtotal'] = 0;
                         }
 
+                        $totalMod = 0;
                         foreach ($p['modifiers']??[] as $modifier) {
                             $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                             $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
                             if($different_price){
                                 $mod_price = ProductModifierPrice::select('product_modifier_price')->where('id_outlet',$data['id_outlet'])->where('id_product_modifier',$id_product_modifier)->pluck('product_modifier_price')->first()?:0;
+                                $totalMod = $totalMod + $mod_price;
                             }else{
                                 $mod_price = ProductModifierGlobalPrice::select('product_modifier_price')->where('id_product_modifier',$id_product_modifier)->pluck('product_modifier_price')->first()?:0;
+                                $totalMod = $totalMod + $mod_price;
                             }
                             $mod_subtotal += $mod_price*$qty_product_modifier;
                         }
@@ -333,9 +346,11 @@ class ApiSettingTransactionV2 extends Controller
                             $discount = ($discount > $getProduct['bundling_product_maximum_discount'] &&  $getProduct['bundling_product_maximum_discount'] > 0? $getProduct['bundling_product_maximum_discount']:$discount);
                             $calculate = ($price - $discount);
                         }
-                        $p['transaction_product_price'] = $calculate;
+                        $p['transaction_product_price'] = $price;
+                        $p['transaction_product_discount'] = $discount;
                         $p['transaction_product_bundling_discount'] = $discount;
-                        $p['transaction_product_subtotal'] = $calculate;
+                        $p['transaction_product_bundling_price'] = $calculate;
+                        $p['transaction_product_subtotal'] = ($calculate  + $totalMod) * $valueBundling['bundling_qty'];
                         $bundlingBasePrice = $bundlingBasePrice + $calculate;
                         $totalDiscount = $totalDiscount + $discount;
                         $p['transaction_product_bundling_charged_outlet'] = $getProduct['charged_outlet'];

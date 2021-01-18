@@ -127,9 +127,10 @@ class ApiConfirm extends Controller
                     $modPrice = $modPrice + ($mod['transaction_product_modifier_price'] * $mod['qty']);
                 }
 
+                $priceProd = $value['transaction_product_price'] - $value['transaction_product_bundling_discount'];
                 $dataProductMidtrans = [
                     'id'       => $value['id_product'],
-                    'price'    => abs($value['transaction_product_price']+$modPrice),
+                    'price'    => abs($priceProd+$modPrice),
                     'name'     => $value['product']['product_name'],
                     'quantity' => $value['transaction_product_qty'],
                 ];
