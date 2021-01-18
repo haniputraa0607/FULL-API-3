@@ -100,7 +100,8 @@ class Subscription extends Eloquent
         'is_all_payment',
         'product_rule',
         'brand_rule',
-        'product_type'
+        'product_type',
+        'allow_bundling'
 	];
 
 	protected $appends  = [
