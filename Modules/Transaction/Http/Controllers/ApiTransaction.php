@@ -1951,7 +1951,7 @@ class ApiTransaction extends Controller
                         $html .= '<td>'.$val['bundling_name'].'</td>';
                         $html .= '<td>'.implode(",",$modifier).'</td>';
                         $html .= '<td>'.$textMod.'</td>';
-                        $html .= '<td>'.$val['transaction_product_price'].'</td>';
+                        $html .= '<td>'.(!empty($val['bundling_name']) ? $val['transaction_product_bundling_price'] : $val['transaction_product_price']).'</td>';
                         $html .= '<td>'.$priceMod.'</td>';
                         $html .= '<td>'.htmlspecialchars($val['transaction_product_note']).'</td>';
                         if(!empty($val['transaction_product_qty_discount'])&& $val['transaction_product_qty_discount'] > $j){

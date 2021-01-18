@@ -656,15 +656,18 @@ class ApiBundlingController extends Controller
         $priceForList = 0;
         $products = [];
         foreach ($getProductBundling as $p){
-            $price = $p['product_global_price'];
-
-            if($outlet['outlet_different_price'] == 1){
-                $price = ProductSpecialPrice::where('id_product', $p['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
-            }
-
-            if ($p['product_variant_status']) {
-                $variantTree = Product::getVariantTree($p['id_product'], $outlet);
-                $price = $variantTree['base_price']??0;
+            if($p['product_variant_status'] && !empty($p['id_product_variant_group'])){
+                if($outlet['outlet_different_price'] == 1){
+                    $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $p['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                }else{
+                    $price = ProductVariantGroup::where('id_product_variant_group', $p['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                }
+            }elseif(!empty($p['id_product'])){
+                if($outlet['outlet_different_price'] == 1){
+                    $price = ProductSpecialPrice::where('id_product', $p['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
+                }else{
+                    $price = $p['product_global_price'];
+                }
             }
 
             $variants = [];
@@ -706,6 +709,7 @@ class ApiBundlingController extends Controller
                     $calculate = ($price - $p['bundling_product_discount']);
                 }else{
                     $discount = $price*($p['bundling_product_discount']/100);
+                    $discount = ($discount > $p['bundling_product_maximum_discount'] &&  $p['bundling_product_maximum_discount'] > 0? $p['bundling_product_maximum_discount']:$discount);
                     $calculate = ($price - $discount);
                 }
                 $priceForList = $priceForList + $calculate;
