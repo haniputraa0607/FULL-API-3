@@ -2870,15 +2870,17 @@ class ApiOnlineTransaction extends Controller
                     continue 2;
                 }
                 $product['note'] = $p['note']??'';
-                $price = $product['product_global_price'];
-                if($outlet['outlet_different_price'] == 1){
-                    $price = ProductSpecialPrice::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
-                }
-
-                if ($product['product_variant_status'] && $getProductDetail['product_detail_stock_status'] == 'Available') {
-                    $price = ProductVariantGroup::where('id_product_variant_group', $id_product_variant_group)->first()['product_variant_group_price']??0;
+                if($product['product_variant_status'] && !empty($product['id_product_variant_group'])){
                     if($outlet['outlet_different_price'] == 1){
-                        $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $id_product_variant_group)->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                        $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                    }else{
+                        $price = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                    }
+                }elseif(!empty($p['id_product'])){
+                    if($outlet['outlet_different_price'] == 1){
+                        $price = ProductSpecialPrice::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
+                    }else{
+                        $price = $product['product_global_price'];
                     }
                 }
 
@@ -3868,15 +3870,17 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
 
-                $price = $product['product_global_price'];
-                if($outlet['outlet_different_price'] == 1){
-                    $price = ProductSpecialPrice::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
-                }
-
-                if ($product['product_variant_status'] && $getProductDetail['product_detail_stock_status'] == 'Available') {
-                    $price = ProductVariantGroup::where('id_product_variant_group', $id_product_variant_group)->first()['product_variant_group_price']??0;
+                if($product['product_variant_status'] && !empty($product['id_product_variant_group'])){
                     if($outlet['outlet_different_price'] == 1){
-                        $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $id_product_variant_group)->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                        $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                    }else{
+                        $price = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                    }
+                }elseif(!empty($product['id_product'])){
+                    if($outlet['outlet_different_price'] == 1){
+                        $price = ProductSpecialPrice::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
+                    }else{
+                        $price = $product['product_global_price'];
                     }
                 }
 
@@ -3899,10 +3903,12 @@ class ApiOnlineTransaction extends Controller
                     'id_outlet'                    => $trx['id_outlet'],
                     'id_user'                      => $trx['id_user'],
                     'transaction_product_qty'      => $itemBundling['bundling_qty'],
-                    'transaction_product_price'    => $calculate,
+                    'transaction_product_price'    => $price,
+                    'transaction_product_bundling_price' => $calculate,
                     'transaction_product_price_base' => NULL,
                     'transaction_product_price_tax'  => NULL,
-                    'transaction_product_discount'   => 0,
+                    'transaction_product_discount'   => $itemProduct['transaction_product_bundling_price'],
+                    'transaction_product_bundling_price'   => $itemProduct['transaction_product_bundling_price'],
                     'transaction_product_base_discount' => 0,
                     'transaction_product_qty_discount'  => 0,
                     'transaction_product_subtotal' => $itemProduct['transaction_product_subtotal'],
