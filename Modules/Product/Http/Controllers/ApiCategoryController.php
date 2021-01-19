@@ -613,14 +613,6 @@ class ApiCategoryController extends Controller
     function getBundling($post, $brands, $outlet, $resProduct){
         $resBundling = [];
         $count = count($brands);
-        $paramValue = '';
-        foreach (array_values($brands) as $index => $p){
-            if($index !== $count-1){
-                $paramValue .= 'brand_product.id_brand = "'.$p.'" OR ';
-            }else{
-                $paramValue .= 'brand_product.id_brand = "'.$p.'"';
-            }
-        }
 
         $bundlings1 = Bundling::join('bundling_product as bp', 'bp.id_bundling', 'bundling.id_bundling')
             ->join('brand_product', 'brand_product.id_product', 'bp.id_product')
@@ -636,10 +628,8 @@ class ApiCategoryController extends Controller
             ->join('brand_product', 'brand_product.id_product', 'bp.id_product')
             ->where('all_outlet', 0)
             ->where('bo.id_outlet', $post['id_outlet'])
-            ->whereRaw('('.$paramValue.')')
-            ->havingRaw('COUNT(*) <= '.$count)
+            ->whereIn('brand_product.id_brand', $brands)
             ->whereRaw('NOW() >= start_date AND NOW() <= end_date')
-            ->groupBy('bo.id_outlet')
             ->pluck('bundling.id_bundling')->toArray();
 
         $bundlings = array_merge($bundlings1,$bundlings2);

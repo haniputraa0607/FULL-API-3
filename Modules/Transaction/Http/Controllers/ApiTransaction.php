@@ -2381,53 +2381,28 @@ class ApiTransaction extends Controller
                 $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
                     ->where('id_transaction_bundling_product', $bundling['id_transaction_bundling_product'])->get()->toArray();
 
-                $prod = [];
                 foreach ($bundlingProduct as $bp){
                     $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                         ->whereNull('transaction_product_modifiers.id_product_modifier_group')
                         ->where('id_transaction_product', $bp['id_transaction_product'])
-                        ->pluck('transaction_product_modifiers.text')->toArray();
+                        ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as modifier_name', DB::raw('FLOOR(transaction_product_modifier_price) as modifier_price'))->get()->toArray();
                     $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
                         ->where('id_transaction_product', $bp['id_transaction_product'])
-                        ->pluck('product_variants.product_variant_name')->toArray();
+                        ->select('product_variants.id_product_variant', 'product_variants.product_variant_name',  DB::raw('FLOOR(transaction_product_variant_price) as product_variant_price'))->get()->toArray();
                     $variantNoPrice =  TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                         ->whereNotNull('transaction_product_modifiers.id_product_modifier_group')
                         ->where('id_transaction_product', $bp['id_transaction_product'])
-                        ->pluck('transaction_product_modifiers.text')->toArray();
+                        ->select('transaction_product_modifiers.id_product_modifier as id_product_variant', 'transaction_product_modifiers.text as product_variant_name', 'transaction_product_modifier_price as product_variant_price')->get()->toArray();
+                    $variants = array_merge($variantPrice, $variantNoPrice);
 
-                    $name = array_merge($variantPrice, $variantNoPrice, $mod);
-                    $check = array_search($bp['id_bundling_product'], array_column($prod, 'id_bundling_product'));
-                    if($check === false){
-                        if(!empty($name) || !empty($bp['transaction_product_note'])){
-                            $prod[] = [
-                                'id_bundling_product' => $bp['id_bundling_product'],
-                                'bundling_product_qty' => 1,
-                                'bundling_product_name' => $bp['product_name'],
-                                'products' => [
-                                    [
-                                        'product_name' => (empty(implode(', ', $name)) ? "" : implode(', ', $name)),
-                                        'product_note' => $bp['transaction_product_note']
-                                    ]
-                                ]
-                            ];
-                        }else{
-                            $prod[] = [
-                                'id_bundling_product' => $bp['id_bundling_product'],
-                                'bundling_product_qty' => 1,
-                                'bundling_product_name' => $bp['product_name'],
-                                'products' => []
-                            ];
-                        }
-                    }else{
-                        $prod[$check]['bundling_product_qty'] = $prod[$check]['bundling_product_qty'] + 1;
-                        $prod[$check]['products'][] = [
-                            'product_name' => implode(', ', $name),
-                            'product_note' => $bp['transaction_product_note']
-                        ];
-                    }
+                    $listItemBundling[$key]['products'][] = [
+                        'product_qty' => $bp['transaction_product_qty'],
+                        'product_name' => $bp['product_name'],
+                        'note' => $bp['transaction_product_note'],
+                        'variants' => $variants,
+                        'modifiers' => $mod
+                    ];
                 }
-
-                $listItemBundling[$key]['products'] = $prod;
             }
 
             $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){

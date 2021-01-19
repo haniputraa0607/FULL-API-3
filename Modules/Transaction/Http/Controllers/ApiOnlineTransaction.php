@@ -1280,7 +1280,7 @@ class ApiOnlineTransaction extends Controller
 
         //process add product bundling
         if(!empty($post['item_bundling'])){
-            $this->insertBundlingProduct($post['item_bundling']??[], $insertTransaction, $outlet, $post, $productMidtrans, $userTrxProduct);
+            $this->insertBundlingProduct($post['item_bundling_detail']??[], $insertTransaction, $outlet, $post, $productMidtrans, $userTrxProduct);
         }
 
         array_push($dataDetailProduct, $productMidtrans);
@@ -2843,6 +2843,7 @@ class ApiOnlineTransaction extends Controller
 
             $bundlingBasePrice = 0;
             $totalModPrice = 0;
+            $totalPriceNoDiscount = 0;
             $products = [];
             $productsBundlingDetail = [];
             //check product from bundling
@@ -2885,6 +2886,7 @@ class ApiOnlineTransaction extends Controller
                 }
 
                 $price = (float)$price??0;
+                $totalPriceNoDiscount = $totalPriceNoDiscount + $price;
                 //calculate discount produk
                 if(strtolower($product['bundling_product_discount_type']) == 'nominal'){
                     $calculate = ($price - $product['bundling_product_discount']);
@@ -3047,37 +3049,48 @@ class ApiOnlineTransaction extends Controller
                     "variants"=> $product['variants']
                 ];
 
-                $variantsName = array_column($variants, 'product_variant_name');
-                $modName = array_column($modifiers, 'text');
-                $name = array_merge($variantsName, $modName);
-                $check = array_search($product['id_bundling_product'], array_column($productsBundlingDetail, 'id_bundling_product'));
+                $check = array_search($product['id_product'], array_column($productsBundlingDetail, 'id_product'));
                 if($check === false){
-                    if(empty($name) && empty($product['note'])){
-                        $productsBundlingDetail[] = [
-                            'id_bundling_product' => $product['id_bundling_product'],
-                            'bundling_product_qty' => 1,
-                            'bundling_product_name' => $product['product_name'],
-                            'products' => []
-                        ];
+                    $productsBundlingDetail[] = [
+                        "product_qty" => 1,
+                        "id_brand" => $product['id_brand'],
+                        "id_product" => $product['id_product'],
+                        "id_bundling_product" => $product['id_bundling_product'],
+                        "id_product_variant_group" => $product['id_product_variant_group'],
+                        "modifiers" => $modifiers,
+                        "extra_modifiers" => array_column($extraModifier, 'id_product_modifier'),
+                        "product_name" => $product['product_name'],
+                        "note" => $product['note'],
+                        "product_code" => $product['product_code'],
+                        "selected_variant" => array_merge($product['selected_variant'], $p['extra_modifiers']),
+                        "variants"=> $product['variants']
+                    ];
+                }else{
+                    $checkModifiers = $productsBundlingDetail[$check]['modifiers'];
+                    $checkNote = $productsBundlingDetail[$check]['note'];
+                    $checkIdProductVariantGroup = $productsBundlingDetail[$check]['id_product_variant_group'];
+
+                    $mergeModifiers = array_merge($checkModifiers, $modifiers);
+                    $mergeModifiersUnique = array_map("unserialize", array_unique(array_map("serialize", $mergeModifiers)));
+
+                    if($checkIdProductVariantGroup == $product['id_product_variant_group'] &&
+                        count($checkModifiers) == count($modifiers) &&
+                        count($mergeModifiersUnique) == count($modifiers) && $checkNote == $product['note']){
+                        $productsBundlingDetail[$check]['product_qty'] = $productsBundlingDetail[$check]['product_qty'] + 1;
                     }else{
                         $productsBundlingDetail[] = [
-                            'id_bundling_product' => $product['id_bundling_product'],
-                            'bundling_product_qty' => 1,
-                            'bundling_product_name' => $product['product_name'],
-                            'products' => [
-                                [
-                                    'product_name' => (empty(implode(', ', $name)) ? "" : implode(', ', $name)),
-                                    'product_note' => $product['note']
-                                ]
-                            ]
-                        ];
-                    }
-                }else{
-                    $productsBundlingDetail[$check]['bundling_product_qty'] = $productsBundlingDetail[$check]['bundling_product_qty'] + 1;
-                    if(!empty($name) || !empty($product['note'])){
-                        $productsBundlingDetail[$check]['products'][] = [
-                            'product_name' => implode(', ', $name),
-                            'product_note' => $product['note']
+                            "product_qty" => 1,
+                            "id_brand" => $product['id_brand'],
+                            "id_product" => $product['id_product'],
+                            "id_bundling_product" => $product['id_bundling_product'],
+                            "id_product_variant_group" => $product['id_product_variant_group'],
+                            "modifiers" => $modifiers,
+                            "extra_modifiers" => array_column($extraModifier, 'id_product_modifier'),
+                            "product_name" => $product['product_name'],
+                            "note" => $product['note'],
+                            "product_code" => $product['product_code'],
+                            "selected_variant" => array_merge($product['selected_variant'], $p['extra_modifiers']),
+                            "variants"=> $product['variants']
                         ];
                     }
                 }
@@ -3094,14 +3107,45 @@ class ApiOnlineTransaction extends Controller
                 "products" => $products
             ];
 
-            $itemBundlingDetail[] = [
-                "id_custom" => $bundling['id_custom']??null,
-                'bundling_name' => $bundling['bundling_name'],
-                'bundling_qty' => $bundling['bundling_qty'],
-                'bundling_subtotal' => ($bundlingBasePrice + $totalModPrice) * $bundling['bundling_qty'],
-                'bundling_sub_item' => '@'.MyHelper::requestNumber($bundlingBasePrice+$totalModPrice,'_CURRENCY'),
-                "products" => $productsBundlingDetail
-            ];
+            //check for same detail item bundling
+            $checkBundling = array_search($getBundling['id_bundling'], array_column($itemBundlingDetail, 'id_bundling'));
+            if($checkBundling === false){
+                $itemBundlingDetail[] = [
+                    "id_custom" => $bundling['id_custom']??null,
+                    "id_bundling" => $bundling['id_bundling']??null,
+                    'bundling_name' => $bundling['bundling_name'],
+                    'bundling_qty' => $bundling['bundling_qty'],
+                    'bundling_price_no_discount' => (int)$totalPriceNoDiscount * $bundling['bundling_qty'],
+                    'bundling_subtotal' => ($bundlingBasePrice + $totalModPrice) * $bundling['bundling_qty'],
+                    'bundling_sub_item' => '@'.MyHelper::requestNumber($bundlingBasePrice+$totalModPrice,'_CURRENCY'),
+                    "products" => $productsBundlingDetail
+                ];
+            }else{
+                $checkBundlingProducts = $itemBundlingDetail[$checkBundling]['products'];
+                $mergeBundlingProducts = array_merge($productsBundlingDetail, $checkBundlingProducts);
+                $mergeBundlingProductsUnique = array_map("unserialize", array_unique(array_map("serialize", $mergeBundlingProducts)));
+                $checkIdBundling = $itemBundlingDetail[$checkBundling]['id_bundling'];
+
+                if($checkIdBundling == $bundling['id_bundling'] &&
+                    count($mergeBundlingProductsUnique) == count($productsBundlingDetail)){
+                    $itemBundlingDetail[$checkBundling]['bundling_qty'] = $itemBundlingDetail[$checkBundling]['bundling_qty'] + 1;
+                    $itemBundlingDetail[$checkBundling]['bundling_price_no_discount'] = (int)($itemBundlingDetail[$checkBundling]['bundling_price_no_discount'] + ($totalPriceNoDiscount * $bundling['bundling_qty']));
+                    $itemBundlingDetail[$checkBundling]['bundling_subtotal'] = $itemBundlingDetail[$checkBundling]['bundling_subtotal'] + ($bundlingBasePrice + $totalModPrice) * $bundling['bundling_qty'];
+                    $itemBundlingDetail[$checkBundling]['bundling_sub_item'] = '@'.MyHelper::requestNumber(($bundlingBasePrice+$totalModPrice) * ($itemBundlingDetail[$checkBundling]['bundling_qty'] + 1),'_CURRENCY');
+                }else{
+                    $itemBundlingDetail[] = [
+                        "id_custom" => $bundling['id_custom']??null,
+                        "id_bundling" => $bundling['id_bundling']??null,
+                        'bundling_name' => $bundling['bundling_name'],
+                        'bundling_qty' => $bundling['bundling_qty'],
+                        'bundling_price_no_discount' => (int)($totalPriceNoDiscount * $bundling['bundling_qty']),
+                        'bundling_subtotal' => ($bundlingBasePrice + $totalModPrice) * $bundling['bundling_qty'],
+                        'bundling_sub_item' => '@'.MyHelper::requestNumber($bundlingBasePrice+$totalModPrice,'_CURRENCY'),
+                        "products" => $productsBundlingDetail
+                    ];
+                }
+            }
+
             $subTotalBundling = $subTotalBundling + (($bundlingBasePrice + $totalModPrice) * $bundling['bundling_qty']);
             $totalItemBundling = $totalItemBundling + $bundling['bundling_qty'];
         }
@@ -3902,7 +3946,7 @@ class ApiOnlineTransaction extends Controller
                     'id_brand'                     => $itemProduct['id_brand'],
                     'id_outlet'                    => $trx['id_outlet'],
                     'id_user'                      => $trx['id_user'],
-                    'transaction_product_qty'      => $itemBundling['bundling_qty'],
+                    'transaction_product_qty'      => $itemProduct['product_qty'],
                     'transaction_product_price'    => $price,
                     'transaction_product_bundling_price' => $calculate,
                     'transaction_product_price_base' => NULL,
@@ -3937,10 +3981,16 @@ class ApiOnlineTransaction extends Controller
                 $insert_modifier = [];
                 $mod_subtotal = 0;
                 $more_mid_text = '';
-                if(isset($itemProduct['modifiers'])){
-                    foreach ($itemProduct['modifiers'] as $modifier) {
+                $selectExtraModifier = ProductModifier::whereIn('id_product_modifier', $itemProduct['extra_modifiers']??[])->get()->toArray();
+                $mergetExtranAndModifier = array_merge($selectExtraModifier, $itemProduct['modifiers']??[]);
+                if(isset($mergetExtranAndModifier)){
+                    foreach ($mergetExtranAndModifier as $modifier) {
                         $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
-                        $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
+                        $qty_product_modifier = 1;
+                        if(isset($modifier['qty'])){
+                            $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
+                        }
+
                         $mod = ProductModifier::select('product_modifiers.id_product_modifier','code',
                             DB::raw('(CASE
                         WHEN product_modifiers.text_detail_trx IS NOT NULL 
