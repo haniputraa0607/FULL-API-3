@@ -245,8 +245,8 @@ class ApiSettingTransactionV2 extends Controller
                 }
             }
 
-            if(isset($data['item_bundling']) && !empty($data['item_bundling'])){
-                $productBundling = &$data['item_bundling']??[];
+            if(isset($data['item_bundling_detail']) && !empty($data['item_bundling_detail'])){
+                $productBundling = &$data['item_bundling_detail']??[];
                 foreach ($productBundling as $keyBundling => &$valueBundling){
                     $bundlingBasePrice = 0;
                     $totalDiscount = 0;
@@ -350,9 +350,9 @@ class ApiSettingTransactionV2 extends Controller
                         $p['transaction_product_discount'] = $discount;
                         $p['transaction_product_bundling_discount'] = $discount;
                         $p['transaction_product_bundling_price'] = $calculate;
-                        $p['transaction_product_subtotal'] = ($calculate  + $totalMod) * $valueBundling['bundling_qty'];
-                        $bundlingBasePrice = $bundlingBasePrice + $calculate;
-                        $totalDiscount = $totalDiscount + $discount;
+                        $p['transaction_product_subtotal'] = ($calculate  + $totalMod) * $p['product_qty'];
+                        $bundlingBasePrice = $bundlingBasePrice + ($calculate * $p['product_qty']);
+                        $totalDiscount = $totalDiscount + ($discount * $p['product_qty']);
                         $p['transaction_product_bundling_charged_outlet'] = $getProduct['charged_outlet'];
                         $p['transaction_product_bundling_charged_central'] = $getProduct['charged_central'];
                     }
