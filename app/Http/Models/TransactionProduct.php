@@ -81,6 +81,11 @@ class TransactionProduct extends Model
 		return $this->belongsTo(\App\Http\Models\Product::class, 'id_product');
 	}
 
+	public function product_variant_group()
+	{
+		return $this->belongsTo(\Modules\ProductVariant\Entities\ProductVariantGroup::class, 'id_product_variant_group');
+	}
+
 	public function transaction()
 	{
 		return $this->belongsTo(\App\Http\Models\Transaction::class, 'id_transaction');
