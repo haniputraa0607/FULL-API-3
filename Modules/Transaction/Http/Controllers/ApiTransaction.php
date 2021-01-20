@@ -2370,22 +2370,21 @@ class ApiTransaction extends Controller
                 ->where('id_transaction', $id)->get()->toArray();
             foreach ($getBundling as $key=>$bundling){
                 $quantityItemBundling = $quantityItemBundling + $bundling['transaction_bundling_product_qty'];
-                $getPriceToping =  $bundling['transaction_bundling_product_subtotal']/$bundling['transaction_bundling_product_qty'];
                 $listItemBundling[$key] = [
                     'bundling_name' => $bundling['bundling_name'],
-                    'bundling_qty' => $bundling['transaction_bundling_product_qty'],
-                    'bundling_subtotal' => (int)$bundling['transaction_bundling_product_subtotal'],
-                    'bundling_sub_item' => '@'.MyHelper::requestNumber($getPriceToping,'_CURRENCY'),
+                    'bundling_qty' => $bundling['transaction_bundling_product_qty']
                 ];
 
                 $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
                     ->where('id_transaction_bundling_product', $bundling['id_transaction_bundling_product'])->get()->toArray();
-
+                $basePriceBundling = 0;
+                $subTotalBundlingWithoutModifier = 0;
+                $subItemBundlingWithoutModifie = 0;
                 foreach ($bundlingProduct as $bp){
                     $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                         ->whereNull('transaction_product_modifiers.id_product_modifier_group')
                         ->where('id_transaction_product', $bp['id_transaction_product'])
-                        ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as modifier_name', DB::raw('FLOOR(transaction_product_modifier_price) as modifier_price'))->get()->toArray();
+                        ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as text', DB::raw('FLOOR(transaction_product_modifier_price * '.$bp['transaction_product_qty'].' * '.$bundling['transaction_bundling_product_qty'].') as product_modifier_price'))->get()->toArray();
                     $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
                         ->where('id_transaction_product', $bp['id_transaction_product'])
                         ->select('product_variants.id_product_variant', 'product_variants.product_variant_name',  DB::raw('FLOOR(transaction_product_variant_price) as product_variant_price'))->get()->toArray();
@@ -2402,7 +2401,14 @@ class ApiTransaction extends Controller
                         'variants' => $variants,
                         'modifiers' => $mod
                     ];
+
+                    $basePriceBundling = $basePriceBundling + ($bp['transaction_product_price'] * $bp['transaction_product_qty']);
+                    $subTotalBundlingWithoutModifier = $subTotalBundlingWithoutModifier + (($bp['transaction_product_subtotal'] - ($bp['transaction_modifier_subtotal'] * $bp['transaction_product_qty'])));
+                    $subItemBundlingWithoutModifie = $subItemBundlingWithoutModifie + ($bp['transaction_product_bundling_price'] * $bp['transaction_product_qty']);
                 }
+                $listItemBundling[$key]['bundling_price_no_discount'] = $basePriceBundling * $bundling['transaction_bundling_product_qty'];
+                $listItemBundling[$key]['bundling_subtotal'] = $subTotalBundlingWithoutModifier * $bundling['transaction_bundling_product_qty'];
+                $listItemBundling[$key]['bundling_sub_item'] = '@'.MyHelper::requestNumber($subItemBundlingWithoutModifie,'_CURRENCY');
             }
 
             $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
@@ -2918,6 +2924,7 @@ class ApiTransaction extends Controller
                             return ($order[$a['id_product_variant']]??999) <=> ($order[$b['id_product_variant']]??999);
                         });
                     }
+                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product_variant_group_price'] = (int)$valueProduct['transaction_product_price'];
                 }
                 $keynya++;
             }
@@ -3016,7 +3023,7 @@ class ApiTransaction extends Controller
 	            }
             }
 
-           
+
 
             $result['promo']['discount'] = $discount;
             $result['promo']['discount'] = MyHelper::requestNumber($discount,'_CURRENCY');
@@ -3258,7 +3265,7 @@ class ApiTransaction extends Controller
 
 
     }
-    // api/transaction/item 
+    // api/transaction/item
     // api order lagi
     public function transactionDetailTrx(Request $request) {
         $trid = $request->json('id_transaction');
@@ -3350,7 +3357,7 @@ class ApiTransaction extends Controller
                     $pt['product_price'] = $product_price->product_variant_group_price;
                 }
             } else {
-                $pt['selected_variant'] = [];                
+                $pt['selected_variant'] = [];
             }
             $order = array_flip($pt['selected_variant']);
             usort($pt['variants'], function ($a, $b) use ($order) {
