@@ -9,27 +9,30 @@ use Illuminate\Database\Eloquent\Model;
 
 class Bundling extends Model
 {
-    protected $table = 'bundlings';
+    protected $table = 'bundling';
+    protected $primaryKey = 'id_bundling';
 
     protected $fillable = [
+        'bundling_code',
         'bundling_name',
+        'bundling_price_before_discount',
+        'bundling_price_after_discount',
         'image',
+        'image_detail',
         'bundling_description',
-        'price',
-        'discount_type',
         'all_outlet',
         'created_by',
         'start_date',
         'end_date'
     ];
 
-    protected $casts = [
-        'price' => 'decimal:2',
-        'all_outlet' => 'boolean',
-        'created_by' => 'integer',
-        'start_date' => 'datetime',
-        'end_date' => 'datetime'
-    ];
+    public function getImageAttribute($value) {
+        return config('url.storage_url_api').$value;
+    }
+
+    public function getImageDetailAttribute($value) {
+        return config('url.storage_url_api').$value;
+    }
 
     public function user()
     {

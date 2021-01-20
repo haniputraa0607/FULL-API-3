@@ -40,8 +40,10 @@ class TransactionPickupGoSend extends Model
 		'vehicle_number',
 		'receiver_name',
 		'retry_count',
+		'stop_booking_at',
 		'created_at',
-		'updated_at'
+		'updated_at',
+		'manual_order_no',
 	];
 
 	public function transaction_pickup()

@@ -19,7 +19,8 @@ class CalculationFeeBladeExport implements FromView, WithTitle
     public function view(): View
     {
         return view('disburse::detail_calculation_fee', [
-            'data' => $this->data
+            'data' => (isset($this->data['show_another_income']) ? $this->data['data'] : $this->data),
+            'show_another_income' => $this->data['show_another_income']??0
         ]);
     }
 

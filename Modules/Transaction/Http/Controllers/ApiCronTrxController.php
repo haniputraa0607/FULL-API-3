@@ -395,57 +395,99 @@ class ApiCronTrxController extends Controller
                 ->whereNull('taken_at')
                 ->whereNull('reject_at')
                 ->whereNull('taken_by_system_at')
+                ->with('outlet')
                 ->get();
             $idTrx = [];
-            // apply point if ready_at null
+            // reject when not ready
+            $processed = [
+                'rejected' => 0,
+                'failed_reject' => 0,
+                'errors' => []
+            ];
             foreach ($trxs as $newTrx) {
                 $idTrx[] = $newTrx->id_transaction;
                 if(
                     !empty($newTrx->ready_at) || //   has been marked ready   or 
-                    $newTrx->transaction_payment_status != 'Completed' || // payment status not complete  or
-                    $newTrx->cashback_insert_status || // cashback has been given   or
-                    $newTrx->pickup_by != 'Customer' // not pickup by the customer
+                    $newTrx->transaction_payment_status != 'Completed'// payment status not complete  or
                 ){
-                    // continue without add cashback
+                    // continue without reject
                     continue;
                 }
-                $newTrx->load('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers','promo_campaign_promo_code','promo_campaign_promo_code.promo_campaign');
 
-                $checkType = TransactionMultiplePayment::where('id_transaction', $newTrx->id_transaction)->get()->toArray();
-                $column = array_column($checkType, 'type');
+                $transaction = $newTrx;
+                // reject order
+                $params = [
+                    'order_id' => $transaction['order_id'],
+                    'reason'   => 'auto reject order by system [not ready]'
+                ];
+                // mocking request object and create fake request
+                $fake_request = new \Modules\OutletApp\Http\Requests\DetailOrder();
+                $fake_request->setJson(new \Symfony\Component\HttpFoundation\ParameterBag($params));
+                $fake_request->merge(['user' => $transaction->outlet]);
+                $fake_request->setUserResolver(function () use ($transaction) {
+                    return $transaction->outlet;
+                });
 
-                $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
+                $reject = app('Modules\OutletApp\Http\Controllers\ApiOutletApp')->rejectOrder($fake_request, date('Y-m-d', strtotime($newTrx->transaction_date)));
 
-                MyHelper::updateFlagTransactionOnline($newTrx, 'success', $newTrx->user);
-                if ((!in_array('Balance', $column) || $use_referral) && $newTrx->user) {
-
-                    $promo_source = null;
-                    if ( $newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers || $use_referral) 
-                    {
-                        if ( $newTrx->id_promo_campaign_promo_code ) {
-                            $promo_source = 'promo_code';
-                        }
-                        elseif ( ($newTrx->transaction_vouchers[0]->status??false) == 'success' )
-                        {
-                            $promo_source = 'voucher_online';
-                        }
-                    }
-
-                    if( app($this->trx)->checkPromoGetPoint($promo_source) || $use_referral)
-                    {
-                        $savePoint = app($this->getNotif)->savePoint($newTrx);
-                    }
+                if ($reject['status'] == 'success') {
+                    $processed['rejected']++;
+                } else {
+                    $processed['failed_reject']++;
+                    $processed['errors'][] = $reject['messages'] ?? 'Something went wrong';
                 }
-                $newTrx->update(['cashback_insert_status' => 1]);
-
-                if ($newTrx->user) {
-                    //check achievement
-                    AchievementCheck::dispatch(['id_transaction' => $newTrx->id_transaction, 'phone' => $newTrx->user->phone])->onConnection('achievement');
-                }
-            
             }
+            
+            // // apply point if ready_at null
+            // foreach ($trxs as $newTrx) {
+            //     $idTrx[] = $newTrx->id_transaction;
+            //     if(
+            //         !empty($newTrx->ready_at) || //   has been marked ready   or 
+            //         $newTrx->transaction_payment_status != 'Completed' || // payment status not complete  or
+            //         $newTrx->cashback_insert_status || // cashback has been given   or
+            //         $newTrx->pickup_by != 'Customer' // not pickup by the customer
+            //     ){
+            //         // continue without add cashback
+            //         continue;
+            //     }
+            //     $newTrx->load('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers','promo_campaign_promo_code','promo_campaign_promo_code.promo_campaign');
+
+            //     $checkType = TransactionMultiplePayment::where('id_transaction', $newTrx->id_transaction)->get()->toArray();
+            //     $column = array_column($checkType, 'type');
+
+            //     $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
+
+            //     MyHelper::updateFlagTransactionOnline($newTrx, 'success', $newTrx->user);
+            //     if ((!in_array('Balance', $column) || $use_referral) && $newTrx->user) {
+
+            //         $promo_source = null;
+            //         if ( $newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers || $use_referral) 
+            //         {
+            //             if ( $newTrx->id_promo_campaign_promo_code ) {
+            //                 $promo_source = 'promo_code';
+            //             }
+            //             elseif ( ($newTrx->transaction_vouchers[0]->status??false) == 'success' )
+            //             {
+            //                 $promo_source = 'voucher_online';
+            //             }
+            //         }
+
+            //         if( app($this->trx)->checkPromoGetPoint($promo_source) || $use_referral)
+            //         {
+            //             $savePoint = app($this->getNotif)->savePoint($newTrx);
+            //         }
+            //     }
+            //     $newTrx->update(['cashback_insert_status' => 1]);
+
+            //     if ($newTrx->user) {
+            //         //check achievement
+            //         AchievementCheck::dispatch(['id_transaction' => $newTrx->id_transaction, 'phone' => $newTrx->user->phone])->onConnection('achievement');
+            //     }
+            
+            // }
             //update taken_by_sistem_at
             $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
+                                        ->whereNotNull('ready_at')
                                         ->update(['taken_by_system_at' => date('Y-m-d 00:00:00')]);
 
             //change status transaction to invalid transaction
@@ -484,7 +526,7 @@ class ApiCronTrxController extends Controller
                 }
             }
 
-            $log->success('success');
+            $log->success(['success', 'reject' => $processed]);
             return response()->json(['status' => 'success']);
         } catch (\Exception $e) {
             $log->fail($e->getMessage());

@@ -17,6 +17,8 @@ use App\Http\Models\ProductPrice;
 use App\Http\Models\Setting;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionMultiplePayment;
+use App\Http\Models\TransactionProduct;
+use App\Http\Models\TransactionProductModifier;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentMidtran;
@@ -55,16 +57,19 @@ use Modules\Product\Entities\ProductModifierStockStatusUpdate;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\ProductVariant\Entities\ProductVariantPivot;
+use Modules\ProductVariant\Entities\TransactionProductVariant;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
 use Modules\Shift\Entities\Shift;
 use Modules\Shift\Entities\UserOutletApp;
+use Modules\Transaction\Entities\TransactionBundlingProduct;
 use Modules\Transaction\Http\Requests\TransactionDetail;
 use Carbon\Carbon;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use function foo\func;
 use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\Product\Entities\ProductGlobalPrice;
+use App\Http\Models\TransactionPickupGoSendUpdate;
 
 class ApiOutletApp extends Controller
 {
@@ -1652,7 +1657,7 @@ class ApiOutletApp extends Controller
         return response()->json(MyHelper::checkGet($result));
     }
 
-    public function rejectOrder(DetailOrder $request)
+    public function rejectOrder(DetailOrder $request, $dateNow = null)
     {
         $post = $request->json()->all();
 
@@ -1660,7 +1665,7 @@ class ApiOutletApp extends Controller
 
         $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->where('order_id', $post['order_id'])
-            ->whereDate('transaction_date', date('Y-m-d'))
+            ->whereDate('transaction_date', $dateNow ?? date('Y-m-d'))
             ->where('transactions.id_outlet', $outlet->id_outlet)
             ->first();
 
@@ -2042,7 +2047,7 @@ class ApiOutletApp extends Controller
         }
         DB::commit();
 
-        return response()->json(MyHelper::checkUpdate($pickup));
+        return MyHelper::checkUpdate($pickup);
     }
 
     public function listSchedule(Request $request)
@@ -2371,14 +2376,35 @@ class ApiOutletApp extends Controller
         $destination['address']   = $trx['transaction_pickup']['transaction_pickup_go_send']['destination_address'];
         $destination['note']      = $trx['transaction_pickup']['transaction_pickup_go_send']['destination_note'];
 
-        $packageDetail = Setting::where('key', 'go_send_package_detail')->first();
-
         //update id from go-send
         $updateGoSend = TransactionPickupGoSend::find($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
-        $maxRetry = Setting::select('value')->where('key', 'booking_delivery_max_retry')->pluck('value')->first()?:5;
-        if ($fromRetry && $updateGoSend->retry_count >= $maxRetry) {
-            return ['status'  => 'fail', 'messages' => ['Retry reach limit']];
+        if ($fromRetry) {
+            $time_limit = 1200; // 20 minutes
+
+            if ($updateGoSend->manual_order_no) {
+                $firstbook = TransactionPickupGoSendUpdate::select('created_at')->where('go_send_order_no', $updateGoSend->manual_order_no)->orderBy('id_transaction_pickup_go_send_update')->pluck('created_at')->first();
+            } else {
+                $firstbook = TransactionPickupGoSendUpdate::select('created_at')->where('id_transaction_pickup_go_send', $updateGoSend->id_transaction_pickup_go_send)->orderBy('id_transaction_pickup_go_send_update')->pluck('created_at')->first();
+            }
+
+            if ((time() - strtotime($firstbook)) > $time_limit) {
+                if (!$updateGoSend->stop_booking_at) {
+                    $updateGoSend->update(['stop_booking_at' => date('Y-m-d H:i:s')]);
+                    // kirim notifikasi
+                    $dataNotif = [
+                        'subject' => 'Order '.$trx['transaction_pickup']['order_id'],
+                        'string_body' => 'Driver tidak ditemukan. Segera pilih tindakan atau pesanan batal otomatis.',
+                        'type' => 'trx',
+                        'id_reference'=> $trx['id_transaction']
+                    ];
+                    $this->outletNotif($dataNotif,$trx->id_outlet);
+                }
+
+                return ['status'  => 'fail', 'messages' => ['Retry reach limit']];
+            }
         }
+
+        $packageDetail = Setting::where('key', 'go_send_package_detail')->first();
 
         if ($packageDetail) {
             $packageDetail = str_replace('%order_id%', $trx['transaction_pickup']['order_id'], $packageDetail['value']);
@@ -2425,7 +2451,9 @@ class ApiOutletApp extends Controller
             $updateGoSend->driver_photo      = $status['driverPhoto'] ?? null;
             $updateGoSend->vehicle_number    = $status['vehicleNumber'] ?? null;
             $updateGoSend->live_tracking_url = $status['liveTrackingUrl'] ?? null;
-            $updateGoSend->retry_count = $fromRetry?($updateGoSend->retry_count+1):0;
+            $updateGoSend->retry_count       = $fromRetry?($updateGoSend->retry_count+1):0;
+            $updateGoSend->manual_order_no   = $fromRetry?$updateGoSend->manual_order_no:$booking['orderNo'];
+            $updateGoSend->stop_booking_at   = null;
             $updateGoSend->save();
 
             if (!$updateGoSend) {
@@ -3023,7 +3051,7 @@ class ApiOutletApp extends Controller
                 $result['rejectable']              = 1;
             }
 
-            if ($list['transaction_pickup_go_send']) {
+            if ($list['transaction_pickup_go_send'] && !$list['detail']['reject_at']) {
                 // $result['transaction_status'] = 5;
                 $result['delivery_info'] = [
                     'driver'            => null,
@@ -3130,6 +3158,169 @@ class ApiOutletApp extends Controller
             }
         }
 
+        //get item bundling
+        $itemBundling = [];
+        $itemBundlingPerBrand = [];
+        $quantityItemBundling = 0;
+        $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
+            ->where('id_transaction', $id)->get()->toArray();
+        foreach ($getBundling as $key=>$bundling){
+            $quantityItemBundling = $quantityItemBundling + $bundling['transaction_bundling_product_qty'];
+            $getPriceToping =  $bundling['transaction_bundling_product_subtotal']/$bundling['transaction_bundling_product_qty'];
+
+            $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
+                ->join('brands', 'brands.id_brand', 'transaction_products.id_brand')
+                ->orderBy('order_brand', 'desc')
+                ->where('id_transaction_bundling_product', $bundling['id_transaction_bundling_product'])->get()->toArray();
+
+            $products = [];
+            $productPerBrand = [];
+            $basePriceBundling = 0;
+            $subTotalBundlingWithoutModifier = 0;
+            $subItemBundlingWithoutModifie = 0;
+            foreach ($bundlingProduct as $bp){
+                $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                    ->whereNull('transaction_product_modifiers.id_product_modifier_group')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as text', DB::raw('FLOOR(transaction_product_modifier_price * '.$bp['transaction_product_bundling_qty'].' * '.$bundling['transaction_bundling_product_qty'].') as product_modifier_price'))->get()->toArray();
+                $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->select('product_variants.id_product_variant', 'product_variants.product_variant_name', 'transaction_product_variant_price')->get()->toArray();
+                $variantNoPrice =  TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                    ->whereNotNull('transaction_product_modifiers.id_product_modifier_group')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->select('transaction_product_modifiers.id_product_modifier as id_product_variant', 'transaction_product_modifiers.text as product_variant_name', 'transaction_product_modifier_price as transaction_product_variant_price')->get()->toArray();
+
+                $products[] = [
+                    'product_name' => $bp['product_name'],
+                    'product_note' => $bp['transaction_product_note'],
+                    'transaction_product_price' => (int)$bp['transaction_product_price'],
+                    'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
+                    'modifiers' => $mod,
+                    'variants' => array_merge($variantPrice, $variantNoPrice)
+                ];
+
+                //set product per brand
+                $checkBrand = array_search($bp['id_brand'], array_column($productPerBrand, 'id_brand'));
+                if($checkBrand === false){
+                    $productPerBrand[] = [
+                        'id_brand' => $bp['id_brand'],
+                        'brand_name' => $bp['name_brand'],
+                        'brand_code' => $bp['code_brand'],
+                        'products' => [[
+                            'id_brand' => $bp['id_brand'],
+                            'id_product' => $bp['id_product'],
+                            'id_product_variant_group' => $bp['id_product_variant_group'],
+                            'product_name' => $bp['product_name'],
+                            'product_note' => $bp['transaction_product_note'],
+                            'transaction_product_price' => (int)$bp['transaction_product_price'],
+                            'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
+                            'modifiers' => $mod,
+                            'variants' => array_merge($variantPrice, $variantNoPrice)
+                        ]]
+                    ];
+                }else{
+                    $productPerBrand[$checkBrand]['products'][] = [
+                        'id_brand' => $bp['id_brand'],
+                        'id_product' => $bp['id_product'],
+                        'id_product_variant_group' => $bp['id_product_variant_group'],
+                        'product_name' => $bp['product_name'],
+                        'product_note' => $bp['transaction_product_note'],
+                        'transaction_product_price' => (int)$bp['transaction_product_price'],
+                        'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
+                        'modifiers' => $mod,
+                        'variants' => array_merge($variantPrice, $variantNoPrice)
+                    ];
+                }
+
+                $basePriceBundling = $basePriceBundling + ($bp['transaction_product_price'] * $bp['transaction_product_bundling_qty']);
+                $subTotalBundlingWithoutModifier = $subTotalBundlingWithoutModifier + (($bp['transaction_product_subtotal'] - ($bp['transaction_modifier_subtotal'] * $bp['transaction_product_bundling_qty'])));
+                $subItemBundlingWithoutModifie = $subItemBundlingWithoutModifie + ($bp['transaction_product_bundling_price'] * $bp['transaction_product_bundling_qty']);
+            }
+
+            $itemBundling[] = [
+                'bundling_name' => $bundling['bundling_name'],
+                'bundling_qty' => $bundling['transaction_bundling_product_qty'],
+                'bundling_price_no_discount' => $basePriceBundling * $bundling['transaction_bundling_product_qty'],
+                'bundling_subtotal' => $subTotalBundlingWithoutModifier * $bundling['transaction_bundling_product_qty'],
+                'bundling_sub_item' => '@'.MyHelper::requestNumber($subItemBundlingWithoutModifie,'_CURRENCY'),
+                'products' => $products
+            ];
+
+            //set bundling per brand
+            $checkBundlingPerBrand = array_search($bundling['id_bundling'], array_column($itemBundlingPerBrand, 'id_bundling'));
+            if($checkBundlingPerBrand === false){
+                $itemBundlingPerBrand[] = [
+                    'id_bundling' => $bundling['id_bundling'],
+                    'bundling_name' => $bundling['bundling_name'],
+                    'bundling_qty' => $bundling['transaction_bundling_product_qty'],
+                    'bundling_subtotal' => (int)$bundling['transaction_bundling_product_subtotal'],
+                    'bundling_sub_item' => '@'.MyHelper::requestNumber($getPriceToping,'_CURRENCY'),
+                    'brands' => $productPerBrand
+                ];
+            }else{
+                $dtBrands = $itemBundlingPerBrand[$checkBundlingPerBrand]['brands'];
+                foreach ($productPerBrand as $pb){
+                    $checkBundlingProductBrand = array_search($pb['id_brand'], array_column($dtBrands, 'id_brand'));
+                    if($checkBundlingProductBrand === false){
+                        $itemBundlingPerBrand[$checkBundlingPerBrand]['brands'][] = $pb;
+                    }else{
+                        $mergeProduct = array_merge($pb['products'], $dtBrands[$checkBundlingProductBrand]['products']);
+                        $productsBrand = [];
+                        foreach ($mergeProduct as $value){
+                            $check = array_search($value['id_product'], array_column($productsBrand, 'id_product'));
+                            if($check === false){
+                                $productsBrand[] = [
+                                    'id_brand' => $value['id_brand'],
+                                    'id_product' => $value['id_product'],
+                                    'id_product_variant_group' => $value['id_product_variant_group'],
+                                    'product_name' => $value['product_name'],
+                                    'product_note' => $value['product_note'],
+                                    'transaction_product_price' => (int)$value['transaction_product_price'],
+                                    'transaction_product_qty' => $value['transaction_product_bundling_qty'],
+                                    'modifiers' => $value['modifiers'],
+                                    'variants' => $value['variants']
+                                ];
+                            }else{
+                                $checkModifiers = $productsBrand[$check]['modifiers'];
+                                $checkNote = $productsBrand[$check]['product_note'];
+                                $checkIdProductVariantGroup = $productsBrand[$check]['id_product_variant_group'];
+
+                                $mergeModifiers = array_merge($checkModifiers, $value['modifiers']);
+                                $mergeModifiersUnique = array_map("unserialize", array_unique(array_map("serialize", $mergeModifiers)));
+
+                                if($checkIdProductVariantGroup == $value['id_product_variant_group'] &&
+                                    count($checkModifiers) == count($value['modifiers']) &&
+                                    count($checkModifiers) == count($value['modifiers']) &&
+                                    count($mergeModifiersUnique) == count($value['modifiers']) && $checkNote == $value['product_note']){
+                                    $productsBrand[$check]['transaction_product_qty'] = $productsBrand[$check]['transaction_product_qty'] + $value['transaction_product_bundling_qty'];
+                                }else{
+                                    $productsBrand[] = [
+                                        'id_brand' => $value['id_brand'],
+                                        'id_product' => $value['id_product'],
+                                        'id_product_variant_group' => $value['id_product_variant_group'],
+                                        'product_name' => $value['product_name'],
+                                        'product_note' => $value['product_note'],
+                                        'transaction_product_price' => (int)$value['transaction_product_price'],
+                                        'transaction_product_qty' => $value['transaction_product_bundling_qty'],
+                                        'modifiers' => $value['modifiers'],
+                                        'variants' => $value['variants']
+                                    ];
+                                }
+                            }
+                        }
+                        $itemBundlingPerBrand[$checkBundlingPerBrand]['bundling_qty'] = $itemBundlingPerBrand[$checkBundlingPerBrand]['bundling_qty'] + 1;
+                        $itemBundlingPerBrand[$checkBundlingPerBrand]['brands'][$checkBundlingProductBrand]['products'] = $productsBrand;
+                    }
+                }
+            }
+        }
+
+        $result['product_bundling_transaction_name'] = 'Bundling';
+        $result['product_bundling_transaction_detail'] = $itemBundling;
+        $result['product_bundling_transaction_perbrand'] = $itemBundlingPerBrand;
+        $result['product_transaction'] = [];
+
         $discount = 0;
         $quantity = 0;
         $keynya   = 0;
@@ -3147,24 +3338,37 @@ class ApiOutletApp extends Controller
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_name']       = $valueProduct['product']['product_name'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_price']      = MyHelper::requestNumber($valueProduct['transaction_product_price'], '_CURRENCY');
                 $discount                                                                                        = $discount + $valueProduct['transaction_product_discount'];
-                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'] = [];
-                foreach ($valueProduct['modifiers'] as $keyMod => $valueMod) {
-                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_name']  = $valueMod['text'];
-                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_qty']   = $valueMod['qty'];
-                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_price'] = MyHelper::requestNumber($valueMod['transaction_product_modifier_price'], '_CURRENCY');
-                }
+                $variantsPrice = 0;
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'] = [];
                 foreach ($valueProduct['variants'] as $keyMod => $valueMod) {
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][$keyMod]['product_variant_name']   = $valueMod['product_variant_name'];
-                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][$keyMod]['product_variant_price']  = MyHelper::requestNumber($valueMod['transaction_product_variant_price'],'_CURRENCY');
+                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][$keyMod]['product_variant_price']  = (int)$valueMod['transaction_product_variant_price'];
+                    $variantsPrice = $variantsPrice + $valueMod['transaction_product_variant_price'];
                 }
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'] = [];
+                foreach ($valueProduct['modifiers'] as $keyMod => $valueMod) {
+                    if(!empty($valueMod['id_product_modifier_group'])){
+                        $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][] = [
+                            'product_variant_name' => $valueMod['text'],
+                            'product_variant_price' => 0
+                        ];
+                    }else{
+                        $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][] = [
+                            'product_modifier_name' => $valueMod['text'],
+                            'product_modifier_qty' => $valueMod['qty'],
+                            'product_modifier_price' => (int)($valueMod['transaction_product_modifier_price'] * $valueProduct['transaction_product_qty'])
+                        ];
+                    }
+                }
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_sub_item']      = '@'.MyHelper::requestNumber($valueProduct['transaction_product_price']+$variantsPrice, '_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product_variant_group_price'] = (int)($valueProduct['transaction_product_price'] + $variantsPrice);
             }
             $keynya++;
         }
 
         $result['payment_detail'][] = [
             'name'   => 'Subtotal',
-            'desc'   => $quantity . ' items',
+            'desc'   => $quantity + $quantityItemBundling . ' items',
             'amount' => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY'),
         ];
 
@@ -3929,7 +4133,7 @@ class ApiOutletApp extends Controller
  
     }
   
-  public function setTimezone($data, $time_zone_utc){
+    public function setTimezone($data, $time_zone_utc){
         $default_time_zone_utc = 7;
         $time_diff = $time_zone_utc - $default_time_zone_utc;
 
@@ -3937,5 +4141,90 @@ class ApiOutletApp extends Controller
         $data['close'] = date('H:i', strtotime('-'.$time_diff.' hour', strtotime($data['close'])));
 
         return $data;
+    }
+
+    public function cronDriverNotFound()
+    {
+        $log = MyHelper::logCron('Driver Not Found Reject Order');
+        try {
+            // dd(date('Y-m-d H:i:s', strtotime('-30minutes')));
+            // dd(date('Y-m-d'));
+            $transactions = Transaction::select([
+                    'transaction_pickup_go_sends.updated_at',
+                    'order_id',
+                    'transaction_receipt_number',
+                    'transactions.id_transaction',
+                    'id_outlet',
+                    'transaction_date',
+                    'stop_booking_at'
+                ])->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+                ->join('transaction_pickup_go_sends', 'transaction_pickup_go_sends.id_transaction_pickup', '=', 'transaction_pickups.id_transaction_pickup')
+                ->whereNull('transaction_pickups.reject_at')
+                ->whereDate('transaction_date', date('Y-m-d'))
+                ->whereNotNull('stop_booking_at')
+                ->where([
+                    'transaction_payment_status' => 'Completed',
+                    'transaction_pickup_go_sends.latest_status' => 'no_driver',
+                ])
+                ->with('outlet')
+                ->get();
+            $processed = [
+                'found' => $transactions->count(),
+                'cancelled' => 0,
+                'failed_cancel' => 0,
+                'errors' => [],
+            ];
+            foreach ($transactions as $transaction) {
+                if (date('Y-m-d H:i', time()) == date('Y-m-d H:i', strtotime($transaction['stop_booking_at']))) {
+                    continue;
+                }
+                $difference = floor((time() - strtotime($transaction['stop_booking_at']))/60);
+                if ($difference < 5) {
+                    // kirim notifikasi
+                    $dataNotif = [
+                        'subject' => 'Order '.$transaction['order_id'],
+                        'string_body' => 'Dalam ' . ( 5 - $difference ) . ' menit, pesanan batal otomatis. Segera pilih tindakan.',
+                        'type' => 'trx',
+                        'id_reference'=> $transaction['id_transaction']
+                    ];
+                    $this->outletNotif($dataNotif, $transaction->id_outlet);
+                } else {
+                    // reject order
+                    $params = [
+                        'order_id' => $transaction['order_id'],
+                        'reason'   => 'auto reject order by system [no driver]'
+                    ];
+                    // mocking request object and create fake request
+                    $fake_request = new DetailOrder();
+                    $fake_request->setJson(new \Symfony\Component\HttpFoundation\ParameterBag($params));
+                    $fake_request->merge(['user' => $transaction->outlet]);
+                    $fake_request->setUserResolver(function () use ($transaction) {
+                        return $transaction->outlet;
+                    });
+
+                    $reject = $this->rejectOrder($fake_request);
+
+                    if ($reject['status'] == 'success') {
+                        $dataNotif = [
+                            'subject' => 'Order Cancelled',
+                            'string_body' => $transaction['order_id'] . ' - '. $transaction['transaction_receipt_number'],
+                            'type' => 'trx',
+                            'id_reference'=> $transaction['id_transaction']
+                        ];
+                        $this->outletNotif($dataNotif,$transaction->id_outlet);
+                        $processed['cancelled']++;
+                    } else {
+                        $processed['failed_cancel']++;
+                        $processed['errors'][] = $reject['messages'] ?? 'Something went wrong';
+                    }
+                }
+            }
+
+            $log->success($processed);
+            return $processed;
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+            return ['status' => 'fail', 'messages' => [$e->getMessage()]];
+        }
     }
 }
