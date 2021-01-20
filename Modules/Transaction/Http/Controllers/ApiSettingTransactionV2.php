@@ -357,7 +357,7 @@ class ApiSettingTransactionV2 extends Controller
                         $p['transaction_product_bundling_charged_central'] = $getProduct['charged_central'];
                     }
 
-                    $bundlingSubtotal = ($bundlingBasePrice + $mod_subtotal) * $valueBundling['bundling_qty'];
+                    $bundlingSubtotal = ($bundlingBasePrice + ($mod_subtotal * $p['product_qty'])) * $valueBundling['bundling_qty'];
                     array_push($dataSubtotal, $bundlingSubtotal);
                     $valueBundling['transaction_bundling_product_base_price'] = $bundlingBasePrice;
                     $valueBundling['transaction_bundling_product_subtotal'] = $bundlingSubtotal;
