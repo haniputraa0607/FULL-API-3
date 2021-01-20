@@ -3095,43 +3095,16 @@ class ApiOnlineTransaction extends Controller
 
             $productsBundlingDetail = $this->mergeBundlingProducts($productsBundlingDetail, $bundling['bundling_qty']);
             //check for same detail item bundling
-            $checkBundling = array_search($getBundling['id_bundling'], array_column($itemBundlingDetail, 'id_bundling'));
-            if($checkBundling === false){
-                $itemBundlingDetail[] = [
-                    "id_custom" => $bundling['id_custom']??null,
-                    "id_bundling" => $bundling['id_bundling']??null,
-                    'bundling_name' => $bundling['bundling_name'],
-                    'bundling_qty' => $bundling['bundling_qty'],
-                    'bundling_price_no_discount' => (int)$totalPriceNoDiscount * $bundling['bundling_qty'],
-                    'bundling_subtotal' => $bundlingBasePrice * $bundling['bundling_qty'],
-                    'bundling_sub_item' => '@'.MyHelper::requestNumber($bundlingBasePrice,'_CURRENCY'),
-                    "products" => $productsBundlingDetail
-                ];
-            }else{
-                $checkBundlingProducts = $itemBundlingDetail[$checkBundling]['products'];
-                $mergeBundlingProducts = array_merge($productsBundlingDetail, $checkBundlingProducts);
-                $mergeBundlingProductsUnique = array_map("unserialize", array_unique(array_map("serialize", $mergeBundlingProducts)));
-                $checkIdBundling = $itemBundlingDetail[$checkBundling]['id_bundling'];
-
-                if($checkIdBundling == $bundling['id_bundling'] &&
-                    count($mergeBundlingProductsUnique) == count($productsBundlingDetail)){
-                    $itemBundlingDetail[$checkBundling]['bundling_qty'] = $itemBundlingDetail[$checkBundling]['bundling_qty'] + 1;
-                    $itemBundlingDetail[$checkBundling]['bundling_price_no_discount'] = (int)($itemBundlingDetail[$checkBundling]['bundling_price_no_discount'] + ($totalPriceNoDiscount * $bundling['bundling_qty']));
-                    $itemBundlingDetail[$checkBundling]['bundling_subtotal'] = $itemBundlingDetail[$checkBundling]['bundling_subtotal'] + $bundlingBasePrice  * $bundling['bundling_qty'];
-                    $itemBundlingDetail[$checkBundling]['bundling_sub_item'] = '@'.MyHelper::requestNumber(($bundlingBasePrice) * ($itemBundlingDetail[$checkBundling]['bundling_qty'] + 1),'_CURRENCY');
-                }else{
-                    $itemBundlingDetail[] = [
-                        "id_custom" => $bundling['id_custom']??null,
-                        "id_bundling" => $bundling['id_bundling']??null,
-                        'bundling_name' => $bundling['bundling_name'],
-                        'bundling_qty' => $bundling['bundling_qty'],
-                        'bundling_price_no_discount' => (int)($totalPriceNoDiscount * $bundling['bundling_qty']),
-                        'bundling_subtotal' => $bundlingBasePrice * $bundling['bundling_qty'],
-                        'bundling_sub_item' => '@'.MyHelper::requestNumber($bundlingBasePrice,'_CURRENCY'),
-                        "products" => $productsBundlingDetail
-                    ];
-                }
-            }
+            $itemBundlingDetail[] = [
+                "id_custom" => $bundling['id_custom']??null,
+                "id_bundling" => $bundling['id_bundling']??null,
+                'bundling_name' => $bundling['bundling_name'],
+                'bundling_qty' => $bundling['bundling_qty'],
+                'bundling_price_no_discount' => (int)$totalPriceNoDiscount * $bundling['bundling_qty'],
+                'bundling_subtotal' => $bundlingBasePrice * $bundling['bundling_qty'],
+                'bundling_sub_item' => '@'.MyHelper::requestNumber($bundlingBasePrice,'_CURRENCY'),
+                "products" => $productsBundlingDetail
+            ];
 
             $subTotalBundling = $subTotalBundling + (($bundlingBasePrice + $totalModPrice) * $bundling['bundling_qty']);
             $totalItemBundling = $totalItemBundling + $bundling['bundling_qty'];
