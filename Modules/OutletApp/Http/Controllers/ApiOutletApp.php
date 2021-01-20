@@ -3161,24 +3161,18 @@ class ApiOutletApp extends Controller
         //get item bundling
         $itemBundling = [];
         $itemBundlingPerBrand = [];
-        $listItemBundling = [];
         $quantityItemBundling = 0;
         $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
             ->where('id_transaction', $id)->get()->toArray();
         foreach ($getBundling as $key=>$bundling){
             $quantityItemBundling = $quantityItemBundling + $bundling['transaction_bundling_product_qty'];
             $getPriceToping =  $bundling['transaction_bundling_product_subtotal']/$bundling['transaction_bundling_product_qty'];
-            $listItemBundling[$key] = [
-                'bundling_name' => $bundling['bundling_name'],
-                'bundling_qty' => $bundling['transaction_bundling_product_qty']
-            ];
 
             $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
                 ->join('brands', 'brands.id_brand', 'transaction_products.id_brand')
                 ->orderBy('order_brand', 'desc')
                 ->where('id_transaction_bundling_product', $bundling['id_transaction_bundling_product'])->get()->toArray();
 
-            $prod = [];
             $products = [];
             $productPerBrand = [];
             $basePriceBundling = 0;
@@ -3188,7 +3182,7 @@ class ApiOutletApp extends Controller
                 $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                     ->whereNull('transaction_product_modifiers.id_product_modifier_group')
                     ->where('id_transaction_product', $bp['id_transaction_product'])
-                    ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as modifier_name', DB::raw('FLOOR(transaction_product_modifier_price) as modifier_price'))->get()->toArray();
+                    ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as text', DB::raw('FLOOR(transaction_product_modifier_price * '.$bp['transaction_product_bundling_qty'].' * '.$bundling['transaction_bundling_product_qty'].') as product_modifier_price'))->get()->toArray();
                 $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
                     ->where('id_transaction_product', $bp['id_transaction_product'])
                     ->select('product_variants.id_product_variant', 'product_variants.product_variant_name', 'transaction_product_variant_price')->get()->toArray();
@@ -3197,45 +3191,11 @@ class ApiOutletApp extends Controller
                     ->where('id_transaction_product', $bp['id_transaction_product'])
                     ->select('transaction_product_modifiers.id_product_modifier as id_product_variant', 'transaction_product_modifiers.text as product_variant_name', 'transaction_product_modifier_price as transaction_product_variant_price')->get()->toArray();
 
-                $getModName = array_column($mod, 'modifier_name');
-                $getVariantPriceName = array_column($variantPrice, 'product_variant_name');
-                $getVariantNoPriceName = array_column($variantNoPrice, 'product_variant_name');
-                $name = array_merge($getVariantPriceName, $getVariantNoPriceName, $getModName);
-                $check = array_search($bp['id_bundling_product'], array_column($prod, 'id_bundling_product'));
-                if($check === false){
-                    if(!empty($name) || !empty($bp['transaction_product_note'])){
-                        $prod[] = [
-                            'id_bundling_product' => $bp['id_bundling_product'],
-                            'bundling_product_qty' => 1,
-                            'bundling_product_name' => $bp['product_name'],
-                            'products' => [
-                                [
-                                    'product_name' => (empty(implode(', ', $name)) ? "" : implode(', ', $name)),
-                                    'product_note' => $bp['transaction_product_note']
-                                ]
-                            ]
-                        ];
-                    }else{
-                        $prod[] = [
-                            'id_bundling_product' => $bp['id_bundling_product'],
-                            'bundling_product_qty' => 1,
-                            'bundling_product_name' => $bp['product_name'],
-                            'products' => []
-                        ];
-                    }
-                }else{
-                    $prod[$check]['bundling_product_qty'] = $prod[$check]['bundling_product_qty'] + 1;
-                    $prod[$check]['products'][] = [
-                        'product_name' => implode(', ', $name),
-                        'product_note' => $bp['transaction_product_note']
-                    ];
-                }
-
                 $products[] = [
                     'product_name' => $bp['product_name'],
                     'product_note' => $bp['transaction_product_note'],
                     'transaction_product_price' => (int)$bp['transaction_product_price'],
-                    'transaction_product_qty' => $bp['transaction_product_qty'],
+                    'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
                     'modifiers' => $mod,
                     'variants' => array_merge($variantPrice, $variantNoPrice)
                 ];
@@ -3254,7 +3214,7 @@ class ApiOutletApp extends Controller
                             'product_name' => $bp['product_name'],
                             'product_note' => $bp['transaction_product_note'],
                             'transaction_product_price' => (int)$bp['transaction_product_price'],
-                            'transaction_product_qty' => $bp['transaction_product_qty'],
+                            'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
                             'modifiers' => $mod,
                             'variants' => array_merge($variantPrice, $variantNoPrice)
                         ]]
@@ -3267,21 +3227,16 @@ class ApiOutletApp extends Controller
                         'product_name' => $bp['product_name'],
                         'product_note' => $bp['transaction_product_note'],
                         'transaction_product_price' => (int)$bp['transaction_product_price'],
-                        'transaction_product_qty' => $bp['transaction_product_qty'],
+                        'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
                         'modifiers' => $mod,
                         'variants' => array_merge($variantPrice, $variantNoPrice)
                     ];
                 }
 
-                $basePriceBundling = $basePriceBundling + ($bp['transaction_product_price'] * $bp['transaction_product_qty']);
-                $subTotalBundlingWithoutModifier = $subTotalBundlingWithoutModifier + (($bp['transaction_product_subtotal'] - ($bp['transaction_modifier_subtotal'] * $bp['transaction_product_qty'])));
-                $subItemBundlingWithoutModifie = $subItemBundlingWithoutModifie + ($bp['transaction_product_bundling_price'] * $bp['transaction_product_qty']);
+                $basePriceBundling = $basePriceBundling + ($bp['transaction_product_price'] * $bp['transaction_product_bundling_qty']);
+                $subTotalBundlingWithoutModifier = $subTotalBundlingWithoutModifier + (($bp['transaction_product_subtotal'] - ($bp['transaction_modifier_subtotal'] * $bp['transaction_product_bundling_qty'])));
+                $subItemBundlingWithoutModifie = $subItemBundlingWithoutModifie + ($bp['transaction_product_bundling_price'] * $bp['transaction_product_bundling_qty']);
             }
-
-            $listItemBundling[$key]['bundling_price_no_discount'] = $basePriceBundling * $bundling['transaction_bundling_product_qty'];
-            $listItemBundling[$key]['bundling_subtotal'] = $subTotalBundlingWithoutModifier * $bundling['transaction_bundling_product_qty'];
-            $listItemBundling[$key]['bundling_sub_item'] = '@'.MyHelper::requestNumber($subItemBundlingWithoutModifie,'_CURRENCY');
-            $listItemBundling[$key]['products'] = $prod;
 
             $itemBundling[] = [
                 'bundling_name' => $bundling['bundling_name'],
@@ -3322,7 +3277,7 @@ class ApiOutletApp extends Controller
                                     'product_name' => $value['product_name'],
                                     'product_note' => $value['product_note'],
                                     'transaction_product_price' => (int)$value['transaction_product_price'],
-                                    'transaction_product_qty' => $value['transaction_product_qty'],
+                                    'transaction_product_qty' => $value['transaction_product_bundling_qty'],
                                     'modifiers' => $value['modifiers'],
                                     'variants' => $value['variants']
                                 ];
@@ -3338,7 +3293,7 @@ class ApiOutletApp extends Controller
                                     count($checkModifiers) == count($value['modifiers']) &&
                                     count($checkModifiers) == count($value['modifiers']) &&
                                     count($mergeModifiersUnique) == count($value['modifiers']) && $checkNote == $value['product_note']){
-                                    $productsBrand[$check]['transaction_product_qty'] = $productsBrand[$check]['transaction_product_qty'] + $value['transaction_product_qty'];
+                                    $productsBrand[$check]['transaction_product_qty'] = $productsBrand[$check]['transaction_product_qty'] + $value['transaction_product_bundling_qty'];
                                 }else{
                                     $productsBrand[] = [
                                         'id_brand' => $value['id_brand'],
@@ -3347,7 +3302,7 @@ class ApiOutletApp extends Controller
                                         'product_name' => $value['product_name'],
                                         'product_note' => $value['product_note'],
                                         'transaction_product_price' => (int)$value['transaction_product_price'],
-                                        'transaction_product_qty' => $value['transaction_product_qty'],
+                                        'transaction_product_qty' => $value['transaction_product_bundling_qty'],
                                         'modifiers' => $value['modifiers'],
                                         'variants' => $value['variants']
                                     ];
@@ -3362,7 +3317,6 @@ class ApiOutletApp extends Controller
         }
 
         $result['product_bundling_transaction_name'] = 'Bundling';
-        $result['product_bundling_transaction'] = $listItemBundling;
         $result['product_bundling_transaction_detail'] = $itemBundling;
         $result['product_bundling_transaction_perbrand'] = $itemBundlingPerBrand;
         $result['product_transaction'] = [];
@@ -3384,21 +3338,30 @@ class ApiOutletApp extends Controller
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_name']       = $valueProduct['product']['product_name'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_price']      = MyHelper::requestNumber($valueProduct['transaction_product_price'], '_CURRENCY');
                 $discount                                                                                        = $discount + $valueProduct['transaction_product_discount'];
-                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'] = [];
                 $variantsPrice = 0;
-                foreach ($valueProduct['modifiers'] as $keyMod => $valueMod) {
-                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_name']  = $valueMod['text'];
-                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_qty']   = $valueMod['qty'];
-                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_price'] = (int)$valueMod['transaction_product_modifier_price'];
-                }
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'] = [];
                 foreach ($valueProduct['variants'] as $keyMod => $valueMod) {
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][$keyMod]['product_variant_name']   = $valueMod['product_variant_name'];
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][$keyMod]['product_variant_price']  = (int)$valueMod['transaction_product_variant_price'];
                     $variantsPrice = $variantsPrice + $valueMod['transaction_product_variant_price'];
                 }
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'] = [];
+                foreach ($valueProduct['modifiers'] as $keyMod => $valueMod) {
+                    if(!empty($valueMod['id_product_modifier_group'])){
+                        $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][] = [
+                            'product_variant_name' => $valueMod['text'],
+                            'product_variant_price' => 0
+                        ];
+                    }else{
+                        $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][] = [
+                            'product_modifier_name' => $valueMod['text'],
+                            'product_modifier_qty' => $valueMod['qty'],
+                            'product_modifier_price' => (int)($valueMod['transaction_product_modifier_price'] * $valueProduct['transaction_product_qty'])
+                        ];
+                    }
+                }
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_sub_item']      = '@'.MyHelper::requestNumber($valueProduct['transaction_product_price']+$variantsPrice, '_CURRENCY');
-                $result['product_transaction'][$keynya]['product'][$keyProduct]['product_variant_group_price'] = (int)$valueProduct['transaction_product_price'];
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product_variant_group_price'] = (int)($valueProduct['transaction_product_price'] + $variantsPrice);
             }
             $keynya++;
         }

@@ -2457,7 +2457,7 @@ class ApiOnlineTransaction extends Controller
                 $mod = $mod->toArray();
                 $scope = $mod['modifier_type'];
                 $mod['qty'] = $qty_product_modifier;
-                $mod['product_modifier_price'] = (int) $mod['product_modifier_price'];
+                $mod['product_modifier_price'] = (int) $mod['product_modifier_price'] * $product['qty'];
                 if ($scope == 'Modifier Group') {
                     $product['extra_modifiers'][]=[
                         'product_variant_name' => $mod['text'],
@@ -2534,7 +2534,7 @@ class ApiOnlineTransaction extends Controller
                     $product_variant_group_price = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first()['product_variant_group_price']??0;
                 }
             }else{
-                $product_variant_group_price = 0;
+                $product_variant_group_price = (int) $product['product_price'];
             }
 
             $product['product_variant_group_price'] = (int)$product_variant_group_price;
@@ -3986,7 +3986,8 @@ class ApiOnlineTransaction extends Controller
                     'id_brand'                     => $itemProduct['id_brand'],
                     'id_outlet'                    => $trx['id_outlet'],
                     'id_user'                      => $trx['id_user'],
-                    'transaction_product_qty'      => $itemProduct['product_qty'],
+                    'transaction_product_qty'      => $itemProduct['product_qty']*$itemBundling['bundling_qty'],
+                    'transaction_product_bundling_qty' => $itemProduct['product_qty'],
                     'transaction_product_price'    => $price,
                     'transaction_product_bundling_price' => $calculate,
                     'transaction_product_price_base' => NULL,

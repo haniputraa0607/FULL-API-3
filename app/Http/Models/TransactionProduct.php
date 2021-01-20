@@ -49,6 +49,7 @@ class TransactionProduct extends Model
 		'id_brand',
 		'id_user',
 		'transaction_product_qty',
+        'transaction_product_bundling_qty',
 		'transaction_product_price',
 		'transaction_product_price_base',
 		'transaction_product_price_tax',
