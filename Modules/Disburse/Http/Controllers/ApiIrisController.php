@@ -41,6 +41,8 @@ use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use App\Lib\SendMail as Mail;
 use DOMDocument;
 use Illuminate\Support\Facades\Log;
+use Modules\Transaction\Entities\TransactionBundlingProduct;
+
 class ApiIrisController extends Controller
 {
     public function notification(Request $request){
@@ -785,15 +787,15 @@ class ApiIrisController extends Controller
                 //get data bundling product
                 $getBundlingProduct = TransactionProduct::where('id_transaction', $id_transaction)
                     ->whereNotNull('id_bundling_product')
-                    ->select('id_transaction_bundling_product', 'id_bundling_product', 'transaction_product_bundling_discount', 'transaction_product_bundling_charged_outlet', 'transaction_product_bundling_charged_central')
+                    ->select('transaction_product_qty', 'id_transaction_bundling_product', 'id_bundling_product', 'transaction_product_bundling_discount', 'transaction_product_bundling_charged_outlet', 'transaction_product_bundling_charged_central')
                     ->get()->toArray();
                 $bundlingProductTotalDiscount = 0;
                 $bundlingProductFeeOutlet = 0;
                 $bundlingProductFeeCentral = 0;
                 foreach ($getBundlingProduct as $bp){
-                    $bundlingProductTotalDiscount = $bundlingProductTotalDiscount + $bp['transaction_product_bundling_discount'];
-                    $bpChargedOutlet = (floatval($bp['transaction_product_bundling_charged_outlet']) / 100) * $bp['transaction_product_bundling_discount'];
-                    $bpChargedCentral = (floatval($bp['transaction_product_bundling_charged_central']) / 100) * $bp['transaction_product_bundling_discount'];
+                    $bundlingProductTotalDiscount = $bundlingProductTotalDiscount + ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                    $bpChargedOutlet = (floatval($bp['transaction_product_bundling_charged_outlet']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                    $bpChargedCentral = (floatval($bp['transaction_product_bundling_charged_central']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
                     $bundlingProductFeeOutlet = $bundlingProductFeeOutlet + $bpChargedOutlet;
                     $bundlingProductFeeCentral = $bundlingProductFeeCentral + $bpChargedCentral;
                 }
@@ -1113,15 +1115,15 @@ class ApiIrisController extends Controller
                     //get data bundling product
                     $getBundlingProduct = TransactionProduct::where('id_transaction', $data['id_transaction'])
                         ->whereNotNull('id_bundling_product')
-                        ->select('id_transaction_bundling_product', 'id_bundling_product', 'transaction_product_bundling_discount', 'transaction_product_bundling_charged_outlet', 'transaction_product_bundling_charged_central')
+                        ->select('transaction_product_qty', 'id_transaction_bundling_product', 'id_bundling_product', 'transaction_product_bundling_discount', 'transaction_product_bundling_charged_outlet', 'transaction_product_bundling_charged_central')
                         ->get()->toArray();
                     $bundlingProductTotalDiscount = 0;
                     $bundlingProductFeeOutlet = 0;
                     $bundlingProductFeeCentral = 0;
                     foreach ($getBundlingProduct as $bp){
-                        $bundlingProductTotalDiscount = $bundlingProductTotalDiscount + $bp['transaction_product_bundling_discount'];
-                        $bpChargedOutlet = (floatval($bp['transaction_product_bundling_charged_outlet']) / 100) * $bp['transaction_product_bundling_discount'];
-                        $bpChargedCentral = (floatval($bp['transaction_product_bundling_charged_central']) / 100) * $bp['transaction_product_bundling_discount'];
+                        $bundlingProductTotalDiscount = $bundlingProductTotalDiscount + ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                        $bpChargedOutlet = (floatval($bp['transaction_product_bundling_charged_outlet']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                        $bpChargedCentral = (floatval($bp['transaction_product_bundling_charged_central']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
                         $bundlingProductFeeOutlet = $bundlingProductFeeOutlet + $bpChargedOutlet;
                         $bundlingProductFeeCentral = $bundlingProductFeeCentral + $bpChargedCentral;
                     }
