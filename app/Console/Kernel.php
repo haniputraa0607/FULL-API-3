@@ -169,6 +169,11 @@ class Kernel extends ConsoleKernel
          */
         $schedule->call('Modules\OutletApp\Http\Controllers\ApiOutletApp@cronDriverNotFound')->cron('*/1 * * * *');
 
+        /**
+         * Sync Bundling
+         * run every day at
+         */
+        $schedule->call('Modules\ProductBundling\Http\Controllers\ApiBundlingController@bundlingToday')->dailyAt('04:00');
     }
 
     /**
