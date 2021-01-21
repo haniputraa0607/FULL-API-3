@@ -2032,6 +2032,7 @@ class ApiTransaction extends Controller
                             for ($bun = 1;$bun<=$val['transaction_bundling_product_qty'];$bun++){
                                 $html .= $htmlBundling;
                             }
+                            $htmlBundling = "";
                         }
 
                         $tmpBundling = $val['id_transaction_bundling_product'];
@@ -2064,7 +2065,7 @@ class ApiTransaction extends Controller
                                     $html .= '<td></td>';
                                 }
                             }
-                            $html .= '<td>'.$val['bundling_name'].'</td>';
+                            $html .= '<td></td>';
                             $html .= '<td>'.implode(",",$modifier).'</td>';
                             $html .= '<td>'.$textMod.'</td>';
                             $html .= '<td>'.$val['transaction_product_price'].'</td>';

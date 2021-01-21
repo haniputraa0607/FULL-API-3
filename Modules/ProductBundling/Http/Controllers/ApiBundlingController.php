@@ -18,7 +18,9 @@ use Modules\Product\Entities\ProductModifierGroup;
 use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\ProductBundling\Entities\Bundling;
 use Modules\ProductBundling\Entities\BundlingOutlet;
+use Modules\ProductBundling\Entities\BundlingPeriodeDay;
 use Modules\ProductBundling\Entities\BundlingProduct;
+use Modules\ProductBundling\Entities\BundlingToday;
 use Modules\ProductBundling\Http\Requests\CreateBundling;
 use DB;
 use Modules\ProductBundling\Http\Requests\UpdateBundling;
@@ -227,6 +229,8 @@ class ApiBundlingController extends Controller
                     'start_date' => date('Y-m-d H:i:s', strtotime($post['bundling_start'])),
                     'end_date' => date('Y-m-d H:i:s', strtotime($post['bundling_end'])),
                     'bundling_description' => $post['bundling_description'],
+                    'bundling_promo_status' => $post['bundling_promo_status']??0,
+                    'bundling_specific_day_type' => $post['bundling_specific_day_type']??null,
                     'all_outlet' => $isAllOutlet
                 ];
                 $create = Bundling::create($createBundling);
@@ -257,6 +261,45 @@ class ApiBundlingController extends Controller
                     if(!$updatePhotoBundling){
                         DB::rollback();
                         return response()->json(['status' => 'fail', 'messages' => ['Failed update photo bundling']]);
+                    }
+                }
+
+                //create bundling periode day
+                if(isset($post['day_date']) && !empty($post['day_date'])){
+                    $insertDay = [];
+                    foreach ($post['day_date'] as $sd){
+                        $insertDay[] = [
+                            'id_bundling' => $create['id_bundling'],
+                            'day' => $sd,
+                            'time_start' => date("H:i:s", strtotime($post['time_start'])),
+                            'time_end' => date("H:i:s", strtotime($post['time_end'])),
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ];
+                    }
+                    $insertBundlingProduct = BundlingPeriodeDay::insert($insertDay);
+                    if(!$insertBundlingProduct){
+                        DB::rollback();
+                        return response()->json(['status' => 'fail', 'messages' => ['Failed add specific day']]);
+                    }
+
+                    //check if periode in current date
+                    $currentDate = date('Y-m-d');
+                    if($post['bundling_specific_day_type'] == 'Day'){
+                        $currentDay = date('l', strtotime($currentDate));
+                    }else{
+                        $currentDay = date('d', strtotime($currentDate));
+                    }
+
+                    $check = array_search($currentDay, array_column($insertDay, 'day'));
+                    if($check !== false &&
+                        date('Y-m-d', strtotime($post['bundling_start'])) <= $currentDate &&
+                        date('Y-m-d', strtotime($post['bundling_end'])) >= $currentDate){
+                        BundlingToday::updateOrCreate(['id_bundling' => $create['id_bundling']], [
+                            'id_bundling' => $create['id_bundling'],
+                            'time_start' => $insertDay[$check]['time_start'],
+                            'time_end' => $insertDay[$check]['time_end']
+                        ]);
                     }
                 }
 
@@ -342,7 +385,7 @@ class ApiBundlingController extends Controller
         $post = $request->json()->all();
         if(isset($post['id_bundling']) && !empty($post['id_bundling'])){
             $detail = Bundling::where('id_bundling', $post['id_bundling'])
-                    ->with(['bundling_product'])->first();
+                    ->with(['bundling_product', 'bundling_periode_day'])->first();
 
             $brands = [];
             if(!empty($detail['bundling_product'])){
@@ -423,6 +466,8 @@ class ApiBundlingController extends Controller
                 'start_date' => date('Y-m-d H:i:s', strtotime($post['bundling_start'])),
                 'end_date' => date('Y-m-d H:i:s', strtotime($post['bundling_end'])),
                 'bundling_description' => $post['bundling_description'],
+                'bundling_promo_status' => $post['bundling_promo_status']??0,
+                'bundling_specific_day_type' => $post['bundling_specific_day_type']??null,
                 'all_outlet' => $isAllOutlet
             ];
             $update = Bundling::where('id_bundling', $post['id_bundling'])->update($updateBundling);
@@ -453,6 +498,49 @@ class ApiBundlingController extends Controller
                 if(!$updatePhotoBundling){
                     DB::rollback();
                     return response()->json(['status' => 'fail', 'messages' => ['Failed update photo bundling']]);
+                }
+            }
+
+            //delete bundling day
+            $delete = BundlingPeriodeDay::where('id_bundling', $post['id_bundling'])->delete();
+
+            //create bundling periode day
+            if(isset($post['day_date']) && !empty($post['day_date'])){
+                $insertDay = [];
+                foreach ($post['day_date'] as $sd){
+                    $insertDay[] = [
+                        'id_bundling' => $post['id_bundling'],
+                        'day' => $sd,
+                        'time_start' => date("H:i:s", strtotime($post['time_start'])),
+                        'time_end' => date("H:i:s", strtotime($post['time_end'])),
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+                }
+                $insertBundlingProduct = BundlingPeriodeDay::insert($insertDay);
+                if(!$insertBundlingProduct){
+                    DB::rollback();
+                    return response()->json(['status' => 'fail', 'messages' => ['Failed add specific day']]);
+                }
+
+                //check if periode in current date
+                $currentDate = date('Y-m-d');
+                if($post['bundling_specific_day_type'] == 'Day'){
+                    $currentDay = date('l', strtotime($currentDate));
+                }else{
+                    $currentDay = date('d', strtotime($currentDate));
+                }
+
+                $check = array_search($currentDay, array_column($insertDay, 'day'));
+
+                if($check !== false &&
+                    date('Y-m-d', strtotime($post['bundling_start'])) <= $currentDate &&
+                    date('Y-m-d', strtotime($post['bundling_end'])) >= $currentDate){
+                    BundlingToday::updateOrCreate(['id_bundling' => $post['id_bundling']], [
+                        'id_bundling' => $post['id_bundling'],
+                        'time_start' => $insertDay[$check]['time_start'],
+                        'time_end' => $insertDay[$check]['time_end']
+                    ]);
                 }
             }
 
@@ -683,7 +771,7 @@ class ApiBundlingController extends Controller
                 $getExtraModifier = ProductModifierGroup::join('product_modifier_group_pivots', 'product_modifier_groups.id_product_modifier_group', 'product_modifier_group_pivots.id_product_modifier_group')
                                     ->join('product_modifiers', 'product_modifiers.id_product_modifier_group', 'product_modifier_groups.id_product_modifier_group')
                                     ->where('id_product', $p['id_product'])->orWhereIn('id_product_variant', $idVariant)
-                                    ->orderBy('product_modifiers.id_product_modifier_group', 'asc')
+                                    ->orderBy('product_modifiers.id_product_modifier_group', 'desc')
                                     ->orderBy('product_modifier_order', 'asc')
                                     ->select('id_product_modifier', 'text_detail_trx', 'product_modifiers.id_product_modifier_group')->get()->toArray();
 
@@ -759,5 +847,54 @@ class ApiBundlingController extends Controller
         }
 
         return response()->json(MyHelper::checkGet($price));
+    }
+
+    public function bundlingToday(){
+        $log = MyHelper::logCron('Sync Data Bundling Today');
+        try {
+            $currentDate = date('Y-m-d');
+            $day = date('l', strtotime($currentDate));
+            $dayNumber = date('d', strtotime($currentDate));
+            $getBundling = Bundling::leftJoin('bundling_periode_day as bpd', 'bpd.id_bundling', 'bundling.id_bundling')
+                ->whereDate('start_date', '<=', $currentDate)
+                ->whereDate('end_date', '>=', $currentDate)
+                ->where(function ($q) use($day,$dayNumber){
+                    $q->where('bpd.day', $day)
+                        ->orWhere('bpd.day', $dayNumber)
+                        ->orWhereNull('bpd.id_bundling_periode_day');
+                })
+                ->select('bpd.day', 'bpd.time_start', 'bpd.time_end', 'bundling.id_bundling')->get()->toArray();
+            $dataToInsert = [];
+
+            foreach($getBundling as $b){
+                $check = array_search($b['id_bundling'], array_column($dataToInsert, 'id_bundling'));
+                if(empty($b['id_bundling_periode_day'])){
+                    $timeStart = '00:01:00';
+                    $timeEnd = '23:59:59';
+                }else{
+                    $timeStart = $b['time_start'];
+                    $timeEnd = $b['time_end'];
+                }
+                if($check === false){
+                    $dataToInsert[] = [
+                        'id_bundling' => $b['id_bundling'],
+                        'time_start' => $timeStart,
+                        'time_end' => $timeEnd,
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+                }
+            }
+
+            //delete old data
+            BundlingToday::whereNotNull('id_bundling')->delete();
+            //insert new data
+            BundlingToday::insert($dataToInsert);
+
+            $log->success();
+            return 'succes';
+        }catch (\Exception $e) {
+            $log->fail($e->getMessage());
+        };
     }
 }

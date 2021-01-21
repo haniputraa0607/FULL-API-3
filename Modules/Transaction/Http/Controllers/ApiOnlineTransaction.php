@@ -434,6 +434,13 @@ class ApiOnlineTransaction extends Controller
         if(!empty($post['item_bundling'])){
             $bundling_detail = $this->checkBundlingProduct($post, $outlet);
             $post['item_bundling_detail'] = $bundling_detail['item_bundling_detail']??[];
+            if(!empty($bundling_detail['error_message']??[])){
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => $bundling_detail['error_message']
+                ]);
+            }
         }
 
         foreach ($grandTotal as $keyTotal => $valueTotal) {
@@ -2814,8 +2821,17 @@ class ApiOnlineTransaction extends Controller
         $totalItemBundling = 0;
         $itemBundlingDetail = [];
         $itemBundling = [];
+        $currentHour = date('H:i:s');
         foreach ($post['item_bundling']??[] as $key=>$bundling){
-            $getBundling = Bundling::where('id_bundling', $bundling['id_bundling'])->whereRaw('NOW() >= start_date AND NOW() <= end_date')->first();
+            if($bundling['bundling_qty'] <= 0){
+                $error_msg[] = $bundling['bundling_name'].' qty must not be below 0';
+                unset($post['item_bundling'][$key]);
+                continue;
+            }
+            $getBundling = Bundling::where('bundling.id_bundling', $bundling['id_bundling'])
+                ->join('bundling_today as bt', 'bt.id_bundling', 'bundling.id_bundling')
+                ->whereRaw('TIME_TO_SEC("'.$currentHour.'") >= TIME_TO_SEC(time_start) AND TIME_TO_SEC("'.$currentHour.'") <= TIME_TO_SEC(time_end)')
+                ->whereRaw('NOW() >= start_date AND NOW() <= end_date')->first();
             if(empty($getBundling)){
                 $error_msg[] = MyHelper::simpleReplace(
                     'Product bundling %bundling_name% tidak tersedia',
@@ -3087,7 +3103,7 @@ class ApiOnlineTransaction extends Controller
                 "id_bundling" => $getBundling['id_bundling'],
                 "bundling_name" => $getBundling['bundling_name'],
                 "bundling_code" => $getBundling['bundling_code'],
-                "bundling_base_price" => $bundlingBasePrice + $totalModPrice,
+                "bundling_base_price" => $bundlingBasePrice,
                 "bundling_qty" => $bundling['bundling_qty'],
                 "bundling_price_total" =>  ($bundlingBasePrice + $totalModPrice) * $bundling['bundling_qty'],
                 "products" => $products
