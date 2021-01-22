@@ -63,7 +63,33 @@ class Product extends Model
 		'product_capacity',
 		'plastic_used',
         'product_variant_status',
-	];
+        'is_inactive'
+    ];
+    
+
+    protected static $_isInactive= false;
+
+    public function newQuery()
+    {
+        $query = parent::newQuery();
+
+        if (!static::$_isInactive) {
+            $query->where('is_inactive', '=', 0);
+        } else {
+            static::$_isInactive = false;
+        }
+
+        return $query;
+    }
+
+    // call this if you need show all product include where is_inactive = 1
+    public static function showAllProduct()
+    {
+        static::$_isInactive = true;
+
+        return new static;
+    }
+
 	public function getPhotoAttribute() {
 		return config('url.storage_url_api').($this->photos[0]['product_photo']??'img/product/item/default.png');
 	}
