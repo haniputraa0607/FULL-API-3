@@ -231,6 +231,7 @@ class ApiBundlingController extends Controller
                     'bundling_description' => $post['bundling_description'],
                     'bundling_promo_status' => $post['bundling_promo_status']??0,
                     'bundling_specific_day_type' => $post['bundling_specific_day_type']??null,
+                    'id_bundling_category' => $post['id_bundling_category']??null,
                     'all_outlet' => $isAllOutlet
                 ];
                 $create = Bundling::create($createBundling);
@@ -468,6 +469,7 @@ class ApiBundlingController extends Controller
                 'bundling_description' => $post['bundling_description'],
                 'bundling_promo_status' => $post['bundling_promo_status']??0,
                 'bundling_specific_day_type' => $post['bundling_specific_day_type']??null,
+                'id_bundling_category' => $post['id_bundling_category']??null,
                 'all_outlet' => $isAllOutlet
             ];
             $update = Bundling::where('id_bundling', $post['id_bundling'])->update($updateBundling);

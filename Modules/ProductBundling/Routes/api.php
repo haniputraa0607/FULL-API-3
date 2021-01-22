@@ -28,3 +28,13 @@ Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'sco
     Route::post('delete', 'ApiBundlingController@destroy');
     Route::post('delete-product', 'ApiBundlingController@destroyBundlingProduct');
 });
+
+Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'product-bundling-category'], function()
+{
+    //bundling product
+    Route::any('list', 'ApiBundlingCategoryController@listCategory');
+    Route::post('store', 'ApiBundlingCategoryController@create');
+    Route::post('detail', 'ApiBundlingCategoryController@detail');
+    Route::post('update', 'ApiBundlingCategoryController@update');
+    Route::post('delete', 'ApiBundlingCategoryController@delete');
+});
