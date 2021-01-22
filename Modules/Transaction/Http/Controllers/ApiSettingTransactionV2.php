@@ -245,6 +245,7 @@ class ApiSettingTransactionV2 extends Controller
                 }
             }
 
+            $bundlingNotIncludePromo = [];
             if(isset($data['item_bundling_detail']) && !empty($data['item_bundling_detail'])){
                 $productBundling = &$data['item_bundling_detail']??[];
                 foreach ($productBundling as $keyBundling => &$valueBundling){
@@ -362,6 +363,7 @@ class ApiSettingTransactionV2 extends Controller
                             }else{
                                 $dataSubtotalPerBrand[$p['id_brand']] = (($calculate  + $totalMod) * $p['product_qty']) * $valueBundling['bundling_qty'];
                             }
+                            $bundlingNotIncludePromo[] = $valueBundling['bundling_name'];
                         }
                     }
 
@@ -375,7 +377,8 @@ class ApiSettingTransactionV2 extends Controller
 
             return [
             	'subtotal' => $dataSubtotal,
-            	'subtotal_per_brand' => $dataSubtotalPerBrand
+            	'subtotal_per_brand' => $dataSubtotalPerBrand,
+                'bundling_not_include_promo' => implode(',', array_unique($bundlingNotIncludePromo))
             ];
         }
 

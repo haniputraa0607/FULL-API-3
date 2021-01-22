@@ -644,9 +644,10 @@ class ApiCategoryController extends Controller
             $getProduct = BundlingProduct::join('products', 'products.id_product', 'bundling_product.id_product')
                 ->leftJoin('product_global_price as pgp', 'pgp.id_product', '=', 'products.id_product')
                 ->join('bundling', 'bundling.id_bundling', 'bundling_product.id_bundling')
+                ->join('bundling_categories', 'bundling_categories.id_bundling_category', 'bundling.id_bundling_category')
                 ->where('bundling.id_bundling', $bundling)
                 ->select('products.product_visibility', 'pgp.product_global_price',  'products.product_variant_status',
-                    'bundling_product.*', 'bundling.*')
+                    'bundling_product.*', 'bundling.*', 'bundling_categories.bundling_category_name', 'bundling_categories.bundling_category_order')
                 ->get()->toArray();
 
             $priceForListNoDiscount = 0;
@@ -698,6 +699,9 @@ class ApiCategoryController extends Controller
             if(count($brands) >= count($id_brand)){
                 $resBundling[] = [
                     "id_bundling" => $bundling,
+                    "id_product_category" => $getProduct[0]['id_bundling_category']??'',
+                    "product_category_name" => $getProduct[0]['bundling_category_name']??'',
+                    'product_category_order' => $getProduct[0]['bundling_category_order']??0,
                     "id_product" => null,
                     "product_name" => $getProduct[0]['bundling_name']??'',
                     "product_code" => $getProduct[0]['bundling_code']??'',
@@ -717,7 +721,7 @@ class ApiCategoryController extends Controller
 
         foreach ($resBundling as $res){
             foreach ($res['brands'] as $insert){
-                if(isset($resProduct[$insert]['bundling']['category'])){
+                if(isset($resProduct[$insert][$res['product_category_name']]['category'])){
                     $resProduct[$insert]['bundling']['list'][] = [
                         "id_bundling" => $res['id_bundling'],
                         "id_product" => null,
@@ -735,14 +739,15 @@ class ApiCategoryController extends Controller
                         "id_brand" =>  $insert
                     ];
                 }else{
-                    $resProduct[$insert]['bundling']['category'] = [
-                        "product_category_name" => "Bundling",
-                        "product_category_order" => -1000000,
-                        "id_product_category" => null,
+                    $order = 1000000 - $res['product_category_order'];
+                    $resProduct[$insert][$res['product_category_name']]['category'] = [
+                        "product_category_name" => $res['product_category_name'],
+                        "product_category_order" => -$order,
+                        "id_product_category" => $res['id_product_category'],
                         "url_product_category_photo" => ""
                     ];
 
-                    $resProduct[$insert]['bundling']['list'][] = [
+                    $resProduct[$insert][$res['product_category_name']]['list'][] = [
                         "id_bundling" => $res['id_bundling'],
                         "id_product" => null,
                         "product_name" => $res['product_name'],
