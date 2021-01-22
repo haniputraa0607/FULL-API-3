@@ -1427,10 +1427,11 @@ class ApiDisburseController extends Controller
             ->whereNull('transaction_pickups.reject_at')
             ->selectRaw('COUNT(transactions.id_transaction) total_trx, SUM(transactions.transaction_grandtotal) as total_gross_sales,
                         SUM(tps.subscription_nominal) as total_subscription, 
+                        SUM(bundling_product_total_discount) as total_discount_bundling,
                         SUM(transactions.transaction_subtotal) as total_sub_total, 
                         SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
                         SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
-                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription,
+                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription, SUM(bundling_product_fee_central) total_income_bundling_product,
                         SUM(transactions.transaction_discount_delivery) total_discount_delivery');
 
         if($id_outlet){
@@ -1642,11 +1643,12 @@ class ApiDisburseController extends Controller
             ->where('transactions.transaction_payment_status', 'Completed')
             ->whereNull('transaction_pickups.reject_at')
             ->selectRaw('COUNT(transactions.id_transaction) total_trx, SUM(transactions.transaction_grandtotal) as total_gross_sales,
-                        SUM(tps.subscription_nominal) as total_subscription, 
+                        SUM(tps.subscription_nominal) as total_subscription,
+                        SUM(bundling_product_total_discount) as total_discount_bundling, 
                         SUM(transactions.transaction_subtotal) as total_sub_total, 
                         SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
                         SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
-                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription,
+                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription, SUM(bundling_product_fee_central) total_income_bundling_product,
                         SUM(transactions.transaction_discount_delivery) total_discount_delivery');
 
         if($id_outlet){
@@ -1841,6 +1843,7 @@ class ApiDisburseController extends Controller
             $filter['key'] = 'all';
             $filter['rule'] = 'and';
             $filter['show_product_code'] = 1;
+            $filter['show_another_income'] = 1;
             $filter['conditions'] = [
                 [
                     'subject' => 'status',
@@ -1877,10 +1880,12 @@ class ApiDisburseController extends Controller
             if(!empty($dataDisburse) && !empty($generateTrx['list']) && !empty($getEmailTo['value'])){
                 $excelFile = 'Transaction_['.$yesterday.'].xlsx';
                 $summary = $this->summaryCalculationFee($yesterday);
+                $summary['show_another_income'] = 1;
                 $generateTrx['show_product_code'] = 1;
+                $generateTrx['show_another_income'] = 1;
                 $store  = (new MultipleSheetExport([
                     "Summary" => $summary,
-                    "Calculation Fee" => $dataDisburse,
+                    "Calculation Fee" => ['data' => $dataDisburse, 'show_another_income' => 1],
                     "Detail Transaction" => $generateTrx
                 ]))->store('excel_email/'.$excelFile);
 

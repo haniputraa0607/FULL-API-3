@@ -21,7 +21,8 @@ class SummaryTrxBladeExport implements FromView, WithTitle
         return view('disburse::detail_export', [
             'summary_product' => $this->data['summary_product'],
             'summary_fee' => $this->data['summary_fee'],
-            'config' => $this->data['config']
+            'config' => $this->data['config'],
+            'show_another_income' => $this->data['show_another_income']??0
         ]);
     }
 

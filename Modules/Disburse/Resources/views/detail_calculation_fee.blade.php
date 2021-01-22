@@ -9,6 +9,7 @@
         <th style="background-color: #dcdcdc;" width="20"> Transaction Date </th>
         <th style="background-color: #dcdcdc;" width="20"> Outlet </th>
         <th style="background-color: #dcdcdc;" width="20"> Gross Sales </th>
+        <th style="background-color: #dcdcdc;" width="20"> Discount </th>
         <th style="background-color: #dcdcdc;" width="20"> Nama Promo </th>
         <th style="background-color: #dcdcdc;" width="20"> Promo </th>
         <th style="background-color: #dcdcdc;" width="20"> Delivery </th>
@@ -16,8 +17,11 @@
         <th style="background-color: #dcdcdc;" width="20"> Biaya Jasa </th>
         <th style="background-color: #dcdcdc;" width="20"> Payment </th>
         <th style="background-color: #dcdcdc;" width="20"> MDR PG </th>
+        @if(isset($show_another_income) && $show_another_income == 1)
         <th style="background-color: #dcdcdc;" width="20"> Income Promo </th>
         <th style="background-color: #dcdcdc;" width="20"> Income Subscription </th>
+        <th style="background-color: #dcdcdc;" width="20"> Income Bundling Product </th>
+        @endif
         <th style="background-color: #dcdcdc;" width="20"> Income Outlet </th>
     </tr>
     </thead>
@@ -39,6 +43,7 @@
                 <td style="text-align: left">{{date('d M Y H:i', strtotime($val['transaction_date']))}}</td>
                 <td style="text-align: left">{{$val['outlet_code']}}-{{$val['outlet_name']}}</td>
                 <td style="text-align: left">{{$val['transaction_subtotal']}}</td>
+                <td style="text-align: left">{{(float)$val['bundling_product_total_discount']}}</td>
                 <td style="text-align: left">
                     <?php
                     $promoName = '';
@@ -87,8 +92,11 @@
                     ?>
                 </td>
                 <td style="text-align: left">{{(float)$val['payment_charge']}}</td>
+                @if(isset($show_another_income) && $show_another_income == 1)
                 <td style="text-align: left">{{(float)$val['discount_central']}}</td>
                 <td style="text-align: left">{{(float)$val['subscription_central']}}</td>
+                <td style="text-align: left">{{(float)$val['bundling_product_fee_central']}}</td>
+                @endif
                 <td style="text-align: left">{{(float)$val['income_outlet']}}</td>
             </tr>
         @endforeach

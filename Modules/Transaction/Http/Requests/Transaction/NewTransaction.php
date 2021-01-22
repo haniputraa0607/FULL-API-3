@@ -11,8 +11,7 @@ class NewTransaction extends FormRequest
     public function rules()
     {
         return [
-            'item'                     => 'required|array',
-            'item.*.qty'               => 'required|numeric|min:1',
+            'item.*.qty'               => 'sometimes|numeric|min:1',
             'item.*.modifiers.*.qty'   => 'sometimes|numeric|min:1',
             'item.*.variants'          => 'sometimes|nullable|array',
             'id_outlet'                => 'required_unless:type,Advance Order|integer',

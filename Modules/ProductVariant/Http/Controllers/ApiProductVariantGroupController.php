@@ -150,8 +150,10 @@ class ApiProductVariantGroupController extends Controller
         return response()->json(MyHelper::checkGet($get));
     }
 
-    public function productVariantGroupListAjax($idProduct){
-        $get = ProductVariantGroup::where('id_product', $idProduct)
+    public function productVariantGroupListAjax($idProduct, $returnType = 'json'){
+        $get = ProductVariantGroup::join('products', 'products.id_product', 'product_variant_groups.id_product')
+            ->where('product_variant_groups.id_product', $idProduct)
+            ->where('products.product_variant_status', 1)
             ->with('product_variant_pivot_simple')
             ->select('product_variant_groups.id_product_variant_group')
             ->get();
@@ -169,7 +171,12 @@ class ApiProductVariantGroupController extends Controller
             }
             $result[] = $dataResult;
         }
-        return response()->json(MyHelper::checkGet($result));
+
+        if($returnType == 'json'){
+            return response()->json(MyHelper::checkGet($result));
+        }else{
+            return $result;
+        }
     }
 
     public function removeProductVariantGroup(Request $request){
@@ -282,11 +289,31 @@ class ApiProductVariantGroupController extends Controller
                 foreach ($post['rule'] as $row){
                     if(isset($row['subject'])){
                         if($row['subject'] == 'product_variant_group_code'){
-                            $data->where('product_variant_groups.product_variant_group_code', $row['parameter']);
+                            if($row['operator'] == '='){
+                                $data->where('product_variant_groups.product_variant_group_code', $row['parameter']);
+                            }else{
+                                $data->where('product_variant_groups.product_variant_group_code', 'like', '%'.$row['parameter'].'%');
+                            }
                         }
 
                         if($row['subject'] == 'product_variant_group_visibility'){
                             $data->where('product_variant_groups.product_variant_group_visibility', $row['parameter']);
+                        }
+
+                        if($row['subject'] == 'product_code'){
+                            if($row['operator'] == '='){
+                                $data->where('products.product_code', $row['parameter']);
+                            }else{
+                                $data->where('products.product_code', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'product_name'){
+                            if($row['operator'] == '='){
+                                $data->where('products.product_name', $row['parameter']);
+                            }else{
+                                $data->where('products.product_name', 'like', '%'.$row['parameter'].'%');
+                            }
                         }
                     }
                 }
@@ -295,11 +322,31 @@ class ApiProductVariantGroupController extends Controller
                     foreach ($post['rule'] as $row){
                         if(isset($row['subject'])){
                             if($row['subject'] == 'product_variant_group_code'){
-                                $subquery->orWhere('product_variant_groups.product_variant_group_code', $row['parameter']);
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('product_variant_groups.product_variant_group_code', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('product_variant_groups.product_variant_group_code', 'like', '%'.$row['parameter'].'%');
+                                }
                             }
 
                             if($row['subject'] == 'product_variant_group_visibility'){
                                 $subquery->orWhere('product_variant_groups.product_variant_group_visibility', $row['parameter']);
+                            }
+
+                            if($row['subject'] == 'product_code'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('products.product_code', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('products.product_code', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'product_name'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('products.product_name', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('products.product_name', 'like', '%'.$row['parameter'].'%');
+                                }
                             }
                         }
                     }
@@ -548,9 +595,18 @@ class ApiProductVariantGroupController extends Controller
                     foreach ($arrCombinations as $group){
                         //search id product variant for insert into product variant pivot
                         $arrTmp = [];
-                        foreach ($group as $g){
-                            $id = explode('-',$g)[0]??'';
-                            $name = explode('-',$g)[1]??'';
+                        if(is_array($group)){
+                            foreach ($group as $g){
+                                $id = explode('-',$g)[0]??'';
+                                $name = explode('-',$g)[1]??'';
+                                $searchId = ProductVariant::where('id_parent', $id)->where('product_variant_name', $name)->first();
+                                if($searchId !== false){
+                                    $arrTmp[] = $searchId['id_product_variant'];
+                                }
+                            }
+                        }else{
+                            $id = explode('-',$group)[0]??'';
+                            $name = explode('-',$group)[1]??'';
                             $searchId = ProductVariant::where('id_parent', $id)->where('product_variant_name', $name)->first();
                             if($searchId !== false){
                                 $arrTmp[] = $searchId['id_product_variant'];

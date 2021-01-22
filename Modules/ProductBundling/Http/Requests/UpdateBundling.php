@@ -4,7 +4,7 @@ namespace Modules\ProductBundling\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class CreateBundling extends FormRequest
+class UpdateBundling extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -14,13 +14,12 @@ class CreateBundling extends FormRequest
     public function rules()
     {
         return [
+            'id_bundling' => 'required',
             'bundling_name' => 'required',
             'bundling_description' => 'required',
             'bundling_start' => 'required',
             'bundling_end' => 'required',
-            'id_outlet' => 'required',
-            'photo' => 'required',
-            'photo_detail' => 'required'
+            'id_outlet' => 'required'
         ];
     }
 
