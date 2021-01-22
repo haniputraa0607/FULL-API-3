@@ -13,6 +13,7 @@ class Bundling extends Model
     protected $primaryKey = 'id_bundling';
 
     protected $fillable = [
+        'id_bundling_category',
         'bundling_code',
         'bundling_name',
         'bundling_promo_status',

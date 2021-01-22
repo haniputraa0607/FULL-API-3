@@ -822,10 +822,17 @@ class ApiOnlineTransaction extends Controller
 
         	if (!$check_min_basket) {
 				DB::rollback();
-                return [
-                    'status'=>'fail',
-                    'messages'=>['Total pembelian minimum belum terpenuhi']
-                ];
+				if(!empty($post['sub']['bundling_not_include_promo']??[])){
+                    return [
+                        'status'=>'fail',
+                        'messages'=>['Bundling : '.$post['sub']['bundling_not_include_promo'].' tidak termasuk dalam perhitungan promo. Silahkan tambahkan item lain untuk memenuhi jumlah minimum pembelian.']
+                    ];
+                }else{
+                    return [
+                        'status'=>'fail',
+                        'messages'=>['Total pembelian minimum belum terpenuhi']
+                    ];
+                }
         	}
         }
         // check promo subscription type discount and discount delivery
@@ -2573,6 +2580,20 @@ class ApiOnlineTransaction extends Controller
             // return $product;
         }
 
+        // check bundling product
+        $result['item_bundling_detail'] = [];
+        $result['item_bundling'] = [];
+        $responseNotIncludePromo = '';
+        if(!empty($post['item_bundling'])){
+            $itemBundlings = $this->checkBundlingProduct($post, $outlet, $subtotal_per_brand);
+            $result['item_bundling'] = $itemBundlings['item_bundling']??[];
+            $result['item_bundling_detail'] = $itemBundlings['item_bundling_detail']??[];
+            $totalItem = $totalItem + $itemBundlings['total_item_bundling']??0;
+            $error_msg = array_merge($error_msg, $itemBundlings['error_message']??[]);
+            $responseNotIncludePromo = $itemBundlings['bundling_not_include_promo']??'';
+            $subtotal_per_brand = $itemBundlings['subtotal_per_brand']??[];
+        }
+
         if ($promo_valid) {
         	if (($promo_type??false) == 'Discount bill') {
         		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $subtotal_per_brand, $promo_error_product);
@@ -2597,7 +2618,11 @@ class ApiOnlineTransaction extends Controller
         		$promo_discount = 0;
         		$promo_source = null;
         		$discount_promo['discount_delivery'] = 0;
-        		$error = ['Total pembelian minimum belum terpenuhi'];
+        		if(!empty($responseNotIncludePromo)){
+                    $error = ['Bundling : '.$post['sub']['bundling_not_include_promo'].' tidak termasuk dalam perhitungan promo. Silahkan tambahkan item lain untuk memenuhi jumlah minimum pembelian.'];
+                }else{
+                    $error = ['Total pembelian minimum belum terpenuhi'];
+                }
 	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, 'all');
         	}
         }
@@ -2638,17 +2663,6 @@ class ApiOnlineTransaction extends Controller
             'today' => $outlet['today']
         ];
         $result['item'] = array_values($tree);
-
-        // check bundling product
-        $result['item_bundling_detail'] = [];
-        $result['item_bundling'] = [];
-        if(!empty($post['item_bundling'])){
-            $itemBundlings = $this->checkBundlingProduct($post, $outlet);
-            $result['item_bundling'] = $itemBundlings['item_bundling']??[];
-            $result['item_bundling_detail'] = $itemBundlings['item_bundling_detail']??[];
-            $totalItem = $totalItem + $itemBundlings['total_item_bundling']??0;
-            $error_msg = array_merge($error_msg, $itemBundlings['error_message']??[]);
-        }
 
         // Additional Plastic Payment
         $plastic = app($this->plastic)->check($post);
@@ -2815,7 +2829,7 @@ class ApiOnlineTransaction extends Controller
         return MyHelper::checkGet($result)+['messages'=>$error_msg,'promo_error'=>$promo_error];
     }
 
-    public function checkBundlingProduct($post, $outlet){
+    public function checkBundlingProduct($post, $outlet, $subtotal_per_brand = []){
         $error_msg = [];
         $subTotalBundling = 0;
         $totalItemBundling = 0;
@@ -2886,7 +2900,7 @@ class ApiOnlineTransaction extends Controller
                     ->join('bundling', 'bundling.id_bundling', 'bundling_product.id_bundling')
                     ->where('bundling_product.id_bundling_product', $p['id_bundling_product'])
                     ->select('products.product_visibility', 'pgp.product_global_price',  'products.product_variant_status',
-                        'bundling_product.*', 'bundling.bundling_name', 'bundling.bundling_code', 'products.*')
+                        'bundling_product.*', 'bundling.bundling_promo_status','bundling.bundling_name', 'bundling.bundling_code', 'products.*')
                     ->first();
                 $getProductDetail = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first();
                 $product['visibility_outlet'] = $getProductDetail['product_detail_visibility']??null;
@@ -3096,6 +3110,15 @@ class ApiOnlineTransaction extends Controller
                     "selected_variant" => array_merge($product['selected_variant'], $p['extra_modifiers']),
                     "variants"=> $product['variants']
                 ];
+
+                if($product['bundling_promo_status'] == 1){
+                    if (isset($subtotal_per_brand[$product['id_brand']])) {
+                        $subtotal_per_brand[$product['id_brand']] += ($calculate  + $mod_price) * $bundling['bundling_qty'];
+                    }else{
+                        $subtotal_per_brand[$product['id_brand']] = ($calculate  + $mod_price) * $bundling['bundling_qty'];
+                    }
+                    $bundlingNotIncludePromo[] = $bundling['bundling_name'];
+                }
             }
 
             $itemBundling[] = [
@@ -3131,7 +3154,9 @@ class ApiOnlineTransaction extends Controller
             'subtotal_bundling' => $subTotalBundling,
             'item_bundling' => $itemBundling,
             'item_bundling_detail' => $itemBundlingDetail,
-            'error_message' => $error_msg
+            'error_message' => $error_msg,
+            'subtotal_per_brand' => $subtotal_per_brand,
+            'bundling_not_include_promo' => implode(',', array_unique($bundlingNotIncludePromo))
         ];
     }
 

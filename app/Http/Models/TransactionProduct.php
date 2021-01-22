@@ -79,7 +79,8 @@ class TransactionProduct extends Model
 	
 	public function product()
 	{
-		return $this->belongsTo(\App\Http\Models\Product::class, 'id_product');
+		return $this->belongsTo(\App\Http\Models\Product::class, 'id_product')
+		->orWhere('products.is_inactive', '1');
 	}
 
 	public function product_variant_group()
