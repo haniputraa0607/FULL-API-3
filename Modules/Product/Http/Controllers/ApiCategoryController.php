@@ -722,7 +722,7 @@ class ApiCategoryController extends Controller
         foreach ($resBundling as $res){
             foreach ($res['brands'] as $insert){
                 if(isset($resProduct[$insert][$res['product_category_name']]['category'])){
-                    $resProduct[$insert]['bundling']['list'][] = [
+                    $resProduct[$insert][$res['product_category_name']]['list'][] = [
                         "id_bundling" => $res['id_bundling'],
                         "id_product" => null,
                         "product_name" => $res['product_name'],
