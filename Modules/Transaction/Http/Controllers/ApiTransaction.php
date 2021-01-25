@@ -2015,8 +2015,8 @@ class ApiTransaction extends Controller
                             $htmlBundling .= '<td>'.$val['bundling_name'].'</td>';
                             $htmlBundling .= '<td></td>';
                             $htmlBundling .= '<td></td>';
-                            $htmlBundling .= '<td></td>';
-                            $htmlBundling .= '<td></td>';
+                            $htmlBundling .= '<td>'.(int)($val['transaction_bundling_product_base_price']+$val['transaction_bundling_product_total_discount']).'</td>';
+                            $htmlBundling .= '<td>0</td>';
                             $htmlBundling .= '<td></td>';
                             $htmlBundling .= '<td></td>';
                             $htmlBundling .= '<td></td>';
