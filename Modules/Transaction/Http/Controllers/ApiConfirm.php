@@ -80,9 +80,9 @@ class ApiConfirm extends Controller
 
         $checkPayment = TransactionMultiplePayment::where('id_transaction', $check['id_transaction'])->first();
         $countGrandTotal = $check['transaction_grandtotal'];
+        $totalPriceProduct = 0;
 
         if (isset($check['productTransaction'])) {
-            $totalPriceProduct = 0;
             foreach ($check['productTransaction'] as $key => $value) {
                 // get modifiers name
                 $mods           = TransactionProductModifier::select('qty', 'text')->where('id_transaction_product', $value['id_transaction_product'])->get()->toArray();
@@ -109,30 +109,18 @@ class ApiConfirm extends Controller
             }
         }
 
-        $checkItemBundling = Transaction::with('transaction_shipments', 'productTransactionBundling.product','outlet_name', 'transaction_payment_subscription')->where('id_transaction', $post['id'])->first();
+        $checkItemBundling = TransactionBundlingProduct::where('id_transaction', $check['id_transaction'])
+            ->join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
+            ->select('transaction_bundling_products.*', 'bundling.bundling_name', 'bundling.bundling_code')
+            ->get()->toArray();
 
-        if (isset($checkItemBundling['productTransactionBundling'])) {
-            $totalPriceProduct = 0;
-            foreach ($checkItemBundling['productTransactionBundling'] as $key => $value) {
-                // get modifiers name
-                $mods           = TransactionProductModifier::select('qty', 'text', 'transaction_product_modifier_price')->where('id_transaction_product', $value['id_transaction_product'])->get()->toArray();
-                $more_name_text = '';
-                $modPrice = 0;
-                foreach ($mods as $mod) {
-                    if ($mod['qty'] > 1) {
-                        $more_name_text .= ',' . $mod['qty'] . 'x ' . $mod['text'];
-                    } else {
-                        $more_name_text .= ',' . $mod['text'];
-                    }
-                    $modPrice = $modPrice + ($mod['transaction_product_modifier_price'] * $mod['qty']);
-                }
-
-                $priceProd = $value['transaction_product_price'] - $value['transaction_product_bundling_discount'];
+        if (!empty($checkItemBundling)) {
+            foreach ($checkItemBundling as $key => $value) {
                 $dataProductMidtrans = [
-                    'id'       => $value['product_variant_group']['product_variant_group_code'] ?? $value['product']['product_code'],
-                    'price'    => abs($priceProd+$modPrice),
-                    'name'     => $value['product']['product_name'],
-                    'quantity' => $value['transaction_product_qty'],
+                    'id'       => $value['bundling_code'],
+                    'price'    => abs((int)$value['transaction_bundling_product_subtotal']/$value['transaction_bundling_product_qty']),
+                    'name'     => $value['bundling_name'],
+                    'quantity' => $value['transaction_bundling_product_qty'],
                 ];
 
                 $totalPriceProduct+= ($dataProductMidtrans['quantity'] * $dataProductMidtrans['price']);

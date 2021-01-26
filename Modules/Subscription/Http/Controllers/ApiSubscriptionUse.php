@@ -210,7 +210,7 @@ class ApiSubscriptionUse extends Controller
 	    	}
 		}
 
-		if (!$check) {
+		if (!$check && empty($request->item_bundling)) {
 			$pct = new PromoCampaignTools;
 			$total_product = count($promo_product??[]);
 			$product_name = $pct->getProductName($promo_product, $subs_obj->subscription_user->subscription->product_rule);

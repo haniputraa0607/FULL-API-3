@@ -2015,8 +2015,8 @@ class ApiTransaction extends Controller
                             $htmlBundling .= '<td>'.$val['bundling_name'].'</td>';
                             $htmlBundling .= '<td></td>';
                             $htmlBundling .= '<td></td>';
-                            $htmlBundling .= '<td></td>';
-                            $htmlBundling .= '<td></td>';
+                            $htmlBundling .= '<td>'.(int)($val['transaction_bundling_product_base_price']+$val['transaction_bundling_product_total_discount']).'</td>';
+                            $htmlBundling .= '<td>0</td>';
                             $htmlBundling .= '<td></td>';
                             $htmlBundling .= '<td></td>';
                             $htmlBundling .= '<td></td>';
@@ -2032,6 +2032,7 @@ class ApiTransaction extends Controller
                             for ($bun = 1;$bun<=$val['transaction_bundling_product_qty'];$bun++){
                                 $html .= $htmlBundling;
                             }
+                            $htmlBundling = "";
                         }
 
                         $tmpBundling = $val['id_transaction_bundling_product'];
@@ -2064,7 +2065,7 @@ class ApiTransaction extends Controller
                                     $html .= '<td></td>';
                                 }
                             }
-                            $html .= '<td>'.$val['bundling_name'].'</td>';
+                            $html .= '<td></td>';
                             $html .= '<td>'.implode(",",$modifier).'</td>';
                             $html .= '<td>'.$textMod.'</td>';
                             $html .= '<td>'.$val['transaction_product_price'].'</td>';
@@ -3439,15 +3440,14 @@ class ApiTransaction extends Controller
             '))
             ->join('products','products.id_product','=','transaction_products.id_product')
             ->join('outlets','outlets.id_outlet','=','transaction_products.id_outlet')
+            ->whereNull('id_transaction_bundling_product')
             ->where(['id_transaction'=>$id_transaction])
             ->with(['modifiers'=>function($query){
                 $query->select('id_transaction_product','product_modifiers.code','transaction_product_modifiers.id_product_modifier','qty','product_modifiers.text', 'transaction_product_modifier_price', 'modifier_type')->join('product_modifiers','product_modifiers.id_product_modifier','=','transaction_product_modifiers.id_product_modifier');
             },'variants'=>function($query){
                 $query->select('id_transaction_product','transaction_product_variants.id_product_variant','transaction_product_variants.id_product_variant','product_variants.product_variant_name', 'transaction_product_variant_price')->join('product_variants','product_variants.id_product_variant','=','transaction_product_variants.id_product_variant');
             }])->get()->toArray();
-        if(!$pts){
-            return MyHelper::checkGet($pts);
-        }
+
         $id_outlet = $trx['id_outlet'];
         $total_mod_price = 0;
         foreach ($pts as &$pt) {
@@ -3507,10 +3507,72 @@ class ApiTransaction extends Controller
             $pt['note'] = $pt['note']?:'';
             unset($pt['transaction_product_price']);
         }
+
+        //item bundling
+        $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
+            ->where('id_transaction', $id_transaction)->get()->toArray();
+        $itemBundling = [];
+        foreach ($getBundling as $key=>$bundling){
+            $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
+                ->where('id_transaction_bundling_product', $bundling['id_transaction_bundling_product'])->get()->toArray();
+            $basePriceBundling = 0;
+            $products = [];
+            foreach ($bundlingProduct as $bp){
+                $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                    ->whereNull('transaction_product_modifiers.id_product_modifier_group')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as text', DB::raw('FLOOR(transaction_product_modifier_price * '.$bp['transaction_product_bundling_qty'].' * '.$bundling['transaction_bundling_product_qty'].') as product_modifier_price'))->get()->toArray();
+                $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->select('product_variants.id_product_variant', 'product_variants.product_variant_name',  DB::raw('FLOOR(transaction_product_variant_price) as product_variant_price'))->get()->toArray();
+                $variantNoPrice =  TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                    ->whereNotNull('transaction_product_modifiers.id_product_modifier_group')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->select('transaction_product_modifiers.id_product_modifier as id_product_variant', 'transaction_product_modifiers.text as product_variant_name', 'transaction_product_modifier_price as product_variant_price')->get()->toArray();
+                $variants = array_merge($variantPrice, $variantNoPrice);
+                $extraMod = array_column($variantNoPrice, 'id_product_variant');
+
+                for ($i=1;$i<=$bp['transaction_product_bundling_qty'];$i++){
+                    $products[] = [
+                        'id_brand' => $bp['id_brand'],
+                        'id_bundling' => $bundling['id_bundling'],
+                        'id_bundling_product' => $bp['id_bundling_product'],
+                        'id_product' => $bp['id_product'],
+                        'id_product_variant_group' => $bp['id_product_variant_group'],
+                        'note' => $bp['transaction_product_note'],
+                        'product_code' => $bp['product_code'],
+                        'product_name' => $bp['product_name'],
+                        'note' => $bp['transaction_product_note'],
+                        'extra_modifiers' => $extraMod,
+                        'variants' => $variants,
+                        'modifiers' => $mod
+                    ];
+                }
+
+                $basePriceBundling = $basePriceBundling + ($bp['transaction_product_price'] * $bp['transaction_product_bundling_qty']);
+            }
+
+            $itemBundling[] = [
+                'id_bundling' => $bundling['id_bundling'],
+                'bundling_name' => $bundling['bundling_name'],
+                'bundling_qty' => $bundling['transaction_bundling_product_qty'],
+                'bundling_code' =>  $bundling['bundling_code'],
+                'bundling_base_price' => (int)$bundling['transaction_bundling_product_base_price'],
+                'bundling_price_no_discount' => $basePriceBundling * $bundling['transaction_bundling_product_qty'],
+                'bundling_price_total' => (int)$bundling['transaction_bundling_product_subtotal'],
+                'products' => $products
+            ];
+        }
+
+        if(empty($pts) && empty($getBundling)){
+            return MyHelper::checkGet([]);
+        }
+
         $result = [
             'id_outlet' => $trx->id_outlet,
             'outlet_code' => $trx->outlet_code,
-            'item' => $pts
+            'item' => $pts,
+            'item_bundling' => $itemBundling
         ];
         if ($trx->pickup_by == 'Customer') {
             $result += [

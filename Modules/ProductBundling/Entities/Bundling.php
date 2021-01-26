@@ -13,8 +13,11 @@ class Bundling extends Model
     protected $primaryKey = 'id_bundling';
 
     protected $fillable = [
+        'id_bundling_category',
         'bundling_code',
         'bundling_name',
+        'bundling_promo_status',
+        'bundling_specific_day_type',
         'bundling_price_before_discount',
         'bundling_price_after_discount',
         'image',
@@ -42,6 +45,10 @@ class Bundling extends Model
     public function bundling_product(){
         return $this->hasMany(BundlingProduct::class, 'id_bundling', 'id_bundling')
         ->join('products', 'bundling_product.id_product', 'products.id_product');
+    }
+
+    public function bundling_periode_day(){
+        return $this->hasMany(BundlingPeriodeDay::class, 'id_bundling', 'id_bundling');
     }
     
     public function outlets(){

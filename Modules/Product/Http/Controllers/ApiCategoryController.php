@@ -24,6 +24,7 @@ use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\ProductBundling\Entities\Bundling;
 use Modules\ProductBundling\Entities\BundlingProduct;
+use Modules\ProductBundling\Entities\BundlingToday;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 use Validator;
@@ -613,23 +614,26 @@ class ApiCategoryController extends Controller
     function getBundling($post, $brands, $outlet, $resProduct){
         $resBundling = [];
         $count = count($brands);
+        $currentHour = date('H:i:s');
 
-        $bundlings1 = Bundling::join('bundling_product as bp', 'bp.id_bundling', 'bundling.id_bundling')
+        $bundlings1 = Bundling::join('bundling_today as bt', 'bt.id_bundling', 'bundling.id_bundling')
+            ->join('bundling_product as bp', 'bp.id_bundling', 'bundling.id_bundling')
             ->join('brand_product', 'brand_product.id_product', 'bp.id_product')
             ->join('brand_outlet', 'brand_outlet.id_brand', 'brand_product.id_brand')
             ->where('brand_outlet.id_outlet', $post['id_outlet'])
             ->where('bundling.all_outlet', 1)
             ->whereIn('brand_product.id_brand', $brands)
-            ->whereRaw('NOW() >= start_date AND NOW() <= end_date')
+            ->whereRaw('TIME_TO_SEC("'.$currentHour.'") >= TIME_TO_SEC(time_start) AND TIME_TO_SEC("'.$currentHour.'") <= TIME_TO_SEC(time_end)')
             ->pluck('bundling.id_bundling')->toArray();
 
-        $bundlings2 = Bundling::join('bundling_outlet as bo', 'bo.id_bundling', 'bundling.id_bundling')
+        $bundlings2 = Bundling::join('bundling_today as bt', 'bt.id_bundling', 'bundling.id_bundling')
+            ->join('bundling_outlet as bo', 'bo.id_bundling', 'bundling.id_bundling')
             ->join('bundling_product as bp', 'bp.id_bundling', 'bundling.id_bundling')
             ->join('brand_product', 'brand_product.id_product', 'bp.id_product')
             ->where('all_outlet', 0)
             ->where('bo.id_outlet', $post['id_outlet'])
             ->whereIn('brand_product.id_brand', $brands)
-            ->whereRaw('NOW() >= start_date AND NOW() <= end_date')
+            ->whereRaw('TIME_TO_SEC("'.$currentHour.'") >= TIME_TO_SEC(time_start) AND TIME_TO_SEC("'.$currentHour.'") <= TIME_TO_SEC(time_end)')
             ->pluck('bundling.id_bundling')->toArray();
 
         $bundlings = array_merge($bundlings1,$bundlings2);
@@ -640,9 +644,10 @@ class ApiCategoryController extends Controller
             $getProduct = BundlingProduct::join('products', 'products.id_product', 'bundling_product.id_product')
                 ->leftJoin('product_global_price as pgp', 'pgp.id_product', '=', 'products.id_product')
                 ->join('bundling', 'bundling.id_bundling', 'bundling_product.id_bundling')
+                ->join('bundling_categories', 'bundling_categories.id_bundling_category', 'bundling.id_bundling_category')
                 ->where('bundling.id_bundling', $bundling)
                 ->select('products.product_visibility', 'pgp.product_global_price',  'products.product_variant_status',
-                    'bundling_product.*', 'bundling.*')
+                    'bundling_product.*', 'bundling.*', 'bundling_categories.bundling_category_name', 'bundling_categories.bundling_category_order')
                 ->get()->toArray();
 
             $priceForListNoDiscount = 0;
@@ -694,6 +699,9 @@ class ApiCategoryController extends Controller
             if(count($brands) >= count($id_brand)){
                 $resBundling[] = [
                     "id_bundling" => $bundling,
+                    "id_product_category" => $getProduct[0]['id_bundling_category']??'',
+                    "product_category_name" => $getProduct[0]['bundling_category_name']??'',
+                    'product_category_order' => $getProduct[0]['bundling_category_order']??0,
                     "id_product" => null,
                     "product_name" => $getProduct[0]['bundling_name']??'',
                     "product_code" => $getProduct[0]['bundling_code']??'',
@@ -705,6 +713,7 @@ class ApiCategoryController extends Controller
                     "photo" => (!empty($getProduct[0]['image']) ? config('url.storage_url_api').$getProduct[0]['image'] : ''),
                     "product_price_no_discount" => $priceForListNoDiscount??0,
                     "is_promo" => 0,
+                    "is_promo_bundling" => $getProduct[0]['bundling_promo_status']??0,
                     "brands" => $id_brand,
                     "position" => 1
                 ];
@@ -713,8 +722,8 @@ class ApiCategoryController extends Controller
 
         foreach ($resBundling as $res){
             foreach ($res['brands'] as $insert){
-                if(isset($resProduct[$insert]['bundling']['category'])){
-                    $resProduct[$insert]['bundling']['list'][] = [
+                if(isset($resProduct[$insert][$res['product_category_name']]['category'])){
+                    $resProduct[$insert][$res['product_category_name']]['list'][] = [
                         "id_bundling" => $res['id_bundling'],
                         "id_product" => null,
                         "product_name" => $res['product_name'],
@@ -727,18 +736,20 @@ class ApiCategoryController extends Controller
                         "product_price_no_discount" => $res['product_price_no_discount'],
                         "photo" => $res['photo'],
                         "is_promo" => 0,
+                        "is_promo_bundling" => $res['is_promo_bundling'],
                         "position" => 1,
                         "id_brand" =>  $insert
                     ];
                 }else{
-                    $resProduct[$insert]['bundling']['category'] = [
-                        "product_category_name" => "Bundling",
-                        "product_category_order" => -1000000,
-                        "id_product_category" => null,
+                    $order = 2500000 - $res['product_category_order'];
+                    $resProduct[$insert][$res['product_category_name']]['category'] = [
+                        "product_category_name" => $res['product_category_name'],
+                        "product_category_order" => -$order,
+                        "id_product_category" => $res['id_product_category'],
                         "url_product_category_photo" => ""
                     ];
 
-                    $resProduct[$insert]['bundling']['list'][] = [
+                    $resProduct[$insert][$res['product_category_name']]['list'][] = [
                         "id_bundling" => $res['id_bundling'],
                         "id_product" => null,
                         "product_name" => $res['product_name'],
@@ -751,6 +762,7 @@ class ApiCategoryController extends Controller
                         "product_price_no_discount" => $res['product_price_no_discount'],
                         "photo" => $res['photo'],
                         "is_promo" => 0,
+                        "is_promo_bundling" => $res['is_promo_bundling'],
                         "position" => 1,
                         "id_brand" =>  $insert
                     ];

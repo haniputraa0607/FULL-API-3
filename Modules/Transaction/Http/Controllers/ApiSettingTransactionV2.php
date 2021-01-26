@@ -245,6 +245,7 @@ class ApiSettingTransactionV2 extends Controller
                 }
             }
 
+            $bundlingNotIncludePromo = [];
             if(isset($data['item_bundling_detail']) && !empty($data['item_bundling_detail'])){
                 $productBundling = &$data['item_bundling_detail']??[];
                 foreach ($productBundling as $keyBundling => &$valueBundling){
@@ -333,7 +334,6 @@ class ApiSettingTransactionV2 extends Controller
                                 $mod_price = ProductModifierGlobalPrice::select('product_modifier_price')->where('id_product_modifier',$id_product_modifier)->pluck('product_modifier_price')->first()?:0;
                                 $totalMod = $totalMod + $mod_price;
                             }
-                            $mod_subtotal += $mod_price*$qty_product_modifier;
                         }
 
                         $price = (float)$price;
@@ -355,9 +355,19 @@ class ApiSettingTransactionV2 extends Controller
                         $totalDiscount = $totalDiscount + ($discount * $p['product_qty']);
                         $p['transaction_product_bundling_charged_outlet'] = $getProduct['charged_outlet'];
                         $p['transaction_product_bundling_charged_central'] = $getProduct['charged_central'];
+                        $mod_subtotal = $mod_subtotal + ($totalMod * $p['product_qty'] * $valueBundling['bundling_qty']);
+
+                        if($getProduct['bundling_promo_status'] == 1){
+                            if (isset($dataSubtotalPerBrand[$p['id_brand']])) {
+                                $dataSubtotalPerBrand[$p['id_brand']] += (($calculate  + $totalMod) * $p['product_qty']) * $valueBundling['bundling_qty'];
+                            }else{
+                                $dataSubtotalPerBrand[$p['id_brand']] = (($calculate  + $totalMod) * $p['product_qty']) * $valueBundling['bundling_qty'];
+                            }
+                            $bundlingNotIncludePromo[] = $valueBundling['bundling_name'];
+                        }
                     }
 
-                    $bundlingSubtotal = ($bundlingBasePrice + $mod_subtotal) * $valueBundling['bundling_qty'];
+                    $bundlingSubtotal = ($bundlingBasePrice * $valueBundling['bundling_qty']) + $mod_subtotal;
                     array_push($dataSubtotal, $bundlingSubtotal);
                     $valueBundling['transaction_bundling_product_base_price'] = $bundlingBasePrice;
                     $valueBundling['transaction_bundling_product_subtotal'] = $bundlingSubtotal;
@@ -367,7 +377,8 @@ class ApiSettingTransactionV2 extends Controller
 
             return [
             	'subtotal' => $dataSubtotal,
-            	'subtotal_per_brand' => $dataSubtotalPerBrand
+            	'subtotal_per_brand' => $dataSubtotalPerBrand,
+                'bundling_not_include_promo' => implode(',', array_unique($bundlingNotIncludePromo))
             ];
         }
 
