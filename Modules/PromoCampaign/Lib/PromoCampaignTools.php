@@ -953,7 +953,7 @@ class PromoCampaignTools{
 					$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
 
 					// promo product not available in cart?
-					if (!$check_product && empty($request->item_bundling)) {
+					if (!$check_product && empty($request['bundling_promo'])) {
 						$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
 						$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
 						$errors[]= $missing_product_messages ?? $message;
@@ -969,7 +969,7 @@ class PromoCampaignTools{
 				$product = $get_promo_product['product'];
 
 				// product not found? buat jaga-jaga kalau sesuatu yang tidak diinginkan terjadi
-				if(!$product && empty($request->item_bundling)){
+				if(!$product && empty($request['bundling_promo'])){
 					$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
 

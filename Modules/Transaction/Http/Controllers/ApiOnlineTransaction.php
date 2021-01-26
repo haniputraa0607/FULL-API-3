@@ -247,6 +247,7 @@ class ApiOnlineTransaction extends Controller
         } else {
             $post['transaction_payment_status'] = 'Pending';
         }
+        $request['bundling_promo'] = $this->checkBundlingIncludePromo($post);
 
         if (!isset($post['id_user'])) {
             $id = $request->user()->id;
@@ -2116,7 +2117,9 @@ class ApiOnlineTransaction extends Controller
         $promo_valid = false;
         $promo_discount = 0;
         $promo_type = null;
+        $request['bundling_promo'] = $this->checkBundlingIncludePromo($post);
         $request_promo = $request->except('type');
+
         if($request->promo_code && !$request->id_subscription_user && !$request->id_deals_user){
         	$code = app($this->promo_campaign)->checkPromoCode($request->promo_code, 1, 1);
 
@@ -2473,7 +2476,7 @@ class ApiOnlineTransaction extends Controller
                 $mod = $mod->toArray();
                 $scope = $mod['modifier_type'];
                 $mod['qty'] = $qty_product_modifier;
-                $mod['product_modifier_price'] = (int) $mod['product_modifier_price'] * $product['qty'];
+                $mod['product_modifier_price'] = (int) $mod['product_modifier_price'];
                 if ($scope == 'Modifier Group') {
                     $product['extra_modifiers'][]=[
                         'product_variant_name' => $mod['text'],
@@ -3164,6 +3167,31 @@ class ApiOnlineTransaction extends Controller
             'subtotal_per_brand' => $subtotal_per_brand,
             'bundling_not_include_promo' => implode(',', array_unique($bundlingNotIncludePromo??[]))
         ];
+    }
+
+    public function checkBundlingIncludePromo($post){
+        $arr = [];
+        foreach ($post['item_bundling']??[] as $key=>$bundling) {
+            $getBundling = Bundling::where('bundling.id_bundling', $bundling['id_bundling'])
+                ->join('bundling_today as bt', 'bt.id_bundling', 'bundling.id_bundling')->first();
+
+            if(!empty($getBundling)){
+                $getBundlingProduct = BundlingProduct::join('brand_product', 'brand_product.id_product', 'bundling_product.id_product')
+                    ->where('bundling_product.id_bundling', $bundling['id_bundling'])
+                    ->pluck('brand_product.id_brand')->toArray();
+
+                foreach ($getBundlingProduct as $brand){
+                    if($getBundling['bundling_promo_status'] == 1){
+                        $arr[] = [
+                            'id_brand' => $brand,
+                            'id_bundling' => $bundling['id_bundling']
+                        ];
+                    }
+                }
+            }
+        }
+
+        return $arr;
     }
 
     public function saveLocation($latitude, $longitude, $id_user, $id_transaction, $id_outlet){
@@ -4114,7 +4142,7 @@ class ApiOnlineTransaction extends Controller
                     'id_user'                      => $trx['id_user'],
                     'transaction_product_qty'      => $itemProduct['product_qty']*$itemBundling['bundling_qty'],
                     'transaction_product_bundling_qty' => $itemProduct['product_qty'],
-                    'transaction_product_price'    => $price,
+                    'transaction_product_price'    => $itemProduct['transaction_product_price'],
                     'transaction_product_bundling_price' => $calculate,
                     'transaction_product_price_base' => NULL,
                     'transaction_product_price_tax'  => NULL,

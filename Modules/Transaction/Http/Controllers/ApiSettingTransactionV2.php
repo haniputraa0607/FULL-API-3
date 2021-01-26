@@ -291,6 +291,18 @@ class ApiSettingTransactionV2 extends Controller
                             ]);
                         }
 
+                        if($different_price){
+                            $productPrice = ProductSpecialPrice::where(['id_product' => $getProduct['id_product'], 'id_outlet' => $outlet['id_outlet']])->first();
+                            if($productPrice){
+                                $productBasePrice = $productPrice['product_special_price'];
+                            }
+                        }else{
+                            $productPrice = ProductGlobalPrice::where(['id_product' => $getProduct['id_product']])->first();
+                            if($productPrice){
+                                $productBasePrice = $productPrice['product_global_price'];
+                            }
+                        }
+
                         if ($getProduct['product_variant_status'] && $getProduct['id_product_variant_group'] ?? false) {
                             $product_variant_group = ProductVariantGroup::where('product_variant_groups.id_product_variant_group', $getProduct['id_product_variant_group']);
                             if ($different_price) {
@@ -316,8 +328,8 @@ class ApiSettingTransactionV2 extends Controller
                             }else{
                                 $p['trx_variants'] = $variants;
                             }
-                            $price = $price;
-                            $p['transaction_variant_subtotal'] = $product_variant_group->product_variant_group_price - $price;
+                            $productBasePrice = $variantTree['base_price'] ?? $productBasePrice;
+                            $p['transaction_variant_subtotal'] = $product_variant_group->product_variant_group_price - $productBasePrice;
                         } else {
                             $p['trx_variants'] = [];
                             $p['transaction_variant_subtotal'] = 0;
@@ -346,7 +358,7 @@ class ApiSettingTransactionV2 extends Controller
                             $discount = ($discount > $getProduct['bundling_product_maximum_discount'] &&  $getProduct['bundling_product_maximum_discount'] > 0? $getProduct['bundling_product_maximum_discount']:$discount);
                             $calculate = ($price - $discount);
                         }
-                        $p['transaction_product_price'] = $price;
+                        $p['transaction_product_price'] = $productBasePrice;
                         $p['transaction_product_discount'] = $discount;
                         $p['transaction_product_bundling_discount'] = $discount;
                         $p['transaction_product_bundling_price'] = $calculate;

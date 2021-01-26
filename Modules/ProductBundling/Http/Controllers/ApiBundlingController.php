@@ -42,7 +42,7 @@ class ApiBundlingController extends Controller
     public function index(Request $request)
     {
         $post = $request->json()->all();
-        $bundling = Bundling::with(['bundling_product']);
+        $bundling = Bundling::with(['bundling_product', 'category']);
 
         if(isset($post['date_start']) && !empty($post['date_start']) &&
             isset($post['date_end']) && !empty($post['date_end'])){
@@ -187,11 +187,16 @@ class ApiBundlingController extends Controller
             }
         }
 
-        if(isset($post['order_field']) && !empty($post['order_field'])){
-            $bundling->orderBy($post['order_field'], $post['order_method']);
+        if(isset($post['all_data']) && $post['all_data'] == 1){
+            $bundling = $bundling->orderBy('bundling_order', 'asc')->get()->toArray();
+        }else{
+            if(isset($post['order_field']) && !empty($post['order_field'])){
+                $bundling->orderBy($post['order_field'], $post['order_method']);
+            }
+            $bundling = $bundling->paginate(20)->toArray();
         }
-        $bundling = $bundling->paginate(20)->toArray();
-        foreach ($bundling['data'] as $key=>$b){
+
+        foreach ($bundling['data']??[] as $key=>$b){
             $idProd = array_column($b['bundling_product'], 'id_product');
             $getBrands = BrandProduct::join('brands', 'brands.id_brand', 'brand_product.id_brand')
                         ->whereIn('brand_product.id_product', $idProd)
@@ -300,6 +305,16 @@ class ApiBundlingController extends Controller
                             'id_bundling' => $create['id_bundling'],
                             'time_start' => $insertDay[$check]['time_start'],
                             'time_end' => $insertDay[$check]['time_end']
+                        ]);
+                    }
+                }else{
+                    $currentDate = date('Y-m-d');
+                    if(date('Y-m-d', strtotime($post['bundling_start'])) <= $currentDate &&
+                        date('Y-m-d', strtotime($post['bundling_end'])) >= $currentDate){
+                        BundlingToday::updateOrCreate(['id_bundling' => $post['id_bundling']], [
+                            'id_bundling' => $create['id_bundling'],
+                            'time_start' => '00:01:00',
+                            'time_end' => '23:59:59',
                         ]);
                     }
                 }
@@ -543,6 +558,16 @@ class ApiBundlingController extends Controller
                         'id_bundling' => $post['id_bundling'],
                         'time_start' => $insertDay[$check]['time_start'],
                         'time_end' => $insertDay[$check]['time_end']
+                    ]);
+                }
+            }else{
+                $currentDate = date('Y-m-d');
+                if(date('Y-m-d', strtotime($post['bundling_start'])) <= $currentDate &&
+                    date('Y-m-d', strtotime($post['bundling_end'])) >= $currentDate){
+                    BundlingToday::updateOrCreate(['id_bundling' => $post['id_bundling']], [
+                        'id_bundling' => $post['id_bundling'],
+                        'time_start' => '00:01:00',
+                        'time_end' => '23:59:59',
                     ]);
                 }
             }
@@ -899,5 +924,23 @@ class ApiBundlingController extends Controller
         }catch (\Exception $e) {
             $log->fail($e->getMessage());
         };
+    }
+
+    public function positionBundling(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if (!isset($post['product_ids'])) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Bundling id is required']
+            ];
+        }
+        // update position
+        foreach ($post['product_ids'] as $key => $product_id) {
+            $update = Bundling::find($product_id)->update(['bundling_order'=>$key+1]);
+        }
+
+        return ['status' => 'success'];
     }
 }
