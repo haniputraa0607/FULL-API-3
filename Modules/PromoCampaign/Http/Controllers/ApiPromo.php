@@ -397,6 +397,7 @@ class ApiPromo extends Controller
     public function getTransactionCheckPromoRule($result, $promo_source, $query)
     {
     	$check = false;
+    	$disable_pickup = false;
     	$available_shipment = ['Pickup Order', 'GO-SEND'];
     	$available_payment 	= $this->getAvailablePayment()['result'];
     	$result['pickup_type'] = 1;
@@ -406,18 +407,27 @@ class ApiPromo extends Controller
     	switch ($promo_source) {
     		case 'promo_code':
     			$promo = $query;
+    			if ($promo->promo_type == 'Discount delivery') {
+    				$disable_pickup = 1;
+    			}
     			$promo_shipment = $query->promo_campaign->promo_campaign_shipment_method->pluck('shipment_method');
     			$promo_payment 	= $query->promo_campaign->promo_campaign_payment_method->pluck('payment_method');
     			break;
     		
     		case 'voucher_online':
     			$promo = $query->dealVoucher->deals;
+    			if ($promo->promo_type == 'Discount delivery') {
+    				$disable_pickup = 1;
+    			}
     			$promo_shipment = $query->dealVoucher->deals->deals_shipment_method->pluck('shipment_method');
     			$promo_payment 	= $query->dealVoucher->deals->deals_payment_method->pluck('payment_method');
     			break;
     		
     		case 'subscription':
     			$promo = Subscription::join('subscription_users','subscriptions.id_subscription','=','subscription_users.id_subscription')->where('id_subscription_user', $query->id_subscription_user)->first();
+    			if ($promo->subscription_discount_type == 'discount_delivery') {
+    				$disable_pickup = 1;
+    			}
     			$promo_shipment = $promo->subscription_shipment_method->pluck('shipment_method');
     			$promo_payment 	= $promo->subscription_payment_method->pluck('payment_method');
     			break;
@@ -429,7 +439,7 @@ class ApiPromo extends Controller
 
     	$pct = New PromoCampaignTools;
     	if ($promo_shipment) {
-	    	if (!$pct->checkShipmentRule($promo->is_all_shipment, 'Pickup Order', $promo_shipment)) {
+	    	if (!$pct->checkShipmentRule($promo->is_all_shipment, 'Pickup Order', $promo_shipment) || $disable_pickup) {
 	    		$result['pickup_type'] = 0;
 	    	}
 	    	if (!$pct->checkShipmentRule($promo->is_all_shipment, 'GO-SEND', $promo_shipment)) {

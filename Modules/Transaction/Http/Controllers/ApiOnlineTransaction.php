@@ -2173,7 +2173,7 @@ class ApiOnlineTransaction extends Controller
 			{
 	        	$promo_type = $deals->dealVoucher->deals->promo_type;
 				if ($promo_type != 'Discount bill') {
-					$discount_promo=$pct->validatePromo($request_promo, $deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals', $errorProduct, $post['shipping']+$shippingGoSend);
+					$discount_promo = $pct->validatePromo($request_promo, $deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals', $errorProduct, $post['shipping']+$shippingGoSend);
 
 					$promo_source = 'voucher_online';
 					if ( !empty($errors) ) {
