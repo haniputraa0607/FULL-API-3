@@ -3151,7 +3151,10 @@ class ApiOnlineTransaction extends Controller
 
         $mergeBundlingDetail = $this->mergeBundlingDetail($itemBundlingDetail);
         $mergeBundling = $this->mergeBundling($itemBundling);
-        $error_msg[] = 'Product '.implode(',', $errorBundlingName). ' tidak tersedia dan akan terhapus dari cart.';
+        if(!empty($errorBundlingName)){
+            $error_msg[] = 'Product '.implode(',', $errorBundlingName). ' tidak tersedia dan akan terhapus dari cart.';
+        }
+
         return [
             'total_item_bundling' => $totalItemBundling,
             'subtotal_bundling' => $subTotalBundling,
@@ -4072,7 +4075,8 @@ class ApiOnlineTransaction extends Controller
                     DB::rollback();
                     return response()->json([
                         'status'    => 'fail',
-                        'messages'  => ['Product '.$checkProduct['product_name'].'pada bundling '.$product['bundling_name'].' tidak tersedia']
+                        'product_sold_out_status' => true,
+                        'messages'  => ['Product '.$checkProduct['product_name'].'pada '.$product['bundling_name'].' tidak tersedia']
                     ]);
                 }
 
