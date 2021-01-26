@@ -178,4 +178,22 @@ class ApiBundlingCategoryController extends Controller
             return false;
         }
     }
+
+    public function positionCategory(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if (!isset($post['category_ids'])) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Category id is required']
+            ];
+        }
+        // update position
+        foreach ($post['category_ids'] as $key => $category_id) {
+            $update = BundlingCategory::find($category_id)->update(['bundling_category_order' => $key + 1]);
+        }
+
+        return ['status' => 'success'];
+    }
 }
