@@ -2377,7 +2377,7 @@ class PromoCampaignTools{
 						}
 					}else{
 						foreach ($applied_product as $val) { // selected multiple product
-							if ($val['id_brand'] == $product['id_brand'] && $val['id_product'] == $product['id_product']) {
+							if (($val['id_brand'] == $product['id_brand'] || $product['id_brand'] == $id_brand_promo) && $val['id_product'] == $product['id_product']) {
 			        			$result[$key]['list'][$key2]['list'][$key3]['is_promo'] = 1;
 								if (isset($flagged_product[$product['id_brand']][$product['id_product']])) {
 			        				continue;
