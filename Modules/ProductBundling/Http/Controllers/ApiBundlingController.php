@@ -525,6 +525,7 @@ class ApiBundlingController extends Controller
                     return response()->json(['status' => 'fail', 'messages' => ['Failed add specific day']]);
                 }
 
+                BundlingToday::where('id_bundling', $post['id_bundling'])->delete();
                 //check if periode in current date
                 $currentDate = date('Y-m-d');
                 if($post['bundling_specific_day_type'] == 'Day'){

@@ -83,12 +83,14 @@ class ApiBundlingCategoryController extends Controller
 
         if (isset($post['bundling_category_description'])) {
             $data['bundling_category_description'] = $post['bundling_category_description'];
+        }else{
+            $data['bundling_category_description'] = "";
         }
 
         if (isset($post['id_parent_category']) && $post['id_parent_category'] != null) {
             $data['id_parent_category'] = $post['id_parent_category'];
         } else {
-            $data['id_parent_category'] = null;
+            $data['id_parent_category'] = 0;
         }
 
         return $data;
