@@ -3165,7 +3165,6 @@ class ApiOutletApp extends Controller
         $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
             ->where('id_transaction', $id)->get()->toArray();
         foreach ($getBundling as $key=>$bundling){
-            $quantityItemBundling = $quantityItemBundling + $bundling['transaction_bundling_product_qty'];
             $getPriceToping =  $bundling['transaction_bundling_product_subtotal']/$bundling['transaction_bundling_product_qty'];
 
             $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
@@ -3179,6 +3178,7 @@ class ApiOutletApp extends Controller
             $subTotalBundlingWithoutModifier = 0;
             $subItemBundlingWithoutModifie = 0;
             foreach ($bundlingProduct as $bp){
+                $quantityItemBundling = $quantityItemBundling + ($bp['transaction_product_bundling_qty'] * $bundling['transaction_bundling_product_qty']);
                 $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                     ->whereNull('transaction_product_modifiers.id_product_modifier_group')
                     ->where('id_transaction_product', $bp['id_transaction_product'])
@@ -3194,7 +3194,7 @@ class ApiOutletApp extends Controller
                 $products[] = [
                     'product_name' => $bp['product_name'],
                     'product_note' => $bp['transaction_product_note'],
-                    'transaction_product_price' => (int)$bp['transaction_product_price'],
+                    'transaction_product_price' => (int)($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']),
                     'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
                     'modifiers' => $mod,
                     'variants' => array_merge($variantPrice, $variantNoPrice)
@@ -3213,7 +3213,7 @@ class ApiOutletApp extends Controller
                             'id_product_variant_group' => $bp['id_product_variant_group'],
                             'product_name' => $bp['product_name'],
                             'product_note' => $bp['transaction_product_note'],
-                            'transaction_product_price' => (int)$bp['transaction_product_price'],
+                            'transaction_product_price' => (int)($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']),
                             'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
                             'modifiers' => $mod,
                             'variants' => array_merge($variantPrice, $variantNoPrice)
@@ -3226,14 +3226,14 @@ class ApiOutletApp extends Controller
                         'id_product_variant_group' => $bp['id_product_variant_group'],
                         'product_name' => $bp['product_name'],
                         'product_note' => $bp['transaction_product_note'],
-                        'transaction_product_price' => (int)$bp['transaction_product_price'],
+                        'transaction_product_price' => (int)($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']),
                         'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
                         'modifiers' => $mod,
                         'variants' => array_merge($variantPrice, $variantNoPrice)
                     ];
                 }
 
-                $basePriceBundling = $basePriceBundling + ($bp['transaction_product_price'] * $bp['transaction_product_bundling_qty']);
+                $basePriceBundling = $basePriceBundling + (($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']) * $bp['transaction_product_bundling_qty']);
                 $subTotalBundlingWithoutModifier = $subTotalBundlingWithoutModifier + (($bp['transaction_product_subtotal'] - ($bp['transaction_modifier_subtotal'] * $bp['transaction_product_bundling_qty'])));
                 $subItemBundlingWithoutModifie = $subItemBundlingWithoutModifie + ($bp['transaction_product_bundling_price'] * $bp['transaction_product_bundling_qty']);
             }

@@ -23,6 +23,7 @@ class Bundling extends Model
         'image',
         'image_detail',
         'bundling_description',
+        'bundling_order',
         'all_outlet',
         'created_by',
         'start_date',
@@ -58,5 +59,10 @@ class Bundling extends Model
     public function bundling_outlet(){
         return $this->hasMany(BundlingOutlet::class, 'id_bundling', 'id_bundling')
         ->join('outlets', 'bundling_outlet.id_outlet', 'outlets.id_outlet');
+    }
+
+    public function category()
+    {
+        return $this->hasMany(BundlingCategory::class, 'id_bundling_category', 'id_bundling_category');
     }
 }

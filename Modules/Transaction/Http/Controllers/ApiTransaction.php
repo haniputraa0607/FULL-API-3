@@ -2065,24 +2065,25 @@ class ApiTransaction extends Controller
                                     $html .= '<td></td>';
                                 }
                             }
+                            $priceProd = $val['transaction_product_price']+(float)$val['transaction_variant_subtotal'];
                             $html .= '<td></td>';
                             $html .= '<td>'.implode(",",$modifier).'</td>';
                             $html .= '<td>'.$textMod.'</td>';
-                            $html .= '<td>'.$val['transaction_product_price'].'</td>';
+                            $html .= '<td>'.$priceProd.'</td>';
                             $html .= '<td>'.$priceMod.'</td>';
                             $html .= '<td>'.htmlspecialchars($val['transaction_product_note']).'</td>';
                             if(!empty($val['transaction_product_qty_discount'])&& $val['transaction_product_qty_discount'] > $j){
                                 $html .= '<td>'.$promoName.'</td>';
                                 $html .= '<td>'.$promoCode.'</td>';
-                                $html .= '<td>'.($val['transaction_product_price']+$priceMod).'</td>';
+                                $html .= '<td>'.($priceProd+$priceMod).'</td>';
                                 $html .= '<td>'.$val['transaction_product_base_discount'].'</td>';
-                                $html .= '<td>'.(($val['transaction_product_price']+$priceMod)-$val['transaction_product_base_discount']).'</td>';
+                                $html .= '<td>'.(($priceProd+$priceMod)-$val['transaction_product_base_discount']).'</td>';
                             }else{
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
-                                $html .= '<td>'.($val['transaction_product_price']+$priceMod).'</td>';
+                                $html .= '<td>'.($priceProd+$priceMod).'</td>';
                                 $html .= '<td>0</td>';
-                                $html .= '<td>'.($val['transaction_product_price']+$priceMod).'</td>';
+                                $html .= '<td>'.($priceProd+$priceMod).'</td>';
                             }
                             $html .= '<td></td><td></td><td></td>';
                             if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
@@ -2132,7 +2133,7 @@ class ApiTransaction extends Controller
                                 ->groupBy('subscriptions.id_subscription')->select('subscriptions.*', 'subscription_user_vouchers.voucher_code')->first();
 
                             if($getSubcription){
-                                $sub  = $val['transaction_payment_subscription']['subscription_nominal']??0;
+                                $sub  = abs($val['transaction_payment_subscription']['subscription_nominal'])??0;
                                 $html .= '<tr>';
                                 $html .= $sameData;
                                 $html .= '<td></td>';
@@ -2159,7 +2160,6 @@ class ApiTransaction extends Controller
                                 $html .= '</tr>';
                             }
                         }elseif(!empty($promoName2)){
-                            $sub  = $val['transaction_discount']??0;
                             $html .= '<tr>';
                             $html .= $sameData;
                             $html .= '<td></td>';
@@ -2507,7 +2507,6 @@ class ApiTransaction extends Controller
             $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
                 ->where('id_transaction', $id)->get()->toArray();
             foreach ($getBundling as $key=>$bundling){
-                $quantityItemBundling = $quantityItemBundling + $bundling['transaction_bundling_product_qty'];
                 $listItemBundling[$key] = [
                     'bundling_name' => $bundling['bundling_name'],
                     'bundling_qty' => $bundling['transaction_bundling_product_qty']
@@ -2539,14 +2538,16 @@ class ApiTransaction extends Controller
                         'variants' => $variants,
                         'modifiers' => $mod
                     ];
-
-                    $basePriceBundling = $basePriceBundling + ($bp['transaction_product_price'] * $bp['transaction_product_bundling_qty']);
+                    $productBasePrice = $bp['transaction_product_price'] + $bp['transaction_variant_subtotal'];
+                    $basePriceBundling = $basePriceBundling + ($productBasePrice * $bp['transaction_product_bundling_qty']);
                     $subTotalBundlingWithoutModifier = $subTotalBundlingWithoutModifier + (($bp['transaction_product_subtotal'] - ($bp['transaction_modifier_subtotal'] * $bp['transaction_product_bundling_qty'])));
                     $subItemBundlingWithoutModifie = $subItemBundlingWithoutModifie + ($bp['transaction_product_bundling_price'] * $bp['transaction_product_bundling_qty']);
                 }
                 $listItemBundling[$key]['bundling_price_no_discount'] = $basePriceBundling * $bundling['transaction_bundling_product_qty'];
                 $listItemBundling[$key]['bundling_subtotal'] = $subTotalBundlingWithoutModifier * $bundling['transaction_bundling_product_qty'];
                 $listItemBundling[$key]['bundling_sub_item'] = '@'.MyHelper::requestNumber($subItemBundlingWithoutModifie,'_CURRENCY');
+
+                $quantityItemBundling = $quantityItemBundling + ($bp['transaction_product_bundling_qty'] * $bundling['transaction_bundling_product_qty']);
             }
 
             $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
@@ -3548,8 +3549,8 @@ class ApiTransaction extends Controller
                         'modifiers' => $mod
                     ];
                 }
-
-                $basePriceBundling = $basePriceBundling + ($bp['transaction_product_price'] * $bp['transaction_product_bundling_qty']);
+                $productPrice = $bp['transaction_product_price'] + $bp['transaction_variant_subtotal'];
+                $basePriceBundling = $basePriceBundling + ($productPrice * $bp['transaction_product_bundling_qty']);
             }
 
             $itemBundling[] = [
