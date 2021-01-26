@@ -713,6 +713,7 @@ class ApiCategoryController extends Controller
                     "photo" => (!empty($getProduct[0]['image']) ? config('url.storage_url_api').$getProduct[0]['image'] : ''),
                     "product_price_no_discount" => $priceForListNoDiscount??0,
                     "is_promo" => 0,
+                    "is_promo_bundling" => $getProduct[0]['bundling_promo_status']??0,
                     "brands" => $id_brand,
                     "position" => 1
                 ];
@@ -735,11 +736,12 @@ class ApiCategoryController extends Controller
                         "product_price_no_discount" => $res['product_price_no_discount'],
                         "photo" => $res['photo'],
                         "is_promo" => 0,
+                        "is_promo_bundling" => $res['is_promo_bundling'],
                         "position" => 1,
                         "id_brand" =>  $insert
                     ];
                 }else{
-                    $order = 1000000 - $res['product_category_order'];
+                    $order = 2500000 - $res['product_category_order'];
                     $resProduct[$insert][$res['product_category_name']]['category'] = [
                         "product_category_name" => $res['product_category_name'],
                         "product_category_order" => -$order,
@@ -760,6 +762,7 @@ class ApiCategoryController extends Controller
                         "product_price_no_discount" => $res['product_price_no_discount'],
                         "photo" => $res['photo'],
                         "is_promo" => 0,
+                        "is_promo_bundling" => $res['is_promo_bundling'],
                         "position" => 1,
                         "id_brand" =>  $insert
                     ];

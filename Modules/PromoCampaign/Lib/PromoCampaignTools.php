@@ -953,7 +953,7 @@ class PromoCampaignTools{
 					$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
 
 					// promo product not available in cart?
-					if (!$check_product) {
+					if (!$check_product && empty($request->item_bundling)) {
 						$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
 						$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
 						$errors[]= $missing_product_messages ?? $message;
@@ -969,7 +969,7 @@ class PromoCampaignTools{
 				$product = $get_promo_product['product'];
 
 				// product not found? buat jaga-jaga kalau sesuatu yang tidak diinginkan terjadi
-				if(!$product){
+				if(!$product && empty($request->item_bundling)){
 					$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
 
@@ -2112,6 +2112,7 @@ class PromoCampaignTools{
     		$promo_outlet 	= $code['promo_campaign']['promo_campaign_outlets']??[];
     		$id_brand_promo	= $code['promo_campaign']['id_brand']??null;
     		$brand_rule		= $code['promo_campaign']['brand_rule']??'and';
+            $promo_type = $code->promo_type;
 
     		// if promo doesn't have product related rule, return data
     		if ($code->promo_type != 'Product discount' && $code->promo_type != 'Tier discount' && $code->promo_type != 'Buy X Get Y' && $code->promo_type != 'Discount bill') {
@@ -2130,6 +2131,7 @@ class PromoCampaignTools{
     		$promo_outlet 	= $code['dealVoucher']['deals']['outlets_active']??[];
     		$id_brand_promo = $code['dealVoucher']['deals']['id_brand']??null;
     		$brand_rule		= $code['dealVoucher']['deals']['brand_rule']??'and';
+            $promo_type = $code->dealVoucher->deals->promo_type;
 
     		// if promo doesn't have product related rule, return data
     		if ($code->dealVoucher->deals->promo_type != 'Product discount' 
@@ -2152,6 +2154,7 @@ class PromoCampaignTools{
     		$promo_outlet 	= $code['subscription_user']['subscription']['outlets_active']??[];
     		$id_brand_promo	= $code['subscription_user']['subscription']['id_brand']??null;
     		$brand_rule		= $code['subscription_user']['subscription']['brand_rule']??'and';
+            $promo_type = 'Subscription';
         }
 
         if (($code['promo_campaign']['date_end'] ?? $code['voucher_expired_at'] ?? $code['subscription_expired_at']) < date('Y-m-d H:i:s')) {
@@ -2182,7 +2185,7 @@ class PromoCampaignTools{
         	$result = $this->checkListProduct2($applied_product, $id_brand_promo, $brands, $result);
         }elseif($list_product_source == 'list_product2'){
         	// used on list product, after ordering and check category
-        	$result = $this->checkListProduct3($applied_product, $brands, $result);
+        	$result = $this->checkListProduct3($applied_product, $brands, $result, $promo_type??"");
         }
 
         return $result;
@@ -2344,7 +2347,7 @@ class PromoCampaignTools{
         return $products;
     }
 
-    public function checkListProduct3($applied_product, $brands, $list_product)
+    public function checkListProduct3($applied_product, $brands, $list_product, $promo_type = '')
     {
     	$result = $list_product;
 
@@ -2353,7 +2356,16 @@ class PromoCampaignTools{
 		foreach ($result as $key => $categories) {
 			foreach ($categories['list'] as $key2 => $products) {
 				foreach ($products['list'] as $key3 => $product) {
-					if ($applied_product == '*') { // all product
+				    if(is_null($product['id_product'])){
+                        continue;
+                    }
+//				    if(isset($product['is_promo_bundling']) &&  $product['is_promo_bundling'] == 0) {
+//                        continue;
+//                    }elseif (isset($product['is_promo_bundling']) &&  $product['is_promo_bundling'] == 1 && ($promo_type != 'Discount bill' || $promo_type != 'Subscription') && $applied_product != '*'){
+//                        continue;
+//                    }
+
+				    if ($applied_product == '*') { // all product
 						if (in_array($product['id_brand'], $brands)) {
 		        			$result[$key]['list'][$key2]['list'][$key3]['is_promo'] = 1;
 		        			if (isset($flagged_product[$product['id_brand']][$product['id_product']])) {

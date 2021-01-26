@@ -803,7 +803,7 @@ class ApiIrisController extends Controller
                 $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
                 $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet - $bundlingProductFeeOutlet, 2);//income outlet
                 $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentral, 2);//income central
-                $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral + $bpChargedCentral, 2);//expense central
+                $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral + $bundlingProductFeeCentral, 2);//expense central
 
                 $dataInsert = [
                     'id_transaction' => $data['id_transaction'],
@@ -1131,7 +1131,7 @@ class ApiIrisController extends Controller
                     $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
                     $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet - $bundlingProductFeeOutlet, 2);//income outlet
                     $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentral, 2);//income central
-                    $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral + $bpChargedCentral, 2);//expense central
+                    $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral + $bundlingProductFeeCentral, 2);//expense central
 
                     $dataInsert = [
                         'id_transaction' => $data['id_transaction'],

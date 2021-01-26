@@ -438,6 +438,7 @@ class ApiOnlineTransaction extends Controller
                 DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
+                    'product_sold_out_status' => true,
                     'messages'  => $bundling_detail['error_message']
                 ]);
             }
@@ -1104,7 +1105,8 @@ class ApiOnlineTransaction extends Controller
                 DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
-                    'messages'  => ['Product '.$checkProduct['product_name'].' sudah habis, silakan pilih yang lain']
+                    'product_sold_out_status' => true,
+                    'messages'  => ['Product '.$checkProduct['product_name'].' tidak tersedia dan akan terhapus dari cart.']
                 ]);
             }
 
@@ -2835,6 +2837,7 @@ class ApiOnlineTransaction extends Controller
         $totalItemBundling = 0;
         $itemBundlingDetail = [];
         $itemBundling = [];
+        $errorBundlingName = [];
         $currentHour = date('H:i:s');
         foreach ($post['item_bundling']??[] as $key=>$bundling){
             if($bundling['bundling_qty'] <= 0){
@@ -2847,12 +2850,7 @@ class ApiOnlineTransaction extends Controller
                 ->whereRaw('TIME_TO_SEC("'.$currentHour.'") >= TIME_TO_SEC(time_start) AND TIME_TO_SEC("'.$currentHour.'") <= TIME_TO_SEC(time_end)')
                 ->whereRaw('NOW() >= start_date AND NOW() <= end_date')->first();
             if(empty($getBundling)){
-                $error_msg[] = MyHelper::simpleReplace(
-                    'Product bundling %bundling_name% tidak tersedia',
-                    [
-                        'bundling_name' => $bundling['bundling_name']
-                    ]
-                );
+                $errorBundlingName[] = $bundling['bundling_name'];
                 unset($post['item_bundling'][$key]);
                 continue;
             }
@@ -3153,6 +3151,10 @@ class ApiOnlineTransaction extends Controller
 
         $mergeBundlingDetail = $this->mergeBundlingDetail($itemBundlingDetail);
         $mergeBundling = $this->mergeBundling($itemBundling);
+        if(!empty($errorBundlingName)){
+            $error_msg[] = 'Product '.implode(',', $errorBundlingName). ' tidak tersedia dan akan terhapus dari cart.';
+        }
+
         return [
             'total_item_bundling' => $totalItemBundling,
             'subtotal_bundling' => $subTotalBundling,
@@ -3843,7 +3845,6 @@ class ApiOnlineTransaction extends Controller
             $new_item = [
                 'id_bundling' => $item['id_bundling'],
                 'bundling_name' => $item['bundling_name'],
-                'bundling_qty' => $item['bundling_qty'],
                 'bundling_price_no_discount' => $item['bundling_price_no_discount'],
                 'bundling_subtotal' => $item['bundling_subtotal'],
                 'bundling_sub_item' => $item['bundling_sub_item'],
@@ -3856,10 +3857,12 @@ class ApiOnlineTransaction extends Controller
                         "id_product_variant_group"=> $i['id_product_variant_group'],
                         "id_bundling_product"=> $i['id_bundling_product'] ,
                         "product_name"=> $i['product_name'],
+                        'product_code' =>  $i['product_code']??"",
                         'note' => $i['note'],
                         'variants' => $i['variants'],
                         'modifiers' => $i['modifiers'],
-                        'product_qty' => $i['product_qty']
+                        'product_qty' => $i['product_qty'],
+                        'extra_modifiers' => $i['extra_modifiers']??[]
                     ];
                 },$item['products']??[]),
             ];
@@ -3899,7 +3902,6 @@ class ApiOnlineTransaction extends Controller
                 'bundling_code' => $item['bundling_code'],
                 'bundling_base_price' => $item['bundling_base_price'],
                 'bundling_price_total' => $item['bundling_price_total'],
-                'bundling_qty' => $item['bundling_qty'],
                 'products' => array_map(function($i){
                     return [
                         "id_brand"=> $i['id_brand'],
@@ -3907,9 +3909,11 @@ class ApiOnlineTransaction extends Controller
                         "id_product_variant_group"=> $i['id_product_variant_group'],
                         "id_bundling_product"=> $i['id_bundling_product'] ,
                         "product_name"=> $i['product_name'],
+                        "product_code" => $i['product_code'],
                         'note' => $i['note'],
                         'variants' => $i['variants'],
-                        'modifiers' => $i['modifiers']
+                        'modifiers' => $i['modifiers'],
+                        'extra_modifiers' => $i['extra_modifiers']??[]
                     ];
                 },$item['products']??[]),
             ];
@@ -4045,7 +4049,8 @@ class ApiOnlineTransaction extends Controller
                     DB::rollback();
                     return response()->json([
                         'status'    => 'fail',
-                        'messages'  => ['Product '.$checkProduct['product_name'].' sudah habis, silakan pilih yang lain']
+                        'product_sold_out_status' => true,
+                        'messages'  => ['Product '.$checkProduct['product_name'].' tidak tersedia dan akan terhapus dari cart.']
                     ]);
                 }
 
@@ -4070,7 +4075,8 @@ class ApiOnlineTransaction extends Controller
                     DB::rollback();
                     return response()->json([
                         'status'    => 'fail',
-                        'messages'  => ['Product '.$checkProduct['product_name'].'pada bundling '.$product['bundling_name'].' tidak tersedia']
+                        'product_sold_out_status' => true,
+                        'messages'  => ['Product '.$checkProduct['product_name'].'pada '.$product['bundling_name'].' tidak tersedia']
                     ]);
                 }
 

@@ -80,9 +80,9 @@ class ApiConfirm extends Controller
 
         $checkPayment = TransactionMultiplePayment::where('id_transaction', $check['id_transaction'])->first();
         $countGrandTotal = $check['transaction_grandtotal'];
+        $totalPriceProduct = 0;
 
         if (isset($check['productTransaction'])) {
-            $totalPriceProduct = 0;
             foreach ($check['productTransaction'] as $key => $value) {
                 // get modifiers name
                 $mods           = TransactionProductModifier::select('qty', 'text')->where('id_transaction_product', $value['id_transaction_product'])->get()->toArray();
@@ -115,7 +115,6 @@ class ApiConfirm extends Controller
             ->get()->toArray();
 
         if (!empty($checkItemBundling)) {
-            $totalPriceProduct = 0;
             foreach ($checkItemBundling as $key => $value) {
                 $dataProductMidtrans = [
                     'id'       => $value['bundling_code'],
