@@ -49,6 +49,7 @@ class TransactionProduct extends Model
 		'id_brand',
 		'id_user',
 		'transaction_product_qty',
+        'transaction_product_bundling_qty',
 		'transaction_product_price',
 		'transaction_product_price_base',
 		'transaction_product_price_tax',
@@ -78,7 +79,13 @@ class TransactionProduct extends Model
 	
 	public function product()
 	{
-		return $this->belongsTo(\App\Http\Models\Product::class, 'id_product');
+		return $this->belongsTo(\App\Http\Models\Product::class, 'id_product')
+		->orWhere('products.is_inactive', '1');
+	}
+
+	public function product_variant_group()
+	{
+		return $this->belongsTo(\Modules\ProductVariant\Entities\ProductVariantGroup::class, 'id_product_variant_group');
 	}
 
 	public function transaction()
