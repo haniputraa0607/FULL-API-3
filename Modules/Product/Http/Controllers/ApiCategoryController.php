@@ -715,7 +715,7 @@ class ApiCategoryController extends Controller
                     "is_promo" => 0,
                     "is_promo_bundling" => $getProduct[0]['bundling_promo_status']??0,
                     "brands" => $id_brand,
-                    "position" => 1
+                    "position" => $getProduct[0]['bundling_order']??null
                 ];
             }
         }
@@ -737,7 +737,7 @@ class ApiCategoryController extends Controller
                         "photo" => $res['photo'],
                         "is_promo" => 0,
                         "is_promo_bundling" => $res['is_promo_bundling'],
-                        "position" => 1,
+                        "position" => $res['position']??0,
                         "id_brand" =>  $insert
                     ];
                 }else{
@@ -763,7 +763,7 @@ class ApiCategoryController extends Controller
                         "photo" => $res['photo'],
                         "is_promo" => 0,
                         "is_promo_bundling" => $res['is_promo_bundling'],
-                        "position" => 1,
+                        "position" => $res['position']??0,
                         "id_brand" =>  $insert
                     ];
                 }
