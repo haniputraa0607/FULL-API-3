@@ -2594,7 +2594,7 @@ class ApiOnlineTransaction extends Controller
             $result['item_bundling'] = $itemBundlings['item_bundling']??[];
             $result['item_bundling_detail'] = $itemBundlings['item_bundling_detail']??[];
             $totalItem = $totalItem + $itemBundlings['total_item_bundling']??0;
-            if(isset($post['from_new']) && $post['from_new'] === false){
+            if(!isset($post['from_new']) || (isset($post['from_new']) && $post['from_new'] === false)){
                 $error_msg = array_merge($error_msg, $itemBundlings['error_message']??[]);
             }
             $responseNotIncludePromo = $itemBundlings['bundling_not_include_promo']??'';

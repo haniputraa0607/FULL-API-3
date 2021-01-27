@@ -2753,7 +2753,7 @@ class ApiOutletApp extends Controller
                     foreach ($multiPayment as $keyMP => $mp) {
                         switch ($mp['type']) {
                             case 'Balance':
-                                $log = LogBalance::where('id_reference', $mp['id_transaction'])->first();
+                                $log = LogBalance::where('id_reference', $mp['id_transaction'])->where('source', 'Online Transaction')->first();
                                 if ($log['balance'] < 0) {
                                     $list['balance'] = $log['balance'];
                                     $list['check'] = 'tidak topup';
