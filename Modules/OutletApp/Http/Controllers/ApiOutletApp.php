@@ -3277,7 +3277,7 @@ class ApiOutletApp extends Controller
                                     'product_name' => $value['product_name'],
                                     'product_note' => $value['product_note'],
                                     'transaction_product_price' => (int)$value['transaction_product_price'],
-                                    'transaction_product_qty' => $value['transaction_product_bundling_qty'],
+                                    'transaction_product_qty' => $bundling['transaction_bundling_product_qty'],
                                     'modifiers' => $value['modifiers'],
                                     'variants' => $value['variants']
                                 ];
@@ -3293,7 +3293,7 @@ class ApiOutletApp extends Controller
                                     count($checkModifiers) == count($value['modifiers']) &&
                                     count($checkModifiers) == count($value['modifiers']) &&
                                     count($mergeModifiersUnique) == count($value['modifiers']) && $checkNote == $value['product_note']){
-                                    $productsBrand[$check]['transaction_product_qty'] = $productsBrand[$check]['transaction_product_qty'] + $value['transaction_product_bundling_qty'];
+                                    $productsBrand[$check]['transaction_product_qty'] = $productsBrand[$check]['transaction_product_qty'] + $value['transaction_product_qty'];
                                 }else{
                                     $productsBrand[] = [
                                         'id_brand' => $value['id_brand'],
@@ -3302,7 +3302,7 @@ class ApiOutletApp extends Controller
                                         'product_name' => $value['product_name'],
                                         'product_note' => $value['product_note'],
                                         'transaction_product_price' => (int)$value['transaction_product_price'],
-                                        'transaction_product_qty' => $value['transaction_product_bundling_qty'],
+                                        'transaction_product_qty' => $value['transaction_product_qty'],
                                         'modifiers' => $value['modifiers'],
                                         'variants' => $value['variants']
                                     ];
