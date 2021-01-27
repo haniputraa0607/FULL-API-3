@@ -116,7 +116,7 @@ class ApiIrisController extends Controller
                     $monthCurrent = date('n');
 
                     if($getSettingFeeDisburse && $getSettingFeeDisburse['value'] !== "" &&
-                        ($monthCurrent > $monthDb || is_null($lastDate))){
+                        ($monthCurrent != $monthDb || is_null($lastDate))){
                         /*
                          -first check current date is holiday or not
                          -today is holiday when return false
