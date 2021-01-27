@@ -680,6 +680,7 @@ class ApiOutletAppReport extends Controller
 	    				->whereBetween('transactions.transaction_date',[ date('Y-m-d', strtotime($now)).' 00:00:00', date('Y-m-d', strtotime($now)).' 23:59:59'] )
 	    				->where('transactions.transaction_payment_status','=','Completed')
 	    				->whereNull('transaction_pickups.reject_at')
+                        ->whereNull('transaction_product_modifiers.id_product_modifier_group')
 	    				->select(
 	    					DB::raw('(select transactions.id_outlet) as id_outlet'),
 	    					DB::raw('(select transaction_products.id_brand) as id_brand'),
