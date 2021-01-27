@@ -2594,7 +2594,9 @@ class ApiOnlineTransaction extends Controller
             $result['item_bundling'] = $itemBundlings['item_bundling']??[];
             $result['item_bundling_detail'] = $itemBundlings['item_bundling_detail']??[];
             $totalItem = $totalItem + $itemBundlings['total_item_bundling']??0;
-            $error_msg = array_merge($error_msg, $itemBundlings['error_message']??[]);
+            if(!isset($post['from_new']) || (isset($post['from_new']) && $post['from_new'] === false)){
+                $error_msg = array_merge($error_msg, $itemBundlings['error_message']??[]);
+            }
             $responseNotIncludePromo = $itemBundlings['bundling_not_include_promo']??'';
             $subtotal_per_brand = $itemBundlings['subtotal_per_brand']??[];
         }
@@ -2908,13 +2910,13 @@ class ApiOnlineTransaction extends Controller
                 $id_product_variant_group = $product['id_product_variant_group']??null;
 
                 if($product['visibility_outlet'] == 'Hidden' || (empty($product['visibility_outlet']) && $product['product_visibility'] == 'Hidden')){
-                    $error_msg[] = MyHelper::simpleReplace(
-                        'Produk %product_name% pada bundling %bundling_name% tidak tersedia',
-                        [
-                            'product_name' => $p['product_name'],
-                            'bundling_name' => $bundling['bundling_name']
-                        ]
-                    );
+                    $errorBundlingName[] = $bundling['bundling_name'];
+                    unset($post['item_bundling'][$key]);
+                    continue 2;
+                }
+
+                if($getProductDetail['product_detail_stock_status']??"" == 'Sold Out'){
+                    $errorBundlingName[] = $bundling['bundling_name'];
                     unset($post['item_bundling'][$key]);
                     continue 2;
                 }
@@ -3122,40 +3124,42 @@ class ApiOnlineTransaction extends Controller
                 }
             }
 
-            $itemBundling[] = [
-                "id_custom" => $bundling['id_custom']??null,
-                "id_bundling" => $getBundling['id_bundling'],
-                "bundling_name" => $getBundling['bundling_name'],
-                "bundling_code" => $getBundling['bundling_code'],
-                "bundling_base_price" => $bundlingBasePrice,
-                "bundling_qty" => $bundling['bundling_qty'],
-                "bundling_price_total" =>  $bundlingBasePrice + $totalModPrice,
-                "products" => $products
-            ];
+            if(!empty($products) && !empty($productsBundlingDetail)){
+                $itemBundling[] = [
+                    "id_custom" => $bundling['id_custom']??null,
+                    "id_bundling" => $getBundling['id_bundling'],
+                    "bundling_name" => $getBundling['bundling_name'],
+                    "bundling_code" => $getBundling['bundling_code'],
+                    "bundling_base_price" => $bundlingBasePrice,
+                    "bundling_qty" => $bundling['bundling_qty'],
+                    "bundling_price_total" =>  $bundlingBasePrice + $totalModPrice,
+                    "products" => $products
+                ];
 
-            $productsBundlingDetail = $this->mergeBundlingProducts($productsBundlingDetail, $bundling['bundling_qty']);
-            //check for same detail item bundling
-            $itemBundlingDetail[] = [
-                "id_custom" => $bundling['id_custom']??null,
-                "id_bundling" => $bundling['id_bundling']??null,
-                'bundling_name' => $bundling['bundling_name'],
-                'bundling_qty' => $bundling['bundling_qty'],
-                'bundling_price_no_discount' => (int)$totalPriceNoDiscount * $bundling['bundling_qty'],
-                'bundling_subtotal' => $bundlingBasePrice * $bundling['bundling_qty'],
-                'bundling_sub_item' => '@'.MyHelper::requestNumber($bundlingBasePrice,'_CURRENCY'),
-                'bundling_sub_item_raw' => $bundlingBasePrice,
-                'bundling_sub_price_no_discount' => (int)$totalPriceNoDiscount,
-                "products" => $productsBundlingDetail
-            ];
+                $productsBundlingDetail = $this->mergeBundlingProducts($productsBundlingDetail, $bundling['bundling_qty']);
+                //check for same detail item bundling
+                $itemBundlingDetail[] = [
+                    "id_custom" => $bundling['id_custom']??null,
+                    "id_bundling" => $bundling['id_bundling']??null,
+                    'bundling_name' => $bundling['bundling_name'],
+                    'bundling_qty' => $bundling['bundling_qty'],
+                    'bundling_price_no_discount' => (int)$totalPriceNoDiscount * $bundling['bundling_qty'],
+                    'bundling_subtotal' => $bundlingBasePrice * $bundling['bundling_qty'],
+                    'bundling_sub_item' => '@'.MyHelper::requestNumber($bundlingBasePrice,'_CURRENCY'),
+                    'bundling_sub_item_raw' => $bundlingBasePrice,
+                    'bundling_sub_price_no_discount' => (int)$totalPriceNoDiscount,
+                    "products" => $productsBundlingDetail
+                ];
 
-            $subTotalBundling = $subTotalBundling + (($bundlingBasePrice + $totalModPrice) * $bundling['bundling_qty']);
-            $totalItemBundling = $totalItemBundling + $bundling['bundling_qty'];
+                $subTotalBundling = $subTotalBundling + (($bundlingBasePrice + $totalModPrice) * $bundling['bundling_qty']);
+                $totalItemBundling = $totalItemBundling + $bundling['bundling_qty'];
+            }
         }
 
         $mergeBundlingDetail = $this->mergeBundlingDetail($itemBundlingDetail);
         $mergeBundling = $this->mergeBundling($itemBundling);
         if(!empty($errorBundlingName)){
-            $error_msg[] = 'Product '.implode(',', $errorBundlingName). ' tidak tersedia dan akan terhapus dari cart.';
+            $error_msg[] = 'Product '.implode(',', array_unique($errorBundlingName)). ' tidak tersedia dan akan terhapus dari cart.';
         }
 
         return [
