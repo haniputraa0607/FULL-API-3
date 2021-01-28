@@ -430,11 +430,17 @@ class ApiCronTrxController extends Controller
 
                 $reject = app('Modules\OutletApp\Http\Controllers\ApiOutletApp')->rejectOrder($fake_request, date('Y-m-d', strtotime($newTrx->transaction_date)));
 
-                if ($reject['status'] == 'success') {
-                    $processed['rejected']++;
-                } else {
-                    $processed['failed_reject']++;
-                    $processed['errors'][] = $reject['messages'] ?? 'Something went wrong';
+                if ($reject instanceof \Illuminate\Http\JsonResponse || $reject instanceof \Illuminate\Http\Response) {
+                    $reject = $reject->original;
+                }
+
+                if (is_array($reject)) {
+                    if (($reject['status'] ?? false) == 'success') {
+                        $processed['rejected']++;
+                    } else {
+                        $processed['failed_reject']++;
+                        $processed['errors'][] = $reject['messages'] ?? 'Something went wrong';
+                    }
                 }
             }
             
