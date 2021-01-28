@@ -1417,6 +1417,7 @@ class ApiCronReport extends Controller
                         AND transactions.id_outlet = "'. $outlet .'"
                         AND transaction_payment_status = "Completed"
                         AND transaction_pickups.reject_at IS NULL
+                        AND transaction_product_modifiers.id_product_modifier_group IS NULL
                         GROUP BY transaction_product_modifiers.id_product_modifier,transaction_products.id_brand
                         ORDER BY transaction_product_modifiers.id_product_modifier ASC
                     '));
@@ -2263,6 +2264,7 @@ class ApiCronReport extends Controller
                         AND transactions.id_outlet = "'. $outlet .'"
                         AND transaction_payment_status = "Completed"
                         AND transaction_pickups.reject_at IS NULL
+                        AND transaction_product_modifiers.id_product_modifier_group IS NULL
                         GROUP BY transaction_product_modifiers.id_product_modifier,transaction_products.id_brand
                         ORDER BY transaction_product_modifiers.id_product_modifier ASC
                     '));
@@ -2319,6 +2321,7 @@ class ApiCronReport extends Controller
                     AND YEAR(transactions.transaction_date) ="'. $year .'"
                     AND transaction_payment_status = "Completed"
                     AND transaction_pickups.reject_at IS NULL
+                    AND transaction_product_modifiers.id_product_modifier_group IS NULL
                     GROUP BY transaction_product_modifiers.id_product_modifier
                     ORDER BY transaction_product_modifiers.id_product_modifier ASC
                 '));

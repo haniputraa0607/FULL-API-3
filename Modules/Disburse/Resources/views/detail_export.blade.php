@@ -71,7 +71,7 @@
             <tr>
                 <td style="text-align: left">{{$val['name']}}</td>
                 <td style="text-align: left">{{$val['type']}}</td>
-                <td style="text-align: left">{{$val['total_qty']*$val['transaction_bundling_product_qty']??1}}</td>
+                <td style="text-align: left">{{$val['total_qty']}}</td>
             </tr>
         @endforeach
     @else
