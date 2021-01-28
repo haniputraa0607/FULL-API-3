@@ -9,8 +9,6 @@
         "Modules\\ProductBundling\\Providers\\ProductBundlingServiceProvider"
     ],
     "aliases": {},
-    "files": [
-        "start.php"
-    ],
+    "files": [],
     "requires": []
 }

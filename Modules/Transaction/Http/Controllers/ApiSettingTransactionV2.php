@@ -10,14 +10,17 @@ use App\Http\Models\Setting;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
+use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
 use App\Http\Models\ProductModifier;
 use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\ProductModifierGlobalPrice;
+use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 
 use DB;
+use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 
 class ApiSettingTransactionV2 extends Controller
 {
@@ -242,9 +245,152 @@ class ApiSettingTransactionV2 extends Controller
                 }
             }
 
+            $bundlingNotIncludePromo = [];
+            if(isset($data['item_bundling_detail']) && !empty($data['item_bundling_detail'])){
+                $productBundling = &$data['item_bundling_detail']??[];
+                foreach ($productBundling as $keyBundling => &$valueBundling){
+                    $bundlingBasePrice = 0;
+                    $totalDiscount = 0;
+                    $mod_subtotal = 0;
+                    foreach ($valueBundling['products'] as &$p){
+                        $getProduct = BundlingProduct::join('products', 'products.id_product', 'bundling_product.id_product')
+                            ->leftJoin('product_global_price as pgp', 'pgp.id_product', '=', 'products.id_product')
+                            ->join('bundling', 'bundling.id_bundling', 'bundling_product.id_bundling')
+                            ->where('bundling_product.id_bundling_product', $p['id_bundling_product'])
+                            ->select('pgp.product_global_price',  'products.product_variant_status', 'products.product_name', 'bundling_product.*', 'bundling.*')
+                            ->first();
+
+                        if (empty($getProduct)) {
+                            DB::rollback();
+                            return response()->json([
+                                'status' => 'fail',
+                                'messages' => ['Bundling Product not found']
+                            ]);
+                        }
+
+                        if($getProduct['product_variant_status'] && !empty($getProduct['id_product_variant_group'])){
+                            if($outlet['outlet_different_price'] == 1){
+                                $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $getProduct['id_product_variant_group'])->where('id_outlet', $outlet['id_outlet'])->first()['product_variant_group_price']??0;
+                            }else{
+                                $price = ProductVariantGroup::where('id_product_variant_group', $getProduct['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                            }
+                        }elseif(!empty($getProduct['id_product'])){
+                            if($outlet['outlet_different_price'] == 1){
+                                $price = ProductSpecialPrice::where('id_product', $getProduct['id_product'])->where('id_outlet', $outlet['id_outlet'])->first()['product_special_price']??0;
+                            }else{
+                                $price = ProductGlobalPrice::where('id_product', $getProduct['id_product'])->first()['product_global_price']??0;
+                            }
+                        }
+
+                        if(empty($price)){
+                            return response()->json([
+                                'status'    => 'fail',
+                                'messages'  => ['Price Bundling Product Not Valid'],
+                                'product' => $getProduct['product_name'],
+                                'bundling_name' => $getProduct['bundling_name']
+                            ]);
+                        }
+
+                        if($different_price){
+                            $productPrice = ProductSpecialPrice::where(['id_product' => $getProduct['id_product'], 'id_outlet' => $outlet['id_outlet']])->first();
+                            if($productPrice){
+                                $productBasePrice = $productPrice['product_special_price'];
+                            }
+                        }else{
+                            $productPrice = ProductGlobalPrice::where(['id_product' => $getProduct['id_product']])->first();
+                            if($productPrice){
+                                $productBasePrice = $productPrice['product_global_price'];
+                            }
+                        }
+
+                        if ($getProduct['product_variant_status'] && $getProduct['id_product_variant_group'] ?? false) {
+                            $product_variant_group = ProductVariantGroup::where('product_variant_groups.id_product_variant_group', $getProduct['id_product_variant_group']);
+                            if ($different_price) {
+                                $product_variant_group->join('product_variant_group_special_prices', function($join) use ($data) {
+                                    $join->on('product_variant_group_special_prices.id_product_variant_group', '=', 'product_variant_groups.id_product_variant_group')
+                                        ->where('id_outlet', $data['id_outlet']);
+                                })->select('product_variant_groups.id_product_variant_group', 'product_variant_groups.id_product', 'product_variant_group_special_prices.product_variant_group_price');
+                            } else {
+                                $product_variant_group->select('product_variant_groups.id_product_variant_group', 'product_variant_groups.id_product', 'product_variant_groups.product_variant_group_price');
+                            }
+                            $product_variant_group = $product_variant_group->first();
+                            if (!$product_variant_group) {
+                                return response()->json([
+                                    'status' => 'fail',
+                                    'messages' => ['Product Variant Group not found'],
+                                    'product' => $product['product_name']
+                                ]);
+                            }
+                            $variantTree = Product::getVariantTree($getProduct['id_product'], $outlet);
+                            $variants = Product::getVariantPrice($product_variant_group, $variantTree['variants_tree']??[]);
+                            if (!$variants) {
+                                $p['trx_variants'] = [];
+                            }else{
+                                $p['trx_variants'] = $variants;
+                            }
+                            $productBasePrice = $variantTree['base_price'] ?? $productBasePrice;
+                            $p['transaction_variant_subtotal'] = $product_variant_group->product_variant_group_price - $productBasePrice;
+                        } else {
+                            $p['trx_variants'] = [];
+                            $p['transaction_variant_subtotal'] = 0;
+                        }
+
+                        $totalMod = 0;
+                        foreach ($p['modifiers']??[] as $modifier) {
+                            $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
+                            $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
+                            if($different_price){
+                                $mod_price = ProductModifierPrice::select('product_modifier_price')->where('id_outlet',$data['id_outlet'])->where('id_product_modifier',$id_product_modifier)->pluck('product_modifier_price')->first()?:0;
+                                $totalMod = $totalMod + $mod_price;
+                            }else{
+                                $mod_price = ProductModifierGlobalPrice::select('product_modifier_price')->where('id_product_modifier',$id_product_modifier)->pluck('product_modifier_price')->first()?:0;
+                                $totalMod = $totalMod + $mod_price;
+                            }
+                        }
+
+                        $price = (float)$price;
+                        //calculate discount produk
+                        if(strtolower($getProduct['bundling_product_discount_type']) == 'nominal'){
+                            $discount = $getProduct['bundling_product_discount'];
+                            $calculate = ($price - $getProduct['bundling_product_discount']);
+                        }else{
+                            $discount = $price*($getProduct['bundling_product_discount']/100);
+                            $discount = ($discount > $getProduct['bundling_product_maximum_discount'] &&  $getProduct['bundling_product_maximum_discount'] > 0? $getProduct['bundling_product_maximum_discount']:$discount);
+                            $calculate = ($price - $discount);
+                        }
+                        $p['transaction_product_price'] = $productBasePrice;
+                        $p['transaction_product_discount'] = $discount;
+                        $p['transaction_product_bundling_discount'] = $discount;
+                        $p['transaction_product_bundling_price'] = $calculate;
+                        $p['transaction_product_subtotal'] = ($calculate  + $totalMod) * $p['product_qty'];
+                        $bundlingBasePrice = $bundlingBasePrice + ($calculate * $p['product_qty']);
+                        $totalDiscount = $totalDiscount + ($discount * $p['product_qty']);
+                        $p['transaction_product_bundling_charged_outlet'] = $getProduct['charged_outlet'];
+                        $p['transaction_product_bundling_charged_central'] = $getProduct['charged_central'];
+                        $mod_subtotal = $mod_subtotal + ($totalMod * $p['product_qty'] * $valueBundling['bundling_qty']);
+
+                        if($getProduct['bundling_promo_status'] == 1){
+                            if (isset($dataSubtotalPerBrand[$p['id_brand']])) {
+                                $dataSubtotalPerBrand[$p['id_brand']] += (($calculate  + $totalMod) * $p['product_qty']) * $valueBundling['bundling_qty'];
+                            }else{
+                                $dataSubtotalPerBrand[$p['id_brand']] = (($calculate  + $totalMod) * $p['product_qty']) * $valueBundling['bundling_qty'];
+                            }
+                            $bundlingNotIncludePromo[] = $valueBundling['bundling_name'];
+                        }
+                    }
+
+                    $bundlingSubtotal = ($bundlingBasePrice * $valueBundling['bundling_qty']) + $mod_subtotal;
+                    array_push($dataSubtotal, $bundlingSubtotal);
+                    $valueBundling['transaction_bundling_product_base_price'] = $bundlingBasePrice;
+                    $valueBundling['transaction_bundling_product_subtotal'] = $bundlingSubtotal;
+                    $valueBundling['transaction_bundling_product_total_discount'] = $totalDiscount;
+                }
+            }
+
             return [
             	'subtotal' => $dataSubtotal,
-            	'subtotal_per_brand' => $dataSubtotalPerBrand
+            	'subtotal_per_brand' => $dataSubtotalPerBrand,
+                'bundling_not_include_promo' => implode(',', array_unique($bundlingNotIncludePromo))
             ];
         }
 

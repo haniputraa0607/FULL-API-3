@@ -210,10 +210,17 @@ class ApiSubscriptionUse extends Controller
 	    	}
 		}
 
+		foreach ($request['bundling_promo']??[] as $bp){
+		    if (isset($promo_brand_flipped[$bp['id_brand']])){
+                $check = true;
+                break;
+            }
+        }
+
 		if (!$check) {
 			$pct = new PromoCampaignTools;
 			$total_product = count($promo_product??[]);
-			$product_name = $pct->getProductName($promo_product, $subs_obj->subscription_user->subscription->product_rule);
+			$product_name = $pct->getProductName($promo_product??[], $subs_obj->subscription_user->subscription->product_rule);
 
 			// $message = $pct->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product_name%</b>.';
 			$message = 'Promo hanya akan berlaku jika anda membeli <b>%product_name%</b>.';
@@ -328,6 +335,14 @@ class ApiSubscriptionUse extends Controller
 					- payment_method
 					- discount
 				*/
+                $promo_brand_flipped = array_flip($promo_brands);
+                $subtotal = 0;
+                foreach ($subtotal_per_brand as $key => $value) {
+                    if (!isset($promo_brand_flipped[$key])) {
+                        continue;
+                    }
+                    $subtotal += $value;
+                }
 
 				// sum subs discount
 		    	if ( !empty($subs['subscription_user']['subscription']['subscription_voucher_nominal']) ) 

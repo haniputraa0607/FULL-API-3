@@ -333,6 +333,13 @@ class ApiOutletAppReport extends Controller
     							DB::raw('SUM(transaction_product_qty) AS total_qty')
     						)->groupBy('id_transaction');
     					},
+                        'productTransactionBundling' => function($q) {
+                            $q->select(
+                                'id_transaction_product',
+                                'id_transaction',
+                                DB::raw('SUM(transaction_product_qty) AS total_bundling_qty')
+                            )->groupBy('id_transaction');
+                        },
     					'transaction_pickup' => function($q) {
     						$q->select(
     							'id_transaction_pickup',
@@ -367,7 +374,7 @@ class ApiOutletAppReport extends Controller
     		$data_trx[$key]['transaction_time'] = date("H:i", strtotime($value['transaction_date']));
     		$data_trx[$key]['transaction_receipt_number'] = $value['transaction_receipt_number'];
     		$data_trx[$key]['transaction_grandtotal'] = number_format($value['transaction_grandtotal'],0,",",".");
-    		$data_trx[$key]['total_item'] = number_format($value['product_transaction'][0]['total_qty'],0,",",".");
+    		$data_trx[$key]['total_item'] = number_format($value['product_transaction'][0]['total_qty']??0+$value['product_transaction_bundling'][0]['total_bundling_qty']??0,0,",",".");
     	}
 
     	$data['outlet_name'] = $outlet['outlet_name'];
@@ -673,6 +680,7 @@ class ApiOutletAppReport extends Controller
 	    				->whereBetween('transactions.transaction_date',[ date('Y-m-d', strtotime($now)).' 00:00:00', date('Y-m-d', strtotime($now)).' 23:59:59'] )
 	    				->where('transactions.transaction_payment_status','=','Completed')
 	    				->whereNull('transaction_pickups.reject_at')
+                        ->whereNull('transaction_product_modifiers.id_product_modifier_group')
 	    				->select(
 	    					DB::raw('(select transactions.id_outlet) as id_outlet'),
 	    					DB::raw('(select transaction_products.id_brand) as id_brand'),

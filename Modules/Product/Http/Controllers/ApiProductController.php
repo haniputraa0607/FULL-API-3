@@ -26,6 +26,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
+use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantPivot;
 use Validator;
@@ -1864,7 +1865,12 @@ class ApiProductController extends Controller
             }
         }
         if ($product['product_variant_status']) {
-            $product['variants'] = Product::getVariantTree($product['id_product'], $outlet)['variants_tree']??null;
+            if(isset($post['id_bundling_product']) && !empty($post['id_bundling_product'])){
+                $getProductBundling = BundlingProduct::where('id_bundling_product', $post['id_bundling_product'])->first();
+                $product['variants'] = Product::getSingleVariantTree($product['id_product'], $getProductBundling['id_product_variant_group'], $outlet)['variants_tree']??null;
+            }else{
+                $product['variants'] = Product::getVariantTree($product['id_product'], $outlet)['variants_tree']??null;
+            }
         } else {
             $product['variants'] = null;
         }
@@ -1928,4 +1934,15 @@ class ApiProductController extends Controller
         return MyHelper::checkGet(Product::select('id_product', 'product_name')->get());
     }
 
+    public function getProductByBrand(Request $request){
+        $post = $request->json()->all();
+        $data = Product::join('brand_product','products.id_product','=','brand_product.id_product');
+
+        if(isset($post['id_brand']) && !empty($post['id_brand'])){
+            $data->where('brand_product.id_brand', $post['id_brand']);
+        }
+        $data = $data->get()->toArray();
+
+        return response()->json(MyHelper::checkGet($data));
+    }
 }

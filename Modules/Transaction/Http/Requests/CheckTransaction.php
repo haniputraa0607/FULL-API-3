@@ -11,7 +11,6 @@ class CheckTransaction extends FormRequest
     public function rules()
     {
         return [
-            'item'    => 'required|array',
             'id_outlet'   => 'required|numeric'
         ];
     }
