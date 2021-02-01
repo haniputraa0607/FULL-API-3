@@ -311,7 +311,7 @@ class ApiBundlingController extends Controller
                     $currentDate = date('Y-m-d');
                     if(date('Y-m-d', strtotime($post['bundling_start'])) <= $currentDate &&
                         date('Y-m-d', strtotime($post['bundling_end'])) >= $currentDate){
-                        BundlingToday::updateOrCreate(['id_bundling' => $post['id_bundling']], [
+                        BundlingToday::updateOrCreate(['id_bundling' => $create['id_bundling']], [
                             'id_bundling' => $create['id_bundling'],
                             'time_start' => '00:01:00',
                             'time_end' => '23:59:59',
