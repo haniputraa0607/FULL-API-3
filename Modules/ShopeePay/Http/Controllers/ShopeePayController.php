@@ -326,6 +326,14 @@ class ShopeePayController extends Controller
                     \Log::error('Failed get shopeepay status transaction ' . $singleTrx->transaction_receipt_number . ': ', $errors);
                     continue;
                 }
+
+                TransactionPaymentShopeePay::where('id_transaction', $singleTrx->id_transaction)->update([
+                    'transaction_sn' => $status['response']['transaction_list'][0]['transaction_sn'] ?? null,
+                    'payment_status' => $status['response']['payment_status'] ?? null,
+                    'user_id_hash'   => $status['response']['transaction_list'][0]['user_id_hash'] ?? null,
+                    'terminal_id'    => $status['response']['transaction_list'][0]['terminal_id'] ?? null,
+                ]);
+
                 // is transaction success?
                 $payment_status = ($status['response']['payment_status'] ?? false);
                 if ($payment_status == '1') {
@@ -480,6 +488,14 @@ class ShopeePayController extends Controller
                     continue;
                 }
                 DB::beginTransaction();
+
+                DealsPaymentShopeePay::where('id_deals_user', $singleTrx->id_deals_user)->update([
+                    'transaction_sn' => $status['response']['transaction_list'][0]['transaction_sn'] ?? null,
+                    'payment_status' => $status['response']['payment_status'] ?? null,
+                    'user_id_hash'   => $status['response']['transaction_list'][0]['user_id_hash'] ?? null,
+                    'terminal_id'    => $status['response']['transaction_list'][0]['terminal_id'] ?? null,
+                ]);
+
                 // is transaction success?
                 if (($status['response']['payment_status'] ?? false) == '1') {
                     if (($status['response']['transaction_list'][0]['amount'] ?? false) != $singleTrx->amount) {
@@ -612,6 +628,14 @@ class ShopeePayController extends Controller
                     continue;
                 }
                 DB::beginTransaction();
+
+                SubscriptionPaymentShopeePay::where('id_subscription_user', $singleTrx->id_subscription_user)->update([
+                    'transaction_sn' => $status['response']['transaction_list'][0]['transaction_sn'] ?? null,
+                    'payment_status' => $status['response']['payment_status'] ?? null,
+                    'user_id_hash'   => $status['response']['transaction_list'][0]['user_id_hash'] ?? null,
+                    'terminal_id'    => $status['response']['transaction_list'][0]['terminal_id'] ?? null,
+                ]);
+
                 // is transaction success?
                 if (($status['response']['payment_status'] ?? false) == '1') {
                     if (($status['response']['transaction_list'][0]['amount'] ?? false) != $singleTrx->amount) {

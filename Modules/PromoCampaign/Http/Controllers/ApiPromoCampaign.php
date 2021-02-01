@@ -1482,29 +1482,12 @@ class ApiPromoCampaign extends Controller
                 return response()->json($result);
             }
         } else {
-            $dataProduct = [];
-            for ($i = 0; $i < count($product); $i++) {
-            	if ($product_type == 'variant') {
-	                $dataProduct[$i]['id_product_variant_group'] = $this->splitBrandProduct(($product)[$i], 'product');
-	                $data_product	= ProductVariantGroup::where('id_product_variant_group', $dataProduct[$i]['id_product_variant_group'])->select('id_product')->first();
-	                if (!$data_product) {
-	                	continue;
-	                }
-	                $dataProduct[$i]['id_product'] = $data_product['id_product'];
-            	}else{
-            		$dataProduct[$i]['id_product']	= $this->splitBrandProduct(($product)[$i], 'product');
-	                $dataProduct[$i]['id_product_variant_group'] = null;
-            	}
-                $dataProduct[$i]['id_brand']    = $this->splitBrandProduct(($product)[$i], 'brand');
-                $dataProduct[$i][$id_table]    	= $id_post;
-                $dataProduct[$i]['created_at']  = date('Y-m-d H:i:s');
-                $dataProduct[$i]['updated_at']  = date('Y-m-d H:i:s');
-            }
+            $data_product = $this->getProductInsertFormat($product, $id_table, $id_post);
 
             try {
                 $table_product_discount_rule::insert($data);
-                $table_product_discount::insert($dataProduct);
-                $result = ['status'  => 'success', 'products' => $dataProduct];
+                $table_product_discount::insert($data_product);
+                $result = ['status'  => 'success', 'products' => $data_product];
             } catch (\Exception $e) {
                 $result = [
                     'status'  => 'fail',
@@ -1584,33 +1567,12 @@ class ApiPromoCampaign extends Controller
 	        }
         }
 
-        $dataProduct = [];
-        foreach ($product[0] as $key => $value) {
-        	$temp = [
-        		'id_brand' 		=> $this->splitBrandProduct($value, 'brand'),
-        		$id_table 		=> $id_post,
-        		'created_at' 	=> date('Y-m-d H:i:s'),
-            	'updated_at' 	=> date('Y-m-d H:i:s')
-        	];
-
-        	if ($product_type == 'variant') {
-                $temp['id_product_variant_group'] = $this->splitBrandProduct($value, 'product');
-                $data_product	= ProductVariantGroup::where('id_product_variant_group', $temp['id_product_variant_group'])->select('id_product')->first();
-                if (!$data_product) {
-                	continue;
-                }
-                $temp['id_product'] = $data_product['id_product'];
-        	}else{
-        		$temp['id_product']	= $this->splitBrandProduct($value, 'product');
-                $temp['id_product_variant_group'] = null;
-        	}
-        	$dataProduct[] = $temp;
-        }
+        $data_product = $this->getProductInsertFormat($product[0], $id_table, $id_post);
 
         try {
             $table_tier_discount_rule::insert($data);
-            $table_tier_discount_product::insert($dataProduct);
-            $result = ['status'  => 'success', 'products' => $dataProduct];
+            $table_tier_discount_product::insert($data_product);
+            $result = ['status'  => 'success', 'products' => $data_product];
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
@@ -1727,27 +1689,7 @@ class ApiPromoCampaign extends Controller
 	    		}
 	        }
 
-			$data_product = [];
-			foreach ($product as $key => $value) {
-				$temp_data = [
-					'id_brand'		=> $this->splitBrandProduct($value, 'brand'),
-			    	$id_table		=> $id_post,
-			    	'created_at'	=> date('Y-m-d H:i:s'),
-			    	'updated_at'	=> date('Y-m-d H:i:s')
-				];
-				if ($product_type == 'variant') {
-	                $temp_data['id_product_variant_group'] = $this->splitBrandProduct($value, 'product');
-	                $temp_product	= ProductVariantGroup::where('id_product_variant_group', $temp_data['id_product_variant_group'])->select('id_product')->first();
-	                if (!$temp_product) {
-	                	continue;
-	                }
-	                $temp_data['id_product'] = $temp_product->toArray()['id_product'];
-	        	}else{
-	        		$temp_data['id_product']	= $this->splitBrandProduct($value, 'product');
-	                $temp_data['id_product_variant_group'] = null;
-	        	}
-				$data_product[] = $temp_data;
-			}
+	        $data_product = $this->getProductInsertFormat($product, $id_table, $id_post);
 
             // $table_buyxgety_discount_rule::insert($data);
             $table_buyxgety_discount_product::insert($data_product);
@@ -1809,28 +1751,7 @@ class ApiPromoCampaign extends Controller
         ];
 
         if ($filter_product != 'All Product') {
-	        $data_product = [];
-			foreach ($products as $key => $value) {
-				$temp_data = [
-					'id_brand'		=> $this->splitBrandProduct($value, 'brand'),
-			    	$id_table		=> $id_post,
-			    	'created_at'	=> date('Y-m-d H:i:s'),
-			    	'updated_at'	=> date('Y-m-d H:i:s'),
-				];
-
-				if ($product_type == 'variant') {
-	                $temp_data['id_product_variant_group'] = $this->splitBrandProduct($value, 'product');
-	                $temp_product	= ProductVariantGroup::where('id_product_variant_group', $temp_data['id_product_variant_group'])->select('id_product')->first();
-	                if (!$temp_product) {
-	                	continue;
-	                }
-	                $temp_data['id_product'] = $temp_product->toArray()['id_product'];
-	        	}else{
-	        		$temp_data['id_product']	= $this->splitBrandProduct($value, 'product');
-	                $temp_data['id_product_variant_group'] = null;
-	        	}
-				$data_product[] = $temp_data;
-			}
+        	$data_product = $this->getProductInsertFormat($products, $id_table, $id_post);
         }
 
         try {
@@ -2175,51 +2096,85 @@ class ApiPromoCampaign extends Controller
         } 
         elseif ($post['get'] == 'Product') 
         {
-        	if (($post['product_type']??false) == 'variant') {
-        		$data = ProductVariantGroup::leftJoin('brand_product', 'product_variant_groups.id_product', '=', 'brand_product.id_product')
-	            		->join('brands', 'brands.id_brand', '=', 'brand_product.id_brand')
-	            		->join('products', 'products.id_product', '=', 'product_variant_groups.id_product')
-	            		->where('products.product_variant_status', 1)
-	            		->with('product_variant_pivot_simple')
-	            		->orderBy('brands.id_brand');
-	            if (!empty($post['brand'])) {
-	                $data = $data->whereIn('brands.id_brand',$post['brand']);
-	            }
+        	$data = [];
+        	$load_data = [];
+        	if (isset($post['product_type'])) {
+    			switch ($post['product_type']) {
+    				case 'single':
+        				$load_data[] = 'single';
+    					break;
+    				
+    				case 'variant':
+        				$load_data[] = 'variant';
+    					break;
 
-            	$data = $data->get()->toArray();
-	            if ($data) {
-	            	$result = [];
-		            foreach ($data as $value) {
-		            	$variant = '';
-		            	if (!empty($value)) {
-			            	$variant = array_column($value['product_variant_pivot_simple'], 'product_variant_name');
-			            	$variant = ' '.implode(',', $variant);
-		            	}
+    				case 'single + variant':
+        				$load_data[] = 'single';
+        				$load_data[] = 'variant';
+    					break;
 
-		            	$result[] = [
-		            		'id_product'=> $value['id_product_variant_group'],
-		            		'id_brand' 	=> $value['id_brand'],
-		            		'product' 	=> $value['name_brand'].' - '.$value['product_code'].' - '.$value['product_name'].$variant
-		            	];
-		            }
-
-		            return $result;
-	            }
-
+    				default:
+        				$load_data[] = 'single';
+    					break;
+    			}
         	}else{
-	            $data = Product::select('products.id_product', 'brands.id_brand' ,DB::raw('CONCAT(name_brand, " - ", product_code, " - ", product_name) AS product'),DB::raw('CONCAT(products.id_product, ".", brands.id_brand) AS id_product'))
+        		$load_data[] = 'single';
+        	}
+
+        	if (in_array('single', $load_data)) {
+	            $product = Product::select([
+	            			'products.id_product', 
+	            			'brands.id_brand',
+	            			DB::raw('CONCAT(name_brand, " - ", product_code, " - ", product_name) AS product, "" as id_product_variant_group')
+            			])
 	            		->leftJoin('brand_product', 'products.id_product', '=', 'brand_product.id_product')
 	            		->join('brands', 'brands.id_brand', '=', 'brand_product.id_brand')
 	            		->groupBy('brand_product.id_brand_product')
 	            		->orderBy('brands.id_brand');
 
 		        if (!empty($post['brand'])) {
-	                $data = $data->whereIn('brands.id_brand',$post['brand']);
+	                $product = $product->whereIn('brands.id_brand',$post['brand']);
 	            }
 
-            	$data = $data->get()->toArray();
+            	$product = $product->get()->toArray();
+
+            	$data = array_merge($data, $product);
         	}
 
+        	if (in_array('variant', $load_data)) {
+        		$product_variant = ProductVariantGroup::leftJoin('brand_product', 'product_variant_groups.id_product', '=', 'brand_product.id_product')
+	            		->join('brands', 'brands.id_brand', '=', 'brand_product.id_brand')
+	            		->join('products', 'products.id_product', '=', 'product_variant_groups.id_product')
+	            		->where('products.product_variant_status', 1)
+	            		->with('product_variant_pivot_simple')
+	            		->orderBy('brands.id_brand');
+
+	            if (!empty($post['brand'])) {
+	                $product_variant = $product_variant->whereIn('brands.id_brand',$post['brand']);
+	            }
+
+            	$product_variant = $product_variant->get()->toArray();
+
+	            if ($product_variant) {
+	            	$formatted_product_variant = [];
+		            foreach ($product_variant as $value) {
+		            	$variant = '';
+		            	if (!empty($value)) {
+			            	$variant = array_column($value['product_variant_pivot_simple'], 'product_variant_name');
+			            	$variant = ' '.implode(',', $variant);
+		            	}
+
+		            	$formatted_product_variant[] = [
+		            		'id_product'=> $value['id_product'],
+		            		'id_brand' 	=> $value['id_brand'],
+		            		'product' 	=> $value['name_brand'].' - '.$value['product_code'].' - '.$value['product_name'].$variant,
+		            		'id_product_variant_group'=> $value['id_product_variant_group']
+		            	];
+		            }
+	            }
+
+	            $data = array_merge($data, $formatted_product_variant);
+        	}
         }
         elseif ($post['get'] == 'Product Variant') {
         	$data = ProductVariantGroup::where('id_product', $post['id_product'])
@@ -3714,5 +3669,63 @@ class ApiPromoCampaign extends Controller
     	}
 
     	return $result;
+    }
+
+    function splitProductFormat($id_product){
+		$split = explode('-', $id_product);
+
+		$result['id_brand'] = $split[0] ?? null;
+		$result['id_product'] = $split[1] ?? null;
+		$result['id_product_variant_group'] = is_numeric($split[2] ?? null) ? $split[2] : null;
+
+    	return $result;
+    }
+
+    public function getProductInsertFormat($products, $id_table, $id_post)
+    {
+    	$product_only = [];
+    	$product_variant = [];
+    	$data_product = [];
+
+    	// get product only
+    	foreach ($products as $value) {
+			$split_product = $this->splitProductFormat($value);
+
+			if ( !empty($split_product['id_product_variant_group']) ) {
+				$product_variant[] = $value;
+			}else{
+				$product_only[] = $split_product['id_brand'].'-'.$split_product['id_product'];
+				$data_product[] = [
+	        		'id_brand' 		=> $split_product['id_brand'],
+	        		'id_product'	=> $split_product['id_product'],
+	                'id_product_variant_group' => null,
+	        		$id_table 		=> $id_post,
+	        		'created_at' 	=> date('Y-m-d H:i:s'),
+	            	'updated_at' 	=> date('Y-m-d H:i:s')
+	        	];
+			}
+		}
+
+		$product_only_flipped = array_flip($product_only);
+
+		// get product with variant, if exist in product only, remove product variant
+		foreach ($product_variant as $value) {
+			$split_product = $this->splitProductFormat($value);
+
+			if (isset($product_only_flipped[$split_product['id_brand'].'-'.$split_product['id_product']])) {
+				continue;
+			}
+
+			$data_product[] = [
+        		'id_brand' 		=> $split_product['id_brand'],
+        		'id_product'	=> $split_product['id_product'],
+                'id_product_variant_group' => $split_product['id_product_variant_group'],
+        		$id_table 		=> $id_post,
+        		'created_at' 	=> date('Y-m-d H:i:s'),
+            	'updated_at' 	=> date('Y-m-d H:i:s')
+        	];
+		}
+
+		return $data_product;
     }
 }

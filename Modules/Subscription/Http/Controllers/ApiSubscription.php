@@ -823,32 +823,11 @@ class ApiSubscription extends Controller
     /* SAVE PRODUCT */
     function saveProduct($id_subs, $id_product = [], $product_type = 'single')
     {
-        $dataProduct = [];
+        $data_product = [];
+		$data_product = app($this->promo_campaign)->getProductInsertFormat($id_product, $id_table = 'id_subscription', $id_subs);
 
-        foreach ($id_product as $value) {
-        	$temp_data = [
-                'id_subscription'=> $id_subs,
-                'id_brand'    	 => app($this->promo_campaign)->splitBrandProduct($value, 'brand'),
-                'created_at' 	 => date('Y-m-d H:i:s'),
-                'updated_at' 	 => date('Y-m-d H:i:s')
-            ];
-
-        	if ($product_type == 'variant') {
-                $temp_data['id_product_variant_group'] = app($this->promo_campaign)->splitBrandProduct($value, 'product');
-                $data_product	= ProductVariantGroup::where('id_product_variant_group', $temp_data['id_product_variant_group'])->select('id_product')->first();
-                if (!$data_product) {
-                	continue;
-                }
-                $temp_data['id_product'] = $data_product['id_product'];
-        	}else{
-        		$temp_data['id_product']	= app($this->promo_campaign)->splitBrandProduct($value, 'product');
-                $temp_data['id_product_variant_group'] = null;
-        	}
-            array_push($dataProduct, $temp_data);
-        }
-
-        if (!empty($dataProduct)) {
-            $save = SubscriptionProduct::insert($dataProduct);
+        if (!empty($data_product)) {
+            $save = SubscriptionProduct::insert($data_product);
 
             return $save;
         } else {
