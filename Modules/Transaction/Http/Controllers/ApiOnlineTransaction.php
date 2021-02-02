@@ -2915,7 +2915,7 @@ class ApiOnlineTransaction extends Controller
                     continue 2;
                 }
 
-                if($getProductDetail['product_detail_stock_status']??"" == 'Sold Out'){
+                if(isset($getProductDetail['product_detail_stock_status']) && $getProductDetail['product_detail_stock_status'] == 'Sold Out'){
                     $errorBundlingName[] = $bundling['bundling_name'];
                     unset($post['item_bundling'][$key]);
                     continue 2;
