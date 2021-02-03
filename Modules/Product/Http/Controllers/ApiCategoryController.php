@@ -24,6 +24,7 @@ use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\ProductBundling\Entities\Bundling;
+use Modules\ProductBundling\Entities\BundlingOutletGroup;
 use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductBundling\Entities\BundlingToday;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
@@ -48,6 +49,7 @@ class ApiCategoryController extends Controller
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
         $this->promo                   = "Modules\PromoCampaign\Http\Controllers\ApiPromo";
+        $this->bundling                   = "Modules\ProductBundling\Http\Controllers\ApiBundlingController";
     }
 
     public $saveImage = "img/product/category/";
@@ -625,6 +627,7 @@ class ApiCategoryController extends Controller
             ->join('brand_outlet', 'brand_outlet.id_brand', 'brand_product.id_brand')
             ->where('brand_outlet.id_outlet', $post['id_outlet'])
             ->where('bundling.all_outlet', 1)
+            ->where('bundling.outlet_available_type', 'Selected Outlet')
             ->whereIn('brand_product.id_brand', $brands)
             ->whereRaw('TIME_TO_SEC("'.$currentHour.'") >= TIME_TO_SEC(time_start) AND TIME_TO_SEC("'.$currentHour.'") <= TIME_TO_SEC(time_end)')
             ->pluck('bundling.id_bundling')->toArray();
@@ -634,12 +637,15 @@ class ApiCategoryController extends Controller
             ->join('bundling_product as bp', 'bp.id_bundling', 'bundling.id_bundling')
             ->join('brand_product', 'brand_product.id_product', 'bp.id_product')
             ->where('all_outlet', 0)
+            ->where('bundling.outlet_available_type', 'Selected Outlet')
             ->where('bo.id_outlet', $post['id_outlet'])
             ->whereIn('brand_product.id_brand', $brands)
             ->whereRaw('TIME_TO_SEC("'.$currentHour.'") >= TIME_TO_SEC(time_start) AND TIME_TO_SEC("'.$currentHour.'") <= TIME_TO_SEC(time_end)')
             ->pluck('bundling.id_bundling')->toArray();
 
-        $bundlings = array_merge($bundlings1,$bundlings2);
+        $bundling3 = app($this->bundling)->bundlingOutletGroupFilter($post['id_outlet'], $brands);
+
+        $bundlings = array_merge($bundlings1,$bundlings2, $bundling3);
         $bundlings = array_unique($bundlings);
 
         //calculate price
