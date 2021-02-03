@@ -18,7 +18,6 @@ class CreateBundling extends FormRequest
             'bundling_description' => 'required',
             'bundling_start' => 'required',
             'bundling_end' => 'required',
-            'id_outlet' => 'required',
             'photo' => 'required',
             'photo_detail' => 'required'
         ];
