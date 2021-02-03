@@ -88,4 +88,13 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::post('user-franchise/set-password-default', 'ApiOutletController@setPasswordDefaultUserFranchise');
 
     Route::post('schedule/restore', 'ApiOutletController@restoreSchedule');
+
+    /*group filter*/
+    Route::group(['prefix' => 'group-filter'], function() {
+        Route::post('store', ['middleware' => 'feature_control:296', 'uses' =>'ApiOutletGroupFilterController@store']);
+        Route::get('/', ['middleware' => 'feature_control:294,297,298', 'uses' =>'ApiOutletGroupFilterController@list']);
+        Route::post('detail', ['middleware' => 'feature_control:295,297', 'uses' =>'ApiOutletGroupFilterController@detail']);
+        Route::post('update', ['middleware' => 'feature_control:297', 'uses' =>'ApiOutletGroupFilterController@update']);
+        Route::post('delete', ['middleware' => 'feature_control:297', 'uses' =>'ApiOutletGroupFilterController@destroy']);
+    });
 });
