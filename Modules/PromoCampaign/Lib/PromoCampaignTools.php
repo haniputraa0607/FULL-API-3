@@ -250,9 +250,9 @@ class PromoCampaignTools{
 					$product[$key]['price'] = $product_price['product_price'];
 				}
 
-				// sort product by price asc
+				// sort product by price desc
 				uasort($product, function($a, $b){
-					return $a['price'] - $b['price'];
+					return $b['price'] - $a['price'];
 				});
 
 				$merge_product = [];
@@ -512,9 +512,9 @@ class PromoCampaignTools{
 					$product[$key]['price'] = $product_price['product_price'];
 				}
 
-				// sort product price asc
+				// sort product price desc
 				uasort($product, function($a, $b){
-					return $a['price'] - $b['price'];
+					return $b['price'] - $a['price'];
 				});
 
 				// get max qty of product that can get promo
