@@ -861,7 +861,7 @@ class ApiProductVariantGroupController extends Controller
                                     ->first();
                         if(!empty($baseSpecialPrice)){
                             $save =ProductSpecialPrice::updateOrCreate(['id_product' => $productVariantGroup['id_product'], 'id_outlet' => $id_outlet],
-                                ['product_global_price' => $baseSpecialPrice['product_variant_group_price'],
+                                ['product_special_price' => $baseSpecialPrice['product_variant_group_price'],
                                   'id_product' => $productVariantGroup['id_product'],
                                   'id_outlet' => $id_outlet]);
                             $save->touch();
