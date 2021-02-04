@@ -2177,12 +2177,14 @@ class ApiPromoCampaign extends Controller
         	}
         }
         elseif ($post['get'] == 'Product Variant') {
-        	$data = ProductVariantGroup::where('id_product', $post['id_product'])
-        			->where('product_variant_group_visibility', 'Visible')
+        	$data = ProductVariantGroup::where('product_variant_groups.id_product', $post['id_product'])
+        			->where('product_variant_groups.product_variant_group_visibility', 'Visible')
         			->whereDoesntHave('product_variant_pivot.product_variant', function($q){
         				$q->where('product_variant_visibility', 'Hidden');
         			})
         			->with(['product_variant_pivot'])
+        			->leftJoin('products','products.id_product','=','product_variant_groups.id_product')
+        			->where('products.product_variant_status', '1')
         			->get();
 
         	$extra_modifier_product = ProductModifierGroupPivot::where('id_product', $post['id_product'])
