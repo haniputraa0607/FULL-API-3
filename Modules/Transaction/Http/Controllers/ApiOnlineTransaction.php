@@ -25,6 +25,7 @@ use App\Http\Models\TransactionProductModifier;
 use Modules\ProductBundling\Entities\BundlingOutlet;
 use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 use Modules\ProductVariant\Entities\TransactionProductVariant;
 use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
@@ -108,10 +109,17 @@ class ApiOnlineTransaction extends Controller
         $this->plastic       = "Modules\Plastic\Http\Controllers\PlasticController";
         $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
+        $this->bundling      = "Modules\ProductBundling\Http\Controllers\ApiBundlingController";
     }
 
     public function newTransaction(NewTransaction $request) {
         $post = $request->json()->all();
+        if(empty($post['item']) && empty($post['item_bundling'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Item or Item bundling can not be empty']
+            ]);
+        }
         $post['item'] = $this->mergeProducts($post['item']);
         if (isset($post['pin']) && strtolower($post['payment_type']) == 'balance') {
             if (!password_verify($post['pin'], $request->user()->password)) {
@@ -240,6 +248,7 @@ class ApiOnlineTransaction extends Controller
         } else {
             $post['transaction_payment_status'] = 'Pending';
         }
+        $request['bundling_promo'] = $this->checkBundlingIncludePromo($post);
 
         if (!isset($post['id_user'])) {
             $id = $request->user()->id;
@@ -423,6 +432,19 @@ class ApiOnlineTransaction extends Controller
         }
 
         $error_msg=[];
+        //set for item bundling detail
+        if(!empty($post['item_bundling'])){
+            $bundling_detail = $this->checkBundlingProduct($post, $outlet);
+            $post['item_bundling_detail'] = $bundling_detail['item_bundling_detail']??[];
+            if(!empty($bundling_detail['error_message']??[])){
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'product_sold_out_status' => true,
+                    'messages'  => $bundling_detail['error_message']
+                ]);
+            }
+        }
 
         foreach ($grandTotal as $keyTotal => $valueTotal) {
             if ($valueTotal == 'subtotal') {
@@ -803,10 +825,17 @@ class ApiOnlineTransaction extends Controller
 
         	if (!$check_min_basket) {
 				DB::rollback();
-                return [
-                    'status'=>'fail',
-                    'messages'=>['Total pembelian minimum belum terpenuhi']
-                ];
+				if(!empty($post['sub']['bundling_not_include_promo']??[])){
+                    return [
+                        'status'=>'fail',
+                        'messages'=>['Bundling : '.$post['sub']['bundling_not_include_promo'].' tidak termasuk dalam perhitungan promo. Silahkan tambahkan item lain untuk memenuhi jumlah minimum pembelian.']
+                    ];
+                }else{
+                    return [
+                        'status'=>'fail',
+                        'messages'=>['Total pembelian minimum belum terpenuhi']
+                    ];
+                }
         	}
         }
         // check promo subscription type discount and discount delivery
@@ -1078,7 +1107,8 @@ class ApiOnlineTransaction extends Controller
                 DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
-                    'messages'  => ['Product '.$checkProduct['product_name'].' sudah habis, silakan pilih yang lain']
+                    'product_sold_out_status' => true,
+                    'messages'  => ['Product '.$checkProduct['product_name'].' tidak tersedia dan akan terhapus dari cart.']
                 ]);
             }
 
@@ -1272,7 +1302,9 @@ class ApiOnlineTransaction extends Controller
         }
 
         //process add product bundling
-        $this->insertBundlingProduct($post['item_bundling']??[], $insertTransaction, $outlet, $post, $productMidtrans, $userTrxProduct);
+        if(!empty($post['item_bundling'])){
+            $this->insertBundlingProduct($post['item_bundling_detail']??[], $insertTransaction, $outlet, $post, $productMidtrans, $userTrxProduct);
+        }
 
         array_push($dataDetailProduct, $productMidtrans);
 
@@ -1898,6 +1930,12 @@ class ApiOnlineTransaction extends Controller
      */
     public function checkTransaction(CheckTransaction $request) {
         $post = $request->json()->all();
+        if(empty($post['item']) && empty($post['item_bundling'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Item or Item bundling can not be empty']
+            ]);
+        }
         $post['item'] = $this->mergeProducts($post['item']);
         $grandTotal = app($this->setting_trx)->grandTotal();
         $user = $request->user();
@@ -2080,7 +2118,9 @@ class ApiOnlineTransaction extends Controller
         $promo_valid = false;
         $promo_discount = 0;
         $promo_type = null;
+        $request['bundling_promo'] = $this->checkBundlingIncludePromo($post);
         $request_promo = $request->except('type');
+
         if($request->promo_code && !$request->id_subscription_user && !$request->id_deals_user){
         	$code = app($this->promo_campaign)->checkPromoCode($request->promo_code, 1, 1);
 
@@ -2137,7 +2177,7 @@ class ApiOnlineTransaction extends Controller
 			{
 	        	$promo_type = $deals->dealVoucher->deals->promo_type;
 				if ($promo_type != 'Discount bill') {
-					$discount_promo=$pct->validatePromo($request_promo, $deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals', $errorProduct, $post['shipping']+$shippingGoSend);
+					$discount_promo = $pct->validatePromo($request_promo, $deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals', $errorProduct, $post['shipping']+$shippingGoSend);
 
 					$promo_source = 'voucher_online';
 					if ( !empty($errors) ) {
@@ -2507,6 +2547,18 @@ class ApiOnlineTransaction extends Controller
             });
             $product['variants'] = $variants;
 
+            if($product['id_product_variant_group']){
+                if($outlet['outlet_different_price']){
+                    $product_variant_group_price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $outlet['id_outlet'])->first()['product_variant_group_price']??0;
+                }else{
+                    $product_variant_group_price = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                }
+            }else{
+                $product_variant_group_price = (int) $product['product_price'];
+            }
+
+            $product['product_variant_group_price'] = (int)$product_variant_group_price;
+
             $product['product_price_total'] = $item['transaction_product_subtotal'];
             $product['product_price_raw'] = (int) $product['product_price'];
             $product['product_price_raw_total'] = (int) $product['product_price']+$mod_price;
@@ -2534,6 +2586,22 @@ class ApiOnlineTransaction extends Controller
             // return $product;
         }
 
+        // check bundling product
+        $result['item_bundling_detail'] = [];
+        $result['item_bundling'] = [];
+        $responseNotIncludePromo = '';
+        if(!empty($post['item_bundling'])){
+            $itemBundlings = $this->checkBundlingProduct($post, $outlet, $subtotal_per_brand);
+            $result['item_bundling'] = $itemBundlings['item_bundling']??[];
+            $result['item_bundling_detail'] = $itemBundlings['item_bundling_detail']??[];
+            $totalItem = $totalItem + $itemBundlings['total_item_bundling']??0;
+            if(!isset($post['from_new']) || (isset($post['from_new']) && $post['from_new'] === false)){
+                $error_msg = array_merge($error_msg, $itemBundlings['error_message']??[]);
+            }
+            $responseNotIncludePromo = $itemBundlings['bundling_not_include_promo']??'';
+            $subtotal_per_brand = $itemBundlings['subtotal_per_brand']??[];
+        }
+
         if ($promo_valid) {
         	if (($promo_type??false) == 'Discount bill') {
         		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $subtotal_per_brand, $promo_error_product);
@@ -2558,7 +2626,11 @@ class ApiOnlineTransaction extends Controller
         		$promo_discount = 0;
         		$promo_source = null;
         		$discount_promo['discount_delivery'] = 0;
-        		$error = ['Total pembelian minimum belum terpenuhi'];
+        		if(!empty($responseNotIncludePromo)){
+                    $error = ['Bundling : '.$post['sub']['bundling_not_include_promo'].' tidak termasuk dalam perhitungan promo. Silahkan tambahkan item lain untuk memenuhi jumlah minimum pembelian.'];
+                }else{
+                    $error = ['Total pembelian minimum belum terpenuhi'];
+                }
 	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, 'all');
         	}
         }
@@ -2599,12 +2671,6 @@ class ApiOnlineTransaction extends Controller
             'today' => $outlet['today']
         ];
         $result['item'] = array_values($tree);
-
-        // check bundling product
-        $itemBundlings = $this->checkBundlingProduct($post, $outlet);
-        $result['item_bundling'] = $itemBundlings['item_bundling']??[];
-        $totalItem = $totalItem + $itemBundlings['total_item_bundling']??0;
-        $error_msg = array_merge($error_msg, $itemBundlings['error_message']??[]);
 
         // Additional Plastic Payment
         $plastic = app($this->plastic)->check($post);
@@ -2771,42 +2837,35 @@ class ApiOnlineTransaction extends Controller
         return MyHelper::checkGet($result)+['messages'=>$error_msg,'promo_error'=>$promo_error];
     }
 
-    public function checkBundlingProduct($post, $outlet){
+    public function checkBundlingProduct($post, $outlet, $subtotal_per_brand = []){
         $error_msg = [];
         $subTotalBundling = 0;
         $totalItemBundling = 0;
-        foreach ($post['item_bundling'] as $key=>$bundling){
-            $getBundling = Bundling::where('id_bundling', $bundling['id_bundling'])->whereRaw('NOW() >= start_date AND NOW() <= end_date')->first();
-            if(empty($getBundling)){
-                $error_msg[] = MyHelper::simpleReplace(
-                    'Product bundling %bundling_name% tidak tersedia',
-                    [
-                        'bundling_name' => $bundling['bundling_name']
-                    ]
-                );
+        $itemBundlingDetail = [];
+        $itemBundling = [];
+        $errorBundlingName = [];
+        $currentHour = date('H:i:s');
+        foreach ($post['item_bundling']??[] as $key=>$bundling){
+            if($bundling['bundling_qty'] <= 0){
+                $error_msg[] = $bundling['bundling_name'].' qty must not be below 0';
                 unset($post['item_bundling'][$key]);
                 continue;
             }
-
-            //check outlet available
-            $getBundlingOutlet = BundlingOutlet::where('id_bundling', $bundling['id_bundling'])->where('id_outlet', $post['id_outlet'])->count();
-
-            if(empty($getBundlingOutlet)){
-                $error_msg[] = MyHelper::simpleReplace(
-                    'Bundling %bundling_name% tidak bisa digunakan di outlet %outlet_name%',
-                    [
-                        'bundling_name' => $bundling['bundling_name'],
-                        'outlet_name' => $outlet['outlet_name']
-                    ]
-                );
+            $getBundling = Bundling::where('bundling.id_bundling', $bundling['id_bundling'])
+                ->join('bundling_today as bt', 'bt.id_bundling', 'bundling.id_bundling')
+                ->whereRaw('TIME_TO_SEC("'.$currentHour.'") >= TIME_TO_SEC(time_start) AND TIME_TO_SEC("'.$currentHour.'") <= TIME_TO_SEC(time_end)')
+                ->whereRaw('NOW() >= start_date AND NOW() <= end_date')->first();
+            if(empty($getBundling)){
+                $errorBundlingName[] = $bundling['bundling_name'];
                 unset($post['item_bundling'][$key]);
                 continue;
             }
 
             //check count product in bundling
-            $getBundlingProduct = BundlingProduct::where('id_bundling', $bundling['id_bundling'])->count();
-
-            if($getBundlingProduct !== count($bundling['products'])){
+            $getBundlingProduct = BundlingProduct::where('id_bundling', $bundling['id_bundling'])->select('id_product', 'bundling_product_qty')->get()->toArray();
+            $arrBundlingQty = array_column($getBundlingProduct, 'bundling_product_qty');
+            $arrBundlingIdProduct = array_column($getBundlingProduct, 'id_product');
+            if(array_sum($arrBundlingQty) !== count($bundling['products'])){
                 $error_msg[] = MyHelper::simpleReplace(
                     'Jumlah product pada bundling %bundling_name% tidak sesuai',
                     [
@@ -2817,47 +2876,89 @@ class ApiOnlineTransaction extends Controller
                 continue;
             }
 
+            //check outlet available
+            if($getBundling['all_outlet'] == 0 && $getBundling['outlet_available_type'] == 'Selected Outlet'){
+                $getBundlingOutlet = BundlingOutlet::where('id_bundling', $bundling['id_bundling'])->where('id_outlet', $post['id_outlet'])->count();
+
+                if(empty($getBundlingOutlet)){
+                    $error_msg[] = MyHelper::simpleReplace(
+                        'Bundling %bundling_name% tidak bisa digunakan di outlet %outlet_name%',
+                        [
+                            'bundling_name' => $bundling['bundling_name'],
+                            'outlet_name' => $outlet['outlet_name']
+                        ]
+                    );
+                    unset($post['item_bundling'][$key]);
+                    continue;
+                }
+            }elseif($getBundling['all_outlet'] == 0 && $getBundling['outlet_available_type'] == 'Outlet Group Filter'){
+                $brands = BrandProduct::whereIn('id_product', $arrBundlingIdProduct)->pluck('id_brand')->toArray();
+                $availableBundling = app($this->bundling)->bundlingOutletGroupFilter($post['id_outlet'], $brands);
+                if(empty($availableBundling)){
+                    $error_msg[] = MyHelper::simpleReplace(
+                        'Bundling %bundling_name% tidak bisa digunakan di outlet %outlet_name%',
+                        [
+                            'bundling_name' => $bundling['bundling_name'],
+                            'outlet_name' => $outlet['outlet_name']
+                        ]
+                    );
+                    unset($post['item_bundling'][$key]);
+                    continue;
+                }
+            }
+
             $bundlingBasePrice = 0;
+            $totalModPrice = 0;
+            $totalPriceNoDiscount = 0;
             $products = [];
+            $productsBundlingDetail = [];
             //check product from bundling
-            foreach ($bundling['products'] as $p){
+            foreach ($bundling['products'] as $keyProduct => $p){
                 $product = BundlingProduct::join('products', 'products.id_product', 'bundling_product.id_product')
                     ->leftJoin('product_global_price as pgp', 'pgp.id_product', '=', 'products.id_product')
                     ->join('bundling', 'bundling.id_bundling', 'bundling_product.id_bundling')
                     ->where('bundling_product.id_bundling_product', $p['id_bundling_product'])
                     ->select('products.product_visibility', 'pgp.product_global_price',  'products.product_variant_status',
-                        'bundling_product.*', 'bundling.bundling_name', 'bundling.bundling_code', 'products.*')
+                        'bundling_product.*', 'bundling.bundling_promo_status','bundling.bundling_name', 'bundling.bundling_code', 'products.*')
                     ->first();
                 $getProductDetail = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first();
                 $product['visibility_outlet'] = $getProductDetail['product_detail_visibility']??null;
+                $id_product_variant_group = $product['id_product_variant_group']??null;
 
                 if($product['visibility_outlet'] == 'Hidden' || (empty($product['visibility_outlet']) && $product['product_visibility'] == 'Hidden')){
-                    $error_msg[] = MyHelper::simpleReplace(
-                        'Produk %product_name% pada bundling %bundling_name% tidak tersedia',
-                        [
-                            'product_name' => $p['product_name'],
-                            'bundling_name' => $bundling['bundling_name']
-                        ]
-                    );
+                    $errorBundlingName[] = $bundling['bundling_name'];
+                    unset($post['item_bundling'][$key]);
+                    continue 2;
+                }
+
+                if(isset($getProductDetail['product_detail_stock_status']) && $getProductDetail['product_detail_stock_status'] == 'Sold Out'){
+                    $errorBundlingName[] = $bundling['bundling_name'];
                     unset($post['item_bundling'][$key]);
                     continue 2;
                 }
                 $product['note'] = $p['note']??'';
-                $price = $product['product_global_price'];
-                if($outlet['outlet_different_price'] == 1){
-                    $price = ProductSpecialPrice::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
-                }
-                if ($product['product_variant_status'] && $getProductDetail['product_detail_stock_status'] == 'Available') {
-                    $variantTree = Product::getVariantTree($product['id_product'], $outlet);
-                    $price = $variantTree['base_price']??0;
+                if($product['product_variant_status'] && !empty($product['id_product_variant_group'])){
+                    if($outlet['outlet_different_price'] == 1){
+                        $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                    }else{
+                        $price = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                    }
+                }elseif(!empty($p['id_product'])){
+                    if($outlet['outlet_different_price'] == 1){
+                        $price = ProductSpecialPrice::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
+                    }else{
+                        $price = $product['product_global_price'];
+                    }
                 }
 
                 $price = (float)$price??0;
+                $totalPriceNoDiscount = $totalPriceNoDiscount + $price;
                 //calculate discount produk
                 if(strtolower($product['bundling_product_discount_type']) == 'nominal'){
                     $calculate = ($price - $product['bundling_product_discount']);
                 }else{
                     $discount = $price*($product['bundling_product_discount']/100);
+                    $discount = ($discount > $product['bundling_product_maximum_discount'] &&  $product['bundling_product_maximum_discount'] > 0? $product['bundling_product_maximum_discount']:$discount);
                     $calculate = ($price - $discount);
                 }
                 $bundlingBasePrice = $bundlingBasePrice + $calculate;
@@ -2951,7 +3052,6 @@ class ApiOnlineTransaction extends Controller
                     continue 2;
                 }
 
-                $id_product_variant_group = $product['id_product_variant_group']??null;
                 $product['selected_variant'] = [];
                 $variants = [];
                 if(!empty($id_product_variant_group)){
@@ -2984,7 +3084,7 @@ class ApiOnlineTransaction extends Controller
                     }
                 }
 
-                if((count($p['extra_modifiers']) != count($extraModifier))){
+                if(isset($p['extra_modifiers']) && (count($p['extra_modifiers']) != count($extraModifier))){
                     $variantsss = ProductVariant::join('product_variant_pivot', 'product_variant_pivot.id_product_variant', 'product_variants.id_product_variant')->select('product_variant_name')->where('id_product_variant_group', $product['id_product_variant_group'])->pluck('product_variant_name')->toArray();
                     $modifiersss = ProductModifier::whereIn('id_product_modifier', array_column($extraModifier, 'id_product_modifier'))->where('modifier_type', 'Modifier Group')->pluck('text')->toArray();
                     $error_msg[] = MyHelper::simpleReplace(
@@ -2999,7 +3099,7 @@ class ApiOnlineTransaction extends Controller
                     continue 2;
                 }
 
-                $bundlingBasePrice = $bundlingBasePrice+$mod_price;
+                $totalModPrice = $totalModPrice + $mod_price;
                 $product['variants'] = $variants;
                 $products[] = [
                     "id_brand" => $product['id_brand'],
@@ -3009,33 +3109,109 @@ class ApiOnlineTransaction extends Controller
                     "modifiers" => $modifiers,
                     "extra_modifiers" => array_column($extraModifier, 'id_product_modifier'),
                     "product_name" => $product['product_name'],
-                    "note" => $product['note'],
+                    "note" => (!empty($product['note']) ? $product['note'] : ""),
                     "product_code" => $product['product_code'],
-                    "selected_variant" => array_merge($product['selected_variant'], $p['extra_modifiers']),
+                    "selected_variant" => array_merge($product['selected_variant'], $p['extra_modifiers']??[]),
                     "variants"=> $product['variants']
                 ];
+
+                $productsBundlingDetail[] = [
+                    "product_qty" => 1,
+                    "id_brand" => $product['id_brand'],
+                    "id_product" => $product['id_product'],
+                    "id_bundling_product" => $product['id_bundling_product'],
+                    "id_product_variant_group" => $product['id_product_variant_group'],
+                    "modifiers" => $modifiers,
+                    "extra_modifiers" => array_column($extraModifier, 'id_product_modifier'),
+                    "product_name" => $product['product_name'],
+                    "note" => (!empty($product['note']) ? $product['note'] : ""),
+                    "product_code" => $product['product_code'],
+                    "selected_variant" => array_merge($product['selected_variant'], $p['extra_modifiers']??[]),
+                    "variants"=> $product['variants']
+                ];
+
+                if($product['bundling_promo_status'] == 1){
+                    if (isset($subtotal_per_brand[$product['id_brand']])) {
+                        $subtotal_per_brand[$product['id_brand']] += ($calculate  + $mod_price) * $bundling['bundling_qty'];
+                    }else{
+                        $subtotal_per_brand[$product['id_brand']] = ($calculate  + $mod_price) * $bundling['bundling_qty'];
+                    }
+                    $bundlingNotIncludePromo[] = $bundling['bundling_name'];
+                }
             }
 
-            $total = $bundlingBasePrice * $bundling['bundling_qty'];
-            $post['item_bundling'][$key] = [
-                "id_bundling" => $getBundling['id_bundling'],
-                "bundling_name" => $getBundling['bundling_name'],
-                "bundling_code" => $getBundling['bundling_code'],
-                "bundling_base_price" => $bundlingBasePrice,
-                "bundling_qty" => $bundling['bundling_qty'],
-                "bundling_price_total" => $total,
-                "products" => $products
-            ];
-            $subTotalBundling = $total;
-            $totalItemBundling = $totalItemBundling + $bundling['bundling_qty'];
+            if(!empty($products) && !empty($productsBundlingDetail)){
+                $itemBundling[] = [
+                    "id_custom" => $bundling['id_custom']??null,
+                    "id_bundling" => $getBundling['id_bundling'],
+                    "bundling_name" => $getBundling['bundling_name'],
+                    "bundling_code" => $getBundling['bundling_code'],
+                    "bundling_base_price" => $bundlingBasePrice,
+                    "bundling_qty" => $bundling['bundling_qty'],
+                    "bundling_price_total" =>  $bundlingBasePrice + $totalModPrice,
+                    "products" => $products
+                ];
+
+                $productsBundlingDetail = $this->mergeBundlingProducts($productsBundlingDetail, $bundling['bundling_qty']);
+                //check for same detail item bundling
+                $itemBundlingDetail[] = [
+                    "id_custom" => $bundling['id_custom']??null,
+                    "id_bundling" => $bundling['id_bundling']??null,
+                    'bundling_name' => $bundling['bundling_name'],
+                    'bundling_qty' => $bundling['bundling_qty'],
+                    'bundling_price_no_discount' => (int)$totalPriceNoDiscount * $bundling['bundling_qty'],
+                    'bundling_subtotal' => $bundlingBasePrice * $bundling['bundling_qty'],
+                    'bundling_sub_item' => '@'.MyHelper::requestNumber($bundlingBasePrice,'_CURRENCY'),
+                    'bundling_sub_item_raw' => $bundlingBasePrice,
+                    'bundling_sub_price_no_discount' => (int)$totalPriceNoDiscount,
+                    "products" => $productsBundlingDetail
+                ];
+
+                $subTotalBundling = $subTotalBundling + (($bundlingBasePrice + $totalModPrice) * $bundling['bundling_qty']);
+                $totalItemBundling = $totalItemBundling + $bundling['bundling_qty'];
+            }
+        }
+
+        $mergeBundlingDetail = $this->mergeBundlingDetail($itemBundlingDetail);
+        $mergeBundling = $this->mergeBundling($itemBundling);
+        if(!empty($errorBundlingName)){
+            $error_msg[] = 'Product '.implode(',', array_unique($errorBundlingName)). ' tidak tersedia dan akan terhapus dari cart.';
         }
 
         return [
             'total_item_bundling' => $totalItemBundling,
             'subtotal_bundling' => $subTotalBundling,
-            'item_bundling' => $post['item_bundling'],
-            'error_message' => $error_msg
+            'item_bundling' => $mergeBundling,
+            'item_bundling_detail' => $mergeBundlingDetail,
+            'error_message' => $error_msg,
+            'subtotal_per_brand' => $subtotal_per_brand,
+            'bundling_not_include_promo' => implode(',', array_unique($bundlingNotIncludePromo??[]))
         ];
+    }
+
+    public function checkBundlingIncludePromo($post){
+        $arr = [];
+        foreach ($post['item_bundling']??[] as $key=>$bundling) {
+            $getBundling = Bundling::where('bundling.id_bundling', $bundling['id_bundling'])
+                ->join('bundling_today as bt', 'bt.id_bundling', 'bundling.id_bundling')->first();
+
+            if(!empty($getBundling)){
+                $getBundlingProduct = BundlingProduct::join('brand_product', 'brand_product.id_product', 'bundling_product.id_product')
+                    ->where('bundling_product.id_bundling', $bundling['id_bundling'])
+                    ->pluck('brand_product.id_brand')->toArray();
+
+                foreach ($getBundlingProduct as $brand){
+                    if($getBundling['bundling_promo_status'] == 1){
+                        $arr[] = [
+                            'id_brand' => $brand,
+                            'id_bundling' => $bundling['id_bundling']
+                        ];
+                    }
+                }
+            }
+        }
+
+        return $arr;
     }
 
     public function saveLocation($latitude, $longitude, $id_user, $id_transaction, $id_outlet){
@@ -3653,6 +3829,163 @@ class ApiOnlineTransaction extends Controller
         return $new_items;
     }
 
+    public function mergeBundlingProducts($items, $bundlinQty)
+    {
+        $new_items = [];
+        $item_qtys = [];
+        $id_custom = [];
+
+        // create unique array
+        foreach ($items as $item) {
+            $new_item = [
+                'id_brand' => $item['id_brand'],
+                'id_product' => $item['id_product'],
+                'id_product_variant_group' => ($item['id_product_variant_group']??null) ?: null,
+                'id_bundling_product' => $item['id_bundling_product'],
+                'product_name' => $item['product_name'],
+                'note' => $item['note'],
+                'variants' => array_map("unserialize", array_unique(array_map("serialize", array_map(function($i){
+                    return [
+                        'id_product_variant' => $i['id_product_variant'],
+                        'product_variant_name' => $i['product_variant_name']
+                    ];
+                },$item['variants']??[])))),
+                'modifiers' => array_map(function($i){
+                    return [
+                        "id_product_modifier"=> $i['id_product_modifier'],
+                        "code"=> $i['code'],
+                        "text"=> $i['text'],
+                        "product_modifier_price"=> $i['product_modifier_price'] ,
+                        "modifier_type"=> $i['modifier_type'],
+                        'qty' => $i['qty']
+                    ];
+                },$item['modifiers']??[]),
+            ];
+            usort($new_item['modifiers'],function($a, $b) { return $a['id_product_modifier'] <=> $b['id_product_modifier']; });
+            $pos = array_search($new_item, $new_items);
+            if($pos === false) {
+                $new_items[] = $new_item;
+                $item_qtys[] = $item['product_qty'];
+                $id_custom[] = $item['id_custom']??0;
+            } else {
+                $item_qtys[$pos] += $item['product_qty'];
+            }
+        }
+        // update qty
+        foreach ($new_items as $key => &$value) {
+            $value['product_qty'] = $item_qtys[$key];
+            foreach ($value['modifiers'] as &$mod){
+                $mod['product_modifier_price'] = $mod['product_modifier_price'] * $item_qtys[$key] * $bundlinQty;
+            }
+        }
+
+        return $new_items;
+    }
+
+    public function mergeBundlingDetail($items)
+    {
+        $new_items = [];
+        $item_qtys = [];
+        $id_custom = [];
+
+        // create unique array
+        foreach ($items as $item) {
+            $new_item = [
+                'id_bundling' => $item['id_bundling'],
+                'bundling_name' => $item['bundling_name'],
+                'bundling_price_no_discount' => $item['bundling_price_no_discount'],
+                'bundling_subtotal' => $item['bundling_subtotal'],
+                'bundling_sub_item' => $item['bundling_sub_item'],
+                'bundling_sub_item_raw' => $item['bundling_sub_item_raw'],
+                'bundling_sub_price_no_discount' => $item['bundling_sub_price_no_discount'],
+                'products' => array_map(function($i){
+                    return [
+                        "id_brand"=> $i['id_brand'],
+                        "id_product"=> $i['id_product'],
+                        "id_product_variant_group"=> $i['id_product_variant_group'],
+                        "id_bundling_product"=> $i['id_bundling_product'] ,
+                        "product_name"=> $i['product_name'],
+                        'product_code' =>  $i['product_code']??"",
+                        'note' => $i['note'],
+                        'variants' => $i['variants'],
+                        'modifiers' => $i['modifiers'],
+                        'product_qty' => $i['product_qty'],
+                        'extra_modifiers' => $i['extra_modifiers']??[]
+                    ];
+                },$item['products']??[]),
+            ];
+            usort($new_item['products'],function($a, $b) { return $a['id_product'] <=> $b['id_product']; });
+            $pos = array_search($new_item, $new_items);
+            if($pos === false) {
+                $new_items[] = $new_item;
+                $item_qtys[] = $item['bundling_qty'];
+                $id_custom[] = $item['id_custom']??0;
+            } else {
+                $item_qtys[$pos] += $item['bundling_qty'];
+            }
+        }
+
+        // update qty
+        foreach ($new_items as $key => &$value) {
+            $value['bundling_qty'] = $item_qtys[$key];
+            $value['id_custom'] = $id_custom[$key];
+            $value['bundling_price_no_discount'] = $value['bundling_sub_price_no_discount'] * $item_qtys[$key];
+            $value['bundling_subtotal'] = $value['bundling_sub_item_raw'] * $item_qtys[$key];
+        }
+
+        return $new_items;
+    }
+
+    public function mergeBundling($items)
+    {
+        $new_items = [];
+        $item_qtys = [];
+        $id_custom = [];
+
+        // create unique array
+        foreach ($items as $item) {
+            $new_item = [
+                'id_bundling' => $item['id_bundling'],
+                'bundling_name' => $item['bundling_name'],
+                'bundling_code' => $item['bundling_code'],
+                'bundling_base_price' => $item['bundling_base_price'],
+                'bundling_price_total' => $item['bundling_price_total'],
+                'products' => array_map(function($i){
+                    return [
+                        "id_brand"=> $i['id_brand'],
+                        "id_product"=> $i['id_product'],
+                        "id_product_variant_group"=> $i['id_product_variant_group'],
+                        "id_bundling_product"=> $i['id_bundling_product'] ,
+                        "product_name"=> $i['product_name'],
+                        "product_code" => $i['product_code'],
+                        'note' => $i['note'],
+                        'variants' => $i['variants'],
+                        'modifiers' => $i['modifiers'],
+                        'extra_modifiers' => $i['extra_modifiers']??[]
+                    ];
+                },$item['products']??[]),
+            ];
+            usort($new_item['products'],function($a, $b) { return $a['id_product'] <=> $b['id_product']; });
+            $pos = array_search($new_item, $new_items);
+            if($pos === false) {
+                $new_items[] = $new_item;
+                $item_qtys[] = $item['bundling_qty'];
+                $id_custom[] = $item['id_custom']??0;
+            } else {
+                $item_qtys[$pos] += $item['bundling_qty'];
+            }
+        }
+
+        // update qty
+        foreach ($new_items as $key => &$value) {
+            $value['bundling_qty'] = $item_qtys[$key];
+            $value['id_custom'] = $id_custom[$key];
+            $value['bundling_price_total'] = $value['bundling_price_total'] * $item_qtys[$key];
+        }
+
+        return $new_items;
+    }
+
     public function getPlasticInfo($plastic, $outlet_plastic_used_status){
         if((isset($plastic['status']) && $plastic['status'] == 'success') && (isset($outlet_plastic_used_status) && $outlet_plastic_used_status == 'Active')){
             $result['plastic'] = $plastic['result'];
@@ -3764,7 +4097,8 @@ class ApiOnlineTransaction extends Controller
                     DB::rollback();
                     return response()->json([
                         'status'    => 'fail',
-                        'messages'  => ['Product '.$checkProduct['product_name'].' sudah habis, silakan pilih yang lain']
+                        'product_sold_out_status' => true,
+                        'messages'  => ['Product '.$checkProduct['product_name'].' tidak tersedia dan akan terhapus dari cart.']
                     ]);
                 }
 
@@ -3774,28 +4108,48 @@ class ApiOnlineTransaction extends Controller
 
                 $productPrice = 0;
 
-                if($outlet['outlet_different_price']){
-                    $checkPriceProduct = ProductSpecialPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $post['id_outlet']])->first();
-                    if(!isset($checkPriceProduct['product_special_price'])){
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => ['Product Price Not Valid']
-                        ]);
-                    }
-                    $productPrice = $checkPriceProduct['product_special_price'];
-                }else{
-                    $checkPriceProduct = ProductGlobalPrice::where(['id_product' => $checkProduct['id_product']])->first();
+                $product = BundlingProduct::join('products', 'products.id_product', 'bundling_product.id_product')
+                    ->leftJoin('product_global_price as pgp', 'pgp.id_product', '=', 'products.id_product')
+                    ->join('bundling', 'bundling.id_bundling', 'bundling_product.id_bundling')
+                    ->where('bundling_product.id_bundling_product', $itemProduct['id_bundling_product'])
+                    ->select('products.product_visibility', 'pgp.product_global_price',  'products.product_variant_status',
+                        'bundling_product.*', 'bundling.bundling_name', 'bundling.bundling_code', 'products.*')
+                    ->first();
+                $getProductDetail = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first();
+                $product['visibility_outlet'] = $getProductDetail['product_detail_visibility']??null;
+                $id_product_variant_group = $product['id_product_variant_group']??null;
 
-                    if(isset($checkPriceProduct['product_global_price'])){
-                        $productPrice = $checkPriceProduct['product_global_price'];
+                if($product['visibility_outlet'] == 'Hidden' || (empty($product['visibility_outlet']) && $product['product_visibility'] == 'Hidden')){
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'product_sold_out_status' => true,
+                        'messages'  => ['Product '.$checkProduct['product_name'].'pada '.$product['bundling_name'].' tidak tersedia']
+                    ]);
+                }
+
+                if($product['product_variant_status'] && !empty($product['id_product_variant_group'])){
+                    if($outlet['outlet_different_price'] == 1){
+                        $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
                     }else{
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => ['Product Price Not Valid']
-                        ]);
+                        $price = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first()['product_variant_group_price']??0;
                     }
+                }elseif(!empty($product['id_product'])){
+                    if($outlet['outlet_different_price'] == 1){
+                        $price = ProductSpecialPrice::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
+                    }else{
+                        $price = $product['product_global_price'];
+                    }
+                }
+
+                $price = (float)$price??0;
+                //calculate discount produk
+                if(strtolower($product['bundling_product_discount_type']) == 'nominal'){
+                    $calculate = ($price - $product['bundling_product_discount']);
+                }else{
+                    $discount = $price*($product['bundling_product_discount']/100);
+                    $discount = ($discount > $product['bundling_product_maximum_discount'] &&  $product['bundling_product_maximum_discount'] > 0? $product['bundling_product_maximum_discount']:$discount);
+                    $calculate = ($price - $discount);
                 }
 
                 $dataProduct = [
@@ -3806,11 +4160,14 @@ class ApiOnlineTransaction extends Controller
                     'id_brand'                     => $itemProduct['id_brand'],
                     'id_outlet'                    => $trx['id_outlet'],
                     'id_user'                      => $trx['id_user'],
-                    'transaction_product_qty'      => 1,
+                    'transaction_product_qty'      => $itemProduct['product_qty']*$itemBundling['bundling_qty'],
+                    'transaction_product_bundling_qty' => $itemProduct['product_qty'],
                     'transaction_product_price'    => $itemProduct['transaction_product_price'],
+                    'transaction_product_bundling_price' => $calculate,
                     'transaction_product_price_base' => NULL,
                     'transaction_product_price_tax'  => NULL,
-                    'transaction_product_discount'   => 0,
+                    'transaction_product_discount'   => $itemProduct['transaction_product_bundling_price'],
+                    'transaction_product_bundling_price'   => $itemProduct['transaction_product_bundling_price'],
                     'transaction_product_base_discount' => 0,
                     'transaction_product_qty_discount'  => 0,
                     'transaction_product_subtotal' => $itemProduct['transaction_product_subtotal'],
@@ -3839,10 +4196,16 @@ class ApiOnlineTransaction extends Controller
                 $insert_modifier = [];
                 $mod_subtotal = 0;
                 $more_mid_text = '';
-                if(isset($itemProduct['modifiers'])){
-                    foreach ($itemProduct['modifiers'] as $modifier) {
+                $selectExtraModifier = ProductModifier::whereIn('id_product_modifier', $itemProduct['extra_modifiers']??[])->get()->toArray();
+                $mergetExtranAndModifier = array_merge($selectExtraModifier, $itemProduct['modifiers']??[]);
+                if(isset($mergetExtranAndModifier)){
+                    foreach ($mergetExtranAndModifier as $modifier) {
                         $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
-                        $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
+                        $qty_product_modifier = 1;
+                        if(isset($modifier['qty'])){
+                            $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
+                        }
+
                         $mod = ProductModifier::select('product_modifiers.id_product_modifier','code',
                             DB::raw('(CASE
                         WHEN product_modifiers.text_detail_trx IS NOT NULL 
@@ -3926,7 +4289,7 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
                 $insert_variants = [];
-                foreach ($itemProduct['variants'] as $id_product_variant => $product_variant_price) {
+                foreach ($itemProduct['trx_variants'] as $id_product_variant => $product_variant_price) {
                     $insert_variants[] = [
                         'id_transaction_product' => $trx_product['id_transaction_product'],
                         'id_product_variant' => $id_product_variant,
@@ -3941,9 +4304,9 @@ class ApiOnlineTransaction extends Controller
                 $trx_product->save();
                 $dataProductMidtrans = [
                     'id'       => $checkProduct['id_product'],
-                    'price'    => $productPrice + $mod_subtotal - ($trx_product['transaction_product_discount']/$trx_product['transaction_product_qty']),
+                    'price'    => $calculate + $mod_subtotal,
                     'name'     => $checkProduct['product_name'],
-                    'quantity' => 1,
+                    'quantity' => $itemBundling['bundling_qty'],
                 ];
                 array_push($productMidtrans, $dataProductMidtrans);
                 $totalWeight += $checkProduct['product_weight'] * 1;

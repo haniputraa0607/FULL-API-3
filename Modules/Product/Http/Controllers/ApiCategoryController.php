@@ -2,6 +2,7 @@
 
 namespace Modules\Product\Http\Controllers;
 
+use Modules\Brand\Entities\BrandOutlet;
 use Modules\Brand\Entities\BrandProduct;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
@@ -20,9 +21,14 @@ use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
 use Modules\Product\Entities\ProductDetail;
+use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\ProductBundling\Entities\Bundling;
+use Modules\ProductBundling\Entities\BundlingOutletGroup;
 use Modules\ProductBundling\Entities\BundlingProduct;
+use Modules\ProductBundling\Entities\BundlingToday;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 use Validator;
 use Hash;
 use DB;
@@ -43,6 +49,7 @@ class ApiCategoryController extends Controller
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
         $this->promo                   = "Modules\PromoCampaign\Http\Controllers\ApiPromo";
+        $this->bundling                   = "Modules\ProductBundling\Http\Controllers\ApiBundlingController";
     }
 
     public $saveImage = "img/product/category/";
@@ -457,7 +464,7 @@ class ApiCategoryController extends Controller
                         $product['position'] = $promo_category['pivot']['position'];
                         unset($promo_category['pivot']);
                         if (!($result[$pivot['id_brand']]['promo' . $id_product_promo_category] ?? false)) {
-                            $promo_category['product_category_order'] -= 1000000;
+                            $promo_category['product_category_order'] -= 100000;
                             $result[$pivot['id_brand']]['promo' . $id_product_promo_category]['category'] = $promo_category;
                         }
                         $result[$pivot['id_brand']]['promo' . $id_product_promo_category]['list'][] = $product;
@@ -604,95 +611,134 @@ class ApiCategoryController extends Controller
                 $result[$product->id_product_category]['category'] = ProductCategory::select('id_product_category', 'product_category_name')->find($product->id_product_category);
             }
         }
-        return MyHelper::checkGet(array_values($result));
+
+        $resultsFinal = $this->getBundlingSearch($post, $outlet, array_values($result));
+        return MyHelper::checkGet($resultsFinal);
     }
 
     function getBundling($post, $brands, $outlet, $resProduct){
         $resBundling = [];
-        $bundlings = Bundling::join('bundling_outlet as bo', 'bo.id_bundling', 'bundling.id_bundling')
+        $count = count($brands);
+        $currentHour = date('H:i:s');
+
+        $bundlings1 = Bundling::join('bundling_today as bt', 'bt.id_bundling', 'bundling.id_bundling')
             ->join('bundling_product as bp', 'bp.id_bundling', 'bundling.id_bundling')
             ->join('brand_product', 'brand_product.id_product', 'bp.id_product')
+            ->join('brand_outlet', 'brand_outlet.id_brand', 'brand_product.id_brand')
+            ->where('brand_outlet.id_outlet', $post['id_outlet'])
+            ->where('bundling.all_outlet', 1)
+            ->where('bundling.outlet_available_type', 'Selected Outlet')
+            ->whereIn('brand_product.id_brand', $brands)
+            ->whereRaw('TIME_TO_SEC("'.$currentHour.'") >= TIME_TO_SEC(time_start) AND TIME_TO_SEC("'.$currentHour.'") <= TIME_TO_SEC(time_end)')
+            ->pluck('bundling.id_bundling')->toArray();
+
+        $bundlings2 = Bundling::join('bundling_today as bt', 'bt.id_bundling', 'bundling.id_bundling')
+            ->join('bundling_outlet as bo', 'bo.id_bundling', 'bundling.id_bundling')
+            ->join('bundling_product as bp', 'bp.id_bundling', 'bundling.id_bundling')
+            ->join('brand_product', 'brand_product.id_product', 'bp.id_product')
+            ->where('all_outlet', 0)
+            ->where('bundling.outlet_available_type', 'Selected Outlet')
             ->where('bo.id_outlet', $post['id_outlet'])
             ->whereIn('brand_product.id_brand', $brands)
-            ->whereRaw('NOW() >= start_date AND NOW() <= end_date')
-            ->groupBy('bundling.id_bundling')
+            ->whereRaw('TIME_TO_SEC("'.$currentHour.'") >= TIME_TO_SEC(time_start) AND TIME_TO_SEC("'.$currentHour.'") <= TIME_TO_SEC(time_end)')
             ->pluck('bundling.id_bundling')->toArray();
+
+        $bundling3 = app($this->bundling)->bundlingOutletGroupFilter($post['id_outlet'], $brands);
+
+        $bundlings = array_merge($bundlings1,$bundlings2, $bundling3);
+        $bundlings = array_unique($bundlings);
 
         //calculate price
         foreach ($bundlings as $bundling){
             $getProduct = BundlingProduct::join('products', 'products.id_product', 'bundling_product.id_product')
                 ->leftJoin('product_global_price as pgp', 'pgp.id_product', '=', 'products.id_product')
                 ->join('bundling', 'bundling.id_bundling', 'bundling_product.id_bundling')
+                ->join('bundling_categories', 'bundling_categories.id_bundling_category', 'bundling.id_bundling_category')
                 ->where('bundling.id_bundling', $bundling)
                 ->select('products.product_visibility', 'pgp.product_global_price',  'products.product_variant_status',
-                    'bundling_product.*', 'bundling.*')
+                    'bundling_product.*', 'bundling.*', 'bundling_categories.bundling_category_name', 'bundling_categories.bundling_category_order')
                 ->get()->toArray();
 
-            $priceForListNoDiscount = 0;
-            $priceForList = 0;
-            $id_brand = [];
-            $stockStatus = 1;
-            foreach ($getProduct as $p){
-                $getProductDetail = ProductDetail::where('id_product', $p['id_product'])->where('id_outlet', $post['id_outlet'])->first();
-                $p['visibility_outlet'] = $getProductDetail['product_detail_visibility']??null;
+            if(!empty($getProduct)){
+                $priceForListNoDiscount = 0;
+                $priceForList = 0;
+                $id_brand = [];
+                $stockStatus = 1;
+                foreach ($getProduct as $p){
+                    $getProductDetail = ProductDetail::where('id_product', $p['id_product'])->where('id_outlet', $post['id_outlet'])->first();
+                    $p['visibility_outlet'] = $getProductDetail['product_detail_visibility']??null;
 
-                if($getProductDetail['product_detail_stock_status'] == 'Sold Out'){
-                    $stockStatus = 0;
+                    if($getProductDetail['product_detail_stock_status'] == 'Sold Out'){
+                        $stockStatus = 0;
+                    }
+
+                    if($p['visibility_outlet'] != 'Hidden' || (empty($p['visibility_outlet']) && $p['product_visibility'] !== 'Hidden')){
+                        $id_brand[] = BrandProduct::where('id_product', $p['id_product'])->first()['id_brand'];
+                        if($p['product_variant_status'] && !empty($p['id_product_variant_group'])){
+                            if($outlet['outlet_different_price'] == 1){
+                                $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $p['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                            }else{
+                                $price = ProductVariantGroup::where('id_product_variant_group', $p['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                            }
+                        }elseif(!empty($p['id_product'])){
+                            if($outlet['outlet_different_price'] == 1){
+                                $price = ProductSpecialPrice::where('id_product', $p['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
+                            }else{
+                                $price = $p['product_global_price'];
+                            }
+                        }
+
+                        $price = (float)$price;
+                        //calculate discount produk
+                        if(strtolower($p['bundling_product_discount_type']) == 'nominal'){
+                            $calculate = ($price - $p['bundling_product_discount']);
+                        }else{
+                            $discount = $price*($p['bundling_product_discount']/100);
+                            $discount = ($discount > $p['bundling_product_maximum_discount'] &&  $p['bundling_product_maximum_discount'] > 0? $p['bundling_product_maximum_discount']:$discount);
+                            $calculate = ($price - $discount);
+                        }
+                        $calculate = $calculate * $p['bundling_product_qty'];
+                        $priceForList = $priceForList + $calculate;
+                        $priceForListNoDiscount = $priceForListNoDiscount + ($price * $p['bundling_product_qty']);
+                    }else{
+                        continue 2;
+                    }
                 }
 
-                if($p['visibility_outlet'] != 'Hidden' || (empty($p['visibility_outlet']) && $p['product_visibility'] !== 'Hidden')){
-                    $id_brand[] = BrandProduct::where('id_product', $p['id_product'])->first()['id_brand'];
-                    $price = $p['product_global_price'];
-                    if($outlet['outlet_different_price'] == 1){
-                        $price = ProductSpecialPrice::where('id_product', $p['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
-                    }
-                    if ($p['product_variant_status'] && $getProductDetail['product_detail_stock_status'] == 'Available') {
-                        $variantTree = Product::getVariantTree($p['id_product'], $outlet);
-                        $price = $variantTree['base_price']??0;
-                    }
-
-                    $price = (float)$price;
-                    //calculate discount produk
-                    if(strtolower($p['bundling_product_discount_type']) == 'nominal'){
-                        $calculate = ($price - $p['bundling_product_discount']);
-                    }else{
-                        $discount = $price*($p['bundling_product_discount']/100);
-                        $calculate = ($price - $discount);
-                    }
-                    $calculate = $calculate * $p['bundling_product_qty'];
-                    $priceForList = $priceForList + $calculate;
-                    $priceForListNoDiscount = $priceForListNoDiscount + ($price * $p['bundling_product_qty']);
-                }else{
-                    continue 2;
+                $id_brand = array_unique($id_brand);
+                if(count($brands) >= count($id_brand)){
+                    $resBundling[] = [
+                        "id_bundling" => $bundling,
+                        "id_product_category" => $getProduct[0]['id_bundling_category']??'',
+                        "product_category_name" => $getProduct[0]['bundling_category_name']??'',
+                        'product_category_order' => $getProduct[0]['bundling_category_order']??0,
+                        "id_product" => null,
+                        "product_name" => $getProduct[0]['bundling_name']??'',
+                        "product_code" => $getProduct[0]['bundling_code']??'',
+                        "product_description" => $getProduct[0]['bundling_description']??'',
+                        "product_variant_status" => null,
+                        "product_price" => (int)$priceForList,
+                        "product_stock_status" => ($stockStatus == 0 ? 'Sold Out' : 'Available'),
+                        "product_price_raw" => (int)$priceForList,
+                        "photo" => (!empty($getProduct[0]['image']) ? config('url.storage_url_api').$getProduct[0]['image'] : ''),
+                        "product_price_no_discount" => $priceForListNoDiscount??0,
+                        "is_promo" => 0,
+                        "is_promo_bundling" => $getProduct[0]['bundling_promo_status']??0,
+                        "brands" => $id_brand,
+                        "position" => $getProduct[0]['bundling_order']??null
+                    ];
                 }
             }
-
-            $resBundling[] = [
-                "id_bundling" => $bundling,
-                "id_product" => null,
-                "product_name" => $getProduct[0]['bundling_name']??'',
-                "product_code" => $getProduct[0]['bundling_code']??'',
-                "product_description" => $getProduct[0]['bundling_code']??'',
-                "product_variant_status" => null,
-                "product_price" => (int)$priceForList,
-                "product_stock_status" => ($stockStatus == 0 ? 'Sold Out' : 'Available'),
-                "product_price_raw" => (int)$priceForList,
-                "photo" => (!empty($getProduct[0]['image']) ? config('url.storage_url_api').$getProduct[0]['image'] : ''),
-                "product_price_no_discount" => $priceForListNoDiscount??0,
-                "is_promo" => 0,
-                "brands" => $id_brand,
-                "position" => 1
-            ];
         }
 
         foreach ($resBundling as $res){
             foreach ($res['brands'] as $insert){
-                if(isset($resProduct[$insert]['bundling']['category'])){
-                    $resProduct[$insert]['bundling']['list'][] = [
+                if(isset($resProduct[$insert][$res['product_category_name']]['category'])){
+                    $resProduct[$insert][$res['product_category_name']]['list'][] = [
                         "id_bundling" => $res['id_bundling'],
                         "id_product" => null,
                         "product_name" => $res['product_name'],
-                        "product_code" => $res['product_name'],
+                        "product_code" => $res['product_code'],
                         "product_description" => $res['product_description'],
                         "product_variant_status" => null,
                         "product_price" => $res['product_price'],
@@ -701,22 +747,24 @@ class ApiCategoryController extends Controller
                         "product_price_no_discount" => $res['product_price_no_discount'],
                         "photo" => $res['photo'],
                         "is_promo" => 0,
-                        "position" => 1,
+                        "is_promo_bundling" => $res['is_promo_bundling'],
+                        "position" => $res['position']??0,
                         "id_brand" =>  $insert
                     ];
                 }else{
-                    $resProduct[$insert]['bundling']['category'] = [
-                        "product_category_name" => "Bundling",
-                        "product_category_order" => -100000,
-                        "id_product_category" => null,
+                    $order = 2500000 - $res['product_category_order'];
+                    $resProduct[$insert][$res['product_category_name']]['category'] = [
+                        "product_category_name" => $res['product_category_name'],
+                        "product_category_order" => -$order,
+                        "id_product_category" => $res['id_product_category'],
                         "url_product_category_photo" => ""
                     ];
 
-                    $resProduct[$insert]['bundling']['list'][] = [
+                    $resProduct[$insert][$res['product_category_name']]['list'][] = [
                         "id_bundling" => $res['id_bundling'],
                         "id_product" => null,
                         "product_name" => $res['product_name'],
-                        "product_code" => $res['product_name'],
+                        "product_code" => $res['product_code'],
                         "product_description" => $res['product_description'],
                         "product_variant_status" => null,
                         "product_price" => $res['product_price'],
@@ -725,7 +773,8 @@ class ApiCategoryController extends Controller
                         "product_price_no_discount" => $res['product_price_no_discount'],
                         "photo" => $res['photo'],
                         "is_promo" => 0,
-                        "position" => 1,
+                        "is_promo_bundling" => $res['is_promo_bundling'],
+                        "position" => $res['position']??0,
                         "id_brand" =>  $insert
                     ];
                 }
@@ -733,6 +782,152 @@ class ApiCategoryController extends Controller
         }
 
         return $resProduct;
+    }
+
+    function getBundlingSearch($post, $outlet, $resProduct){
+        $resBundling = [];
+        $brands = BrandOutlet::where('id_outlet', $post['id_outlet'])->pluck('id_brand')->toArray();
+        $count = count($brands);
+        $currentHour = date('H:i:s');
+
+        $bundlings1 = Bundling::join('bundling_today as bt', 'bt.id_bundling', 'bundling.id_bundling')
+            ->join('bundling_product as bp', 'bp.id_bundling', 'bundling.id_bundling')
+            ->join('brand_product', 'brand_product.id_product', 'bp.id_product')
+            ->join('brand_outlet', 'brand_outlet.id_brand', 'brand_product.id_brand')
+            ->where('brand_outlet.id_outlet', $post['id_outlet'])
+            ->where('bundling.all_outlet', 1)
+            ->where('bundling.bundling_name', 'like', '%' . $post['product_name'] . '%')
+            ->whereIn('brand_product.id_brand', $brands)
+            ->whereRaw('TIME_TO_SEC("'.$currentHour.'") >= TIME_TO_SEC(time_start) AND TIME_TO_SEC("'.$currentHour.'") <= TIME_TO_SEC(time_end)')
+            ->pluck('bundling.id_bundling')->toArray();
+
+        $bundlings2 = Bundling::join('bundling_today as bt', 'bt.id_bundling', 'bundling.id_bundling')
+            ->join('bundling_outlet as bo', 'bo.id_bundling', 'bundling.id_bundling')
+            ->join('bundling_product as bp', 'bp.id_bundling', 'bundling.id_bundling')
+            ->join('brand_product', 'brand_product.id_product', 'bp.id_product')
+            ->where('all_outlet', 0)
+            ->where('bo.id_outlet', $post['id_outlet'])
+            ->where('bundling.bundling_name', 'like', '%' . $post['product_name'] . '%')
+            ->whereIn('brand_product.id_brand', $brands)
+            ->whereRaw('TIME_TO_SEC("'.$currentHour.'") >= TIME_TO_SEC(time_start) AND TIME_TO_SEC("'.$currentHour.'") <= TIME_TO_SEC(time_end)')
+            ->pluck('bundling.id_bundling')->toArray();
+
+        $bundlings = array_merge($bundlings1,$bundlings2);
+        $bundlings = array_unique($bundlings);
+
+        //calculate price
+        foreach ($bundlings as $key => $bundling){
+            $getProduct = BundlingProduct::join('products', 'products.id_product', 'bundling_product.id_product')
+                ->leftJoin('product_global_price as pgp', 'pgp.id_product', '=', 'products.id_product')
+                ->join('bundling', 'bundling.id_bundling', 'bundling_product.id_bundling')
+                ->join('bundling_categories', 'bundling_categories.id_bundling_category', 'bundling.id_bundling_category')
+                ->where('bundling.id_bundling', $bundling)
+                ->select('products.product_visibility', 'pgp.product_global_price',  'products.product_variant_status',
+                    'bundling_product.*', 'bundling.*', 'bundling_categories.bundling_category_name', 'bundling_categories.bundling_category_order')
+                ->get()->toArray();
+
+            if(!empty($getProduct)){
+                $priceForListNoDiscount = 0;
+                $priceForList = 0;
+                $id_brand = [];
+                $stockStatus = 1;
+                foreach ($getProduct as $p){
+                    $getProductDetail = ProductDetail::where('id_product', $p['id_product'])->where('id_outlet', $post['id_outlet'])->first();
+                    $p['visibility_outlet'] = $getProductDetail['product_detail_visibility']??null;
+
+                    if($getProductDetail['product_detail_stock_status'] == 'Sold Out'){
+                        $stockStatus = 0;
+                    }
+
+                    if($p['visibility_outlet'] != 'Hidden' || (empty($p['visibility_outlet']) && $p['product_visibility'] !== 'Hidden')){
+                        $id_brand[] = BrandProduct::where('id_product', $p['id_product'])->first()['id_brand'];
+                        if($p['product_variant_status'] && !empty($p['id_product_variant_group'])){
+                            if($outlet['outlet_different_price'] == 1){
+                                $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $p['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                            }else{
+                                $price = ProductVariantGroup::where('id_product_variant_group', $p['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                            }
+                        }elseif(!empty($p['id_product'])){
+                            if($outlet['outlet_different_price'] == 1){
+                                $price = ProductSpecialPrice::where('id_product', $p['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
+                            }else{
+                                $price = $p['product_global_price'];
+                            }
+                        }
+
+                        $price = (float)$price;
+                        //calculate discount produk
+                        if(strtolower($p['bundling_product_discount_type']) == 'nominal'){
+                            $calculate = ($price - $p['bundling_product_discount']);
+                        }else{
+                            $discount = $price*($p['bundling_product_discount']/100);
+                            $discount = ($discount > $p['bundling_product_maximum_discount'] &&  $p['bundling_product_maximum_discount'] > 0? $p['bundling_product_maximum_discount']:$discount);
+                            $calculate = ($price - $discount);
+                        }
+                        $calculate = $calculate * $p['bundling_product_qty'];
+                        $priceForList = $priceForList + $calculate;
+                        $priceForListNoDiscount = $priceForListNoDiscount + ($price * $p['bundling_product_qty']);
+                    }else{
+                        continue 2;
+                    }
+                }
+
+                $id_brand = array_unique($id_brand);
+                if(count($brands) >= count($id_brand)){
+                    $resBundling[] = [
+                        "id_bundling" => $bundling,
+                        "id_product_category" => $getProduct[0]['id_bundling_category']??'',
+                        "product_category_name" => $getProduct[0]['bundling_category_name']??'',
+                        'product_category_order' => $getProduct[0]['bundling_category_order']??0,
+                        "id_product" => null,
+                        "product_name" => $getProduct[0]['bundling_name']??'',
+                        "product_code" => $getProduct[0]['bundling_code']??'',
+                        "product_description" => $getProduct[0]['bundling_description']??'',
+                        "product_variant_status" => null,
+                        "product_price" => (int)$priceForList,
+                        "product_stock_status" => ($stockStatus == 0 ? 'Sold Out' : 'Available'),
+                        "product_price_raw" => (int)$priceForList,
+                        "photo" => (!empty($getProduct[0]['image']) ? config('url.storage_url_api').$getProduct[0]['image'] : ''),
+                        "product_price_no_discount" => $priceForListNoDiscount??0,
+                        "is_promo" => 0,
+                        "is_promo_bundling" => $getProduct[0]['bundling_promo_status']??0,
+                        "brands" => $id_brand,
+                        "position" => $getProduct[0]['bundling_order']??null
+                    ];
+                }
+            }
+        }
+
+        $resBundlingFinal = [];
+        foreach ($resBundling as $k=>$res){
+            $product = [
+                "id_bundling" => $res['id_bundling'],
+                "id_product" => null,
+                "product_name" => $res['product_name'],
+                "product_code" => $res['product_code'],
+                "product_description" => $res['product_description'],
+                "product_variant_status" => null,
+                "product_price" => $res['product_price'],
+                "product_stock_status" => $res['product_stock_status'],
+                "product_price_raw" => $res['product_price_raw'],
+                "product_price_no_discount" => $res['product_price_no_discount'],
+                "photo" => $res['photo'],
+                "is_promo" => 0,
+                "is_promo_bundling" => $res['is_promo_bundling'],
+                "position" => $res['position']??0,
+                "id_brand" =>  $res['brands'][0]??null
+            ];
+            $resBundlingFinal[$res['id_product_category']]['list'][] = $product;
+            if (!isset($resBundlingFinal[$res['id_product_category']]['category'])) {
+                $resBundlingFinal[$res['id_product_category']]['category'] = [
+                    "product_category_name" => $res['product_category_name'],
+                    "id_product_category" => $res['id_product_category'],
+                    "url_product_category_photo" => ""
+                ];
+            }
+        }
+
+        return array_merge(array_values($resBundlingFinal), $resProduct);
     }
 
     function getData($post = [])

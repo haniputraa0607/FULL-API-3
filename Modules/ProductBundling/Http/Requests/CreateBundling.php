@@ -14,11 +14,10 @@ class CreateBundling extends FormRequest
     public function rules()
     {
         return [
-            'bundling_name' => 'required|max:50',
+            'bundling_name' => 'required',
             'bundling_description' => 'required',
             'bundling_start' => 'required',
             'bundling_end' => 'required',
-            'id_outlet' => 'required',
             'photo' => 'required',
             'photo_detail' => 'required'
         ];

@@ -13,7 +13,7 @@
     </tr>
     <tr>
         <td width="30"><b>Total Discount</b></td>
-        <td>: {{abs($summary_fee['total_discount'])+$summary_fee['total_subscription']+abs($summary_fee['total_discount_delivery'])}}</td>
+        <td>: {{abs($summary_fee['total_discount'])+$summary_fee['total_subscription']+abs($summary_fee['total_discount_delivery'])+abs((float)$summary_fee['total_discount_bundling'])}}</td>
     </tr>
     <tr>
         <td width="30"><b>Total Delivery</b></td>
@@ -31,6 +31,7 @@
         <td width="30"><b>Total MDR PG</b></td>
         <td>: {{(float)$summary_fee['total_fee_pg']}}</td>
     </tr>
+    @if(isset($show_another_income) && $show_another_income == 1)
     <tr>
         <td width="30"><b>Total Income Promo</b></td>
         <td>: {{(float)$summary_fee['total_income_promo']}}</td>
@@ -43,6 +44,7 @@
         <td width="30"><b>Total Income Bundling Product</b></td>
         <td>: {{(float)$summary_fee['total_income_bundling_product']??0}}</td>
     </tr>
+    @endif
     <tr>
         <td width="30"><b>Total Income Outlet</b></td>
         <td>: {{(float)$summary_fee['total_income_outlet']}}</td>

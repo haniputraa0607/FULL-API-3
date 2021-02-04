@@ -15,11 +15,10 @@ class UpdateBundling extends FormRequest
     {
         return [
             'id_bundling' => 'required',
-            'bundling_name' => 'required|max:50',
+            'bundling_name' => 'required',
             'bundling_description' => 'required',
             'bundling_start' => 'required',
-            'bundling_end' => 'required',
-            'id_outlet' => 'required'
+            'bundling_end' => 'required'
         ];
     }
 

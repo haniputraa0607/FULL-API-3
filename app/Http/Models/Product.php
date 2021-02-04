@@ -63,7 +63,33 @@ class Product extends Model
 		'product_capacity',
 		'plastic_used',
         'product_variant_status',
-	];
+        'is_inactive'
+    ];
+    
+
+    protected static $_isInactive= false;
+
+    public function newQuery()
+    {
+        $query = parent::newQuery();
+
+        if (!static::$_isInactive) {
+            $query->where('is_inactive', '=', 0);
+        } else {
+            static::$_isInactive = false;
+        }
+
+        return $query;
+    }
+
+    // call this if you need show all product include where is_inactive = 1
+    public static function showAllProduct()
+    {
+        static::$_isInactive = true;
+
+        return new static;
+    }
+
 	public function getPhotoAttribute() {
 		return config('url.storage_url_api').($this->photos[0]['product_photo']??'img/product/item/default.png');
 	}
@@ -348,7 +374,7 @@ class Product extends Model
      * @param  boolean $with_index     result should use id_product_variant as index or not
      * @return array                   generated product variant tree
      */
-    protected static function recursiveCheck(&$variants, $variant_groups, $last = [], $with_index = false)
+    protected static function recursiveCheck(&$variants, $variant_groups, $last = [], $with_index = false, $with_name_detail_trx = false)
     {
         if (!($variants['childs']??false)) {
             $variants = null;
@@ -365,7 +391,7 @@ class Product extends Model
             // variant has variant / this a parent variant?
             if ($variant['variant']) { // a parent
                 // get variant tree of variant childs
-                self::recursiveCheck($variant['variant'], $variant_groups, $current, $with_index);
+                self::recursiveCheck($variant['variant'], $variant_groups, $current, $with_index, $with_name_detail_trx);
                 // check if still a parent
                 if ($variant['variant']) { 
                     // assign price, from lowest price of variant with lower level, [previously saved in variant detail]
@@ -421,6 +447,9 @@ class Product extends Model
                 'product_variant_price' => $variant['product_variant_price'],
                 'product_variant_stock_status' => $variant['product_variant_stock_status'],
             ];
+            if($with_name_detail_trx){
+                $new_order['product_variant_name_detail_trx']  = $variant['product_variant_name'];
+            }
 
             if ($variant['id_product_variant_group'] ?? false) {
                 $new_order['id_product_variant_group']    = $variant['id_product_variant_group'];
@@ -678,14 +707,14 @@ class Product extends Model
         }
 
         // merge product variant tree and product's product variant group
-        self::recursiveCheck($variants, $variant_groups, [], $with_index);
+        self::recursiveCheck($variants, $variant_groups, [], $with_index, 1);
 
         // get list modifiers group order by name where id_product or id_variant
         $modifier_groups_raw = ProductModifierGroup::select('product_modifier_groups.id_product_modifier_group', 'product_modifier_group_name', \DB::raw('GROUP_CONCAT(id_product) as id_products, GROUP_CONCAT(id_product_variant) as id_product_variants'))->join('product_modifier_group_pivots', 'product_modifier_groups.id_product_modifier_group', 'product_modifier_group_pivots.id_product_modifier_group')->where('id_product', $id_product)->orWhereIn('id_product_variant', $list_variants)->groupBy('product_modifier_groups.id_product_modifier_group')->orderBy('product_modifier_group_name')->get()->toArray();
         // ambil modifier + harga + yang visible dll berdasarkan modifier group
         $modifier_groups = [];
         foreach ($modifier_groups_raw as $key => &$modifier_group) {
-            $modifiers = ProductModifier::select('product_modifiers.id_product_modifier as id_product_variant', \DB::raw('coalesce(product_modifier_price,0) as product_variant_price'), 'text as product_variant_name', \DB::raw('coalesce(product_modifier_stock_status, "Available") as product_variant_stock_status'))
+            $modifiers = ProductModifier::select('product_modifiers.id_product_modifier as id_product_variant', \DB::raw('coalesce(product_modifier_price,0) as product_variant_price'), 'text as product_variant_name', 'text_detail_trx as product_variant_name_detail_trx', \DB::raw('coalesce(product_modifier_stock_status, "Available") as product_variant_stock_status'))
                 ->where('modifier_type', 'Modifier Group')
                 ->where('id_product_modifier_group', $modifier_group['id_product_modifier_group'])
                 ->leftJoin('product_modifier_details', function($join) use ($outlet) {

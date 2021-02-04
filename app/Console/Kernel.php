@@ -52,7 +52,7 @@ class Kernel extends ConsoleKernel
          * detect transaction fraud and member balance by comparing the encryption of each data in the log_balances table
          * run every day at 02:00
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@checkSchedule')->dailyAt('02:00');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@checkSchedule')->dailyAt('04:30');
 
         /**
          * cancel all pending transaction that have been more than 5 minutes
@@ -82,7 +82,7 @@ class Kernel extends ConsoleKernel
          * update all pickup transaction that have been more than 1 x 24 hours
          * run every day at 04:00
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@completeTransactionPickup')->dailyAt('04:00');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@completeTransactionPickup')->dailyAt('01:00');
 
         /**
          * calculate achievement all transaction that have not calculated the achievement
@@ -100,13 +100,13 @@ class Kernel extends ConsoleKernel
          * To process transaction sync from POS
          * Run every 2 minutes
          */
-        $schedule->call('Modules\POS\Http\Controllers\ApiTransactionSync@transaction')->cron('*/2 * * * *');
+        // $schedule->call('Modules\POS\Http\Controllers\ApiTransactionSync@transaction')->cron('*/2 * * * *');
 
         /**
          * To process sync menu outlets from the POS
          * Run every 3 minutes
          */
-        $schedule->call('Modules\POS\Http\Controllers\ApiPOS@syncOutletMenuCron')->cron('*/3 * * * *');
+        // $schedule->call('Modules\POS\Http\Controllers\ApiPOS@syncOutletMenuCron')->cron('*/3 * * * *');
 
         /**
          * To make daily transaction reports (offline and online transactions)
@@ -139,11 +139,11 @@ class Kernel extends ConsoleKernel
         /**
          * To send email report trx
          */
-        $schedule->call('Modules\Disburse\Http\Controllers\ApiDisburseController@cronSendEmailDisburse')->dailyAt('01:30');
+        $schedule->call('Modules\Disburse\Http\Controllers\ApiDisburseController@cronSendEmailDisburse')->dailyAt('02:00');
         /**
          * To send
          */
-        $schedule->call('Modules\Disburse\Http\Controllers\ApiDisburseController@shortcutRecap')->dailyAt('02:00');
+        $schedule->call('Modules\Disburse\Http\Controllers\ApiDisburseController@shortcutRecap')->dailyAt('02:30');
         /**
          * Void failed transaction shopeepay
          */
@@ -159,9 +159,9 @@ class Kernel extends ConsoleKernel
 
         /**
          * Check the status of Gosend which is not updated after 5 minutes
-         * run every 5 minutes
+         * run every 3 minutes
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiGosendController@cronCheckStatus')->cron('*/5 * * * *');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiGosendController@cronCheckStatus')->cron('*/3 * * * *');
 
         /**
          * Auto reject order when driver not found > 30minutes
@@ -169,6 +169,11 @@ class Kernel extends ConsoleKernel
          */
         $schedule->call('Modules\OutletApp\Http\Controllers\ApiOutletApp@cronDriverNotFound')->cron('*/1 * * * *');
 
+        /**
+         * Sync Bundling
+         * run every day at
+         */
+        $schedule->call('Modules\ProductBundling\Http\Controllers\ApiBundlingController@bundlingToday')->dailyAt('04:00');
     }
 
     /**

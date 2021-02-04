@@ -172,121 +172,138 @@ class ApiUser extends Controller
 
         if ($conditions != null) {
             $key = 0;
-            foreach ($conditions as $key => $cond) {
-                $query = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
-                    ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
-                    ->orderBy($order_field, $order_method);
+            if(count($conditions) > 1){
+                foreach ($conditions as $key => $cond) {
+                    $query = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
+                        ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
+                        ->orderBy($order_field, $order_method);
 
-                if ($cond != null) {
-                    $scanTrx = false;
-                    $scanProd = false;
-                    $scanTag = false;
-                    $notTrx = false;
-                    $userTrxProduct = false;
-                    $exceptUserTrxProduct = false;
-                    $scanOtherProduct = false;
-                    $trxOutlet = false;
+                    if ($cond != null) {
+                        $scanTrx = false;
+                        $scanProd = false;
+                        $scanTag = false;
+                        $notTrx = false;
+                        $userTrxProduct = false;
+                        $exceptUserTrxProduct = false;
+                        $scanOtherProduct = false;
+                        $trxOutlet = false;
 
-                    $rule = $cond['rule'];
-                    unset($cond['rule']);
-                    $conRuleNext = $cond['rule_next'];
-                    unset($cond['rule_next']);
+                        $rule = $cond['rule'];
+                        unset($cond['rule']);
+                        $conRuleNext = $cond['rule_next'];
+                        unset($cond['rule_next']);
 
-                    if (isset($cond['rules'])) {
-                        $cond = $cond['rules'];
-                    }
-
-                    /*========= Check conditions related to the subject of the transaction =========*/
-                    $countTrxDate = 0;
-                    $arr_tmp_product = [];
-                    $arr_tmp_outlet = [];
-                    foreach ($cond as $i => $condition) {
-                        if($condition['subject'] == 'all_user'){
-                            $status_all_user = 1;
-                            break 2;
-                        }
-                        if (stristr($condition['subject'], 'trx')) $scanTrx = true;
-                        if (stristr($condition['subject'], 'trx_product')) $scanProd = true;
-                        if (stristr($condition['subject'], 'trx_product_tag')) $scanTag = true;
-
-                        if ($condition['subject'] == 'trx_count' && ($condition['operator'] == '=' || $condition['operator'] == '<' || $condition['operator'] == '<=') && $condition['parameter'] <= 0) {
-                            $notTrx = true;
-                            unset($cond[$i]);
+                        if (isset($cond['rules'])) {
+                            $cond = $cond['rules'];
                         }
 
-                        if ($condition['subject'] == 'trx_product') {
-                            array_push($arr_tmp_product, $condition);
-                            unset($cond[$i]);
-                        }
+                        /*========= Check conditions related to the subject of the transaction =========*/
+                        $countTrxDate = 0;
+                        $arr_tmp_product = [];
+                        $arr_tmp_outlet = [];
+                        foreach ($cond as $i => $condition) {
+                            if($condition['subject'] == 'all_user'){
+                                $status_all_user = 1;
+                                break 2;
+                            }
+                            if (stristr($condition['subject'], 'trx')) $scanTrx = true;
+                            if (stristr($condition['subject'], 'trx_product')) $scanProd = true;
+                            if (stristr($condition['subject'], 'trx_product_tag')) $scanTag = true;
 
-                        if ($condition['subject'] == 'trx_outlet') {
-                            array_push($arr_tmp_outlet, $condition);
-                            unset($cond[$i]);
-                        }
+                            if ($condition['subject'] == 'trx_count' && ($condition['operator'] == '=' || $condition['operator'] == '<' || $condition['operator'] == '<=') && $condition['parameter'] <= 0) {
+                                $notTrx = true;
+                                unset($cond[$i]);
+                            }
 
-                        if ($condition['subject'] == 'trx_product' || $condition['subject'] == 'trx_product_count' || $condition['subject'] == 'trx_product_tag' || $condition['subject'] == 'trx_product_tag_count') {
-                            $userTrxProduct = true;
-                        } elseif ($condition['subject']  != 'trx_date' && stristr($condition['subject'], 'trx')) {
-                            $scanOtherProduct = true;
-                        }
-                        if ($condition['subject'] == 'trx_date') {
-                            $countTrxDate++;
-                            if ($condition['parameter'] != date('Y-m-d') && $condition['operator'] != '<=') {
+                            if ($condition['subject'] == 'trx_product') {
+                                array_push($arr_tmp_product, $condition);
+                                unset($cond[$i]);
+                            }
+
+                            if ($condition['subject'] == 'trx_outlet') {
+                                array_push($arr_tmp_outlet, $condition);
+                                unset($cond[$i]);
+                            }
+
+                            if ($condition['subject'] == 'trx_product' || $condition['subject'] == 'trx_product_count' || $condition['subject'] == 'trx_product_tag' || $condition['subject'] == 'trx_product_tag_count') {
+                                $userTrxProduct = true;
+                            } elseif ($condition['subject']  != 'trx_date' && stristr($condition['subject'], 'trx')) {
+                                $scanOtherProduct = true;
+                            }
+                            if ($condition['subject'] == 'trx_date') {
+                                $countTrxDate++;
+                                if ($condition['parameter'] != date('Y-m-d') && $condition['operator'] != '<=') {
+                                    $exceptUserTrxProduct = true;
+                                }
+                            }
+
+                            if ($condition['subject'] == 'last_trx_date') {
                                 $exceptUserTrxProduct = true;
                             }
                         }
 
-                        if ($condition['subject'] == 'last_trx_date') {
-                            $exceptUserTrxProduct = true;
+                        if ($exceptUserTrxProduct == true || $countTrxDate > 1) {
+                            $userTrxProduct = false;
                         }
-                    }
+                        /*================================== END check ==================================*/
+                        if (is_object($cond)) $cond = $cond->toArray();
+                        if (count($arr_tmp_outlet) > 0) array_push($cond, ['outlets' => $arr_tmp_outlet]);
 
-                    if ($exceptUserTrxProduct == true || $countTrxDate > 1) {
-                        $userTrxProduct = false;
-                    }
-                    /*================================== END check ==================================*/
-                    if (is_object($cond)) $cond = $cond->toArray();
-                    if (count($arr_tmp_outlet) > 0) array_push($cond, ['outlets' => $arr_tmp_outlet]);
+                        if ($scanTrx == true) {
+                            if ($userTrxProduct == true) {
+                                array_push($cond, ['products' => $arr_tmp_product]);
 
-                    if ($scanTrx == true) {
-                        if ($userTrxProduct == true) {
-                            array_push($cond, ['products' => $arr_tmp_product]);
-
-                            if ($scanOtherProduct == true) {
-                                $query = $query->leftJoin('transactions', 'transactions.id_user', '=', 'users.id');
+                                if ($scanOtherProduct == true) {
+                                    $query = $query->leftJoin('transactions', 'transactions.id_user', '=', 'users.id');
+                                    $query = $query->leftJoin('transaction_shipments', 'transactions.id_transaction', '=', 'transaction_shipments.id_transaction');
+                                    if ($scanTag == true) {
+                                        $query = $query->leftJoin('user_trx_products', 'users.id', '=', 'user_trx_products.id_user');
+                                        $query = $query->leftJoin('product_tags', 'product_tags.id_product', '=', 'user_trx_products.id_product');
+                                    } else {
+                                        $query = $query->leftJoin('user_trx_products', 'transactions.id_user', '=', 'user_trx_products.id_user');
+                                    }
+                                } else {
+                                    $query = $query->leftJoin('user_trx_products', 'users.id', '=', 'user_trx_products.id_user');
+                                    if ($scanTag == true) {
+                                        $query = $query->leftJoin('product_tags', 'product_tags.id_product', '=', 'user_trx_products.id_product');
+                                    }
+                                };
+                            } elseif ($scanProd == true) {
+                                $query = $query->leftJoin('transaction_products', 'users.id', '=', 'transaction_products.id_user');
+                                $query = $query->leftJoin('transactions', 'transactions.id_transaction', '=', 'transaction_products.id_transaction');
                                 $query = $query->leftJoin('transaction_shipments', 'transactions.id_transaction', '=', 'transaction_shipments.id_transaction');
                                 if ($scanTag == true) {
-                                    $query = $query->leftJoin('user_trx_products', 'users.id', '=', 'user_trx_products.id_user');
-                                    $query = $query->leftJoin('product_tags', 'product_tags.id_product', '=', 'user_trx_products.id_product');
-                                } else {
-                                    $query = $query->leftJoin('user_trx_products', 'transactions.id_user', '=', 'user_trx_products.id_user');
+                                    $query = $query->leftJoin('products', 'transaction_products.id_product', '=', 'products.id_product');
+                                    $query = $query->leftJoin('product_tags', 'products.id_product', '=', 'product_tags.id_product');
                                 }
                             } else {
-                                $query = $query->leftJoin('user_trx_products', 'users.id', '=', 'user_trx_products.id_user');
-                                if ($scanTag == true) {
-                                    $query = $query->leftJoin('product_tags', 'product_tags.id_product', '=', 'user_trx_products.id_product');
-                                }
-                            };
-                        } elseif ($scanProd == true) {
-                            $query = $query->leftJoin('transaction_products', 'users.id', '=', 'transaction_products.id_user');
-                            $query = $query->leftJoin('transactions', 'transactions.id_transaction', '=', 'transaction_products.id_transaction');
-                            $query = $query->leftJoin('transaction_shipments', 'transactions.id_transaction', '=', 'transaction_shipments.id_transaction');
-                            if ($scanTag == true) {
-                                $query = $query->leftJoin('products', 'transaction_products.id_product', '=', 'products.id_product');
-                                $query = $query->leftJoin('product_tags', 'products.id_product', '=', 'product_tags.id_product');
+                                $query = $query->leftJoin('transactions', 'transactions.id_user', '=', 'users.id');
+                                $query = $query->leftJoin('transaction_shipments', 'transactions.id_transaction', '=', 'transaction_shipments.id_transaction');
                             }
+
+                            $query = $query->groupBy('users.id');
+                            $query = $query->select(
+                                'users.*',
+                                'cities.*',
+                                'provinces.*',
+                                DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
+                            );
                         } else {
-                            $query = $query->leftJoin('transactions', 'transactions.id_user', '=', 'users.id');
-                            $query = $query->leftJoin('transaction_shipments', 'transactions.id_transaction', '=', 'transaction_shipments.id_transaction');
+                            $query = $query->select(
+                                'users.*',
+                                'cities.*',
+                                'provinces.*',
+                                DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
+                            );
                         }
 
-                        $query = $query->groupBy('users.id');
-                        $query = $query->select(
-                            'users.*',
-                            'cities.*',
-                            'provinces.*',
-                            DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
-                        );
+                        if ($notTrx) {
+                            $query = $query->whereDoesntHave('transactions', function ($q) use ($cond, $rule, $userTrxProduct) {
+                                $q = $this->queryFilter($cond, $rule, $q, $userTrxProduct);
+                            });
+                        } else {
+                            $query = $this->queryFilter($cond, $rule, $query, $userTrxProduct);
+                        }
                     } else {
                         $query = $query->select(
                             'users.*',
@@ -294,51 +311,178 @@ class ApiUser extends Controller
                             'provinces.*',
                             DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
                         );
+                    }
+                    $result = array_pluck($query->get()->toArray(), 'id');
+
+                    if ($key > 0) {
+                        if ($ruleNext == 'and') {
+                            $prevResult = array_intersect($result, $prevResult);
+                        } else {
+                            $prevResult = array_unique(array_merge($result, $prevResult));
+                        }
+                        $ruleNext = $conRuleNext;
+                    } else {
+                        $prevResult = $result;
+                        $ruleNext = $conRuleNext;
                     }
 
-                    if ($notTrx) {
-                        $query = $query->whereDoesntHave('transactions', function ($q) use ($cond, $rule, $userTrxProduct) {
-                            $q = $this->queryFilter($cond, $rule, $q, $userTrxProduct);
-                        });
-                    } else {
-                        $query = $this->queryFilter($cond, $rule, $query, $userTrxProduct);
-                    }
-                } else {
-                    $query = $query->select(
+                    $key++;
+                }
+
+                /*============= Final query when condition not null =============*/
+                $finalResult = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
+                    ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
+                    ->orderBy($order_field, $order_method)
+                    ->select(
                         'users.*',
                         'cities.*',
                         'provinces.*',
                         DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
-                    );
-                }
-                $result = array_pluck($query->get()->toArray(), 'id');
+                    )
+                    ->whereIn('users.id', $prevResult);
+            }else{
+                foreach ($conditions as $key => $cond) {
+                    $query = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
+                        ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
+                        ->orderBy($order_field, $order_method);
 
-                if ($key > 0) {
-                    if ($ruleNext == 'and') {
-                        $prevResult = array_intersect($result, $prevResult);
+                    if ($cond != null) {
+                        $scanTrx = false;
+                        $scanProd = false;
+                        $scanTag = false;
+                        $notTrx = false;
+                        $userTrxProduct = false;
+                        $exceptUserTrxProduct = false;
+                        $scanOtherProduct = false;
+                        $trxOutlet = false;
+
+                        $rule = $cond['rule'];
+                        unset($cond['rule']);
+                        $conRuleNext = $cond['rule_next'];
+                        unset($cond['rule_next']);
+
+                        if (isset($cond['rules'])) {
+                            $cond = $cond['rules'];
+                        }
+
+                        /*========= Check conditions related to the subject of the transaction =========*/
+                        $countTrxDate = 0;
+                        $arr_tmp_product = [];
+                        $arr_tmp_outlet = [];
+                        foreach ($cond as $i => $condition) {
+                            if($condition['subject'] == 'all_user'){
+                                $status_all_user = 1;
+                                break 2;
+                            }
+                            if (stristr($condition['subject'], 'trx')) $scanTrx = true;
+                            if (stristr($condition['subject'], 'trx_product')) $scanProd = true;
+                            if (stristr($condition['subject'], 'trx_product_tag')) $scanTag = true;
+
+                            if ($condition['subject'] == 'trx_count' && ($condition['operator'] == '=' || $condition['operator'] == '<' || $condition['operator'] == '<=') && $condition['parameter'] <= 0) {
+                                $notTrx = true;
+                                unset($cond[$i]);
+                            }
+
+                            if ($condition['subject'] == 'trx_product') {
+                                array_push($arr_tmp_product, $condition);
+                                unset($cond[$i]);
+                            }
+
+                            if ($condition['subject'] == 'trx_outlet') {
+                                array_push($arr_tmp_outlet, $condition);
+                                unset($cond[$i]);
+                            }
+
+                            if ($condition['subject'] == 'trx_product' || $condition['subject'] == 'trx_product_count' || $condition['subject'] == 'trx_product_tag' || $condition['subject'] == 'trx_product_tag_count') {
+                                $userTrxProduct = true;
+                            } elseif ($condition['subject']  != 'trx_date' && stristr($condition['subject'], 'trx')) {
+                                $scanOtherProduct = true;
+                            }
+                            if ($condition['subject'] == 'trx_date') {
+                                $countTrxDate++;
+                                if ($condition['parameter'] != date('Y-m-d') && $condition['operator'] != '<=') {
+                                    $exceptUserTrxProduct = true;
+                                }
+                            }
+
+                            if ($condition['subject'] == 'last_trx_date') {
+                                $exceptUserTrxProduct = true;
+                            }
+                        }
+
+                        if ($exceptUserTrxProduct == true || $countTrxDate > 1) {
+                            $userTrxProduct = false;
+                        }
+                        /*================================== END check ==================================*/
+                        if (is_object($cond)) $cond = $cond->toArray();
+                        if (count($arr_tmp_outlet) > 0) array_push($cond, ['outlets' => $arr_tmp_outlet]);
+
+                        if ($scanTrx == true) {
+                            if ($userTrxProduct == true) {
+                                array_push($cond, ['products' => $arr_tmp_product]);
+
+                                if ($scanOtherProduct == true) {
+                                    $query = $query->leftJoin('transactions', 'transactions.id_user', '=', 'users.id');
+                                    $query = $query->leftJoin('transaction_shipments', 'transactions.id_transaction', '=', 'transaction_shipments.id_transaction');
+                                    if ($scanTag == true) {
+                                        $query = $query->leftJoin('user_trx_products', 'users.id', '=', 'user_trx_products.id_user');
+                                        $query = $query->leftJoin('product_tags', 'product_tags.id_product', '=', 'user_trx_products.id_product');
+                                    } else {
+                                        $query = $query->leftJoin('user_trx_products', 'transactions.id_user', '=', 'user_trx_products.id_user');
+                                    }
+                                } else {
+                                    $query = $query->leftJoin('user_trx_products', 'users.id', '=', 'user_trx_products.id_user');
+                                    if ($scanTag == true) {
+                                        $query = $query->leftJoin('product_tags', 'product_tags.id_product', '=', 'user_trx_products.id_product');
+                                    }
+                                };
+                            } elseif ($scanProd == true) {
+                                $query = $query->leftJoin('transaction_products', 'users.id', '=', 'transaction_products.id_user');
+                                $query = $query->leftJoin('transactions', 'transactions.id_transaction', '=', 'transaction_products.id_transaction');
+                                $query = $query->leftJoin('transaction_shipments', 'transactions.id_transaction', '=', 'transaction_shipments.id_transaction');
+                                if ($scanTag == true) {
+                                    $query = $query->leftJoin('products', 'transaction_products.id_product', '=', 'products.id_product');
+                                    $query = $query->leftJoin('product_tags', 'products.id_product', '=', 'product_tags.id_product');
+                                }
+                            } else {
+                                $query = $query->leftJoin('transactions', 'transactions.id_user', '=', 'users.id');
+                                $query = $query->leftJoin('transaction_shipments', 'transactions.id_transaction', '=', 'transaction_shipments.id_transaction');
+                            }
+
+                            $query = $query->groupBy('users.id');
+                            $query = $query->select(
+                                'users.*',
+                                'cities.*',
+                                'provinces.*',
+                                DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
+                            );
+                        } else {
+                            $query = $query->select(
+                                'users.*',
+                                'cities.*',
+                                'provinces.*',
+                                DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
+                            );
+                        }
+
+                        if ($notTrx) {
+                            $query = $query->whereDoesntHave('transactions', function ($q) use ($cond, $rule, $userTrxProduct) {
+                                $q = $this->queryFilter($cond, $rule, $q, $userTrxProduct);
+                            });
+                        } else {
+                            $query = $this->queryFilter($cond, $rule, $query, $userTrxProduct);
+                        }
                     } else {
-                        $prevResult = array_unique(array_merge($result, $prevResult));
+                        $query = $query->select(
+                            'users.*',
+                            'cities.*',
+                            'provinces.*',
+                            DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
+                        );
                     }
-                    $ruleNext = $conRuleNext;
-                } else {
-                    $prevResult = $result;
-                    $ruleNext = $conRuleNext;
                 }
-
-                $key++;
             }
-
-            /*============= Final query when condition not null =============*/
-            $finalResult = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
-                ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
-                ->orderBy($order_field, $order_method)
-                ->select(
-                    'users.*',
-                    'cities.*',
-                    'provinces.*',
-                    DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
-                )
-                ->whereIn('users.id', $prevResult);
+            $finalResult = $query;
         } else {
             $query = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
                 ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
