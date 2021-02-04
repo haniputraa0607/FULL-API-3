@@ -2727,6 +2727,8 @@ class ApiPromoCampaign extends Controller
     		if ( ($query[$source.'_product_discount_rules']['is_all_product']??false) == 1 
     			|| ($query['promo_type']??false) == 'Referral' 
     			|| ($query[$source.'_discount_bill_rules']['is_all_product']??false) == 1
+    			|| ($query[$source.'_tier_discount_rules'][0]['is_all_product']??false) == 1
+    			|| ($query[$source.'_buyxgety_rules'][0]['is_all_product']??false) == 1
     		) {
 	        	$applied_product = '*';
 	        	$product = $default_product;
