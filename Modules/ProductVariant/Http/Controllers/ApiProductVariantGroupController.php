@@ -817,6 +817,11 @@ class ApiProductVariantGroupController extends Controller
             ])->update($datUpdate);
 
             if($update1){
+                $basePrice = ProductVariantGroup::orderBy('product_variant_group_price', 'asc')->where('id_product', $productVariantGroup['id_product'])->first();
+                if(!empty($basePrice)){
+                    $save = ProductGlobalPrice::updateOrCreate(['id_product' => $productVariantGroup['id_product']], ['id_product' => $productVariantGroup['id_product'], 'product_global_price' => $basePrice['product_variant_group_price']]);
+                    $save->touch();
+                }
                 $result['updated']++;
             }else{
                 $result['no_update']++;
@@ -834,6 +839,7 @@ class ApiProductVariantGroupController extends Controller
                             'id_product_variant_group' => $productVariantGroup['id_product_variant_group']
                         ])->first();
                     if($pp){
+                        $id_outlet = $pp['id_outlet'];
                         $update = $pp->update(['product_variant_group_price'=>$col_value]);
                     }else{
                         $id_outlet = Outlet::select('id_outlet')->where('outlet_code',$outlet_code)->pluck('id_outlet')->first();
@@ -847,6 +853,19 @@ class ApiProductVariantGroupController extends Controller
                         ]);
                     }
                     if($update){
+                        $baseSpecialPrice = ProductVariantGroup::join('product_variant_group_special_prices as pvgsp', 'pvgsp.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
+                                    ->orderBy('pvgsp.product_variant_group_price', 'asc')
+                                    ->where('id_outlet', $id_outlet)
+                                    ->where('id_product', $productVariantGroup['id_product'])
+                                    ->select('pvgsp.*')
+                                    ->first();
+                        if(!empty($baseSpecialPrice)){
+                            $save =ProductSpecialPrice::updateOrCreate(['id_product' => $productVariantGroup['id_product'], 'id_outlet' => $id_outlet],
+                                ['product_global_price' => $baseSpecialPrice['product_variant_group_price'],
+                                  'id_product' => $productVariantGroup['id_product'],
+                                  'id_outlet' => $id_outlet]);
+                            $save->touch();
+                        }
                         $result['updated_price']++;
                     }else{
                         $result['updated_price_fail']++;
