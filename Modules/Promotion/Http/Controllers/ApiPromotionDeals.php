@@ -558,6 +558,7 @@ class ApiPromotionDeals extends Controller
 				'discount_type'			=> $value['discount_type'],
 				'discount_value'		=> $value['discount_value'],
 				'max_percent_discount'	=> $value['max_percent_discount'],
+				'is_all_product'		=> $value['is_all_product'],
 				'created_at' 			=> date('Y-m-d H:i:s'),
         		'updated_at' 			=> date('Y-m-d H:i:s')
 			];
@@ -602,6 +603,7 @@ class ApiPromotionDeals extends Controller
 				'benefit_qty'  			=> $value['benefit_qty'],
 				'id_brand'  			=> $value['id_brand'],
 				'id_product_variant_group'=> $value['id_product_variant_group'],
+				'is_all_product'		=> $value['is_all_product'],
 				'created_at' 			=> date('Y-m-d H:i:s'),
     			'updated_at' 			=> date('Y-m-d H:i:s')
 			];
