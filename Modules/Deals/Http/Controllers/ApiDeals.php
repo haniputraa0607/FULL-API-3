@@ -1909,7 +1909,7 @@ class ApiDeals extends Controller
 
 	function dealsPaginate($query, $request)
 	{
-
+		$query->with('brands');
 		$query = $query->addSelect('deals.updated_at')->paginate($request->paginate);
 
 		return MyHelper::checkGet($query);

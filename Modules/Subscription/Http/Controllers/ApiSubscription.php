@@ -1105,7 +1105,7 @@ class ApiSubscription extends Controller
         }
 
         if ( $request->json('with_brand') ) {
-            $subs = $subs->with('brand');
+            $subs = $subs->with(['brand', 'brands']);
         }
 
         if ($request->json('id_subscription')) {

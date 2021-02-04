@@ -66,7 +66,7 @@ class ApiPromotionDeals extends Controller
 		}
 
 		if ($request->json('brand')) {
-			$deals = $deals->with('brand');
+			$deals = $deals->with(['brand', 'brands']);
 		}
 
 		$deals = $deals->get();
