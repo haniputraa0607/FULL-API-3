@@ -109,6 +109,7 @@ class ApiOnlineTransaction extends Controller
         $this->plastic       = "Modules\Plastic\Http\Controllers\PlasticController";
         $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
+        $this->bundling      = "Modules\ProductBundling\Http\Controllers\ApiBundlingController";
     }
 
     public function newTransaction(NewTransaction $request) {
@@ -2860,8 +2861,23 @@ class ApiOnlineTransaction extends Controller
                 continue;
             }
 
-            if($getBundling['all_outlet'] != 1){
-                //check outlet available
+            //check count product in bundling
+            $getBundlingProduct = BundlingProduct::where('id_bundling', $bundling['id_bundling'])->select('id_product', 'bundling_product_qty')->get()->toArray();
+            $arrBundlingQty = array_column($getBundlingProduct, 'bundling_product_qty');
+            $arrBundlingIdProduct = array_column($getBundlingProduct, 'id_product');
+            if(array_sum($arrBundlingQty) !== count($bundling['products'])){
+                $error_msg[] = MyHelper::simpleReplace(
+                    'Jumlah product pada bundling %bundling_name% tidak sesuai',
+                    [
+                        'bundling_name' => $bundling['bundling_name']
+                    ]
+                );
+                unset($post['item_bundling'][$key]);
+                continue;
+            }
+
+            //check outlet available
+            if($getBundling['all_outlet'] == 0 && $getBundling['outlet_available_type'] == 'Selected Outlet'){
                 $getBundlingOutlet = BundlingOutlet::where('id_bundling', $bundling['id_bundling'])->where('id_outlet', $post['id_outlet'])->count();
 
                 if(empty($getBundlingOutlet)){
@@ -2875,20 +2891,20 @@ class ApiOnlineTransaction extends Controller
                     unset($post['item_bundling'][$key]);
                     continue;
                 }
-            }
-
-            //check count product in bundling
-            $getBundlingProduct = BundlingProduct::where('id_bundling', $bundling['id_bundling'])->pluck('bundling_product_qty')->toArray();
-
-            if(array_sum($getBundlingProduct) !== count($bundling['products'])){
-                $error_msg[] = MyHelper::simpleReplace(
-                    'Jumlah product pada bundling %bundling_name% tidak sesuai',
-                    [
-                        'bundling_name' => $bundling['bundling_name']
-                    ]
-                );
-                unset($post['item_bundling'][$key]);
-                continue;
+            }elseif($getBundling['all_outlet'] == 0 && $getBundling['outlet_available_type'] == 'Outlet Group Filter'){
+                $brands = BrandProduct::whereIn('id_product', $arrBundlingIdProduct)->pluck('id_brand')->toArray();
+                $availableBundling = app($this->bundling)->bundlingOutletGroupFilter($post['id_outlet'], $brands);
+                if(empty($availableBundling)){
+                    $error_msg[] = MyHelper::simpleReplace(
+                        'Bundling %bundling_name% tidak bisa digunakan di outlet %outlet_name%',
+                        [
+                            'bundling_name' => $bundling['bundling_name'],
+                            'outlet_name' => $outlet['outlet_name']
+                        ]
+                    );
+                    unset($post['item_bundling'][$key]);
+                    continue;
+                }
             }
 
             $bundlingBasePrice = 0;
