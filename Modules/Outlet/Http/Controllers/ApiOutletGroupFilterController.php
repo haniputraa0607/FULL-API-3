@@ -25,6 +25,7 @@ use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
 use Modules\Outlet\Entities\OutletGroup;
 use Modules\Outlet\Entities\OutletGroupFilterCondition;
+use Modules\Outlet\Entities\OutletGroupFilterConditionParent;
 use Modules\Outlet\Entities\OutletGroupFilterOutlet;
 use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductGlobalPrice;
@@ -88,17 +89,13 @@ class ApiOutletGroupFilterController extends Controller
     function store(Request $request){
         $post = $request->json()->all();
 
-        if(!isset($post['outlets']) && !isset($post['conditions'][0]['subject'])){
+        if(!isset($post['outlets']) && !isset($post['conditions'])){
             return response()->json(['status' => 'fail', 'messages' => ['Data outlets or conditions can not be empty']]);
         }else{
             $dataOutletGroup = [
                 'outlet_group_name' => $post['outlet_group_name'],
                 'outlet_group_type' => $post['outlet_group_type']
             ];
-
-            if($post['outlet_group_type'] == 'Conditions'){
-                $dataOutletGroup['outlet_group_filter_rule'] = $post['rule'];
-            }
 
             DB::beginTransaction();
             $outletGroup = OutletGroup::create($dataOutletGroup);
@@ -109,22 +106,42 @@ class ApiOutletGroupFilterController extends Controller
             }
 
             if($post['outlet_group_type'] == 'Conditions'){
-                $dataFilter = [];
                 foreach ($post['conditions'] as $con){
-                    $dataFilter[] = [
-                        'id_outlet_group' => $outletGroup['id_outlet_group'],
-                        'outlet_group_filter_subject' => $con['subject'],
-                        'outlet_group_filter_operator' => $con['operator'],
-                        'outlet_group_filter_parameter' => $con['parameter'],
-                        'created_at' => date('Y-m-d H:i:s'),
-                        'updated_at' => date('Y-m-d H:i:s')
-                    ];
-                }
+                    $rule = $con['rule'];
+                    $ruleNext = $con['rule_next'];
+                    unset($con['rule']);
+                    unset($con['rule_next']);
 
-                $insertFilter = OutletGroupFilterCondition::insert($dataFilter);
-                if(!$insertFilter){
-                    DB::rollback();
-                    return response()->json(['status' => 'fail', 'messages' => ['Failed save outlet group filter conditions']]);
+                    $dataRuleParent = [
+                        'id_outlet_group' => $outletGroup['id_outlet_group'],
+                        'condition_parent_rule' => $rule,
+                        'condition_parent_rule_next' => $ruleNext
+                    ];
+
+                    $createConditionParent = OutletGroupFilterConditionParent::create($dataRuleParent);
+
+                    if(!$createConditionParent){
+                        DB::rollback();
+                        return response()->json(['status' => 'fail', 'messages' => ['Failed Create parent condition']]);
+                    }
+
+                    $dataFilter = [];
+                    foreach ($con as $con_child){
+                        $dataFilter[] = [
+                            'id_outlet_group_filter_condition_parent' => $createConditionParent['id_outlet_group_filter_condition_parent'],
+                            'id_outlet_group' => $outletGroup['id_outlet_group'],
+                            'outlet_group_filter_subject' => $con_child['subject'],
+                            'outlet_group_filter_operator' => $con_child['operator'],
+                            'outlet_group_filter_parameter' => $con_child['parameter'],
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ];
+                    }
+                    $insertFilter = OutletGroupFilterCondition::insert($dataFilter);
+                    if(!$insertFilter){
+                        DB::rollback();
+                        return response()->json(['status' => 'fail', 'messages' => ['Failed save outlet group filter conditions']]);
+                    }
                 }
             }else{
                 $dataOutlet = [];
@@ -154,10 +171,16 @@ class ApiOutletGroupFilterController extends Controller
 
         if(isset($post['id_outlet_group']) && !empty($post['id_outlet_group'])){
             $detail = OutletGroup::where('id_outlet_group', $post['id_outlet_group'])
-                        ->with(['outlet_group_filter_condition', 'outlet_group_filter_outlet'])
+                        ->with(['outlet_group_filter_outlet'])
                         ->first();
             if(!empty($detail)){
-                $detail['outlets'] = $this->outletGroupFilter($post['id_outlet_group']);
+                $parents = OutletGroupFilterConditionParent::where('id_outlet_group', $post['id_outlet_group'])->get()->toArray();
+                foreach ($parents as $key=>$p){
+                    $parents[$key]['condition_child'] = OutletGroupFilterCondition::where('id_outlet_group_filter_condition_parent', $p['id_outlet_group_filter_condition_parent'])
+                        ->select('outlet_group_filter_subject', 'outlet_group_filter_operator', 'outlet_group_filter_parameter')->get()->toArray();
+                }
+                $detail['conditions'] = $parents;
+                $detail['outlets'] = [];//$this->outletGroupFilter($post['id_outlet_group']);
             }
 
             return response()->json(MyHelper::checkGet($detail));
@@ -176,12 +199,6 @@ class ApiOutletGroupFilterController extends Controller
                 'outlet_group_name' => $post['outlet_group_name'],
                 'outlet_group_type' => $post['outlet_group_type']
             ];
-
-            if($post['outlet_group_type'] == 'Conditions'){
-                $dataOutletGroup['outlet_group_filter_rule'] = $post['rule'];
-            }else{
-                $dataOutletGroup['outlet_group_filter_rule'] = NULL;
-            }
 
             DB::beginTransaction();
             $outletGroup = OutletGroup::where('id_outlet_group', $post['id_outlet_group'])->update($dataOutletGroup);
