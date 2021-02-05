@@ -2416,16 +2416,18 @@ class PromoCampaignTools{
         	$brand_get_promo[] = $promo_brand;
         }
 
-    	$brand_not_get_promo = [];
-		foreach ($result as $value) {
-			if (isset($flagged_product[$value['brand']['id_brand']])) {
-				$brand_get_promo[] = $value;
-			}else{
-				$brand_not_get_promo[] = $value;
-			}
-		}
-
-		$result = array_merge($brand_get_promo, $brand_not_get_promo);
+        $brand_not_get_promo = [];
+        $bundling = [];
+        foreach ($result as $value) {
+            if ($value['brand']['id_brand'] >= 1000) {
+                $bundling[] = $value;
+            }elseif (isset($flagged_product[$value['brand']['id_brand']])) {
+                $brand_get_promo[] = $value;
+            }else{
+                $brand_not_get_promo[] = $value;
+            }
+        }
+        $result = array_merge($bundling, $brand_get_promo, $brand_not_get_promo);
 
         return $result;
     }
