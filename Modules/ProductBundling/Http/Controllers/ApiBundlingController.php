@@ -4,6 +4,7 @@ namespace Modules\ProductBundling\Http\Controllers;
 
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
+use App\Http\Models\Setting;
 use App\Http\Models\TransactionProduct;
 use App\Lib\MyHelper;
 use Illuminate\Http\Request;
@@ -942,5 +943,17 @@ class ApiBundlingController extends Controller
         }
 
         return ['status' => 'success'];
+    }
+
+    public function setting(Request $request){
+        $post = $request->json()->all();
+
+        if(empty($post)){
+            $set = Setting::where('key', 'brand_bundling_name')->first();
+            return response()->json(MyHelper::checkGet($set));
+        }else{
+            $set = Setting::updateOrCreate(['key' => 'brand_bundling_name'], ['key' => 'brand_bundling_name', 'value' => $post['brand_bundling_name']??'Bundling']);
+            return response()->json(MyHelper::checkUpdate($set));
+        }
     }
 }
