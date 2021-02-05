@@ -66,7 +66,8 @@ class DealsPromotionTemplate extends Model
 		'is_all_shipment',
         'is_all_payment',
         'product_rule',
-        'brand_rule'
+        'brand_rule',
+        'is_all_outlet'
 	];
 
 	public function deals_promotion_buyxgety_product_requirement()
@@ -200,6 +201,6 @@ class DealsPromotionTemplate extends Model
 
 	public function outlet_groups()
 	{
-		return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'promo_campaign_outlet_groups', 'id_deals', 'id_outlet_group');
+		return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'deals_promotion_outlet_groups', 'id_deals', 'id_outlet_group');
 	}
 }

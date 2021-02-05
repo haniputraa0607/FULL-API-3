@@ -308,6 +308,6 @@ class Deal extends Model
 
 	public function outlet_groups()
 	{
-		return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'promo_campaign_outlet_groups', 'id_deals', 'id_outlet_group');
+		return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'deals_outlet_groups', 'id_deals', 'id_outlet_group');
 	}
 }

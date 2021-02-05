@@ -1270,6 +1270,10 @@ class ApiPromoCampaign extends Controller
 			        elseif ($request->filter_outlet == 'Selected') {
 			            $update = $this->createOutletFilter('selected', 0, $request->id_promo_campaign, $request->multiple_outlet);
 			        } 
+			        elseif ($request->filter_outlet == 'Outlet Group')
+			        {
+			            $update = $this->createOutletFilter('outlet_group', 0, $request->id_promo_campaign, null, $request->multiple_outlet_group);
+			        }
 			        else {
 			            $update = false;
 			        }

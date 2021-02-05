@@ -268,6 +268,6 @@ class Subscription extends Eloquent
 
 	public function outlet_groups()
 	{
-		return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'promo_campaign_outlet_groups', 'id_subscription', 'id_outlet_group');
+		return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'subscription_outlet_groups', 'id_subscription', 'id_outlet_group');
 	}
 }
