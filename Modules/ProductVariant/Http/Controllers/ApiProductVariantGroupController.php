@@ -499,7 +499,7 @@ class ApiProductVariantGroupController extends Controller
 
     public function export(Request $request){
         $post      = $request->json()->all();
-        $data = Product::with(['product_variant_group'])->where('product_visibility', 'Visible');
+        $data = Product::with(['product_variant_group'])->where('product_type', 'product')->where('product_visibility', 'Visible');
         $dataBrand = [];
         if(isset($post['id_brand']) && !empty($post['id_brand'])){
             $dataBrand = Brand::where('brands.id_brand', $post['id_brand'])->first();

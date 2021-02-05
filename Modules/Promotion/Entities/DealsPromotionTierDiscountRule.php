@@ -44,7 +44,8 @@ class DealsPromotionTierDiscountRule extends Eloquent
 		'max_qty',
 		'discount_type',
 		'discount_value',
-		'max_percent_discount'
+		'max_percent_discount',
+		'is_all_product'
 	];
 
 	public function deals_promotion_template()

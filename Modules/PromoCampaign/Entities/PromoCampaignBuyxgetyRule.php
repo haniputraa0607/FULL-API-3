@@ -50,7 +50,8 @@ class PromoCampaignBuyxgetyRule extends Eloquent
 		'discount_type',
 		'discount_value',
 		'max_percent_discount',
-		'id_brand'
+		'id_brand',
+		'is_all_product'
 	];
 
 	public function product()
