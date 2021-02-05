@@ -3316,7 +3316,8 @@ class ApiOutletApp extends Controller
             }
         }
 
-        $result['product_bundling_transaction_name'] = 'Bundling';
+        $nameBrandBundling = Setting::where('key', 'brand_bundling_name')->first();
+        $result['name_brand_bundling'] = $nameBrandBundling['value']??'Bundling';
         $result['product_bundling_transaction_detail'] = $itemBundling;
         $result['product_bundling_transaction_perbrand'] = $itemBundlingPerBrand;
         $result['product_transaction'] = [];
