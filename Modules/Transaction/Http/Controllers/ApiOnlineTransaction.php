@@ -2591,6 +2591,8 @@ class ApiOnlineTransaction extends Controller
         }
 
         // check bundling product
+        $nameBrandBundling = Setting::where('key', 'brand_bundling_name')->first();
+        $result['name_brand_bundling'] = $nameBrandBundling['value']??'Bundling';
         $result['item_bundling_detail'] = [];
         $result['item_bundling'] = [];
         $responseNotIncludePromo = '';
