@@ -197,4 +197,9 @@ class DealsPromotionTemplate extends Model
 	{
 		return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionDiscountBillProduct::class, 'id_deals', 'id_deals_promotion_template');
 	}
+
+	public function outlet_groups()
+	{
+		return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'promo_campaign_outlet_groups', 'id_deals', 'id_outlet_group');
+	}
 }

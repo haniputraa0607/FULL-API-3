@@ -305,4 +305,9 @@ class Deal extends Model
 	{
 		return $this->hasMany(\Modules\Deals\Entities\DealsDiscountBillProduct::class, 'id_deals', 'id_deals');
 	}
+
+	public function outlet_groups()
+	{
+		return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'promo_campaign_outlet_groups', 'id_deals', 'id_outlet_group');
+	}
 }
