@@ -1130,7 +1130,7 @@ class ApiPromoCampaign extends Controller
         } elseif ($post['promo_type'] == 'Tier discount') {
 
             try {
-                $createFilterProduct = $this->createPromoTierDiscount($id_post, array($post['product']), $post['discount_type'], $post['promo_rule'], $source, $table, $id_table, $product_type);
+                $createFilterProduct = $this->createPromoTierDiscount($id_post, $post['multiple_product'] ?? [], $post['discount_type'], $post['promo_rule'], $source, $table, $id_table, $product_type, $post['filter_product']);
             } catch (Exception $e) {
                 $createFilterProduct = [
                     'status'  => 'fail',
@@ -1142,7 +1142,7 @@ class ApiPromoCampaign extends Controller
 
         } elseif ($post['promo_type'] == 'Buy X Get Y') {
             try {
-                $createFilterProduct = $this->createBuyXGetYDiscount($id_post, $post['product'], $post['promo_rule'], $source, $table, $id_table, $product_type);
+                $createFilterProduct = $this->createBuyXGetYDiscount($id_post, $post['multiple_product'] ?? [], $post['promo_rule'], $source, $table, $id_table, $product_type, $post['filter_product']);
 
             } catch (Exception $e) {
                 $createFilterProduct = [
@@ -1500,7 +1500,7 @@ class ApiPromoCampaign extends Controller
         return $result;
     }
 
-    public function createPromoTierDiscount($id_post, $product, $discount_type, $rules, $source, $table, $id_table, $product_type)
+    public function createPromoTierDiscount($id_post, $product, $discount_type, $rules, $source, $table, $id_table, $product_type, $filter_product)
     {
         if (!$rules) {
             return [
@@ -1557,8 +1557,9 @@ class ApiPromoCampaign extends Controller
                 'max_qty'           => $rule['max_qty'],
                 'min_qty'           => $rule['min_qty'],
                 'discount_value'    => $rule['discount_value'],
+                'is_all_product' 	=> ($filter_product == 'selected') ? 0 : 1,
                 'created_at'        => date('Y-m-d H:i:s'),
-                'updated_at'        => date('Y-m-d H:i:s')
+                'updated_at'        => date('Y-m-d H:i:s'),
             ];
 	        if ($is_nominal) {
 	        	$data[$key]['max_percent_discount'] = null;
@@ -1567,12 +1568,17 @@ class ApiPromoCampaign extends Controller
 	        }
         }
 
-        $data_product = $this->getProductInsertFormat($product[0], $id_table, $id_post);
-
         try {
+
             $table_tier_discount_rule::insert($data);
-            $table_tier_discount_product::insert($data_product);
-            $result = ['status'  => 'success', 'products' => $data_product];
+            $result = ['status'  => 'success'];
+
+	        if ($filter_product == 'selected') {
+	        	$data_product = $this->getProductInsertFormat($product, $id_table, $id_post);
+            	$table_tier_discount_product::insert($data_product);
+            	$result = $result+['products' => $data_product];
+	        }
+
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
@@ -1582,7 +1588,7 @@ class ApiPromoCampaign extends Controller
         return $result;
     }
 
-    public function createBuyXGetYDiscount($id_post, $product, $rules, $source, $table, $id_table, $product_type)
+    public function createBuyXGetYDiscount($id_post, $product, $rules, $source, $table, $id_table, $product_type, $filter_product)
     {
         if (!$rules) {
             return [
@@ -1638,7 +1644,8 @@ class ApiPromoCampaign extends Controller
 	                'max_qty_requirement' 		=> $rule['max_qty_requirement'],
 	                'min_qty_requirement' 		=> $rule['min_qty_requirement'],
 	                'benefit_qty'         		=> $rule['benefit_qty'],
-	                'max_percent_discount'  	=> $rule['max_percent_discount']
+	                'max_percent_discount'  	=> $rule['max_percent_discount'],
+	                'is_all_product' 			=> ($filter_product == 'selected') ? 0 : 1
 	            ];
 
 
@@ -1689,11 +1696,16 @@ class ApiPromoCampaign extends Controller
 	    		}
 	        }
 
-	        $data_product = $this->getProductInsertFormat($product, $id_table, $id_post);
+            $result = ['status'  => 'success'];
 
-            // $table_buyxgety_discount_rule::insert($data);
-            $table_buyxgety_discount_product::insert($data_product);
-            $result = ['status'  => 'success', 'products' => $data_product];
+	        if ($filter_product == 'selected') {
+		        $data_product = $this->getProductInsertFormat($product, $id_table, $id_post);
+
+	            $table_buyxgety_discount_product::insert($data_product);
+
+            	$result = $result+['products' => $data_product];
+	        }
+
         } catch (\Illuminate\Database\QueryException $e) {
             $result = [
                 'status'  => 'fail',
@@ -2715,6 +2727,8 @@ class ApiPromoCampaign extends Controller
     		if ( ($query[$source.'_product_discount_rules']['is_all_product']??false) == 1 
     			|| ($query['promo_type']??false) == 'Referral' 
     			|| ($query[$source.'_discount_bill_rules']['is_all_product']??false) == 1
+    			|| ($query[$source.'_tier_discount_rules'][0]['is_all_product']??false) == 1
+    			|| ($query[$source.'_buyxgety_rules'][0]['is_all_product']??false) == 1
     		) {
 	        	$applied_product = '*';
 	        	$product = $default_product;

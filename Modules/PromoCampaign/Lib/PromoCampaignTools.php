@@ -250,9 +250,9 @@ class PromoCampaignTools{
 					$product[$key]['price'] = $product_price['product_price'];
 				}
 
-				// sort product by price asc
+				// sort product by price desc
 				uasort($product, function($a, $b){
-					return $a['price'] - $b['price'];
+					return $b['price'] - $a['price'];
 				});
 
 				$merge_product = [];
@@ -356,19 +356,32 @@ class PromoCampaignTools{
 				$promo_product_id = array_column($promo_product_array, 'id_product');
 				$promo_product_count = count($promo_product);
 
-				$product_error_applied = $this->checkProductErrorApplied($promo_product, $id_outlet, $missing_product_messages);
-
-				$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
-
-				// promo product not available in cart?
 				$product_name = $this->getProductName($promo_product, $promo->product_rule);
+				
+				if(!$promo_rules[0]->is_all_product){
+					if ($promo[$source.'_tier_discount_product']->isEmpty()) {
+						$errors[]='Produk tidak ditemukan';
+						return false;
+					}
+					$promo_product = $promo[$source.'_tier_discount_product']->toArray();
+					$promo_product_count = count($promo_product);
 
-				if (!$check_product) {
-					$message = $this->getMessage('error_tier_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
-					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
-					$errors[]= $missing_product_messages ?? $message;
-					$errorProduct = $product_error_applied;
-					return false;		
+					$product_error_applied = $this->checkProductErrorApplied($promo_product, $id_outlet, $missing_product_messages);
+
+					$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
+
+					// promo product not available in cart?
+					if (!$check_product) {
+						$message = $this->getMessage('error_tier_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
+						$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
+						$errors[]= $missing_product_messages ?? $message;
+						$errorProduct = $product_error_applied;
+						return false;
+					}
+
+				}else{
+					$promo_product = "*";
+					$product_error_applied = 'all';
 				}
 
 				$get_promo_product = $this->getPromoProduct($trxs, $promo_brand, $promo_product);
@@ -408,7 +421,7 @@ class PromoCampaignTools{
 
 				//find promo rules
 				$promo_rule = null;
-				if ($promo->product_rule == "and") {
+				if ($promo->product_rule == "and" && $promo_product != "*") {
 					$req_valid 	= true;
 					$rule_key	= [];
 					$promo_qty_each = 0;
@@ -499,9 +512,9 @@ class PromoCampaignTools{
 					$product[$key]['price'] = $product_price['product_price'];
 				}
 
-				// sort product price asc
+				// sort product price desc
 				uasort($product, function($a, $b){
-					return $a['price'] - $b['price'];
+					return $b['price'] - $a['price'];
 				});
 
 				// get max qty of product that can get promo
@@ -640,18 +653,33 @@ class PromoCampaignTools{
 				$promo_product_array = $promo_product->toArray();
 				$promo_product_id = array_column($promo_product_array, 'id_product');
 
-				$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
-
 				// promo product not available in cart?
 				$product_name = $this->getProductName($promo_product, $promo->product_rule);
 
-				if (!$check_product) {
-					$message = $this->getMessage('error_buyxgety_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
-					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
-					
-					$errors[]= $missing_product_messages ?? $message;
-					$errorProduct = $product_error_applied;
-					return false;		
+
+				if(!$promo_rules[0]->is_all_product){
+					if ($promo[$source.'_buyxgety_product_requirement']->isEmpty()) {
+						$errors[]='Produk tidak ditemukan';
+						return false;
+					}
+					$promo_product = $promo[$source.'_buyxgety_product_requirement']->toArray();
+					$promo_product_count = count($promo_product);
+
+					$check_product = $this->checkProductRule($promo, $promo_brand, $promo_product, $trxs);
+
+					// promo product not available in cart?
+					if (!$check_product) {
+						$message = $this->getMessage('error_buyxgety_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
+						$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
+						
+						$errors[]= $missing_product_messages ?? $message;
+						$errorProduct = $product_error_applied;
+						return false;		
+					}
+
+				}else{
+					$promo_product = "*";
+					$product_error_applied = 'all';
 				}
 
 				$get_promo_product = $this->getPromoProduct($trxs, $promo_brand, $promo_product);
@@ -696,7 +724,7 @@ class PromoCampaignTools{
 				$max_qty=null;
 
 				$promo_rule = null;
-				if ($promo->product_rule == "and") {
+				if ($promo->product_rule == "and" && $promo_product != "*") {
 					$req_valid 	= true;
 					$rule_key	= [];
 					foreach ($product as $key => &$val) {

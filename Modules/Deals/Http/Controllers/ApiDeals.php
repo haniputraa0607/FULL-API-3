@@ -1549,7 +1549,10 @@ class ApiDeals extends Controller
                 $table.'_shipment_method',
                 $table.'_payment_method',
                 'brand',
-                'brands'
+                'brands',
+                'created_by_user' => function($q) {
+                	$q->select('id', 'name', 'level');
+                }
             ]);
         }
 
@@ -1558,7 +1561,7 @@ class ApiDeals extends Controller
         }
 
         if ($post['step'] == 'all') {
-			$deals = $deals->with(['created_by_user']);
+			// $deals = $deals->with(['created_by_user']);
         }
 
         $deals = $deals->first();
@@ -1909,7 +1912,7 @@ class ApiDeals extends Controller
 
 	function dealsPaginate($query, $request)
 	{
-
+		$query->with('brands');
 		$query = $query->addSelect('deals.updated_at')->paginate($request->paginate);
 
 		return MyHelper::checkGet($query);
