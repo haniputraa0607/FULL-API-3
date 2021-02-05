@@ -4,6 +4,7 @@ namespace Modules\ProductBundling\Http\Controllers;
 
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
+use App\Http\Models\Setting;
 use App\Http\Models\TransactionProduct;
 use App\Lib\MyHelper;
 use Illuminate\Http\Request;
@@ -35,6 +36,7 @@ class ApiBundlingController extends Controller
     {
         $this->product_variant_group = "Modules\ProductVariant\Http\Controllers\ApiProductVariantGroupController";
         $this->outlet_group_filter = "Modules\Outlet\Http\Controllers\ApiOutletGroupFilterController";
+        $this->bundling      = "Modules\ProductBundling\Http\Controllers\ApiBundlingController";
     }
 
     /**
@@ -799,10 +801,17 @@ class ApiBundlingController extends Controller
             return ['status' => 'fail','messages' => ['Bundling detail not found']];
         }
 
-        if($getProductBundling[0]['all_outlet'] != 1){
+        if($getProductBundling[0]['all_outlet'] == 0 && $getProductBundling[0]['outlet_available_type'] == 'Selected Outlet'){
             //check available outlet
             $availableOutlet = BundlingOutlet::where('id_outlet', $post['id_outlet'])->where('id_bundling', $post['id_bundling'])->first();
             if (!$availableOutlet) {
+                return ['status' => 'fail','messages' => ['Product not available in this outlet']];
+            }
+        }elseif($getProductBundling[0]['all_outlet'] == 0 && $getProductBundling[0]['outlet_available_type'] == 'Outlet Group Filter'){
+            $arrBundlingIdProduct = array_column($getProductBundling, 'id_product');
+            $brands = BrandProduct::whereIn('id_product', $arrBundlingIdProduct)->pluck('id_brand')->toArray();
+            $availableBundling = app($this->bundling)->bundlingOutletGroupFilter($post['id_outlet'], $brands);
+            if(empty($availableBundling)){
                 return ['status' => 'fail','messages' => ['Product not available in this outlet']];
             }
         }
@@ -1014,5 +1023,17 @@ class ApiBundlingController extends Controller
         }
 
         return array_unique($tmpBundling);
+    }
+
+    public function setting(Request $request){
+        $post = $request->json()->all();
+
+        if(empty($post)){
+            $set = Setting::where('key', 'brand_bundling_name')->first();
+            return response()->json(MyHelper::checkGet($set));
+        }else{
+            $set = Setting::updateOrCreate(['key' => 'brand_bundling_name'], ['key' => 'brand_bundling_name', 'value' => $post['brand_bundling_name']??'Bundling']);
+            return response()->json(MyHelper::checkUpdate($set));
+        }
     }
 }
