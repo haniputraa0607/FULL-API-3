@@ -25,6 +25,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignShipmentMethod;
 use Modules\PromoCampaign\Entities\PromoCampaignPaymentMethod;
 use Modules\PromoCampaign\Entities\PromoCampaignBrand;
 use Modules\PromoCampaign\Entities\PromoCampaignBuyxgetyProductModifier;
+use Modules\PromoCampaign\Entities\PromoCampaignOutletGroup;
 
 use Modules\Deals\Entities\DealsProductDiscount;
 use Modules\Deals\Entities\DealsProductDiscountRule;
@@ -73,6 +74,8 @@ use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantPivot;
 
 use Modules\Product\Entities\ProductModifierGroupPivot;
+
+use Modules\Outlet\Entities\OutletGroup;
 
 use Modules\PromoCampaign\Http\Requests\Step1PromoCampaignRequest;
 use Modules\PromoCampaign\Http\Requests\Step2PromoCampaignRequest;
@@ -319,9 +322,12 @@ class ApiPromoCampaign extends Controller
     {
         $post = $request->json()->all();
         $data = [
-            'user',
+            'user' => function($q){
+            	$q->select('id', 'name', 'level');
+            },
             'promo_campaign_have_tags.promo_campaign_tag',
             'outlets',
+            'outlet_groups',
             'promo_campaign_product_discount_rules',
             'promo_campaign_discount_bill_rules',
             'promo_campaign_discount_bill_products.product',
@@ -1054,6 +1060,10 @@ class ApiPromoCampaign extends Controller
 	        {
 	            $createFilterOutlet = $this->createOutletFilter('selected', 0, $post['id_promo_campaign'], $post['multiple_outlet']);
 	        }
+	        elseif ($post['filter_outlet'] == 'Outlet Group')
+	        {
+	            $createFilterOutlet = $this->createOutletFilter('outlet_group', 0, $post['id_promo_campaign'], null, $post['multiple_outlet_group']);
+	        }
 	        else
 	        {
 	            $createFilterOutlet = [
@@ -1286,10 +1296,14 @@ class ApiPromoCampaign extends Controller
     	return MyHelper::checkUpdate($update);
     }
 
-    function createOutletFilter($parameter, $operator, $id_promo_campaign, $outlet)
+    function createOutletFilter($parameter, $operator, $id_promo_campaign, $outlet, $outlet_groups = [])
     {
         if (PromoCampaignOutlet::where('id_promo_campaign', '=', $id_promo_campaign)->exists()) {
             PromoCampaignOutlet::where('id_promo_campaign', '=', $id_promo_campaign)->delete();
+        }
+
+        if (PromoCampaignOutletGroup::where('id_promo_campaign', '=', $id_promo_campaign)->exists()) {
+            PromoCampaignOutletGroup::where('id_promo_campaign', '=', $id_promo_campaign)->delete();
         }
 
         if ($parameter == 'all_outlet') {
@@ -1304,7 +1318,8 @@ class ApiPromoCampaign extends Controller
                 DB::rollBack();
                 return $result;
             }
-        } else {
+        } 
+        elseif($parameter == 'selected') {
             $dataOutlet = [];
             for ($i = 0; $i < count($outlet); $i++) {
                 $dataOutlet[$i]['id_outlet']            = array_values($outlet)[$i];
@@ -1324,7 +1339,32 @@ class ApiPromoCampaign extends Controller
                 DB::rollBack();
                 return $result;
             }
+        } 
+        elseif($parameter == 'outlet_group') {
+            $data_outlet_group = [];
+            foreach ($outlet_groups as $value) {
+            	$data_outlet_group[] = [
+            		'id_outlet_group'      => $value,
+	                'id_promo_campaign'    => $id_promo_campaign,
+	                'created_at'           => date('Y-m-d H:i:s'),
+	                'updated_at'           => date('Y-m-d H:i:s')
+            	];
+            }
+
+            try {
+                PromoCampaignOutletGroup::insert($data_outlet_group);
+                PromoCampaign::where('id_promo_campaign', '=', $id_promo_campaign)->update(['is_all_outlet' => $operator]);
+                $result = ['status'  => 'success'];
+            } catch (\Exception $e) {
+                $result = [
+                    'status'  => 'fail',
+                    'message' => 'Create Filter Outlet Failed'
+                ];
+                DB::rollBack();
+                return $result;
+            }
         }
+
         return $result;
     }
 
@@ -2048,6 +2088,7 @@ class ApiPromoCampaign extends Controller
                             'promo_campaign_buyxgety_product_requirement', 
                             'promo_campaign_buyxgety_rules.promo_campaign_buyxgety_product_modifiers',
                             'outlets',
+                            'outlet_groups',
                             'brands',
                             'promo_campaign_discount_bill_rules',
                             'promo_campaign_discount_bill_products',
@@ -2293,6 +2334,12 @@ class ApiPromoCampaign extends Controller
 
         		$data = $result ?: $variant_data;
         	}
+        }
+        elseif ($post['get'] == 'Outlet Group') 
+        {
+        	$data = OutletGroup::select('id_outlet_group', 'outlet_group_name', 'outlet_group_type')->orderBy('updated_at', 'desc');
+
+            $data = $data->get()->toArray();
         }
         else 
         {
