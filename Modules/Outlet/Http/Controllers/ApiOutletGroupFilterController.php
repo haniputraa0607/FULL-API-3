@@ -156,6 +156,10 @@ class ApiOutletGroupFilterController extends Controller
             $detail = OutletGroup::where('id_outlet_group', $post['id_outlet_group'])
                         ->with(['outlet_group_filter_condition', 'outlet_group_filter_outlet'])
                         ->first();
+            if(!empty($detail)){
+                $detail['outlets'] = $this->outletGroupFilter($post['id_outlet_group']);
+            }
+
             return response()->json(MyHelper::checkGet($detail));
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
@@ -288,7 +292,7 @@ class ApiOutletGroupFilterController extends Controller
                             }
 
                             if($row['outlet_group_filter_subject'] == 'delivery_order'){
-                                $outlets->where('delivery_order', $row['status_delivery']);
+                                $outlets->where('delivery_order', $row['outlet_group_filter_operator']);
                             }
 
                             if($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name'){
@@ -325,7 +329,7 @@ class ApiOutletGroupFilterController extends Controller
                                 }
 
                                 if($row['outlet_group_filter_subject'] == 'delivery_order'){
-                                    $subquery->orWhere('delivery_order', $row['status_delivery']);
+                                    $subquery->orWhere('delivery_order', $row['outlet_group_filter_operator']);
                                 }
 
                                 if($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name'){
