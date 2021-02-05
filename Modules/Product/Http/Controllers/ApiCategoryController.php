@@ -672,7 +672,9 @@ class ApiCategoryController extends Controller
                         $stockStatus = 0;
                     }
 
-                    if($p['visibility_outlet'] != 'Hidden' || (empty($p['visibility_outlet']) && $p['product_visibility'] !== 'Hidden')){
+                    if($p['visibility_outlet'] == 'Hidden' || (empty($p['visibility_outlet']) && $p['product_visibility'] == 'Hidden')){
+                        continue 2;
+                    }else{
                         $id_brand[] = BrandProduct::where('id_product', $p['id_product'])->first()['id_brand'];
                         if($p['product_variant_status'] && !empty($p['id_product_variant_group'])){
                             if($outlet['outlet_different_price'] == 1){
@@ -700,8 +702,6 @@ class ApiCategoryController extends Controller
                         $calculate = $calculate * $p['bundling_product_qty'];
                         $priceForList = $priceForList + $calculate;
                         $priceForListNoDiscount = $priceForListNoDiscount + ($price * $p['bundling_product_qty']);
-                    }else{
-                        continue 2;
                     }
                 }
 
@@ -839,7 +839,9 @@ class ApiCategoryController extends Controller
                         $stockStatus = 0;
                     }
 
-                    if($p['visibility_outlet'] != 'Hidden' || (empty($p['visibility_outlet']) && $p['product_visibility'] !== 'Hidden')){
+                    if($p['visibility_outlet'] == 'Hidden' || (empty($p['visibility_outlet']) && $p['product_visibility'] == 'Hidden')){
+                        continue 2;
+                    }else{
                         $id_brand[] = BrandProduct::where('id_product', $p['id_product'])->first()['id_brand'];
                         if($p['product_variant_status'] && !empty($p['id_product_variant_group'])){
                             if($outlet['outlet_different_price'] == 1){
@@ -867,8 +869,6 @@ class ApiCategoryController extends Controller
                         $calculate = $calculate * $p['bundling_product_qty'];
                         $priceForList = $priceForList + $calculate;
                         $priceForListNoDiscount = $priceForListNoDiscount + ($price * $p['bundling_product_qty']);
-                    }else{
-                        continue 2;
                     }
                 }
 
