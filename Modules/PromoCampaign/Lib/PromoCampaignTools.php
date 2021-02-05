@@ -2401,6 +2401,7 @@ class PromoCampaignTools{
 		}
 
         $brand_get_promo = [];
+        /* 
         if (!empty($promo_product)) {
         	$promo_category = [
         		'category' => [
@@ -2424,6 +2425,7 @@ class PromoCampaignTools{
 
         	$brand_get_promo[] = $promo_brand;
         }
+        */
 
         $brand_not_get_promo = [];
         $bundling = [];
