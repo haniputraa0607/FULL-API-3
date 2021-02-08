@@ -494,7 +494,7 @@ class ApiBundlingController extends Controller
             DB::beginTransaction();
 
             $isAllOutlet = 0;
-            if(in_array("all", $post['id_outlet']) && $post['outlet_available_type'] == 'Selected Outlet'){
+            if(in_array("all", $post['id_outlet']??[]) && $post['outlet_available_type'] == 'Selected Outlet'){
                 $isAllOutlet = 1;
             }
 
