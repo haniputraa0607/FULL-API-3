@@ -1460,8 +1460,8 @@ class ApiAchievement extends Controller
         }
         //check for product
         if (!is_null($achievement['id_product'])) {
-
-            $seacrhProduct = array_search($achievement['id_product'], array_column($dataTrx['product_transaction'], 'id_product'));
+            
+            $seacrhProduct = array_search($achievement['id_product'], array_column($dataTrx['all_product_transaction'], 'id_product'));
             if(!is_int($seacrhProduct)){
                 return false;
             }
