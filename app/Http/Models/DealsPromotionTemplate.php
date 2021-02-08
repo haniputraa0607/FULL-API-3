@@ -66,7 +66,8 @@ class DealsPromotionTemplate extends Model
 		'is_all_shipment',
         'is_all_payment',
         'product_rule',
-        'brand_rule'
+        'brand_rule',
+        'is_all_outlet'
 	];
 
 	public function deals_promotion_buyxgety_product_requirement()
@@ -143,7 +144,7 @@ class DealsPromotionTemplate extends Model
 
 	public function outlets()
 	{
-		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'deals_outlets', 'id_deals', 'id_outlet');
+		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'deals_promotion_outlets', 'id_deals', 'id_outlet');
 	}
 
 	public function deals_vouchers()
@@ -196,5 +197,20 @@ class DealsPromotionTemplate extends Model
 	public function deals_promotion_discount_bill_products()
 	{
 		return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionDiscountBillProduct::class, 'id_deals', 'id_deals_promotion_template');
+	}
+
+	public function outlet_groups()
+	{
+		return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'deals_promotion_outlet_groups', 'id_deals', 'id_outlet_group');
+	}
+
+	public function deals_promotion_outlets()
+	{
+        return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionOutlet::class, 'id_deals', 'id_deals_promotion_template');
+	}
+
+	public function deals_promotion_outlet_groups()
+	{
+        return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionOutletGroup::class, 'id_deals', 'id_deals_promotion_template');
 	}
 }
