@@ -2,6 +2,7 @@
 
 namespace Modules\Plastic\Http\Controllers;
 
+use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\TransactionProduct;
 use Illuminate\Http\Request;
@@ -9,8 +10,10 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
+use Modules\Brand\Entities\Brand;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Validator;
 use Hash;
 use DB;
@@ -127,5 +130,353 @@ class ApiProductPlasticController extends Controller
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
+    }
+
+    function exportProduct(Request $request){
+        $post = $request->json()->all();
+
+        $data = Product::where('product_type', 'product')->where('product_visibility', 'Visible')
+                ->select('product_code', 'product_name', 'plastic_used as total_use_plastic');
+        $dataBrand = [];
+        if(isset($post['id_brand']) && !empty($post['id_brand'])){
+            $dataBrand = Brand::where('brands.id_brand', $post['id_brand'])->first();
+            $data = $data->join('brand_product', 'brand_product.id_product', 'products.id_product')
+                ->join('brands', 'brand_product.id_brand', 'brands.id_brand')
+                ->where('brands.id_brand', $post['id_brand']);
+        }
+        $data = $data->get()->toArray();
+
+        if(!empty($data)){
+            return response()->json([
+                'status' => 'success',
+                'result' => [
+                    'brand' => $dataBrand,
+                    'products' => $data
+                ]
+            ]);
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+        }
+    }
+
+    function importProduct(Request $request){
+        $post = $request->json()->all();
+        $result = [
+            'updated' => 0,
+            'invalid' => 0,
+            'failed' => 0,
+            'not_found' => 0,
+            'more_msg' => [],
+            'more_msg_extended' => []
+        ];
+        $data = $post['data']??[];
+
+        foreach ($data as $key => $value) {
+            if(empty($value['product_code'])){
+                $result['invalid']++;
+                continue;
+            }
+
+            $product = Product::where('product_code', $value['product_code'])->first();
+
+            if($product){
+                $update = Product::where('id_product', $product['id_product'])->update(['plastic_used' => $value['total_use_plastic']??0]);
+
+                if($update){
+                    $result['updated']++;
+                    continue;
+                }else{
+                    $result['failed']++;
+                    continue;
+                }
+            }else{
+                $result['not_found']++;
+                $result['more_msg_extended'][] = "Product with code {$value['product_code']} not found";
+                continue;
+            }
+        }
+
+        $response = [];
+
+        if($result['invalid']){
+            $response[] = $result['invalid'].' invalid data';
+        }
+        if($result['updated']){
+            $response[] = 'Update '.$result['updated'].' product';
+        }
+        if($result['not_found']){
+            $response[] = $result['no_update'].' product not found';
+        }
+        if($result['failed']){
+            $response[] = 'Failed update '.$result['failed'].' product';
+        }
+        $response = array_merge($response,$result['more_msg_extended']);
+        return MyHelper::checkGet($response);
+    }
+
+    function exportProductVariant(Request $request){
+        $post = $request->json()->all();
+        $data = ProductVariantGroup::join('products', 'products.id_product', 'product_variant_groups.id_product')
+            ->select('products.id_product', 'products.product_name', 'products.product_code', 'product_variant_groups.product_variant_groups_plastic_used',
+                'product_variant_groups.product_variant_group_code', 'product_variant_groups.id_product_variant_group')
+            ->where('product_variant_status', 1)
+            ->where('product_visibility', 'Visible')
+            ->orderBy('products.product_code', 'asc')
+            ->with(['product_variant_pivot']);
+
+        $dataBrand = [];
+        if(isset($post['id_brand']) && !empty($post['id_brand'])){
+            $dataBrand = Brand::where('brands.id_brand', $post['id_brand'])->first();
+            $data = $data->join('brand_product', 'brand_product.id_product', 'products.id_product')
+                ->join('brands', 'brand_product.id_brand', 'brands.id_brand')
+                ->where('brands.id_brand', $post['id_brand']);
+        }
+        $data = $data->get()->toArray();
+
+        $arrProductVariant = [];
+        foreach ($data as $key => $pv) {
+            $arr = array_column($pv['product_variant_pivot'], 'product_variant_name');
+            $name = implode(',',$arr);
+            $arrProductVariant[$key] = [
+                'product' => $pv['product_code'].' - '.$pv['product_name'],
+                'product_variant_code' => $pv['product_variant_group_code'],
+                'product_variant' => $name,
+                'total_use_plastic' => $pv['product_variant_groups_plastic_used']
+            ];
+        }
+
+        if($arrProductVariant){
+            return response()->json([
+                'status' => 'success',
+                'result' => [
+                    'brand' => $dataBrand,
+                    'products_variant' => $arrProductVariant
+                ]
+            ]);
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+        }
+    }
+
+    function importProductVariant(Request $request){
+        $post = $request->json()->all();
+        $result = [
+            'updated' => 0,
+            'invalid' => 0,
+            'failed' => 0,
+            'not_found' => 0,
+            'more_msg' => [],
+            'more_msg_extended' => []
+        ];
+        $data = $post['data']??[];
+
+        foreach ($data as $key => $value) {
+            if(empty($value['product_variant_code'])){
+                $result['invalid']++;
+                continue;
+            }
+
+            $productVariantGroup = ProductVariantGroup::where('product_variant_group_code', $value['product_variant_code'])->first();
+
+            if($productVariantGroup){
+                $update = ProductVariantGroup::where('id_product_variant_group', $productVariantGroup['id_product_variant_group'])->update(['product_variant_groups_plastic_used' => $value['total_use_plastic']??0]);
+
+                if($update){
+                    $result['updated']++;
+                    continue;
+                }else{
+                    $result['failed']++;
+                    continue;
+                }
+            }else{
+                $result['not_found']++;
+                $result['more_msg_extended'][] = "Product Variant Group with code {$value['product_code']} not found";
+                continue;
+            }
+        }
+
+        $response = [];
+
+        if($result['invalid']){
+            $response[] = $result['invalid'].' invalid data';
+        }
+        if($result['updated']){
+            $response[] = 'Update '.$result['updated'].' product';
+        }
+        if($result['not_found']){
+            $response[] = $result['no_update'].' product not found';
+        }
+        if($result['failed']){
+            $response[] = 'Failed update '.$result['failed'].' product';
+        }
+        $response = array_merge($response,$result['more_msg_extended']);
+        return MyHelper::checkGet($response);
+    }
+
+    function exportProductPlaticPrice(){
+        $different_outlet = Outlet::select('outlet_code','id_product','product_special_price.product_special_price as product_price')
+            ->leftJoin('product_special_price','outlets.id_outlet','=','product_special_price.id_outlet')
+            ->where('outlet_different_price',1)->get();
+        $do = MyHelper::groupIt($different_outlet,'outlet_code',null,function($key,&$val){
+            $val = MyHelper::groupIt($val,'id_product');
+            return $key;
+        });
+
+        $data['products'] = Product::select('products.id_product','product_code as product_plastic_code','product_name as product_plastic_name', 'product_global_price.product_global_price as global_price')
+            ->leftJoin('product_global_price', 'product_global_price.id_product', 'products.id_product')
+            ->where('product_type', 'plastic')
+            ->orderBy('position')
+            ->orderBy('products.id_product')
+            ->distinct()
+            ->get();
+
+        foreach ($data['products'] as $key => &$product) {
+            $inc = 0;
+            foreach ($do as $outlet_code => $x) {
+                $inc++;
+                $product['price_'.$outlet_code] = $x[$product['id_product']][0]['product_price']??'';
+                if($inc === count($do)){
+                    unset($product['id_product']);
+                }
+            }
+        }
+
+        return MyHelper::checkGet($data);
+    }
+
+    function importProductPlaticPrice(Request $request){
+        $post = $request->json()->all();
+        $result = [
+            'processed' => 0,
+            'invalid' => 0,
+            'updated' => 0,
+            'updated_price' => 0,
+            'updated_price_fail' => 0,
+            'create' => 0,
+            'create_category' => 0,
+            'no_update' => 0,
+            'failed' => 0,
+            'not_found' => 0,
+            'more_msg' => [],
+            'more_msg_extended' => []
+        ];
+        $data = $post['data'][0]??[];
+
+        foreach ($data as $key => $value) {
+            if(empty($value['product_plastic_code'])){
+                $result['invalid']++;
+                continue;
+            }
+            $result['processed']++;
+            if(empty($value['product_plastic_name'])){
+                unset($value['product_plastic_name']);
+            }
+            if(empty($value['global_price'])){
+                unset($value['global_price']);
+            }
+
+            $product = Product::where('product_code', $value['product_plastic_code'])->first();
+            \Log::info($product);
+            if(!$product){
+                $result['not_found']++;
+                $result['more_msg_extended'][] = "Product with product code {$value['product_plastic_code']} in selected brand not found";
+                continue;
+            }
+
+            if($value['global_price']??false){
+                $pp = ProductGlobalPrice::where([
+                    'id_product' => $product->id_product
+                ])->first();
+                if($pp){
+                    $update = $pp->update(['product_global_price'=>$value['global_price']]);
+                }else{
+                    $update = ProductGlobalPrice::create([
+                        'id_product' => $product->id_product,
+                        'product_global_price'=>$value['global_price']
+                    ]);
+                }
+                if($update){
+                    $result['updated_price']++;
+                }else{
+                    if($update !== 0){
+                        $result['updated_price_fail']++;
+                        $result['more_msg_extended'][] = "Failed set price for product {$value['product_plastic_code']} at outlet {$outlet->outlet_code} failed";
+                    }
+                }
+            }
+            foreach ($value as $col_name => $col_value) {
+                if(!$col_value){
+                    continue;
+                }
+                if(strpos($col_name, 'price_') !== false){
+                    $outlet_code = str_replace('price_', '', $col_name);
+                    $pp = ProductSpecialPrice::join('outlets','outlets.id_outlet','=','product_special_price.id_outlet')
+                        ->where([
+                            'outlet_code' => $outlet_code,
+                            'id_product' => $product->id_product
+                        ])->first();
+                    if($pp){
+                        $update = $pp->update(['product_special_price'=>$col_value]);
+                    }else{
+                        $id_outlet = Outlet::select('id_outlet')->where('outlet_code',$outlet_code)->pluck('id_outlet')->first();
+                        if(!$id_outlet){
+                            $result['updated_price_fail']++;
+                            $result['more_msg_extended'][] = "Failed create new price for product {$value['product_plastic_code']} at outlet $outlet_code failed";
+                            continue;
+                        }
+                        $update = ProductSpecialPrice::create([
+                            'id_outlet' => $id_outlet,
+                            'id_product' => $product->id_product,
+                            'product_special_price'=>$col_value
+                        ]);
+                    }
+                    if($update){
+                        $result['updated_price']++;
+                    }else{
+                        $result['updated_price_fail']++;
+                        $result['more_msg_extended'][] = "Failed set price for product {$value['product_plastic_code']} at outlet $outlet_code failed";
+                    }
+                }
+            }
+        }
+
+        $response = [];
+        if($result['invalid']+$result['processed']<=0){
+            return MyHelper::checkGet([],'File empty');
+        }else{
+            $response[] = $result['invalid']+$result['processed'].' total data found';
+        }
+        if($result['processed']){
+            $response[] = $result['processed'].' data processed';
+        }
+        if($result['updated']){
+            $response[] = 'Update '.$result['updated'].' product';
+        }
+        if($result['create']){
+            $response[] = 'Create '.$result['create'].' new product';
+        }
+        if($result['create_category']){
+            $response[] = 'Create '.$result['create_category'].' new category';
+        }
+        if($result['no_update']){
+            $response[] = $result['no_update'].' product not updated';
+        }
+        if($result['invalid']){
+            $response[] = $result['invalid'].' row data invalid';
+        }
+        if($result['failed']){
+            $response[] = 'Failed create '.$result['failed'].' product';
+        }
+        if($result['not_found']){
+            $response[] = $result['not_found'].' product not found';
+        }
+        if($result['updated_price']){
+            $response[] = 'Update '.$result['updated_price'].' product price';
+        }
+        if($result['updated_price_fail']){
+            $response[] = 'Update '.$result['updated_price_fail'].' product price fail';
+        }
+        $response = array_merge($response,$result['more_msg_extended']);
+        return MyHelper::checkGet($response);
     }
 }
