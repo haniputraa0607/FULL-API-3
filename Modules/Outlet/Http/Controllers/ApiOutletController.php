@@ -2787,28 +2787,30 @@ class ApiOutletController extends Controller
 	        	}
 
 	        	if ($source == 'promo_campaign') {
-	        		$brands 		= $code->promo_campaign->promo_campaign_brands()->pluck('id_brand')->toArray();
-	        		$all_outlet 	= $code['promo_campaign']['is_all_outlet']??0;
-	        		$promo_outlet 	= $code['promo_campaign']['promo_campaign_outlets']??[];
-	        		$id_brand 		= $code['promo_campaign']['id_brand']??null;
-	        		$brand_rule		= $code['promo_campaign']['brand_rule']??'and';
-	        		$promo_type 	= $code['promo_campaign']['promo_type'];
+	        		$brands 			= $code->promo_campaign->promo_campaign_brands()->pluck('id_brand')->toArray();
+	        		$all_outlet 		= $code['promo_campaign']['is_all_outlet']??0;
+	        		$promo_outlet 		= $code['promo_campaign']['promo_campaign_outlets']??[];
+	        		$promo_outlet_group = $code['promo_campaign']['outlet_groups']??[];
+	        		$id_brand 			= $code['promo_campaign']['id_brand']??null;
+	        		$brand_rule			= $code['promo_campaign']['brand_rule']??'and';
+	        		$promo_type 		= $code['promo_campaign']['promo_type'];
 	        	}elseif($source == 'deals'){
-	        		$brands 		= $code->dealVoucher->deals->deals_brands()->pluck('id_brand')->toArray();
-	        		$all_outlet 	= $code['dealVoucher']['deals']['is_all_outlet']??0;
-	        		$promo_outlet 	= $code['dealVoucher']['deals']['outlets_active']??[];
-	        		$id_brand 		= $code['dealVoucher']['deals']['id_brand']??null;
-	        		$brand_rule		= $code['dealVoucher']['deals']['brand_rule']??'and';
-	        		$promo_type		= $code['dealVoucher']['deals']['promo_type'];
+	        		$brands 			= $code->dealVoucher->deals->deals_brands()->pluck('id_brand')->toArray();
+	        		$all_outlet 		= $code['dealVoucher']['deals']['is_all_outlet']??0;
+	        		$promo_outlet 		= $code['dealVoucher']['deals']['outlets_active']??[];
+	        		$promo_outlet_group = $code['dealVoucher']['deals']['outlet_groups']??[];
+	        		$id_brand 			= $code['dealVoucher']['deals']['id_brand']??null;
+	        		$brand_rule			= $code['dealVoucher']['deals']['brand_rule']??'and';
+	        		$promo_type			= $code['dealVoucher']['deals']['promo_type'];
 	        	}elseif($source == 'subscription'){
-	        		$brands 		= $code->subscription_user->subscription->subscription_brands->pluck('id_brand')->toArray();
-	        		$all_outlet 	= $code['subscription_user']['subscription']['is_all_outlet']??0;
-	        		$promo_outlet 	= $code['subscription_user']['subscription']['outlets_active']??[];
-	        		$id_brand 		= $code['subscription_user']['subscription']['id_brand']??null;
-	        		$brand_rule		= $code['subscription_user']['subscription']['brand_rule']??'and';
-	        		$promo_type		= $code['subscription_user']['subscription']['subscription_discount_type'];
+	        		$brands 			= $code->subscription_user->subscription->subscription_brands->pluck('id_brand')->toArray();
+	        		$all_outlet 		= $code['subscription_user']['subscription']['is_all_outlet']??0;
+	        		$promo_outlet 		= $code['subscription_user']['subscription']['outlets_active']??[];
+	        		$promo_outlet_group = $code['subscription_user']['subscription']['outlet_groups']??[];
+	        		$id_brand 			= $code['subscription_user']['subscription']['id_brand']??null;
+	        		$brand_rule			= $code['subscription_user']['subscription']['brand_rule']??'and';
+	        		$promo_type			= $code['subscription_user']['subscription']['subscription_discount_type'];
 	        	}
-
 	        	// if valid give flag is_promo = 1
 	        	$code_obj = $code;
 	        	$code = $code->toArray();
@@ -2824,7 +2826,7 @@ class ApiOutletController extends Controller
 					if (isset($id_brand)) {
 						$check_outlet = $pct->checkOutletRule($value['id_outlet'], $all_outlet, $promo_outlet, $id_brand);
 					}else{
-						$check_outlet = $pct->checkOutletBrandRule($value['id_outlet'], $all_outlet, $promo_outlet, $brands, $brand_rule);
+						$check_outlet = $pct->checkOutletBrandRule($value['id_outlet'], $all_outlet, $promo_outlet, $brands, $brand_rule, $promo_outlet_group);
 					}
 					
 					if ($check_outlet) {

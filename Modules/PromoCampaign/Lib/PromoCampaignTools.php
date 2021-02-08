@@ -40,6 +40,7 @@ class PromoCampaignTools{
         $this->user     = "Modules\Users\Http\Controllers\ApiUser";
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
+        $this->outlet_group_filter  = "Modules\Outlet\Http\Controllers\ApiOutletGroupFilterController";
     }
 	/**
 	 * validate transaction to use promo campaign
@@ -70,11 +71,13 @@ class PromoCampaignTools{
 		{
 			$promo=PromoCampaign::with('promo_campaign_outlets')->find($id_promo);
 			$promo_outlet = $promo->promo_campaign_outlets;
+			$promo_outlet_groups = $promo->outlet_groups;
 		}
 		elseif($source == 'deals')
 		{
 			$promo=Deal::with('outlets_active')->find($id_promo);
 			$promo_outlet = $promo->outlets_active;
+			$promo_outlet_groups = $promo->outlet_groups;
 		}
 		else
 		{
@@ -94,7 +97,7 @@ class PromoCampaignTools{
 
 		$promo_brand = $promo->{$source.'_brands'}->pluck('id_brand')->toArray();
 		// $outlet = $this->checkOutletRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet, $promo->id_brand);
-		$outlet = $this->checkOutletBrandRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet, $promo_brand, $promo->brand_rule);
+		$outlet = $this->checkOutletBrandRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet, $promo_brand, $promo->brand_rule, $promo_outlet_groups);
 
 		if(!$outlet){
 			$errors[]='Promo tidak dapat digunakan di outlet ini.';
@@ -1453,8 +1456,12 @@ class PromoCampaignTools{
         }
     }
 
-    public function checkOutletBrandRule($id_outlet, $all_outlet, $promo_outlets, $promo_brands, $brand_rule = 'and')
+    public function checkOutletBrandRule($id_outlet, $all_outlet, $promo_outlets, $promo_brands, $brand_rule = 'and', $promo_outlet_groups = [])
     {
+    	if (!is_array($promo_outlets)) {
+    		$promo_outlets = $promo_outlets->toArray();
+    	}
+
     	$outlet_brands 	= BrandOutlet::where('id_outlet', $id_outlet)->pluck('id_brand')->toArray();
     	$check_brand 	= array_diff($promo_brands, $outlet_brands);
 
@@ -1467,6 +1474,14 @@ class PromoCampaignTools{
     			return false;
     		}
     	}
+
+    	$outlet_by_group_filter = [];
+    	foreach ($promo_outlet_groups as $val) {
+			$temp = app($this->outlet_group_filter)->outletGroupFilter($val['id_outlet_group']);
+			$outlet_by_group_filter = array_merge($outlet_by_group_filter, $temp);
+    	}
+
+    	$promo_outlets = array_merge($promo_outlets, $outlet_by_group_filter);
 
         if ($all_outlet == '1') 
         {
@@ -2115,13 +2130,14 @@ class PromoCampaignTools{
                 $promo_error = 'Promo not valid';
                 return $result;
             }
-            $source 		= 'promo_campaign';
-            $brands 		= $code->promo_campaign->promo_campaign_brands()->pluck('id_brand')->toArray();
-    		$all_outlet 	= $code['promo_campaign']['is_all_outlet']??0;
-    		$promo_outlet 	= $code['promo_campaign']['promo_campaign_outlets']??[];
-    		$id_brand_promo	= $code['promo_campaign']['id_brand']??null;
-    		$brand_rule		= $code['promo_campaign']['brand_rule']??'and';
-            $promo_type = $code->promo_type;
+            $source 			= 'promo_campaign';
+            $brands 			= $code->promo_campaign->promo_campaign_brands()->pluck('id_brand')->toArray();
+    		$all_outlet 		= $code['promo_campaign']['is_all_outlet']??0;
+    		$promo_outlet 		= $code['promo_campaign']['promo_campaign_outlets']??[];
+    		$promo_outlet_group = $code['promo_campaign']['outlet_groups']??[];
+    		$id_brand_promo		= $code['promo_campaign']['id_brand']??null;
+    		$brand_rule			= $code['promo_campaign']['brand_rule']??'and';
+            $promo_type 		= $code->promo_type;
 
     		// if promo doesn't have product related rule, return data
     		if ($code->promo_type != 'Product discount' && $code->promo_type != 'Tier discount' && $code->promo_type != 'Buy X Get Y' && $code->promo_type != 'Discount bill') {
@@ -2134,13 +2150,14 @@ class PromoCampaignTools{
                 $promo_error = 'Promo not valid';
                 return $result;
             }
-            $source 		= 'deals';
-    		$brands 		= $code->dealVoucher->deals->deals_brands()->pluck('id_brand')->toArray();
-    		$all_outlet 	= $code['dealVoucher']['deals']['is_all_outlet']??0;
-    		$promo_outlet 	= $code['dealVoucher']['deals']['outlets_active']??[];
-    		$id_brand_promo = $code['dealVoucher']['deals']['id_brand']??null;
-    		$brand_rule		= $code['dealVoucher']['deals']['brand_rule']??'and';
-            $promo_type = $code->dealVoucher->deals->promo_type;
+            $source 			= 'deals';
+    		$brands 			= $code->dealVoucher->deals->deals_brands()->pluck('id_brand')->toArray();
+    		$all_outlet 		= $code['dealVoucher']['deals']['is_all_outlet']??0;
+    		$promo_outlet 		= $code['dealVoucher']['deals']['outlets_active']??[];
+    		$promo_outlet_group = $code['dealVoucher']['deals']['outlet_groups']??[];
+    		$id_brand_promo 	= $code['dealVoucher']['deals']['id_brand']??null;
+    		$brand_rule			= $code['dealVoucher']['deals']['brand_rule']??'and';
+            $promo_type 		= $code->dealVoucher->deals->promo_type;
 
     		// if promo doesn't have product related rule, return data
     		if ($code->dealVoucher->deals->promo_type != 'Product discount' 
@@ -2157,13 +2174,14 @@ class PromoCampaignTools{
                 $promo_error = 'Promo not valid';
                 return $result;
             }
-            $source 		= 'subscription';
-            $brands 		= $code->subscription_user->subscription->subscription_brands->pluck('id_brand')->toArray();
-    		$all_outlet 	= $code['subscription_user']['subscription']['is_all_outlet']??0;
-    		$promo_outlet 	= $code['subscription_user']['subscription']['outlets_active']??[];
-    		$id_brand_promo	= $code['subscription_user']['subscription']['id_brand']??null;
-    		$brand_rule		= $code['subscription_user']['subscription']['brand_rule']??'and';
-            $promo_type = 'Subscription';
+            $source 			= 'subscription';
+            $brands 			= $code->subscription_user->subscription->subscription_brands->pluck('id_brand')->toArray();
+    		$all_outlet 		= $code['subscription_user']['subscription']['is_all_outlet']??0;
+    		$promo_outlet 		= $code['subscription_user']['subscription']['outlets_active']??[];
+    		$promo_outlet_group = $code['subscription_user']['subscription']['outlet_groups']??[];
+    		$id_brand_promo		= $code['subscription_user']['subscription']['id_brand']??null;
+    		$brand_rule			= $code['subscription_user']['subscription']['brand_rule']??'and';
+            $promo_type 		= 'Subscription';
         }
 
         if (($code['promo_campaign']['date_end'] ?? $code['voucher_expired_at'] ?? $code['subscription_expired_at']) < date('Y-m-d H:i:s')) {
@@ -2176,7 +2194,7 @@ class PromoCampaignTools{
         if (!empty($id_brand_promo)) {
 			$check_outlet = $this->checkOutletRule($post['id_outlet'], $all_outlet, $promo_outlet, $id_brand_promo);
 		}else{
-			$check_outlet = $this->checkOutletBrandRule($post['id_outlet'], $all_outlet, $promo_outlet, $brands, $brand_rule);
+			$check_outlet = $this->checkOutletBrandRule($post['id_outlet'], $all_outlet, $promo_outlet, $brands, $brand_rule, $promo_outlet_group);
 		}
 
 		if (!$check_outlet) {
