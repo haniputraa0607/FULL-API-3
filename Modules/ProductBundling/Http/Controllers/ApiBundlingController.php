@@ -228,6 +228,10 @@ class ApiBundlingController extends Controller
                 if(in_array("all", $post['id_outlet'])){
                     $isAllOutlet = 1;
                 }
+
+                if($post['bundling_specific_day_type'] == 'not_specific_day'){
+                    $post['bundling_specific_day_type'] = NULL;
+                }
                 //create bundling
                 $createBundling = [
                     'bundling_code' => $post['bundling_code'],
@@ -475,6 +479,10 @@ class ApiBundlingController extends Controller
             $isAllOutlet = 0;
             if(in_array("all", $post['id_outlet'])){
                 $isAllOutlet = 1;
+            }
+
+            if($post['bundling_specific_day_type'] == 'not_specific_day'){
+                $post['bundling_specific_day_type'] = NULL;
             }
 
             //update bundling
