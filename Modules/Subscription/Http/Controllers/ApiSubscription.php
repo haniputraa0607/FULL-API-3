@@ -1086,7 +1086,8 @@ class ApiSubscription extends Controller
 	                    'brand',
 	                    'subscription_shipment_method',
 	                    'subscription_payment_method',
-	                    'brands'
+	                    'brands',
+	                    'outlet_groups'
                     ])
                     ->withCount(['subscription_users' => function($q) {
                     	$q->where('paid_status','!=','Cancelled');
