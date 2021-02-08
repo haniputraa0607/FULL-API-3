@@ -228,6 +228,10 @@ class ApiBundlingController extends Controller
                 if(in_array("all", $post['id_outlet'])){
                     $isAllOutlet = 1;
                 }
+
+                if($post['bundling_specific_day_type'] == 'not_specific_day'){
+                    $post['bundling_specific_day_type'] = NULL;
+                }
                 //create bundling
                 $createBundling = [
                     'bundling_code' => $post['bundling_code'],
@@ -424,16 +428,15 @@ class ApiBundlingController extends Controller
                 }
             }
 
+            $brands = array_unique($brands);
             $count = count($brands);
             $paramValue = '';
+            $tmp = [];
             foreach ($brands as $index => $p){
-                if($index !== $count-1){
-                    $paramValue .= 'bo.id_brand = "'.$p.'" OR ';
-                }else{
-                    $paramValue .= 'bo.id_brand = "'.$p.'"';
-                }
+                $tmp[] = 'bo.id_brand = "'.$p.'"';
             }
 
+            $paramValue = implode(" OR ", $tmp);
             $outletAvailable = Outlet::join('brand_outlet as bo', 'bo.id_outlet', 'outlets.id_outlet')
                 ->groupBy('bo.id_outlet')
                 ->whereRaw($paramValue)
@@ -475,6 +478,10 @@ class ApiBundlingController extends Controller
             $isAllOutlet = 0;
             if(in_array("all", $post['id_outlet'])){
                 $isAllOutlet = 1;
+            }
+
+            if($post['bundling_specific_day_type'] == 'not_specific_day'){
+                $post['bundling_specific_day_type'] = NULL;
             }
 
             //update bundling
