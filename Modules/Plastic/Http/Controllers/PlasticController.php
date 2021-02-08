@@ -53,7 +53,7 @@ class PlasticController extends Controller
         
         $id_outlet = $post['id_outlet'];
         $item = $post['item'];
-        $itemBundling = $post['item_bundling_detail'];
+        $itemBundling = $post['item_bundling_detail']??[];
 
         // count total penggunaan plastik 
         $total_capacities = 0;
