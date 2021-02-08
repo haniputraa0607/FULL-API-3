@@ -428,16 +428,15 @@ class ApiBundlingController extends Controller
                 }
             }
 
+            $brands = array_unique($brands);
             $count = count($brands);
             $paramValue = '';
+            $tmp = [];
             foreach ($brands as $index => $p){
-                if($index !== $count-1){
-                    $paramValue .= 'bo.id_brand = "'.$p.'" OR ';
-                }else{
-                    $paramValue .= 'bo.id_brand = "'.$p.'"';
-                }
+                $tmp[] = 'bo.id_brand = "'.$p.'"';
             }
 
+            $paramValue = implode(" OR ", $tmp);
             $outletAvailable = Outlet::join('brand_outlet as bo', 'bo.id_outlet', 'outlets.id_outlet')
                 ->groupBy('bo.id_outlet')
                 ->whereRaw($paramValue)
