@@ -2806,6 +2806,7 @@ class ApiOutletController extends Controller
 	        		$brands 			= $code->subscription_user->subscription->subscription_brands->pluck('id_brand')->toArray();
 	        		$all_outlet 		= $code['subscription_user']['subscription']['is_all_outlet']??0;
 	        		$promo_outlet 		= $code['subscription_user']['subscription']['outlets_active']??[];
+	        		$promo_outlet_group = $code['subscription_user']['subscription']['outlet_groups']??[];
 	        		$id_brand 			= $code['subscription_user']['subscription']['id_brand']??null;
 	        		$brand_rule			= $code['subscription_user']['subscription']['brand_rule']??'and';
 	        		$promo_type			= $code['subscription_user']['subscription']['subscription_discount_type'];
