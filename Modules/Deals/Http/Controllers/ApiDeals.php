@@ -24,6 +24,7 @@ use App\Http\Models\DealsPromotionTemplate;
 use Modules\ProductVariant\Entities\ProductGroup;
 use App\Http\Models\Product;
 use Modules\Promotion\Entities\DealsPromotionBrand;
+use Modules\Promotion\Entities\DealsPromotionOutlet;
 use Modules\Promotion\Entities\DealsPromotionOutletGroup;
 
 use Modules\Deals\Entities\DealsProductDiscount;
@@ -235,6 +236,7 @@ class ApiDeals extends Controller
         if (isset($post['deals_total_used'])) {
             $data['deals_total_used'] = $post['deals_total_used'];
         }
+        /* replaced by check filter outlet
         if (isset($post['id_outlet'])) {
         	if ($post['deals_type'] == 'Promotion') {
         		$data['deals_list_outlet'] = implode(',', $post['id_outlet']);
@@ -248,7 +250,7 @@ class ApiDeals extends Controller
             }else{
                 $data['is_all_outlet'] = 0;
             }
-        }
+        }*/
         if (isset($post['user_limit'])) {
             $data['user_limit'] = $post['user_limit'];
         } else {
@@ -297,12 +299,7 @@ class ApiDeals extends Controller
         if (isset($post['filter_outlet'])) {
         	switch ($post['filter_outlet']) {
         		case 'selected_outlet':
-        			if ($post['deals_type'] == 'Promotion') {
-		        		$data['deals_list_outlet'] = implode(',', $post['id_outlet']);
-						unset($data['id_outlet']);
-		        	}else{
-		        	    $data['id_outlet'] = $post['id_outlet'] ?? [];
-		        	}
+		        	$data['id_outlet'] = $post['id_outlet'] ?? [];
 		        	$data['is_all_outlet'] = 0;
 		        	unset($data['id_outlet_group']);
         			break;
@@ -357,7 +354,7 @@ class ApiDeals extends Controller
         if ($save) {
             if (isset($data['id_outlet']) && $data['is_all_outlet'] == 0) {
                 if (isset($data['id_outlet'])) {
-                    $saveOutlet = $this->saveOutlet($save, $data['id_outlet']);
+                    $saveOutlet = $this->saveOutlet($data['deals_type'], $save, $data['id_outlet']);
 
                     if (!$saveOutlet) {
                         return false;
@@ -1166,17 +1163,19 @@ class ApiDeals extends Controller
             $this->deleteImage($id);
         }
 
-        // DELETE
-        $this->deleteOutlet($id);
+        //delete outlet
+        $this->deleteOutlet('deals', $id);
+
+        // save outlet
         if (isset($data['id_outlet'])) {
 
-            // SAVE
             if($data['is_all_outlet'] == 0){
-                $saveOutlet = $this->saveOutlet($deals, $data['id_outlet']);
+                $saveOutlet = $this->saveOutlet('deals', $deals, $data['id_outlet']);
             }
             unset($data['id_outlet']);
         }
 
+        // save outlet group
         if (isset($data['id_outlet_group'])) {
 
             if($data['is_all_outlet'] == 0){
@@ -1256,8 +1255,6 @@ class ApiDeals extends Controller
 	        	return response()->json(['status' => 'fail','messages' => ['Update Promotion Deals Failed']]);
 	        }
         }
-
-
     }
 
     /* DELETE */
@@ -1338,13 +1335,17 @@ class ApiDeals extends Controller
     }
 
     /* OUTLET */
-    function saveOutlet($deals, $id_outlet = [])
+    function saveOutlet($deals_type, $deals, $id_outlet = [])
     {
-        $id_deals=$deals->id_deals;
-        $id_brand=$deals->id_brand;
-        $dataOutlet = [];
+    	if ($deals_type == 'Promotion') {
+        	$id_deals = $deals->id_deals_promotion_template;
+        	$outlet_table = new DealsPromotionOutlet;
+        }else{
+	        $id_deals = $deals->id_deals;
+        	$outlet_table = new DealsOutlet;
+        }
 
-        /*If select all outlet, not save to table deals outlet*/
+        $dataOutlet = [];
         foreach ($id_outlet as $value) {
             array_push($dataOutlet, [
                 'id_outlet' => $value,
@@ -1353,7 +1354,7 @@ class ApiDeals extends Controller
         }
 
         if (!empty($dataOutlet)) {
-            $save = DealsOutlet::insert($dataOutlet);
+            $save = $outlet_table::insert($dataOutlet);
 
             return $save;
         } else {
@@ -1373,14 +1374,9 @@ class ApiDeals extends Controller
         }else{
 	        $id_deals = $deals->id_deals;
         	$outlet_group_table = new DealsOutletGroup;
-        	$this->deleteOutlet($id_deals);
         }
 
-	    $delete = $outlet_group_table::where('id_deals', $id_deals)->delete();
-
         $data_outlet = [];
-
-        /*If select all outlet, not save to table deals outlet*/
         foreach ($id_outlet_group as $value) {
             array_push($data_outlet, [
                 'id_outlet_group' => $value,
@@ -1400,10 +1396,15 @@ class ApiDeals extends Controller
     }
 
     /* DELETE OUTLET */
-    function deleteOutlet($id_deals)
+    function deleteOutlet($deals_type, $id_deals)
     {
-        $delete = DealsOutlet::where('id_deals', $id_deals)->delete();
-        $delete = DealsOutletGroup::where('id_deals', $id_deals)->delete();
+    	if ($deals_type == 'Promotion') {
+	        $delete = DealsPromotionOutlet::where('id_deals', $id_deals)->delete();
+	        $delete = DealsPromotionOutletGroup::where('id_deals', $id_deals)->delete();
+	    }else{
+	        $delete = DealsOutlet::where('id_deals', $id_deals)->delete();
+	        $delete = DealsOutletGroup::where('id_deals', $id_deals)->delete();
+	    }
 
         return $delete;
     }
@@ -1603,7 +1604,7 @@ class ApiDeals extends Controller
     		$table = 'deals';
     	}
 
-        if ( ($post['step'] == 1 || $post['step'] == 'all') && ($deals_type != 'Promotion') ){
+        if ( ($post['step'] == 1 || $post['step'] == 'all') ){
 			$deals = $deals->with(['outlets', 'outlet_groups']);
         }
 
@@ -2013,9 +2014,7 @@ class ApiDeals extends Controller
         unset(
         	$data['deals_type'],
         	$data['deals_voucher_price_point'],
-        	$data['deals_voucher_price_cash'],
-        	$data['is_all_outlet'],
-        	$data['id_outlet']
+        	$data['deals_voucher_price_cash']
         );
         $data['step_complete'] = 0;
         $data['last_updated_by'] = auth()->user()->id;
@@ -2058,6 +2057,26 @@ class ApiDeals extends Controller
         	if (!$save_brand) {
                 return false;
             }
+        }
+
+        //delete outlet
+        $this->deleteOutlet('Promotion', $id);
+
+        // save outlet
+        if (isset($data['id_outlet'])) {
+
+            if($data['is_all_outlet'] == 0){
+                $saveOutlet = $this->saveOutlet('Promotion', $deals, $data['id_outlet']);
+            }
+            unset($data['id_outlet']);
+        }
+
+        // save outlet group
+        if (isset($data['id_outlet_group'])) {
+            if($data['is_all_outlet'] == 0){
+                $saveOutlet = $this->saveOutletGroup('Promotion', $deals, $data['id_outlet_group']);
+            }
+            unset($data['id_outlet_group']);
         }
 
         // error

@@ -144,7 +144,7 @@ class DealsPromotionTemplate extends Model
 
 	public function outlets()
 	{
-		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'deals_outlets', 'id_deals', 'id_outlet');
+		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'deals_promotion_outlets', 'id_deals', 'id_outlet');
 	}
 
 	public function deals_vouchers()

@@ -183,7 +183,9 @@ class ApiPromotionDeals extends Controller
 	                'deals_promotion_discount_delivery_rules',
 	                'deals_promotion_shipment_method',
 	                'deals_promotion_payment_method',
-	                'brands'
+	                'brands',
+	                'outlets',
+	                'outlet_groups'
 	            ])
 	            ->first();
 	    $outlet = explode(',',$deals->deals_list_outlet);
