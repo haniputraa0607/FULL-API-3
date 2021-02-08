@@ -311,89 +311,53 @@ class ApiOutletGroupFilterController extends Controller
                     ->join('provinces', 'provinces.id_province', '=', 'cities.id_province')
                     ->where('outlet_status', 'Active');
 
-                $conditionParents = OutletGroupFilterConditionParent::where('id_outlet_group', $id_outlet_group)->get()->toArray();
+                $conditionParents = OutletGroupFilterConditionParent::where('id_outlet_group', $id_outlet_group)->orderBy('id_outlet_group_filter_condition_parent', 'desc')->get()->toArray();
 
-                foreach ($conditionParents as $conditionParent){
-                    $ruleNext = 'and';
-                    if(isset($conditionParent['condition_parent_rule_next'])){
-                        $ruleNext = $conditionParent['condition_parent_rule_next'];
-                    }
+                $outlets->where(function ($subMaster) use($conditionParents){
+                    foreach ($conditionParents as $conditionParent){
+                        $ruleNext = 'and';
+                        if(isset($conditionParent['condition_parent_rule_next'])){
+                            $ruleNext = $conditionParent['condition_parent_rule_next'];
+                        }
 
-                    if($ruleNext == 'and'){
-                        $outlets->where(function ($sub) use ($conditionParent){
-                            $conditions = OutletGroupFilterCondition::where('id_outlet_group_filter_condition_parent', $conditionParent['id_outlet_group_filter_condition_parent'])->get()->toArray();
+                        if($ruleNext == 'and'){
+                            $subMaster->where(function ($sub) use ($conditionParent){
+                                $conditions = OutletGroupFilterCondition::where('id_outlet_group_filter_condition_parent', $conditionParent['id_outlet_group_filter_condition_parent'])->get()->toArray();
 
-                            $rule = 'and';
-                            if(isset($conditionParent['condition_parent_rule'])){
-                                $rule = $conditionParent['condition_parent_rule'];
-                            }
-
-                            if($rule == 'and'){
-                                foreach ($conditions as $row){
-                                    if(isset($row['outlet_group_filter_subject'])){
-                                        if($row['outlet_group_filter_subject'] == 'province'){
-                                            $sub->where('provinces.id_province', $row['outlet_group_filter_operator']);
-                                        }
-
-                                        if($row['outlet_group_filter_subject'] == 'city'){
-                                            $sub->where('cities.id_city', $row['outlet_group_filter_operator']);
-                                        }
-
-                                        if($row['outlet_group_filter_subject'] == 'status_franchise'){
-                                            $sub->where('status_franchise', $row['outlet_group_filter_operator']);
-                                        }
-
-                                        if($row['outlet_group_filter_subject'] == 'delivery_order'){
-                                            $sub->where('delivery_order', $row['outlet_group_filter_operator']);
-                                        }
-
-                                        if($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name'){
-                                            if($row['outlet_group_filter_operator'] == '='){
-                                                $sub->where($row['outlet_group_filter_subject'], $row['outlet_group_filter_parameter']);
-                                            }else{
-                                                $sub->where($row['outlet_group_filter_subject'], 'like', '%'.$row['outlet_group_filter_parameter'].'%');
-                                            }
-                                        }
-
-                                        if($row['outlet_group_filter_subject'] == 'brand'){
-                                            $sub->whereIn('outlets.id_outlet', function($query) use($row) {
-                                                $query->select('id_outlet')
-                                                    ->from('brand_outlet')
-                                                    ->where('id_brand', $row['outlet_group_filter_operator']);
-                                            });
-                                        }
-                                    }
+                                $rule = 'and';
+                                if(isset($conditionParent['condition_parent_rule'])){
+                                    $rule = $conditionParent['condition_parent_rule'];
                                 }
-                            }else{
-                                $sub->where(function ($subquery) use ($conditions){
+
+                                if($rule == 'and'){
                                     foreach ($conditions as $row){
                                         if(isset($row['outlet_group_filter_subject'])){
                                             if($row['outlet_group_filter_subject'] == 'province'){
-                                                $subquery->orWhere('provinces.id_province', $row['outlet_group_filter_operator']);
+                                                $sub->where('provinces.id_province', $row['outlet_group_filter_operator']);
                                             }
 
                                             if($row['outlet_group_filter_subject'] == 'city'){
-                                                $subquery->orWhere('cities.id_city', $row['outlet_group_filter_operator']);
+                                                $sub->where('cities.id_city', $row['outlet_group_filter_operator']);
                                             }
 
                                             if($row['outlet_group_filter_subject'] == 'status_franchise'){
-                                                $subquery->orWhere('status_franchise', $row['outlet_group_filter_operator']);
+                                                $sub->where('status_franchise', $row['outlet_group_filter_operator']);
                                             }
 
                                             if($row['outlet_group_filter_subject'] == 'delivery_order'){
-                                                $subquery->orWhere('delivery_order', $row['outlet_group_filter_operator']);
+                                                $sub->where('delivery_order', $row['outlet_group_filter_operator']);
                                             }
 
                                             if($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name'){
                                                 if($row['outlet_group_filter_operator'] == '='){
-                                                    $subquery->orWhere($row['outlet_group_filter_subject'], $row['outlet_group_filter_parameter']);
+                                                    $sub->where($row['outlet_group_filter_subject'], $row['outlet_group_filter_parameter']);
                                                 }else{
-                                                    $subquery->orWhere($row['outlet_group_filter_subject'], 'like', '%'.$row['outlet_group_filter_parameter'].'%');
+                                                    $sub->where($row['outlet_group_filter_subject'], 'like', '%'.$row['outlet_group_filter_parameter'].'%');
                                                 }
                                             }
 
                                             if($row['outlet_group_filter_subject'] == 'brand'){
-                                                $subquery->orWhereIn('outlets.id_outlet', function($query) use($row) {
+                                                $sub->whereIn('outlets.id_outlet', function($query) use($row) {
                                                     $query->select('id_outlet')
                                                         ->from('brand_outlet')
                                                         ->where('id_brand', $row['outlet_group_filter_operator']);
@@ -401,84 +365,84 @@ class ApiOutletGroupFilterController extends Controller
                                             }
                                         }
                                     }
-                                });
-                            }
-                        });
-                    }else{
-                        $outlets->orWhere(function ($sub) use ($conditionParent){
-                            $conditions = OutletGroupFilterCondition::where('id_outlet_group_filter_condition_parent', $conditionParent['id_outlet_group_filter_condition_parent'])->get()->toArray();
+                                }else{
+                                    $sub->where(function ($subquery) use ($conditions){
+                                        foreach ($conditions as $row){
+                                            if(isset($row['outlet_group_filter_subject'])){
+                                                if($row['outlet_group_filter_subject'] == 'province'){
+                                                    $subquery->orWhere('provinces.id_province', $row['outlet_group_filter_operator']);
+                                                }
 
-                            $rule = 'and';
-                            if(isset($conditionParent['condition_parent_rule'])){
-                                $rule = $conditionParent['condition_parent_rule'];
-                            }
+                                                if($row['outlet_group_filter_subject'] == 'city'){
+                                                    $subquery->orWhere('cities.id_city', $row['outlet_group_filter_operator']);
+                                                }
 
-                            if($rule == 'and'){
-                                foreach ($conditions as $row){
-                                    if(isset($row['outlet_group_filter_subject'])){
-                                        if($row['outlet_group_filter_subject'] == 'province'){
-                                            $sub->where('provinces.id_province', $row['outlet_group_filter_operator']);
-                                        }
+                                                if($row['outlet_group_filter_subject'] == 'status_franchise'){
+                                                    $subquery->orWhere('status_franchise', $row['outlet_group_filter_operator']);
+                                                }
 
-                                        if($row['outlet_group_filter_subject'] == 'city'){
-                                            $sub->where('cities.id_city', $row['outlet_group_filter_operator']);
-                                        }
+                                                if($row['outlet_group_filter_subject'] == 'delivery_order'){
+                                                    $subquery->orWhere('delivery_order', $row['outlet_group_filter_operator']);
+                                                }
 
-                                        if($row['outlet_group_filter_subject'] == 'status_franchise'){
-                                            $sub->where('status_franchise', $row['outlet_group_filter_operator']);
-                                        }
+                                                if($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name'){
+                                                    if($row['outlet_group_filter_operator'] == '='){
+                                                        $subquery->orWhere($row['outlet_group_filter_subject'], $row['outlet_group_filter_parameter']);
+                                                    }else{
+                                                        $subquery->orWhere($row['outlet_group_filter_subject'], 'like', '%'.$row['outlet_group_filter_parameter'].'%');
+                                                    }
+                                                }
 
-                                        if($row['outlet_group_filter_subject'] == 'delivery_order'){
-                                            $sub->where('delivery_order', $row['outlet_group_filter_operator']);
-                                        }
-
-                                        if($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name'){
-                                            if($row['outlet_group_filter_operator'] == '='){
-                                                $sub->where($row['outlet_group_filter_subject'], $row['outlet_group_filter_parameter']);
-                                            }else{
-                                                $sub->where($row['outlet_group_filter_subject'], 'like', '%'.$row['outlet_group_filter_parameter'].'%');
+                                                if($row['outlet_group_filter_subject'] == 'brand'){
+                                                    $subquery->orWhereIn('outlets.id_outlet', function($query) use($row) {
+                                                        $query->select('id_outlet')
+                                                            ->from('brand_outlet')
+                                                            ->where('id_brand', $row['outlet_group_filter_operator']);
+                                                    });
+                                                }
                                             }
                                         }
-
-                                        if($row['outlet_group_filter_subject'] == 'brand'){
-                                            $sub->whereIn('outlets.id_outlet', function($query) use($row) {
-                                                $query->select('id_outlet')
-                                                    ->from('brand_outlet')
-                                                    ->where('id_brand', $row['outlet_group_filter_operator']);
-                                            });
-                                        }
-                                    }
+                                    });
                                 }
-                            }else{
-                                $sub->where(function ($subquery) use ($conditions){
+                            });
+                        }else{
+                            $subMaster->orWhere(function ($sub) use ($conditionParent){
+                                $conditions = OutletGroupFilterCondition::where('id_outlet_group_filter_condition_parent', $conditionParent['id_outlet_group_filter_condition_parent'])->get()->toArray();
+
+                                $rule = 'and';
+                                if(isset($conditionParent['condition_parent_rule'])){
+                                    $rule = $conditionParent['condition_parent_rule'];
+                                }
+
+                                if($rule == 'and'){
                                     foreach ($conditions as $row){
                                         if(isset($row['outlet_group_filter_subject'])){
                                             if($row['outlet_group_filter_subject'] == 'province'){
-                                                $subquery->orWhere('provinces.id_province', $row['outlet_group_filter_operator']);
+                                                $sub->where('provinces.id_province', $row['outlet_group_filter_operator']);
                                             }
 
                                             if($row['outlet_group_filter_subject'] == 'city'){
-                                                $subquery->orWhere('cities.id_city', $row['outlet_group_filter_operator']);
+                                                $sub->where('cities.id_city', $row['outlet_group_filter_operator']);
                                             }
 
                                             if($row['outlet_group_filter_subject'] == 'status_franchise'){
-                                                $subquery->orWhere('status_franchise', $row['outlet_group_filter_operator']);
+                                                $sub->where('status_franchise', $row['outlet_group_filter_operator']);
                                             }
 
                                             if($row['outlet_group_filter_subject'] == 'delivery_order'){
-                                                $subquery->orWhere('delivery_order', $row['outlet_group_filter_operator']);
+                                                $sub->where('delivery_order', $row['outlet_group_filter_operator']);
                                             }
 
                                             if($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name'){
                                                 if($row['outlet_group_filter_operator'] == '='){
-                                                    $subquery->orWhere($row['outlet_group_filter_subject'], $row['outlet_group_filter_parameter']);
+                                                    $sub->where($row['outlet_group_filter_subject'], $row['outlet_group_filter_parameter']);
                                                 }else{
-                                                    $subquery->orWhere($row['outlet_group_filter_subject'], 'like', '%'.$row['outlet_group_filter_parameter'].'%');
+                                                    $sub->where($row['outlet_group_filter_subject'], 'like', '%'.$row['outlet_group_filter_parameter'].'%');
                                                 }
                                             }
 
                                             if($row['outlet_group_filter_subject'] == 'brand'){
-                                                $subquery->orWhereIn('outlets.id_outlet', function($query) use($row) {
+                                                $sub->whereIn('outlets.id_outlet', function($query) use($row) {
                                                     $query->select('id_outlet')
                                                         ->from('brand_outlet')
                                                         ->where('id_brand', $row['outlet_group_filter_operator']);
@@ -486,11 +450,49 @@ class ApiOutletGroupFilterController extends Controller
                                             }
                                         }
                                     }
-                                });
-                            }
-                        });
+                                }else{
+                                    $sub->where(function ($subquery) use ($conditions){
+                                        foreach ($conditions as $row){
+                                            if(isset($row['outlet_group_filter_subject'])){
+                                                if($row['outlet_group_filter_subject'] == 'province'){
+                                                    $subquery->orWhere('provinces.id_province', $row['outlet_group_filter_operator']);
+                                                }
+
+                                                if($row['outlet_group_filter_subject'] == 'city'){
+                                                    $subquery->orWhere('cities.id_city', $row['outlet_group_filter_operator']);
+                                                }
+
+                                                if($row['outlet_group_filter_subject'] == 'status_franchise'){
+                                                    $subquery->orWhere('status_franchise', $row['outlet_group_filter_operator']);
+                                                }
+
+                                                if($row['outlet_group_filter_subject'] == 'delivery_order'){
+                                                    $subquery->orWhere('delivery_order', $row['outlet_group_filter_operator']);
+                                                }
+
+                                                if($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name'){
+                                                    if($row['outlet_group_filter_operator'] == '='){
+                                                        $subquery->orWhere($row['outlet_group_filter_subject'], $row['outlet_group_filter_parameter']);
+                                                    }else{
+                                                        $subquery->orWhere($row['outlet_group_filter_subject'], 'like', '%'.$row['outlet_group_filter_parameter'].'%');
+                                                    }
+                                                }
+
+                                                if($row['outlet_group_filter_subject'] == 'brand'){
+                                                    $subquery->orWhereIn('outlets.id_outlet', function($query) use($row) {
+                                                        $query->select('id_outlet')
+                                                            ->from('brand_outlet')
+                                                            ->where('id_brand', $row['outlet_group_filter_operator']);
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    });
+                                }
+                            });
+                        }
                     }
-                }
+                });
 
                 return $outlets->get()->toArray();
             }
