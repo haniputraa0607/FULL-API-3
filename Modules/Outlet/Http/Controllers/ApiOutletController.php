@@ -149,6 +149,12 @@ class ApiOutletController extends Controller
             $data['status_franchise'] = 0;
         }
 
+        if (isset($post['plastic_used_status'])) {
+            $data['plastic_used_status'] = $post['plastic_used_status'];
+        }else{
+            $data['plastic_used_status'] = 'Inactive';
+        }
+
         if (isset($post['time_zone_utc'])) {
             $data['time_zone_utc'] = $post['time_zone_utc'];
         }
@@ -2000,7 +2006,8 @@ class ApiOutletController extends Controller
                             WHEN delivery_order = 1 THEN "Active"
                             ELSE "Inactive"
                         END) as "delivery"'),
-                'outlets.time_zone_utc'
+                'outlets.time_zone_utc',
+                'outlets.plastic_used_status as plastic_used'
             )->with('brands')->join('cities', 'outlets.id_city', '=', 'cities.id_city');
 
             foreach ($brand as $bran) {
@@ -2138,6 +2145,10 @@ class ApiOutletController extends Controller
                             'id_city' => $id_city[$search]??null,
                             'time_zone_utc' => $value['time_zone_utc']??7
                         ];
+
+                        if(isset($value['plastic_used'])){
+                            $insert['plastic_used_status'] = $value['plastic_used'];
+                        }
                         //insert status
                         if(isset($value['outlet_status'])){
                             $insert['outlet_status'] = $value['outlet_status'];

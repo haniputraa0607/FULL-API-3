@@ -1081,6 +1081,10 @@ class ApiOnlineTransaction extends Controller
             foreach($post['plastic']['item'] as $key => $value){
                 $value['product_price_total'] = $value['plastic_price_raw'];
                 $value['qty'] = $value['total_used'];
+                $value['transaction_product_price'] = $value['plastic_price_raw']/$value['total_used'];
+                $value['transaction_product_subtotal'] = $value['total_used'] * ($value['plastic_price_raw']/$value['total_used']);
+                $value['transaction_variant_subtotal'] = 0;
+                $value['variants'] = [];
                 
                 unset($value['plastic_price_raw']);
                 unset($value['total_used']);
@@ -1147,7 +1151,7 @@ class ApiOnlineTransaction extends Controller
                 'id_product'                   => $checkProduct['id_product'],
                 'type'                         => $checkProduct['product_type'],
                 'id_product_variant_group'     => $valueProduct['id_product_variant_group']??null,
-                'id_brand'                     => $valueProduct['id_brand'],
+                'id_brand'                     => $valueProduct['id_brand']??null,
                 'id_outlet'                    => $insertTransaction['id_outlet'],
                 'id_user'                      => $insertTransaction['id_user'],
                 'transaction_product_qty'      => $valueProduct['qty'],
@@ -2587,6 +2591,8 @@ class ApiOnlineTransaction extends Controller
         }
 
         // check bundling product
+        $nameBrandBundling = Setting::where('key', 'brand_bundling_name')->first();
+        $result['name_brand_bundling'] = $nameBrandBundling['value']??'Bundling';
         $result['item_bundling_detail'] = [];
         $result['item_bundling'] = [];
         $responseNotIncludePromo = '';
@@ -2594,6 +2600,7 @@ class ApiOnlineTransaction extends Controller
             $itemBundlings = $this->checkBundlingProduct($post, $outlet, $subtotal_per_brand);
             $result['item_bundling'] = $itemBundlings['item_bundling']??[];
             $result['item_bundling_detail'] = $itemBundlings['item_bundling_detail']??[];
+            $post['item_bundling_detail'] = $itemBundlings['item_bundling_detail']??[];
             $totalItem = $totalItem + $itemBundlings['total_item_bundling']??0;
             if(!isset($post['from_new']) || (isset($post['from_new']) && $post['from_new'] === false)){
                 $error_msg = array_merge($error_msg, $itemBundlings['error_message']??[]);
@@ -2678,9 +2685,11 @@ class ApiOnlineTransaction extends Controller
         if($post['type'] == 'Pickup Order'){
             $result['plastic']['is_checked'] = true;
             $result['plastic']['is_mandatory'] = false;
+            $result['plastic']['info'] = "Harga plastik akan dihitung berdasarkan jumlah item";
         }elseif($post['type'] == 'GO-SEND'){
             $result['plastic']['is_checked'] = true;
             $result['plastic']['is_mandatory'] = true;
+            $result['plastic']['info'] = "Harga plastik akan dihitung berdasarkan jumlah item";
         }else{
             return [
                 'status' => 'fail',

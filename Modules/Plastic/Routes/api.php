@@ -13,8 +13,14 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::middleware('auth:api')->get('/plastic', function (Request $request) {
-    return $request->user();
+Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'product-plastic'], function()
+{
+    Route::any('list', 'ApiProductPlasticController@index');
+    Route::post('store', 'ApiProductPlasticController@store');
+    Route::post('detail', 'ApiProductPlasticController@detail');
+    Route::post('update', 'ApiProductPlasticController@update');
+    Route::post('delete', 'ApiProductPlasticController@destroy');
+    Route::post('visibility', 'ApiProductPlasticController@visibility');
 });
 
 // Route::post('/plastic/total-price', 'PlasticController@getTotalPrice')->middleware('auth:api');

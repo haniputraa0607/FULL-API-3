@@ -14,7 +14,8 @@ class ProductVariantGroup extends Model
         'product_variant_group_code',
         'product_variant_group_name',
         'product_variant_group_visibility',
-        'product_variant_group_price'
+        'product_variant_group_price',
+        'product_variant_groups_plastic_used'
     ];
 
     public function product_variant_pivot()

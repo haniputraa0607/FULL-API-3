@@ -16,6 +16,8 @@ use Modules\Plastic\Http\Controllers\Plastic;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\Plastic\Http\Requests\PlasticTotalPrice;
+use Modules\ProductVariant\Entities\ProductVariant;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
 
 
 class PlasticController extends Controller
@@ -45,19 +47,46 @@ class PlasticController extends Controller
             return ['status' => 'fail', 'id_outlet is empty'];
         }
 
-        if(!isset($post['item'])){
-            return ['status' => 'fail', 'item is empty'];
+        if(empty(isset($post['item'])) && empty(isset($post['item_bundling_detail']))){
+            return ['status' => 'fail', 'item or item bundling is empty'];
         }
         
         $id_outlet = $post['id_outlet'];
         $item = $post['item'];
+        $itemBundling = $post['item_bundling_detail']??[];
 
         // count total penggunaan plastik 
         $total_capacities = 0;
         foreach($item as $key => $value){
-            $product = Product::select('id_product', 'plastic_used')->where('id_product',$value['id_product'])->first();
-            if($product['plastic_used'] != null){
-                $total_capacities += ($value['qty'] * $product['plastic_used']);
+            $product = Product::select('id_product', 'plastic_used', 'product_variant_status')->where('id_product',$value['id_product'])->first();
+
+            if($product['product_variant_status']??0 == 1){
+                $productVariant = ProductVariantGroup::where('id_product_variant_group', $value['id_product_variant_group'])->first();
+                if($productVariant['product_variant_groups_plastic_used'] != null){
+                    $total_capacities += ($value['qty'] * $productVariant['product_variant_groups_plastic_used']);
+                }
+            }else{
+                if($product['plastic_used'] != null){
+                    $total_capacities += ($value['qty'] * $product['plastic_used']);
+                }
+            }
+        }
+
+        foreach($itemBundling as $bundling){
+
+            foreach ($bundling['products'] as $value){
+                $product = Product::select('id_product', 'plastic_used', 'product_variant_status')->where('id_product',$value['id_product'])->first();
+
+                if($product['product_variant_status']??0 == 1){
+                    $productVariant = ProductVariantGroup::where('id_product_variant_group', $value['id_product_variant_group'])->first();
+                    if($productVariant['product_variant_groups_plastic_used'] != null){
+                        $total_capacities += (($value['product_qty'] * $bundling['bundling_qty']) * $productVariant['product_variant_groups_plastic_used']);
+                    }
+                }else{
+                    if($product['plastic_used'] != null){
+                        $total_capacities += (($value['product_qty'] * $bundling['bundling_qty']) * $product['plastic_used']);
+                    }
+                }
             }
         }
 
