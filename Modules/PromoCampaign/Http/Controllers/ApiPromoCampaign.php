@@ -3230,7 +3230,7 @@ class ApiPromoCampaign extends Controller
 		            } );
 
 	    if (!empty($outlet)) {
-	    	$code = $code->with(['promo_campaign.promo_campaign_outlets']);
+	    	$code = $code->with(['promo_campaign.promo_campaign_outlets', 'promo_campaign.outlet_groups']);
 	    }
 
 	    if (!empty($promo_rule)) {
@@ -3293,7 +3293,7 @@ class ApiPromoCampaign extends Controller
 
 
 	    if (!empty($outlet)) {
-        	$deals = $deals->with(['dealVoucher.deals.outlets_active']);
+        	$deals = $deals->with(['dealVoucher.deals.outlets_active', 'dealVoucher.deals.outlet_groups']);
 	    }
 
 	    if (!empty($promo_rule)) {
