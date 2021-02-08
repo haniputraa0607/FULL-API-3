@@ -29,6 +29,8 @@ Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'sco
     Route::post('delete-product', 'ApiBundlingController@destroyBundlingProduct');
     Route::post('position/assign', 'ApiBundlingController@positionBundling');
     Route::any('setting', 'ApiBundlingController@setting');
+
+    Route::get('sync-date-today', 'ApiBundlingController@bundlingToday');
 });
 
 Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'product-bundling-category'], function()

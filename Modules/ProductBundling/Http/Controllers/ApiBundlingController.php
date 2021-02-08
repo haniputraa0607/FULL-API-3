@@ -892,7 +892,7 @@ class ApiBundlingController extends Controller
                         ->orWhere('bpd.day', $dayNumber)
                         ->orWhereNull('bpd.id_bundling_periode_day');
                 })
-                ->select('bpd.day', 'bpd.time_start', 'bpd.time_end', 'bundling.id_bundling')->get()->toArray();
+                ->select('bpd.day', 'bpd.id_bundling_periode_day', 'bpd.time_start', 'bpd.time_end', 'bundling.id_bundling')->get()->toArray();
             $dataToInsert = [];
 
             foreach($getBundling as $b){
