@@ -2130,13 +2130,14 @@ class PromoCampaignTools{
                 $promo_error = 'Promo not valid';
                 return $result;
             }
-            $source 		= 'promo_campaign';
-            $brands 		= $code->promo_campaign->promo_campaign_brands()->pluck('id_brand')->toArray();
-    		$all_outlet 	= $code['promo_campaign']['is_all_outlet']??0;
-    		$promo_outlet 	= $code['promo_campaign']['promo_campaign_outlets']??[];
-    		$id_brand_promo	= $code['promo_campaign']['id_brand']??null;
-    		$brand_rule		= $code['promo_campaign']['brand_rule']??'and';
-            $promo_type = $code->promo_type;
+            $source 			= 'promo_campaign';
+            $brands 			= $code->promo_campaign->promo_campaign_brands()->pluck('id_brand')->toArray();
+    		$all_outlet 		= $code['promo_campaign']['is_all_outlet']??0;
+    		$promo_outlet 		= $code['promo_campaign']['promo_campaign_outlets']??[];
+    		$promo_outlet_group = $code['promo_campaign']['outlet_groups']??[];
+    		$id_brand_promo		= $code['promo_campaign']['id_brand']??null;
+    		$brand_rule			= $code['promo_campaign']['brand_rule']??'and';
+            $promo_type 		= $code->promo_type;
 
     		// if promo doesn't have product related rule, return data
     		if ($code->promo_type != 'Product discount' && $code->promo_type != 'Tier discount' && $code->promo_type != 'Buy X Get Y' && $code->promo_type != 'Discount bill') {
@@ -2149,13 +2150,14 @@ class PromoCampaignTools{
                 $promo_error = 'Promo not valid';
                 return $result;
             }
-            $source 		= 'deals';
-    		$brands 		= $code->dealVoucher->deals->deals_brands()->pluck('id_brand')->toArray();
-    		$all_outlet 	= $code['dealVoucher']['deals']['is_all_outlet']??0;
-    		$promo_outlet 	= $code['dealVoucher']['deals']['outlets_active']??[];
-    		$id_brand_promo = $code['dealVoucher']['deals']['id_brand']??null;
-    		$brand_rule		= $code['dealVoucher']['deals']['brand_rule']??'and';
-            $promo_type = $code->dealVoucher->deals->promo_type;
+            $source 			= 'deals';
+    		$brands 			= $code->dealVoucher->deals->deals_brands()->pluck('id_brand')->toArray();
+    		$all_outlet 		= $code['dealVoucher']['deals']['is_all_outlet']??0;
+    		$promo_outlet 		= $code['dealVoucher']['deals']['outlets_active']??[];
+    		$promo_outlet_group = $code['dealVoucher']['deals']['outlet_groups']??[];
+    		$id_brand_promo 	= $code['dealVoucher']['deals']['id_brand']??null;
+    		$brand_rule			= $code['dealVoucher']['deals']['brand_rule']??'and';
+            $promo_type 		= $code->dealVoucher->deals->promo_type;
 
     		// if promo doesn't have product related rule, return data
     		if ($code->dealVoucher->deals->promo_type != 'Product discount' 
@@ -2191,7 +2193,7 @@ class PromoCampaignTools{
         if (!empty($id_brand_promo)) {
 			$check_outlet = $this->checkOutletRule($post['id_outlet'], $all_outlet, $promo_outlet, $id_brand_promo);
 		}else{
-			$check_outlet = $this->checkOutletBrandRule($post['id_outlet'], $all_outlet, $promo_outlet, $brands, $brand_rule);
+			$check_outlet = $this->checkOutletBrandRule($post['id_outlet'], $all_outlet, $promo_outlet, $brands, $brand_rule, $promo_outlet_group);
 		}
 
 		if (!$check_outlet) {
