@@ -203,4 +203,14 @@ class DealsPromotionTemplate extends Model
 	{
 		return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'deals_promotion_outlet_groups', 'id_deals', 'id_outlet_group');
 	}
+
+	public function deals_promotion_outlets()
+	{
+        return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionOutlet::class, 'id_deals', 'id_deals_promotion_template');
+	}
+
+	public function deals_promotion_outlet_groups()
+	{
+        return $this->hasMany(\Modules\Promotion\Entities\DealsPromotionOutletGroup::class, 'id_deals', 'id_deals_promotion_template');
+	}
 }
