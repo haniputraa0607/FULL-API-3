@@ -679,7 +679,7 @@ class ApiAchievement extends Controller
         if (isset($post['group']) && date('Y-m-d H:i', strtotime($post['group']['date_start'])) <= date('Y-m-d H:i')) {
             $getUser = User::select('id')->get()->toArray();
             foreach ($getUser as $key => $value) {
-                self::checkAchievement($value['id'], $achievementDetail, $post['rule_total']);
+                self::checkAchievement($value['id'], $achievementDetail, $post['rule_total'], $post['group']['date_start']);
             }
         }
 
@@ -700,7 +700,7 @@ class ApiAchievement extends Controller
         }
     }
 
-    public static function checkAchievement($idUser, $detailAchievement, $rules)
+    public static function checkAchievement($idUser, $detailAchievement, $rules, $startDate=null)
     {
         $getUser = User::where('id', $idUser)->first();
 
@@ -709,8 +709,15 @@ class ApiAchievement extends Controller
                 switch ($rules) {
                     case 'nominal_transaction':
                         $sumTrx = Transaction::select(DB::raw('COALESCE(SUM(transactions.transaction_grandtotal), 0) as total'))
-                        ->where('transactions.id_user', $idUser);
+                        ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                        ->where('transactions.id_user', $idUser)
+                        ->where('transactions.transaction_payment_status', 'Completed')
+                        ->whereNull('transaction_pickups.reject_at');
 
+                        //only transaction after start date achievement
+                        if($startDate){
+                            $sumTrx = $sumTrx->where('transaction_date', '>=', $startDate);
+                        }
                         if (!is_null($achievement['id_product'])) {
                             $sumTrx = $sumTrx->join('transaction_products', 'transactions.id_transaction', 'transaction_products.id_transaction')
                             ->where('transaction_products.id_product', $achievement['id_product']);
@@ -736,29 +743,41 @@ class ApiAchievement extends Controller
                             $sumTrx = 0;
                         }
 
-                        if ((int) $sumTrx >= (int) $achievement['trx_nominal']) {
-                            AchievementProgress::updateOrCreate([
-                                'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                'id_user' => $idUser,
-                            ], [
-                                'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                'id_user' => $idUser,
-                                'progress' => $achievement['trx_nominal'],
-                                'end_progress' => $achievement['trx_nominal'],
-                            ]);
-                        } else {
-                            $ach_progress = AchievementGroup::select(DB::raw('SUM(achievement_progress.end_progress - achievement_progress.progress) as total'))
-                            ->join('achievement_details', 'achievement_groups.id_achievement_group', 'achievement_details.id_achievement_group')
-                            ->join('achievement_progress', 'achievement_details.id_achievement_detail', 'achievement_progress.id_achievement_detail')
-                            ->where([
-                                'achievement_progress.id_user'              => $idUser,
-                                'achievement_groups.id_achievement_group'   => $achievement['id_achievement_group']
-                            ])
-                            ->groupBy('achievement_details.id_achievement_detail')
-                            ->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
-
-                            if ($ach_progress) {
-                                if ((int) $ach_progress->total == 0) {
+                        if($sumTrx > 0){
+                            if ((int) $sumTrx >= (int) $achievement['trx_nominal']) {
+                                AchievementProgress::updateOrCreate([
+                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                    'id_user' => $idUser,
+                                ], [
+                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                    'id_user' => $idUser,
+                                    'progress' => $achievement['trx_nominal'],
+                                    'end_progress' => $achievement['trx_nominal'],
+                                ]);
+                            } else {
+                                $ach_progress = AchievementGroup::select(DB::raw('SUM(achievement_progress.end_progress - achievement_progress.progress) as total'))
+                                ->join('achievement_details', 'achievement_groups.id_achievement_group', 'achievement_details.id_achievement_group')
+                                ->join('achievement_progress', 'achievement_details.id_achievement_detail', 'achievement_progress.id_achievement_detail')
+                                ->where([
+                                    'achievement_progress.id_user'              => $idUser,
+                                    'achievement_groups.id_achievement_group'   => $achievement['id_achievement_group']
+                                ])
+                                ->groupBy('achievement_details.id_achievement_detail')
+                                ->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
+    
+                                if ($ach_progress) {
+                                    if ((int) $ach_progress->total == 0) {
+                                        AchievementProgress::updateOrCreate([
+                                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                            'id_user' => $idUser,
+                                        ], [
+                                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                            'id_user' => $idUser,
+                                            'progress' => $sumTrx,
+                                            'end_progress' => $achievement['trx_nominal'],
+                                        ]);
+                                    }
+                                } else {
                                     AchievementProgress::updateOrCreate([
                                         'id_achievement_detail' => $achievement['id_achievement_detail'],
                                         'id_user' => $idUser,
@@ -769,22 +788,20 @@ class ApiAchievement extends Controller
                                         'end_progress' => $achievement['trx_nominal'],
                                     ]);
                                 }
-                            } else {
-                                AchievementProgress::updateOrCreate([
-                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                    'id_user' => $idUser,
-                                ], [
-                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                    'id_user' => $idUser,
-                                    'progress' => $sumTrx,
-                                    'end_progress' => $achievement['trx_nominal'],
-                                ]);
                             }
                         }
                         break;
                     case 'total_transaction':
                         $countTrx = Transaction::select(DB::raw('COALESCE(COUNT(transactions.id_transaction), 0) as total'))
-                        ->where('transactions.id_user', $idUser);
+                        ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                        ->where('transactions.id_user', $idUser)
+                        ->where('transactions.transaction_payment_status', 'Completed')
+                        ->whereNull('transaction_pickups.reject_at');
+
+                        //only transaction after start date achievement
+                        if($startDate){
+                            $countTrx = $countTrx->where('transaction_date', '>=', $startDate);
+                        }
 
                         if (!is_null($achievement['trx_nominal'])) {
                             $countTrx = $countTrx->where('transactions.transaction_grandtotal', '>=', $achievement['trx_nominal']);
@@ -813,29 +830,41 @@ class ApiAchievement extends Controller
                             $countTrx = 0;
                         }
 
-                        if ((int) $countTrx >= (int) $achievement['trx_total']) {
-                            AchievementProgress::updateOrCreate([
-                                'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                'id_user' => $idUser,
-                            ], [
-                                'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                'id_user' => $idUser,
-                                'progress' => $achievement['trx_total'],
-                                'end_progress' => $achievement['trx_total'],
-                            ]);
-                        } else {
-                            $ach_progress = AchievementGroup::select(DB::raw('COALESCE(SUM(achievement_progress.end_progress - achievement_progress.progress), 0) as total'))
-                            ->join('achievement_details', 'achievement_groups.id_achievement_group', 'achievement_details.id_achievement_group')
-                            ->join('achievement_progress', 'achievement_details.id_achievement_detail', 'achievement_progress.id_achievement_detail')
-                            ->where([
-                                'achievement_progress.id_user'              => $idUser,
-                                'achievement_groups.id_achievement_group'   => $achievement['id_achievement_group']
-                            ])
-                            ->groupBy('achievement_details.id_achievement_detail')
-                            ->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
-                            
-                            if ($ach_progress) {
-                                if ((int) $ach_progress->total == 0) {
+                        if($countTrx > 0){
+                            if ((int) $countTrx >= (int) $achievement['trx_total']) {
+                                AchievementProgress::updateOrCreate([
+                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                    'id_user' => $idUser,
+                                ], [
+                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                    'id_user' => $idUser,
+                                    'progress' => $achievement['trx_total'],
+                                    'end_progress' => $achievement['trx_total'],
+                                ]);
+                            } else {
+                                $ach_progress = AchievementGroup::select(DB::raw('COALESCE(SUM(achievement_progress.end_progress - achievement_progress.progress), 0) as total'))
+                                ->join('achievement_details', 'achievement_groups.id_achievement_group', 'achievement_details.id_achievement_group')
+                                ->join('achievement_progress', 'achievement_details.id_achievement_detail', 'achievement_progress.id_achievement_detail')
+                                ->where([
+                                    'achievement_progress.id_user'              => $idUser,
+                                    'achievement_groups.id_achievement_group'   => $achievement['id_achievement_group']
+                                ])
+                                ->groupBy('achievement_details.id_achievement_detail')
+                                ->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
+                                
+                                if ($ach_progress) {
+                                    if ((int) $ach_progress->total == 0) {
+                                        AchievementProgress::updateOrCreate([
+                                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                            'id_user' => $idUser,
+                                        ], [
+                                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                            'id_user' => $idUser,
+                                            'progress' => (int) $countTrx,
+                                            'end_progress' => $achievement['trx_total'],
+                                        ]);
+                                    }
+                                } else {
                                     AchievementProgress::updateOrCreate([
                                         'id_achievement_detail' => $achievement['id_achievement_detail'],
                                         'id_user' => $idUser,
@@ -846,24 +875,21 @@ class ApiAchievement extends Controller
                                         'end_progress' => $achievement['trx_total'],
                                     ]);
                                 }
-                            } else {
-                                AchievementProgress::updateOrCreate([
-                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                    'id_user' => $idUser,
-                                ], [
-                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                    'id_user' => $idUser,
-                                    'progress' => (int) $countTrx,
-                                    'end_progress' => $achievement['trx_total'],
-                                ]);
                             }
                         }
                         break;
                     case 'total_product':
                         $sumProd = Transaction::select(DB::raw('COALESCE(SUM(transaction_products.transaction_product_qty), 0) as total'))
+                        ->join('transaction_products', 'transactions.id_transaction', 'transaction_products.id_transaction')
+                        ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
                         ->where('transactions.id_user', $idUser)
-                        ->join('transaction_products', 'transactions.id_transaction', 'transaction_products.id_transaction');
+                        ->where('transactions.transaction_payment_status', 'Completed')
+                        ->whereNull('transaction_pickups.reject_at');
 
+                        //only transaction after start date achievement
+                        if($startDate){
+                            $sumProd = $sumProd->where('transaction_date', '>=', $startDate);
+                        }
                         if (!is_null($achievement['trx_nominal'])) {
                             $sumProd = $sumProd->where('transactions.transaction_grandtotal', '>=', $achievement['trx_nominal']);
                         }
@@ -881,36 +907,47 @@ class ApiAchievement extends Controller
                         }
 
                         $sumProd = $sumProd->first();
-
                         if ($sumProd) {
                             $sumProd = $sumProd->total;
                         } else {
                             $sumProd = 0;
                         }
     
-                        if ((int) $sumProd >= (int) $achievement['product_total']) {
-                            AchievementProgress::updateOrCreate([
-                                'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                'id_user' => $idUser,
-                            ], [
-                                'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                'id_user' => $idUser,
-                                'progress' => $achievement['product_total'],
-                                'end_progress' => $achievement['product_total'],
-                            ]);
-                        } else {
-                            $ach_progress = AchievementGroup::select(DB::raw('SUM(achievement_progress.end_progress - achievement_progress.progress) as total'))
-                            ->join('achievement_details', 'achievement_groups.id_achievement_group', 'achievement_details.id_achievement_group')
-                            ->join('achievement_progress', 'achievement_details.id_achievement_detail', 'achievement_progress.id_achievement_detail')
-                            ->where([
-                                'achievement_progress.id_user'              => $idUser,
-                                'achievement_groups.id_achievement_group'   => $achievement['id_achievement_group']
-                            ])
-                            ->groupBy('achievement_details.id_achievement_detail')
-                            ->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
-
-                            if ($ach_progress) {
-                                if ((int) $ach_progress->total == 0) {
+                        if($sumProd > 0){
+                            if ((int) $sumProd >= (int) $achievement['product_total']) {
+                                AchievementProgress::updateOrCreate([
+                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                    'id_user' => $idUser,
+                                ], [
+                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                    'id_user' => $idUser,
+                                    'progress' => $achievement['product_total'],
+                                    'end_progress' => $achievement['product_total'],
+                                ]);
+                            } else {
+                                $ach_progress = AchievementGroup::select(DB::raw('SUM(achievement_progress.end_progress - achievement_progress.progress) as total'))
+                                ->join('achievement_details', 'achievement_groups.id_achievement_group', 'achievement_details.id_achievement_group')
+                                ->join('achievement_progress', 'achievement_details.id_achievement_detail', 'achievement_progress.id_achievement_detail')
+                                ->where([
+                                    'achievement_progress.id_user'              => $idUser,
+                                    'achievement_groups.id_achievement_group'   => $achievement['id_achievement_group']
+                                ])
+                                ->groupBy('achievement_details.id_achievement_detail')
+                                ->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
+    
+                                if ($ach_progress) {
+                                    if ((int) $ach_progress->total == 0) {
+                                        AchievementProgress::updateOrCreate([
+                                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                            'id_user' => $idUser,
+                                        ], [
+                                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                            'id_user' => $idUser,
+                                            'progress' => (int) $sumProd,
+                                            'end_progress' => $achievement['product_total'],
+                                        ]);
+                                    }
+                                } else {
                                     AchievementProgress::updateOrCreate([
                                         'id_achievement_detail' => $achievement['id_achievement_detail'],
                                         'id_user' => $idUser,
@@ -921,22 +958,20 @@ class ApiAchievement extends Controller
                                         'end_progress' => $achievement['product_total'],
                                     ]);
                                 }
-                            } else {
-                                AchievementProgress::updateOrCreate([
-                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                    'id_user' => $idUser,
-                                ], [
-                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                    'id_user' => $idUser,
-                                    'progress' => (int) $sumProd,
-                                    'end_progress' => $achievement['product_total'],
-                                ]);
                             }
                         }
                         break;
                     case 'total_outlet':
                         $countOutlet = Transaction::select(DB::raw('COALESCE(COUNT(DISTINCT transactions.id_outlet), 0) as total'))
-                        ->where('transactions.id_user', $idUser);
+                        ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                        ->where('transactions.id_user', $idUser)
+                        ->where('transactions.transaction_payment_status', 'Completed')
+                        ->whereNull('transaction_pickups.reject_at');
+
+                        //only transaction after start date achievement
+                        if($startDate){
+                            $countOutlet = $countOutlet->where('transaction_date', '>=', $startDate);
+                        }
 
                         if (!is_null($achievement['trx_nominal'])) {
                             $countOutlet = $countOutlet->where('transactions.transaction_grandtotal', '>=', $achievement['trx_nominal']);
@@ -962,29 +997,41 @@ class ApiAchievement extends Controller
                             $countOutlet = 0;
                         }
     
-                        if ((int) $countOutlet >= (int) $achievement['different_outlet']) {
-                            AchievementProgress::updateOrCreate([
-                                'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                'id_user' => $idUser,
-                            ], [
-                                'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                'id_user' => $idUser,
-                                'progress' => $achievement['different_outlet'],
-                                'end_progress' => $achievement['different_outlet'],
-                            ]);
-                        } else {
-                            $ach_progress = AchievementGroup::select(DB::raw('SUM(achievement_progress.end_progress - achievement_progress.progress) as total'))
-                            ->join('achievement_details', 'achievement_groups.id_achievement_group', 'achievement_details.id_achievement_group')
-                            ->join('achievement_progress', 'achievement_details.id_achievement_detail', 'achievement_progress.id_achievement_detail')
-                            ->where([
-                                'achievement_progress.id_user'              => $idUser,
-                                'achievement_groups.id_achievement_group'   => $achievement['id_achievement_group']
-                            ])
-                            ->groupBy('achievement_details.id_achievement_detail')
-                            ->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
-
-                            if ($ach_progress) {
-                                if ((int) $ach_progress->total == 0) {
+                        if($countOutlet > 0){
+                            if ((int) $countOutlet >= (int) $achievement['different_outlet']) {
+                                AchievementProgress::updateOrCreate([
+                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                    'id_user' => $idUser,
+                                ], [
+                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                    'id_user' => $idUser,
+                                    'progress' => $achievement['different_outlet'],
+                                    'end_progress' => $achievement['different_outlet'],
+                                ]);
+                            } else {
+                                $ach_progress = AchievementGroup::select(DB::raw('SUM(achievement_progress.end_progress - achievement_progress.progress) as total'))
+                                ->join('achievement_details', 'achievement_groups.id_achievement_group', 'achievement_details.id_achievement_group')
+                                ->join('achievement_progress', 'achievement_details.id_achievement_detail', 'achievement_progress.id_achievement_detail')
+                                ->where([
+                                    'achievement_progress.id_user'              => $idUser,
+                                    'achievement_groups.id_achievement_group'   => $achievement['id_achievement_group']
+                                ])
+                                ->groupBy('achievement_details.id_achievement_detail')
+                                ->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
+    
+                                if ($ach_progress) {
+                                    if ((int) $ach_progress->total == 0) {
+                                        AchievementProgress::updateOrCreate([
+                                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                            'id_user' => $idUser,
+                                        ], [
+                                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                            'id_user' => $idUser,
+                                            'progress' => (int) $countOutlet,
+                                            'end_progress' => $achievement['different_outlet'],
+                                        ]);
+                                    }
+                                } else {
                                     AchievementProgress::updateOrCreate([
                                         'id_achievement_detail' => $achievement['id_achievement_detail'],
                                         'id_user' => $idUser,
@@ -995,24 +1042,22 @@ class ApiAchievement extends Controller
                                         'end_progress' => $achievement['different_outlet'],
                                     ]);
                                 }
-                            } else {
-                                AchievementProgress::updateOrCreate([
-                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                    'id_user' => $idUser,
-                                ], [
-                                    'id_achievement_detail' => $achievement['id_achievement_detail'],
-                                    'id_user' => $idUser,
-                                    'progress' => (int) $countOutlet,
-                                    'end_progress' => $achievement['different_outlet'],
-                                ]);
                             }
                         }
                         break;
                     case 'total_province':
                         $countProvince = Transaction::select(DB::raw('COALESCE(COUNT(DISTINCT cities.id_province), 0) as total'))
-                        ->where('transactions.id_user', $idUser)
+                        ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
                         ->join('outlets', 'transactions.id_outlet', 'outlets.id_outlet')
-                        ->join('cities', 'outlets.id_city', 'cities.id_city');
+                        ->join('cities', 'outlets.id_city', 'cities.id_city')
+                        ->where('transactions.id_user', $idUser)
+                        ->where('transactions.transaction_payment_status', 'Completed')
+                        ->whereNull('transaction_pickups.reject_at');
+
+                        //only transaction after start date achievement
+                        if($startDate){
+                            $countProvince = $countProvince->where('transaction_date', '>=', $startDate);
+                        }
     
                         if (!is_null($achievement['trx_nominal'])) {
                             $countProvince = $countProvince->where('transactions.transaction_grandtotal', '>=', $achievement['trx_nominal']);
@@ -1126,34 +1171,34 @@ class ApiAchievement extends Controller
                         ]);
                     }
                 } else {
-                    AchievementUser::updateOrCreate([
-                        'id_achievement_detail' => $achievement['id_achievement_detail'],
-                        'id_user' => $idUser,
-                    ], [
-                        'id_achievement_detail' => $achievement['id_achievement_detail'],
-                        'id_user' => $idUser,
-                        'json_rule' => json_encode([
-                            'id_product' => $achievement['id_product'],
-                            'product_total' => $achievement['product_total'],
-                            'trx_nominal' => $achievement['trx_nominal'],
-                            'trx_total' => $achievement['trx_total'],
-                            'id_outlet' => $achievement['id_outlet'],
-                            'different_outlet' => $achievement['different_outlet'],
-                            'id_province' => $achievement['id_province'],
-                            'different_province' => $achievement['different_province'],
-                        ]),
-                        'json_rule_enc' => MyHelper::encrypt2019(json_encode([
-                            'id_product' => $achievement['id_product'],
-                            'product_total' => $achievement['product_total'],
-                            'trx_nominal' => $achievement['trx_nominal'],
-                            'trx_total' => $achievement['trx_total'],
-                            'id_outlet' => $achievement['id_outlet'],
-                            'different_outlet' => $achievement['different_outlet'],
-                            'id_province' => $achievement['id_province'],
-                            'different_province' => $achievement['different_province'],
-                        ])),
-                        'date' => date('Y-m-d H:i:s'),
-                    ]);
+                    // AchievementUser::updateOrCreate([
+                    //     'id_achievement_detail' => $achievement['id_achievement_detail'],
+                    //     'id_user' => $idUser,
+                    // ], [
+                    //     'id_achievement_detail' => $achievement['id_achievement_detail'],
+                    //     'id_user' => $idUser,
+                    //     'json_rule' => json_encode([
+                    //         'id_product' => $achievement['id_product'],
+                    //         'product_total' => $achievement['product_total'],
+                    //         'trx_nominal' => $achievement['trx_nominal'],
+                    //         'trx_total' => $achievement['trx_total'],
+                    //         'id_outlet' => $achievement['id_outlet'],
+                    //         'different_outlet' => $achievement['different_outlet'],
+                    //         'id_province' => $achievement['id_province'],
+                    //         'different_province' => $achievement['different_province'],
+                    //     ]),
+                    //     'json_rule_enc' => MyHelper::encrypt2019(json_encode([
+                    //         'id_product' => $achievement['id_product'],
+                    //         'product_total' => $achievement['product_total'],
+                    //         'trx_nominal' => $achievement['trx_nominal'],
+                    //         'trx_total' => $achievement['trx_total'],
+                    //         'id_outlet' => $achievement['id_outlet'],
+                    //         'different_outlet' => $achievement['different_outlet'],
+                    //         'id_province' => $achievement['id_province'],
+                    //         'different_province' => $achievement['different_province'],
+                    //     ])),
+                    //     'date' => date('Y-m-d H:i:s'),
+                    // ]);
                 }
             }
         }
@@ -1166,7 +1211,7 @@ class ApiAchievement extends Controller
         //get detail transaction
         $dataTrx = Transaction::where('id_transaction', $idTrx)
                                 //check 
-                                ->with(['productTransaction'])
+                                ->with(['allProductTransaction'])
                                 ->join('outlets', 'transactions.id_outlet', 'outlets.id_outlet')
                                 ->join('cities', 'outlets.id_city', 'cities.id_city')
                                 ->first();
@@ -1237,7 +1282,7 @@ class ApiAchievement extends Controller
                             // if detail rule passed, update achievement progress
                             if($checkRule){
                                 $total = 0;
-                                foreach($dataTrx['product_transaction'] as $product){
+                                foreach($dataTrx['all_product_transaction'] as $product){
                                     if($product['id_product'] <= $achievement['id_product']){
                                         if($product['id_product'] == $achievement['id_product']){
                                             $total += $product['transaction_product_qty'];
@@ -1423,7 +1468,7 @@ class ApiAchievement extends Controller
 
             //search product & sum total product
             $totalQty = 0;
-            foreach($dataTrx['product_transaction'] as $product){
+            foreach($dataTrx['all_product_transaction'] as $product){
                 if($product['id_product'] <= $achievement['id_product']){
                     if($product['id_product'] == $achievement['id_product']){
                         //check variant
@@ -1439,7 +1484,6 @@ class ApiAchievement extends Controller
                     break;
                 }
             }
-
             //product not found
             if($totalQty == 0){
                 return false;
