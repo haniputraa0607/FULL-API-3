@@ -3523,7 +3523,8 @@ class ApiTransaction extends Controller
                 $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                     ->whereNull('transaction_product_modifiers.id_product_modifier_group')
                     ->where('id_transaction_product', $bp['id_transaction_product'])
-                    ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as text', DB::raw('FLOOR(transaction_product_modifier_price * '.$bp['transaction_product_bundling_qty'].' * '.$bundling['transaction_bundling_product_qty'].') as product_modifier_price'))->get()->toArray();
+                    ->select('transaction_product_modifiers.code', 'transaction_product_modifiers.qty', 'transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as text',
+                        DB::raw('FLOOR(transaction_product_modifier_price * '.$bp['transaction_product_bundling_qty'].' * '.$bundling['transaction_bundling_product_qty'].') as product_modifier_price'))->get()->toArray();
                 $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
                     ->where('id_transaction_product', $bp['id_transaction_product'])
                     ->select('product_variants.id_product_variant', 'product_variants.product_variant_name',  DB::raw('FLOOR(transaction_product_variant_price) as product_variant_price'))->get()->toArray();
@@ -3555,6 +3556,7 @@ class ApiTransaction extends Controller
             }
 
             $itemBundling[] = [
+                'id_custom' => $key+1,
                 'id_bundling' => $bundling['id_bundling'],
                 'bundling_name' => $bundling['bundling_name'],
                 'bundling_qty' => $bundling['transaction_bundling_product_qty'],
