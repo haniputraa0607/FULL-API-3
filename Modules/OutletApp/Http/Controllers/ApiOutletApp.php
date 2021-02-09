@@ -3158,175 +3158,13 @@ class ApiOutletApp extends Controller
             }
         }
 
-        //get item bundling
-        $itemBundling = [];
-        $itemBundlingPerBrand = [];
-        $quantityItemBundling = 0;
-        $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
-            ->where('id_transaction', $id)->get()->toArray();
-        foreach ($getBundling as $key=>$bundling){
-            $getPriceToping =  $bundling['transaction_bundling_product_subtotal']/$bundling['transaction_bundling_product_qty'];
-
-            $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
-                ->join('brands', 'brands.id_brand', 'transaction_products.id_brand')
-                ->orderBy('order_brand', 'desc')
-                ->where('id_transaction_bundling_product', $bundling['id_transaction_bundling_product'])->get()->toArray();
-
-            $products = [];
-            $productPerBrand = [];
-            $basePriceBundling = 0;
-            $subTotalBundlingWithoutModifier = 0;
-            $subItemBundlingWithoutModifie = 0;
-            foreach ($bundlingProduct as $bp){
-                $quantityItemBundling = $quantityItemBundling + ($bp['transaction_product_bundling_qty'] * $bundling['transaction_bundling_product_qty']);
-                $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
-                    ->whereNull('transaction_product_modifiers.id_product_modifier_group')
-                    ->where('id_transaction_product', $bp['id_transaction_product'])
-                    ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as text', DB::raw('FLOOR(transaction_product_modifier_price * '.$bp['transaction_product_bundling_qty'].' * '.$bundling['transaction_bundling_product_qty'].') as product_modifier_price'))->get()->toArray();
-                $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
-                    ->where('id_transaction_product', $bp['id_transaction_product'])
-                    ->select('product_variants.id_product_variant', 'product_variants.product_variant_name', 'transaction_product_variant_price')->get()->toArray();
-                $variantNoPrice =  TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
-                    ->whereNotNull('transaction_product_modifiers.id_product_modifier_group')
-                    ->where('id_transaction_product', $bp['id_transaction_product'])
-                    ->select('transaction_product_modifiers.id_product_modifier as id_product_variant', 'transaction_product_modifiers.text as product_variant_name', 'transaction_product_modifier_price as transaction_product_variant_price')->get()->toArray();
-
-                $products[] = [
-                    'product_name' => $bp['product_name'],
-                    'product_note' => $bp['transaction_product_note'],
-                    'transaction_product_price' => (int)($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']),
-                    'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
-                    'modifiers' => $mod,
-                    'variants' => array_merge($variantPrice, $variantNoPrice)
-                ];
-
-                //set product per brand
-                $checkBrand = array_search($bp['id_brand'], array_column($productPerBrand, 'id_brand'));
-                if($checkBrand === false){
-                    $productPerBrand[] = [
-                        'id_brand' => $bp['id_brand'],
-                        'brand_name' => $bp['name_brand'],
-                        'brand_code' => $bp['code_brand'],
-                        'products' => [[
-                            'id_brand' => $bp['id_brand'],
-                            'id_product' => $bp['id_product'],
-                            'id_product_variant_group' => $bp['id_product_variant_group'],
-                            'product_name' => $bp['product_name'],
-                            'product_note' => $bp['transaction_product_note'],
-                            'transaction_product_price' => (int)($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']),
-                            'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
-                            'modifiers' => $mod,
-                            'variants' => array_merge($variantPrice, $variantNoPrice)
-                        ]]
-                    ];
-                }else{
-                    $productPerBrand[$checkBrand]['products'][] = [
-                        'id_brand' => $bp['id_brand'],
-                        'id_product' => $bp['id_product'],
-                        'id_product_variant_group' => $bp['id_product_variant_group'],
-                        'product_name' => $bp['product_name'],
-                        'product_note' => $bp['transaction_product_note'],
-                        'transaction_product_price' => (int)($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']),
-                        'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
-                        'modifiers' => $mod,
-                        'variants' => array_merge($variantPrice, $variantNoPrice)
-                    ];
-                }
-
-                $basePriceBundling = $basePriceBundling + (($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']) * $bp['transaction_product_bundling_qty']);
-                $subTotalBundlingWithoutModifier = $subTotalBundlingWithoutModifier + (($bp['transaction_product_subtotal'] - ($bp['transaction_modifier_subtotal'] * $bp['transaction_product_bundling_qty'])));
-                $subItemBundlingWithoutModifie = $subItemBundlingWithoutModifie + ($bp['transaction_product_bundling_price'] * $bp['transaction_product_bundling_qty']);
-            }
-
-            $itemBundling[] = [
-                'bundling_name' => $bundling['bundling_name'],
-                'bundling_qty' => $bundling['transaction_bundling_product_qty'],
-                'bundling_price_no_discount' => $basePriceBundling * $bundling['transaction_bundling_product_qty'],
-                'bundling_subtotal' => $subTotalBundlingWithoutModifier * $bundling['transaction_bundling_product_qty'],
-                'bundling_sub_item' => '@'.MyHelper::requestNumber($subItemBundlingWithoutModifie,'_CURRENCY'),
-                'products' => $products
-            ];
-
-            //set bundling per brand
-            $checkBundlingPerBrand = array_search($bundling['id_bundling'], array_column($itemBundlingPerBrand, 'id_bundling'));
-            if($checkBundlingPerBrand === false){
-                $itemBundlingPerBrand[] = [
-                    'id_bundling' => $bundling['id_bundling'],
-                    'bundling_name' => $bundling['bundling_name'],
-                    'bundling_qty' => $bundling['transaction_bundling_product_qty'],
-                    'bundling_subtotal' => (int)$bundling['transaction_bundling_product_subtotal'],
-                    'bundling_sub_item' => '@'.MyHelper::requestNumber($getPriceToping,'_CURRENCY'),
-                    'brands' => $productPerBrand
-                ];
-            }else{
-                $dtBrands = $itemBundlingPerBrand[$checkBundlingPerBrand]['brands'];
-                foreach ($productPerBrand as $pb){
-                    $checkBundlingProductBrand = array_search($pb['id_brand'], array_column($dtBrands, 'id_brand'));
-                    if($checkBundlingProductBrand === false){
-                        $itemBundlingPerBrand[$checkBundlingPerBrand]['brands'][] = $pb;
-                    }else{
-                        $mergeProduct = array_merge($pb['products'], $dtBrands[$checkBundlingProductBrand]['products']);
-                        $productsBrand = [];
-                        foreach ($mergeProduct as $value){
-                            $check = array_search($value['id_product'], array_column($productsBrand, 'id_product'));
-                            if($check === false){
-                                $productsBrand[] = [
-                                    'id_brand' => $value['id_brand'],
-                                    'id_product' => $value['id_product'],
-                                    'id_product_variant_group' => $value['id_product_variant_group'],
-                                    'product_name' => $value['product_name'],
-                                    'product_note' => $value['product_note'],
-                                    'transaction_product_price' => (int)$value['transaction_product_price'],
-                                    'transaction_product_qty' => $bundling['transaction_bundling_product_qty'],
-                                    'modifiers' => $value['modifiers'],
-                                    'variants' => $value['variants']
-                                ];
-                            }else{
-                                $checkModifiers = $productsBrand[$check]['modifiers'];
-                                $checkNote = $productsBrand[$check]['product_note'];
-                                $checkIdProductVariantGroup = $productsBrand[$check]['id_product_variant_group'];
-
-                                $mergeModifiers = array_merge($checkModifiers, $value['modifiers']);
-                                $mergeModifiersUnique = array_map("unserialize", array_unique(array_map("serialize", $mergeModifiers)));
-
-                                if($checkIdProductVariantGroup == $value['id_product_variant_group'] &&
-                                    count($checkModifiers) == count($value['modifiers']) &&
-                                    count($checkModifiers) == count($value['modifiers']) &&
-                                    count($mergeModifiersUnique) == count($value['modifiers']) && $checkNote == $value['product_note']){
-                                    $productsBrand[$check]['transaction_product_qty'] = $productsBrand[$check]['transaction_product_qty'] + $value['transaction_product_qty'];
-                                }else{
-                                    $productsBrand[] = [
-                                        'id_brand' => $value['id_brand'],
-                                        'id_product' => $value['id_product'],
-                                        'id_product_variant_group' => $value['id_product_variant_group'],
-                                        'product_name' => $value['product_name'],
-                                        'product_note' => $value['product_note'],
-                                        'transaction_product_price' => (int)$value['transaction_product_price'],
-                                        'transaction_product_qty' => $value['transaction_product_qty'],
-                                        'modifiers' => $value['modifiers'],
-                                        'variants' => $value['variants']
-                                    ];
-                                }
-                            }
-                        }
-                        $itemBundlingPerBrand[$checkBundlingPerBrand]['bundling_qty'] = $itemBundlingPerBrand[$checkBundlingPerBrand]['bundling_qty'] + 1;
-                        $itemBundlingPerBrand[$checkBundlingPerBrand]['brands'][$checkBundlingProductBrand]['products'] = $productsBrand;
-                    }
-                }
-            }
-        }
-
-        $nameBrandBundling = Setting::where('key', 'brand_bundling_name')->first();
-        $result['name_brand_bundling'] = $nameBrandBundling['value']??'Bundling';
-        $result['product_bundling_transaction_detail'] = $itemBundling;
-        $result['product_bundling_transaction_perbrand'] = $itemBundlingPerBrand;
-        $result['product_transaction'] = [];
-
         $discount = 0;
         $quantity = 0;
         $keynya   = 0;
+        $productPerBrand = [];
         foreach ($list['product_transaction'] as $keyTrx => $valueTrx) {
             $result['product_transaction'][$keynya]['brand'] = $keyTrx;
+            $forProdBrand = [];
             foreach ($valueTrx as $keyProduct => $valueProduct) {
                 $quantity                                                                                        = $quantity + $valueProduct['transaction_product_qty'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_qty']       = $valueProduct['transaction_product_qty'];
@@ -3363,9 +3201,106 @@ class ApiOutletApp extends Controller
                 }
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_sub_item']      = '@'.MyHelper::requestNumber($valueProduct['transaction_product_price']+$variantsPrice, '_CURRENCY');
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product_variant_group_price'] = (int)($valueProduct['transaction_product_price'] + $variantsPrice);
+
+                $forProdBrand[] = [
+                    'bundling_name' => null,
+                    'product_name' => $valueProduct['product']['product_name'],
+                    'transaction_product_qty' => $valueProduct['transaction_product_qty'],
+                    'product_modifiers' => $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'],
+                    'product_variants' => $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'],
+                ];
             }
+            $productPerBrand[] = [
+                'brand' => $keyTrx,
+                'products' => $forProdBrand
+            ];
             $keynya++;
         }
+        //get item bundling
+        $itemBundling = [];
+        $quantityItemBundling = 0;
+        $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
+            ->where('id_transaction', $id)->get()->toArray();
+        foreach ($getBundling as $key=>$bundling){
+            $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
+                ->join('brands', 'brands.id_brand', 'transaction_products.id_brand')
+                ->orderBy('order_brand', 'desc')
+                ->where('id_transaction_bundling_product', $bundling['id_transaction_bundling_product'])->get()->toArray();
+
+            $products = [];
+            $basePriceBundling = 0;
+            $subTotalBundlingWithoutModifier = 0;
+            $subItemBundlingWithoutModifie = 0;
+            foreach ($bundlingProduct as $bp){
+                $quantityItemBundling = $quantityItemBundling + ($bp['transaction_product_bundling_qty'] * $bundling['transaction_bundling_product_qty']);
+                $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                    ->whereNull('transaction_product_modifiers.id_product_modifier_group')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as text', DB::raw('FLOOR(transaction_product_modifier_price * '.$bp['transaction_product_bundling_qty'].' * '.$bundling['transaction_bundling_product_qty'].') as product_modifier_price'))->get()->toArray();
+                $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->select('product_variants.id_product_variant', 'product_variants.product_variant_name', 'transaction_product_variant_price')->get()->toArray();
+                $variantNoPrice =  TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                    ->whereNotNull('transaction_product_modifiers.id_product_modifier_group')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->select('transaction_product_modifiers.id_product_modifier as id_product_variant', 'transaction_product_modifiers.text as product_variant_name', 'transaction_product_modifier_price as transaction_product_variant_price')->get()->toArray();
+
+                $products[] = [
+                    'product_name' => $bp['product_name'],
+                    'product_note' => $bp['transaction_product_note'],
+                    'transaction_product_price' => (int)($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']),
+                    'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
+                    'modifiers' => $mod,
+                    'variants' => array_merge($variantPrice, $variantNoPrice)
+                ];
+
+                $checkBrand = array_search($bp['name_brand'], array_column($productPerBrand, 'brand'));
+                if($checkBrand === false){
+                    $productPerBrand[] = [
+                        'brand' => $bp['name_brand'],
+                        'products' => [
+                            [
+                                'bundling_name' => $bundling['bundling_name'],
+                                'product_name' => $bp['product_name'],
+                                'product_note' => $bp['transaction_product_note'],
+                                'transaction_product_qty' => $bp['transaction_product_bundling_qty']*$bundling['transaction_bundling_product_qty'],
+                                'product_modifiers' => $mod,
+                                'product_variants' => array_merge($variantPrice, $variantNoPrice)
+                            ]
+                        ]
+                    ];
+                }else{
+                    $productPerBrand[$checkBrand]['products'][] =
+                        [
+                            'bundling_name' => $bundling['bundling_name'],
+                            'product_name' => $bp['product_name'],
+                            'product_note' => $bp['transaction_product_note'],
+                            'transaction_product_qty' => $bp['transaction_product_bundling_qty']*$bundling['transaction_bundling_product_qty'],
+                            'product_modifiers' => $mod,
+                            'product_variants' => array_merge($variantPrice, $variantNoPrice)
+                        ];
+                }
+
+                $basePriceBundling = $basePriceBundling + (($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']) * $bp['transaction_product_bundling_qty']);
+                $subTotalBundlingWithoutModifier = $subTotalBundlingWithoutModifier + (($bp['transaction_product_subtotal'] - ($bp['transaction_modifier_subtotal'] * $bp['transaction_product_bundling_qty'])));
+                $subItemBundlingWithoutModifie = $subItemBundlingWithoutModifie + ($bp['transaction_product_bundling_price'] * $bp['transaction_product_bundling_qty']);
+            }
+
+            $itemBundling[] = [
+                'bundling_name' => $bundling['bundling_name'],
+                'bundling_qty' => $bundling['transaction_bundling_product_qty'],
+                'bundling_price_no_discount' => $basePriceBundling * $bundling['transaction_bundling_product_qty'],
+                'bundling_subtotal' => $subTotalBundlingWithoutModifier * $bundling['transaction_bundling_product_qty'],
+                'bundling_sub_item' => '@'.MyHelper::requestNumber($subItemBundlingWithoutModifie,'_CURRENCY'),
+                'products' => $products
+            ];
+        }
+
+        $nameBrandBundling = Setting::where('key', 'brand_bundling_name')->first();
+        $result['name_brand_bundling'] = $nameBrandBundling['value']??'Bundling';
+        $result['product_bundling_transaction_detail'] = $itemBundling;
+
+        $result['product_perbrand'] = $productPerBrand??[];
 
         $result['payment_detail'][] = [
             'name'   => 'Subtotal',
