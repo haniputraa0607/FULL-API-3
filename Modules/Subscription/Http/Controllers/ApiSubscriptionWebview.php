@@ -442,7 +442,7 @@ class ApiSubscriptionWebview extends Controller
     	$value = $subs;
 
     	if (!empty($value['outlet_groups'])) {
-        	$value['outlets'] = app($this->deals_webview)->getOutletGroupFilter($value['outlet_groups']);
+        	$value['outlets'] = app($this->deals_webview)->getOutletGroupFilter($value['outlet_groups'], $value['subscription_brands'], $value['brand_rule']);
         }
 
     	if (!empty($value['outlets'])) {

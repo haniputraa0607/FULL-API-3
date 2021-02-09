@@ -76,7 +76,7 @@ class ApiDealsWebview extends Controller
         }
 
         if (!empty($deals['outlet_groups'])) {
-        	$deals['outlets'] = $this->getOutletGroupFilter($deals['outlet_groups']);
+        	$deals['outlets'] = $this->getOutletGroupFilter($deals['outlet_groups'], $deals['deals_brands'], $deals['brand_rule']);
         }
 
         if (!empty($deals['outlets'])) {
@@ -336,7 +336,7 @@ class ApiDealsWebview extends Controller
         return response()->json($response);
     }*/
 
-    public function getOutletGroupFilter($promo_outlet_groups = [])
+    public function getOutletGroupFilter($promo_outlet_groups = [], $promo_brands = [], $brand_rule = 'or')
     {
     	$outlets = [];
     	foreach ($promo_outlet_groups as $val) {
@@ -349,8 +349,37 @@ class ApiDealsWebview extends Controller
     		$id_outlets[] = $val['id_outlet'];
     	}
 
-    	$outlet_with_city = Outlet::whereIn('id_outlet', $id_outlets)->with('city')->get()->toArray();
+    	$outlet_with_city = Outlet::whereIn('id_outlet', $id_outlets)
+    						->with(['city', 'brands' => function($q) {
+    							$q->select('brands.id_brand', 'id_outlet');
+    						}])
+    						->get()
+    						->toArray();
 
-    	return $outlet_with_city;
+    	$result = $outlet_with_city;
+
+    	if (!empty($promo_brands)) {
+    		$id_promo_brands = array_column($promo_brands, 'id_brand');
+    		$result = [];
+
+    		foreach ($outlet_with_city as $val) {
+    			$id_outlet_brands = array_column($val['brands'], 'id_brand');
+    			$check_brand 	= array_diff($id_promo_brands, $id_outlet_brands);
+
+		    	if ($brand_rule == 'or') {
+		    		if (count($check_brand) == count($promo_brands)) {
+			    		continue;
+			    	}
+		    	}else{
+			    	if (!empty($check_brand)) {
+		    			continue;
+		    		}
+		    	}
+
+    			$result[] = $val;
+    		}
+    	}
+
+    	return $result;
     }
 }

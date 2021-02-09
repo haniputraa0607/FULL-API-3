@@ -110,7 +110,7 @@ class ApiDealsVoucherWebviewController extends Controller
         $voucher['deals_voucher']['deal']['outlet_by_city'] = [];
 
         if (!empty($voucher['deals_voucher']['deal']['outlet_groups'])) {
-        	$voucher['deals_voucher']['deal']['outlets'] = app($this->deals_webview)->getOutletGroupFilter($voucher['deals_voucher']['deal']['outlet_groups']);
+        	$voucher['deals_voucher']['deal']['outlets'] = app($this->deals_webview)->getOutletGroupFilter($voucher['deals_voucher']['deal']['outlet_groups'], $voucher['deals_voucher']['deal']['deals_brands'], $voucher['deals_voucher']['deal']['brand_rule']);
         }
 
         if (!empty($voucher['deals_voucher']['deal']['outlets'])) {
