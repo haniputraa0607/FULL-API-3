@@ -22,6 +22,11 @@ use Modules\Subscription\Http\Requests\ListSubscription;
 
 class ApiSubscriptionWebview extends Controller
 {
+	function __construct()
+    {
+        $this->deals_webview  = "Modules\Deals\Http\Controllers\ApiDealsWebview";
+    }
+
     // deals detail webview
     public function subscriptionDetail(Request $request)
     {
@@ -31,7 +36,8 @@ class ApiSubscriptionWebview extends Controller
         			'outlets' => function($q) {
         				$q->where('outlet_status', 'Active');
         			},
-        			'outlets.city', 
+        			'outlets.city',
+        			'outlet_groups',
         			'subscription_content' => function($q){
         				$q->where('is_active',1);
         			},
@@ -230,7 +236,8 @@ class ApiSubscriptionWebview extends Controller
 						'subscription.outlets' => function($q) {
 							$q->where('outlet_status', 'Active');
 						}, 
-						'subscription.outlets.city', 
+						'subscription.outlets.city',
+						'subscription.outlet_groups',
 						'subscription.brand', 
 						'subscription_user_vouchers', 
 						'subscription.subscription_content' => function($q){
@@ -433,6 +440,11 @@ class ApiSubscriptionWebview extends Controller
     public function renderOutletCity($subs)
     {
     	$value = $subs;
+
+    	if (!empty($value['outlet_groups'])) {
+        	$value['outlets'] = app($this->deals_webview)->getOutletGroupFilter($value['outlet_groups']);
+        }
+
     	if (!empty($value['outlets'])) {
             // ambil kotanya dulu
     		// return $value['outlets'];

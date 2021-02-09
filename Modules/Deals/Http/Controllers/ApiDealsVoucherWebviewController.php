@@ -12,6 +12,11 @@ use App\Lib\MyHelper;
 
 class ApiDealsVoucherWebviewController extends Controller
 {
+	function __construct()
+    {
+        $this->deals_webview  = "Modules\Deals\Http\Controllers\ApiDealsWebview";
+    }
+
     public function voucherDetail(Request $request, $id_deals_user)
     {
         $bearer = $request->header('Authorization');
@@ -60,6 +65,7 @@ class ApiDealsVoucherWebviewController extends Controller
         				$q->where('outlet_status', 'Active');
         			}, 
         			'deals_voucher.deal.outlets.city',
+        			'deals_voucher.deal.outlet_groups',
         			'deals_voucher.deal.deals_brands'
         		])
         		->where('id_deals_user', $request->id_deals_user)
@@ -102,6 +108,11 @@ class ApiDealsVoucherWebviewController extends Controller
         }
 
         $voucher['deals_voucher']['deal']['outlet_by_city'] = [];
+
+        if (!empty($voucher['deals_voucher']['deal']['outlet_groups'])) {
+        	$voucher['deals_voucher']['deal']['outlets'] = app($this->deals_webview)->getOutletGroupFilter($voucher['deals_voucher']['deal']['outlet_groups']);
+        }
+
         if (!empty($voucher['deals_voucher']['deal']['outlets'])) {
             $kota = array_column($voucher['deals_voucher']['deal']['outlets'], 'city');
             $kota = array_values(array_map("unserialize", array_unique(array_map("serialize", $kota))));
