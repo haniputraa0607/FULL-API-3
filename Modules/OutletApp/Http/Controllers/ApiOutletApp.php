@@ -4084,6 +4084,7 @@ class ApiOutletApp extends Controller
         $bundlingGroup = [];
         $itemBundling = [];
         $quantityItemBundling = 0;
+        $productBundlingPerBrand = [];
         $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
             ->where('id_transaction', $id)->get()->toArray();
         foreach ($getBundling as $key=>$bundling){
