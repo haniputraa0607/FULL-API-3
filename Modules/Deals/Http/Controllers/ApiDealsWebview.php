@@ -20,6 +20,11 @@ use Modules\Deals\Http\Requests\Deals\ListDeal;
 
 class ApiDealsWebview extends Controller
 {
+	function __construct()
+    {
+        $this->outlet_group_filter  = "Modules\Outlet\Http\Controllers\ApiOutletGroupFilterController";
+    }
+
     // deals detail webview
     public function dealsDetail(Request $request)
     {
@@ -29,6 +34,7 @@ class ApiDealsWebview extends Controller
         				$q->where('outlet_status', 'Active');
         			},
         			'outlets.city', 
+        			'outlet_groups',
         			'deals_content' => function($q){
         				$q->where('is_active',1);
         			},
@@ -67,6 +73,10 @@ class ApiDealsWebview extends Controller
 
             $outlets = $outlets->where('outlet_status','Active')->select('outlets.*')->with('city')->groupBy('id_outlet')->get()->toArray();
             $deals['outlets'] = $outlets;
+        }
+
+        if (!empty($deals['outlet_groups'])) {
+        	$deals['outlets'] = $this->getOutletGroupFilter($deals['outlet_groups']);
         }
 
         if (!empty($deals['outlets'])) {
@@ -325,4 +335,22 @@ class ApiDealsWebview extends Controller
         ];
         return response()->json($response);
     }*/
+
+    public function getOutletGroupFilter($promo_outlet_groups = [])
+    {
+    	$outlets = [];
+    	foreach ($promo_outlet_groups as $val) {
+    		$temp = app($this->outlet_group_filter)->outletGroupFilter($val['id_outlet_group']);
+			$outlets = array_merge($outlets, $temp);
+    	}
+
+    	$id_outlets = [];
+    	foreach ($outlets as $val) {
+    		$id_outlets[] = $val['id_outlet'];
+    	}
+
+    	$outlet_with_city = Outlet::whereIn('id_outlet', $id_outlets)->with('city')->get()->toArray();
+
+    	return $outlet_with_city;
+    }
 }
