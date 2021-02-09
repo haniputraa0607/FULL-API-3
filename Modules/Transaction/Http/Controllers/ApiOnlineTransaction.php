@@ -3828,6 +3828,7 @@ class ApiOnlineTransaction extends Controller
                 'id_bundling_product' => $item['id_bundling_product'],
                 'product_name' => $item['product_name'],
                 'note' => $item['note'],
+                'extra_modifiers' => $item['extra_modifiers']??[],
                 'variants' => array_map("unserialize", array_unique(array_map("serialize", array_map(function($i){
                     return [
                         'id_product_variant' => $i['id_product_variant'],
