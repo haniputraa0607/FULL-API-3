@@ -33,6 +33,7 @@ Route::group(['middleware' => ['auth:outlet-app', 'outlet_device_location', 'log
     Route::post('book-delivery', 'ApiOutletApp@bookDelivery');
     Route::post('cancel-delivery', 'ApiOutletApp@cancelDelivery');
     Route::post('refresh-delivery-status', 'ApiOutletApp@refreshDeliveryStatus');
+    Route::post('transaction/detail/v2', 'ApiOutletApp@transactionDetailV2');
     Route::post('transaction/detail', 'ApiOutletApp@transactionDetail');
     Route::post('shift/start', 'ApiOutletApp@start_shift');
     Route::post('shift/end', 'ApiOutletApp@end_shift');
