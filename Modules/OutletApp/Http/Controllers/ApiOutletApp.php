@@ -3205,6 +3205,7 @@ class ApiOutletApp extends Controller
                 $forProdBrand[] = [
                     'bundling_name' => null,
                     'product_name' => $valueProduct['product']['product_name'],
+                    'product_note' => $valueProduct['transaction_product_note'],
                     'transaction_product_qty' => $valueProduct['transaction_product_qty'],
                     'product_modifiers' => $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'],
                     'product_variants' => $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'],
