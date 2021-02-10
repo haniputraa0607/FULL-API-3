@@ -41,6 +41,7 @@ class ShopeePayController extends Controller
         $this->promo_campaign      = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->deals_claim         = "Modules\Deals\Http\Controllers\ApiDealsClaim";
         $this->subscription        = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
+        $this->trx                 = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
         $this->errcode             = [
             '-2'  => 'a server dropped the connection',
             '-1'  => 'a server error occurred',
