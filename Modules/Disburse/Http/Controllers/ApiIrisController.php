@@ -33,7 +33,7 @@ use Modules\Disburse\Entities\DisburseTransaction;
 use Modules\Disburse\Entities\LogIRIS;
 use Modules\Disburse\Entities\LogTopupIris;
 use Modules\Disburse\Entities\MDR;
-use Modules\Disburse\Entities\UserFranchisee;
+use  Modules\UserFranchise\Entities\UserFranchisee;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use Modules\Subscription\Entities\SubscriptionUser;

@@ -10,8 +10,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Support\Facades\DB;
 use App\Http\Models\OutletSchedule;
-use Modules\Disburse\Entities\UserFranchise;
-use Modules\Disburse\Entities\UserFranchiseOultet;
+use  Modules\UserFranchise\Entities\UserFranchise;
+use  Modules\UserFranchise\Entities\UserFranchiseOultet;
 
 class SyncOutletSeed implements ShouldQueue
 {

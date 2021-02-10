@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Disburse\Entities;
+namespace Modules\UserFranchise\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 

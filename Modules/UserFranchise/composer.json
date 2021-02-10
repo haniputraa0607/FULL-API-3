@@ -1,0 +1,25 @@
+{
+    "name": "nwidart/userfranchise",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\UserFranchise\\Providers\\UserFranchiseServiceProvider"
+            ],
+            "aliases": {
+                
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\UserFranchise\\": ""
+        }
+    }
+}
