@@ -41,6 +41,7 @@ class ShopeePayController extends Controller
         $this->promo_campaign      = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->deals_claim         = "Modules\Deals\Http\Controllers\ApiDealsClaim";
         $this->subscription        = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
+        $this->trx                 = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
         $this->errcode             = [
             '-2'  => 'a server dropped the connection',
             '-1'  => 'a server error occurred',
@@ -172,6 +173,9 @@ class ShopeePayController extends Controller
                 'order_id'     => $trx['transaction_receipt_number'],
                 'gross_amount' => ($trx['amount'] / 100),
             ];
+
+            //send notif to outlet
+            $sendNotifOutlet = app($this->trx)->outletNotif($trx->id_transaction);
             $send = app($this->notif)->notification($mid, $trx);
 
             $status_code = 200;
@@ -377,7 +381,10 @@ class ShopeePayController extends Controller
                         'order_id'     => $singleTrx['transaction_receipt_number'],
                         'gross_amount' => ($singleTrx['amount'] / 100),
                     ];
-                    // $send = app($this->notif)->notification($mid, $singleTrx);
+
+                    //send notif to outlet
+                    $sendNotifOutlet = app($this->trx)->outletNotif($singleTrx->id_transaction);
+                    $send = app($this->notif)->notification($mid, $singleTrx);
 
                     continue;
                 }

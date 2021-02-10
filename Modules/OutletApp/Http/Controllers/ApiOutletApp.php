@@ -2379,7 +2379,7 @@ class ApiOutletApp extends Controller
         //update id from go-send
         $updateGoSend = TransactionPickupGoSend::find($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
         if ($fromRetry) {
-            $time_limit = 1200; // 20 minutes
+            $time_limit = 600; // 10 minutes
 
             if ($updateGoSend->manual_order_no) {
                 $firstbook = TransactionPickupGoSendUpdate::select('created_at')->where('go_send_order_no', $updateGoSend->manual_order_no)->orderBy('id_transaction_pickup_go_send_update')->pluck('created_at')->first();
