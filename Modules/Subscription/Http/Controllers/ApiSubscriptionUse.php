@@ -54,9 +54,10 @@ class ApiSubscriptionUse extends Controller
     			->where('id_user', Auth::id());
 
     	if (!empty($outlet)) {
-    		$subs = $subs->with(
-    			'subscription_user.subscription.outlets_active'
-    		);
+    		$subs = $subs->with([
+		    			'subscription_user.subscription.outlets_active',
+		    			'subscription_user.subscription.outlet_groups'
+		    		]);
     	}
 
     	if (!empty($product)) {
@@ -140,7 +141,6 @@ class ApiSubscriptionUse extends Controller
     			return 0;
 			}
     	}
-
     	// check outlet & brands
 		$pct = new PromoCampaignTools;
 		if (!empty($subs['subscription_user']['subscription']['id_brand'])) {
@@ -152,10 +152,12 @@ class ApiSubscriptionUse extends Controller
 								$subs['subscription_user']['subscription']['is_all_outlet'], 
 								$subs['subscription_user']['subscription']['outlets_active'], 
 								$promo_brands,
-								$subs['subscription_user']['subscription']['brand_rule']
+								$subs['subscription_user']['subscription']['brand_rule'],
+								$subs['subscription_user']['subscription']['outlet_groups']
 							);
 
 		}
+
 		if ( !$check_outlet ) {
     		$errors[] = 'Cannot use subscription at this outlet';
     		return 0;

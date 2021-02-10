@@ -109,6 +109,7 @@ class ApiOnlineTransaction extends Controller
         $this->plastic       = "Modules\Plastic\Http\Controllers\PlasticController";
         $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
+        $this->bundling      = "Modules\ProductBundling\Http\Controllers\ApiBundlingController";
     }
 
     public function newTransaction(NewTransaction $request) {
@@ -1080,6 +1081,10 @@ class ApiOnlineTransaction extends Controller
             foreach($post['plastic']['item'] as $key => $value){
                 $value['product_price_total'] = $value['plastic_price_raw'];
                 $value['qty'] = $value['total_used'];
+                $value['transaction_product_price'] = $value['plastic_price_raw']/$value['total_used'];
+                $value['transaction_product_subtotal'] = $value['total_used'] * ($value['plastic_price_raw']/$value['total_used']);
+                $value['transaction_variant_subtotal'] = 0;
+                $value['variants'] = [];
                 
                 unset($value['plastic_price_raw']);
                 unset($value['total_used']);
@@ -1146,7 +1151,7 @@ class ApiOnlineTransaction extends Controller
                 'id_product'                   => $checkProduct['id_product'],
                 'type'                         => $checkProduct['product_type'],
                 'id_product_variant_group'     => $valueProduct['id_product_variant_group']??null,
-                'id_brand'                     => $valueProduct['id_brand'],
+                'id_brand'                     => $valueProduct['id_brand']??null,
                 'id_outlet'                    => $insertTransaction['id_outlet'],
                 'id_user'                      => $insertTransaction['id_user'],
                 'transaction_product_qty'      => $valueProduct['qty'],
@@ -2118,7 +2123,8 @@ class ApiOnlineTransaction extends Controller
         $promo_discount = 0;
         $promo_type = null;
         $request['bundling_promo'] = $this->checkBundlingIncludePromo($post);
-        $request_promo = $request->except('type');
+        $request_promo = $request;
+        unset($request_promo['type']);
 
         if($request->promo_code && !$request->id_subscription_user && !$request->id_deals_user){
         	$code = app($this->promo_campaign)->checkPromoCode($request->promo_code, 1, 1);
@@ -2586,6 +2592,8 @@ class ApiOnlineTransaction extends Controller
         }
 
         // check bundling product
+        $nameBrandBundling = Setting::where('key', 'brand_bundling_name')->first();
+        $result['name_brand_bundling'] = $nameBrandBundling['value']??'Bundling';
         $result['item_bundling_detail'] = [];
         $result['item_bundling'] = [];
         $responseNotIncludePromo = '';
@@ -2593,6 +2601,7 @@ class ApiOnlineTransaction extends Controller
             $itemBundlings = $this->checkBundlingProduct($post, $outlet, $subtotal_per_brand);
             $result['item_bundling'] = $itemBundlings['item_bundling']??[];
             $result['item_bundling_detail'] = $itemBundlings['item_bundling_detail']??[];
+            $post['item_bundling_detail'] = $itemBundlings['item_bundling_detail']??[];
             $totalItem = $totalItem + $itemBundlings['total_item_bundling']??0;
             if(!isset($post['from_new']) || (isset($post['from_new']) && $post['from_new'] === false)){
                 $error_msg = array_merge($error_msg, $itemBundlings['error_message']??[]);
@@ -2603,7 +2612,7 @@ class ApiOnlineTransaction extends Controller
 
         if ($promo_valid) {
         	if (($promo_type??false) == 'Discount bill') {
-        		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $subtotal_per_brand, $promo_error_product);
+        		$check_promo = app($this->promo)->checkPromo($request_promo, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $subtotal_per_brand, $promo_error_product);
 
         		if ($check_promo['status'] == 'fail') {
 	        		$promo_error = app($this->promo_campaign)->promoError('transaction', $check_promo['messages']??$error, null, $promo_error_product ?? 0);
@@ -2677,9 +2686,11 @@ class ApiOnlineTransaction extends Controller
         if($post['type'] == 'Pickup Order'){
             $result['plastic']['is_checked'] = true;
             $result['plastic']['is_mandatory'] = false;
+            $result['plastic']['info'] = "Harga plastik akan dihitung berdasarkan jumlah item";
         }elseif($post['type'] == 'GO-SEND'){
             $result['plastic']['is_checked'] = true;
             $result['plastic']['is_mandatory'] = true;
+            $result['plastic']['info'] = "Harga plastik akan dihitung berdasarkan jumlah item";
         }else{
             return [
                 'status' => 'fail',
@@ -2860,8 +2871,23 @@ class ApiOnlineTransaction extends Controller
                 continue;
             }
 
-            if($getBundling['all_outlet'] != 1){
-                //check outlet available
+            //check count product in bundling
+            $getBundlingProduct = BundlingProduct::where('id_bundling', $bundling['id_bundling'])->select('id_product', 'bundling_product_qty')->get()->toArray();
+            $arrBundlingQty = array_column($getBundlingProduct, 'bundling_product_qty');
+            $arrBundlingIdProduct = array_column($getBundlingProduct, 'id_product');
+            if(array_sum($arrBundlingQty) !== count($bundling['products'])){
+                $error_msg[] = MyHelper::simpleReplace(
+                    'Jumlah product pada bundling %bundling_name% tidak sesuai',
+                    [
+                        'bundling_name' => $bundling['bundling_name']
+                    ]
+                );
+                unset($post['item_bundling'][$key]);
+                continue;
+            }
+
+            //check outlet available
+            if($getBundling['all_outlet'] == 0 && $getBundling['outlet_available_type'] == 'Selected Outlet'){
                 $getBundlingOutlet = BundlingOutlet::where('id_bundling', $bundling['id_bundling'])->where('id_outlet', $post['id_outlet'])->count();
 
                 if(empty($getBundlingOutlet)){
@@ -2875,20 +2901,20 @@ class ApiOnlineTransaction extends Controller
                     unset($post['item_bundling'][$key]);
                     continue;
                 }
-            }
-
-            //check count product in bundling
-            $getBundlingProduct = BundlingProduct::where('id_bundling', $bundling['id_bundling'])->pluck('bundling_product_qty')->toArray();
-
-            if(array_sum($getBundlingProduct) !== count($bundling['products'])){
-                $error_msg[] = MyHelper::simpleReplace(
-                    'Jumlah product pada bundling %bundling_name% tidak sesuai',
-                    [
-                        'bundling_name' => $bundling['bundling_name']
-                    ]
-                );
-                unset($post['item_bundling'][$key]);
-                continue;
+            }elseif($getBundling['all_outlet'] == 0 && $getBundling['outlet_available_type'] == 'Outlet Group Filter'){
+                $brands = BrandProduct::whereIn('id_product', $arrBundlingIdProduct)->pluck('id_brand')->toArray();
+                $availableBundling = app($this->bundling)->bundlingOutletGroupFilter($post['id_outlet'], $brands);
+                if(empty($availableBundling)){
+                    $error_msg[] = MyHelper::simpleReplace(
+                        'Bundling %bundling_name% tidak bisa digunakan di outlet %outlet_name%',
+                        [
+                            'bundling_name' => $bundling['bundling_name'],
+                            'outlet_name' => $outlet['outlet_name']
+                        ]
+                    );
+                    unset($post['item_bundling'][$key]);
+                    continue;
+                }
             }
 
             $bundlingBasePrice = 0;
@@ -3398,8 +3424,8 @@ class ApiOnlineTransaction extends Controller
                             'push_notif_local' => 1,
                             'title_5mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 5 menit lagi'),
                             'msg_5mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !'),
-                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
-                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
+                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_15mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
+                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_15mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
                             'pickup_time'       => $detail->pickup_at,
                         ];
                     } else {
@@ -3429,8 +3455,8 @@ class ApiOnlineTransaction extends Controller
                             'push_notif_local' => 1,
                             'title_5mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 5 menit lagi'),
                             'msg_5mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !'),
-                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
-                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
+                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_15mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
+                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_15mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
                             'pickup_time'       => $detail->pickup_at,
                         ];
                     }else {
@@ -4151,7 +4177,7 @@ class ApiOnlineTransaction extends Controller
                     'transaction_product_bundling_price' => $calculate,
                     'transaction_product_price_base' => NULL,
                     'transaction_product_price_tax'  => NULL,
-                    'transaction_product_discount'   => $itemProduct['transaction_product_bundling_price'],
+                    'transaction_product_discount'   => 0,
                     'transaction_product_bundling_price'   => $itemProduct['transaction_product_bundling_price'],
                     'transaction_product_base_discount' => 0,
                     'transaction_product_qty_discount'  => 0,
