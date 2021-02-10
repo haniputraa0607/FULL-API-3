@@ -3424,8 +3424,8 @@ class ApiOnlineTransaction extends Controller
                             'push_notif_local' => 1,
                             'title_5mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 5 menit lagi'),
                             'msg_5mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !'),
-                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
-                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
+                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_15mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
+                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_15mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
                             'pickup_time'       => $detail->pickup_at,
                         ];
                     } else {
@@ -3455,8 +3455,8 @@ class ApiOnlineTransaction extends Controller
                             'push_notif_local' => 1,
                             'title_5mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 5 menit lagi'),
                             'msg_5mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !'),
-                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
-                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
+                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_15mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
+                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_15mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
                             'pickup_time'       => $detail->pickup_at,
                         ];
                     }else {
