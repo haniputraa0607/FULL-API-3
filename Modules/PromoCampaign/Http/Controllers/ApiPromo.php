@@ -81,10 +81,16 @@ class ApiPromo extends Controller
     	$user = auth()->user();
     	$datenow = date("Y-m-d H:i:s");
     	$remove = 0;
+    	$available_promo = $this->availablePromo();
 		DB::beginTransaction();
     	$user_promo = UserPromo::where('id_user','=',$user->id)->first();
     	if (!$user_promo) {
-    		return response()->json(['status' => 'fail']);
+    		return response()->json([
+    			'status' => 'fail', 
+    			'result' => [
+    				'total_promo'	=> $available_promo
+    			]
+    		]);
     	}
     	if ($user_promo->promo_type == 'deals')
     	{
@@ -134,11 +140,21 @@ class ApiPromo extends Controller
     	}
     	else
     	{
-    		return response()->json(['status' => 'fail']);
+    		return response()->json([
+    			'status' => 'fail', 
+    			'result' => [
+    				'total_promo'	=> $available_promo
+    			]
+    		]);
     	}
 
     	if (!$promo) {
-    		return response()->json(['status' => 'fail']);
+    		return response()->json([
+    			'status' => 'fail', 
+    			'result' => [
+    				'total_promo'	=> $available_promo
+    			]
+    		]);
     	}
 
     	$promo = $promo->toArray();
@@ -152,8 +168,10 @@ class ApiPromo extends Controller
     		'id_deals_user'		=> $promo['id_deals_user']??'',
     		'promo_code'		=> $promo['promo_code']??'',
     		'id_subscription_user'		=> $promo['id_subscription_user']??'',
-    		'remove'			=> $remove
+    		'remove'			=> $remove,
+    		'total_promo'		=> $available_promo
     	];
+    	
     	return response()->json(MyHelper::checkGet($result));
 
     }
