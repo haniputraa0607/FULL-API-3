@@ -454,11 +454,6 @@ class ApiBundlingController extends Controller
             $paramValue = '';
             $tmp = [];
             foreach ($brands as $index => $p){
-                if($index !== $count-1){
-                    $paramValue .= 'bo.id_brand = "'.$p.'" OR ';
-                }else{
-                    $paramValue .= 'bo.id_brand = "'.$p.'"';
-                }
                 $tmp[] = 'bo.id_brand = "'.$p.'"';
             }
 
