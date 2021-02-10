@@ -42,7 +42,7 @@
                 <td style="text-align: left">{{$val['transaction_receipt_number']}}</td>
                 <td style="text-align: left">{{date('d M Y H:i', strtotime($val['transaction_date']))}}</td>
                 <td style="text-align: left">{{$val['outlet_code']}}-{{$val['outlet_name']}}</td>
-                <td style="text-align: left">{{$val['transaction_subtotal']}}</td>
+                <td style="text-align: left">{{$val['transaction_subtotal']+(float)$val['bundling_product_total_discount']}}</td>
                 <td style="text-align: left">{{(float)$val['bundling_product_total_discount']}}</td>
                 <td style="text-align: left">
                     <?php

@@ -4177,7 +4177,7 @@ class ApiOnlineTransaction extends Controller
                     'transaction_product_bundling_price' => $calculate,
                     'transaction_product_price_base' => NULL,
                     'transaction_product_price_tax'  => NULL,
-                    'transaction_product_discount'   => $itemProduct['transaction_product_bundling_price'],
+                    'transaction_product_discount'   => 0,
                     'transaction_product_bundling_price'   => $itemProduct['transaction_product_bundling_price'],
                     'transaction_product_base_discount' => 0,
                     'transaction_product_qty_discount'  => 0,
