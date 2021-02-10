@@ -231,6 +231,10 @@ class ApiBundlingController extends Controller
                 if(isset($post['id_outlet']) && in_array("all", $post['id_outlet'])){
                     $isAllOutlet = 1;
                 }
+
+                if($post['bundling_specific_day_type'] == 'not_specific_day'){
+                    $post['bundling_specific_day_type'] = NULL;
+                }
                 //create bundling
                 $createBundling = [
                     'bundling_code' => $post['bundling_code'],
@@ -501,6 +505,10 @@ class ApiBundlingController extends Controller
             $isAllOutlet = 0;
             if(in_array("all", $post['id_outlet']??[]) && $post['outlet_available_type'] == 'Selected Outlet'){
                 $isAllOutlet = 1;
+            }
+
+            if($post['bundling_specific_day_type'] == 'not_specific_day'){
+                $post['bundling_specific_day_type'] = NULL;
             }
 
             //update bundling
@@ -944,7 +952,7 @@ class ApiBundlingController extends Controller
                         ->orWhere('bpd.day', $dayNumber)
                         ->orWhereNull('bpd.id_bundling_periode_day');
                 })
-                ->select('bpd.day', 'bpd.time_start', 'bpd.time_end', 'bundling.id_bundling')->get()->toArray();
+                ->select('bpd.day', 'bpd.id_bundling_periode_day', 'bpd.time_start', 'bpd.time_end', 'bundling.id_bundling')->get()->toArray();
             $dataToInsert = [];
 
             foreach($getBundling as $b){
