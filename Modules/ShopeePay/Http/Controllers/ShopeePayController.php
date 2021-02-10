@@ -172,6 +172,9 @@ class ShopeePayController extends Controller
                 'order_id'     => $trx['transaction_receipt_number'],
                 'gross_amount' => ($trx['amount'] / 100),
             ];
+
+            //send notif to outlet
+            $sendNotifOutlet = app($this->trx)->outletNotif($trx->id_transaction);
             $send = app($this->notif)->notification($mid, $trx);
 
             $status_code = 200;
@@ -385,7 +388,10 @@ class ShopeePayController extends Controller
                         'order_id'     => $singleTrx['transaction_receipt_number'],
                         'gross_amount' => ($singleTrx['amount'] / 100),
                     ];
-                    // $send = app($this->notif)->notification($mid, $singleTrx);
+
+                    //send notif to outlet
+                    $sendNotifOutlet = app($this->trx)->outletNotif($singleTrx->id_transaction);
+                    $send = app($this->notif)->notification($mid, $singleTrx);
 
                     continue;
                 }
