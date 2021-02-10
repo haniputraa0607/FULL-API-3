@@ -4,16 +4,16 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Module UserFranchise</title>
+        <title>Module Franchise</title>
 
        {{-- Laravel Mix - CSS File --}}
-       {{-- <link rel="stylesheet" href="{{ mix('css/userfranchise.css') }}"> --}}
+       {{-- <link rel="stylesheet" href="{{ mix('css/franchise.css') }}"> --}}
 
     </head>
     <body>
         @yield('content')
 
         {{-- Laravel Mix - JS File --}}
-        {{-- <script src="{{ mix('js/userfranchise.js') }}"></script> --}}
+        {{-- <script src="{{ mix('js/franchise.js') }}"></script> --}}
     </body>
 </html>

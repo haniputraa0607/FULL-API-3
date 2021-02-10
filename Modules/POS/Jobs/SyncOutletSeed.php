@@ -11,7 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Support\Facades\DB;
 use App\Http\Models\OutletSchedule;
 use  Modules\UserFranchise\Entities\UserFranchise;
-use  Modules\UserFranchise\Entities\UserFranchiseOultet;
+use  Modules\Franchise\Entities\UserFranchiseOultet;
 
 class SyncOutletSeed implements ShouldQueue
 {

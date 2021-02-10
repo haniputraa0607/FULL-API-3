@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\UserFranchise\Entities;
+namespace Modules\Franchise\Entities;
 
 use App\Lib\MyHelper;
 use Illuminate\Database\Eloquent\Model;

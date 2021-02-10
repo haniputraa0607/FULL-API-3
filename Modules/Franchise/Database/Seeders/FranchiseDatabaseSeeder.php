@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\UserFranchise\Database\Seeders;
+namespace Modules\Franchise\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Database\Eloquent\Model;
 
-class UserFranchiseDatabaseSeeder extends Seeder
+class FranchiseDatabaseSeeder extends Seeder
 {
     /**
      * Run the database seeds.

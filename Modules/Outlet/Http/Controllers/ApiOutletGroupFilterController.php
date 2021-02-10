@@ -31,7 +31,7 @@ use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
 use  Modules\UserFranchise\Entities\UserFranchise;
-use  Modules\UserFranchise\Entities\UserFranchiseOultet;
+use  Modules\Franchise\Entities\UserFranchiseOultet;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
 
 use App\Imports\ExcelImport;

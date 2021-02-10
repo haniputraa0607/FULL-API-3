@@ -1,5 +1,5 @@
 {
-    "name": "nwidart/userfranchise",
+    "name": "nwidart/franchise",
     "description": "",
     "authors": [
         {
@@ -10,7 +10,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Modules\\UserFranchise\\Providers\\UserFranchiseServiceProvider"
+                "Modules\\Franchise\\Providers\\FranchiseServiceProvider"
             ],
             "aliases": {
                 
@@ -19,7 +19,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Modules\\UserFranchise\\": ""
+            "Modules\\Franchise\\": ""
         }
     }
 }

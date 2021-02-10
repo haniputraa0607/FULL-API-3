@@ -11,6 +11,6 @@
 |
 */
 
-Route::prefix('userfranchise')->group(function() {
-    Route::get('/', 'ApiUserFranchiseController@index');
+Route::prefix('franchise')->group(function() {
+    Route::get('/', 'FranchiseController@index');
 });

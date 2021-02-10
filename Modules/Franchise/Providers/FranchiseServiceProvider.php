@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\UserFranchise\Providers;
+namespace Modules\Franchise\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Database\Eloquent\Factory;
 
-class UserFranchiseServiceProvider extends ServiceProvider
+class FranchiseServiceProvider extends ServiceProvider
 {
     /**
      * Boot the application events.
@@ -39,10 +39,10 @@ class UserFranchiseServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('userfranchise.php'),
+            __DIR__.'/../Config/config.php' => config_path('franchise.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'userfranchise'
+            __DIR__.'/../Config/config.php', 'franchise'
         );
     }
 
@@ -53,7 +53,7 @@ class UserFranchiseServiceProvider extends ServiceProvider
      */
     public function registerViews()
     {
-        $viewPath = resource_path('views/modules/userfranchise');
+        $viewPath = resource_path('views/modules/franchise');
 
         $sourcePath = __DIR__.'/../Resources/views';
 
@@ -62,8 +62,8 @@ class UserFranchiseServiceProvider extends ServiceProvider
         ],'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
-            return $path . '/modules/userfranchise';
-        }, \Config::get('view.paths')), [$sourcePath]), 'userfranchise');
+            return $path . '/modules/franchise';
+        }, \Config::get('view.paths')), [$sourcePath]), 'franchise');
     }
 
     /**
@@ -73,12 +73,12 @@ class UserFranchiseServiceProvider extends ServiceProvider
      */
     public function registerTranslations()
     {
-        $langPath = resource_path('lang/modules/userfranchise');
+        $langPath = resource_path('lang/modules/franchise');
 
         if (is_dir($langPath)) {
-            $this->loadTranslationsFrom($langPath, 'userfranchise');
+            $this->loadTranslationsFrom($langPath, 'franchise');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'userfranchise');
+            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'franchise');
         }
     }
 

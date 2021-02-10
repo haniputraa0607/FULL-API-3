@@ -1,12 +1,12 @@
 {
-    "name": "UserFranchise",
-    "alias": "userfranchise",
+    "name": "Franchise",
+    "alias": "franchise",
     "description": "",
     "keywords": [],
     "active": 1,
     "order": 0,
     "providers": [
-        "Modules\\UserFranchise\\Providers\\UserFranchiseServiceProvider"
+        "Modules\\Franchise\\Providers\\FranchiseServiceProvider"
     ],
     "aliases": {},
     "files": [],
