@@ -18,8 +18,7 @@ class UpdateBundling extends FormRequest
             'bundling_name' => 'required',
             'bundling_description' => 'required',
             'bundling_start' => 'required',
-            'bundling_end' => 'required',
-            'id_outlet' => 'required'
+            'bundling_end' => 'required'
         ];
     }
 

@@ -24,6 +24,8 @@ use App\Http\Models\DealsPromotionTemplate;
 use Modules\ProductVariant\Entities\ProductGroup;
 use App\Http\Models\Product;
 use Modules\Promotion\Entities\DealsPromotionBrand;
+use Modules\Promotion\Entities\DealsPromotionOutlet;
+use Modules\Promotion\Entities\DealsPromotionOutletGroup;
 
 use Modules\Deals\Entities\DealsProductDiscount;
 use Modules\Deals\Entities\DealsProductDiscountRule;
@@ -35,6 +37,7 @@ use Modules\Deals\Entities\DealsUserLimit;
 use Modules\Deals\Entities\DealsContent;
 use Modules\Deals\Entities\DealsContentDetail;
 use Modules\Deals\Entities\DealsBrand;
+use Modules\Deals\Entities\DealsOutletGroup;
 
 use DB;
 
@@ -233,6 +236,7 @@ class ApiDeals extends Controller
         if (isset($post['deals_total_used'])) {
             $data['deals_total_used'] = $post['deals_total_used'];
         }
+        /* replaced by check filter outlet
         if (isset($post['id_outlet'])) {
         	if ($post['deals_type'] == 'Promotion') {
         		$data['deals_list_outlet'] = implode(',', $post['id_outlet']);
@@ -246,7 +250,7 @@ class ApiDeals extends Controller
             }else{
                 $data['is_all_outlet'] = 0;
             }
-        }
+        }*/
         if (isset($post['user_limit'])) {
             $data['user_limit'] = $post['user_limit'];
         } else {
@@ -288,6 +292,32 @@ class ApiDeals extends Controller
         	$data['product_type'] = $post['product_type'];
         }
 
+        if (isset($post['product_type'])) {
+        	$data['product_type'] = $post['product_type'];
+        }
+
+        if (isset($post['filter_outlet'])) {
+        	switch ($post['filter_outlet']) {
+        		case 'selected_outlet':
+		        	$data['id_outlet'] = $post['id_outlet'] ?? [];
+		        	$data['is_all_outlet'] = 0;
+		        	unset($data['id_outlet_group']);
+        			break;
+        		
+        		case 'outlet_group':
+		        	$data['id_outlet_group'] = $post['id_outlet_group'] ?? [];
+		        	$data['is_all_outlet'] = 0;
+		        	unset($data['id_outlet']);
+        			break;
+
+        		default:
+        			$data['is_all_outlet'] = 1;
+        			unset($data['id_outlet']);
+        			unset($data['id_outlet_group']);
+        			break;
+        	}
+        }
+
         return $data;
     }
 
@@ -324,7 +354,17 @@ class ApiDeals extends Controller
         if ($save) {
             if (isset($data['id_outlet']) && $data['is_all_outlet'] == 0) {
                 if (isset($data['id_outlet'])) {
-                    $saveOutlet = $this->saveOutlet($save, $data['id_outlet']);
+                    $saveOutlet = $this->saveOutlet($data['deals_type'], $save, $data['id_outlet']);
+
+                    if (!$saveOutlet) {
+                        return false;
+                    }
+                }
+            }
+
+            if (isset($data['id_outlet_group']) && $data['is_all_outlet'] == 0) {
+                if (isset($data['id_outlet_group'])) {
+                    $saveOutlet = $this->saveOutletGroup($data['deals_type'], $save, $data['id_outlet_group']);
 
                     if (!$saveOutlet) {
                         return false;
@@ -1123,16 +1163,25 @@ class ApiDeals extends Controller
             $this->deleteImage($id);
         }
 
+        //delete outlet
+        $this->deleteOutlet('deals', $id);
+
+        // save outlet
         if (isset($data['id_outlet'])) {
 
-            // DELETE
-            $this->deleteOutlet($id);
-
-            // SAVE
             if($data['is_all_outlet'] == 0){
-                $saveOutlet = $this->saveOutlet($deals, $data['id_outlet']);
+                $saveOutlet = $this->saveOutlet('deals', $deals, $data['id_outlet']);
             }
             unset($data['id_outlet']);
+        }
+
+        // save outlet group
+        if (isset($data['id_outlet_group'])) {
+
+            if($data['is_all_outlet'] == 0){
+                $saveOutlet = $this->saveOutletGroup('deals', $deals, $data['id_outlet_group']);
+            }
+            unset($data['id_outlet_group']);
         }
 
         if (isset($data['id_brand'])) {
@@ -1206,8 +1255,6 @@ class ApiDeals extends Controller
 	        	return response()->json(['status' => 'fail','messages' => ['Update Promotion Deals Failed']]);
 	        }
         }
-
-
     }
 
     /* DELETE */
@@ -1288,13 +1335,17 @@ class ApiDeals extends Controller
     }
 
     /* OUTLET */
-    function saveOutlet($deals, $id_outlet = [])
+    function saveOutlet($deals_type, $deals, $id_outlet = [])
     {
-        $id_deals=$deals->id_deals;
-        $id_brand=$deals->id_brand;
-        $dataOutlet = [];
+    	if ($deals_type == 'Promotion') {
+        	$id_deals = $deals->id_deals_promotion_template;
+        	$outlet_table = new DealsPromotionOutlet;
+        }else{
+	        $id_deals = $deals->id_deals;
+        	$outlet_table = new DealsOutlet;
+        }
 
-        /*If select all outlet, not save to table deals outlet*/
+        $dataOutlet = [];
         foreach ($id_outlet as $value) {
             array_push($dataOutlet, [
                 'id_outlet' => $value,
@@ -1303,7 +1354,38 @@ class ApiDeals extends Controller
         }
 
         if (!empty($dataOutlet)) {
-            $save = DealsOutlet::insert($dataOutlet);
+            $save = $outlet_table::insert($dataOutlet);
+
+            return $save;
+        } else {
+            return false;
+        }
+
+        return true;
+    }
+
+    /* OUTLET */
+    function saveOutletGroup($deals_type, $deals, $id_outlet_group = [])
+    {
+
+        if ($deals_type == 'Promotion') {
+        	$id_deals = $deals->id_deals_promotion_template;
+        	$outlet_group_table = new DealsPromotionOutletGroup;
+        }else{
+	        $id_deals = $deals->id_deals;
+        	$outlet_group_table = new DealsOutletGroup;
+        }
+
+        $data_outlet = [];
+        foreach ($id_outlet_group as $value) {
+            array_push($data_outlet, [
+                'id_outlet_group' => $value,
+                'id_deals'  => $id_deals
+            ]);
+        }
+
+        if (!empty($data_outlet)) {
+            $save = $outlet_group_table::insert($data_outlet);
 
             return $save;
         } else {
@@ -1314,9 +1396,15 @@ class ApiDeals extends Controller
     }
 
     /* DELETE OUTLET */
-    function deleteOutlet($id_deals)
+    function deleteOutlet($deals_type, $id_deals)
     {
-        $delete = DealsOutlet::where('id_deals', $id_deals)->delete();
+    	if ($deals_type == 'Promotion') {
+	        $delete = DealsPromotionOutlet::where('id_deals', $id_deals)->delete();
+	        $delete = DealsPromotionOutletGroup::where('id_deals', $id_deals)->delete();
+	    }else{
+	        $delete = DealsOutlet::where('id_deals', $id_deals)->delete();
+	        $delete = DealsOutletGroup::where('id_deals', $id_deals)->delete();
+	    }
 
         return $delete;
     }
@@ -1516,8 +1604,8 @@ class ApiDeals extends Controller
     		$table = 'deals';
     	}
 
-        if ( ($post['step'] == 1 || $post['step'] == 'all') && ($deals_type != 'Promotion') ){
-			$deals = $deals->with(['outlets']);
+        if ( ($post['step'] == 1 || $post['step'] == 'all') ){
+			$deals = $deals->with(['outlets', 'outlet_groups']);
         }
 
         if ( ($post['step'] == 1 || $post['step'] == 'all') ){
@@ -1549,7 +1637,10 @@ class ApiDeals extends Controller
                 $table.'_shipment_method',
                 $table.'_payment_method',
                 'brand',
-                'brands'
+                'brands',
+                'created_by_user' => function($q) {
+                	$q->select('id', 'name', 'level');
+                }
             ]);
         }
 
@@ -1558,7 +1649,7 @@ class ApiDeals extends Controller
         }
 
         if ($post['step'] == 'all') {
-			$deals = $deals->with(['created_by_user']);
+			// $deals = $deals->with(['created_by_user']);
         }
 
         $deals = $deals->first();
@@ -1909,7 +2000,7 @@ class ApiDeals extends Controller
 
 	function dealsPaginate($query, $request)
 	{
-
+		$query->with('brands');
 		$query = $query->addSelect('deals.updated_at')->paginate($request->paginate);
 
 		return MyHelper::checkGet($query);
@@ -1923,9 +2014,7 @@ class ApiDeals extends Controller
         unset(
         	$data['deals_type'],
         	$data['deals_voucher_price_point'],
-        	$data['deals_voucher_price_cash'],
-        	$data['is_all_outlet'],
-        	$data['id_outlet']
+        	$data['deals_voucher_price_cash']
         );
         $data['step_complete'] = 0;
         $data['last_updated_by'] = auth()->user()->id;
@@ -1968,6 +2057,26 @@ class ApiDeals extends Controller
         	if (!$save_brand) {
                 return false;
             }
+        }
+
+        //delete outlet
+        $this->deleteOutlet('Promotion', $id);
+
+        // save outlet
+        if (isset($data['id_outlet'])) {
+
+            if($data['is_all_outlet'] == 0){
+                $saveOutlet = $this->saveOutlet('Promotion', $deals, $data['id_outlet']);
+            }
+            unset($data['id_outlet']);
+        }
+
+        // save outlet group
+        if (isset($data['id_outlet_group'])) {
+            if($data['is_all_outlet'] == 0){
+                $saveOutlet = $this->saveOutletGroup('Promotion', $deals, $data['id_outlet_group']);
+            }
+            unset($data['id_outlet_group']);
         }
 
         // error

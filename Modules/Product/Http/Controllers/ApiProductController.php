@@ -746,6 +746,7 @@ class ApiProductController extends Controller
                 $data['products'] = Product::select('product_code','product_name','product_description')
                     ->join('brand_product','brand_product.id_product','=','products.id_product')
                     ->where('id_brand',$post['id_brand'])
+                    ->where('product_type', 'product')
                     ->groupBy('products.id_product')
                     ->orderBy('position')
                     ->orderBy('products.id_product')
@@ -758,6 +759,7 @@ class ApiProductController extends Controller
                 $data['products'] = Product::select('product_categories.product_category_name','products.position','product_code','product_name','product_description','products.product_visibility')
                     ->join('brand_product','brand_product.id_product','=','products.id_product')
                     ->where('id_brand',$post['id_brand'])
+                    ->where('product_type', 'product')
                     ->leftJoin('product_categories','product_categories.id_product_category','=','brand_product.id_product_category')
                     ->groupBy('products.id_product')
                     ->groupBy('product_category_name')
@@ -781,6 +783,7 @@ class ApiProductController extends Controller
                     ->join('brand_product','brand_product.id_product','=','products.id_product')
                     ->leftJoin('product_global_price', 'product_global_price.id_product', 'products.id_product')
                     ->where('id_brand',$post['id_brand'])
+                    ->where('product_type', 'product')
                     ->orderBy('position')
                     ->orderBy('products.id_product')
                     ->distinct()
@@ -956,7 +959,8 @@ class ApiProductController extends Controller
         }
 
         if(isset($post['admin_list'])){
-            $product = $product->withCount('product_detail')->withCount('product_detail_hiddens')->with(['brands']);
+            $product = $product->where('product_type', 'product')
+                ->withCount('product_detail')->withCount('product_detail_hiddens')->with(['brands']);
         }
 
         if(isset($post['pagination'])){
@@ -1496,7 +1500,7 @@ class ApiProductController extends Controller
             $data['id_outlet'] = $post['id_outlet'];
         }
 
-        $getAllProduct = Product::pluck('id_product');
+        $getAllProduct = Product::where('product_type', 'product')->pluck('id_product');
         if($post['id_outlet'] == 0){
             if (isset($post['product_price'])) {
                 $dataGlobalPrice['product_global_price'] = $post['product_price'];

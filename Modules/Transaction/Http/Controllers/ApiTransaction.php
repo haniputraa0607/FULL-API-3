@@ -1962,9 +1962,9 @@ class ApiTransaction extends Controller
                             $htmlBundling .= '<td>'.htmlspecialchars($val['transaction_product_note']).'</td>';
                             $htmlBundling .= '<td></td>';
                             $htmlBundling .= '<td></td>';
+                            $htmlBundling .= '<td>'.$priceMod.'</td>';
                             $htmlBundling .= '<td>0</td>';
-                            $htmlBundling .= '<td>0</td>';
-                            $htmlBundling .= '<td>'.(0+$priceMod).'</td>';
+                            $htmlBundling .= '<td>'.($priceMod).'</td>';
                             $htmlBundling .= '<td></td><td></td><td></td>';
                             if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
                                 $htmlBundling .= '<td></td><td></td><td></td>';
@@ -1991,7 +1991,7 @@ class ApiTransaction extends Controller
                                     $htmlBundling .= '<td></td>';
                                     $htmlBundling .= '<td></td>';
                                     $htmlBundling .= '<td></td>';
-                                    $htmlBundling .= '<td>0</td>';
+                                    $htmlBundling .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
                                     $htmlBundling .= '<td>0</td>';
                                     $htmlBundling .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
                                     $htmlBundling .= '<td></td><td></td><td></td>';
@@ -3017,7 +3017,8 @@ class ApiTransaction extends Controller
                 }
             }
 
-            $result['product_bundling_transaction_name'] = 'Bundling';
+            $nameBrandBundling = Setting::where('key', 'brand_bundling_name')->first();
+            $result['name_brand_bundling'] = $nameBrandBundling['value']??'Bundling';
             $result['product_bundling_transaction'] = $listItemBundling;
             $result['product_transaction'] = [];
             $discount = 0;

@@ -13,8 +13,23 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::middleware('auth:api')->get('/plastic', function (Request $request) {
-    return $request->user();
+Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'product-plastic'], function()
+{
+    Route::any('list', 'ApiProductPlasticController@index');
+    Route::post('store', 'ApiProductPlasticController@store');
+    Route::post('detail', 'ApiProductPlasticController@detail');
+    Route::post('update', 'ApiProductPlasticController@update');
+    Route::post('delete', 'ApiProductPlasticController@destroy');
+    Route::post('visibility', 'ApiProductPlasticController@visibility');
+
+    Route::post('export-price', 'ApiProductPlasticController@exportProductPlaticPrice');
+    Route::post('import-price', 'ApiProductPlasticController@importProductPlaticPrice');
+
+    Route::post('export-product', 'ApiProductPlasticController@exportProduct');
+    Route::post('import-product', 'ApiProductPlasticController@importProduct');
+
+    Route::post('export-product-variant', 'ApiProductPlasticController@exportProductVariant');
+    Route::post('import-product-variant', 'ApiProductPlasticController@importProductVariant');
 });
 
 // Route::post('/plastic/total-price', 'PlasticController@getTotalPrice')->middleware('auth:api');
