@@ -2123,7 +2123,8 @@ class ApiOnlineTransaction extends Controller
         $promo_discount = 0;
         $promo_type = null;
         $request['bundling_promo'] = $this->checkBundlingIncludePromo($post);
-        $request_promo = $request->except('type');
+        $request_promo = $request;
+        unset($request_promo['type']);
 
         if($request->promo_code && !$request->id_subscription_user && !$request->id_deals_user){
         	$code = app($this->promo_campaign)->checkPromoCode($request->promo_code, 1, 1);
@@ -2611,7 +2612,7 @@ class ApiOnlineTransaction extends Controller
 
         if ($promo_valid) {
         	if (($promo_type??false) == 'Discount bill') {
-        		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $subtotal_per_brand, $promo_error_product);
+        		$check_promo = app($this->promo)->checkPromo($request_promo, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $subtotal_per_brand, $promo_error_product);
 
         		if ($check_promo['status'] == 'fail') {
 	        		$promo_error = app($this->promo_campaign)->promoError('transaction', $check_promo['messages']??$error, null, $promo_error_product ?? 0);
