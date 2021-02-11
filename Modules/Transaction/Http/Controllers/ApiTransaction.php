@@ -3019,6 +3019,7 @@ class ApiTransaction extends Controller
 
             $nameBrandBundling = Setting::where('key', 'brand_bundling_name')->first();
             $result['name_brand_bundling'] = $nameBrandBundling['value']??'Bundling';
+            $result['product_bundling_transaction_name'] = $nameBrandBundling['value']??'Bundling';
             $result['product_bundling_transaction'] = $listItemBundling;
             $result['product_transaction'] = [];
             $discount = 0;

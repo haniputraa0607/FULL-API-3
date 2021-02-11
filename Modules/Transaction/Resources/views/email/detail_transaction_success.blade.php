@@ -461,6 +461,51 @@ use App\Lib\MyHelper;
                 <div class="col-12 text-right text-black-grey-light text-13-3px WorkSans-SemiBold" style="text-align: right"><b>{{ $data['transaction_receipt_number'] }}</b></div>
             </div>
             <div class="kotak" style="margin: 0px;border-radius: 10px;">
+                @if(!empty($data['product_bundling_transaction']))
+                    <div class="row" style="margin-bottom: 5%;">
+                        <div class="col-12 text-13-3px WorkSans-Medium text-black">
+                            <div class="round-grey bg-grey" style="border: 1px solid #aaaaaa;border-radius: 50%;width: 5px;height: 5px;display: inline-block;margin-right:3px;background-color: #aaaaaa"></div>
+                            {{$data['name_brand_bundling']}}
+                        </div>
+                    </div>
+                @foreach ($data['product_bundling_transaction']??[] as $trx)
+                        <div class="row">
+                            <div class="col-2 text-13-3px WorkSans-SemiBold text-black">{{$trx['bundling_qty']}}x</div>
+                            <div class="col-6 text-14px WorkSans-SemiBold text-black" style="margin-left:-100px;margin-right: 50px;">{{$trx['bundling_name']}}</div>
+                            <div class="col-4 text-13-3px text-right WorkSans-SemiBold text-black">{{$trx['bundling_subtotal']}}</div>
+                        </div>
+                    @foreach ($trx['product'] as $prod)
+                        <div class="row">
+                            <div class="col-2 text-13-3px WorkSans-SemiBold text-black"></div>
+                            <div class="col-10 text-14px WorkSans-SemiBold text-black" style="margin-left:-100px;margin-right: 50px;">{{$prod['product_name']}} {{$prod['product_qty']}}x</div>
+                        </div>
+                        <?php
+                        $modVar = '';
+                        $dataMod = array_column($prod['modifiers'], 'text');
+                        $dataVar = array_column($prod['variants'], 'product_variant_name');
+                        $modVar  = implode(',', array_merge($dataMod,$dataVar));
+                        ?>
+                        @if(!empty($modVar))
+                            <div class="row">
+                                <div class="col-2 text-13-3px WorkSans-SemiBold text-black"></div>
+                                <div class="col-6 text-14px WorkSans-SemiBold text-black" style="margin-left:-100px;margin-right: 50px;color: darkgrey;font-size: 11px;">{{$modVar}}</div>
+                                <div class="col-4 text-13-3px text-right WorkSans-SemiBold text-black"></div>
+                            </div>
+                        @endif
+                        @if(isset($prod['note']))
+                            <div class="row">
+                                <div class="col-2 text-13-3px WorkSans-SemiBold text-black"></div>
+                                <div class="col-6 text-14px WorkSans-SemiBold text-black" style="margin-left:-100px;margin-right: 50px;color: darkgrey;font-size: 11px;">{{$prod['transaction_product_note']}}</div>
+                                <div class="col-4 text-13-3px text-right WorkSans-SemiBold text-black"></div>
+                            </div>
+                        @endif
+                    @endforeach
+                @endforeach
+                    <div class="col-12">
+                        <hr style="border-top: 1px solid #eeeeee;">
+                    </div>
+                @endif
+
                 @foreach ($data['product_transaction']??[] as $trx)
                     <div class="row" style="margin-bottom: 5%;">
                         <div class="col-12 text-13-3px WorkSans-Medium text-black">
