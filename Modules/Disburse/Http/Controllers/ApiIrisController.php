@@ -549,6 +549,23 @@ class ApiIrisController extends Controller
             $charged = NULL;
 
             if(!empty($data['transaction_multiple_payment']) || !empty($data['transaction_payment_subscription'])){
+                //get data bundling product
+                $getBundlingProduct = TransactionProduct::where('id_transaction', $id_transaction)
+                    ->whereNotNull('id_bundling_product')
+                    ->select('transaction_product_qty', 'id_transaction_bundling_product', 'id_bundling_product', 'transaction_product_bundling_discount', 'transaction_product_bundling_charged_outlet', 'transaction_product_bundling_charged_central')
+                    ->get()->toArray();
+                $bundlingProductTotalDiscount = 0;
+                $bundlingProductFeeOutlet = 0;
+                $bundlingProductFeeCentral = 0;
+                foreach ($getBundlingProduct as $bp){
+                    $bundlingProductTotalDiscount = $bundlingProductTotalDiscount + ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                    $bpChargedOutlet = (floatval($bp['transaction_product_bundling_charged_outlet']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                    $bpChargedCentral = (floatval($bp['transaction_product_bundling_charged_central']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                    $bundlingProductFeeOutlet = $bundlingProductFeeOutlet + $bpChargedOutlet;
+                    $bundlingProductFeeCentral = $bundlingProductFeeCentral + $bpChargedCentral;
+                }
+                $subTotal = $subTotal + $bundlingProductTotalDiscount;
+                $nominalFeeToCentral = $subTotal;
 
                 // ===== Calculate Fee Subscription ====== //
                 $totalChargedSubcriptionOutlet = 0;
@@ -784,25 +801,13 @@ class ApiIrisController extends Controller
                     }
                 }
 
-                //get data bundling product
-                $getBundlingProduct = TransactionProduct::where('id_transaction', $id_transaction)
-                    ->whereNotNull('id_bundling_product')
-                    ->select('transaction_product_qty', 'id_transaction_bundling_product', 'id_bundling_product', 'transaction_product_bundling_discount', 'transaction_product_bundling_charged_outlet', 'transaction_product_bundling_charged_central')
-                    ->get()->toArray();
-                $bundlingProductTotalDiscount = 0;
-                $bundlingProductFeeOutlet = 0;
-                $bundlingProductFeeCentral = 0;
-                foreach ($getBundlingProduct as $bp){
-                    $bundlingProductTotalDiscount = $bundlingProductTotalDiscount + ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
-                    $bpChargedOutlet = (floatval($bp['transaction_product_bundling_charged_outlet']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
-                    $bpChargedCentral = (floatval($bp['transaction_product_bundling_charged_central']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
-                    $bundlingProductFeeOutlet = $bundlingProductFeeOutlet + $bpChargedOutlet;
-                    $bundlingProductFeeCentral = $bundlingProductFeeCentral + $bpChargedCentral;
-                }
                 if(!empty($getBundlingProduct)){
-                    $nominalFeeToCentral = $subTotal;
+                    if($nominalFeeToCentral == 0){
+                        $nominalFeeToCentral = $subTotal - $bundlingProductTotalDiscount;
+                    }else{
+                        $nominalFeeToCentral = $nominalFeeToCentral - $bundlingProductTotalDiscount;
+                    }
                 }
-                $subTotal = $subTotal + $bundlingProductTotalDiscount;
 
                 $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
                 $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet - $bundlingProductFeeOutlet, 2);//income outlet
@@ -874,7 +879,6 @@ class ApiIrisController extends Controller
                 $settingMDRAll = MDR::get()->toArray();
                 $subTotal = $data['transaction_subtotal'];
                 $grandTotal = $data['transaction_grandtotal'];
-                $nominalFeeToCentral = $subTotal;
                 $feePGCentral = 0;
                 $feePG = 0;
                 $feePGType = 'Percent';
@@ -899,6 +903,24 @@ class ApiIrisController extends Controller
                 $charged = NULL;
 
                 if(!empty($data['transaction_multiple_payment']) || !empty($data['transaction_payment_subscription'])){
+                    //get data bundling product
+                    $getBundlingProduct = TransactionProduct::where('id_transaction', $data['id_transaction'])
+                        ->whereNotNull('id_bundling_product')
+                        ->select('transaction_product_qty', 'id_transaction_bundling_product', 'id_bundling_product', 'transaction_product_bundling_discount', 'transaction_product_bundling_charged_outlet', 'transaction_product_bundling_charged_central')
+                        ->get()->toArray();
+                    $bundlingProductTotalDiscount = 0;
+                    $bundlingProductFeeOutlet = 0;
+                    $bundlingProductFeeCentral = 0;
+                    foreach ($getBundlingProduct as $bp){
+                        $bundlingProductTotalDiscount = $bundlingProductTotalDiscount + ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                        $bpChargedOutlet = (floatval($bp['transaction_product_bundling_charged_outlet']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                        $bpChargedCentral = (floatval($bp['transaction_product_bundling_charged_central']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                        $bundlingProductFeeOutlet = $bundlingProductFeeOutlet + $bpChargedOutlet;
+                        $bundlingProductFeeCentral = $bundlingProductFeeCentral + $bpChargedCentral;
+                    }
+
+                    $subTotal = $subTotal + $bundlingProductTotalDiscount;
+                    $nominalFeeToCentral = $subTotal;
 
                     // ===== Calculate Fee Subscription ====== //
                     $totalChargedSubcriptionOutlet = 0;
@@ -1116,25 +1138,13 @@ class ApiIrisController extends Controller
                         }
                     }
 
-                    //get data bundling product
-                    $getBundlingProduct = TransactionProduct::where('id_transaction', $data['id_transaction'])
-                        ->whereNotNull('id_bundling_product')
-                        ->select('transaction_product_qty', 'id_transaction_bundling_product', 'id_bundling_product', 'transaction_product_bundling_discount', 'transaction_product_bundling_charged_outlet', 'transaction_product_bundling_charged_central')
-                        ->get()->toArray();
-                    $bundlingProductTotalDiscount = 0;
-                    $bundlingProductFeeOutlet = 0;
-                    $bundlingProductFeeCentral = 0;
-                    foreach ($getBundlingProduct as $bp){
-                        $bundlingProductTotalDiscount = $bundlingProductTotalDiscount + ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
-                        $bpChargedOutlet = (floatval($bp['transaction_product_bundling_charged_outlet']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
-                        $bpChargedCentral = (floatval($bp['transaction_product_bundling_charged_central']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
-                        $bundlingProductFeeOutlet = $bundlingProductFeeOutlet + $bpChargedOutlet;
-                        $bundlingProductFeeCentral = $bundlingProductFeeCentral + $bpChargedCentral;
-                    }
                     if(!empty($getBundlingProduct)){
-                        $nominalFeeToCentral = $subTotal;
+                        if($nominalFeeToCentral == 0){
+                            $nominalFeeToCentral = $subTotal - $bundlingProductTotalDiscount;
+                        }else{
+                            $nominalFeeToCentral = $nominalFeeToCentral - $bundlingProductTotalDiscount;
+                        }
                     }
-                    $subTotal = $subTotal + $bundlingProductTotalDiscount;
 
                     $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
                     $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet - $bundlingProductFeeOutlet, 2);//income outlet
