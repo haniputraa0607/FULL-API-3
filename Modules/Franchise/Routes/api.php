@@ -24,5 +24,11 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::post('detail', 'ApiUserFranchiseController@detail');
             Route::post('update', 'ApiUserFranchiseController@update');
         });
+
+	    Route::group(['prefix' => 'transaction'], function () {
+
+		    Route::any('filter', 'ApiTransactionFranchiseController@transactionFilter');
+		});
     });
+
 });
