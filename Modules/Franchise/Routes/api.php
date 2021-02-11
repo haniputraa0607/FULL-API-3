@@ -16,6 +16,8 @@ use Illuminate\Http\Request;
 Route::group(['prefix' => 'franchise'], function () {
 
     Route::group(['middleware' => ['auth:franchise', 'scopes:be']], function () {
+        Route::get('outlets', 'ApiUserFranchiseController@allOutlet');
+
         Route::group(['prefix' => 'user'], function() {
             Route::any('/', 'ApiUserFranchiseController@index');
             Route::post('store', 'ApiUserFranchiseController@store');

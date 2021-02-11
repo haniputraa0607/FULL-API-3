@@ -2,12 +2,14 @@
 
 namespace Modules\Franchise\Http\Controllers;
 
+use App\Http\Models\Outlet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Modules\Franchise\Entities\UserFranchise;
 use App\Lib\MyHelper;
-use Modules\UserFranchise\Http\Requests\users_create;
+use Modules\Franchise\Entities\UserFranchiseOultet;
+use Modules\Franchise\Http\Requests\users_create;
 
 class ApiUserFranchiseController extends Controller
 {
@@ -69,6 +71,10 @@ class ApiUserFranchiseController extends Controller
             ];
 
             $create = UserFranchise::create($dataCreate);
+            if($create){
+                UserFranchiseOultet::where('id_user_franchise' , $create['id_user_franchise'])->delete();
+                $createUserOutlet = UserFranchiseOultet::create(['id_user_franchise' => $create['id_user_franchise'], 'id_outlet' => $post['id_outlet']]);
+            }
             return response()->json(MyHelper::checkCreate($create));
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['Email already exist']]);
@@ -85,7 +91,28 @@ class ApiUserFranchiseController extends Controller
     {
         $post = $request->json()->all();
         if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
+            if(empty($post['password_admin'])){
+                return response()->json(['status' => 'fail', 'messages' => ['Your password can not be empty ']]);
+            }
+            $dataAdmin = UserFranchise::where('id_user_franchise', auth()->user()->id_user_franchise)->first();
 
+            if(!password_verify($post['password_admin'], $dataAdmin['password'])){
+                return response()->json(['status' => 'fail', 'message' => 'Wrong input your password']);
+            }
+
+            $dataUpdate = [
+                'name' => $post['name'],
+                'email' => $post['email'],
+                'phone' => $post['phone'],
+                'level' => $post['level']
+            ];
+
+            $update = UserFranchise::where('id_user_franchise', $post['id_user_franchise'])->update($dataUpdate);
+            if($update){
+                UserFranchiseOultet::where('id_user_franchise' , $post['id_user_franchise'])->delete();
+                $createUserOutlet = UserFranchiseOultet::create(['id_user_franchise' => $post['id_user_franchise'], 'id_outlet' => $post['id_outlet']]);
+            }
+            return response()->json(MyHelper::checkUpdate($update));
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
@@ -114,8 +141,14 @@ class ApiUserFranchiseController extends Controller
             $data = UserFranchise::where('email', $post['email'])->first();
         }elseif (isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
             $data = UserFranchise::where('id_user_franchise', $post['id_user_franchise'])->first();
+            $data['id_outlet'] = UserFranchiseOultet::where('id_user_franchise', $post['id_user_franchise'])->first()['id_outlet']??NULL;
         }
 
         return response()->json(MyHelper::checkGet($data));
+    }
+
+    function allOutlet(){
+        $outlets = Outlet::where('outlet_status', 'Active')->select('id_outlet', 'outlet_code', 'outlet_name')->get()->toArray();
+        return response()->json(MyHelper::checkGet($outlets));
     }
 }
