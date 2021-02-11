@@ -28,6 +28,7 @@ Route::group(['prefix' => 'franchise'], function () {
 	    Route::group(['prefix' => 'transaction'], function () {
 
 		    Route::any('filter', 'ApiTransactionFranchiseController@transactionFilter');
+		    Route::post('detail','ApiTransactionFranchiseController@transactionDetail');
 		});
     });
 
