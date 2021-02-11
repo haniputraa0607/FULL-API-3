@@ -23,6 +23,7 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::post('store', 'ApiUserFranchiseController@store');
             Route::post('detail', 'ApiUserFranchiseController@detail');
             Route::post('update', 'ApiUserFranchiseController@update');
+            Route::any('autoresponse', 'ApiUserFranchiseController@autoresponse');
         });
     });
 });

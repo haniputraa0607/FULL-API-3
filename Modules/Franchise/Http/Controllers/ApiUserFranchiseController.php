@@ -2,6 +2,7 @@
 
 namespace Modules\Franchise\Http\Controllers;
 
+use App\Http\Models\Autocrm;
 use App\Http\Models\Outlet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -141,7 +142,10 @@ class ApiUserFranchiseController extends Controller
             $data = UserFranchise::where('email', $post['email'])->first();
         }elseif (isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
             $data = UserFranchise::where('id_user_franchise', $post['id_user_franchise'])->first();
-            $data['id_outlet'] = UserFranchiseOultet::where('id_user_franchise', $post['id_user_franchise'])->first()['id_outlet']??NULL;
+        }
+
+        if(!empty($data)){
+            $data['id_outlet'] = UserFranchiseOultet::where('id_user_franchise' , $data['id_user_franchise'])->first()['id_outlet']??NULL;
         }
 
         return response()->json(MyHelper::checkGet($data));
@@ -150,5 +154,16 @@ class ApiUserFranchiseController extends Controller
     function allOutlet(){
         $outlets = Outlet::where('outlet_status', 'Active')->select('id_outlet', 'outlet_code', 'outlet_name')->get()->toArray();
         return response()->json(MyHelper::checkGet($outlets));
+    }
+
+    function autoresponse(Request $request){
+        $post = $request->json()->all();
+
+        if(empty($post)){
+            $crm = Autocrm::where('')->first();
+            return response()->json(MyHelper::checkGet($crm));
+        }else{
+
+        }
     }
 }
