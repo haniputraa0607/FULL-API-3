@@ -9,7 +9,7 @@
     </tr>
     <tr>
         <td width="30"><b>Total Gross Sales</b></td>
-        <td>: {{(float)$summary_fee['total_sub_total']}}</td>
+        <td>: {{(float)$summary_fee['total_sub_total']+abs((float)$summary_fee['total_discount_bundling'])}}</td>
     </tr>
     <tr>
         <td width="30"><b>Total Discount</b></td>
