@@ -26,8 +26,8 @@ use App\Http\Models\ProductPrice;
 use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
-use Modules\Disburse\Entities\UserFranchise;
-use Modules\Disburse\Entities\UserFranchiseOultet;
+use Modules\Franchise\Entities\UserFranchise;
+use Modules\Franchise\Entities\UserFranchiseOultet;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
 
 use App\Imports\ExcelImport;
