@@ -893,7 +893,7 @@ class ApiCronTrxController extends Controller
      */
     public function autoRejectReady()
     {
-        $log = MyHelper::logCron('Complete Transaction Pickup');
+        $log = MyHelper::logCron('Auto Reject Not Ready');
         try {
             $max_pickup = 600; // 10 minutes
             $trxs = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
