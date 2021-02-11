@@ -799,6 +799,10 @@ class ApiIrisController extends Controller
                     $bundlingProductFeeOutlet = $bundlingProductFeeOutlet + $bpChargedOutlet;
                     $bundlingProductFeeCentral = $bundlingProductFeeCentral + $bpChargedCentral;
                 }
+                if(!empty($getBundlingProduct)){
+                    $nominalFeeToCentral = $subTotal;
+                }
+                $subTotal = $subTotal + $bundlingProductTotalDiscount;
 
                 $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
                 $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet - $bundlingProductFeeOutlet, 2);//income outlet
@@ -1127,6 +1131,10 @@ class ApiIrisController extends Controller
                         $bundlingProductFeeOutlet = $bundlingProductFeeOutlet + $bpChargedOutlet;
                         $bundlingProductFeeCentral = $bundlingProductFeeCentral + $bpChargedCentral;
                     }
+                    if(!empty($getBundlingProduct)){
+                        $nominalFeeToCentral = $subTotal;
+                    }
+                    $subTotal = $subTotal + $bundlingProductTotalDiscount;
 
                     $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
                     $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet - $bundlingProductFeeOutlet, 2);//income outlet
