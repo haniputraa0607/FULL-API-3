@@ -71,13 +71,15 @@ class Favorite extends Model
 				$query->select('id_product', 'product_photo')->limit(1);
 			}
 		])->first();
-		return [
-			'product_name' => $product->product_name,
-			'product_code' => $product->product_code,
-			'product_description' => $product->product_description,
-			'url_product_photo' => optional($product->photos[0] ?? null)->url_product_photo ?: config('url.storage_url_api') . 'img/product/item/default.png',
-			'price' => $this->getProductPrice($id_outlet, $id_product)
-		];
+		if($product){
+			return [
+				'product_name' => $product->product_name,
+				'product_code' => $product->product_code,
+				'product_description' => $product->product_description,
+				'url_product_photo' => optional($product->photos[0] ?? null)->url_product_photo ?: config('url.storage_url_api') . 'img/product/item/default.png',
+				'price' => $this->getProductPrice($id_outlet, $id_product)
+			];
+		}
 	}
 
 	public function user()
