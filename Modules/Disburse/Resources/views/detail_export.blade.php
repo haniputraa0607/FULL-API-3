@@ -12,7 +12,7 @@
         <td>: {{(float)$summary_fee['total_sub_total']+abs((float)$summary_fee['total_discount_bundling'])}}</td>
     </tr>
     <tr>
-        <td width="30"><b>Total Discount</b></td>
+        <td width="30"><b>Total Discount + Promo</b></td>
         <td>: {{abs($summary_fee['total_discount'])+$summary_fee['total_subscription']+abs($summary_fee['total_discount_delivery'])+abs((float)$summary_fee['total_discount_bundling'])}}</td>
     </tr>
     <tr>
