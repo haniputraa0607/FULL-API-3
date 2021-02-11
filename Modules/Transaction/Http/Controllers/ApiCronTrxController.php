@@ -885,4 +885,75 @@ class ApiCronTrxController extends Controller
             $log->fail($e->getMessage());
         }
     }
+
+    /**
+     * Reject transaction not ready where transaction not ready after pickup_at + 10 minutes
+     * @param  string $value [description]
+     * @return [type]        [description]
+     */
+    public function autoRejectReady()
+    {
+        $log = MyHelper::logCron('Complete Transaction Pickup');
+        try {
+            $max_pickup = 600; // 10 minutes
+            $trxs = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->where('transaction_payment_status', 'Completed')
+                ->whereNotNull('receive_at')
+                ->whereNull('ready_at')
+                ->whereNull('taken_at')
+                ->whereNull('taken_by_system_at')
+                ->whereNull('reject_at')
+                ->with('outlet')
+                ->where('pickup_at', '<', date('Y-m-d H:i:s', time() - $max_pickup))
+                ->get();
+
+            $processed = [
+                'rejected' => 0,
+                'failed_reject' => 0,
+                'errors' => []
+            ];
+
+            foreach ($trxs as $transaction) {
+                $params = [
+                    'order_id' => $transaction['order_id'],
+                    'reason'   => 'auto reject order by system [not ready]'
+                ];
+                // mocking request object and create fake request
+                $fake_request = new \Modules\OutletApp\Http\Requests\DetailOrder();
+                $fake_request->setJson(new \Symfony\Component\HttpFoundation\ParameterBag($params));
+                $fake_request->merge(['user' => $transaction->outlet]);
+                $fake_request->setUserResolver(function () use ($transaction) {
+                    return $transaction->outlet;
+                });
+
+                $reject = app('Modules\OutletApp\Http\Controllers\ApiOutletApp')->rejectOrder($fake_request, date('Y-m-d', strtotime($transaction->transaction_date)));
+
+                if ($reject instanceof \Illuminate\Http\JsonResponse || $reject instanceof \Illuminate\Http\Response) {
+                    $reject = $reject->original;
+                }
+
+                if (is_array($reject)) {
+                    if (($reject['status'] ?? false) == 'success') {
+                        $dataNotif = [
+                            'subject' => 'Order Cancelled',
+                            'string_body' => $transaction['order_id'] . ' - '. $transaction['transaction_receipt_number'],
+                            'type' => 'trx',
+                            'id_reference'=> $transaction['id_transaction']
+                        ];
+                        app('Modules\OutletApp\Http\Controllers\ApiOutletApp')->outletNotif($dataNotif,$transaction->id_outlet);
+                        $processed['rejected']++;
+                    } else {
+                        $processed['failed_reject']++;
+                        $processed['errors'][] = $reject['messages'] ?? 'Something went wrong';
+                    }
+                }
+            }
+
+            $log->success($processed);
+            return $processed;
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+            return ['status' => 'fail', 'messages' => [$e->getMessage()]];
+        }
+    }
 }
