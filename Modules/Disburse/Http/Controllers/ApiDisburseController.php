@@ -912,7 +912,7 @@ class ApiDisburseController extends Controller
     public function sendRecapTransactionEachOultet(Request $request){
         $post = $request->json()->all();
         SendRecapManualy::dispatch(['data' => $post, 'type' => 'recap_transaction_each_outlet'])->onConnection('disbursequeue');
-        return 'Success';
+        return response()->json(['status' => 'success']);
     }
 
     public function exportToOutlet($post){
