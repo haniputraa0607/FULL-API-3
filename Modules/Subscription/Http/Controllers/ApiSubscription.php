@@ -1829,6 +1829,7 @@ class ApiSubscription extends Controller
         $subs = (new Subscription)->newQuery();
         $subs->where('subscription_publish_end', '>=', date('Y-m-d H:i:s'));
 		$subs->where('subscription_publish_start', '<=', date('Y-m-d H:i:s'));
+        $subs->where('subscription_end', '>=', date('Y-m-d H:i:s'));
         $subs->where('subscription_step_complete', '=', 1);
         $subs->where(function($q){
         	$q->whereColumn('subscription_bought', '<', 'subscription_total')
