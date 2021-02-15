@@ -83,8 +83,6 @@ class ApiNotification extends Controller {
                 // TRANSACTION
                 $transac = Transaction::with('user.memberships', 'logTopup')->where('transaction_receipt_number', $midtrans['order_id'])->first();
     
-                $old_payment_status = $transac->transaction_payment_status;
-    
                 if (empty($transac)) {
                     DB::rollback();
                     return response()->json([
@@ -92,7 +90,9 @@ class ApiNotification extends Controller {
                         'messages' => ['Transaction not found']
                     ]);
                 }
-    
+                    
+                $old_payment_status = $transac->transaction_payment_status;
+
                 // PROCESS
                 $checkPayment = $this->checkPayment($transac, $midtrans);
                 if (!$checkPayment) {
