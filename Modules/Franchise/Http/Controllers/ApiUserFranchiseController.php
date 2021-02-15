@@ -124,9 +124,21 @@ class ApiUserFranchiseController extends Controller
      * @param int $id
      * @return Response
      */
-    public function destroy($id)
+    public function destroy(Request $request)
     {
-        //
+        $post = $request->json()->all();
+
+        if (isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
+            $dataAdmin = UserFranchise::where('id_user_franchise', auth()->user()->id_user_franchise)->first();
+            if($dataAdmin['level'] != 'Super Admin'){
+                return response()->json(['status' => 'fail', 'messages' => ["You don't have permission"]]);
+            }
+
+            $delete = UserFranchise::where('id_user_franchise', $post['id_user_franchise'])->delete();
+            return response()->json(MyHelper::checkDelete($delete));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
+        }
     }
 
     /**
