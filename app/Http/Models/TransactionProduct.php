@@ -54,7 +54,7 @@ class TransactionProduct extends Model
 		'transaction_product_price_base',
 		'transaction_product_price_tax',
 		'transaction_product_subtotal',
-        'transaction_product_subtotal_final',
+        'transaction_product_net',
 		'transaction_product_note',
 		'transaction_product_discount',
         'transaction_product_discount_all',

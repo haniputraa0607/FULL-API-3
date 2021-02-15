@@ -875,7 +875,6 @@ class ApiOnlineTransaction extends Controller
 
         DB::beginTransaction();
         UserFeedbackLog::where('id_user',$request->user()->id)->delete();
-        $totalDiscount = abs($post['discount']) + $post['total_discount_bundling']??0;
         $transaction = [
             'id_outlet'                   => $post['id_outlet'],
             'id_user'                     => $id,
@@ -885,15 +884,14 @@ class ApiOnlineTransaction extends Controller
             'trasaction_type'             => $type,
             'transaction_notes'           => $post['notes'],
             'transaction_subtotal'        => $post['subtotal'],
-            'transaction_subtotal_final'  => $post['subtotal_final'],
+            'transaction_gross'  => $post['subtotal_final'],
             'transaction_shipment'        => $post['shipping'],
             'transaction_shipment_go_send'=> $shippingGoSend,
             'transaction_is_free'         => $isFree,
             'transaction_service'         => $post['service'],
             'transaction_discount'        => $post['discount'],
-            'transaction_discount_all'    => -$totalDiscount,
             'transaction_discount_delivery' => $post['discount_delivery'],
-            'transaction_discount_item' 	=> $promo_discount_item,
+            'transaction_discount_item' 	=> $promo_discount_item+$post['total_discount_bundling']??0,
             'transaction_discount_bill' 	=> $promo_discount_bill,
             'transaction_tax'             => $post['tax'],
             'transaction_grandtotal'      => $post['grandTotal'] + $shippingGoSend,
@@ -1183,7 +1181,7 @@ class ApiOnlineTransaction extends Controller
                 // remove discount from subtotal
                 // 'transaction_product_subtotal' => ($valueProduct['qty'] * $checkPriceProduct['product_price'])-$this_discount,
                 'transaction_product_subtotal' => $valueProduct['transaction_product_subtotal'],
-                'transaction_product_subtotal_final' => $valueProduct['transaction_product_subtotal'],
+                'transaction_product_net' => $valueProduct['transaction_product_subtotal']-$this_discount,
                 'transaction_variant_subtotal' => $valueProduct['transaction_variant_subtotal'],
                 'transaction_product_note'     => $valueProduct['note'],
                 'created_at'                   => date('Y-m-d', strtotime($insertTransaction['transaction_date'])).' '.date('H:i:s'),
@@ -4203,7 +4201,7 @@ class ApiOnlineTransaction extends Controller
                     'transaction_product_base_discount' => 0,
                     'transaction_product_qty_discount'  => 0,
                     'transaction_product_subtotal' => $itemProduct['transaction_product_subtotal'],
-                    'transaction_product_subtotal_final' => $itemProduct['transaction_product_subtotal_final'],
+                    'transaction_product_net' => $itemProduct['transaction_product_net'],
                     'transaction_variant_subtotal' => $itemProduct['transaction_variant_subtotal'],
                     'transaction_product_note'     => $itemProduct['note'],
                     'id_transaction_bundling_product' => $createTransactionBundling['id_transaction_bundling_product'],
@@ -4365,60 +4363,45 @@ class ApiOnlineTransaction extends Controller
             ->get()->toArray();
 
         foreach ($data as $dt){
-            $check = TransactionBundlingProduct::where('id_transaction', $dt['id_transaction'])->count();
+            $trxDiscount = $dt['transaction_discount'];
+            $discountBill = 0;
+            $totalDicountItem = [];
+            $subtotalFinal = [];
+            $prods = TransactionProduct::where('id_transaction', $dt['id_transaction'])->get()->toArray();
 
-            if($check <= 0){
-                $dtUpdateTrx = [
-                    'transaction_subtotal_final' => $dt['transaction_subtotal'],
-                    'transaction_discount_all' => $dt['transaction_discount']
-                ];
-                $updateTrx = Transaction::where('id_transaction', $dt['id_transaction'])->update($dtUpdateTrx);
-
-                if($updateTrx){
-                    $prods = TransactionProduct::where('id_transaction', $dt['id_transaction'])->get()->toArray();
-
-                    foreach ($prods as $prod){
-                        $dtUpdateTrxProd = [
-                            'transaction_product_subtotal_final' => $prod['transaction_product_subtotal'],
-                            'transaction_product_discount_all' => $prod['transaction_product_discount']
-                        ];
-                        TransactionProduct::where('id_transaction_product', $prod['id_transaction_product'])->update($dtUpdateTrxProd);
-                    }
+            foreach ($prods as $prod){
+                if(is_null($prod['id_transaction_bundling_product'])){
+                    $dtUpdateTrxProd = [
+                        'transaction_product_net' => $prod['transaction_product_subtotal']-$prod['transaction_product_discount'],
+                        'transaction_product_discount_all' => $prod['transaction_product_discount']
+                    ];
+                    TransactionProduct::where('id_transaction_product', $prod['id_transaction_product'])->update($dtUpdateTrxProd);
+                    array_push($totalDicountItem, $prod['transaction_product_discount']);
+                    array_push($subtotalFinal, $prod['transaction_product_subtotal']);
+                }else{
+                    $perItem = ($prod['transaction_product_subtotal']/$prod['transaction_product_bundling_qty']);
+                    $productSubtotalFinal = $perItem * $prod['transaction_product_qty'];
+                    $productSubtotalFinalNoDiscount = ($perItem + $prod['transaction_product_bundling_discount']) * $prod['transaction_product_qty'];
+                    $discount = $prod['transaction_product_bundling_discount'] * $prod['transaction_product_qty'];
+                    $dtUpdateTrxProd = [
+                        'transaction_product_net' => $productSubtotalFinal,
+                        'transaction_product_discount_all' => $discount
+                    ];
+                    array_push($totalDicountItem, $discount);
+                    array_push($subtotalFinal, $productSubtotalFinalNoDiscount);
+                    TransactionProduct::where('id_transaction_product', $prod['id_transaction_product'])->update($dtUpdateTrxProd);
                 }
-            }else{
-                $totalDicount = [];
-                $subtotalFinal = [];
-                $prods = TransactionProduct::where('id_transaction', $dt['id_transaction'])->get()->toArray();
-
-                foreach ($prods as $prod){
-                    if(is_null($prod['id_transaction_bundling_product'])){
-                        $dtUpdateTrxProd = [
-                            'transaction_product_subtotal_final' => $prod['transaction_product_subtotal'],
-                            'transaction_product_discount_all' => $prod['transaction_product_discount']
-                        ];
-                        TransactionProduct::where('id_transaction_product', $prod['id_transaction_product'])->update($dtUpdateTrxProd);
-                        array_push($totalDicount, $prod['transaction_product_discount']);
-                        array_push($subtotalFinal, $prod['transaction_product_subtotal']);
-                    }else{
-                        $perItem = ($prod['transaction_product_subtotal']/$prod['transaction_product_bundling_qty']);
-                        $productSubtotalFinal = ($perItem + $prod['transaction_product_bundling_discount']) * $prod['transaction_product_qty'];
-                        $discount = $prod['transaction_product_bundling_discount'] * $prod['transaction_product_qty'];
-                        $dtUpdateTrxProd = [
-                            'transaction_product_subtotal_final' => $productSubtotalFinal,
-                            'transaction_product_discount_all' => $discount
-                        ];
-                        array_push($totalDicount, $discount);
-                        array_push($subtotalFinal, $productSubtotalFinal);
-                        TransactionProduct::where('id_transaction_product', $prod['id_transaction_product'])->update($dtUpdateTrxProd);
-                    }
-                }
-
-                $dtUpdateTrx = [
-                    'transaction_subtotal_final' => array_sum($subtotalFinal),
-                    'transaction_discount_all' => -array_sum($totalDicount)
-                ];
-                Transaction::where('id_transaction', $dt['id_transaction'])->update($dtUpdateTrx);
             }
+
+            if(empty($totalDicountItem)){
+                $discountBill = $trxDiscount;
+            }
+            $dtUpdateTrx = [
+                'transaction_gross' => array_sum($subtotalFinal),
+                'transaction_discount_item' => array_sum($totalDicountItem),
+                'transaction_discount_bill' => $discountBill
+            ];
+            Transaction::where('id_transaction', $dt['id_transaction'])->update($dtUpdateTrx);
         }
 
         return 'success';

@@ -370,7 +370,7 @@ class ApiSettingTransactionV2 extends Controller
                         $totalDiscountBundling = $totalDiscountBundling + ($discount * $totalProduct);
                         $p['transaction_product_bundling_price'] = $calculate;
                         $p['transaction_product_subtotal'] = ($calculate  + $totalMod) * $p['product_qty'];
-                        $p['transaction_product_subtotal_final'] = $subtotalNoDiscount;
+                        $p['transaction_product_net'] = ($calculate  + $totalMod) * $totalProduct;
                         $bundlingBasePrice = $bundlingBasePrice + ($calculate * $p['product_qty']);
                         $totalDiscount = $totalDiscount + ($discount * $p['product_qty']);
                         $p['transaction_product_bundling_charged_outlet'] = $getProduct['charged_outlet'];
