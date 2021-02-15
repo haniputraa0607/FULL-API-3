@@ -328,6 +328,8 @@ class ApiOnlineTransaction extends Controller
         $use_referral = false;
         $discount_promo = [];
         $promo_discount = 0;
+        $promo_discount_item = 0;
+        $promo_discount_bill = 0;
         $promo_source = null;
         $promo_valid = false;
         $promo_type = null;
@@ -374,6 +376,7 @@ class ApiOnlineTransaction extends Controller
 	                $promo_source 	= 'promo_code';
 	                $promo_valid 	= true;
 	                $promo_discount	= $discount_promo['discount'];
+	                $promo_discount_item = abs($promo_discount);
             	}
             	else{
             		$promo_source 	= 'promo_code';
@@ -408,7 +411,8 @@ class ApiOnlineTransaction extends Controller
 
 		            $promo_source = 'voucher_online';
 		            $promo_valid = true;
-		            $promo_discount=$discount_promo['discount'];
+		            $promo_discount = $discount_promo['discount'];
+		            $promo_discount_item = abs($promo_discount);
 				}
 				else{
 					$promo_source = 'voucher_online';
@@ -824,7 +828,8 @@ class ApiOnlineTransaction extends Controller
         			return $check_promo;
         		}
         		$post['discount_delivery'] = (-$check_promo['data']['discount_delivery'])??0;
-        		$post['discount'] = (-$check_promo['data']['discount'])??0;
+        		$post['discount'] = (-$check_promo['data']['discount']) ?? 0;
+        		$promo_discount_bill = abs($check_promo['data']['discount']) ?? 0 ;
         		$post['grandTotal'] = $post['grandTotal'] + (int) $post['discount_delivery'] + (int) $post['discount'];
         	}
         	// check minimum subtotal
@@ -863,6 +868,7 @@ class ApiOnlineTransaction extends Controller
         		$post['grandTotal'] = $post['grandTotal'] + (int) $post['discount_delivery'];
         	}elseif ($check_subs['result']['type'] == 'discount') {
         		$post['discount'] = -$check_subs['result']['value'];	
+        		$promo_discount_bill = abs($check_subs['result']['value']) ?? 0 ;
         		$post['grandTotal'] = $post['grandTotal'] + (int) $post['discount'];
         	}
         }
@@ -887,6 +893,8 @@ class ApiOnlineTransaction extends Controller
             'transaction_discount'        => $post['discount'],
             'transaction_discount_all'    => -$totalDiscount,
             'transaction_discount_delivery' => $post['discount_delivery'],
+            'transaction_discount_item' 	=> $promo_discount_item,
+            'transaction_discount_bill' 	=> $promo_discount_bill,
             'transaction_tax'             => $post['tax'],
             'transaction_grandtotal'      => $post['grandTotal'] + $shippingGoSend,
             'transaction_point_earned'    => $post['point'],
