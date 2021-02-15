@@ -29,7 +29,6 @@ class users_create extends FormRequest
 			'email'			=> 'required',
 			'name'			=> 'required',
 			'phone'			=> 'required|string',
-			'password'		=> 'required',
             'id_outlet'		=> 'required'
         ];
     }

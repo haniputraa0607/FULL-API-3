@@ -63,11 +63,12 @@ class ApiUserFranchiseController extends Controller
         $check = UserFranchise::where('email', $post['email'])->first();
 
         if(!$check){
+            $pin = MyHelper::createRandomPIN(8, 'angka');
             $dataCreate = [
                 'name' => $post['name'],
                 'email' => $post['email'],
                 'phone' => $post['phone'],
-                'password' => bcrypt($post['password']),
+                'password' => bcrypt($pin),
                 'level' => $post['level']
             ];
 
@@ -75,6 +76,18 @@ class ApiUserFranchiseController extends Controller
             if($create){
                 UserFranchiseOultet::where('id_user_franchise' , $create['id_user_franchise'])->delete();
                 $createUserOutlet = UserFranchiseOultet::create(['id_user_franchise' => $create['id_user_franchise'], 'id_outlet' => $post['id_outlet']]);
+
+                if($createUserOutlet){
+                    $autocrm = app($this->autocrm)->SendAutoCRM(
+                        'New User Franchise',
+                        $post['email'],
+                        [
+                            'password' => $pin,
+                            'email' => $post['email'],
+                            'name' => $post['name']
+                        ], null, false, false, 'franchise', 1
+                    );
+                }
             }
             return response()->json(MyHelper::checkCreate($create));
         }else{
@@ -172,7 +185,7 @@ class ApiUserFranchiseController extends Controller
         $post = $request->json()->all();
 
         if(empty($post)){
-            $crm = Autocrm::where('')->first();
+            $crm = Autocrm::where('autocrm_title', 'New User Franchise')->first();
             return response()->json(MyHelper::checkGet($crm));
         }else{
 

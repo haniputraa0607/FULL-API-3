@@ -29,6 +29,7 @@ use App\Lib\classMaskingJson;
 use App\Lib\classJatisSMS;
 use App\Lib\apiwha;
 use App\Lib\ValueFirst;
+use Modules\Franchise\Entities\UserFranchise;
 use Validator;
 use Hash;
 use DB;
@@ -47,15 +48,17 @@ class ApiAutoCrm extends Controller
 		$this->apiwha = new apiwha();
     }
 
-	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null, $forward_only = false, $outlet = false, $recipient_type = null){
+	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null, $forward_only = false, $outlet = false, $recipient_type = null, $franchise = null){
 
 		$query = Autocrm::where('autocrm_title','=',$autocrm_title)->with('whatsapp_content')->get()->toArray();
 
 		if (!isset($recipient_type)) {
-			if(!$outlet){
-				$users = User::where('phone','=',$receipient)->get()->toArray();
+			if($franchise){
+                $users = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('email','=',$receipient)->get()->toArray();
+            }elseif($outlet){
+                $users = UserOutlet::select('id_user_outlet as id', 'user_outlets.*')->where('phone','=',$receipient)->get()->toArray();
 			}else{
-				$users = UserOutlet::select('id_user_outlet as id', 'user_outlets.*')->where('phone','=',$receipient)->get()->toArray();
+                $users = User::where('phone','=',$receipient)->get()->toArray();
 			}
 		}
 		else{
@@ -68,7 +71,9 @@ class ApiAutoCrm extends Controller
 
 				$query[0]['autocrm_email_subject'] = MyHelper::simpleReplace($query[0]['autocrm_email_subject'] ,$variables);
 				$query[0]['autocrm_email_content'] = MyHelper::simpleReplace($query[0]['autocrm_email_content'] ,$variables);
-			}
+			}elseif($recipient_type == 'franchise'){
+                $users = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('email','=',$receipient)->get()->toArray();
+            }
 		}
 		if(empty($users)){
 			return true;
