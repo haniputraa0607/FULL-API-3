@@ -97,7 +97,9 @@ class Transaction extends Model
 		'cashback_insert_status',
 		'calculate_achievement',
 		'show_rate_popup',
-		'transaction_discount_delivery'
+		'transaction_discount_delivery',
+		'transaction_discount_item',
+		'transaction_discount_bill'
 	];
 
 	public function user()
