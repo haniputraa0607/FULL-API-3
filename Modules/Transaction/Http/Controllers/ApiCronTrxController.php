@@ -898,6 +898,7 @@ class ApiCronTrxController extends Controller
             $max_pickup = 600; // 10 minutes
             $trxs = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
                 ->where('transaction_payment_status', 'Completed')
+                ->where('pickup_by', 'Customer')
                 ->whereNotNull('receive_at')
                 ->whereNull('ready_at')
                 ->whereNull('taken_at')
