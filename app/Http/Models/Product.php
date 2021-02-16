@@ -60,6 +60,7 @@ class Product extends Model
 		'product_visibility',
 		'position',
 		'product_type',
+        'id_plastic_type',
 		'product_capacity',
 		'plastic_used',
         'product_variant_status',
