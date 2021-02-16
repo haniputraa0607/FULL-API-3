@@ -3072,10 +3072,18 @@ class ApiTransaction extends Controller
                 $keynya++;
             }
 
+            $result['plastic_transaction_detail'] = [];
             if(isset($list['plastic_transaction'])){
                 $subtotal_plastic = 0;
                 foreach($list['plastic_transaction'] as $key => $value){
                     $subtotal_plastic += $value['transaction_product_subtotal'];
+
+                    $result['plastic_transaction_detail'][] = [
+                        'plastic_name' => $value['product']['product_name'],
+                        'plasctic_qty' => $value['transaction_product_qty'],
+                        'plastic_base_price' => '@'.MyHelper::requestNumber((int)$value['transaction_product_price'],'_CURRENCY'),
+                        'plasctic_subtotal' => MyHelper::requestNumber($value['transaction_product_subtotal'],'_CURRENCY')
+                    ];
                 }
 
                 $result['plastic_transaction'] = [];

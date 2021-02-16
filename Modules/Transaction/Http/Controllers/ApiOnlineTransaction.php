@@ -2699,21 +2699,30 @@ class ApiOnlineTransaction extends Controller
         $result['item'] = array_values($tree);
 
         // Additional Plastic Payment
-        $plastic = app($this->plastic)->check($post);
-        $result['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
-        if($post['type'] == 'Pickup Order'){
-            $result['plastic']['is_checked'] = true;
-            $result['plastic']['is_mandatory'] = false;
-            $result['plastic']['info'] = "Harga plastik akan dihitung berdasarkan jumlah item";
-        }elseif($post['type'] == 'GO-SEND'){
-            $result['plastic']['is_checked'] = true;
-            $result['plastic']['is_mandatory'] = true;
-            $result['plastic']['info'] = "Harga plastik akan dihitung berdasarkan jumlah item";
+        if($outlet['plastic_used_status'] == 'Active'){
+            $result['plastic_used_status'] = true;
+            $plastic = app($this->plastic)->check($post);
+            $result['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
+            if($post['type'] == 'Pickup Order'){
+                $result['plastic']['is_checked'] = true;
+                $result['plastic']['is_mandatory'] = false;
+                $result['plastic']['info'] = "Harga plastik akan dihitung berdasarkan jumlah item";
+            }elseif($post['type'] == 'GO-SEND'){
+                $result['plastic']['is_checked'] = true;
+                $result['plastic']['is_mandatory'] = true;
+                $result['plastic']['info'] = "Harga plastik akan dihitung berdasarkan jumlah item";
+            }else{
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Invalid Order Type']
+                ];
+            }
+
+            if(!isset($post['is_plastic_checked']) || $post['is_plastic_checked'] == false){
+                $result['plastic']['plastic_price_total'] = 0;
+            }
         }else{
-            return [
-                'status' => 'fail',
-                'messages' => ['Invalid Order Type']
-            ];
+            $result['plastic_used_status'] = false;
         }
 
         $subtotal += $result['plastic']['plastic_price_total'] ?? 0;
