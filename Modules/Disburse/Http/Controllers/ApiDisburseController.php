@@ -994,66 +994,66 @@ class ApiDisburseController extends Controller
                         $tmpPath[] = storage_path('app/excel_email/'.$excelFile);
                     }
 
-                    if(!empty($tmpPath)){
-                        $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
-                        $setting = array();
-                        foreach ($getSetting as $key => $value) {
-                            if($value['key'] == 'email_setting_url'){
-                                $setting[$value['key']]  = (array)json_decode($value['value_text']);
-                            }else{
-                                $setting[$value['key']] = $value['value'];
-                            }
-                        }
-
-                        $data = array(
-                            'customer' => '',
-                            'html_message' => 'Report Outlet '.$getOutlet['outlet_name'].', transaksi tanggal '.date('d M Y', strtotime($start)).' sampai '.date('d M Y', strtotime($end)),
-                            'setting' => $setting
-                        );
-
-                        $to = $getOutlet['outlet_email'];
-                        $subject = 'Report Transaksi ['.date('d M Y', strtotime($start)).' - '.date('d M Y', strtotime($end)).']';
-                        $name =  $getOutlet['outlet_name'];
-                        $variables['attachment'] = $tmpPath;
-
-                        try{
-                            Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
-                            {
-                                $message->to($to, $name)->subject($subject);
-                                if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-                                    $message->from($setting['email_sender'], $setting['email_from']);
-                                }else if(!empty($setting['email_sender'])){
-                                    $message->from($setting['email_sender']);
-                                }
-
-                                if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
-                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-                                }else if(!empty($setting['email_reply_to'])){
-                                    $message->replyTo($setting['email_reply_to']);
-                                }
-
-                                if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
-                                    $message->cc($setting['email_cc'], $setting['email_cc_name']);
-                                }
-
-                                if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
-                                    $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
-                                }
-
-                                // attachment
-                                if(isset($variables['attachment']) && !empty($variables['attachment'])){
-                                    foreach($variables['attachment'] as $attach){
-                                        $message->attach($attach);
-                                    }
-                                }
-                            });
-                        }catch(\Exception $e){
-                        }
-
-                        foreach ($tmpPath as $t){
-                            File::delete($t);
-                        }
-                    }
+//                    if(!empty($tmpPath)){
+//                        $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
+//                        $setting = array();
+//                        foreach ($getSetting as $key => $value) {
+//                            if($value['key'] == 'email_setting_url'){
+//                                $setting[$value['key']]  = (array)json_decode($value['value_text']);
+//                            }else{
+//                                $setting[$value['key']] = $value['value'];
+//                            }
+//                        }
+//
+//                        $data = array(
+//                            'customer' => '',
+//                            'html_message' => 'Report Outlet '.$getOutlet['outlet_name'].', transaksi tanggal '.date('d M Y', strtotime($start)).' sampai '.date('d M Y', strtotime($end)),
+//                            'setting' => $setting
+//                        );
+//
+//                        $to = $getOutlet['outlet_email'];
+//                        $subject = 'Report Transaksi ['.date('d M Y', strtotime($start)).' - '.date('d M Y', strtotime($end)).']';
+//                        $name =  $getOutlet['outlet_name'];
+//                        $variables['attachment'] = $tmpPath;
+//
+//                        try{
+//                            Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
+//                            {
+//                                $message->to($to, $name)->subject($subject);
+//                                if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+//                                    $message->from($setting['email_sender'], $setting['email_from']);
+//                                }else if(!empty($setting['email_sender'])){
+//                                    $message->from($setting['email_sender']);
+//                                }
+//
+//                                if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+//                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+//                                }else if(!empty($setting['email_reply_to'])){
+//                                    $message->replyTo($setting['email_reply_to']);
+//                                }
+//
+//                                if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+//                                    $message->cc($setting['email_cc'], $setting['email_cc_name']);
+//                                }
+//
+//                                if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+//                                    $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+//                                }
+//
+//                                // attachment
+//                                if(isset($variables['attachment']) && !empty($variables['attachment'])){
+//                                    foreach($variables['attachment'] as $attach){
+//                                        $message->attach($attach);
+//                                    }
+//                                }
+//                            });
+//                        }catch(\Exception $e){
+//                        }
+//
+//                        foreach ($tmpPath as $t){
+//                            File::delete($t);
+//                        }
+//                    }
                 }
 
                 return 'success';
@@ -1337,11 +1337,16 @@ class ApiDisburseController extends Controller
             ->whereDate('transaction_date', '>=',$date_start)
             ->whereDate('transaction_date', '<=',$date_end)
             ->where('transactions.id_outlet', $id_outlet)
+            ->groupBy('transaction_products.id_product_variant_group')
             ->groupBy('transaction_products.id_product')
-            ->selectRaw("p.product_name as name, 'Product' as type, SUM(transaction_products.transaction_product_qty) as total_qty")->get()->toArray();
+            ->selectRaw("p.product_name as name, SUM(transaction_products.transaction_product_qty) as total_qty,
+                        p.product_type as type,
+                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
+                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
+                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
+                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants")->get()->toArray();
         $summaryModifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'transaction_product_modifiers.id_transaction')
             ->join('transaction_products as tp', 'tp.id_transaction_product', 'transaction_product_modifiers.id_transaction_product')
-            ->leftJoin('transaction_bundling_products as tbp', 'tbp.id_transaction_bundling_product', 'tp.id_transaction_bundling_product')
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
             ->where('transaction_payment_status', 'Completed')
@@ -1351,7 +1356,8 @@ class ApiDisburseController extends Controller
             ->whereDate('transaction_date', '<=',$date_end)
             ->where('transactions.id_outlet', $id_outlet)
             ->groupBy('transaction_product_modifiers.id_product_modifier')
-            ->selectRaw("pm.text as name, 'Modifier' as type, tbp.transaction_bundling_product_qty, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty")->get()->toArray();
+            ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty,
+                        NULL as variants")->get()->toArray();
 
         $summary = array_merge($summaryProduct,$summaryModifier);
         return [
@@ -1554,11 +1560,15 @@ class ApiDisburseController extends Controller
             ->whereNull('reject_at')
             ->whereDate('transaction_date', $date)
             ->where('transactions.id_outlet', $id_outlet)
+            ->groupBy('transaction_products.id_product_variant_group')
             ->groupBy('transaction_products.id_product')
-            ->selectRaw("p.product_name as name, 'Product' as type, SUM(transaction_products.transaction_product_qty) as total_qty")->get()->toArray();
+            ->selectRaw("p.product_name as name, p.product_type as type, SUM(transaction_products.transaction_product_qty) as total_qty,
+                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
+                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
+                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
+                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants")->get()->toArray();
         $summaryModifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'transaction_product_modifiers.id_transaction')
             ->join('transaction_products as tp', 'tp.id_transaction_product', 'transaction_product_modifiers.id_transaction_product')
-            ->leftJoin('transaction_bundling_products as tbp', 'tbp.id_transaction_bundling_product', 'tp.id_transaction_bundling_product')
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
             ->where('transaction_payment_status', 'Completed')
@@ -1567,7 +1577,8 @@ class ApiDisburseController extends Controller
             ->whereDate('transaction_date', $date)
             ->where('transactions.id_outlet', $id_outlet)
             ->groupBy('transaction_product_modifiers.id_product_modifier')
-            ->selectRaw("pm.text as name, 'Modifier' as type, tbp.transaction_bundling_product_qty, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty")->get()->toArray();
+            ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty,
+                        NULL as variants")->get()->toArray();
 
         $summary = array_merge($summaryProduct, $summaryModifier);
         return [
