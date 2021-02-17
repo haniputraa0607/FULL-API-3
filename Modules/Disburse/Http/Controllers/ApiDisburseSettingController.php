@@ -464,6 +464,17 @@ class ApiDisburseSettingController extends Controller
         }
     }
 
+    function settingFeeProductPlastic(Request $request){
+        $post = $request->json()->all();
+        if($post){
+            $update = Setting::where('key', 'disburse_fee_product_plastic')->update($post);
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            $setting = Setting::where('key', 'disburse_fee_product_plastic')->first();
+            return response()->json(MyHelper::checkGet($setting));
+        }
+    }
+
     function settingTimeToSent(Request $request){
         $post = $request->json()->all();
         if($post){

@@ -103,6 +103,10 @@ class PlasticController extends Controller
                     $sub->whereNull('product_detail_stock_status')
                         ->orWhere('product_detail_stock_status', 'Available');
                 })
+                ->where(function ($sub) use($id_outlet){
+                    $sub->whereNull('product_detail.id_outlet')
+                        ->orWhere('product_detail.id_outlet', $id_outlet);
+                })
                 ->where('id_plastic_type', $id_plastic_type)
                 ->where('product_visibility', 'Visible')->select('products.*')->get()->toArray();
 
