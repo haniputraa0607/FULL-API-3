@@ -2707,6 +2707,9 @@ class ApiOnlineTransaction extends Controller
                 $result['plastic']['is_checked'] = true;
                 $result['plastic']['is_mandatory'] = false;
                 $result['plastic']['info'] = "Harga plastik akan dihitung berdasarkan jumlah item";
+                if(!isset($post['is_plastic_checked']) || $post['is_plastic_checked'] == false){
+                    $result['plastic']['plastic_price_total'] = 0;
+                }
             }elseif($post['type'] == 'GO-SEND'){
                 $result['plastic']['is_checked'] = true;
                 $result['plastic']['is_mandatory'] = true;
@@ -2718,9 +2721,6 @@ class ApiOnlineTransaction extends Controller
                 ];
             }
 
-            if(!isset($post['is_plastic_checked']) || $post['is_plastic_checked'] == false){
-                $result['plastic']['plastic_price_total'] = 0;
-            }
         }else{
             $result['plastic_used_status'] = false;
         }
