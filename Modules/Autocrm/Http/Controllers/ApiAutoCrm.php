@@ -89,9 +89,10 @@ class ApiAutoCrm extends Controller
 						$name	 = $user['name'];
 
 					$to		 = $user['email'];
-					$subject = $this->TextReplace($crm['autocrm_email_subject'], $receipient, $variables);
 
-					$content = $this->TextReplace($crm['autocrm_email_content'], $receipient, $variables);
+					$subject = $this->TextReplace($crm['autocrm_email_subject'], $receipient, $variables, null, $franchise);
+
+					$content = $this->TextReplace($crm['autocrm_email_content'], $receipient, $variables, null, $franchise);
 					//get setting email
 					$getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
 					$setting = array();
@@ -706,21 +707,26 @@ class ApiAutoCrm extends Controller
 		return response()->json(MyHelper::checkUpdate($query));
 	}
 
-	function TextReplace($text, $receipient, $variables = null, $wherefield = null){
+	function TextReplace($text, $receipient, $variables = null, $wherefield = null, $franchise = 0){
 		$query = TextReplace::where('status','=','Activated')->get()->toArray();
-		if($wherefield != null){
-			$user = User::leftJoin('cities','cities.id_city','=','users.id_city')
-							->leftJoin('provinces','cities.id_province','=','provinces.id_province')
-							->where($wherefield,'=',$receipient)
-							->get()
-							->first();
-		} else {
-			$user = User::leftJoin('cities','cities.id_city','=','users.id_city')
-							->leftJoin('provinces','cities.id_province','=','provinces.id_province')
-							->where('phone','=',$receipient)
-							->get()
-							->first();
-		}
+
+		if($franchise){
+            $user = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('email','=',$receipient)->get()->first();
+        }else{
+            if($wherefield != null){
+                $user = User::leftJoin('cities','cities.id_city','=','users.id_city')
+                    ->leftJoin('provinces','cities.id_province','=','provinces.id_province')
+                    ->where($wherefield,'=',$receipient)
+                    ->get()
+                    ->first();
+            } else {
+                $user = User::leftJoin('cities','cities.id_city','=','users.id_city')
+                    ->leftJoin('provinces','cities.id_province','=','provinces.id_province')
+                    ->where('phone','=',$receipient)
+                    ->get()
+                    ->first();
+            }
+        }
 
 		if($user){
 
@@ -728,6 +734,10 @@ class ApiAutoCrm extends Controller
 			if(isset($variables['pin'])){
 				$variables['pin'] = substr($variables['pin'], 0, 3).'-'.substr($variables['pin'], 3, 3);
 			}
+
+            if(isset($variables['pin_franchise'])){
+                $variables['pin'] = $variables['pin_franchise'];
+            }
 
 			//add numeric separator to point
 			if(isset($variables['received_point'])){

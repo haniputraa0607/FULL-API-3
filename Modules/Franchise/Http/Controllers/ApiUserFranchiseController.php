@@ -14,6 +14,12 @@ use Modules\Franchise\Http\Requests\users_create;
 
 class ApiUserFranchiseController extends Controller
 {
+    public function __construct()
+    {
+        date_default_timezone_set('Asia/Jakarta');
+        $this->autocrm          = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+    }
+
     /**
      * Display a listing of the resource.
      * @return Response
@@ -63,7 +69,8 @@ class ApiUserFranchiseController extends Controller
         $check = UserFranchise::where('email', $post['email'])->first();
 
         if(!$check){
-            $pin = MyHelper::createRandomPIN(8, 'angka');
+            $pin = MyHelper::createRandomPIN(6, 'angka');
+
             $dataCreate = [
                 'name' => $post['name'],
                 'email' => $post['email'],
@@ -82,7 +89,7 @@ class ApiUserFranchiseController extends Controller
                         'New User Franchise',
                         $post['email'],
                         [
-                            'password' => $pin,
+                            'pin_franchise' => $pin,
                             'email' => $post['email'],
                             'name' => $post['name']
                         ], null, false, false, 'franchise', 1
@@ -184,11 +191,58 @@ class ApiUserFranchiseController extends Controller
     function autoresponse(Request $request){
         $post = $request->json()->all();
 
-        if(empty($post)){
-            $crm = Autocrm::where('autocrm_title', 'New User Franchise')->first();
-            return response()->json(MyHelper::checkGet($crm));
-        }else{
+        $crm = Autocrm::where('autocrm_title', $post['title'])->first();
+        return response()->json(MyHelper::checkGet($crm));
+    }
 
+    function updateAutoresponse(Request $request){
+       $update = app($this->autocrm)->updateAutoCrm($request);
+       return response()->json($update->original??['status' => 'fail']);
+    }
+
+    function updateFirstPin(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['password']) && !empty($post['password'])){
+            if($post['password'] != $post['password2']){
+                return response()->json(['status' => 'fail', 'messages' => ["Password don't match"]]);
+            }
+
+            $upadte = UserFranchise::where('id_user_franchise', auth()->user()->id_user_franchise)->update(['password' => bcrypt($post['password']), 'first_update_password' => 1]);
+            return response()->json(MyHelper::checkUpdate($upadte));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Password can not be empty']]);
         }
+    }
+
+    function updateProfile(Request $request){
+        $post = $request->json()->all();
+
+        if(!empty($post['password']) && $post['password'] != $post['password2']){
+            return response()->json(['status' => 'fail', 'messages' => ["Password don't match"]]);
+        }
+        $checkEmail = UserFranchise::where('email', $post['email'])->first();
+        $checkPhone = UserFranchise::where('phone', $post['phone'])->first();
+        $dataAdmin = UserFranchise::where('id_user_franchise', auth()->user()->id_user_franchise)->first();
+
+        if($checkEmail && $checkEmail['id_user_franchise'] != auth()->user()->id_user_franchise){
+            return response()->json(['status' => 'fail', 'messages' => ["email already use"]]);
+        }
+
+        if($checkPhone && $checkPhone['id_user_franchise'] != auth()->user()->id_user_franchise){
+            return response()->json(['status' => 'fail', 'messages' => ["phone already use"]]);
+        }
+
+        $dataUpdate = [
+            'name' => $post['name'],
+            'email' => $post['email'],
+            'phone' => $post['phone']
+        ];
+        if(!empty($post['password'])){
+            $dataUpdate['password'] =  bcrypt($post['password']);
+        }
+        $update = UserFranchise::where('id_user_franchise', auth()->user()->id_user_franchise)->update($dataUpdate);
+
+        return response()->json(MyHelper::checkUpdate($update));
     }
 }

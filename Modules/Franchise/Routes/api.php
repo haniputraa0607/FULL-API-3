@@ -14,8 +14,8 @@ use Illuminate\Http\Request;
 */
 
 Route::group(['prefix' => 'franchise'], function () {
-
     Route::group(['middleware' => ['auth:franchise', 'scopes:be']], function () {
+        Route::post('profile', 'ApiUserFranchiseController@updateProfile');
         Route::get('outlets', 'ApiUserFranchiseController@allOutlet');
 
         Route::group(['prefix' => 'user'], function() {
@@ -23,8 +23,11 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::post('store', 'ApiUserFranchiseController@store');
             Route::post('detail', 'ApiUserFranchiseController@detail');
             Route::post('update', 'ApiUserFranchiseController@update');
+            Route::post('update-first-pin', 'ApiUserFranchiseController@updateFirstPin');
             Route::post('delete', 'ApiUserFranchiseController@destroy');
-            Route::any('autoresponse', 'ApiUserFranchiseController@autoresponse');
+
+            Route::post('autoresponse', 'ApiUserFranchiseController@autoresponse');
+            Route::post('autoresponse/new-user/update', 'ApiUserFranchiseController@updateAutoresponse');
         });
     });
 });
