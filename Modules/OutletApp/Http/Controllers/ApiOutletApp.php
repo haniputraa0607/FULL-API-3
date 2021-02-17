@@ -3523,6 +3523,7 @@ class ApiOutletApp extends Controller
         $list = Transaction::where([['transactions.id_transaction', $id]])->leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->with([
             // 'user.city.province',
             'user',
+            'plasticTransaction.product',
             'productTransaction.product.product_category',
             'productTransaction.modifiers' => function($query) {
                 $query->orderByRaw('CASE WHEN id_product_modifier_group IS NULL THEN 1 ELSE 0 END');
@@ -4319,6 +4320,24 @@ class ApiOutletApp extends Controller
                     'amount' => MyHelper::requestNumber($value['amount'], '_CURRENCY'),
                 ];
             }
+        }
+
+        $result['plastic_transaction_detail'] = [];
+        if(isset($list['plastic_transaction'])){
+            $subtotal_plastic = 0;
+            foreach($list['plastic_transaction'] as $key => $value){
+                $subtotal_plastic += $value['transaction_product_subtotal'];
+
+                $result['plastic_transaction_detail'][] = [
+                    'plastic_name' => $value['product']['product_name'],
+                    'plasctic_qty' => $value['transaction_product_qty'],
+                    'plastic_base_price' => '@'.MyHelper::requestNumber((int)$value['transaction_product_price'],'_CURRENCY'),
+                    'plasctic_subtotal' => MyHelper::requestNumber($value['transaction_product_subtotal'],'_CURRENCY')
+                ];
+            }
+
+            $result['plastic_transaction'] = [];
+            $result['plastic_transaction']['transaction_plastic_total'] = $subtotal_plastic;
         }
 
         return response()->json(MyHelper::checkGet($result));
