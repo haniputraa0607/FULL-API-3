@@ -113,6 +113,12 @@ class ApiDealsWebview extends Controller
         ];
         $response['button_text'] = 'BELI';
 
+        $available_voucher = ($deals['deals_voucher_type'] == 'Unlimited') ? 'Unlimited' : $deals['deals_total_voucher'] - $deals['deals_total_claimed'] . '/' . $deals['deals_total_voucher'];
+        $available_voucher_text = "";
+        if ($deals['deals_voucher_type'] != 'Unlimited') {
+        	$available_voucher_text = ($deals['deals_total_voucher'] - $deals['deals_total_claimed']). " kupon tersedia";
+        }
+
         $result = [
             'id_deals'                      => $deals['id_deals'],
             'deals_type'                    => $deals['deals_type'],
@@ -127,7 +133,8 @@ class ApiDealsWebview extends Controller
             'deals_image'                   => $deals['deals_image'],
             'deals_start'                   => $deals['deals_start'],
             'deals_end'                     => $deals['deals_end'],
-            'deals_voucher'                 => ($deals['deals_voucher_type'] == 'Unlimited') ? 'Unlimited' : $deals['deals_total_voucher'] - $deals['deals_total_claimed'] . '/' . $deals['deals_total_voucher'],
+            'deals_voucher'                 => $available_voucher,
+            'available_voucher_text'        => $available_voucher_text,
             'deals_title'                   => $deals['deals_title'],
             'deals_second_title'            => $deals['deals_second_title'],
             'deals_description'             => $deals['deals_description'],
