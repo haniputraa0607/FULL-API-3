@@ -1674,12 +1674,13 @@ class ApiDeals extends Controller
     	if ($post['deals_type'] != 'Promotion') {
     		$source = 'deals';
 	    	$check = Deal::where('id_deals','=',$post['id_deals'])->first();
+	    	/* change to can update content deals even after someone has already claimed a voucher 
 	    	if (!empty($check['deals_total_claimed']) ) {
 				return [
 	                'status'  => 'fail',
 	                'messages' => 'Cannot update deals because someone has already claimed a voucher'
 	            ];
-			}
+			}*/
     	}
     	else
     	{
@@ -1699,7 +1700,7 @@ class ApiDeals extends Controller
     	if ($update)
     	{
     		if ($post['deals_type'] != 'Promotion') {
-				$update = Deal::where('id_deals','=',$post['id_deals'])->update(['deals_description' => $post['deals_description'], 'step_complete' => 0, 'last_updated_by' => auth()->user()->id]);
+				$update = Deal::where('id_deals','=',$post['id_deals'])->update(['deals_description' => $post['deals_description'], 'last_updated_by' => auth()->user()->id]);
     		}else{
 				$update = DealsPromotionTemplate::where('id_deals_promotion_template','=',$post['id_deals'])->update(['deals_description' => $post['deals_description'], 'step_complete' => 0, 'last_updated_by' => auth()->user()->id]);
     		}
