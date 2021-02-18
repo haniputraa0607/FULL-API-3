@@ -3107,7 +3107,9 @@ class ApiTransaction extends Controller
             }
 
             $result['plastic_transaction_detail'] = [];
+            $result['plastic_name'] = '';
             if(isset($list['plastic_transaction'])){
+                $result['plastic_name'] = 'Tas Kantong';
                 $subtotal_plastic = 0;
                 foreach($list['plastic_transaction'] as $key => $value){
                     $subtotal_plastic += $value['transaction_product_subtotal'];
