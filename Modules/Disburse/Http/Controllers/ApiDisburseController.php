@@ -21,7 +21,7 @@ use Modules\Disburse\Entities\Disburse;
 
 use DB;
 use Modules\Disburse\Entities\DisburseOutletTransaction;
-use Modules\Disburse\Entities\UserFranchise;
+use Modules\Franchise\Entities\UserFranchise;
 use function Clue\StreamFilter\fun;
 
 use App\Http\Models\Setting;
