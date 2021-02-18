@@ -5112,6 +5112,7 @@ class ApiOutletApp extends Controller
                 ->groupBy('plastic_type_outlet.id_plastic_type')
                 ->where('id_outlet', $outlet['id_outlet'])->orderBy('plastic_type_order', 'asc')->first();
         $plastics = 0;
+        $data = [];
         if($plastic_type['id_plastic_type']??NULL){
             $plastics = Product::where('product_type', 'plastic')
                 ->leftJoin('product_detail', 'products.id_product', 'product_detail.id_product')
@@ -5124,13 +5125,12 @@ class ApiOutletApp extends Controller
                     DB::raw('(CASE WHEN product_detail.product_detail_stock_status is NULL THEN "Available"
                         ELSE product_detail.product_detail_stock_status END) as product_stock_status'))->count();
 
+            $data = [[
+                'id_plastic_type' => $plastic_type['id_plastic_type'],
+                'plastic_type_name' => $plastic_type['plastic_type_name'],
+                'total_item' => $plastics
+            ]];
         }
-
-        $data = [
-            'id_plastic_type' => $plastic_type['id_plastic_type'],
-            'plastic_type_name' => $plastic_type['plastic_type_name'],
-            'total_item' => $plastics
-        ];
 
         return response()->json(MyHelper::checkGet($data));
     }

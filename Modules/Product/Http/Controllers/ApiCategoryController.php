@@ -702,6 +702,9 @@ class ApiCategoryController extends Controller
                         }
 
                         $price = (float)$price;
+                        if($price <= 0){
+                            continue 2;
+                        }
                         //calculate discount produk
                         if(strtolower($p['bundling_product_discount_type']) == 'nominal'){
                             $calculate = ($price - $p['bundling_product_discount']);
