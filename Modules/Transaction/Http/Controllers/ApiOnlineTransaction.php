@@ -2702,9 +2702,9 @@ class ApiOnlineTransaction extends Controller
         if($outlet['plastic_used_status'] == 'Active'){
             $result['plastic_used_status'] = true;
             $plastic = app($this->plastic)->check($post);
+            $result['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
             $result['plastic']['plastic_name'] = 'Tas Kantong';
             $result['plastic']['plastic_pop_up'] = 'Tas Kantong Berbayar';
-            $result['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
             if($post['type'] == 'Pickup Order'){
                 $result['plastic']['is_checked'] = true;
                 $result['plastic']['is_mandatory'] = false;
