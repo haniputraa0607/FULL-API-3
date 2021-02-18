@@ -128,6 +128,12 @@ class ApiSettingTransactionV2 extends Controller
         $tax      = isset($data['tax']) ? $data['tax'] : 0;
         $shipping = isset($data['shipping']) ? $data['shipping'] : 0;
         $discount = isset($data['discount']) ? $data['discount'] : 0;
+
+        if (!isset($data['total_bundling_discount'])) {
+            $data['total_bundling_discount'] = 0;
+        }
+        $total_bundling_discount = isset($data['total_bundling_discount']) ? $data['total_bundling_discount'] : 0;
+
         // return $data;
         if ($value == 'subtotal') {
             $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet',$data['id_outlet'])->first();
@@ -394,6 +400,7 @@ class ApiSettingTransactionV2 extends Controller
                     $valueBundling['transaction_bundling_product_base_price'] = $bundlingBasePrice;
                     $valueBundling['transaction_bundling_product_subtotal'] = $bundlingSubtotal;
                     $valueBundling['transaction_bundling_product_total_discount'] = $totalDiscount;
+                    $data['total_bundling_discount'] += $totalDiscount;
                 }
             }
 
