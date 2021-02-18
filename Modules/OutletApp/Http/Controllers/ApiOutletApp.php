@@ -5108,28 +5108,60 @@ class ApiOutletApp extends Controller
             return response()->json(['status' => 'fail', 'messages' => "This outlet don't use plastic"]);
         }
 
-        $id_plastic_type = PlasticTypeOutlet::join('plastic_type', 'plastic_type.id_plastic_type', 'plastic_type_outlet.id_plastic_type')
+        $plastic_type = PlasticTypeOutlet::join('plastic_type', 'plastic_type.id_plastic_type', 'plastic_type_outlet.id_plastic_type')
                 ->groupBy('plastic_type_outlet.id_plastic_type')
-                ->where('id_outlet', $outlet['id_outlet'])->orderBy('plastic_type_order', 'asc')->first()['id_plastic_type']??NULL;
-
-        $plastics = [];
-        if($id_plastic_type){
+                ->where('id_outlet', $outlet['id_outlet'])->orderBy('plastic_type_order', 'asc')->first();
+        $plastics = 0;
+        if($plastic_type['id_plastic_type']??NULL){
             $plastics = Product::where('product_type', 'plastic')
                 ->leftJoin('product_detail', 'products.id_product', 'product_detail.id_product')
                 ->where(function ($sub) use($outlet){
                     $sub->whereNull('product_detail.id_outlet')
                         ->orWhere('product_detail.id_outlet', $outlet['id_outlet']);
                 })
-                ->where('id_plastic_type', $id_plastic_type)
+                ->where('id_plastic_type', $plastic_type['id_plastic_type'])
                 ->where('product_visibility', 'Visible')->select('products.id_product', 'products.product_code', 'products.product_name',
                     DB::raw('(CASE WHEN product_detail.product_detail_stock_status is NULL THEN "Available"
+                        ELSE product_detail.product_detail_stock_status END) as product_stock_status'))->count();
+
+        }
+
+        $data = [
+            'id_plastic_type' => $plastic_type['id_plastic_type'],
+            'plastic_type_name' => $plastic_type['plastic_type_name'],
+            'total_item' => $plastics
+        ];
+
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function detailProductPlastic(Request $request){
+        $outlet  = $request->user();
+        $post = $request->all();
+
+        if($outlet['plastic_used_status'] == 'Inactive'){
+            return response()->json(['status' => 'fail', 'messages' => "This outlet don't use plastic"]);
+        }
+
+        if(!isset($post['id_plastic_type'])){
+            return response()->json(['status' => 'fail', 'messages' => "ID can not be empty"]);
+        }
+
+        $plastics = Product::where('product_type', 'plastic')
+            ->leftJoin('product_detail', 'products.id_product', 'product_detail.id_product')
+            ->where(function ($sub) use($outlet){
+                $sub->whereNull('product_detail.id_outlet')
+                    ->orWhere('product_detail.id_outlet', $outlet['id_outlet']);
+            })
+            ->where('id_plastic_type', $post['id_plastic_type'])
+            ->where('product_visibility', 'Visible')->select('products.id_product', 'products.product_code', 'products.product_name',
+                DB::raw('(CASE WHEN product_detail.product_detail_stock_status is NULL THEN "Available"
                         ELSE product_detail.product_detail_stock_status END) as product_stock_status'));
 
-            if(isset($post['page'])){
-                $plastics = $plastics->paginate(10)->toArray();
-            }else{
-                $plastics = $plastics->get()->toArray();
-            }
+        if(isset($post['page'])){
+            $plastics = $plastics->paginate(10)->toArray();
+        }else{
+            $plastics = $plastics->get()->toArray();
         }
 
         return response()->json(MyHelper::checkGet($plastics));

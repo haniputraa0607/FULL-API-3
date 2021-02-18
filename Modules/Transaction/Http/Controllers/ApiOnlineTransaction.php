@@ -492,7 +492,8 @@ class ApiOnlineTransaction extends Controller
                 $post['subtotal'] = $post['subtotal'] - $totalDisProduct;
 
                 // Additional Plastic Payment
-                if(isset($post['is_plastic_checked']) && $post['is_plastic_checked'] == true){
+                if((isset($post['is_plastic_checked']) && $post['is_plastic_checked'] == true) ||
+                    $post['type'] == 'GO-SEND'){
                     $plastic = app($this->plastic)->check($post);
                     $post['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
                     $post['subtotal'] =$post['subtotal'] + $post['plastic']['plastic_price_total'] ?? 0;
@@ -2727,6 +2728,9 @@ class ApiOnlineTransaction extends Controller
             $result['plastic_used_status'] = false;
         }
 
+        if(empty($result['plastic']['item']??[])){
+            $result['plastic_used_status'] = false;
+        }
         $subtotal += $result['plastic']['plastic_price_total'] ?? 0;
         $subtotal += $itemBundlings['subtotal_bundling']??0;
 
