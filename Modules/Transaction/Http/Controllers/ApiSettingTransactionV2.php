@@ -129,10 +129,10 @@ class ApiSettingTransactionV2 extends Controller
         $shipping = isset($data['shipping']) ? $data['shipping'] : 0;
         $discount = isset($data['discount']) ? $data['discount'] : 0;
 
-        if (!isset($data['total_bundling_discount'])) {
-            $data['total_bundling_discount'] = 0;
+        if (!isset($data['total_bundling'])) {
+            $data['total_bundling'] = 0;
         }
-        $total_bundling_discount = isset($data['total_bundling_discount']) ? $data['total_bundling_discount'] : 0;
+        $totalBundling = isset($data['total_bundling']) ? $data['total_bundling'] : 0;
 
         // return $data;
         if ($value == 'subtotal') {
@@ -400,7 +400,7 @@ class ApiSettingTransactionV2 extends Controller
                     $valueBundling['transaction_bundling_product_base_price'] = $bundlingBasePrice;
                     $valueBundling['transaction_bundling_product_subtotal'] = $bundlingSubtotal;
                     $valueBundling['transaction_bundling_product_total_discount'] = $totalDiscount;
-                    $data['total_bundling_discount'] += $totalDiscount;
+                    $data['total_bundling'] += $bundlingSubtotal;
                 }
             }
 
