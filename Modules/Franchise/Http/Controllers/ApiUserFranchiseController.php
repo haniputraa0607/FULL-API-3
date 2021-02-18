@@ -225,11 +225,15 @@ class ApiUserFranchiseController extends Controller
         $checkPhone = UserFranchise::where('phone', $post['phone'])->first();
         $dataAdmin = UserFranchise::where('id_user_franchise', auth()->user()->id_user_franchise)->first();
 
-        if($checkEmail && $checkEmail['id_user_franchise'] != auth()->user()->id_user_franchise){
+        if(empty($dataAdmin)){
+            return response()->json(['status' => 'fail', 'messages' => ["User not found"]]);
+        }
+
+        if($checkEmail && $checkEmail['id_user_franchise'] != $dataAdmin['id_user_franchise']){
             return response()->json(['status' => 'fail', 'messages' => ["email already use"]]);
         }
 
-        if($checkPhone && $checkPhone['id_user_franchise'] != auth()->user()->id_user_franchise){
+        if($checkPhone && $checkPhone['id_user_franchise'] != $dataAdmin['id_user_franchise']){
             return response()->json(['status' => 'fail', 'messages' => ["phone already use"]]);
         }
 
@@ -241,7 +245,7 @@ class ApiUserFranchiseController extends Controller
         if(!empty($post['password'])){
             $dataUpdate['password'] =  bcrypt($post['password']);
         }
-        $update = UserFranchise::where('id_user_franchise', auth()->user()->id_user_franchise)->update($dataUpdate);
+        $update = UserFranchise::where('id_user_franchise', $dataAdmin['id_user_franchise'])->update($dataUpdate);
 
         return response()->json(MyHelper::checkUpdate($update));
     }
