@@ -57,9 +57,9 @@ return [
             'driver' => 'passport',
             'provider' => 'quinos'
         ],
-        'user-franchise' => [
+        'franchise' => [
             'driver' => 'passport',
-            'provider' => 'user-franchise'
+            'provider' => 'franchise'
         ],
     ],
 
@@ -110,9 +110,9 @@ return [
             'model' => App\Http\Models\QuinosUser::class
         ],
 
-        'user-franchise' => [
+        'franchise' => [
             'driver' => 'eloquent',
-            'model' => \Modules\Disburse\Entities\UserFranchise::class
+            'model' => \Modules\Franchise\Entities\UserFranchise::class
         ],
     ],
 

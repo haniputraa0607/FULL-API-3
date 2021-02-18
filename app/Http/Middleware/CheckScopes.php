@@ -55,15 +55,13 @@ class CheckScopes extends AddCustomProvider
             $clientId = $getOauth['client_id'];
         }
 
-        if($scope == 'pos' && $scopeUser == 'pos' && $clientId == 1){
+        if(($scope == 'pos' && $scopeUser == 'pos' && $clientId == 1) ||
+            ($scope == 'be' && $scopeUser == 'be') ||
+            ($scope == 'apps' && $scopeUser == 'apps')){
+
             return $next($request);
-        }else{
-            if($scope == 'be' && $scopeUser == 'be'){
-                return $next($request);
-            }elseif($scope == 'apps' && $scopeUser == 'apps'){
-                return $next($request);
-            }
         }
+
         return response()->json(['error' => 'Unauthenticated.'], 401);
     }
 }
