@@ -2995,6 +2995,12 @@ class ApiOnlineTransaction extends Controller
                 }
 
                 $price = (float)$price??0;
+                if($price <= 0){
+                    $errorBundlingName[] = $bundling['bundling_name'];
+                    unset($post['item_bundling'][$key]);
+                    continue 2;
+                }
+
                 $totalPriceNoDiscount = $totalPriceNoDiscount + $price;
                 //calculate discount produk
                 if(strtolower($product['bundling_product_discount_type']) == 'nominal'){
