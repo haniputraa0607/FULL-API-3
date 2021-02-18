@@ -139,7 +139,7 @@ class ApiProductPlasticController extends Controller
     function exportProduct(Request $request){
         $post = $request->json()->all();
 
-        $data = Product::where('product_type', 'product')->where('product_visibility', 'Visible')
+        $data = Product::where('product_type', 'product')
                 ->where('product_variant_status', 0)
                 ->select('product_code', 'product_name', 'plastic_used as total_use_plastic');
         $dataBrand = [];

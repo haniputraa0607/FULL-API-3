@@ -40,6 +40,7 @@ Route::group(['middleware' => ['auth:outlet-app', 'outlet_device_location', 'log
     Route::get('payment-method', 'ApiOutletApp@listPaymentMethod');
     Route::post('phone/update', 'ApiOutletApp@updatePhone');
     Route::get('product-plastic', 'ApiOutletApp@listProductPlastic');
+    Route::post('product-plastic/detail', 'ApiOutletApp@detailProductPlastic');
     Route::post('product-plastic/sold-out', 'ApiOutletApp@productPlasticSoldOut');
 });
 
