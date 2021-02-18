@@ -2700,20 +2700,22 @@ class ApiOnlineTransaction extends Controller
 
         // Additional Plastic Payment
         if($outlet['plastic_used_status'] == 'Active'){
+            $result['plastic_name'] = 'Tas Kantong';
+            $result['plastic_pop_up'] = 'Tas Kantong Berbayar';
             $result['plastic_used_status'] = true;
             $plastic = app($this->plastic)->check($post);
             $result['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
             if($post['type'] == 'Pickup Order'){
                 $result['plastic']['is_checked'] = true;
                 $result['plastic']['is_mandatory'] = false;
-                $result['plastic']['info'] = "Harga plastik akan dihitung berdasarkan jumlah item";
+                $result['plastic']['info'] = "Harga tas kantong akan dihitung berdasarkan jumlah item";
                 if(!isset($post['is_plastic_checked']) || $post['is_plastic_checked'] == false){
                     $result['plastic']['plastic_price_total'] = 0;
                 }
             }elseif($post['type'] == 'GO-SEND'){
                 $result['plastic']['is_checked'] = true;
                 $result['plastic']['is_mandatory'] = true;
-                $result['plastic']['info'] = "Harga plastik akan dihitung berdasarkan jumlah item";
+                $result['plastic']['info'] = "Harga tas kantong akan dihitung berdasarkan jumlah item";
             }else{
                 return [
                     'status' => 'fail',
