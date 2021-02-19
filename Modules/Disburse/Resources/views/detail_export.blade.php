@@ -57,6 +57,7 @@
     <thead>
     <tr>
         <th style="background-color: #dcdcdc;"> Name </th>
+        <th style="background-color: #dcdcdc;" width="20"> Variants </th>
         <th style="background-color: #dcdcdc;" width="20"> Type </th>
         <th style="background-color: #dcdcdc;" width="20"> Total Sold Out </th>
     </tr>
@@ -66,7 +67,8 @@
         @foreach($summary_product as $val)
             <tr>
                 <td style="text-align: left">{{$val['name']}}</td>
-                <td style="text-align: left">{{$val['type']}}</td>
+                <td style="text-align: left">{{$val['variants']??''}}</td>
+                <td style="text-align: left">{{ucfirst($val['type'])}}</td>
                 <td style="text-align: left">{{$val['total_qty']}}</td>
             </tr>
         @endforeach

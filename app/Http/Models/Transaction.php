@@ -66,11 +66,14 @@ class Transaction extends Model
 		'transaction_receipt_number',
 		'transaction_notes',
 		'transaction_subtotal',
+        'transaction_gross',
 		'transaction_shipment',
 		'transaction_shipment_go_send',
 		'transaction_is_free',
 		'transaction_service',
 		'transaction_discount',
+        'transaction_discount_item',
+        'transaction_discount_bill',
 		'transaction_tax',
 		'trasaction_type',
 		'transaction_cashier',
@@ -97,7 +100,9 @@ class Transaction extends Model
 		'cashback_insert_status',
 		'calculate_achievement',
 		'show_rate_popup',
-		'transaction_discount_delivery'
+		'transaction_discount_delivery',
+		'transaction_discount_item',
+		'transaction_discount_bill'
 	];
 
 	public function user()

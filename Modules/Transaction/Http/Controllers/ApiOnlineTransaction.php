@@ -328,6 +328,8 @@ class ApiOnlineTransaction extends Controller
         $use_referral = false;
         $discount_promo = [];
         $promo_discount = 0;
+        $promo_discount_item = 0;
+        $promo_discount_bill = 0;
         $promo_source = null;
         $promo_valid = false;
         $promo_type = null;
@@ -374,6 +376,7 @@ class ApiOnlineTransaction extends Controller
 	                $promo_source 	= 'promo_code';
 	                $promo_valid 	= true;
 	                $promo_discount	= $discount_promo['discount'];
+	                $promo_discount_item = abs($promo_discount);
             	}
             	else{
             		$promo_source 	= 'promo_code';
@@ -408,7 +411,8 @@ class ApiOnlineTransaction extends Controller
 
 		            $promo_source = 'voucher_online';
 		            $promo_valid = true;
-		            $promo_discount=$discount_promo['discount'];
+		            $promo_discount = $discount_promo['discount'];
+		            $promo_discount_item = abs($promo_discount);
 				}
 				else{
 					$promo_source = 'voucher_online';
@@ -482,14 +486,18 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
 
+                $post['subtotal_final'] = array_sum($post['sub']['subtotal_final']);
                 $post['subtotal'] = array_sum($post['sub']['subtotal']);
+                $post['total_discount_bundling'] = $post['sub']['total_discount_bundling']??0;
                 $post['subtotal'] = $post['subtotal'] - $totalDisProduct;
 
                 // Additional Plastic Payment
-                if(isset($post['is_plastic_checked']) && $post['is_plastic_checked'] == true){
+                if((isset($post['is_plastic_checked']) && $post['is_plastic_checked'] == true) ||
+                    $post['type'] == 'GO-SEND'){
                     $plastic = app($this->plastic)->check($post);
                     $post['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
                     $post['subtotal'] =$post['subtotal'] + $post['plastic']['plastic_price_total'] ?? 0;
+                    $post['subtotal_final'] = $post['subtotal_final'] + $post['plastic']['plastic_price_total'] ?? 0;
                 }
 
             } elseif ($valueTotal == 'discount') {
@@ -603,6 +611,10 @@ class ApiOnlineTransaction extends Controller
 
         if (!isset($post['subtotal'])) {
             $post['subtotal'] = 0;
+        }
+
+        if (!isset($post['subtotal_final'])) {
+            $post['subtotal_final'] = 0;
         }
 
         if (!isset($post['discount'])) {
@@ -817,7 +829,8 @@ class ApiOnlineTransaction extends Controller
         			return $check_promo;
         		}
         		$post['discount_delivery'] = (-$check_promo['data']['discount_delivery'])??0;
-        		$post['discount'] = (-$check_promo['data']['discount'])??0;
+        		$post['discount'] = (-$check_promo['data']['discount']) ?? 0;
+        		$promo_discount_bill = abs($check_promo['data']['discount']) ?? 0 ;
         		$post['grandTotal'] = $post['grandTotal'] + (int) $post['discount_delivery'] + (int) $post['discount'];
         	}
         	// check minimum subtotal
@@ -856,6 +869,7 @@ class ApiOnlineTransaction extends Controller
         		$post['grandTotal'] = $post['grandTotal'] + (int) $post['discount_delivery'];
         	}elseif ($check_subs['result']['type'] == 'discount') {
         		$post['discount'] = -$check_subs['result']['value'];	
+        		$promo_discount_bill = abs($check_subs['result']['value']) ?? 0 ;
         		$post['grandTotal'] = $post['grandTotal'] + (int) $post['discount'];
         	}
         }
@@ -871,12 +885,15 @@ class ApiOnlineTransaction extends Controller
             'trasaction_type'             => $type,
             'transaction_notes'           => $post['notes'],
             'transaction_subtotal'        => $post['subtotal'],
+            'transaction_gross'  => $post['subtotal_final'],
             'transaction_shipment'        => $post['shipping'],
             'transaction_shipment_go_send'=> $shippingGoSend,
             'transaction_is_free'         => $isFree,
             'transaction_service'         => $post['service'],
             'transaction_discount'        => $post['discount'],
             'transaction_discount_delivery' => $post['discount_delivery'],
+            'transaction_discount_item' 	=> $promo_discount_item+$post['total_discount_bundling']??0,
+            'transaction_discount_bill' 	=> $promo_discount_bill,
             'transaction_tax'             => $post['tax'],
             'transaction_grandtotal'      => $post['grandTotal'] + $shippingGoSend,
             'transaction_point_earned'    => $post['point'],
@@ -1076,6 +1093,11 @@ class ApiOnlineTransaction extends Controller
 
         $insertTransaction['transaction_receipt_number'] = $receipt;
 
+        //process add product bundling
+        if(!empty($post['item_bundling'])){
+            $this->insertBundlingProduct($post['item_bundling_detail']??[], $insertTransaction, $outlet, $post, $productMidtrans, $userTrxProduct);
+        }
+
         // added item plastic to post item
         if(isset($post['plastic']['item'])){
             foreach($post['plastic']['item'] as $key => $value){
@@ -1159,11 +1181,13 @@ class ApiOnlineTransaction extends Controller
                 'transaction_product_price_base' => NULL,
                 'transaction_product_price_tax'  => NULL,
                 'transaction_product_discount'   => $this_discount,
+                'transaction_product_discount_all'   => $this_discount,
                 'transaction_product_base_discount' => $valueProduct['base_discount'] ?? 0,
                 'transaction_product_qty_discount'  => $valueProduct['qty_discount'] ?? 0,
                 // remove discount from subtotal
                 // 'transaction_product_subtotal' => ($valueProduct['qty'] * $checkPriceProduct['product_price'])-$this_discount,
                 'transaction_product_subtotal' => $valueProduct['transaction_product_subtotal'],
+                'transaction_product_net' => $valueProduct['transaction_product_subtotal']-$this_discount,
                 'transaction_variant_subtotal' => $valueProduct['transaction_variant_subtotal'],
                 'transaction_product_note'     => $valueProduct['note'],
                 'created_at'                   => date('Y-m-d', strtotime($insertTransaction['transaction_date'])).' '.date('H:i:s'),
@@ -1303,11 +1327,6 @@ class ApiOnlineTransaction extends Controller
                 'last_trx_date' => $insertTransaction['transaction_date']
             ];
             array_push($userTrxProduct, $dataUserTrxProduct);
-        }
-
-        //process add product bundling
-        if(!empty($post['item_bundling'])){
-            $this->insertBundlingProduct($post['item_bundling_detail']??[], $insertTransaction, $outlet, $post, $productMidtrans, $userTrxProduct);
         }
 
         array_push($dataDetailProduct, $productMidtrans);
@@ -2681,23 +2700,37 @@ class ApiOnlineTransaction extends Controller
         $result['item'] = array_values($tree);
 
         // Additional Plastic Payment
-        $plastic = app($this->plastic)->check($post);
-        $result['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
-        if($post['type'] == 'Pickup Order'){
-            $result['plastic']['is_checked'] = true;
-            $result['plastic']['is_mandatory'] = false;
-            $result['plastic']['info'] = "Harga plastik akan dihitung berdasarkan jumlah item";
-        }elseif($post['type'] == 'GO-SEND'){
-            $result['plastic']['is_checked'] = true;
-            $result['plastic']['is_mandatory'] = true;
-            $result['plastic']['info'] = "Harga plastik akan dihitung berdasarkan jumlah item";
+        if($outlet['plastic_used_status'] == 'Active'){
+            $result['plastic_used_status'] = true;
+            $plastic = app($this->plastic)->check($post);
+            $result['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
+            $result['plastic']['plastic_name'] = 'Tas Kantong';
+            $result['plastic']['plastic_pop_up'] = 'Tas Kantong Berbayar';
+            if($post['type'] == 'Pickup Order'){
+                $result['plastic']['is_checked'] = true;
+                $result['plastic']['is_mandatory'] = false;
+                $result['plastic']['info'] = "Harga tas kantong akan dihitung berdasarkan jumlah item";
+                if(!isset($post['is_plastic_checked']) || $post['is_plastic_checked'] == false){
+                    $result['plastic']['plastic_price_total'] = 0;
+                }
+            }elseif($post['type'] == 'GO-SEND'){
+                $result['plastic']['is_checked'] = true;
+                $result['plastic']['is_mandatory'] = true;
+                $result['plastic']['info'] = "Harga tas kantong akan dihitung berdasarkan jumlah item";
+            }else{
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Invalid Order Type']
+                ];
+            }
+
         }else{
-            return [
-                'status' => 'fail',
-                'messages' => ['Invalid Order Type']
-            ];
+            $result['plastic_used_status'] = false;
         }
 
+        if(empty($result['plastic']['item']??[])){
+            $result['plastic_used_status'] = false;
+        }
         $subtotal += $result['plastic']['plastic_price_total'] ?? 0;
         $subtotal += $itemBundlings['subtotal_bundling']??0;
 
@@ -2962,6 +2995,12 @@ class ApiOnlineTransaction extends Controller
                 }
 
                 $price = (float)$price??0;
+                if($price <= 0){
+                    $errorBundlingName[] = $bundling['bundling_name'];
+                    unset($post['item_bundling'][$key]);
+                    continue 2;
+                }
+
                 $totalPriceNoDiscount = $totalPriceNoDiscount + $price;
                 //calculate discount produk
                 if(strtolower($product['bundling_product_discount_type']) == 'nominal'){
@@ -4178,10 +4217,12 @@ class ApiOnlineTransaction extends Controller
                     'transaction_product_price_base' => NULL,
                     'transaction_product_price_tax'  => NULL,
                     'transaction_product_discount'   => 0,
+                    'transaction_product_discount_all'   => $itemProduct['transaction_product_discount_all'],
                     'transaction_product_bundling_price'   => $itemProduct['transaction_product_bundling_price'],
                     'transaction_product_base_discount' => 0,
                     'transaction_product_qty_discount'  => 0,
                     'transaction_product_subtotal' => $itemProduct['transaction_product_subtotal'],
+                    'transaction_product_net' => $itemProduct['transaction_product_net'],
                     'transaction_variant_subtotal' => $itemProduct['transaction_variant_subtotal'],
                     'transaction_product_note'     => $itemProduct['note'],
                     'id_transaction_bundling_product' => $createTransactionBundling['id_transaction_bundling_product'],
@@ -4331,5 +4372,63 @@ class ApiOnlineTransaction extends Controller
                 array_push($userTrxProduct, $dataUserTrxProduct);
             }
         }
+    }
+
+    public function syncDataSubtotal(Request $request){
+        $post = $request->json()->all();
+        $dateStart = date('Y-m-d', strtotime($post['date_start']));
+        $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+
+        $data = Transaction::whereDate('transaction_date', '>=', $dateStart)
+            ->whereDate('transaction_date', '<=', $dateEnd)
+            ->get()->toArray();
+
+        foreach ($data as $dt){
+            $trxDiscount = $dt['transaction_discount'];
+            $discountBill = 0;
+            $totalDicountItem = [];
+            $subtotalFinal = [];
+            $prods = TransactionProduct::where('id_transaction', $dt['id_transaction'])->get()->toArray();
+
+            foreach ($prods as $prod){
+                if(is_null($prod['id_transaction_bundling_product'])){
+                    $dtUpdateTrxProd = [
+                        'transaction_product_net' => $prod['transaction_product_subtotal']-$prod['transaction_product_discount'],
+                        'transaction_product_discount_all' => $prod['transaction_product_discount']
+                    ];
+                    TransactionProduct::where('id_transaction_product', $prod['id_transaction_product'])->update($dtUpdateTrxProd);
+                    array_push($totalDicountItem, $prod['transaction_product_discount']);
+                    array_push($subtotalFinal, $prod['transaction_product_subtotal']);
+                }else{
+                    $bundlingQty = $prod['transaction_product_bundling_qty'];
+                    if($bundlingQty == 0){
+                        $bundlingQty = $prod['transaction_product_qty'];
+                    }
+                    $perItem = $prod['transaction_product_subtotal']/$bundlingQty;
+                    $productSubtotalFinal = $perItem * $prod['transaction_product_qty'];
+                    $productSubtotalFinalNoDiscount = ($perItem + $prod['transaction_product_bundling_discount']) * $prod['transaction_product_qty'];
+                    $discount = $prod['transaction_product_bundling_discount'] * $prod['transaction_product_qty'];
+                    $dtUpdateTrxProd = [
+                        'transaction_product_net' => $productSubtotalFinal,
+                        'transaction_product_discount_all' => $discount
+                    ];
+                    array_push($totalDicountItem, $discount);
+                    array_push($subtotalFinal, $productSubtotalFinalNoDiscount);
+                    TransactionProduct::where('id_transaction_product', $prod['id_transaction_product'])->update($dtUpdateTrxProd);
+                }
+            }
+
+            if(empty($totalDicountItem)){
+                $discountBill = $trxDiscount;
+            }
+            $dtUpdateTrx = [
+                'transaction_gross' => array_sum($subtotalFinal),
+                'transaction_discount_item' => array_sum($totalDicountItem),
+                'transaction_discount_bill' => $discountBill
+            ];
+            Transaction::where('id_transaction', $dt['id_transaction'])->update($dtUpdateTrx);
+        }
+
+        return 'success';
     }
 }

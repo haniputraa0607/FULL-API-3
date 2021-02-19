@@ -65,6 +65,9 @@ Route::group(['prefix' => 'disburse'], function () {
         //approver
         Route::any('setting/approver', 'ApiDisburseSettingController@settingApproverPayouts');
 
+        //fee product plastic
+        Route::any('setting/fee-product-plastic', 'ApiDisburseSettingController@settingFeeProductPlastic');
+
         //time to sent disburse
         Route::any('setting/time-to-sent', 'ApiDisburseSettingController@settingTimeToSent');
 

@@ -2,6 +2,7 @@
 
 namespace Modules\Outlet\Http\Controllers;
 
+use App\Jobs\SyncronPlasticTypeOutlet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -30,8 +31,8 @@ use Modules\Outlet\Entities\OutletGroupFilterOutlet;
 use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
-use Modules\Disburse\Entities\UserFranchise;
-use Modules\Disburse\Entities\UserFranchiseOultet;
+use  Modules\UserFranchise\Entities\UserFranchise;
+use  Modules\Franchise\Entities\UserFranchiseOultet;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
 
 use App\Imports\ExcelImport;
@@ -162,6 +163,7 @@ class ApiOutletGroupFilterController extends Controller
             }
 
             DB::commit();
+            SyncronPlasticTypeOutlet::dispatch([])->allOnConnection('database');
             return response()->json(['status' => 'success']);
         }
     }
@@ -269,6 +271,7 @@ class ApiOutletGroupFilterController extends Controller
             }
 
             DB::commit();
+            SyncronPlasticTypeOutlet::dispatch([])->allOnConnection('database');
             return response()->json(['status' => 'success']);
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);

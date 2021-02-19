@@ -188,6 +188,8 @@ class ApiHistoryController extends Controller
 
         if ($post['cancel'] == null && $post['pending'] == null && $post['completed'] == null) {
             $post['completed'] = 1;
+            $post['pending'] = 1;
+            $post['cancel'] = 1;
         }
 
         if (!isset($post['buy_voucher'])) {
@@ -497,7 +499,8 @@ class ApiHistoryController extends Controller
 
     public function transaction($post, $id)
     {
-        $transaction = Transaction::select(\DB::raw('*,transactions.id_transaction as id_transaction,sum(transaction_products.transaction_product_qty) as sum_qty'))->distinct('transactions.*')
+        $transaction = Transaction::select(\DB::raw('*,transactions.id_transaction as id_transaction,sum(transaction_products.transaction_product_qty) as sum_qty'))
+            ->distinct('transactions.*')
             ->join('outlets', 'transactions.id_outlet', '=', 'outlets.id_outlet')
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
             ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
@@ -610,7 +613,7 @@ class ApiHistoryController extends Controller
                 'rating_item_text' => $feedback->text ?: $feedback->rating_item_text,
             ] : null;
             $dataList['display_review'] = ($value['transaction_payment_status'] == 'Completed' && !empty($value['taken_at'] . $value['taken_by_system_at'])) ? 1 : 0;
-            $dataList['button_reorder'] = ($value['transaction_payment_status'] == 'Completed') ? 1 : 0;
+            $dataList['button_reorder'] = 1;
             $listTransaction[] = $dataList;
         }
 
