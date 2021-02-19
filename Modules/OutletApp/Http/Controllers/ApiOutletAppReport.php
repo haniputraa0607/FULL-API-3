@@ -526,6 +526,44 @@ class ApiOutletAppReport extends Controller
 			$result = $data['modifier'];
 		}
 
+    	if($request->plastic){
+    	    $productPlastic = [];
+            if ($post['date'] < date("Y-m-d"))
+            {
+                $productPlastic = DailyReportTrxMenu::where('type', 'plastic')->where('id_outlet', '=', $post['id_outlet'])
+                    ->whereDate('trx_date', '=', $post['date'])
+                    ->select([
+                        'product_name',
+                        'total_qty',
+                        'total_nominal',
+                        'total_product_discount'
+                    ])->get()->toArray();
+            }else{
+                $productPlastic = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+                    ->join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+                    ->join('products', 'products.id_product', 'transaction_products.id_product')
+                    ->where('type', 'plastic')->where('transactions.id_outlet', '=', $post['id_outlet'])
+                    ->where('transactions.transaction_payment_status','=','Completed')
+                    ->whereDate('transactions.transaction_date', '=', $post['date'])
+                    ->whereNull('transaction_pickups.reject_at')
+                    ->groupBy('transaction_products.id_product','transaction_products.id_brand')
+                    ->select(
+                        DB::raw('(select products.product_name) as product_name'),
+                        DB::raw('(select SUM(transaction_products.transaction_product_qty)) as total_qty'),
+                        DB::raw('(select SUM(transaction_products.transaction_product_subtotal)) as total_nominal'),
+                        DB::raw('(SUM(transaction_products.transaction_product_discount)) as total_product_discount')
+                    )
+                    ->get()->toArray();
+            }
+
+            if(!empty($productPlastic)){
+                $result[] = [
+                    "id_brand" => 0,
+                    "name_brand" => "Plastic",
+                    "product" => $productPlastic
+                ];
+            }
+        }
 		
 		return response()->json(MyHelper::checkGet($result));
     }
