@@ -3033,8 +3033,19 @@ class ApiOutletApp extends Controller
                 $result['transaction_status']      = 6;
                 $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
             } elseif ($list['detail']['reject_at'] != null) {
+                $reason = $list['detail']['reject_reason'];
+                if (strpos($reason, 'auto reject order') !== false) {
+                    if (strpos($reason, 'no driver') !== false) {
+                        $reason = 'Driver tidak ditemukan';
+                    } elseif (strpos($reason, 'not ready') !== false) {
+                        $reason = 'Auto reject sistem karena tidak diproses ready';
+                    } else {
+                        $reason = 'Auto reject sistem karena tidak diterima';
+                    }
+                }
+                if($reason) $reason = "\n$reason";
                 $result['transaction_status']      = 0;
-                $result['transaction_status_text'] = 'ORDER ANDA DITOLAK';
+                $result['transaction_status_text'] = "ORDER DITOLAK$reason";
             } elseif ($list['detail']['taken_by_system_at'] != null) {
                 $result['transaction_status']      = 1;
                 $result['transaction_status_text'] = 'ORDER SELESAI';
@@ -3900,8 +3911,19 @@ class ApiOutletApp extends Controller
                 $result['transaction_status']      = 6;
                 $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
             } elseif ($list['detail']['reject_at'] != null) {
+                $reason = $list['detail']['reject_reason'];
+                if (strpos($reason, 'auto reject order') !== false) {
+                    if (strpos($reason, 'no driver') !== false) {
+                        $reason = 'Driver tidak ditemukan';
+                    } elseif (strpos($reason, 'not ready') !== false) {
+                        $reason = 'Auto reject sistem karena tidak diproses ready';
+                    } else {
+                        $reason = 'Auto reject sistem karena tidak diterima';
+                    }
+                }
+                if($reason) $reason = "\n$reason";
                 $result['transaction_status']      = 0;
-                $result['transaction_status_text'] = 'ORDER ANDA DITOLAK';
+                $result['transaction_status_text'] = "ORDER DITOLAK$reason";
             } elseif ($list['detail']['taken_by_system_at'] != null) {
                 $result['transaction_status']      = 1;
                 $result['transaction_status_text'] = 'ORDER SELESAI';

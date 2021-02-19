@@ -21,6 +21,7 @@ use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\Product\Entities\ProductDetail;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 use Modules\Brand\Entities\BrandOutlet;
 use Modules\Brand\Entities\BrandProduct;
@@ -798,7 +799,8 @@ class PromoCampaignTools{
 					return false;
 				}
 				// get product with brand
-				$benefit_product = $this->getOneProduct($id_outlet, $promo_rule->benefit_id_product, $promo_rule->id_brand, 'with_brand');
+
+				$benefit_product = $this->getOneProductV2($id_outlet, $promo_rule->benefit_id_product, $promo_rule->id_brand, 'with_brand', $promo_rule->id_product_variant_group);
 
 				if(!$benefit_product){
 					$errors[]="Product benefit not found.";
@@ -1678,6 +1680,79 @@ class PromoCampaignTools{
 		return $product;
     }
 
+    public function getOneProductV2($id_outlet, $id_product, $id_brand, $brand=null, $id_product_variant_group=null)
+    {
+    	$product = Product::where('id_product',$id_product)
+			        ->whereHas('brand_category', function($q) use ($id_brand){
+			        	$q->where('id_brand', $id_brand);
+			        })
+			        ->first();
+		if (!$product) {
+			return false;
+		}
+
+    	if ($id_product_variant_group) {
+
+    		// check product variant
+    		$product_variant_group_detail = ProductVariantGroupDetail::where('id_product_variant_group', $id_product_variant_group)->where('id_outlet', $id_outlet)->first();
+
+    		if ($product_variant_group_detail) {
+    			if ($product_variant_group_detail['product_variant_group_visibility'] != 'Visible' 
+    				|| $product_variant_group_detail['product_variant_group_status'] != 'Active'
+    				|| $product_variant_group_detail['product_variant_group_stock_status'] != 'Available'
+    			) {
+    				return false;
+    			}
+    		}else{
+    			$product_variant_group = ProductVariantGroup::where('id_product_variant_group', $id_product_variant_group)->where('product_variant_group_visibility', 'Visible')->first();
+
+    			if (!$product_variant_group) {
+    				return false;
+    			}
+    		}
+
+    	}else{
+
+    		// check product
+    		$product_detail = ProductDetail::where(['id_product' => $id_product, 'id_outlet' => $id_outlet])->first();
+    		if ($product_detail = false) {
+	    		if ($product_detail['product_detail_visibility'] != 'Visible'
+					|| $product_detail['product_detail_status'] != 'Active'
+					|| $product_detail['product_detail_stock_status'] != 'Available'
+				) {
+	    			return false;
+	    		}
+    		}else{
+    			$product = Product::where('id_product',$id_product)->where('product_visibility', 'Visible')->first();
+
+    			if (!$product) {
+    				return false;
+    			}
+    		}
+    	}
+
+		$check_price = $this->getProductPrice($id_outlet, $id_product, $id_product_variant_group=null, $id_brand);
+
+		if (!$check_price) {
+			return false;
+		}
+
+		if ($product && !empty($brand)) {
+
+			$product_brand = Brand::join('brand_product', 'brand_product.id_brand', '=', 'brands.id_brand')
+							->where('brand_active', '1')
+							->where('id_product', $id_product)
+							->first();
+			if (!$product_brand) {
+				return false;
+			}else{
+				$product->brand = $product_brand;
+			}
+		}
+
+		return $product;
+    }
+
     public function getProductPrice($id_outlet, $id_product, $id_product_variant_group=null, $id_brand=null)
     {
 	    $different_price = Outlet::select('outlet_different_price')->where('id_outlet',$id_outlet)->pluck('outlet_different_price')->first();
@@ -2466,7 +2541,7 @@ class PromoCampaignTools{
     	$promo_product_count = count($promo_product);
 		if ($promo_product_count == 1) {
 			$product_error_applied = 1;
-			$check_promo_product_availability = $this->getOneProduct($id_outlet, $promo_product[0]['id_product'], $promo_product[0]['id_brand']);
+			$check_promo_product_availability = $this->getOneProductV2($id_outlet, $promo_product[0]['id_product'], $promo_product[0]['id_brand']);
 			if(!$check_promo_product_availability){
 				$product_error_applied 	= 0;
 				$missing_product_messages	= 'Promo tidak dapat digunakan di outlet ini karena produk tidak tersedia';
