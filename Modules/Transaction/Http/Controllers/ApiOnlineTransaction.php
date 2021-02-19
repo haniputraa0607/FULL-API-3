@@ -4400,7 +4400,11 @@ class ApiOnlineTransaction extends Controller
                     array_push($totalDicountItem, $prod['transaction_product_discount']);
                     array_push($subtotalFinal, $prod['transaction_product_subtotal']);
                 }else{
-                    $perItem = ($prod['transaction_product_subtotal']/$prod['transaction_product_bundling_qty']);
+                    $bundlingQty = $prod['transaction_product_bundling_qty'];
+                    if($bundlingQty == 0){
+                        $bundlingQty = $prod['transaction_product_qty'];
+                    }
+                    $perItem = $prod['transaction_product_subtotal']/$bundlingQty;
                     $productSubtotalFinal = $perItem * $prod['transaction_product_qty'];
                     $productSubtotalFinalNoDiscount = ($perItem + $prod['transaction_product_bundling_discount']) * $prod['transaction_product_qty'];
                     $discount = $prod['transaction_product_bundling_discount'] * $prod['transaction_product_qty'];
