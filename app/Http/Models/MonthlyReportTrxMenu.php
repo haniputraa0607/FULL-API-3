@@ -24,6 +24,7 @@ class MonthlyReportTrxMenu extends Model
         'trx_year',
         'id_outlet',
         'id_product',
+        'type',
         'total_rec',
         'total_qty',
         'total_nominal',

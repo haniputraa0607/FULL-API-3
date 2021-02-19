@@ -1093,6 +1093,11 @@ class ApiOnlineTransaction extends Controller
 
         $insertTransaction['transaction_receipt_number'] = $receipt;
 
+        //process add product bundling
+        if(!empty($post['item_bundling'])){
+            $this->insertBundlingProduct($post['item_bundling_detail']??[], $insertTransaction, $outlet, $post, $productMidtrans, $userTrxProduct);
+        }
+
         // added item plastic to post item
         if(isset($post['plastic']['item'])){
             foreach($post['plastic']['item'] as $key => $value){
@@ -1322,11 +1327,6 @@ class ApiOnlineTransaction extends Controller
                 'last_trx_date' => $insertTransaction['transaction_date']
             ];
             array_push($userTrxProduct, $dataUserTrxProduct);
-        }
-
-        //process add product bundling
-        if(!empty($post['item_bundling'])){
-            $this->insertBundlingProduct($post['item_bundling_detail']??[], $insertTransaction, $outlet, $post, $productMidtrans, $userTrxProduct);
         }
 
         array_push($dataDetailProduct, $productMidtrans);
