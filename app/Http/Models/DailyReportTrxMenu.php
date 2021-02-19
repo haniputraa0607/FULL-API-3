@@ -23,6 +23,7 @@ class DailyReportTrxMenu extends Model
         'trx_date',
         'id_outlet',
         'id_product',
+        'type',
         'total_rec',
         'total_qty',
         'total_nominal',
