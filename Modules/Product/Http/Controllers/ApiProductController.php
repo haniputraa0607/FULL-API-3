@@ -890,6 +890,7 @@ class ApiProductController extends Controller
 									->where('product_detail.id_outlet','=',$post['id_outlet'])
 									->where('product_detail.product_detail_visibility','=','Visible')
                                     ->where('product_detail.product_detail_status','=','Active')
+                                    ->where('products.product_type', 'product')
                                     ->with(['category', 'discount']);
 
             if (isset($post['visibility'])) {
@@ -900,6 +901,7 @@ class ApiProductController extends Controller
                                             ->where('product_detail.product_detail_status', 'Active')
                                             ->whereNotNull('id_product_category')
                                             ->where('id_outlet', $post['id_outlet'])
+                                            ->where('products.product_type', 'product')
                                             ->select('product_detail.id_product')->get();
                     $product = Product::whereNotIn('products.id_product', $idVisible)->with(['category', 'discount']);
                 }else{
@@ -910,11 +912,11 @@ class ApiProductController extends Controller
             }
 		} else {
 		    if(isset($post['product_setting_type']) && $post['product_setting_type'] == 'product_price'){
-                $product = Product::with(['category', 'discount', 'product_special_price', 'global_price']);
+                $product = Product::with(['category', 'discount', 'product_special_price', 'global_price'])->where('products.product_type', 'product');
             }elseif(isset($post['product_setting_type']) && $post['product_setting_type'] == 'outlet_product_detail'){
-                $product = Product::with(['category', 'discount', 'product_detail']);
+                $product = Product::with(['category', 'discount', 'product_detail'])->where('products.product_type', 'product');
             }else{
-                $product = Product::with(['category', 'discount']);
+                $product = Product::with(['category', 'discount'])->where('products.product_type', 'product');
             }
 		}
 
@@ -1599,7 +1601,7 @@ class ApiProductController extends Controller
             $data['product_detail_stock_status'] = $post['product_stock_status'];
         }
 
-        $getAllProduct = Product::pluck('id_product');
+        $getAllProduct = Product::where('product_type', 'plastic')->pluck('id_product');
 
         foreach ($getAllProduct as $id_product){
             $product = ProductDetail::where([

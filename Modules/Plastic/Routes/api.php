@@ -33,6 +33,9 @@ Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'sco
 
     Route::post('export-plastic-status-outlet', 'ApiProductPlasticController@exportPlaticStatusOutlet');
     Route::post('import-plastic-status-outlet', 'ApiProductPlasticController@importPlaticStatusOutlet');
+
+    Route::any('list-by-outlet', 'ApiProductPlasticController@listProductByOutlet');
+    Route::post('update-stock', 'ApiProductPlasticController@updateStock');
 });
 
 Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'plastic-type'], function()
