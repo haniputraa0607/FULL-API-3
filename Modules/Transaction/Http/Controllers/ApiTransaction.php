@@ -3487,6 +3487,7 @@ class ApiTransaction extends Controller
             '))
             ->join('products','products.id_product','=','transaction_products.id_product')
             ->join('outlets','outlets.id_outlet','=','transaction_products.id_outlet')
+            ->where('transaction_products.type', 'product')
             ->whereNull('id_transaction_bundling_product')
             ->where(['id_transaction'=>$id_transaction])
             ->with(['modifiers'=>function($query){
