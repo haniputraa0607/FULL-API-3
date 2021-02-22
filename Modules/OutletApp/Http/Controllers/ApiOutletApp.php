@@ -5154,6 +5154,12 @@ class ApiOutletApp extends Controller
             ]];
         }
 
+        if(!empty($data)){
+            $data = [
+                'plastic_name' => 'Tas Kantong',
+                'list' => $data
+            ];
+        }
         return response()->json(MyHelper::checkGet($data));
     }
 
