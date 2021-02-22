@@ -994,66 +994,66 @@ class ApiDisburseController extends Controller
                         $tmpPath[] = storage_path('app/excel_email/'.$excelFile);
                     }
 
-//                    if(!empty($tmpPath)){
-//                        $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
-//                        $setting = array();
-//                        foreach ($getSetting as $key => $value) {
-//                            if($value['key'] == 'email_setting_url'){
-//                                $setting[$value['key']]  = (array)json_decode($value['value_text']);
-//                            }else{
-//                                $setting[$value['key']] = $value['value'];
-//                            }
-//                        }
-//
-//                        $data = array(
-//                            'customer' => '',
-//                            'html_message' => 'Report Outlet '.$getOutlet['outlet_name'].', transaksi tanggal '.date('d M Y', strtotime($start)).' sampai '.date('d M Y', strtotime($end)),
-//                            'setting' => $setting
-//                        );
-//
-//                        $to = $getOutlet['outlet_email'];
-//                        $subject = 'Report Transaksi ['.date('d M Y', strtotime($start)).' - '.date('d M Y', strtotime($end)).']';
-//                        $name =  $getOutlet['outlet_name'];
-//                        $variables['attachment'] = $tmpPath;
-//
-//                        try{
-//                            Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
-//                            {
-//                                $message->to($to, $name)->subject($subject);
-//                                if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-//                                    $message->from($setting['email_sender'], $setting['email_from']);
-//                                }else if(!empty($setting['email_sender'])){
-//                                    $message->from($setting['email_sender']);
-//                                }
-//
-//                                if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
-//                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-//                                }else if(!empty($setting['email_reply_to'])){
-//                                    $message->replyTo($setting['email_reply_to']);
-//                                }
-//
-//                                if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
-//                                    $message->cc($setting['email_cc'], $setting['email_cc_name']);
-//                                }
-//
-//                                if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
-//                                    $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
-//                                }
-//
-//                                // attachment
-//                                if(isset($variables['attachment']) && !empty($variables['attachment'])){
-//                                    foreach($variables['attachment'] as $attach){
-//                                        $message->attach($attach);
-//                                    }
-//                                }
-//                            });
-//                        }catch(\Exception $e){
-//                        }
-//
-//                        foreach ($tmpPath as $t){
-//                            File::delete($t);
-//                        }
-//                    }
+                    if(!empty($tmpPath)){
+                        $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
+                        $setting = array();
+                        foreach ($getSetting as $key => $value) {
+                            if($value['key'] == 'email_setting_url'){
+                                $setting[$value['key']]  = (array)json_decode($value['value_text']);
+                            }else{
+                                $setting[$value['key']] = $value['value'];
+                            }
+                        }
+
+                        $data = array(
+                            'customer' => '',
+                            'html_message' => 'Report Outlet '.$getOutlet['outlet_name'].', transaksi tanggal '.date('d M Y', strtotime($start)).' sampai '.date('d M Y', strtotime($end)),
+                            'setting' => $setting
+                        );
+
+                        $to = $getOutlet['outlet_email'];
+                        $subject = 'Report Transaksi ['.date('d M Y', strtotime($start)).' - '.date('d M Y', strtotime($end)).']';
+                        $name =  $getOutlet['outlet_name'];
+                        $variables['attachment'] = $tmpPath;
+
+                        try{
+                            Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
+                            {
+                                $message->to($to, $name)->subject($subject);
+                                if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                                    $message->from($setting['email_sender'], $setting['email_from']);
+                                }else if(!empty($setting['email_sender'])){
+                                    $message->from($setting['email_sender']);
+                                }
+
+                                if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                                }else if(!empty($setting['email_reply_to'])){
+                                    $message->replyTo($setting['email_reply_to']);
+                                }
+
+                                if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+                                    $message->cc($setting['email_cc'], $setting['email_cc_name']);
+                                }
+
+                                if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+                                    $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+                                }
+
+                                // attachment
+                                if(isset($variables['attachment']) && !empty($variables['attachment'])){
+                                    foreach($variables['attachment'] as $attach){
+                                        $message->attach($attach);
+                                    }
+                                }
+                            });
+                        }catch(\Exception $e){
+                        }
+
+                        foreach ($tmpPath as $t){
+                            File::delete($t);
+                        }
+                    }
                 }
 
                 return 'success';
