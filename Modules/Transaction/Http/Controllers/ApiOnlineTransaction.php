@@ -4136,7 +4136,7 @@ class ApiOnlineTransaction extends Controller
             }
 
             foreach ($itemBundling['products'] as $itemProduct){
-                $checkProduct = Product::where('id_product', $itemProduct['id_product'])->first();
+                $checkProduct = Product::where('id_product', $itemProduct['id_product'])->orWhere('is_inactive', 1)->first();
                 if (empty($checkProduct)) {
                     DB::rollback();
                     return [
