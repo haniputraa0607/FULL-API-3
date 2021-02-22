@@ -1093,8 +1093,15 @@ class ApiOnlineTransaction extends Controller
 
         $insertTransaction['transaction_receipt_number'] = $receipt;
 
+        if(!empty($post['item_bundling']) && empty($post['item_bundling_detail'])){
+            DB::rollback();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Bundling not found']
+            ]);
+        }
         //process add product bundling
-        if(!empty($post['item_bundling'])){
+        if(!empty($post['item_bundling_detail'])){
             $insertBundling = $this->insertBundlingProduct($post['item_bundling_detail']??[], $insertTransaction, $outlet, $post, $productMidtrans, $userTrxProduct);
             if(isset($insertBundling['status']) && $insertBundling['status'] == 'fail'){
                 return response()->json($insertBundling);
@@ -2964,9 +2971,15 @@ class ApiOnlineTransaction extends Controller
                     ->leftJoin('product_global_price as pgp', 'pgp.id_product', '=', 'products.id_product')
                     ->join('bundling', 'bundling.id_bundling', 'bundling_product.id_bundling')
                     ->where('bundling_product.id_bundling_product', $p['id_bundling_product'])
+                    ->where('products.is_inactive', 0)
                     ->select('products.product_visibility', 'pgp.product_global_price',  'products.product_variant_status',
                         'bundling_product.*', 'bundling.bundling_promo_status','bundling.bundling_name', 'bundling.bundling_code', 'products.*')
                     ->first();
+
+                if(empty($product)){
+                    unset($post['item_bundling'][$key]);
+                    continue 2;
+                }
                 $getProductDetail = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first();
                 $product['visibility_outlet'] = $getProductDetail['product_detail_visibility']??null;
                 $id_product_variant_group = $product['id_product_variant_group']??null;
@@ -4136,7 +4149,7 @@ class ApiOnlineTransaction extends Controller
             }
 
             foreach ($itemBundling['products'] as $itemProduct){
-                $checkProduct = Product::where('id_product', $itemProduct['id_product'])->orWhere('is_inactive', 1)->first();
+                $checkProduct = Product::where('id_product', $itemProduct['id_product'])->first();
                 if (empty($checkProduct)) {
                     DB::rollback();
                     return [
@@ -4375,6 +4388,10 @@ class ApiOnlineTransaction extends Controller
                 array_push($userTrxProduct, $dataUserTrxProduct);
             }
         }
+
+        return [
+            'status'    => 'success'
+        ];
     }
 
     public function syncDataSubtotal(Request $request){
