@@ -130,6 +130,24 @@ class ApiConfirm extends Controller
             }
         }
 
+        $checkProductPlastic = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
+                                ->where('id_transaction', $check['id_transaction'])->where('type', 'Plastic')->get()->toArray();
+        if (!empty($checkProductPlastic)) {
+            foreach ($checkProductPlastic as $key => $value) {
+                $dataProductMidtrans = [
+                    'id'       => $value['product_code'],
+                    'price'    => abs($value['transaction_product_price']),
+                    'name'     => $value['product_name'],
+                    'quantity' => $value['transaction_product_qty'],
+                ];
+
+                $totalPriceProduct+= ($dataProductMidtrans['quantity'] * $dataProductMidtrans['price']);
+
+                array_push($productMidtrans, $dataProductMidtrans);
+                array_push($dataDetailProduct, $dataProductMidtrans);
+            }
+        }
+
         if ($check['transaction_shipment'] > 0) {
             $dataShip = [
                 'id'       => null,
@@ -189,6 +207,7 @@ class ApiConfirm extends Controller
             'discount' => -$check['transaction_discount'],
         ];
 
+        $payment_balance = 0;
         if (!empty($checkPayment)) {
             if ($checkPayment['type'] == 'Balance') {
                 $checkPaymentBalance = TransactionPaymentBalance::where('id_transaction', $check['id_transaction'])->first();
@@ -201,6 +220,7 @@ class ApiConfirm extends Controller
                 }
 
                 $countGrandTotal = $countGrandTotal - $checkPaymentBalance['balance_nominal'];
+                $payment_balance = $checkPaymentBalance['balance_nominal'];
                 $dataBalance     = [
                     'id'       => null,
                     'price'    => -abs($checkPaymentBalance['balance_nominal']),
@@ -214,7 +234,7 @@ class ApiConfirm extends Controller
             }
         }
 
-        if ($check['transaction_discount'] != 0 && ($countGrandTotal < $totalPriceProduct)) {
+        if ($check['transaction_discount'] != 0 && (($countGrandTotal + $payment_balance) < $totalPriceProduct)) {
             $dataDis = [
                 'id'       => null,
                 'price'    => -abs($check['transaction_discount']),

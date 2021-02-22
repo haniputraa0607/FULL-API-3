@@ -2126,6 +2126,40 @@ class ApiTransaction extends Controller
 
                     $sub = 0;
                     if($key == ($count-1) || (isset($get[$key+1]['transaction_receipt_number']) && $val['transaction_receipt_number'] != $get[$key+1]['transaction_receipt_number'])){
+                        //for product plastic
+                        $productPlastics = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
+                                            ->where('id_transaction', $val['id_transaction'])->where('type', 'Plastic')
+                                            ->get()->toArray();
+
+                        foreach ($productPlastics as $plastic){
+                            for($j=0;$j<$plastic['transaction_product_qty'];$j++){
+                                $html .= '<tr>';
+                                $html .= $sameData;
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= $addAdditionalColumn;
+                                $html .= '<td>'.$plastic['product_name']??''.'</td>';
+                                $html .= $addAdditionalColumnVariant;
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
+                                $html .= '<td>0</td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
+                                $html .= '<td>0</td>';
+                                $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
+                                $html .= '<td></td><td></td><td></td>';
+                                if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                    $html .= '<td></td><td></td><td></td>';
+                                }
+                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                $html .= '</tr>';
+                            }
+                        }
+
                         if(!empty($val['transaction_payment_subscription'])) {
                             $getSubcription = SubscriptionUserVoucher::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                                 ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
@@ -3072,10 +3106,20 @@ class ApiTransaction extends Controller
                 $keynya++;
             }
 
+            $result['plastic_transaction_detail'] = [];
+            $result['plastic_name'] = '';
             if(isset($list['plastic_transaction'])){
+                $result['plastic_name'] = 'Tas Kantong';
                 $subtotal_plastic = 0;
                 foreach($list['plastic_transaction'] as $key => $value){
                     $subtotal_plastic += $value['transaction_product_subtotal'];
+
+                    $result['plastic_transaction_detail'][] = [
+                        'plastic_name' => $value['product']['product_name'],
+                        'plasctic_qty' => $value['transaction_product_qty'],
+                        'plastic_base_price' => '@'.MyHelper::requestNumber((int)$value['transaction_product_price'],'_CURRENCY'),
+                        'plasctic_subtotal' => MyHelper::requestNumber($value['transaction_product_subtotal'],'_CURRENCY')
+                    ];
                 }
 
                 $result['plastic_transaction'] = [];
@@ -3443,6 +3487,7 @@ class ApiTransaction extends Controller
             '))
             ->join('products','products.id_product','=','transaction_products.id_product')
             ->join('outlets','outlets.id_outlet','=','transaction_products.id_outlet')
+            ->where('transaction_products.type', 'product')
             ->whereNull('id_transaction_bundling_product')
             ->where(['id_transaction'=>$id_transaction])
             ->with(['modifiers'=>function($query){

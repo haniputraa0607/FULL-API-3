@@ -981,6 +981,10 @@ class ApiDeals extends Controller
 
             $deals[$key]['show'] = 1;
             $deals[$key]['available_voucher'] = (string) $calc;
+            $deals[$key]['available_voucher_text'] = "";
+            if ($calc != "*") {
+            	$deals[$key]['available_voucher_text'] = $calc. " kupon tersedia";
+            }
             // deals masih ada?
             // print_r($deals[$key]['available_voucher']);
         }
@@ -1674,12 +1678,13 @@ class ApiDeals extends Controller
     	if ($post['deals_type'] != 'Promotion') {
     		$source = 'deals';
 	    	$check = Deal::where('id_deals','=',$post['id_deals'])->first();
+	    	/* change to can update content deals even after someone has already claimed a voucher 
 	    	if (!empty($check['deals_total_claimed']) ) {
 				return [
 	                'status'  => 'fail',
 	                'messages' => 'Cannot update deals because someone has already claimed a voucher'
 	            ];
-			}
+			}*/
     	}
     	else
     	{
@@ -1699,7 +1704,7 @@ class ApiDeals extends Controller
     	if ($update)
     	{
     		if ($post['deals_type'] != 'Promotion') {
-				$update = Deal::where('id_deals','=',$post['id_deals'])->update(['deals_description' => $post['deals_description'], 'step_complete' => 0, 'last_updated_by' => auth()->user()->id]);
+				$update = Deal::where('id_deals','=',$post['id_deals'])->update(['deals_description' => $post['deals_description'], 'last_updated_by' => auth()->user()->id]);
     		}else{
 				$update = DealsPromotionTemplate::where('id_deals_promotion_template','=',$post['id_deals'])->update(['deals_description' => $post['deals_description'], 'step_complete' => 0, 'last_updated_by' => auth()->user()->id]);
     		}
@@ -1735,7 +1740,8 @@ class ApiDeals extends Controller
         $deals->where('deals_type', '!=','WelcomeVoucher');
         $deals->where( function($q) {
         	$q->where('deals_publish_start', '<=', date('Y-m-d H:i:s'))
-        	->where('deals_publish_end', '>=', date('Y-m-d H:i:s'));
+        	->where('deals_publish_end', '>=', date('Y-m-d H:i:s'))
+        	->where('deals_end', '>=', date('Y-m-d H:i:s'));
         });
         $deals->where( function($q) {
         	$q->where('deals_voucher_type','Unlimited')

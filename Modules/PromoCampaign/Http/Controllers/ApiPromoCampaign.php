@@ -2251,7 +2251,7 @@ class ApiPromoCampaign extends Controller
 
         	$extra_modifier_product_group = [];
         	foreach ($extra_modifier_product as $val) {
-        		$extra_modifier_product_group[$val['id_product_modifier_group']][$val['id_product_modifier']] = $val['text_detail_trx'];
+        		$extra_modifier_product_group[$val['id_product_modifier_group']][$val['id_product_modifier']] = $val['text_detail_trx'] ?? $val['text'];
         	}
 
         	if ($data) {
@@ -2268,7 +2268,7 @@ class ApiPromoCampaign extends Controller
         								->get();
 
         			foreach ($extra_modifier_variant as $val) {
-		        		$extra_modifier_variant_group[$val['id_product_modifier_group']][$val['id_product_modifier']] = $val['text_detail_trx'];
+		        		$extra_modifier_variant_group[$val['id_product_modifier_group']][$val['id_product_modifier']] = $val['text_detail_trx'] ?? $val['text'];
 		        	}
 
         			$temp_data = [

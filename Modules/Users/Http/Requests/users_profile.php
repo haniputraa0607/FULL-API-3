@@ -32,7 +32,7 @@ class users_profile extends FormRequest
 			'email'		=> 'nullable|email',
 			'gender'	=> 'nullable|in:Male,Female',
 			'birthday'	=> 'nullable|date',
-			'id_city'	=> 'nullable|integer|max:501'
+			'id_city'	=> 'nullable|integer'
         ];
     }
 
