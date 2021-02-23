@@ -83,6 +83,7 @@ use Modules\Transaction\Http\Requests\ShippingGoSend;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 
+use App\Jobs\ExportFranchiseJob;
 use App\Lib\MyHelper;
 use App\Lib\GoSend;
 use Validator;
@@ -91,6 +92,9 @@ use DB;
 use Mail;
 use Image;
 use Illuminate\Support\Facades\Log;
+use App\Exports\MultipleSheetExport;
+
+use Modules\Franchise\Entities\ExportFranchiseQueue;
 
 class ApiTransactionFranchiseController extends Controller
 {
@@ -98,8 +102,15 @@ class ApiTransactionFranchiseController extends Controller
 
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
+        $this->disburse = "Modules\Disburse\Http\Controllers\ApiDisburseController";
+        $this->trx = "Modules\Transaction\Http\Controllers\ApiTransaction";
     }
 
+    /**
+     * Display list of transactions
+     * @param Request $request
+     * return Response
+     */
     public function transactionFilter(TransactionFilter $request) {
         $post = $request->json()->all();
         
@@ -113,6 +124,7 @@ class ApiTransactionFranchiseController extends Controller
             $post['key'] = 'pickup order';
             $delivery = true;
         }
+
         $query = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')->select('transactions.*',
             'transaction_pickups.*',
             'transaction_pickup_go_sends.*',
@@ -133,6 +145,10 @@ class ApiTransactionFranchiseController extends Controller
             // ->orderBy('transactions.id_transaction', 'DESC')
             ->groupBy('transactions.id_transaction');
         
+        if (isset($post['id_outlet'])) {
+        	$query->where('transactions.id_outlet', $post['id_outlet']);
+        }
+
         if (strtolower($post['key']) !== 'all') {
             $query->where('trasaction_type', $post['key']);
             if($delivery){
@@ -301,7 +317,6 @@ class ApiTransactionFranchiseController extends Controller
                         }
                     }
                 }
-
             }
 
             $conditions = $post['conditions'];
@@ -1305,4 +1320,85 @@ class ApiTransactionFranchiseController extends Controller
             return response()->json(MyHelper::checkGet($result));
         }
     }
+
+    /**
+     * Create a new export queue
+     * @param  Request $request
+     * @return Response
+     */
+    public function newExport(Request $request)
+    {
+        $post = $request->json()->all();
+        unset($post['filter']['_token']);
+
+        $insertToQueue = [
+            'id_user_franchise' => $request->user()->id_user_franchise,
+            'id_outlet' => $post['id_outlet'],
+            'filter' => json_encode($post['filter']),
+            'report_type' => 'Transaction',
+            'status_export' => 'Running'
+        ];
+
+        $create = ExportFranchiseQueue::create($insertToQueue);
+        if($create){
+            ExportFranchiseJob::dispatch($create)->allOnConnection('export_franchise_queue');
+        }
+        return response()->json(MyHelper::checkCreate($create));
+    }
+
+    /**
+     * Display list of exported transaction
+     * @param Request $request
+     * return Response
+     */
+    public function listExport(Request $request) {
+    	// return $request->all();
+        $result = ExportFranchiseQueue::where('report_type', 'Transaction')->where('id_user_franchise', $request->user()->id_user_franchise);
+        if ($request->id_outlet) {
+        	$result->where('id_outlet', $request->id_outlet);
+        }
+
+        if (is_array($orders = $request->order)) {
+            $columns = [
+                'created_at',
+                 null,
+                'status_export',
+            ];
+            foreach ($orders as $column) {
+                if ($colname = ($columns[$column['column']] ?? false)) {
+                    $result->orderBy($colname, $column['dir']);
+                }
+            }
+        }
+
+        $result->orderBy('id_export_franchise_queue', 'DESC');
+
+        if ($request->page) {
+            $result = $result->paginate($request->length ?: 15)->toArray();
+            $countTotal = $result['total'];
+            // needed for datatables
+            $result['recordsTotal'] = $countTotal;
+        } else {
+            $result = $result->get();
+        }
+
+        return MyHelper::checkGet($result);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     * @param int $id
+     * @return Response
+     */
+    public function destroyExport(ExportQueue $export_queue)
+    {
+        $filename = str_replace([env('STORAGE_URL_API').'download/', env('STORAGE_URL_API')], '', $export_queue->url_export);
+        $delete = Storage::delete($filename);
+        if ($delete) {
+            $export_queue->status_export = 'Deleted';
+            $export_queue->save();
+        }
+        return MyHelper::checkDelete($delete);
+    }
+
 }

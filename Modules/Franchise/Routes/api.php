@@ -34,6 +34,10 @@ Route::group(['prefix' => 'franchise'], function () {
 
 		    Route::any('filter', 'ApiTransactionFranchiseController@transactionFilter');
 		    Route::post('detail','ApiTransactionFranchiseController@transactionDetail');
+
+		    Route::get('export','ApiTransactionFranchiseController@listExport');
+	        Route::post('export','ApiTransactionFranchiseController@newExport');
+	        Route::delete('export/{export_queue}','ApiTransactionFranchiseController@destroyExport');
 		});
     });
 
