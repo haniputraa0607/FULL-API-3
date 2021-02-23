@@ -219,6 +219,9 @@ class ApiBundlingController extends Controller
     public function store(CreateBundling $request)
     {
         $post = $request->json()->all();
+        if(empty($post['bundling_description'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Description can not be empty']]);
+        }
         if(isset($post['data_product']) && !empty($post['data_product'])){
             DB::beginTransaction();
                 $checkCode = Bundling::where('bundling_code', $post['bundling_code'])->first();
@@ -494,6 +497,10 @@ class ApiBundlingController extends Controller
     public function update(UpdateBundling $request)
     {
         $post = $request->json()->all();
+        if(empty($post['bundling_description'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Description can not be empty']]);
+        }
+
         if(isset($post['data_product']) && !empty($post['data_product'])){
             DB::beginTransaction();
 
