@@ -1093,9 +1093,19 @@ class ApiOnlineTransaction extends Controller
 
         $insertTransaction['transaction_receipt_number'] = $receipt;
 
+        if(!empty($post['item_bundling']) && empty($post['item_bundling_detail'])){
+            DB::rollback();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Bundling not found']
+            ]);
+        }
         //process add product bundling
-        if(!empty($post['item_bundling'])){
-            $this->insertBundlingProduct($post['item_bundling_detail']??[], $insertTransaction, $outlet, $post, $productMidtrans, $userTrxProduct);
+        if(!empty($post['item_bundling_detail'])){
+            $insertBundling = $this->insertBundlingProduct($post['item_bundling_detail']??[], $insertTransaction, $outlet, $post, $productMidtrans, $userTrxProduct);
+            if(isset($insertBundling['status']) && $insertBundling['status'] == 'fail'){
+                return response()->json($insertBundling);
+            }
         }
 
         // added item plastic to post item
@@ -2961,9 +2971,15 @@ class ApiOnlineTransaction extends Controller
                     ->leftJoin('product_global_price as pgp', 'pgp.id_product', '=', 'products.id_product')
                     ->join('bundling', 'bundling.id_bundling', 'bundling_product.id_bundling')
                     ->where('bundling_product.id_bundling_product', $p['id_bundling_product'])
+                    ->where('products.is_inactive', 0)
                     ->select('products.product_visibility', 'pgp.product_global_price',  'products.product_variant_status',
                         'bundling_product.*', 'bundling.bundling_promo_status','bundling.bundling_name', 'bundling.bundling_code', 'products.*')
                     ->first();
+
+                if(empty($product)){
+                    unset($post['item_bundling'][$key]);
+                    continue 2;
+                }
                 $getProductDetail = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first();
                 $product['visibility_outlet'] = $getProductDetail['product_detail_visibility']??null;
                 $id_product_variant_group = $product['id_product_variant_group']??null;
@@ -4126,30 +4142,30 @@ class ApiOnlineTransaction extends Controller
 
             if(!$createTransactionBundling){
                 DB::rollback();
-                return response()->json([
+                return [
                     'status'    => 'fail',
                     'messages'  => ['Insert Bundling Product Failed']
-                ]);
+                ];
             }
 
             foreach ($itemBundling['products'] as $itemProduct){
                 $checkProduct = Product::where('id_product', $itemProduct['id_product'])->first();
                 if (empty($checkProduct)) {
                     DB::rollback();
-                    return response()->json([
+                    return [
                         'status'    => 'fail',
-                        'messages'  => ['Product Not Found']
-                    ]);
+                        'messages'  => ['Product Not Found '.$itemProduct['product_name']]
+                    ];
                 }
 
                 $checkDetailProduct = ProductDetail::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $trx['id_outlet']])->first();
                 if (!empty($checkDetailProduct) && $checkDetailProduct['product_detail_stock_status'] == 'Sold Out') {
                     DB::rollback();
-                    return response()->json([
+                    return [
                         'status'    => 'fail',
                         'product_sold_out_status' => true,
                         'messages'  => ['Product '.$checkProduct['product_name'].' tidak tersedia dan akan terhapus dari cart.']
-                    ]);
+                    ];
                 }
 
                 if(!isset($itemProduct['note'])){
@@ -4171,11 +4187,11 @@ class ApiOnlineTransaction extends Controller
 
                 if($product['visibility_outlet'] == 'Hidden' || (empty($product['visibility_outlet']) && $product['product_visibility'] == 'Hidden')){
                     DB::rollback();
-                    return response()->json([
+                    return [
                         'status'    => 'fail',
                         'product_sold_out_status' => true,
                         'messages'  => ['Product '.$checkProduct['product_name'].'pada '.$product['bundling_name'].' tidak tersedia']
-                    ]);
+                    ];
                 }
 
                 if($product['product_variant_status'] && !empty($product['id_product_variant_group'])){
@@ -4237,10 +4253,10 @@ class ApiOnlineTransaction extends Controller
                 $trx_product = TransactionProduct::create($dataProduct);
                 if (!$trx_product) {
                     DB::rollback();
-                    return response()->json([
+                    return [
                         'status'    => 'fail',
                         'messages'  => ['Insert Product Transaction Failed']
-                    ]);
+                    ];
                 }
                 if(strtotime($trx['transaction_date'])){
                     $trx_product->created_at = strtotime($trx['transaction_date']);
@@ -4335,10 +4351,10 @@ class ApiOnlineTransaction extends Controller
                 $trx_modifier = TransactionProductModifier::insert($insert_modifier);
                 if (!$trx_modifier) {
                     DB::rollback();
-                    return response()->json([
+                    return [
                         'status'    => 'fail',
                         'messages'  => ['Insert Product Modifier Transaction Failed']
-                    ]);
+                    ];
                 }
                 $insert_variants = [];
                 foreach ($itemProduct['trx_variants'] as $id_product_variant => $product_variant_price) {
@@ -4372,6 +4388,10 @@ class ApiOnlineTransaction extends Controller
                 array_push($userTrxProduct, $dataUserTrxProduct);
             }
         }
+
+        return [
+            'status'    => 'success'
+        ];
     }
 
     public function syncDataSubtotal(Request $request){

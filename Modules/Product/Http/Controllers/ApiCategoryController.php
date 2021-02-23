@@ -666,6 +666,7 @@ class ApiCategoryController extends Controller
                 ->join('bundling', 'bundling.id_bundling', 'bundling_product.id_bundling')
                 ->join('bundling_categories', 'bundling_categories.id_bundling_category', 'bundling.id_bundling_category')
                 ->where('bundling.id_bundling', $bundling)
+                ->where('products.is_inactive', 0)
                 ->select('products.product_visibility', 'pgp.product_global_price',  'products.product_variant_status',
                     'bundling_product.*', 'bundling.*', 'bundling_categories.bundling_category_name', 'bundling_categories.bundling_category_order')
                 ->get()->toArray();
