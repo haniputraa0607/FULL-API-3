@@ -505,7 +505,7 @@ class ApiHistoryController extends Controller
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
             ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
             ->where('transactions.id_user', $id)
-            ->with('outlet', 'logTopup')
+            ->with('outlet', 'logTopup', 'transaction_pickup_go_send')
             ->orderBy('transaction_date', 'DESC')
             ->groupBy('transactions.id_transaction');
         if ($post['brand'] ?? false) {
@@ -588,8 +588,59 @@ class ApiHistoryController extends Controller
 
         $listTransaction = [];
 
-        foreach ($transaction as $key => $value) {
+        $lastStatusText = [
+            'payment_pending' => [
+                'text' => 'Menunggu Pembayaran',
+                'code' => 1,
+            ],
+            'pending' => [
+                'text' => 'Menunggu Konfirmasi',
+                'code' => 2,
+            ],
+            'cancelled' => [
+                'text' => 'Pembayaran Gagal',
+                'code' => 0,
+            ],
+            'received' => [
+                'text' => 'Order Diproses',
+                'code' => 2,
+            ],
+            'ready' => [
+                'text' => 'Order Siap',
+                'code' => 2,
+            ],
+            'on_delivery' => [
+                'text' => 'Order Dikirim',
+                'code' => 2,
+            ],
+            'completed' => [
+                'text' => 'Order Selesai',
+                'code' => 3,
+            ],
+            'rejected' => [
+                'text' => 'Order Ditolak',
+                'code' => 0,
+            ],
+        ];
 
+        foreach ($transaction as $key => $value) {
+            if ($value['reject_at']) {
+                $last_status = $lastStatusText['rejected'];
+            } elseif ($value['arrived_at'] || $value['taken_by_system_at'] || ($value['taken_at'] && $value['pickup_by'] == 'Customer')) {
+                $last_status = $lastStatusText['completed'];
+            } elseif (($value['transaction_pickup_go_send']['latest_status'] ?? false) == 'out_for_delivery') {
+                $last_status = $lastStatusText['on_delivery'];
+            } elseif ($value['ready_at']) {
+                $last_status = $lastStatusText['ready'];
+            } elseif ($value['receive_at']) {
+                $last_status = $lastStatusText['received'];
+            } elseif ($value['transaction_payment_status'] == 'Completed') {
+                $last_status = $lastStatusText['pending'];
+            } elseif ($value['transaction_payment_status'] == 'Cancelled') {
+                $last_status = $lastStatusText['cancelled'];
+            } else {
+                $last_status = $lastStatusText['payment_pending'];
+            }
             $dataList['type'] = 'trx';
             $dataList['id'] = $value['id_transaction'] ?: 0;
             $dataList['date']    = date('Y-m-d H:i', strtotime($value['transaction_date']));
@@ -601,6 +652,8 @@ class ApiHistoryController extends Controller
             $dataList['cashback'] = MyHelper::requestNumber($value['transaction_cashback_earned'], '_POINT');
             $dataList['subtitle'] = $value['sum_qty'] . ($value['sum_qty'] > 1 ? ' items' : ' item');
             $dataList['item_total'] = (int) $value['sum_qty'];
+            $dataList['last_status'] = $last_status['text'];
+            $dataList['last_status_code'] = $last_status['code'];
             if ($dataList['cashback'] >= 0) {
                 $dataList['status_point'] = 1;
             } else {
@@ -644,6 +697,11 @@ class ApiHistoryController extends Controller
 
         $listTransaction = [];
 
+        $last_status = [
+            'text' => 'Menunggu Konfirmasi',
+            'code' => 2,
+        ];
+
         foreach ($transaction as $key => $value) {
             $dataList['type'] = 'trx';
             $dataList['id'] = $value['id_transaction'] ?: 0;
@@ -652,6 +710,8 @@ class ApiHistoryController extends Controller
             $dataList['outlet'] = $value['outlet']['outlet_name'];
             $dataList['outlet_code'] = $value['outlet']['outlet_code'];
             $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
+            $dataList['last_status'] = $last_status['text'];
+            $dataList['last_status_code'] = $last_status['code'];
 
             if ($value['ready_at'] != null) {
                 $dataList['status'] = "Pesanan Sudah Siap";
