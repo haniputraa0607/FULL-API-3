@@ -2122,13 +2122,13 @@ class ApiOutletApp extends Controller
         $keyword        = $request->json('search_order_id');
         $perpage        = $request->json('perpage');
         $request_number = $request->json('request_number') ?: 'thousand_id';
-        $data           = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%Y-%m-%d") as trx_date,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,count(*) as total_products,transaction_grandtotal'))
+        $data           = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%Y-%m-%d") as trx_date,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,SUM(transaction_product_qty) as total_products,transaction_grandtotal'))
             ->where('transactions.id_outlet', $request->user()->id_outlet)
             ->where('trasaction_type', 'Pickup Order')
             ->join('transaction_pickups', 'transactions.id_transaction', '=', 'transaction_pickups.id_transaction')
             ->whereDate('transaction_date', $trx_date)
             ->join('transaction_products', 'transaction_products.id_transaction', '=', 'transactions.id_transaction')
-            ->groupBy('transactions.id_transaction');
+            ->groupBy('transaction_products.id_transaction');
 
         if ($trx_status == 'taken') {
             $data->where('transaction_payment_status', 'Completed')
@@ -4123,7 +4123,7 @@ class ApiOutletApp extends Controller
             $subTotalBundlingWithoutModifier = 0;
             $subItemBundlingWithoutModifie = 0;
             foreach ($bundlingProduct as $bp){
-                $quantityItemBundling = $quantityItemBundling + ($bp['transaction_product_bundling_qty'] * $bundling['transaction_bundling_product_qty']);
+                $quantityItemBundling = $quantityItemBundling + $bp['transaction_product_qty'];
                 $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                     ->whereNull('transaction_product_modifiers.id_product_modifier_group')
                     ->where('id_transaction_product', $bp['id_transaction_product'])
@@ -4199,9 +4199,31 @@ class ApiOutletApp extends Controller
             $result['product_transaction'] = [];
         }
 
+        $result['plastic_transaction_detail'] = [];
+        $result['plastic_name'] = '';
+        $quantityPlastic = 0;
+        if(isset($list['plastic_transaction'])){
+            $result['plastic_name'] = 'Tas Kantong';
+            $subtotal_plastic = 0;
+            foreach($list['plastic_transaction'] as $key => $value){
+                $quantityPlastic = $quantityPlastic + $value['transaction_product_qty'];
+                $subtotal_plastic += $value['transaction_product_subtotal'];
+
+                $result['plastic_transaction_detail'][] = [
+                    'plastic_name' => $value['product']['product_name'],
+                    'plasctic_qty' => $value['transaction_product_qty'],
+                    'plastic_base_price' => '@'.MyHelper::requestNumber((int)$value['transaction_product_price'],'_CURRENCY'),
+                    'plasctic_subtotal' => MyHelper::requestNumber($value['transaction_product_subtotal'],'_CURRENCY')
+                ];
+            }
+
+            $result['plastic_transaction'] = [];
+            $result['plastic_transaction']['transaction_plastic_total'] = $subtotal_plastic;
+        }
+
         $result['payment_detail'][] = [
             'name'   => 'Subtotal',
-            'desc'   => $quantity + $quantityItemBundling . ' items',
+            'desc'   => $quantity + $quantityItemBundling + $quantityPlastic . ' items',
             'amount' => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY'),
         ];
 
@@ -4344,26 +4366,6 @@ class ApiOutletApp extends Controller
                     'amount' => MyHelper::requestNumber($value['amount'], '_CURRENCY'),
                 ];
             }
-        }
-
-        $result['plastic_transaction_detail'] = [];
-        $result['plastic_name'] = '';
-        if(isset($list['plastic_transaction'])){
-            $result['plastic_name'] = 'Tas Kantong';
-            $subtotal_plastic = 0;
-            foreach($list['plastic_transaction'] as $key => $value){
-                $subtotal_plastic += $value['transaction_product_subtotal'];
-
-                $result['plastic_transaction_detail'][] = [
-                    'plastic_name' => $value['product']['product_name'],
-                    'plasctic_qty' => $value['transaction_product_qty'],
-                    'plastic_base_price' => '@'.MyHelper::requestNumber((int)$value['transaction_product_price'],'_CURRENCY'),
-                    'plasctic_subtotal' => MyHelper::requestNumber($value['transaction_product_subtotal'],'_CURRENCY')
-                ];
-            }
-
-            $result['plastic_transaction'] = [];
-            $result['plastic_transaction']['transaction_plastic_total'] = $subtotal_plastic;
         }
 
         return response()->json(MyHelper::checkGet($result));
@@ -5154,6 +5156,12 @@ class ApiOutletApp extends Controller
             ]];
         }
 
+        if(!empty($data)){
+            $data = [
+                'plastic_name' => 'Tas Kantong',
+                'list' => $data
+            ];
+        }
         return response()->json(MyHelper::checkGet($data));
     }
 

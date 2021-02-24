@@ -340,6 +340,13 @@ class ApiOutletAppReport extends Controller
                                 DB::raw('SUM(transaction_product_qty) AS total_bundling_qty')
                             )->groupBy('id_transaction');
                         },
+                        'plasticTransaction' => function($q) {
+                            $q->select(
+                                'id_transaction_product',
+                                'id_transaction',
+                                DB::raw('SUM(transaction_product_qty) AS total_plastic')
+                            )->groupBy('id_transaction');
+                        },
     					'transaction_pickup' => function($q) {
     						$q->select(
     							'id_transaction_pickup',
@@ -368,13 +375,27 @@ class ApiOutletAppReport extends Controller
 
     	$data_trx = [];
     	foreach ($trx['data']??$trx as $key => $value) {
+            $item = 0;
+            $itemBundling = 0;
+            $itemPlastic = 0;
 
+            if(isset($value['product_transaction'][0]['total_qty'])){
+                $item = $value['product_transaction'][0]['total_qty'];
+            }
+
+            if(isset($value['product_transaction_bundling'][0]['total_bundling_qty'])){
+                $itemBundling = $value['product_transaction_bundling'][0]['total_bundling_qty'];
+            }
+
+            if(isset($value['plastic_transaction'][0]['total_plastic'])){
+                $itemPlastic = $value['plastic_transaction'][0]['total_plastic'];
+            }
     		$data_trx[$key]['id_transaction'] = $value['id_transaction'];
     		$data_trx[$key]['order_id'] = $value['transaction_pickup']['order_id'];
     		$data_trx[$key]['transaction_time'] = date("H:i", strtotime($value['transaction_date']));
     		$data_trx[$key]['transaction_receipt_number'] = $value['transaction_receipt_number'];
     		$data_trx[$key]['transaction_grandtotal'] = number_format($value['transaction_grandtotal'],0,",",".");
-    		$data_trx[$key]['total_item'] = number_format($value['product_transaction'][0]['total_qty']??0+$value['product_transaction_bundling'][0]['total_bundling_qty']??0,0,",",".");
+    		$data_trx[$key]['total_item'] = number_format($item+$itemBundling+$itemPlastic,0,",",".");
     	}
 
     	$data['outlet_name'] = $outlet['outlet_name'];
@@ -559,7 +580,7 @@ class ApiOutletAppReport extends Controller
             if(!empty($productPlastic)){
                 $result[] = [
                     "id_brand" => 0,
-                    "name_brand" => "Plastic",
+                    "name_brand" => "Tas Kantong",
                     "product" => $productPlastic
                 ];
             }
