@@ -2714,19 +2714,19 @@ class ApiOnlineTransaction extends Controller
             $result['plastic_used_status'] = true;
             $plastic = app($this->plastic)->check($post);
             $result['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
-            $result['plastic']['plastic_name'] = 'Tas Kantong';
-            $result['plastic']['plastic_pop_up'] = 'Tas Kantong Berbayar';
+            $result['plastic']['plastic_name'] = 'Kantong Belanja';
+            $result['plastic']['plastic_pop_up'] = 'Kantong Belanja Berbayar';
             if($post['type'] == 'Pickup Order'){
                 $result['plastic']['is_checked'] = true;
                 $result['plastic']['is_mandatory'] = false;
-                $result['plastic']['info'] = "Harga tas kantong akan dihitung berdasarkan jumlah item";
+                $result['plastic']['info'] = "Harga kantong belanja akan dihitung berdasarkan jumlah item";
                 if(!isset($post['is_plastic_checked']) || $post['is_plastic_checked'] == false){
                     $result['plastic']['plastic_price_total'] = 0;
                 }
             }elseif($post['type'] == 'GO-SEND'){
                 $result['plastic']['is_checked'] = true;
                 $result['plastic']['is_mandatory'] = true;
-                $result['plastic']['info'] = "Harga tas kantong akan dihitung berdasarkan jumlah item";
+                $result['plastic']['info'] = "Harga kantong belanja akan dihitung berdasarkan jumlah item";
             }else{
                 return [
                     'status' => 'fail',

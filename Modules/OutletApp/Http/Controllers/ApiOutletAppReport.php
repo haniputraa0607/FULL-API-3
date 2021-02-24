@@ -559,7 +559,7 @@ class ApiOutletAppReport extends Controller
             if(!empty($productPlastic)){
                 $result[] = [
                     "id_brand" => 0,
-                    "name_brand" => "Tas Kantong",
+                    "name_brand" => "Kantong Belanja",
                     "product" => $productPlastic
                 ];
             }
