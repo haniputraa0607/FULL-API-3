@@ -2977,6 +2977,7 @@ class ApiOnlineTransaction extends Controller
                     ->first();
 
                 if(empty($product)){
+                    $errorBundlingName[] = $bundling['bundling_name'];
                     unset($post['item_bundling'][$key]);
                     continue 2;
                 }
