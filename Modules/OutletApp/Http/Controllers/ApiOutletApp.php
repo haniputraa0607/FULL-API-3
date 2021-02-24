@@ -4367,7 +4367,7 @@ class ApiOutletApp extends Controller
                 ];
             }
         }
-
+      
         return response()->json(MyHelper::checkGet($result));
     }
 
@@ -5158,7 +5158,7 @@ class ApiOutletApp extends Controller
 
         if(!empty($data)){
             $data = [
-                'plastic_name' => 'Tas Kantong',
+                'plastic_name' => 'Kantong Belanja',
                 'list' => $data
             ];
         }
