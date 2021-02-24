@@ -5,6 +5,7 @@ namespace Modules\Franchise\Http\Controllers;
 use App\Http\Models\Deal;
 use App\Http\Models\TransactionProductModifier;
 use Illuminate\Pagination\Paginator;
+use App\Http\Models\Configs;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionPayment;
@@ -45,6 +46,8 @@ use Modules\IPay88\Entities\DealsPaymentIpay88;
 use Modules\ShopeePay\Entities\DealsPaymentShopeePay;
 use App\Http\Models\UserTrxProduct;
 use Modules\Brand\Entities\Brand;
+use Modules\Brand\Entities\BrandOutlet;
+use Modules\Brand\Entities\BrandProduct;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
 
@@ -83,6 +86,8 @@ use Modules\Transaction\Http\Requests\ShippingGoSend;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 
+use Modules\Disburse\Entities\DisburseOutletTransaction;
+
 use App\Jobs\ExportFranchiseJob;
 use App\Lib\MyHelper;
 use App\Lib\GoSend;
@@ -93,6 +98,7 @@ use Mail;
 use Image;
 use Illuminate\Support\Facades\Log;
 use App\Exports\MultipleSheetExport;
+use Rap2hpoutre\FastExcel\FastExcel;
 
 use Modules\Franchise\Entities\ExportFranchiseQueue;
 
@@ -138,6 +144,7 @@ class ApiTransactionFranchiseController extends Controller
             ->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')
             ->leftJoin('users','transactions.id_user','=','users.id')
             ->leftJoin('products','products.id_product','=','transaction_products.id_product')
+            // ->leftJoin('brand_product','brand_product.id_product','=','transaction_products.id_product')
             ->leftJoin('product_categories','products.id_product_category','=','product_categories.id_product_category')
             ->whereDate('transactions.transaction_date', '>=', $start)
             ->whereDate('transactions.transaction_date', '<=', $end)
@@ -146,7 +153,7 @@ class ApiTransactionFranchiseController extends Controller
             ->groupBy('transactions.id_transaction');
         
         if (isset($post['id_outlet'])) {
-        	$query->where('transactions.id_outlet', $post['id_outlet']);
+        	// $query->where('transactions.id_outlet', $post['id_outlet']);
         }
 
         if (strtolower($post['key']) !== 'all') {
@@ -230,61 +237,118 @@ class ApiTransactionFranchiseController extends Controller
 
                     if ($con['subject'] == 'transaction_status') {
                         if ($post['rule'] == 'and') {
-                            if($con['operator'] == 'pending'){
-                                $query = $query->whereNull('transaction_pickups.receive_at');
-                            }elseif($con['operator'] == 'taken_by_driver'){
-                                $query = $query->whereNotNull('transaction_pickups.taken_at')
-                                    ->whereNotIn('transaction_pickups.pickup_by', ['Customer']);
-                            }elseif ($con['operator'] == 'taken_by_customer'){
-                                $query = $query->whereNotNull('transaction_pickups.taken_at')
-                                    ->where('transaction_pickups.pickup_by', 'Customer');
-                            }elseif ($con['operator'] == 'taken_by_system'){
-                                $query = $query->whereNotNull('transaction_pickups.ready_at')
-                                    ->whereNotNull('transaction_pickups.taken_by_system_at');
-                            }elseif($con['operator'] == 'receive_at'){
-                                $query = $query->whereNotNull('transaction_pickups.receive_at')
-                                    ->whereNull('transaction_pickups.ready_at');
-                            }elseif($con['operator'] == 'ready_at'){
-                                $query = $query->whereNotNull('transaction_pickups.ready_at')
-                                    ->whereNull('transaction_pickups.taken_at');
-                            }else{
-                                $query = $query->whereNotNull('transaction_pickups.'.$con['operator']);
-                            }
+                        	if ($con['operator'] == 'not') {
+                        		if($con['parameter'] == 'pending'){
+	                                $query = $query->whereNotNull('transaction_pickups.receive_at');
+	                            }elseif($con['parameter'] == 'taken_by_driver'){
+	                                $query = $query->whereNull('transaction_pickups.taken_at')
+	                                    ->whereIn('transaction_pickups.pickup_by', ['Customer']);
+	                            }elseif ($con['parameter'] == 'taken_by_customer'){
+	                                $query = $query->whereNull('transaction_pickups.taken_at')
+	                                    ->where('transaction_pickups.pickup_by', '!=', 'Customer');
+	                            }elseif ($con['parameter'] == 'taken_by_system'){
+	                                $query = $query->whereNull('transaction_pickups.ready_at')
+	                                    ->whereNull('transaction_pickups.taken_by_system_at');
+	                            }elseif($con['parameter'] == 'receive_at'){
+	                                $query = $query->whereNull('transaction_pickups.receive_at')
+	                                    ->whereNotNull('transaction_pickups.ready_at');
+	                            }elseif($con['parameter'] == 'ready_at'){
+	                                $query = $query->whereNull('transaction_pickups.ready_at')
+	                                    ->whereNotNull('transaction_pickups.taken_at');
+	                            }else{
+	                                $query = $query->whereNull('transaction_pickups.'.$con['parameter']);
+	                            }
+                        	}else{
+	                        	if($con['parameter'] == 'pending'){
+	                                $query = $query->whereNull('transaction_pickups.receive_at');
+	                            }elseif($con['parameter'] == 'taken_by_driver'){
+	                                $query = $query->whereNotNull('transaction_pickups.taken_at')
+	                                    ->whereNotIn('transaction_pickups.pickup_by', ['Customer']);
+	                            }elseif ($con['parameter'] == 'taken_by_customer'){
+	                                $query = $query->whereNotNull('transaction_pickups.taken_at')
+	                                    ->where('transaction_pickups.pickup_by', 'Customer');
+	                            }elseif ($con['parameter'] == 'taken_by_system'){
+	                                $query = $query->whereNotNull('transaction_pickups.ready_at')
+	                                    ->whereNotNull('transaction_pickups.taken_by_system_at');
+	                            }elseif($con['parameter'] == 'receive_at'){
+	                                $query = $query->whereNotNull('transaction_pickups.receive_at')
+	                                    ->whereNull('transaction_pickups.ready_at');
+	                            }elseif($con['parameter'] == 'ready_at'){
+	                                $query = $query->whereNotNull('transaction_pickups.ready_at')
+	                                    ->whereNull('transaction_pickups.taken_at');
+	                            }else{
+	                                $query = $query->whereNotNull('transaction_pickups.'.$con['parameter']);
+	                            }
+                        	}
                         } else {
-                            if($con['operator'] == 'pending'){
-                                $query = $query->orWhereNotNull('transaction_pickups.receive_at');
-                            }elseif($con['operator'] == 'taken_by_driver'){
-                                $query = $query->orWhere(function ($q){
-                                    $q->whereNotNull('transaction_pickups.taken_at')
-                                        ->whereNotIn('transaction_pickups.pickup_by', ['Customer']);
-                                });
-                            }elseif ($con['operator'] == 'taken_by_customer'){
-                                $query = $query->orWhere(function ($q){
-                                    $q->whereNotNull('transaction_pickups.taken_at')
-                                        ->where('transaction_pickups.pickup_by', 'Customer');
-                                });
-                            }elseif ($con['operator'] == 'taken_by_system'){
-                                $query = $query->orWhere(function ($q){
-                                    $q->whereNotNull('transaction_pickups.ready_at')
-                                        ->whereNotNull('transaction_pickups.taken_by_system_at');
-                                });
-                            }elseif($con['operator'] == 'receive_at'){
-                                $query = $query->orWhere(function ($q){
-                                    $q->whereNotNull('transaction_pickups.receive_at')
-                                        ->whereNull('transaction_pickups.ready_at');
-                                });
-                            }elseif($con['operator'] == 'ready_at'){
-                                $query = $query->orWhere(function ($q) {
-                                    $q->whereNotNull('transaction_pickups.ready_at')
-                                        ->whereNull('transaction_pickups.taken_at');
-                                });
-                            }else{
-                                $query = $query->orWhereNotNull('transaction_pickups.'.$con['operator']);
-                            }
+                        	if ($con['operator'] == 'not') {
+	                            if($con['parameter'] == 'pending'){
+	                                $query = $query->orWhereNull('transaction_pickups.receive_at');
+	                            }elseif($con['parameter'] == 'taken_by_driver'){
+	                                $query = $query->orWhere(function ($q){
+	                                    $q->whereNull('transaction_pickups.taken_at')
+	                                        ->whereIn('transaction_pickups.pickup_by', ['Customer']);
+	                                });
+	                            }elseif ($con['parameter'] == 'taken_by_customer'){
+	                                $query = $query->orWhere(function ($q){
+	                                    $q->whereNull('transaction_pickups.taken_at')
+	                                        ->where('transaction_pickups.pickup_by', '!=', 'Customer');
+	                                });
+	                            }elseif ($con['parameter'] == 'taken_by_system'){
+	                                $query = $query->orWhere(function ($q){
+	                                    $q->whereNull('transaction_pickups.ready_at')
+	                                        ->whereNull('transaction_pickups.taken_by_system_at');
+	                                });
+	                            }elseif($con['parameter'] == 'receive_at'){
+	                                $query = $query->orWhere(function ($q){
+	                                    $q->whereNull('transaction_pickups.receive_at')
+	                                        ->whereNotNull('transaction_pickups.ready_at');
+	                                });
+	                            }elseif($con['parameter'] == 'ready_at'){
+	                                $query = $query->orWhere(function ($q) {
+	                                    $q->whereNull('transaction_pickups.ready_at')
+	                                        ->whereNotNull('transaction_pickups.taken_at');
+	                                });
+	                            }else{
+	                                $query = $query->orWhereNull('transaction_pickups.'.$con['parameter']);
+	                            }
+	                        }
+	                        else{
+	                        	if($con['parameter'] == 'pending'){
+	                                $query = $query->orWhereNotNull('transaction_pickups.receive_at');
+	                            }elseif($con['parameter'] == 'taken_by_driver'){
+	                                $query = $query->orWhere(function ($q){
+	                                    $q->whereNotNull('transaction_pickups.taken_at')
+	                                        ->whereNotIn('transaction_pickups.pickup_by', ['Customer']);
+	                                });
+	                            }elseif ($con['parameter'] == 'taken_by_customer'){
+	                                $query = $query->orWhere(function ($q){
+	                                    $q->whereNotNull('transaction_pickups.taken_at')
+	                                        ->where('transaction_pickups.pickup_by', 'Customer');
+	                                });
+	                            }elseif ($con['parameter'] == 'taken_by_system'){
+	                                $query = $query->orWhere(function ($q){
+	                                    $q->whereNotNull('transaction_pickups.ready_at')
+	                                        ->whereNotNull('transaction_pickups.taken_by_system_at');
+	                                });
+	                            }elseif($con['parameter'] == 'receive_at'){
+	                                $query = $query->orWhere(function ($q){
+	                                    $q->whereNotNull('transaction_pickups.receive_at')
+	                                        ->whereNull('transaction_pickups.ready_at');
+	                                });
+	                            }elseif($con['parameter'] == 'ready_at'){
+	                                $query = $query->orWhere(function ($q) {
+	                                    $q->whereNotNull('transaction_pickups.ready_at')
+	                                        ->whereNull('transaction_pickups.taken_at');
+	                                });
+	                            }else{
+	                                $query = $query->orWhereNotNull('transaction_pickups.'.$con['parameter']);
+	                            }
+	                        }
                         }
                     }
 
-                    if (in_array($con['subject'], ['status', 'courier', 'id_outlet', 'id_product', 'pickup_by'])) {
+                    if (in_array($con['subject'], ['status', 'courier', 'id_outlet', 'id_product', 'pickup_by', 'id_product_category'])) {
                         switch ($con['subject']) {
                             case 'status':
                                 $var = 'transactions.transaction_payment_status';
@@ -296,14 +360,22 @@ class ApiTransactionFranchiseController extends Controller
 
                             case 'id_product':
                                 $var = 'products.id_product';
+                                $con['operator'] = $con['parameter'];
                                 break;
 
                             case 'id_outlet':
                                 $var = 'outlets.id_outlet';
                                 break;
 
+                            case 'id_product_category':
+                                // $var = 'brand_product.id_product_category';
+                                $var = 'products.id_product_category';
+                                $con['operator'] = $con['parameter'];
+                                break;
+
                             case 'pickup_by':
                                 $var = 'transaction_pickups.pickup_by';
+                                $con['operator'] = $con['parameter'];
                                 break;
 
                             default:
@@ -1401,4 +1473,227 @@ class ApiTransactionFranchiseController extends Controller
         return MyHelper::checkDelete($delete);
     }
 
+    // public function exportExcel($post){
+    public function exportExcel($queue){
+
+    	$queue = ExportFranchiseQueue::where('id_export_franchise_queue', $queue->id_export_franchise_queue)->where('status_export', 'Running')->first()->toArray();
+    	$filter = (array)json_decode($queue['filter'], true);
+    	// return $filter;
+    	$data['date_start'] = $filter['rule']['9998']['parameter'] ?? date('Y-m-01');
+    	$data['date_end'] = $filter['rule']['9999']['parameter'] ?? date('Y-m-d');
+    	$data['rule'] = $filter['operator'] ?? 'and';
+    	$data['conditions'] = $filter['conditions'] ?? [];
+    	$data['key'] = 'all';
+
+    	if (isset($filter['rule']['9998'])) {
+    		unset($filter['rule']['9998'], $filter['rule']['9999']);
+    		$data['conditions'] = $filter['rule'];
+    	}
+
+    	$post = $data;
+
+        $start = date('Y-m-d', strtotime($post['date_start']));
+        $end = date('Y-m-d', strtotime($post['date_end']));
+        
+        $getOutlet = Outlet::where('id_outlet', 1274)->first();
+
+        if($getOutlet && !empty($getOutlet['outlet_email'])){
+            $filter['date_start'] = $start;
+            $filter['date_end'] = $end;
+            $filter['detail'] = 1;
+            $filter['key'] = 'all';
+            $filter['rule'] = 'and';
+            $filter['conditions'] = [
+                [
+                    'subject' => 'id_outlet',
+                    'operator' => $getOutlet['id_outlet'],
+                    'parameter' => null
+                ],
+                [
+                    'subject' => 'status',
+                    'operator' => 'Completed',
+                    'parameter' => null
+                ]
+            ];
+
+            $summary = $this->summaryCalculationFee($start, $end, $getOutlet['id_outlet'], $post);
+            $generateTrx = app($this->trx)->exportTransaction($filter, 1);
+            $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+                ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
+                ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
+                ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
+                ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
+                ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
+                // ->where('transaction_payment_status', 'Completed')
+                // ->whereNull('reject_at')
+                ->where('transactions.id_outlet', $getOutlet['id_outlet'])
+                ->whereDate('transactions.transaction_date', '>=',$start)
+                ->whereDate('transactions.transaction_date', '<=',$end)
+                ->with(['transaction_payment_subscription'=> function($q){
+                    $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
+                        ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+                        ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
+                }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
+                ->select('transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
+                    'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
+                    'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
+                    'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code')
+                ->get()->toArray();
+
+
+
+            if(!empty($generateTrx['list'])){
+                $excelFile = 'Transaction_['.$start.'_'.$end.']['.$getOutlet['outlet_code'].'].xlsx';
+                $directory = 'franchise/report/transaction/'.$excelFile;
+
+                $store  = (new MultipleSheetExport([
+                    "Summary" => $summary,
+                    "Calculation Fee" => $dataDisburse,
+                    "Detail Transaction" => $generateTrx
+                ]))->store($directory);
+
+
+                if ($store) {
+                    $contents = storage_path('app/'.$directory);
+	                if(config('configs.STORAGE') != 'local'){
+	                    // $contents = File::get($path);
+                    	$contents = storage_path('app/'.$directory);
+	                    $store = Storage::disk(config('configs.STORAGE'))->put($directory, $contents, 'public');
+	                    if($store){
+	                        $delete = File::delete($contents);
+	                    }
+	                }
+                    ExportFranchiseQueue::where('id_export_franchise_queue', $queue['id_export_franchise_queue'])->update(['url_export' => $directory, 'status_export' => 'Ready']);
+                }
+            }
+
+            return 'success';
+        }else{
+            return 'Outlet Not Found';
+        }
+    }
+
+    function listProduct(Request $request) {
+        $post = $request->json()->all();
+        $id_brand = BrandOutlet::where('id_outlet', $post['id_outlet'])->pluck('id_brand');
+
+        $product = BrandProduct::whereIn('id_brand', $id_brand)
+        			->join('products', 'products.id_product', '=', 'brand_product.id_product')
+        			->whereNotNull('brand_product.id_product_category')
+        			->get()
+        			->toArray();
+
+        return response()->json(MyHelper::checkGet($product));
+    }
+
+    function listProductCategory(Request $request) {
+        $post = $request->json()->all();
+        $id_brand = BrandOutlet::where('id_outlet', $post['id_outlet'])->pluck('id_brand');
+
+        $product = BrandProduct::whereIn('id_brand', $id_brand)
+        			->join('product_categories', 'product_categories.id_product_category', '=', 'brand_product.id_product_category')
+        			->whereNotNull('brand_product.id_product_category')
+        			->groupBy('brand_product.id_product_category')
+        			->get()
+        			->toArray();
+
+        return response()->json(MyHelper::checkGet($product));
+    }
+
+    function summaryCalculationFee($date_start, $date_end, $id_outlet = null, $filter = []){
+    	// return $filter;
+        $summaryFee = [];
+        $summaryFee = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->leftJoin('transaction_payment_subscriptions as tps', 'tps.id_transaction', 'transactions.id_transaction')
+            ->whereDate('transactions.transaction_date', '>=', $date_start)
+            ->whereDate('transactions.transaction_date', '<=', $date_end)
+            ->where('transactions.transaction_payment_status', 'Completed')
+            ->whereNull('transaction_pickups.reject_at')
+            ->selectRaw('COUNT(transactions.id_transaction) total_trx, SUM(transactions.transaction_grandtotal) as total_gross_sales,
+                        SUM(tps.subscription_nominal) as total_subscription, 
+                        SUM(bundling_product_total_discount) as total_discount_bundling,
+                        SUM(transactions.transaction_subtotal) as total_sub_total, 
+                        SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
+                        SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
+                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription, SUM(bundling_product_fee_central) total_income_bundling_product,
+                        SUM(transactions.transaction_discount_delivery) total_discount_delivery');
+
+        if($id_outlet){
+            $summaryFee = $summaryFee->where('transactions.id_outlet', $id_outlet);
+        }
+
+        $summaryFee = $summaryFee->first()->toArray();
+
+        $config = Configs::where('config_name', 'show or hide info calculation disburse')->first();
+
+        $summaryProduct = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->join('products as p', 'p.id_product', 'transaction_products.id_product')
+            ->where('transaction_payment_status', 'Completed')
+            ->whereNull('reject_at')
+            ->whereDate('transaction_date', '>=',$date_start)
+            ->whereDate('transaction_date', '<=',$date_end)
+            ->where('transactions.id_outlet', $id_outlet)
+            ->groupBy('transaction_products.id_product_variant_group')
+            ->groupBy('transaction_products.id_product')
+            ->selectRaw("p.product_name as name, SUM(transaction_products.transaction_product_qty) as total_qty,
+                        p.product_type as type,
+                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
+                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
+                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
+                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants")->get()->toArray();
+        $summaryModifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'transaction_product_modifiers.id_transaction')
+            ->join('transaction_products as tp', 'tp.id_transaction_product', 'transaction_product_modifiers.id_transaction_product')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+            ->where('transaction_payment_status', 'Completed')
+            ->whereNull('reject_at')
+            ->whereNull('transaction_product_modifiers.id_product_modifier_group')
+            ->whereDate('transaction_date', '>=',$date_start)
+            ->whereDate('transaction_date', '<=',$date_end)
+            ->where('transactions.id_outlet', $id_outlet)
+            ->groupBy('transaction_product_modifiers.id_product_modifier')
+            ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty,
+                        NULL as variants")->get()->toArray();
+
+        $summary = array_merge($summaryProduct,$summaryModifier);
+        return [
+            'summary_product' => $summary,
+            'summary_fee' => $summaryFee,
+            'config' => $config
+        ];
+    }
+
+    function actionExport(Request $request){
+        $post = $request->json()->all();
+        $action = $post['action'];
+        $id_export_franchise_queue = $post['id_export_franchise_queue'];
+
+        if($action == 'download'){
+            $data = ExportFranchiseQueue::where('id_export_franchise_queue', $id_export_franchise_queue)->first();
+            if(!empty($data)){
+                $data['url_export'] = config('url.storage_url_api').$data['url_export'];
+            }
+            return response()->json(MyHelper::checkGet($data));
+        }
+        elseif($action == 'deleted'){
+            $data = ExportQueue::where('id_export_franchise_queue', $id_export_franchise_queue)->first();
+            $file = public_path().'/'.$data['url_export'];
+            if(config('configs.STORAGE') == 'local'){
+                $delete = File::delete($file);
+            }else{
+                $delete = MyHelper::deleteFile($file);
+            }
+
+            if($delete){
+                $update = ExportFranchiseQueue::where('id_export_franchise_queue', $id_export_franchise_queue)->update(['status_export' => 'Deleted']);
+                return response()->json(MyHelper::checkUpdate($update));
+            }else{
+                return response()->json(['status' => 'fail', 'messages' => ['failed to delete file']]);
+            }
+
+        }
+    }
 }
