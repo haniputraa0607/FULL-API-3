@@ -45,10 +45,12 @@ class Quest extends Model
             ->orderBy('order')
             ->get()
             ->toArray();
-        array_unshift($result, [
-            'title' => 'Overview',
-            'content' => $this->description,
-        ]);
+        if ($this->description !== null) {
+            array_unshift($result, [
+                'title' => 'Overview',
+                'content' => $this->description,
+            ]);
+        }
         return $result;
     }
 
@@ -84,7 +86,7 @@ class Quest extends Model
             'done' => $questUsers->sum('is_done'),
         ];
 
-        $result['complete'] = $result['done'] >= $result['total'];
+        $result['complete'] = $result['done'] >= $result['total'] ? 1 : 0;
         return $result;
     }
 

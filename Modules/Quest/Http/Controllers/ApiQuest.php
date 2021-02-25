@@ -678,6 +678,16 @@ class ApiQuest extends Controller
         ];
     }
 
+    public function claimBenefit(Request $request)
+    {
+        return [
+            'status' => 'fail',
+            'messages' => [
+                'Fitur belum tersedia'
+            ],
+        ];
+    }
+
     public function me(Request $request)
     {
         $id_user = $request->user()->id;
@@ -709,14 +719,24 @@ class ApiQuest extends Controller
     public function detail(Request $request)
     {
         $id_user = $request->user()->id;
-        $quest = Quest::select('quests.id_quest', 'name', 'image as image_url', 'description', 'date_end')
+        $quest = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'date_start', 'date_end')
             ->join('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
             })
             ->where('quests.id_quest', MyHelper::decSlug($request['id_quest']) ?? $request->id_quest)
             ->first();
+        if (!$quest) {
+            return MyHelper::checkGet($result, "Quest tidak ditemukan");
+        }
+        $quest->append(['progress', 'contents']);
+        $quest->makeHidden(['date_start', 'quest_contents']);
         $result = $quest->toArray();
+
+        $details = QuestUser::select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
+
+        $result['details'] = $details;
+
         return MyHelper::checkGet($result, "Quest tidak ditemukan");
     }
 }
