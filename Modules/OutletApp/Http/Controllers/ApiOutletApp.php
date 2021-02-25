@@ -4203,7 +4203,7 @@ class ApiOutletApp extends Controller
         $result['plastic_name'] = '';
         $quantityPlastic = 0;
         if(isset($list['plastic_transaction'])){
-            $result['plastic_name'] = 'Tas Kantong';
+            $result['plastic_name'] = 'Kantong Belanja';
             $subtotal_plastic = 0;
             foreach($list['plastic_transaction'] as $key => $value){
                 $quantityPlastic = $quantityPlastic + $value['transaction_product_qty'];
@@ -4367,7 +4367,7 @@ class ApiOutletApp extends Controller
                 ];
             }
         }
-
+      
         return response()->json(MyHelper::checkGet($result));
     }
 
@@ -5158,7 +5158,7 @@ class ApiOutletApp extends Controller
 
         if(!empty($data)){
             $data = [
-                'plastic_name' => 'Tas Kantong',
+                'plastic_name' => 'Kantong Belanja',
                 'list' => $data
             ];
         }
