@@ -44,6 +44,7 @@ Route::group(['prefix' => 'franchise'], function () {
 		Route::group(['prefix' => 'product'], function() {
             Route::post('list','ApiTransactionFranchiseController@listProduct');
 		    Route::post('category/list','ApiTransactionFranchiseController@listProductCategory');
+        });
 
         Route::group(['prefix' => 'report-payment'], function() {
             Route::post('summary', 'ApiReportPaymentController@summaryPaymentMethod');
