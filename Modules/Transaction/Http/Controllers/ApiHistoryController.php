@@ -677,7 +677,7 @@ class ApiHistoryController extends Controller
     {
         $transaction = Transaction::select(\DB::raw('*,sum(transaction_products.transaction_product_qty) as sum_qty'))->join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
-            ->with('outlet')
+            ->with('outlet', 'transaction_pickup_go_send')
             ->where('transaction_payment_status', 'Completed')
             ->where(function ($q) {
                 $q->where(function ($q2) {
@@ -697,12 +697,59 @@ class ApiHistoryController extends Controller
 
         $listTransaction = [];
 
-        $last_status = [
-            'text' => 'Menunggu Konfirmasi',
-            'code' => 2,
+        $lastStatusText = [
+            'payment_pending' => [
+                'text' => 'Menunggu Pembayaran',
+                'code' => 1,
+            ],
+            'pending' => [
+                'text' => 'Menunggu Konfirmasi',
+                'code' => 2,
+            ],
+            'cancelled' => [
+                'text' => 'Pembayaran Gagal',
+                'code' => 0,
+            ],
+            'received' => [
+                'text' => 'Order Diproses',
+                'code' => 2,
+            ],
+            'ready' => [
+                'text' => 'Order Siap',
+                'code' => 2,
+            ],
+            'on_delivery' => [
+                'text' => 'Order Dikirim',
+                'code' => 2,
+            ],
+            'completed' => [
+                'text' => 'Order Selesai',
+                'code' => 3,
+            ],
+            'rejected' => [
+                'text' => 'Order Ditolak',
+                'code' => 0,
+            ],
         ];
 
         foreach ($transaction as $key => $value) {
+            if ($value['reject_at']) {
+                $last_status = $lastStatusText['rejected'];
+            } elseif ($value['arrived_at'] || $value['taken_by_system_at'] || ($value['taken_at'] && $value['pickup_by'] == 'Customer')) {
+                $last_status = $lastStatusText['completed'];
+            } elseif (($value['transaction_pickup_go_send']['latest_status'] ?? false) == 'out_for_delivery') {
+                $last_status = $lastStatusText['on_delivery'];
+            } elseif ($value['ready_at']) {
+                $last_status = $lastStatusText['ready'];
+            } elseif ($value['receive_at']) {
+                $last_status = $lastStatusText['received'];
+            } elseif ($value['transaction_payment_status'] == 'Completed') {
+                $last_status = $lastStatusText['pending'];
+            } elseif ($value['transaction_payment_status'] == 'Cancelled') {
+                $last_status = $lastStatusText['cancelled'];
+            } else {
+                $last_status = $lastStatusText['payment_pending'];
+            }
             $dataList['type'] = 'trx';
             $dataList['id'] = $value['id_transaction'] ?: 0;
             $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['transaction_date']));
