@@ -50,6 +50,8 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::post('summary', 'ApiReportPaymentController@summaryPaymentMethod');
             Route::post('summary/detail', 'ApiReportPaymentController@summaryDetailPaymentMethod');
             Route::post('summary/chart', 'ApiReportPaymentController@summaryChart');
+            Route::post('list', 'ApiReportPaymentController@listPayment');
+            Route::get('payments', 'ApiReportPaymentController@payments');
         });
     });
 
