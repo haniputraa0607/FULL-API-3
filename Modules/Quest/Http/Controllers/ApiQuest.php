@@ -27,14 +27,15 @@ class ApiQuest extends Controller
      */
     public function index()
     {
-        return view('quest::index');
+        $quests = Quest::paginate();
+        return MyHelper::checkGet($quests);
     }
 
     /**
      * Show the form for creating a new resource.
      * @return Response
      */
-    public function create(Request $request)
+    public function store(Request $request)
     {
         $post = $request->json()->all();
 
@@ -114,12 +115,13 @@ class ApiQuest extends Controller
             }
         }
         
-        if (isset($post['quest']) && date('Y-m-d H:i', strtotime($post['quest']['date_start'])) <= date('Y-m-d H:i')) {
-            $getUser = User::select('id')->get()->toArray();
-            foreach ($getUser as $key => $value) {
-                self::checkQuest($value['id'], $questDetail);
-            }
-        }
+        // if (isset($post['quest']) && date('Y-m-d H:i', strtotime($post['quest']['date_start'])) <= date('Y-m-d H:i')) {
+        //     $getUser = User::select('id')->get()->toArray();
+        //     $this->quest = $quest;
+        //     foreach ($getUser as $key => $value) {
+        //         $this->checkQuest($quest,$value['id'], $questDetail);
+        //     }
+        // }
 
         DB::commit();
 
@@ -137,10 +139,9 @@ class ApiQuest extends Controller
             ]);
         }
     }
-    public static function checkQuest($idUser, $detailQuest)
+    public function checkQuest($quest, $idUser, $detailQuest)
     {
         $questPassed = 0;
-        $quest = null;
         foreach ($detailQuest as $keyQuest => $quest) {
             $getTrxUser = Transaction::with('outlet.city.province', 'productTransaction')->where(['transactions.id_user' => $idUser, 'transactions.transaction_payment_status' => 'Completed'])->get()->toArray();
 
@@ -499,6 +500,7 @@ class ApiQuest extends Controller
                 'id_quest_detail'           => $quest['id_quest_detail'],
                 'id_user'                   => $idUser,
             ], [
+                'id_quest'                  => $quest['id_quest'],
                 'id_quest_detail'           => $quest['id_quest_detail'],
                 'id_user'                   => $idUser,
                 'json_rule'                 => json_encode([
@@ -526,16 +528,6 @@ class ApiQuest extends Controller
         }
 
         return ['status' => 'success'];
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     * @param Request $request
-     * @return Response
-     */
-    public function store(Request $request)
-    {
-        //
     }
 
     /**
@@ -611,5 +603,120 @@ class ApiQuest extends Controller
     public function destroy($id)
     {
         //
+    }
+
+    public function list(Request $request)
+    {
+        $id_user = $request->user()->id;
+        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'date_start', 'date_end', 'short_description', 'description')
+            ->leftJoin('quest_users', function($q) use ($id_user) {
+                $q->on('quest_users.id_quest', 'quests.id_quest')
+                    ->where('id_user', $id_user);
+            })
+            ->whereNull('quest_users.id_quest_user')
+            ->where('publish_start', '<=', date('Y-m-d H:i:s'))
+            ->where('publish_end', '>=', date('Y-m-d H:i:s'))
+            ->where('is_complete', 1);
+
+        if ($request->page) {
+            $quests = $quests->paginate();
+        } else {
+            $quests = $quests->get();
+        }
+
+        $quests->each(function($item) {
+            $item->append('contents', 'text_label');
+            $item->makeHidden(['date_start', 'date_end', 'quest_contents']);
+        });
+
+        $result = $quests->toArray();
+        return MyHelper::checkGet($result, "Belum ada misi saat ini.\nTunggu misi selanjutnya");
+    }
+
+    public function takeMission(Request $request)
+    {
+        $id_user = $request->user()->id;
+        $quest = Quest::select('quests.*', 'id_quest_user')
+            ->leftJoin('quest_users', function($q) use ($id_user) {
+                $q->on('quest_users.id_quest', 'quests.id_quest')
+                    ->where('id_user', $id_user);
+            })
+            ->where('quests.id_quest', MyHelper::decSlug($request['id_quest']) ?? $request->id_quest)
+            ->where('is_complete', 1)
+            ->first();
+        if ($quest['id_quest_user']) {
+            return [
+                'status' => 'fail',
+                'messages' => [
+                    'Misi sudah diambil'
+                ]
+            ];
+        }
+        if ($quest->date_start > date('Y-m-d H:i:s')) {
+            return [
+                'status' => 'fail',
+                'messages' => [
+                    'Misi belum dimulai'
+                ]
+            ];
+        }
+        if ($quest->date_end < date('Y-m-d H:i:s')) {
+            return [
+                'status' => 'fail',
+                'messages' => [
+                    'Misi sudah selesai'
+                ]
+            ];
+        }
+        $questDetail = QuestDetail::where(['id_quest' => MyHelper::decSlug($quest->id_quest)])->get();
+        $this->checkQuest($quest,$id_user, $questDetail);
+        return [
+            'status' => 'success',
+            'result' => [
+                'id_quest' => $quest->id_quest
+            ],
+        ];
+    }
+
+    public function me(Request $request)
+    {
+        $id_user = $request->user()->id;
+        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'date_start', 'date_end')
+            ->where('is_complete', 1)
+            ->where('publish_start', '<=', date('Y-m-d H:i:s'))
+            ->where('publish_end', '>=', date('Y-m-d H:i:s'))
+            ->groupBy('quests.id_quest')
+            ->join('quest_users', function($q) use ($id_user) {
+                $q->on('quest_users.id_quest', 'quests.id_quest')
+                    ->where('id_user', $id_user);
+            });
+
+        if ($request->page) {
+            $quests = $quests->paginate();
+        } else {
+            $quests = $quests->get();
+        }
+
+        $quests->each(function($item) {
+            $item->append(['progress']);
+            $item->makeHidden(['date_start']);
+        });
+
+        $result = $quests->toArray();
+        return MyHelper::checkGet($result, "Belum ada misi saat ini.\nMulai sebuah misi baru");
+    }
+
+    public function detail(Request $request)
+    {
+        $id_user = $request->user()->id;
+        $quest = Quest::select('quests.id_quest', 'name', 'image as image_url', 'description', 'date_end')
+            ->join('quest_users', function($q) use ($id_user) {
+                $q->on('quest_users.id_quest', 'quests.id_quest')
+                    ->where('id_user', $id_user);
+            })
+            ->where('quests.id_quest', MyHelper::decSlug($request['id_quest']) ?? $request->id_quest)
+            ->first();
+        $result = $quest->toArray();
+        return MyHelper::checkGet($result, "Quest tidak ditemukan");
     }
 }
