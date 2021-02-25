@@ -99,6 +99,7 @@ use Image;
 use Illuminate\Support\Facades\Log;
 use App\Exports\MultipleSheetExport;
 use Rap2hpoutre\FastExcel\FastExcel;
+use Illuminate\Support\Facades\Storage;
 
 use Modules\Franchise\Entities\ExportFranchiseQueue;
 
