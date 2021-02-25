@@ -29,5 +29,11 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::post('autoresponse', 'ApiUserFranchiseController@autoresponse');
             Route::post('autoresponse/new-user/update', 'ApiUserFranchiseController@updateAutoresponse');
         });
+
+        Route::group(['prefix' => 'report-payment'], function() {
+            Route::post('summary', 'ApiReportPaymentController@summaryPaymentMethod');
+            Route::post('summary/detail', 'ApiReportPaymentController@summaryDetailPaymentMethod');
+            Route::post('summary/chart', 'ApiReportPaymentController@summaryChart');
+        });
     });
 });
