@@ -99,6 +99,8 @@ use Image;
 use Illuminate\Support\Facades\Log;
 use App\Exports\MultipleSheetExport;
 use Rap2hpoutre\FastExcel\FastExcel;
+use Illuminate\Support\Facades\Storage;
+use File;
 
 use Modules\Franchise\Entities\ExportFranchiseQueue;
 
@@ -150,7 +152,7 @@ class ApiTransactionFranchiseController extends Controller
             ->whereDate('transactions.transaction_date', '>=', $start)
             ->whereDate('transactions.transaction_date', '<=', $end)
             ->where('transactions.transaction_payment_status', 'Completed')
-            ->whereNull('transaction_pickups.reject_at')
+            // ->whereNull('transaction_pickups.reject_at')
             ->with('user')
             // ->orderBy('transactions.id_transaction', 'DESC')
             ->groupBy('transactions.id_transaction');
@@ -1317,7 +1319,7 @@ class ApiTransactionFranchiseController extends Controller
                 ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
                 ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
                 ->where('transaction_payment_status', 'Completed')
-                ->whereNull('reject_at')
+                // ->whereNull('reject_at')
                 ->where('transactions.id_outlet', $getOutlet['id_outlet'])
                 ->whereDate('transactions.transaction_date', '>=',$start)
                 ->whereDate('transactions.transaction_date', '<=',$end)
@@ -1347,15 +1349,12 @@ class ApiTransactionFranchiseController extends Controller
 
 
                 if ($store) {
-                    $contents = storage_path('app/'.$directory);
+                	$path = storage_path('app/'.$directory);
+                    $contents = File::get($path);
 	                if(config('configs.STORAGE') != 'local'){
-	                    // $contents = File::get($path);
-                    	$contents = storage_path('app/'.$directory);
 	                    $store = Storage::disk(config('configs.STORAGE'))->put($directory, $contents, 'public');
-	                    if($store){
-	                        $delete = File::delete($contents);
-	                    }
 	                }
+	                $delete = File::delete($path);
                     ExportFranchiseQueue::where('id_export_franchise_queue', $queue['id_export_franchise_queue'])->update(['url_export' => $directory, 'status_export' => 'Ready']);
                 }
             }
@@ -1402,7 +1401,7 @@ class ApiTransactionFranchiseController extends Controller
             ->whereDate('transactions.transaction_date', '>=', $date_start)
             ->whereDate('transactions.transaction_date', '<=', $date_end)
             ->where('transactions.transaction_payment_status', 'Completed')
-            ->whereNull('transaction_pickups.reject_at')
+            // ->whereNull('transaction_pickups.reject_at')
             ->selectRaw('COUNT(transactions.id_transaction) total_trx, SUM(transactions.transaction_grandtotal) as total_gross_sales,
                         SUM(tps.subscription_nominal) as total_subscription, 
                         SUM(bundling_product_total_discount) as total_discount_bundling,
@@ -1426,7 +1425,7 @@ class ApiTransactionFranchiseController extends Controller
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->join('products as p', 'p.id_product', 'transaction_products.id_product')
             ->where('transaction_payment_status', 'Completed')
-            ->whereNull('reject_at')
+            // ->whereNull('reject_at')
             ->whereDate('transaction_date', '>=',$date_start)
             ->whereDate('transaction_date', '<=',$date_end)
             ->groupBy('transaction_products.id_product_variant_group')
@@ -1451,7 +1450,7 @@ class ApiTransactionFranchiseController extends Controller
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
             ->where('transaction_payment_status', 'Completed')
-            ->whereNull('reject_at')
+            // ->whereNull('reject_at')
             ->whereNull('transaction_product_modifiers.id_product_modifier_group')
             ->whereDate('transaction_date', '>=',$date_start)
             ->whereDate('transaction_date', '<=',$date_end)
@@ -1815,7 +1814,7 @@ class ApiTransactionFranchiseController extends Controller
                 $columnsVariant .= '<td style="background-color: #dcdcdc;" width="10">'.$v['product_variant_name'].'</td>';
                 $addAdditionalColumnVariant .= '<td></td>';
             }
-            $query->whereNull('reject_at');
+            // $query->whereNull('reject_at');
 
             $dataTrxDetail = '';
             $cek = '';
