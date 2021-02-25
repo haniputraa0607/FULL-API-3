@@ -89,7 +89,8 @@ class PromoCampaign extends Eloquent
         'is_all_payment',
         'product_rule',
         'brand_rule',
-        'product_type'
+        'product_type',
+        'promo_description'
 	];
 
 	public function user()
