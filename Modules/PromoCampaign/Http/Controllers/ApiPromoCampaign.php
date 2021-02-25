@@ -2866,6 +2866,10 @@ class ApiPromoCampaign extends Controller
 
     public function getPromoDescription($source, $query, $product)
     {
+    	if (!empty($query['promo_description'])) {
+    		return $query['promo_description'];
+    	}
+
     	$brand = $query['brand']['name_brand']??null;
 
     	$payment_text = null;
