@@ -2715,18 +2715,18 @@ class ApiOnlineTransaction extends Controller
             $plastic = app($this->plastic)->check($post);
             $result['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
             $result['plastic']['plastic_name'] = 'Kantong Belanja';
-            $result['plastic']['plastic_pop_up'] = 'Kantong Belanja Berbayar';
+            $result['plastic']['plastic_pop_up'] = 'Kantong Belanja Ramah Lingkungan';
             if($post['type'] == 'Pickup Order'){
                 $result['plastic']['is_checked'] = true;
                 $result['plastic']['is_mandatory'] = false;
-                $result['plastic']['info'] = "Harga kantong belanja akan dihitung berdasarkan jumlah item";
+                $result['plastic']['info'] = "Untuk mendukung #JanjiSayangBumi, outlet tidak menyediakan kantong sekali pakai";
                 if(!isset($post['is_plastic_checked']) || $post['is_plastic_checked'] == false){
                     $result['plastic']['plastic_price_total'] = 0;
                 }
             }elseif($post['type'] == 'GO-SEND'){
                 $result['plastic']['is_checked'] = true;
                 $result['plastic']['is_mandatory'] = true;
-                $result['plastic']['info'] = "Harga kantong belanja akan dihitung berdasarkan jumlah item";
+                $result['plastic']['info'] = "Untuk mendukung #JanjiSayangBumi, outlet tidak menyediakan kantong sekali pakai";
             }else{
                 return [
                     'status' => 'fail',
