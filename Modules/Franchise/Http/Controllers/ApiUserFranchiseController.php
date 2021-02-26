@@ -69,32 +69,38 @@ class ApiUserFranchiseController extends Controller
         $check = UserFranchise::where('email', $post['email'])->first();
 
         if(!$check){
-            $pin = MyHelper::createRandomPIN(6, 'angka');
+            if(isset($post['auto_generate_pin'])){
+                $pin = MyHelper::createRandomPIN(6, 'angka');
+            }else{
+                $pin = $post['pin'];
+            }
+
 
             $dataCreate = [
                 'name' => $post['name'],
                 'email' => $post['email'],
-                'phone' => $post['phone'],
                 'password' => bcrypt($pin),
-                'level' => $post['level']
+                'level' => $post['level'],
+                'user_franchise_status' => $post['user_franchise_status']??'Inactive'
             ];
 
             $create = UserFranchise::create($dataCreate);
             if($create){
-                UserFranchiseOultet::where('id_user_franchise' , $create['id_user_franchise'])->delete();
-                $createUserOutlet = UserFranchiseOultet::create(['id_user_franchise' => $create['id_user_franchise'], 'id_outlet' => $post['id_outlet']]);
-
-                if($createUserOutlet){
-                    $autocrm = app($this->autocrm)->SendAutoCRM(
-                        'New User Franchise',
-                        $post['email'],
-                        [
-                            'pin_franchise' => $pin,
-                            'email' => $post['email'],
-                            'name' => $post['name']
-                        ], null, false, false, 'franchise', 1
-                    );
+                if($post['level'] == 'Admin'){
+                    UserFranchiseOultet::where('id_user_franchise' , $create['id_user_franchise'])->delete();
+                    $createUserOutlet = UserFranchiseOultet::create(['id_user_franchise' => $create['id_user_franchise'], 'id_outlet' => $post['id_outlet']]);
                 }
+
+                $autocrm = app($this->autocrm)->SendAutoCRM(
+                    'New User Franchise',
+                    $post['email'],
+                    [
+                        'pin_franchise' => $pin,
+                        'email' => $post['email'],
+                        'name' => $post['name'],
+                        'url' => env('URL_PORTAL_MITRA')
+                    ], null, false, false, 'franchise', 1
+                );
             }
             return response()->json(MyHelper::checkCreate($create));
         }else{
@@ -121,17 +127,45 @@ class ApiUserFranchiseController extends Controller
                 return response()->json(['status' => 'fail', 'message' => 'Wrong input your password']);
             }
 
+
             $dataUpdate = [
                 'name' => $post['name'],
                 'email' => $post['email'],
-                'phone' => $post['phone'],
-                'level' => $post['level']
+                'level' => $post['level'],
+                'user_franchise_status' => $post['user_franchise_status']??'Inactive'
             ];
+            $sendCrm = 0;
+            if(isset($post['reset_pin'])){
+                $pin = MyHelper::createRandomPIN(6, 'angka');
+                $dataUpdate['password'] = bcrypt($pin);
+                $dataUpdate['first_update_password'] =0;
+                $sendCrm = 1;
+            }elseif(isset($post['pin']) && !empty($post['pin'])){
+                $pin = $post['pin'];
+                $dataUpdate['password'] = bcrypt($pin);
+                $dataUpdate['first_update_password'] =0;
+                $sendCrm = 1;
+            }
 
             $update = UserFranchise::where('id_user_franchise', $post['id_user_franchise'])->update($dataUpdate);
             if($update){
                 UserFranchiseOultet::where('id_user_franchise' , $post['id_user_franchise'])->delete();
-                $createUserOutlet = UserFranchiseOultet::create(['id_user_franchise' => $post['id_user_franchise'], 'id_outlet' => $post['id_outlet']]);
+                if($post['level'] == 'Admin'){
+                    $createUserOutlet = UserFranchiseOultet::create(['id_user_franchise' => $post['id_user_franchise'], 'id_outlet' => $post['id_outlet']]);
+                }
+
+                if($sendCrm == 1){
+                    $autocrm = app($this->autocrm)->SendAutoCRM(
+                        'Reset Pin User Franchise',
+                        $post['email'],
+                        [
+                            'pin_franchise' => $pin,
+                            'email' => $post['email'],
+                            'name' => $post['name'],
+                            'url' => env('URL_PORTAL_MITRA')
+                        ], null, false, false, 'franchise', 1
+                    );
+                }
             }
             return response()->json(MyHelper::checkUpdate($update));
         }else{
@@ -217,31 +251,37 @@ class ApiUserFranchiseController extends Controller
 
     function updateProfile(Request $request){
         $post = $request->json()->all();
-
-        if(!empty($post['password']) && $post['password'] != $post['password2']){
-            return response()->json(['status' => 'fail', 'messages' => ["Password don't match"]]);
+        if(empty($post['current_pin'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Your pin can not be empty ']]);
         }
-        $checkEmail = UserFranchise::where('email', $post['email'])->first();
-        $checkPhone = UserFranchise::where('phone', $post['phone'])->first();
         $dataAdmin = UserFranchise::where('id_user_franchise', auth()->user()->id_user_franchise)->first();
 
-        if($checkEmail && $checkEmail['id_user_franchise'] != auth()->user()->id_user_franchise){
-            return response()->json(['status' => 'fail', 'messages' => ["email already use"]]);
+        if(!password_verify($post['current_pin'], $dataAdmin['password'])){
+            return response()->json(['status' => 'fail', 'message' => 'Wrong input your pin']);
         }
 
-        if($checkPhone && $checkPhone['id_user_franchise'] != auth()->user()->id_user_franchise){
-            return response()->json(['status' => 'fail', 'messages' => ["phone already use"]]);
+        if(!empty($post['password']) && $post['password'] != $post['password2']){
+            return response()->json(['status' => 'fail', 'messages' => ["Pin don't match"]]);
+        }
+        $checkEmail = UserFranchise::where('email', $post['email'])->first();
+        $dataAdmin = UserFranchise::where('id_user_franchise', auth()->user()->id_user_franchise)->first();
+
+        if(empty($dataAdmin)){
+            return response()->json(['status' => 'fail', 'messages' => ["User not found"]]);
+        }
+
+        if($checkEmail && $checkEmail['id_user_franchise'] != $dataAdmin['id_user_franchise']){
+            return response()->json(['status' => 'fail', 'messages' => ["email already use"]]);
         }
 
         $dataUpdate = [
             'name' => $post['name'],
-            'email' => $post['email'],
-            'phone' => $post['phone']
+            'email' => $post['email']
         ];
         if(!empty($post['password'])){
             $dataUpdate['password'] =  bcrypt($post['password']);
         }
-        $update = UserFranchise::where('id_user_franchise', auth()->user()->id_user_franchise)->update($dataUpdate);
+        $update = UserFranchise::where('id_user_franchise', $dataAdmin['id_user_franchise'])->update($dataUpdate);
 
         return response()->json(MyHelper::checkUpdate($update));
     }
