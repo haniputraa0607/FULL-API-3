@@ -375,6 +375,11 @@ class ApiPromoCampaign extends Controller
                 $total->leftJoin(...$value);
             }
             $promoCampaign['total2'] = $total2->count();
+            $getProduct = $this->getProduct('promo_campaign',$promoCampaign);
+    		$desc = $this->getPromoDescription('promo_campaign', $promoCampaign, $getProduct['product']??'', true);
+
+    		$promoCampaign['description'] = $desc;
+
             $result = [
                 'status'  => 'success',
                 'result'  => $promoCampaign
@@ -2864,9 +2869,9 @@ class ApiPromoCampaign extends Controller
         return $result;
     }
 
-    public function getPromoDescription($source, $query, $product)
+    public function getPromoDescription($source, $query, $product, $use_global = false)
     {
-    	if (!empty($query['promo_description'])) {
+    	if (!empty($query['promo_description']) && !$use_global) {
     		return $query['promo_description'];
     	}
 

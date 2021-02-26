@@ -632,4 +632,40 @@ class ApiPromo extends Controller
 
     	return $extend;
     }
+
+    public function updatePromoDescription(Request $request)
+    {
+    	$post = $request->json()->all();
+    	$error_msg = [];
+
+        if (!empty($error_msg)) {
+        	return [
+        		'status' => 'fail',
+        		'messages' => $error_msg
+        	];
+        }
+
+    	if (isset($post['id_deals'])) {
+    		$table 		= new Deal;
+    		$id_table 	= 'id_deals';
+    		$id_post 	= $post['id_deals'];
+    	}
+    	if (isset($post['id_promo_campaign'])) {
+    		$table 		= new PromoCampaign;
+    		$id_table 	= 'id_promo_campaign';
+    		$id_post 	= $post['id_promo_campaign'];
+    	}
+    	if (isset($post['id_subscription'])) {
+    		$table 		= new Subscription;
+    		$id_table 	= 'id_subscription';
+    		$id_post 	= $post['id_subscription'];
+    	}
+
+    	$data['promo_description'] = $post['promo_description'];
+    	$update = $table::where($id_table,$id_post)->update($data);
+
+    	$update = MyHelper::checkUpdate($update);
+
+    	return $update;
+    }
 }
