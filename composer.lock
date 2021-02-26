@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "415c70746974a0ddde59a12aa791a440",
+    "content-hash": "fd5f870b82cc9012ad244412a5a5c29d",
     "packages": [
         {
             "name": "aliyuncs/oss-sdk-php",
@@ -564,6 +564,47 @@
                 "stream_filter_register"
             ],
             "time": "2019-04-09T12:31:48+00:00"
+        },
+        {
+            "name": "cmdisp/monolog-microsoft-teams",
+            "version": "1.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/cmdisp/monolog-microsoft-teams.git",
+                "reference": "153da40534cb4836f9a49baa3507ac0ac17be93e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/cmdisp/monolog-microsoft-teams/zipball/153da40534cb4836f9a49baa3507ac0ac17be93e",
+                "reference": "153da40534cb4836f9a49baa3507ac0ac17be93e",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-json": "*",
+                "monolog/monolog": "^1.23|^2.0",
+                "php": "^7.2|^8.0"
+            },
+            "require-dev": {
+                "php-coveralls/php-coveralls": "^2.0",
+                "phpunit/phpunit": "^9.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "CMDISP\\MonologMicrosoftTeams\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Monolog Handler for sending messages to Microsoft Teams using the Incoming Webhook connector",
+            "support": {
+                "issues": "https://github.com/cmdisp/monolog-microsoft-teams/issues",
+                "source": "https://github.com/cmdisp/monolog-microsoft-teams/tree/1.2.0"
+            },
+            "time": "2021-01-29T12:52:00+00:00"
         },
         {
             "name": "defuse/php-encryption",
@@ -9493,5 +9534,6 @@
     "platform": {
         "php": "^7.1.3"
     },
-    "platform-dev": []
+    "platform-dev": [],
+    "plugin-api-version": "2.0.0"
 }

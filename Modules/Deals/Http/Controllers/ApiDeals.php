@@ -1658,6 +1658,15 @@ class ApiDeals extends Controller
 
         $deals = $deals->first();
 
+        if ($deals) {
+        	if ($post['step'] == 'all') {
+	        	$deals_array = $deals->toArray();
+	        	$getProduct = app($this->promo_campaign)->getProduct('deals',$deals_array);
+	    		$desc = app($this->promo_campaign)->getPromoDescription('deals', $deals_array, $getProduct['product']??'', true);
+	    		$deals['description'] = $desc;
+        	}
+        }
+
         if ($deals_type != 'Promotion' && $post['step'] == 'all') {
         	$used_voucher = DealsVoucher::join('transaction_vouchers', 'deals_vouchers.id_deals_voucher', 'transaction_vouchers.id_deals_voucher')
         					->where('id_deals', $deals->id_deals)

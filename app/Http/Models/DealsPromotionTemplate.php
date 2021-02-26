@@ -67,7 +67,8 @@ class DealsPromotionTemplate extends Model
         'is_all_payment',
         'product_rule',
         'brand_rule',
-        'is_all_outlet'
+        'is_all_outlet',
+        'promo_description'
 	];
 
 	public function deals_promotion_buyxgety_product_requirement()
