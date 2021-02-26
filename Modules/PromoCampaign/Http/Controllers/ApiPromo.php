@@ -44,6 +44,7 @@ use App\Http\Models\Voucher;
 use App\Http\Models\Treatment;
 use App\Http\Models\Deal;
 use App\Http\Models\DealsUser;
+use App\Http\Models\DealsPromotionTemplate;
 
 use Modules\PromoCampaign\Http\Requests\Step1PromoCampaignRequest;
 use Modules\PromoCampaign\Http\Requests\Step2PromoCampaignRequest;
@@ -659,6 +660,11 @@ class ApiPromo extends Controller
     		$table 		= new Subscription;
     		$id_table 	= 'id_subscription';
     		$id_post 	= $post['id_subscription'];
+    	}
+    	if (isset($post['id_deals_promotion_template'])) {
+    		$table 		= new DealsPromotionTemplate;
+    		$id_table 	= 'id_deals_promotion_template';
+    		$id_post 	= $post['id_deals_promotion_template'];
     	}
 
     	$data['promo_description'] = $post['promo_description'];
