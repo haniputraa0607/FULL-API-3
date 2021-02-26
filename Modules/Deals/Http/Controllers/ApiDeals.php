@@ -1659,8 +1659,8 @@ class ApiDeals extends Controller
         $deals = $deals->first();
 
         if ($deals) {
-        	$getProduct = app($this->promo_campaign)->getProduct('promo_campaign',$deals);
-    		$desc = app($this->promo_campaign)->getPromoDescription('promo_campaign', $deals, $getProduct['product']??'', true);
+        	$getProduct = app($this->promo_campaign)->getProduct('deals',$deals);
+    		$desc = app($this->promo_campaign)->getPromoDescription('deals', $deals, $getProduct['product']??'', true);
     		$deals['description'] = $desc;
         }
 
