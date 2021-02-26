@@ -10,6 +10,7 @@
         "arcanedev/log-viewer": "~4.7.0",
         "bogardo/mailgun": "^5.1",
         "brozot/laravel-fcm": "^1.2",
+        "cmdisp/monolog-microsoft-teams": "^1.2",
         "doctrine/dbal": "^2.9",
         "fideloper/proxy": "^4.0",
         "fruitcake/laravel-cors": "^1.0",
