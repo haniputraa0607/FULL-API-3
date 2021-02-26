@@ -2792,7 +2792,7 @@ class ApiPromoCampaign extends Controller
 	    		$applied_product = $query[$source.'_product_discount'] ?: $query[$source.'_tier_discount_product'] ?: $query[$source.'_buyxgety_product_requirement'] ?: $query[$source.'_discount_bill_products'] ?: [];
 
 	    		if(empty($applied_product)){
-	        		$product = [];
+	        		$product = null;
 	    		}elseif (count($applied_product) == 1) {
 	        		$product = $applied_product[0]['product']['product_name'] ?? $default_product;
 	        		if (isset($applied_product[0]['id_product_variant_group'])) {
