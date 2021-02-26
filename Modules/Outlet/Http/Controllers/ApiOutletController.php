@@ -2,6 +2,7 @@
 
 namespace Modules\Outlet\Http\Controllers;
 
+use App\Jobs\SyncronPlasticTypeOutlet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -26,8 +27,8 @@ use App\Http\Models\ProductPrice;
 use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
-use Modules\Disburse\Entities\UserFranchise;
-use Modules\Disburse\Entities\UserFranchiseOultet;
+use Modules\Franchise\Entities\UserFranchise;
+use Modules\Franchise\Entities\UserFranchiseOultet;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
 
 use App\Imports\ExcelImport;
@@ -245,7 +246,7 @@ class ApiOutletController extends Controller
         }
 
         DB::commit();
-
+        SyncronPlasticTypeOutlet::dispatch([])->allOnConnection('database');
         // sent pin to outlet
         if (isset($request->outlet_email)) {
         	$variable = $save->toArray();
@@ -294,6 +295,7 @@ class ApiOutletController extends Controller
         // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
         if($save){
             DB::commit();
+            SyncronPlasticTypeOutlet::dispatch([])->allOnConnection('database');
         }else{
             DB::rollBack();
         }
@@ -2006,8 +2008,7 @@ class ApiOutletController extends Controller
                             WHEN delivery_order = 1 THEN "Active"
                             ELSE "Inactive"
                         END) as "delivery"'),
-                'outlets.time_zone_utc',
-                'outlets.plastic_used_status as plastic_used'
+                'outlets.time_zone_utc'
             )->with('brands')->join('cities', 'outlets.id_city', '=', 'cities.id_city');
 
             foreach ($brand as $bran) {
@@ -2146,9 +2147,6 @@ class ApiOutletController extends Controller
                             'time_zone_utc' => $value['time_zone_utc']??7
                         ];
 
-                        if(isset($value['plastic_used'])){
-                            $insert['plastic_used_status'] = $value['plastic_used'];
-                        }
                         //insert status
                         if(isset($value['outlet_status'])){
                             $insert['outlet_status'] = $value['outlet_status'];
@@ -2215,6 +2213,7 @@ class ApiOutletController extends Controller
             	SendOutletJob::dispatch($queue_data)->allOnConnection('outletqueue');
             }
             DB::commit();
+            SyncronPlasticTypeOutlet::dispatch([])->allOnConnection('database');
 
             if(count($failedImport) > 0){
                 return ['status' => 'fail','messages' => [$failedImport]];

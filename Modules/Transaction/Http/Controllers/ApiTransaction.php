@@ -2126,6 +2126,40 @@ class ApiTransaction extends Controller
 
                     $sub = 0;
                     if($key == ($count-1) || (isset($get[$key+1]['transaction_receipt_number']) && $val['transaction_receipt_number'] != $get[$key+1]['transaction_receipt_number'])){
+                        //for product plastic
+                        $productPlastics = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
+                                            ->where('id_transaction', $val['id_transaction'])->where('type', 'Plastic')
+                                            ->get()->toArray();
+
+                        foreach ($productPlastics as $plastic){
+                            for($j=0;$j<$plastic['transaction_product_qty'];$j++){
+                                $html .= '<tr>';
+                                $html .= $sameData;
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= $addAdditionalColumn;
+                                $html .= '<td>'.$plastic['product_name']??''.'</td>';
+                                $html .= $addAdditionalColumnVariant;
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
+                                $html .= '<td>0</td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
+                                $html .= '<td>0</td>';
+                                $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
+                                $html .= '<td></td><td></td><td></td>';
+                                if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                    $html .= '<td></td><td></td><td></td>';
+                                }
+                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                $html .= '</tr>';
+                            }
+                        }
+
                         if(!empty($val['transaction_payment_subscription'])) {
                             $getSubcription = SubscriptionUserVoucher::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                                 ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
@@ -2542,14 +2576,12 @@ class ApiTransaction extends Controller
                     $basePriceBundling = $basePriceBundling + ($productBasePrice * $bp['transaction_product_bundling_qty']);
                     $subTotalBundlingWithoutModifier = $subTotalBundlingWithoutModifier + (($bp['transaction_product_subtotal'] - ($bp['transaction_modifier_subtotal'] * $bp['transaction_product_bundling_qty'])));
                     $subItemBundlingWithoutModifie = $subItemBundlingWithoutModifie + ($bp['transaction_product_bundling_price'] * $bp['transaction_product_bundling_qty']);
+                    $quantityItemBundling = $quantityItemBundling + $bp['transaction_product_qty'];
                 }
                 $listItemBundling[$key]['bundling_price_no_discount'] = $basePriceBundling * $bundling['transaction_bundling_product_qty'];
                 $listItemBundling[$key]['bundling_subtotal'] = $subTotalBundlingWithoutModifier * $bundling['transaction_bundling_product_qty'];
                 $listItemBundling[$key]['bundling_sub_item'] = '@'.MyHelper::requestNumber($subItemBundlingWithoutModifie,'_CURRENCY');
-
-                $quantityItemBundling = $quantityItemBundling + ($bp['transaction_product_bundling_qty'] * $bundling['transaction_bundling_product_qty']);
             }
-
             $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
                 $product_count += array_sum(array_column($val,'transaction_product_qty'));
                 $brand = Brand::select('name_brand')->find($key);
@@ -3072,19 +3104,32 @@ class ApiTransaction extends Controller
                 $keynya++;
             }
 
+            $result['plastic_transaction_detail'] = [];
+            $result['plastic_name'] = '';
+            $quantityPlastic = 0;
             if(isset($list['plastic_transaction'])){
+                $result['plastic_name'] = 'Kantong Belanja';
                 $subtotal_plastic = 0;
                 foreach($list['plastic_transaction'] as $key => $value){
+                    $quantityPlastic = $quantityPlastic + $value['transaction_product_qty'];
                     $subtotal_plastic += $value['transaction_product_subtotal'];
+
+                    $result['plastic_transaction_detail'][] = [
+                        'plastic_name' => $value['product']['product_name'],
+                        'plasctic_qty' => $value['transaction_product_qty'],
+                        'plastic_base_price' => '@'.MyHelper::requestNumber((int)$value['transaction_product_price'],'_CURRENCY'),
+                        'plasctic_subtotal' => MyHelper::requestNumber($value['transaction_product_subtotal'],'_CURRENCY')
+                    ];
                 }
 
                 $result['plastic_transaction'] = [];
                 $result['plastic_transaction']['transaction_plastic_total'] = $subtotal_plastic;
             }
 
+            $totalItem = $quantity+$quantityItemBundling+$quantityPlastic;
             $result['payment_detail'][] = [
                 'name'      => 'Subtotal',
-                'desc'      => $quantity+$quantityItemBundling . ' items',
+                'desc'      => $totalItem . ' items',
                 'amount'    => MyHelper::requestNumber($list['transaction_subtotal'],'_CURRENCY')
             ];
 
@@ -3443,6 +3488,7 @@ class ApiTransaction extends Controller
             '))
             ->join('products','products.id_product','=','transaction_products.id_product')
             ->join('outlets','outlets.id_outlet','=','transaction_products.id_outlet')
+            ->where('transaction_products.type', 'product')
             ->whereNull('id_transaction_bundling_product')
             ->where(['id_transaction'=>$id_transaction])
             ->with(['modifiers'=>function($query){

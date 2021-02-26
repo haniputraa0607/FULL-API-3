@@ -4,6 +4,7 @@ namespace Modules\Plastic\Http\Controllers;
 
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
+use App\Http\Models\Setting;
 use App\Http\Models\TransactionProduct;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -11,8 +12,11 @@ use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
 use Modules\Brand\Entities\Brand;
+use Modules\Plastic\Entities\PlasticTypeOutlet;
+use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
+use Modules\Product\Entities\ProductStockStatusUpdate;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Validator;
 use Hash;
@@ -26,7 +30,10 @@ class ApiProductPlasticController extends Controller
     }
 
     function index(){
-        $data = Product::where('product_type', 'plastic')->get()->toArray();
+        $data = Product::where('product_type', 'plastic')
+            ->leftJoin('plastic_type', 'products.id_plastic_type', 'plastic_type.id_plastic_type')
+            ->select('products.*', 'plastic_type.plastic_type_name')
+            ->get()->toArray();
 
         foreach ($data as $key => $dt){
             $globalPrice = ProductGlobalPrice::where('id_product', $dt['id_product'])->first();
@@ -135,7 +142,8 @@ class ApiProductPlasticController extends Controller
     function exportProduct(Request $request){
         $post = $request->json()->all();
 
-        $data = Product::where('product_type', 'product')->where('product_visibility', 'Visible')
+        $data = Product::where('product_type', 'product')
+                ->where('product_variant_status', 0)
                 ->select('product_code', 'product_name', 'plastic_used as total_use_plastic');
         $dataBrand = [];
         if(isset($post['id_brand']) && !empty($post['id_brand'])){
@@ -376,10 +384,10 @@ class ApiProductPlasticController extends Controller
             }
 
             $product = Product::where('product_code', $value['product_plastic_code'])->first();
-            \Log::info($product);
+
             if(!$product){
                 $result['not_found']++;
-                $result['more_msg_extended'][] = "Product with product code {$value['product_plastic_code']} in selected brand not found";
+                $result['more_msg_extended'][] = "Product with product code {$value['product_plastic_code']}";
                 continue;
             }
 
@@ -400,7 +408,7 @@ class ApiProductPlasticController extends Controller
                 }else{
                     if($update !== 0){
                         $result['updated_price_fail']++;
-                        $result['more_msg_extended'][] = "Failed set price for product {$value['product_plastic_code']} at outlet {$outlet->outlet_code} failed";
+                        $result['more_msg_extended'][] = "Failed set price for product {$value['product_plastic_code']}";
                     }
                 }
             }
@@ -478,5 +486,180 @@ class ApiProductPlasticController extends Controller
         }
         $response = array_merge($response,$result['more_msg_extended']);
         return MyHelper::checkGet($response);
+    }
+
+    function exportPlaticStatusOutlet(){
+        $outlets = Outlet::select('outlets.outlet_code',
+                    'outlets.outlet_name',
+                    'outlets.plastic_used_status as plastic_status')->get()->toArray();
+
+        foreach ($outlets as $key => $o){
+            unset($outlets[$key]['call']);
+            unset($outlets[$key]['url']);
+        }
+
+        return response()->json(MyHelper::checkGet($outlets));
+    }
+
+    function importPlaticStatusOutlet(Request $request){
+        $post = $request->json()->all();
+        $result = [
+            'invalid' => 0,
+            'updated' => 0,
+            'failed' => 0,
+            'not_found' => 0,
+            'more_msg' => [],
+            'more_msg_extended' => []
+        ];
+        $data = $post['data'][0]??[];
+
+        foreach ($data as $key => $value) {
+            if(empty($value['outlet_code'])){
+                $result['invalid']++;
+                continue;
+            }
+
+            $outlet = Outlet::where('outlet_code', $value['outlet_code'])->first();
+
+            if(!$outlet){
+                $result['not_found']++;
+                $result['more_msg_extended'][] = "Outlet not found with code {$value['outlet_code']}";
+                continue;
+            }
+
+            $update = Outlet::where('id_outlet', $outlet['id_outlet'])->update(['plastic_used_status' => $value['plastic_status']??'Inactive']);
+            if($update){
+                $result['updated']++;
+            }else{
+                $result['failed']++;
+                $result['more_msg_extended'][] = "Failed set plastic status for outlet {$value['outlet_code']}";
+            }
+        }
+
+        $response = [];
+
+        if($result['updated']){
+            $response[] = 'Update '.$result['updated'].' product';
+        }
+        if($result['invalid']){
+            $response[] = $result['invalid'].' row data invalid';
+        }
+        if($result['not_found']){
+            $response[] = $result['not_found'].' product not found';
+        }
+        if($result['failed']){
+            $response[] = 'Failed create '.$result['failed'].' product';
+        }
+
+        $response = array_merge($response,$result['more_msg_extended']);
+        return MyHelper::checkGet($response);
+    }
+
+    public function listProductByOutlet(Request $request){
+        $post = $request->json()->all();
+        $outlet = Outlet::where('id_outlet', $post['id_outlet'])->first();
+
+        if($outlet['plastic_used_status'] == 'Inactive'){
+            return response()->json(MyHelper::checkGet([]));
+        }
+
+        $plastic_type = PlasticTypeOutlet::join('plastic_type', 'plastic_type.id_plastic_type', 'plastic_type_outlet.id_plastic_type')
+            ->groupBy('plastic_type_outlet.id_plastic_type')
+            ->where('id_outlet', $outlet['id_outlet'])->orderBy('plastic_type_order', 'asc')->first();
+
+        $plastics = [];
+        if($plastic_type['id_plastic_type']??NULL){
+            $plastics = Product::where('product_type', 'plastic')
+                ->leftJoin('product_detail', 'products.id_product', 'product_detail.id_product')
+                ->join('plastic_type', 'plastic_type.id_plastic_type', 'products.id_plastic_type')
+                ->where(function ($sub) use($outlet){
+                    $sub->whereNull('product_detail.id_outlet')
+                        ->orWhere('product_detail.id_outlet', $outlet['id_outlet']);
+                })
+                ->where('products.id_plastic_type', $plastic_type['id_plastic_type'])
+                ->where('product_visibility', 'Visible')
+                ->select('plastic_type_name', 'products.id_product', 'products.product_code', 'products.product_name',
+                    DB::raw('(CASE WHEN product_detail.product_detail_stock_status is NULL THEN "Available"
+                        ELSE product_detail.product_detail_stock_status END) as product_stock_status'))->paginate(10);
+        }
+
+        return response()->json(MyHelper::checkGet($plastics));
+    }
+
+    public function updateStock(Request $request){
+        $post = $request->json()->all();
+        $outlet = Outlet::where('id_outlet', $post['id_outlet'])->first();
+
+        if(isset($post['sameall']) && !empty($post['sameall'])){
+            $plastic_type = PlasticTypeOutlet::join('plastic_type', 'plastic_type.id_plastic_type', 'plastic_type_outlet.id_plastic_type')
+                ->groupBy('plastic_type_outlet.id_plastic_type')
+                ->where('id_outlet', $outlet['id_outlet'])->orderBy('plastic_type_order', 'asc')->first();
+
+            $plastics = [];
+            if($plastic_type['id_plastic_type']??NULL){
+                $plastics = Product::where('product_type', 'plastic')
+                    ->leftJoin('product_detail', 'products.id_product', 'product_detail.id_product')
+                    ->join('plastic_type', 'plastic_type.id_plastic_type', 'products.id_plastic_type')
+                    ->where(function ($sub) use($outlet){
+                        $sub->whereNull('product_detail.id_outlet')
+                            ->orWhere('product_detail.id_outlet', $outlet['id_outlet']);
+                    })
+                    ->where('products.id_plastic_type', $plastic_type['id_plastic_type'])
+                    ->where('product_visibility', 'Visible')
+                    ->pluck('products.id_product')->toArray();
+
+                foreach ($plastics as $id_product){
+                    $product = ProductDetail::where([
+                        'id_product' => $id_product,
+                        'id_outlet'  => $outlet['id_outlet']
+                    ])->first();
+
+                    if(($post['product_stock_status']??false) && (($post['product_stock_status']??false) != $product['product_detail_stock_status']??false)){
+                        $create = ProductStockStatusUpdate::create([
+                            'id_product' => $id_product,
+                            'id_user' => $post['id_user'],
+                            'user_type' => 'users',
+                            'id_outlet' => $outlet['id_outlet'],
+                            'date_time' => date('Y-m-d H:i:s'),
+                            'new_status' => $post['product_stock_status'],
+                            'id_outlet_app_otp' => null
+                        ]);
+                    }
+
+                    $save = ProductDetail::updateOrCreate([
+                        'id_product' => $id_product,
+                        'id_outlet'  => $outlet['id_outlet']
+                    ], [
+                        'product_detail_visibility'  => 'Visible',
+                        'product_detail_stock_status' => $post['product_stock_status']]);
+                }
+            }
+        }else{
+            $product = ProductDetail::where([
+                'id_product' => $post['id_product'],
+                'id_outlet'  => $outlet['id_outlet']
+            ])->first();
+
+            if(($post['product_stock_status']??false) && (($post['product_stock_status']??false) != $product['product_detail_stock_status']??false)){
+                $create = ProductStockStatusUpdate::create([
+                    'id_product' => $post['id_product'],
+                    'id_user' => $post['id_user'],
+                    'user_type' => 'users',
+                    'id_outlet' => $outlet['id_outlet'],
+                    'date_time' => date('Y-m-d H:i:s'),
+                    'new_status' => $post['product_stock_status'],
+                    'id_outlet_app_otp' => null
+                ]);
+            }
+
+            $save = ProductDetail::updateOrCreate([
+                'id_product' => $post['id_product'],
+                'id_outlet'  => $outlet['id_outlet']
+            ], [
+                'product_detail_visibility'  => 'Visible',
+                'product_detail_stock_status' => $post['product_stock_status']]);
+        }
+
+        return response()->json(MyHelper::checkUpdate($save));
     }
 }

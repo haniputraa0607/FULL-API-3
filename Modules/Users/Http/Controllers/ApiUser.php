@@ -2741,11 +2741,10 @@ class ApiUser extends Controller
 
         $query = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
             ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
-            ->with('history_transactions.outlet_name', 'history_balance.detail_trx', 'user_membership')
+            ->with('history_transactions.outlet_name', 'history_transactions.transaction_pickup', 'history_balance.detail_trx', 'user_membership')
             ->where('phone', '=', $post['phone'])
             ->get()
             ->first();
-
 
         if ($query) {
 
@@ -2763,7 +2762,7 @@ class ApiUser extends Controller
                 ->whereNull('taken_at')
                 ->whereNull('reject_at')
                 ->where('id_user', $query['id'])
-                ->select('transactions.id_transaction', 'transaction_receipt_number', 'trasaction_type', 'transaction_grandtotal', 'transaction_payment_status', 'transaction_date', 'receive_at', 'ready_at', 'taken_at', 'reject_at')
+                ->select('transactions.id_transaction', 'id_outlet', 'transaction_receipt_number', 'trasaction_type', 'transaction_grandtotal', 'transaction_payment_status', 'transaction_date', 'receive_at', 'ready_at', 'taken_at', 'reject_at', 'pickup_by', 'reject_reason')
                 ->orderBy('transaction_date', 'DESC')
                 ->get();
 

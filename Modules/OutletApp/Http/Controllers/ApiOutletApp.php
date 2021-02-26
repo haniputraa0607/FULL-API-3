@@ -50,6 +50,7 @@ use Modules\OutletApp\Http\Requests\ProductSoldOut;
 use Modules\OutletApp\Http\Requests\UpdateToken;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
 use Modules\OutletApp\Jobs\AchievementCheck;
+use Modules\Plastic\Entities\PlasticTypeOutlet;
 use Modules\Product\Entities\ProductDetail;
 use App\Http\Models\ProductModifierDetail;
 use Modules\Product\Entities\ProductStockStatusUpdate;
@@ -1558,6 +1559,7 @@ class ApiOutletApp extends Controller
             ->where('product_prices.product_visibility', '=', 'Visible')
             ->where('product_prices.product_status', '=', 'Active')
             ->with('product_category')
+            ->where('product_type', 'product')
         // ->select('id_product_category', 'product_category_name')
             ->get();
 
@@ -2120,13 +2122,13 @@ class ApiOutletApp extends Controller
         $keyword        = $request->json('search_order_id');
         $perpage        = $request->json('perpage');
         $request_number = $request->json('request_number') ?: 'thousand_id';
-        $data           = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%Y-%m-%d") as trx_date,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,count(*) as total_products,transaction_grandtotal'))
+        $data           = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%Y-%m-%d") as trx_date,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,SUM(transaction_product_qty) as total_products,transaction_grandtotal'))
             ->where('transactions.id_outlet', $request->user()->id_outlet)
             ->where('trasaction_type', 'Pickup Order')
             ->join('transaction_pickups', 'transactions.id_transaction', '=', 'transaction_pickups.id_transaction')
             ->whereDate('transaction_date', $trx_date)
             ->join('transaction_products', 'transaction_products.id_transaction', '=', 'transactions.id_transaction')
-            ->groupBy('transactions.id_transaction');
+            ->groupBy('transaction_products.id_transaction');
 
         if ($trx_status == 'taken') {
             $data->where('transaction_payment_status', 'Completed')
@@ -3031,8 +3033,19 @@ class ApiOutletApp extends Controller
                 $result['transaction_status']      = 6;
                 $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
             } elseif ($list['detail']['reject_at'] != null) {
+                $reason = $list['detail']['reject_reason'];
+                if (strpos($reason, 'auto reject order') !== false) {
+                    if (strpos($reason, 'no driver') !== false) {
+                        $reason = 'Driver tidak ditemukan';
+                    } elseif (strpos($reason, 'not ready') !== false) {
+                        $reason = 'Auto reject sistem karena tidak diproses ready';
+                    } else {
+                        $reason = 'Auto reject sistem karena tidak diterima';
+                    }
+                }
+                if($reason) $reason = "\n$reason";
                 $result['transaction_status']      = 0;
-                $result['transaction_status_text'] = 'ORDER ANDA DITOLAK';
+                $result['transaction_status_text'] = "ORDER DITOLAK$reason";
             } elseif ($list['detail']['taken_by_system_at'] != null) {
                 $result['transaction_status']      = 1;
                 $result['transaction_status_text'] = 'ORDER SELESAI';
@@ -3523,6 +3536,7 @@ class ApiOutletApp extends Controller
         $list = Transaction::where([['transactions.id_transaction', $id]])->leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->with([
             // 'user.city.province',
             'user',
+            'plasticTransaction.product',
             'productTransaction.product.product_category',
             'productTransaction.modifiers' => function($query) {
                 $query->orderByRaw('CASE WHEN id_product_modifier_group IS NULL THEN 1 ELSE 0 END');
@@ -3897,8 +3911,19 @@ class ApiOutletApp extends Controller
                 $result['transaction_status']      = 6;
                 $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
             } elseif ($list['detail']['reject_at'] != null) {
+                $reason = $list['detail']['reject_reason'];
+                if (strpos($reason, 'auto reject order') !== false) {
+                    if (strpos($reason, 'no driver') !== false) {
+                        $reason = 'Driver tidak ditemukan';
+                    } elseif (strpos($reason, 'not ready') !== false) {
+                        $reason = 'Auto reject sistem karena tidak diproses ready';
+                    } else {
+                        $reason = 'Auto reject sistem karena tidak diterima';
+                    }
+                }
+                if($reason) $reason = "\n$reason";
                 $result['transaction_status']      = 0;
-                $result['transaction_status_text'] = 'ORDER ANDA DITOLAK';
+                $result['transaction_status_text'] = "ORDER DITOLAK$reason";
             } elseif ($list['detail']['taken_by_system_at'] != null) {
                 $result['transaction_status']      = 1;
                 $result['transaction_status_text'] = 'ORDER SELESAI';
@@ -4098,7 +4123,7 @@ class ApiOutletApp extends Controller
             $subTotalBundlingWithoutModifier = 0;
             $subItemBundlingWithoutModifie = 0;
             foreach ($bundlingProduct as $bp){
-                $quantityItemBundling = $quantityItemBundling + ($bp['transaction_product_bundling_qty'] * $bundling['transaction_bundling_product_qty']);
+                $quantityItemBundling = $quantityItemBundling + $bp['transaction_product_qty'];
                 $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                     ->whereNull('transaction_product_modifiers.id_product_modifier_group')
                     ->where('id_transaction_product', $bp['id_transaction_product'])
@@ -4174,9 +4199,31 @@ class ApiOutletApp extends Controller
             $result['product_transaction'] = [];
         }
 
+        $result['plastic_transaction_detail'] = [];
+        $result['plastic_name'] = '';
+        $quantityPlastic = 0;
+        if(isset($list['plastic_transaction'])){
+            $result['plastic_name'] = 'Kantong Belanja';
+            $subtotal_plastic = 0;
+            foreach($list['plastic_transaction'] as $key => $value){
+                $quantityPlastic = $quantityPlastic + $value['transaction_product_qty'];
+                $subtotal_plastic += $value['transaction_product_subtotal'];
+
+                $result['plastic_transaction_detail'][] = [
+                    'plastic_name' => $value['product']['product_name'],
+                    'plasctic_qty' => $value['transaction_product_qty'],
+                    'plastic_base_price' => '@'.MyHelper::requestNumber((int)$value['transaction_product_price'],'_CURRENCY'),
+                    'plasctic_subtotal' => MyHelper::requestNumber($value['transaction_product_subtotal'],'_CURRENCY')
+                ];
+            }
+
+            $result['plastic_transaction'] = [];
+            $result['plastic_transaction']['transaction_plastic_total'] = $subtotal_plastic;
+        }
+
         $result['payment_detail'][] = [
             'name'   => 'Subtotal',
-            'desc'   => $quantity + $quantityItemBundling . ' items',
+            'desc'   => $quantity + $quantityItemBundling + $quantityPlastic . ' items',
             'amount' => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY'),
         ];
 
@@ -4320,7 +4367,7 @@ class ApiOutletApp extends Controller
                 ];
             }
         }
-
+      
         return response()->json(MyHelper::checkGet($result));
     }
 
@@ -5076,5 +5123,113 @@ class ApiOutletApp extends Controller
         }
 
         return $new_items;
+    }
+
+    public function listProductPlastic(Request $request){
+        $outlet  = $request->user();
+
+        if($outlet['plastic_used_status'] == 'Inactive'){
+            return response()->json(['status' => 'fail', 'messages' => "This outlet don't use plastic"]);
+        }
+
+        $plastic_type = PlasticTypeOutlet::join('plastic_type', 'plastic_type.id_plastic_type', 'plastic_type_outlet.id_plastic_type')
+                ->groupBy('plastic_type_outlet.id_plastic_type')
+                ->where('id_outlet', $outlet['id_outlet'])->orderBy('plastic_type_order', 'asc')->first();
+        $plastics = 0;
+        $data = [];
+        if($plastic_type['id_plastic_type']??NULL){
+            $plastics = Product::where('product_type', 'plastic')
+                ->leftJoin('product_detail', 'products.id_product', 'product_detail.id_product')
+                ->where(function ($sub) use($outlet){
+                    $sub->whereNull('product_detail.id_outlet')
+                        ->orWhere('product_detail.id_outlet', $outlet['id_outlet']);
+                })
+                ->where('id_plastic_type', $plastic_type['id_plastic_type'])
+                ->where('product_visibility', 'Visible')->select('products.id_product', 'products.product_code', 'products.product_name',
+                    DB::raw('(CASE WHEN product_detail.product_detail_stock_status is NULL THEN "Available"
+                        ELSE product_detail.product_detail_stock_status END) as product_stock_status'))->count();
+
+            $data = [[
+                'id_plastic_type' => $plastic_type['id_plastic_type'],
+                'plastic_type_name' => $plastic_type['plastic_type_name'],
+                'total_item' => $plastics
+            ]];
+        }
+
+        if(!empty($data)){
+            $data = [
+                'plastic_name' => 'Kantong Belanja',
+                'list' => $data
+            ];
+        }
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function detailProductPlastic(Request $request){
+        $outlet  = $request->user();
+        $post = $request->all();
+
+        if($outlet['plastic_used_status'] == 'Inactive'){
+            return response()->json(['status' => 'fail', 'messages' => "This outlet don't use plastic"]);
+        }
+
+        if(!isset($post['id_plastic_type'])){
+            return response()->json(['status' => 'fail', 'messages' => "ID can not be empty"]);
+        }
+
+        $plastics = Product::where('product_type', 'plastic')
+            ->leftJoin('product_detail', 'products.id_product', 'product_detail.id_product')
+            ->where(function ($sub) use($outlet){
+                $sub->whereNull('product_detail.id_outlet')
+                    ->orWhere('product_detail.id_outlet', $outlet['id_outlet']);
+            })
+            ->where('id_plastic_type', $post['id_plastic_type'])
+            ->where('product_visibility', 'Visible')->select('products.id_product', 'products.product_code', 'products.product_name',
+                DB::raw('(CASE WHEN product_detail.product_detail_stock_status is NULL THEN "Available"
+                        ELSE product_detail.product_detail_stock_status END) as product_stock_status'));
+
+        if(isset($post['page'])){
+            $plastics = $plastics->paginate(10)->toArray();
+        }else{
+            $plastics = $plastics->get()->toArray();
+        }
+
+        return response()->json(MyHelper::checkGet($plastics));
+    }
+
+    public function productPlasticSoldOut(Request $request)
+    {
+        $post = $request->all();
+        $id_outlet = $post['id_outlet']??auth()->user()->id_outlet;
+
+        if(!$id_outlet){
+            return response()->json(['status' => 'fail', 'messages' => 'Outlet ID is required']);
+        }
+
+        if(empty($post['available']) && empty($post['sold_out'])){
+            return response()->json(['status' => 'fail', 'messages' => 'Data for update is empty']);
+        }
+
+        if(isset($post['available']) && !empty($post['available'])){
+            $dataAvailable = array_unique($post['available']);
+            foreach ($dataAvailable as $id_product){
+                if($id_product){
+                    $status = 'Available';
+                    $updateOrCreate = ProductDetail::updateOrCreate(['id_outlet' =>$id_outlet, 'id_product' => $id_product], ['product_detail_stock_status' => $status]);
+                }
+            }
+        }
+
+        if(isset($post['sold_out']) && !empty($post['sold_out'])){
+            $dataSoldOut = array_unique($post['sold_out']);
+            foreach ($dataSoldOut as $id_product){
+                if($id_product){
+                    $status = 'Sold Out';
+                    $updateOrCreate = ProductDetail::updateOrCreate(['id_outlet' =>$id_outlet, 'id_product' => $id_product], ['product_detail_stock_status' => $status]);
+                }
+            }
+        }
+
+        return response()->json(MyHelper::checkUpdate($updateOrCreate));
     }
 }

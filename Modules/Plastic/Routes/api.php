@@ -30,6 +30,20 @@ Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'sco
 
     Route::post('export-product-variant', 'ApiProductPlasticController@exportProductVariant');
     Route::post('import-product-variant', 'ApiProductPlasticController@importProductVariant');
+
+    Route::post('export-plastic-status-outlet', 'ApiProductPlasticController@exportPlaticStatusOutlet');
+    Route::post('import-plastic-status-outlet', 'ApiProductPlasticController@importPlaticStatusOutlet');
+
+    Route::any('list-by-outlet', 'ApiProductPlasticController@listProductByOutlet');
+    Route::post('update-stock', 'ApiProductPlasticController@updateStock');
 });
 
-// Route::post('/plastic/total-price', 'PlasticController@getTotalPrice')->middleware('auth:api');
+Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'plastic-type'], function()
+{
+    Route::any('list', 'ApiPlasticTypeController@index');
+    Route::post('store', 'ApiPlasticTypeController@store');
+    Route::post('detail', 'ApiPlasticTypeController@detail');
+    Route::post('update', 'ApiPlasticTypeController@update');
+    Route::post('delete', 'ApiPlasticTypeController@destroy');
+    Route::post('position', 'ApiPlasticTypeController@position');
+});

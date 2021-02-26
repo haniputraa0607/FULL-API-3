@@ -15,7 +15,6 @@ class CreateBundling extends FormRequest
     {
         return [
             'bundling_name' => 'required',
-            'bundling_description' => 'required',
             'bundling_start' => 'required',
             'bundling_end' => 'required',
             'photo' => 'required',

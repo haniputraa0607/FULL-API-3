@@ -981,6 +981,10 @@ class ApiDeals extends Controller
 
             $deals[$key]['show'] = 1;
             $deals[$key]['available_voucher'] = (string) $calc;
+            $deals[$key]['available_voucher_text'] = "";
+            if ($calc != "*") {
+            	$deals[$key]['available_voucher_text'] = $calc. " kupon tersedia";
+            }
             // deals masih ada?
             // print_r($deals[$key]['available_voucher']);
         }

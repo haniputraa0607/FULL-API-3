@@ -25,7 +25,8 @@ class DisburseOutletTransaction extends Model
         'bundling_product_total_discount',
         'bundling_product_fee_outlet',
         'bundling_product_fee_central',
-        'fee', //percent fee of fee item
+        'fee', //percent fee of fee item,
+        'fee_product_plastic_status',
         'mdr_charged',
         'mdr',//percent fee of payment gateway
         'mdr_central',//income fee from payment gateway for central

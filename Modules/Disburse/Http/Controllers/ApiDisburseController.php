@@ -21,7 +21,7 @@ use Modules\Disburse\Entities\Disburse;
 
 use DB;
 use Modules\Disburse\Entities\DisburseOutletTransaction;
-use Modules\Disburse\Entities\UserFranchise;
+use Modules\Franchise\Entities\UserFranchise;
 use function Clue\StreamFilter\fun;
 
 use App\Http\Models\Setting;
@@ -1337,11 +1337,36 @@ class ApiDisburseController extends Controller
             ->whereDate('transaction_date', '>=',$date_start)
             ->whereDate('transaction_date', '<=',$date_end)
             ->where('transactions.id_outlet', $id_outlet)
+            ->where('p.product_type', 'product')
+            ->groupBy('transaction_products.id_product_variant_group')
             ->groupBy('transaction_products.id_product')
-            ->selectRaw("p.product_name as name, 'Product' as type, SUM(transaction_products.transaction_product_qty) as total_qty")->get()->toArray();
+            ->selectRaw("p.product_name as name, SUM(transaction_products.transaction_product_qty) as total_qty,
+                        p.product_type as type,
+                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
+                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
+                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
+                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants")->get()->toArray();
+
+        $summaryProductPlastic = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->join('products as p', 'p.id_product', 'transaction_products.id_product')
+            ->where('transaction_payment_status', 'Completed')
+            ->whereNull('reject_at')
+            ->whereDate('transaction_date', '>=',$date_start)
+            ->whereDate('transaction_date', '<=',$date_end)
+            ->where('transactions.id_outlet', $id_outlet)
+            ->where('p.product_type', 'plastic')
+            ->groupBy('transaction_products.id_product_variant_group')
+            ->groupBy('transaction_products.id_product')
+            ->selectRaw("p.product_name as name, SUM(transaction_products.transaction_product_qty) as total_qty,
+                        p.product_type as type,
+                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
+                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
+                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
+                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants")->get()->toArray();
+
         $summaryModifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'transaction_product_modifiers.id_transaction')
             ->join('transaction_products as tp', 'tp.id_transaction_product', 'transaction_product_modifiers.id_transaction_product')
-            ->leftJoin('transaction_bundling_products as tbp', 'tbp.id_transaction_bundling_product', 'tp.id_transaction_bundling_product')
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
             ->where('transaction_payment_status', 'Completed')
@@ -1351,9 +1376,10 @@ class ApiDisburseController extends Controller
             ->whereDate('transaction_date', '<=',$date_end)
             ->where('transactions.id_outlet', $id_outlet)
             ->groupBy('transaction_product_modifiers.id_product_modifier')
-            ->selectRaw("pm.text as name, 'Modifier' as type, tbp.transaction_bundling_product_qty, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty")->get()->toArray();
+            ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty,
+                        NULL as variants")->get()->toArray();
 
-        $summary = array_merge($summaryProduct,$summaryModifier);
+        $summary = array_merge($summaryProduct,$summaryModifier,$summaryProductPlastic);
         return [
             'summary_product' => $summary,
             'summary_fee' => $summaryFee,
@@ -1553,12 +1579,17 @@ class ApiDisburseController extends Controller
             ->where('transaction_payment_status', 'Completed')
             ->whereNull('reject_at')
             ->whereDate('transaction_date', $date)
+            ->where('p.product_type', 'product')
             ->where('transactions.id_outlet', $id_outlet)
+            ->groupBy('transaction_products.id_product_variant_group')
             ->groupBy('transaction_products.id_product')
-            ->selectRaw("p.product_name as name, 'Product' as type, SUM(transaction_products.transaction_product_qty) as total_qty")->get()->toArray();
+            ->selectRaw("p.product_name as name, p.product_type as type, SUM(transaction_products.transaction_product_qty) as total_qty,
+                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
+                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
+                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
+                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants")->get()->toArray();
         $summaryModifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'transaction_product_modifiers.id_transaction')
             ->join('transaction_products as tp', 'tp.id_transaction_product', 'transaction_product_modifiers.id_transaction_product')
-            ->leftJoin('transaction_bundling_products as tbp', 'tbp.id_transaction_bundling_product', 'tp.id_transaction_bundling_product')
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
             ->where('transaction_payment_status', 'Completed')
@@ -1567,9 +1598,25 @@ class ApiDisburseController extends Controller
             ->whereDate('transaction_date', $date)
             ->where('transactions.id_outlet', $id_outlet)
             ->groupBy('transaction_product_modifiers.id_product_modifier')
-            ->selectRaw("pm.text as name, 'Modifier' as type, tbp.transaction_bundling_product_qty, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty")->get()->toArray();
+            ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty,
+                        NULL as variants")->get()->toArray();
+        $summaryProductPlastic = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->join('products as p', 'p.id_product', 'transaction_products.id_product')
+            ->where('transaction_payment_status', 'Completed')
+            ->whereNull('reject_at')
+            ->whereDate('transaction_date', $date)
+            ->where('transactions.id_outlet', $id_outlet)
+            ->where('p.product_type', 'plastic')
+            ->groupBy('transaction_products.id_product_variant_group')
+            ->groupBy('transaction_products.id_product')
+            ->selectRaw("p.product_name as name, p.product_type as type, SUM(transaction_products.transaction_product_qty) as total_qty,
+                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
+                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
+                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
+                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants")->get()->toArray();
 
-        $summary = array_merge($summaryProduct, $summaryModifier);
+        $summary = array_merge($summaryProduct, $summaryModifier,$summaryProductPlastic);
         return [
             'summary_product' => $summary,
             'summary_fee' => $summaryFee,

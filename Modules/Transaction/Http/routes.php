@@ -64,6 +64,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
 
+    Route::post('sync-subtotal', 'ApiOnlineTransaction@syncDataSubtotal');
     Route::get('/', 'ApiTransaction@transactionList');
     Route::any('/filter', 'ApiTransaction@transactionFilter');
     Route::post('/detail', 'ApiTransaction@transactionDetail');

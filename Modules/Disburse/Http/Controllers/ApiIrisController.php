@@ -33,7 +33,7 @@ use Modules\Disburse\Entities\DisburseTransaction;
 use Modules\Disburse\Entities\LogIRIS;
 use Modules\Disburse\Entities\LogTopupIris;
 use Modules\Disburse\Entities\MDR;
-use Modules\Disburse\Entities\UserFranchisee;
+use  Modules\UserFranchise\Entities\UserFranchisee;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use Modules\Subscription\Entities\SubscriptionUser;
@@ -520,6 +520,7 @@ class ApiIrisController extends Controller
 
         if(!empty($data)){
             $settingGlobalFee = Setting::where('key', 'global_setting_fee')->first()->value_text;
+            $settingProductPlastic = Setting::where('key', 'disburse_fee_product_plastic')->first()->value??0;
             $settingGlobalFee = json_decode($settingGlobalFee);
             $settingMDRAll = MDR::get()->toArray();
             $subTotal = $data['transaction_subtotal'];
@@ -566,6 +567,11 @@ class ApiIrisController extends Controller
                 }
                 $subTotal = $subTotal + $bundlingProductTotalDiscount;
                 $nominalFeeToCentral = $subTotal;
+
+                if($settingProductPlastic == 0){
+                    $subtotalPlastic = TransactionProduct::where('id_transaction', $id_transaction)->where('type', 'Plastic')->sum('transaction_product_subtotal');
+                    $nominalFeeToCentral = $subTotal - $subtotalPlastic;
+                }
 
                 // ===== Calculate Fee Subscription ====== //
                 $totalChargedSubcriptionOutlet = 0;
@@ -830,6 +836,7 @@ class ApiIrisController extends Controller
                     'bundling_product_fee_outlet' => $bundlingProductFeeOutlet,
                     'bundling_product_fee_central' => $bundlingProductFeeCentral,
                     'fee' => $percentFee,
+                    'fee_product_plastic_status' => $settingProductPlastic,
                     'mdr' => $feePG,
                     'mdr_central' => $feePGCentral,
                     'mdr_charged' => $charged,
@@ -875,6 +882,7 @@ class ApiIrisController extends Controller
         if(!empty($datas)){
             foreach ($datas as $data){
                 $settingGlobalFee = Setting::where('key', 'global_setting_fee')->first()->value_text;
+                $settingProductPlastic = Setting::where('key', 'disburse_fee_product_plastic')->first()->value??0;
                 $settingGlobalFee = json_decode($settingGlobalFee);
                 $settingMDRAll = MDR::get()->toArray();
                 $subTotal = $data['transaction_subtotal'];
@@ -921,6 +929,11 @@ class ApiIrisController extends Controller
 
                     $subTotal = $subTotal + $bundlingProductTotalDiscount;
                     $nominalFeeToCentral = $subTotal;
+
+                    if($settingProductPlastic == 0){
+                        $subtotalPlastic = TransactionProduct::where('id_transaction', $data['id_transaction'])->where('type', 'Plastic')->sum('transaction_product_subtotal');
+                        $nominalFeeToCentral = $subTotal - $subtotalPlastic;
+                    }
 
                     // ===== Calculate Fee Subscription ====== //
                     $totalChargedSubcriptionOutlet = 0;
@@ -1167,6 +1180,7 @@ class ApiIrisController extends Controller
                         'bundling_product_fee_outlet' => $bundlingProductFeeOutlet,
                         'bundling_product_fee_central' => $bundlingProductFeeCentral,
                         'fee' => $percentFee,
+                        'fee_product_plastic_status' => $settingProductPlastic,
                         'mdr' => $feePG,
                         'mdr_central' => $feePGCentral,
                         'mdr_charged' => $charged,
