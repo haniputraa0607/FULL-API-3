@@ -57,7 +57,6 @@ class ApiIrisController extends Controller
             //if status alredy success then no update to database
             $check = Disburse::where('reference_no', $reference_no)->first();
             if($check['disburse_status'] == 'Success'){
-                LogTopupIris::create(['response' => json_encode($post)]);
                 return response()->json(['status' => 'success']);
             }
 
