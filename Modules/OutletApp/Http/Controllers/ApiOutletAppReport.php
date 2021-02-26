@@ -340,6 +340,13 @@ class ApiOutletAppReport extends Controller
                                 DB::raw('SUM(transaction_product_qty) AS total_bundling_qty')
                             )->groupBy('id_transaction');
                         },
+                        'plasticTransaction' => function($q) {
+                            $q->select(
+                                'id_transaction_product',
+                                'id_transaction',
+                                DB::raw('SUM(transaction_product_qty) AS total_plastic')
+                            )->groupBy('id_transaction');
+                        },
     					'transaction_pickup' => function($q) {
     						$q->select(
     							'id_transaction_pickup',
@@ -368,13 +375,27 @@ class ApiOutletAppReport extends Controller
 
     	$data_trx = [];
     	foreach ($trx['data']??$trx as $key => $value) {
+            $item = 0;
+            $itemBundling = 0;
+            $itemPlastic = 0;
 
+            if(isset($value['product_transaction'][0]['total_qty'])){
+                $item = $value['product_transaction'][0]['total_qty'];
+            }
+
+            if(isset($value['product_transaction_bundling'][0]['total_bundling_qty'])){
+                $itemBundling = $value['product_transaction_bundling'][0]['total_bundling_qty'];
+            }
+
+            if(isset($value['plastic_transaction'][0]['total_plastic'])){
+                $itemPlastic = $value['plastic_transaction'][0]['total_plastic'];
+            }
     		$data_trx[$key]['id_transaction'] = $value['id_transaction'];
     		$data_trx[$key]['order_id'] = $value['transaction_pickup']['order_id'];
     		$data_trx[$key]['transaction_time'] = date("H:i", strtotime($value['transaction_date']));
     		$data_trx[$key]['transaction_receipt_number'] = $value['transaction_receipt_number'];
     		$data_trx[$key]['transaction_grandtotal'] = number_format($value['transaction_grandtotal'],0,",",".");
-    		$data_trx[$key]['total_item'] = number_format($value['product_transaction'][0]['total_qty']??0+$value['product_transaction_bundling'][0]['total_bundling_qty']??0,0,",",".");
+    		$data_trx[$key]['total_item'] = number_format($item+$itemBundling+$itemPlastic,0,",",".");
     	}
 
     	$data['outlet_name'] = $outlet['outlet_name'];
@@ -526,6 +547,44 @@ class ApiOutletAppReport extends Controller
 			$result = $data['modifier'];
 		}
 
+    	if($request->plastic){
+    	    $productPlastic = [];
+            if ($post['date'] < date("Y-m-d"))
+            {
+                $productPlastic = DailyReportTrxMenu::where('type', 'plastic')->where('id_outlet', '=', $post['id_outlet'])
+                    ->whereDate('trx_date', '=', $post['date'])
+                    ->select([
+                        'product_name',
+                        'total_qty',
+                        'total_nominal',
+                        'total_product_discount'
+                    ])->get()->toArray();
+            }else{
+                $productPlastic = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+                    ->join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+                    ->join('products', 'products.id_product', 'transaction_products.id_product')
+                    ->where('type', 'plastic')->where('transactions.id_outlet', '=', $post['id_outlet'])
+                    ->where('transactions.transaction_payment_status','=','Completed')
+                    ->whereDate('transactions.transaction_date', '=', $post['date'])
+                    ->whereNull('transaction_pickups.reject_at')
+                    ->groupBy('transaction_products.id_product','transaction_products.id_brand')
+                    ->select(
+                        DB::raw('(select products.product_name) as product_name'),
+                        DB::raw('(select SUM(transaction_products.transaction_product_qty)) as total_qty'),
+                        DB::raw('(select SUM(transaction_products.transaction_product_subtotal)) as total_nominal'),
+                        DB::raw('(SUM(transaction_products.transaction_product_discount)) as total_product_discount')
+                    )
+                    ->get()->toArray();
+            }
+
+            if(!empty($productPlastic)){
+                $result[] = [
+                    "id_brand" => 0,
+                    "name_brand" => "Kantong Belanja",
+                    "product" => $productPlastic
+                ];
+            }
+        }
 		
 		return response()->json(MyHelper::checkGet($result));
     }

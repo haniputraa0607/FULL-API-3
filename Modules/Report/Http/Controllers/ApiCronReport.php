@@ -654,7 +654,7 @@ class ApiCronReport extends Controller
     {
         foreach ($outletAll as $outlet) {
              $product = DB::select(DB::raw('
-                        SELECT transaction_products.id_product, transaction_products.id_brand, transactions.id_outlet, 
+                        SELECT transaction_products.id_product, transaction_products.type, transaction_products.id_brand, transactions.id_outlet, 
                         (select SUM(transaction_products.transaction_product_qty)) as total_qty, 
                         (select SUM(transaction_products.transaction_product_subtotal)) as total_nominal, 
                         (select SUM(transaction_products.transaction_product_discount)) as total_product_discount, 
@@ -695,6 +695,7 @@ class ApiCronReport extends Controller
 					// $sum = array();
 					$sum[$value['id_product']]['trx_date'] = $date;
 					$sum[$value['id_product']]['id_product'] = $value['id_product'];
+                    $sum[$value['id_product']]['type'] = $value['type'];
 					$sum[$value['id_product']]['product_name'] = $value['product_name'];
 					$sum[$value['id_product']]['total_qty'] = ($sum[$value['id_product']]['total_qty']??0) + $value['total_qty'];
 					$sum[$value['id_product']]['total_nominal'] = ($sum[$value['id_product']]['total_nominal']??0) + $value['total_nominal'];
@@ -1610,7 +1611,7 @@ class ApiCronReport extends Controller
     	$sum = [];
         foreach ($outletAll as $outlet) {
             $product = DB::select(DB::raw('
-                        SELECT transaction_products.id_product, transaction_products.id_brand, transactions.id_outlet, 
+                        SELECT transaction_products.id_product, transaction_products.type, transaction_products.id_brand, transactions.id_outlet, 
                         (select SUM(transaction_products.transaction_product_qty)) as total_qty, 
                         (select SUM(transaction_products.transaction_product_subtotal)) as total_nominal, 
                         (select SUM(transaction_products.transaction_product_discount)) as total_product_discount, 
@@ -1696,7 +1697,7 @@ class ApiCronReport extends Controller
 
         // update global trx menu
         $product = DB::select(DB::raw('
-                    SELECT transaction_products.id_product, 
+                    SELECT transaction_products.id_product, transaction_products.type, 
                     (select SUM(transaction_products.transaction_product_qty)) as total_qty, 
                     (select SUM(transaction_products.transaction_product_subtotal)) as total_nominal, 
                     (select SUM(transaction_products.transaction_product_discount)) as total_product_discount, 

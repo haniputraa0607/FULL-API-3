@@ -29,5 +29,30 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::post('autoresponse', 'ApiUserFranchiseController@autoresponse');
             Route::post('autoresponse/new-user/update', 'ApiUserFranchiseController@updateAutoresponse');
         });
+
+	    Route::group(['prefix' => 'transaction'], function () {
+
+		    Route::any('filter', 'ApiTransactionFranchiseController@transactionFilter');
+		    Route::post('detail','ApiTransactionFranchiseController@transactionDetail');
+
+		    Route::get('export','ApiTransactionFranchiseController@listExport');
+	        Route::post('export','ApiTransactionFranchiseController@newExport');
+	        Route::delete('export/{export_queue}','ApiTransactionFranchiseController@destroyExport');
+	        Route::any('export/action', 'ApiTransactionFranchiseController@actionExport');
+		});
+
+		Route::group(['prefix' => 'product'], function() {
+            Route::post('list','ApiTransactionFranchiseController@listProduct');
+		    Route::post('category/list','ApiTransactionFranchiseController@listProductCategory');
+        });
+
+        Route::group(['prefix' => 'report-payment'], function() {
+            Route::post('summary', 'ApiReportPaymentController@summaryPaymentMethod');
+            Route::post('summary/detail', 'ApiReportPaymentController@summaryDetailPaymentMethod');
+            Route::post('summary/chart', 'ApiReportPaymentController@summaryChart');
+            Route::post('list', 'ApiReportPaymentController@listPayment');
+            Route::get('payments', 'ApiReportPaymentController@payments');
+        });
     });
+
 });

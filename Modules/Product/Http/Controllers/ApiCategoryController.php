@@ -666,7 +666,7 @@ class ApiCategoryController extends Controller
                 ->join('bundling', 'bundling.id_bundling', 'bundling_product.id_bundling')
                 ->join('bundling_categories', 'bundling_categories.id_bundling_category', 'bundling.id_bundling_category')
                 ->where('bundling.id_bundling', $bundling)
-                ->select('products.product_visibility', 'pgp.product_global_price',  'products.product_variant_status',
+                ->select('products.product_visibility', 'pgp.product_global_price',  'products.is_inactive', 'products.product_variant_status',
                     'bundling_product.*', 'bundling.*', 'bundling_categories.bundling_category_name', 'bundling_categories.bundling_category_order')
                 ->get()->toArray();
 
@@ -676,6 +676,9 @@ class ApiCategoryController extends Controller
                 $id_brand = [];
                 $stockStatus = 1;
                 foreach ($getProduct as $p){
+                    if($p['is_inactive'] == 1){
+                        continue 2;
+                    }
                     $getProductDetail = ProductDetail::where('id_product', $p['id_product'])->where('id_outlet', $post['id_outlet'])->first();
                     $p['visibility_outlet'] = $getProductDetail['product_detail_visibility']??null;
 
@@ -702,6 +705,9 @@ class ApiCategoryController extends Controller
                         }
 
                         $price = (float)$price;
+                        if($price <= 0){
+                            continue 2;
+                        }
                         //calculate discount produk
                         if(strtolower($p['bundling_product_discount_type']) == 'nominal'){
                             $calculate = ($price - $p['bundling_product_discount']);

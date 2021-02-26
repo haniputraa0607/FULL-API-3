@@ -2576,14 +2576,12 @@ class ApiTransaction extends Controller
                     $basePriceBundling = $basePriceBundling + ($productBasePrice * $bp['transaction_product_bundling_qty']);
                     $subTotalBundlingWithoutModifier = $subTotalBundlingWithoutModifier + (($bp['transaction_product_subtotal'] - ($bp['transaction_modifier_subtotal'] * $bp['transaction_product_bundling_qty'])));
                     $subItemBundlingWithoutModifie = $subItemBundlingWithoutModifie + ($bp['transaction_product_bundling_price'] * $bp['transaction_product_bundling_qty']);
+                    $quantityItemBundling = $quantityItemBundling + $bp['transaction_product_qty'];
                 }
                 $listItemBundling[$key]['bundling_price_no_discount'] = $basePriceBundling * $bundling['transaction_bundling_product_qty'];
                 $listItemBundling[$key]['bundling_subtotal'] = $subTotalBundlingWithoutModifier * $bundling['transaction_bundling_product_qty'];
                 $listItemBundling[$key]['bundling_sub_item'] = '@'.MyHelper::requestNumber($subItemBundlingWithoutModifie,'_CURRENCY');
-
-                $quantityItemBundling = $quantityItemBundling + ($bp['transaction_product_bundling_qty'] * $bundling['transaction_bundling_product_qty']);
             }
-
             $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
                 $product_count += array_sum(array_column($val,'transaction_product_qty'));
                 $brand = Brand::select('name_brand')->find($key);
@@ -3107,9 +3105,13 @@ class ApiTransaction extends Controller
             }
 
             $result['plastic_transaction_detail'] = [];
+            $result['plastic_name'] = '';
+            $quantityPlastic = 0;
             if(isset($list['plastic_transaction'])){
+                $result['plastic_name'] = 'Kantong Belanja';
                 $subtotal_plastic = 0;
                 foreach($list['plastic_transaction'] as $key => $value){
+                    $quantityPlastic = $quantityPlastic + $value['transaction_product_qty'];
                     $subtotal_plastic += $value['transaction_product_subtotal'];
 
                     $result['plastic_transaction_detail'][] = [
@@ -3124,9 +3126,10 @@ class ApiTransaction extends Controller
                 $result['plastic_transaction']['transaction_plastic_total'] = $subtotal_plastic;
             }
 
+            $totalItem = $quantity+$quantityItemBundling+$quantityPlastic;
             $result['payment_detail'][] = [
                 'name'      => 'Subtotal',
-                'desc'      => $quantity+$quantityItemBundling . ' items',
+                'desc'      => $totalItem . ' items',
                 'amount'    => MyHelper::requestNumber($list['transaction_subtotal'],'_CURRENCY')
             ];
 
@@ -3485,6 +3488,7 @@ class ApiTransaction extends Controller
             '))
             ->join('products','products.id_product','=','transaction_products.id_product')
             ->join('outlets','outlets.id_outlet','=','transaction_products.id_outlet')
+            ->where('transaction_products.type', 'product')
             ->whereNull('id_transaction_bundling_product')
             ->where(['id_transaction'=>$id_transaction])
             ->with(['modifiers'=>function($query){
