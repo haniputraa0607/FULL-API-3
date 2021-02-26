@@ -191,7 +191,14 @@ class ApiPromotionDeals extends Controller
 	            ->first();
 	    $outlet = explode(',',$deals->deals_list_outlet);
         $deals->outlets = Outlet::whereIn('id_outlet',$outlet??[])->get();
-            
+        
+        if ($deals) {
+	        $deals_array = $deals->toArray();
+        	$getProduct = app($this->promo_campaign)->getProduct('deals_promotion',$deals_array);
+    		$desc = app($this->promo_campaign)->getPromoDescription('deals_promotion', $deals_array, $getProduct['product']??'', true);
+    		$deals['description'] = $desc;
+        }
+
 		return response()->json(MyHelper::checkGet($deals));
     }
 
@@ -250,6 +257,7 @@ class ApiPromotionDeals extends Controller
 		$dataDeals['brand_rule'] 			= $dealsTemplate['brand_rule'];
 		$dataDeals['product_type'] 			= $dealsTemplate['product_type'];
 		$dataDeals['is_all_outlet'] 		= $dealsTemplate['is_all_outlet'];
+		$dataDeals['promo_description'] 	= $dealsTemplate['promo_description'];
 
 		if ($post['duration'][$key] == 'duration') {
 			$dataDeals['deals_voucher_duration'] = $post['deals_voucher_expiry_duration'][$key];
