@@ -14,23 +14,30 @@ use Illuminate\Http\Request;
 */
 
 Route::group(['prefix' => 'franchise'], function () {
-    Route::group(['middleware' => ['auth:franchise', 'scopes:be']], function () {
-        Route::post('profile', 'ApiUserFranchiseController@updateProfile');
-        Route::get('outlets', 'ApiUserFranchiseController@allOutlet');
-
+    Route::group(['middleware' => ['auth:franchise', 'scopes:franchise-super-admin']], function () {
         Route::group(['prefix' => 'user'], function() {
             Route::any('/', 'ApiUserFranchiseController@index');
             Route::post('store', 'ApiUserFranchiseController@store');
             Route::post('detail', 'ApiUserFranchiseController@detail');
             Route::post('update', 'ApiUserFranchiseController@update');
-            Route::post('update-first-pin', 'ApiUserFranchiseController@updateFirstPin');
             Route::post('delete', 'ApiUserFranchiseController@destroy');
 
             Route::post('autoresponse', 'ApiUserFranchiseController@autoresponse');
             Route::post('autoresponse/new-user/update', 'ApiUserFranchiseController@updateAutoresponse');
         });
+        Route::get('outlets', 'ApiUserFranchiseController@allOutlet');
+        Route::post('profile', 'ApiUserFranchiseController@updateProfile');
+    });
 
-	    Route::group(['prefix' => 'transaction'], function () {
+    Route::group(['middleware' => ['auth:franchise', 'scopes:franchise']], function () {
+        Route::group(['prefix' => 'user'], function() {
+            Route::post('update-first-pin', 'ApiUserFranchiseController@updateFirstPin');
+            Route::post('detail/for-login', 'ApiUserFranchiseController@detail');
+        });
+    });
+
+    Route::group(['middleware' => ['auth:franchise', 'scopes:franchise-admin']], function () {
+        Route::group(['prefix' => 'transaction'], function () {
 
 		    Route::any('filter', 'ApiTransactionFranchiseController@transactionFilter');
 		    Route::post('detail','ApiTransactionFranchiseController@transactionDetail');

@@ -26,6 +26,7 @@ class UserFranchise extends Authenticatable
         'name',
         'level',
 		'email',
+        'user_franchise_status',
         'password',
         'password_default_plain_text',
         'user_franchise_type',

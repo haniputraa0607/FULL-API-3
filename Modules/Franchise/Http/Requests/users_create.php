@@ -27,9 +27,7 @@ class users_create extends FormRequest
 	{
 		return [
 			'email'			=> 'required',
-			'name'			=> 'required',
-			'phone'			=> 'required|string',
-            'id_outlet'		=> 'required'
+			'name'			=> 'required'
         ];
     }
 
