@@ -247,6 +247,19 @@ class GoSend
 
         $ref_status2 = array_flip($ref_status);
 
+        $outlet_message = [
+            'confirmed' => 'Mencari Driver',
+            'allocated' => 'Driver ditemukan',
+            'out_for_pickup' => 'Driver menuju ke Outlet',
+            'picked' => 'Driver mengambil Pesanan',
+            'out_for_delivery' => 'Driver menuju Alamat Tujuan',
+            'cancelled' => 'Driver batal mengambil Pesanan',
+            'delivered' => 'Pesanan sampai ke Alamat Tujuan',
+            'rejected' => 'Driver batal mengantar Pesanan',
+            'no_driver' => 'Driver tidak ditemukan',
+            'on_hold' => 'Driver terkendala saat pengantaran'
+        ];
+
         if (!$found) {
             $trx_pickup = TransactionPickup::where('id_transaction', $dataUpdate['id_transaction'])->first();
             $trx = Transaction::where('id_transaction', $dataUpdate['id_transaction'])->first();
@@ -258,8 +271,8 @@ class GoSend
             $phone   = User::select('phone')->where('id', $trx->id_user)->pluck('phone')->first();
             $dataPush = [
                 'type' => 'update_delivery',
-                'subject' => 'Update Delivery',
-                'string_body' => $trx->transaction_receipt_number.' '.($ref_status[$dataUpdate['status']] ?? $dataUpdate['status']),
+                'subject' => 'Info Pesanan Delivery',
+                'string_body' => $trx_pickup->order_id.' '.($outlet_message[$dataUpdate['status']] ?? $dataUpdate['status']),
                 'status' => $dataUpdate['status'],
                 'id_transaction' => $trx->id_transaction,
                 'order_id' => $trx_pickup->order_id
