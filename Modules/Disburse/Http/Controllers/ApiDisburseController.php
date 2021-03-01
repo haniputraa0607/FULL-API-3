@@ -1413,6 +1413,7 @@ class ApiDisburseController extends Controller
 
             if(!empty($getEmail)){
                 foreach ($getEmail as $e){
+                    $email = $e;
                     $tmpPath = [];
                     $tmpOutlet = [];
                     $outlets = Outlet::where('outlet_email', $e)->select('id_outlet', 'outlet_code', 'outlet_name', 'outlet_email')->get()->toArray();
@@ -1532,6 +1533,7 @@ class ApiDisburseController extends Controller
                             });
                         }catch(\Exception $e){
                             \Log::error($e);
+                            \Log::error($email);
                         }
 
                         foreach ($tmpPath as $t){
