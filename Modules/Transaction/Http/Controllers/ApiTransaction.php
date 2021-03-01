@@ -4042,7 +4042,7 @@ class ApiTransaction extends Controller
                 $gmap = [
                     'id_user_address' => 0,
                     'short_address' => $gmap['name'],
-                    'address' => $gmap['vicinity'],
+                    'address' => $gmap['vicinity']??'',
                     'latitude' => $coor['latitude'],
                     'longitude' => $coor['longitude'],
                     'description' => '',
