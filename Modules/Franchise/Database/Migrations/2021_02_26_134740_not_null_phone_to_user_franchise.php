@@ -13,8 +13,8 @@ class NotNullPhoneToUserFranchise extends Migration
      */
     public function up()
     {
-        \DB::statement("ALTER TABLE user_franchises ADD COLUMN auto_generate_password SMALLINT DEFAULT(0) AFTER password");
-        \DB::statement("ALTER TABLE user_franchises ADD COLUMN user_franchise_status ENUM('Active', 'Inactive') DEFAULT('Active') AFTER email");
+        \DB::statement("ALTER TABLE user_franchises ADD COLUMN auto_generate_password SMALLINT DEFAULT 0 AFTER password");
+        \DB::statement("ALTER TABLE user_franchises ADD COLUMN user_franchise_status ENUM('Active', 'Inactive') DEFAULT 'Active' AFTER email");
         \DB::statement("ALTER TABLE user_franchises CHANGE phone phone varchar (15) NULL UNIQUE");
     }
 
