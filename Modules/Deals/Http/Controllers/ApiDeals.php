@@ -1661,8 +1661,13 @@ class ApiDeals extends Controller
         if ($deals) {
         	if ($post['step'] == 'all' && $deals_type != 'Promotion' && $deals_type != 'promotion-deals') {
 	        	$deals_array = $deals->toArray();
-	        	$getProduct = app($this->promo_campaign)->getProduct($deals_type,$deals_array);
-	    		$desc = app($this->promo_campaign)->getPromoDescription($deals_type, $deals_array, $getProduct['product']??'', true);
+	        	if ($deals_type == 'Deals') {
+	        		$type = 'deals';
+	        	}else{
+	        		$type = $deals_type;
+	        	}
+	        	$getProduct = app($this->promo_campaign)->getProduct($type, $deals_array);
+	    		$desc = app($this->promo_campaign)->getPromoDescription($type, $deals_array, $getProduct['product']??'', true);
 	    		$deals['description'] = $desc;
         	}
         }
