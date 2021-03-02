@@ -3047,6 +3047,10 @@ class ApiTransaction extends Controller
                             break;
                     }
                 }
+                $result['delivery_info_be'] = [
+                    'delivery_address' => $list['transaction_pickup_go_send']['destination_address']?:'',
+                    'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note'] ?: '',
+                ];
             }
 
             $nameBrandBundling = Setting::where('key', 'brand_bundling_name')->first();
@@ -3353,7 +3357,7 @@ class ApiTransaction extends Controller
                         } else {
                             $result['detail']['detail_status'][$keyStatus]['text'] = 'Pesanan telah ditolak karena '.strtolower($list['detail']['reject_reason']);
                         }
-
+                        $result['detail']['reject_reason'] = $list['detail']['reject_reason'];
                         $result['detail']['detail_status'][$keyStatus]['reason'] = $list['detail']['reject_reason'];
                     }
                 }
