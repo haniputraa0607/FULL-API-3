@@ -311,14 +311,12 @@ class ApiTransactionFranchiseController extends Controller
                     $basePriceBundling = $basePriceBundling + ($productBasePrice * $bp['transaction_product_bundling_qty']);
                     $subTotalBundlingWithoutModifier = $subTotalBundlingWithoutModifier + (($bp['transaction_product_subtotal'] - ($bp['transaction_modifier_subtotal'] * $bp['transaction_product_bundling_qty'])));
                     $subItemBundlingWithoutModifie = $subItemBundlingWithoutModifie + ($bp['transaction_product_bundling_price'] * $bp['transaction_product_bundling_qty']);
+                    $quantityItemBundling = $quantityItemBundling + $bp['transaction_product_qty'];
                 }
                 $listItemBundling[$key]['bundling_price_no_discount'] = $basePriceBundling * $bundling['transaction_bundling_product_qty'];
                 $listItemBundling[$key]['bundling_subtotal'] = $subTotalBundlingWithoutModifier * $bundling['transaction_bundling_product_qty'];
                 $listItemBundling[$key]['bundling_sub_item'] = '@'.MyHelper::requestNumber($subItemBundlingWithoutModifie,'_CURRENCY');
-
-                $quantityItemBundling = $quantityItemBundling + ($bp['transaction_product_bundling_qty'] * $bundling['transaction_bundling_product_qty']);
             }
-
             $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
                 $product_count += array_sum(array_column($val,'transaction_product_qty'));
                 $brand = Brand::select('name_brand')->find($key);
@@ -784,10 +782,15 @@ class ApiTransactionFranchiseController extends Controller
                             break;
                     }
                 }
+                $result['delivery_info_be'] = [
+                    'delivery_address' => $list['transaction_pickup_go_send']['destination_address']?:'',
+                    'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note'] ?: '',
+                ];
             }
 
             $nameBrandBundling = Setting::where('key', 'brand_bundling_name')->first();
             $result['name_brand_bundling'] = $nameBrandBundling['value']??'Bundling';
+            $result['product_bundling_transaction_name'] = $nameBrandBundling['value']??'Bundling';
             $result['product_bundling_transaction'] = $listItemBundling;
             $result['product_transaction'] = [];
             $discount = 0;
@@ -840,19 +843,32 @@ class ApiTransactionFranchiseController extends Controller
                 $keynya++;
             }
 
+            $result['plastic_transaction_detail'] = [];
+            $result['plastic_name'] = '';
+            $quantityPlastic = 0;
             if(isset($list['plastic_transaction'])){
+                $result['plastic_name'] = 'Kantong Belanja';
                 $subtotal_plastic = 0;
                 foreach($list['plastic_transaction'] as $key => $value){
+                    $quantityPlastic = $quantityPlastic + $value['transaction_product_qty'];
                     $subtotal_plastic += $value['transaction_product_subtotal'];
+
+                    $result['plastic_transaction_detail'][] = [
+                        'plastic_name' => $value['product']['product_name'],
+                        'plasctic_qty' => $value['transaction_product_qty'],
+                        'plastic_base_price' => '@'.MyHelper::requestNumber((int)$value['transaction_product_price'],'_CURRENCY'),
+                        'plasctic_subtotal' => MyHelper::requestNumber($value['transaction_product_subtotal'],'_CURRENCY')
+                    ];
                 }
 
                 $result['plastic_transaction'] = [];
                 $result['plastic_transaction']['transaction_plastic_total'] = $subtotal_plastic;
             }
 
+            $totalItem = $quantity+$quantityItemBundling+$quantityPlastic;
             $result['payment_detail'][] = [
                 'name'      => 'Subtotal',
-                'desc'      => $quantity+$quantityItemBundling . ' items',
+                'desc'      => $totalItem . ' items',
                 'amount'    => MyHelper::requestNumber($list['transaction_subtotal'],'_CURRENCY')
             ];
 
@@ -1076,7 +1092,7 @@ class ApiTransactionFranchiseController extends Controller
                         } else {
                             $result['detail']['detail_status'][$keyStatus]['text'] = 'Pesanan telah ditolak karena '.strtolower($list['detail']['reject_reason']);
                         }
-
+                        $result['detail']['reject_reason'] = $list['detail']['reject_reason'];
                         $result['detail']['detail_status'][$keyStatus]['reason'] = $list['detail']['reject_reason'];
                     }
                 }
@@ -1173,6 +1189,8 @@ class ApiTransactionFranchiseController extends Controller
 
             return response()->json(MyHelper::checkGet($result));
         }
+
+
     }
 
     /**
