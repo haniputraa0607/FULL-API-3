@@ -1685,6 +1685,18 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        if ($order->picked_by != 'Customer') {
+            $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+            if($pickup_gosend && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Driver has been booked'],
+                ]);
+            } else {
+                goto reject;
+            }
+        }
+
         if ($order->ready_at) {
             if ($order->picked_by == 'Customer') {
                 return response()->json([
