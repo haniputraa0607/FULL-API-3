@@ -2404,10 +2404,25 @@ class ApiOutletApp extends Controller
             if ((time() - strtotime($firstbook)) > $time_limit) {
                 if (!$updateGoSend->stop_booking_at) {
                     $updateGoSend->update(['stop_booking_at' => date('Y-m-d H:i:s')]);
+
+                    $text_start = 'Driver tidak ditemukan. ';
+                    switch ($trx['transaction_pickup']['transaction_pickup_go_send']['latest_status']) {
+                        case 'no_driver':
+                            $text_start = 'Driver tidak ditemukan.';
+                            break;
+                        
+                        case 'rejected':
+                            $text_start = $trx['transaction_pickup']['order_id'].' Driver batal mengantar Pesanan.';
+                            break;
+
+                        case 'cancelled':
+                            $text_start = $trx['transaction_pickup']['order_id'].' Driver batal mengambil Pesanan.';
+                            break;
+                    }
                     // kirim notifikasi
                     $dataNotif = [
                         'subject' => 'Order '.$trx['transaction_pickup']['order_id'],
-                        'string_body' => 'Driver tidak ditemukan. Segera pilih tindakan atau pesanan batal otomatis.',
+                        'string_body' => "$text_start Segera pilih tindakan atau pesanan batal otomatis.",
                         'type' => 'trx',
                         'id_reference'=> $trx['id_transaction']
                     ];
