@@ -67,6 +67,7 @@ Route::group(['prefix' => 'franchise'], function () {
         Route::group(['prefix' => 'outlet'], function () {
 		    Route::get('detail','ApiOutletFranchiseController@detail');
 		    Route::post('update','ApiOutletFranchiseController@update');
+		    Route::post('update-schedule','ApiOutletFranchiseController@updateSchedule');
 		});
     });
 
