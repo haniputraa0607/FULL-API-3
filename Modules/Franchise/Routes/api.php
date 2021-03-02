@@ -38,7 +38,6 @@ Route::group(['prefix' => 'franchise'], function () {
 
     Route::group(['middleware' => ['auth:franchise', 'scopes:franchise-admin']], function () {
         Route::group(['prefix' => 'transaction'], function () {
-
 		    Route::any('filter', 'ApiTransactionFranchiseController@transactionFilter');
 		    Route::post('detail','ApiTransactionFranchiseController@transactionDetail');
 
@@ -65,6 +64,10 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::post('summary', 'ApiReportDisburseController@summary');
             Route::post('list-transaction', 'ApiReportDisburseController@listTransaction');
         });
+        Route::group(['prefix' => 'outlet'], function () {
+		    Route::get('detail','ApiOutletFranchiseController@detail');
+		    Route::post('update','ApiOutletFranchiseController@update');
+		});
     });
 
 });
