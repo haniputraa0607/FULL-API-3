@@ -440,7 +440,7 @@ class ApiCronTrxController extends Controller
                     } else {
                         // taken
                         if (($reject['should_taken'] ?? false) === true) {
-                            TransactionPickup::whereIn('id_transaction', $newTrx->id_transaction)
+                            TransactionPickup::where('id_transaction', $newTrx->id_transaction)
                                         ->update(['taken_by_system_at' => date('Y-m-d 00:00:00')]);
                         }
                         $processed['failed_reject']++;
