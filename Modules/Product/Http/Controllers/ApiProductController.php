@@ -1943,7 +1943,18 @@ class ApiProductController extends Controller
                             break;
                     }
                     $promoVariant = app('\Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign')->getProduct($appliedPromo->promo_type, $query->toArray(), $post['id_outlet'])['applied_product'] ?? [];
-                    $productVariantIdPromo = array_column($promoVariant, 'id_product_variant_group');
+                    $productVariantIdPromo = [];
+                    if (is_array($promoVariant)) {
+                        $productVariantIdPromo = array_filter(array_column($promoVariant, 'id_product_variant_group'));
+                        if (!$productVariantIdPromo) {
+                            $productPromo = array_filter(array_column($promoVariant, 'id_product'));
+                            if (in_array($product['id_product'], $productPromo)) {
+                                $productVariantIdPromo = ProductVariantGroup::where('id_product', $product['id_product'])->pluck('id_product_variant_group')->toArray();
+                            }
+                        };
+                    } elseif ($promoVariant == '*') {
+                        $productVariantIdPromo = ProductVariantGroup::where('id_product', $product['id_product'])->pluck('id_product_variant_group')->toArray();
+                    }
                     if ($productVariantIdPromo) {
                         $product['variants'] = $this->addPromoFlag($product['variants'], $productVariantIdPromo);
                         unset($product['variants']['promo']);

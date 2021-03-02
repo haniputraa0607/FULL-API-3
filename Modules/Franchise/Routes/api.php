@@ -37,6 +37,11 @@ Route::group(['prefix' => 'franchise'], function () {
     });
 
     Route::group(['middleware' => ['auth:franchise', 'scopes:franchise-admin']], function () {
+        Route::group(['prefix' => 'user'], function() {
+            Route::post('detail-admin', 'ApiUserFranchiseController@detail');
+        });
+        Route::post('profile-admin', 'ApiUserFranchiseController@updateProfile');
+
         Route::group(['prefix' => 'transaction'], function () {
 		    Route::any('filter', 'ApiTransactionFranchiseController@transactionFilter');
 		    Route::post('detail','ApiTransactionFranchiseController@transactionDetail');

@@ -1685,6 +1685,19 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        if ($order->picked_by != 'Customer') {
+            $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+            if($pickup_gosend && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Driver has been booked'],
+                    'should_taken' => true,
+                ]);
+            } else {
+                goto reject;
+            }
+        }
+
         if ($order->ready_at) {
             if ($order->picked_by == 'Customer') {
                 return response()->json([
@@ -2392,10 +2405,25 @@ class ApiOutletApp extends Controller
             if ((time() - strtotime($firstbook)) > $time_limit) {
                 if (!$updateGoSend->stop_booking_at) {
                     $updateGoSend->update(['stop_booking_at' => date('Y-m-d H:i:s')]);
+
+                    $text_start = 'Driver tidak ditemukan. ';
+                    switch ($trx['transaction_pickup']['transaction_pickup_go_send']['latest_status']) {
+                        case 'no_driver':
+                            $text_start = 'Driver tidak ditemukan.';
+                            break;
+                        
+                        case 'rejected':
+                            $text_start = $trx['transaction_pickup']['order_id'].' Driver batal mengantar Pesanan.';
+                            break;
+
+                        case 'cancelled':
+                            $text_start = $trx['transaction_pickup']['order_id'].' Driver batal mengambil Pesanan.';
+                            break;
+                    }
                     // kirim notifikasi
                     $dataNotif = [
                         'subject' => 'Order '.$trx['transaction_pickup']['order_id'],
-                        'string_body' => 'Driver tidak ditemukan. Segera pilih tindakan atau pesanan batal otomatis.',
+                        'string_body' => "$text_start Segera pilih tindakan atau pesanan batal otomatis.",
                         'type' => 'trx',
                         'id_reference'=> $trx['id_transaction']
                     ];
@@ -3034,18 +3062,20 @@ class ApiOutletApp extends Controller
                 $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
             } elseif ($list['detail']['reject_at'] != null) {
                 $reason = $list['detail']['reject_reason'];
+                $ditolak = 'ORDER DITOLAK';
                 if (strpos($reason, 'auto reject order') !== false) {
+                    $ditolak = 'ORDER DITOLAK OTOMATIS';
                     if (strpos($reason, 'no driver') !== false) {
-                        $reason = 'Driver tidak ditemukan';
+                        $reason = 'GAGAL MENEMUKAN DRIVER';
                     } elseif (strpos($reason, 'not ready') !== false) {
-                        $reason = 'Auto reject sistem karena tidak diproses ready';
+                        $reason = 'STATUS ORDER TIDAK DIPROSES READY';
                     } else {
-                        $reason = 'Auto reject sistem karena tidak diterima';
+                        $reason = 'OUTLET GAGAL MENERIMA ORDER';
                     }
                 }
                 if($reason) $reason = "\n$reason";
                 $result['transaction_status']      = 0;
-                $result['transaction_status_text'] = "ORDER DITOLAK$reason";
+                $result['transaction_status_text'] = "$ditolak$reason";
             } elseif ($list['detail']['taken_by_system_at'] != null) {
                 $result['transaction_status']      = 1;
                 $result['transaction_status_text'] = 'ORDER SELESAI';
@@ -5062,7 +5092,7 @@ class ApiOutletApp extends Controller
 
                     if ($reject['status'] == 'success') {
                         $dataNotif = [
-                            'subject' => 'Order Cancelled',
+                            'subject' => 'Order Dibatalkan',
                             'string_body' => $transaction['order_id'] . ' - '. $transaction['transaction_receipt_number'],
                             'type' => 'trx',
                             'id_reference'=> $transaction['id_transaction']
