@@ -1691,6 +1691,7 @@ class ApiOutletApp extends Controller
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['Driver has been booked'],
+                    'should_taken' => true,
                 ]);
             } else {
                 goto reject;
