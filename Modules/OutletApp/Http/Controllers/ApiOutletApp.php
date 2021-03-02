@@ -3942,18 +3942,20 @@ class ApiOutletApp extends Controller
                 $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
             } elseif ($list['detail']['reject_at'] != null) {
                 $reason = $list['detail']['reject_reason'];
+                $ditolak = 'ORDER DITOLAK';
                 if (strpos($reason, 'auto reject order') !== false) {
+                    $ditolak = 'ORDER DITOLAK OTOMATIS';
                     if (strpos($reason, 'no driver') !== false) {
-                        $reason = 'Driver tidak ditemukan';
+                        $reason = 'GAGAL MENEMUKAN DRIVER';
                     } elseif (strpos($reason, 'not ready') !== false) {
-                        $reason = 'Auto reject sistem karena tidak diproses ready';
+                        $reason = 'STATUS ORDER TIDAK DIPROSES READY';
                     } else {
-                        $reason = 'Auto reject sistem karena tidak diterima';
+                        $reason = 'OUTLET GAGAL MENERIMA ORDER';
                     }
                 }
                 if($reason) $reason = "\n$reason";
                 $result['transaction_status']      = 0;
-                $result['transaction_status_text'] = "ORDER DITOLAK$reason";
+                $result['transaction_status_text'] = "$ditolak$reason";
             } elseif ($list['detail']['taken_by_system_at'] != null) {
                 $result['transaction_status']      = 1;
                 $result['transaction_status_text'] = 'ORDER SELESAI';
@@ -4040,15 +4042,17 @@ class ApiOutletApp extends Controller
                         break;
                     case 'completed':
                     case 'delivered':
-                        if($list['detail']['ready_at'] == null){
-                            $result['transaction_status'] = 4;
-                            $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
-                        }elseif($list['detail']['taken_at'] == null){
-                            $result['transaction_status'] = 3;
-                            $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
-                        }else{
-                            $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
-                            $result['transaction_status'] = 2;
+                        if($list['detail']['taken_by_system_at'] == null){
+                            if($list['detail']['ready_at'] == null){
+                                $result['transaction_status'] = 4;
+                                $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
+                            }elseif($list['detail']['taken_at'] == null){
+                                $result['transaction_status'] = 3;
+                                $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
+                            }else{
+                                $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
+                                $result['transaction_status'] = 2;
+                            }
                         }
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['driver']          = [
