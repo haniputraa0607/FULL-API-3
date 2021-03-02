@@ -131,7 +131,7 @@ class ApiOutletApp extends Controller
             ->leftJoin('users', 'users.id', 'transactions.id_user')
             ->select('transactions.id_transaction', 'transaction_receipt_number', 'order_id', 'transaction_date',
                 DB::raw('(CASE WHEN pickup_by = "Customer" THEN "Pickup Order" ELSE "Delivery" END) AS transaction_type'),
-                'pickup_by', 'pickup_type', 'pickup_at', 'receive_at', 'ready_at', 'taken_at', 'reject_at', 'transaction_grandtotal', DB::raw('sum(transaction_product_qty) as total_item'), 'users.name')
+                'pickup_by', 'pickup_type', 'pickup_at', 'receive_at', 'ready_at', 'taken_at', 'reject_at', 'taken_by_system_at', 'transaction_grandtotal', DB::raw('sum(transaction_product_qty) as total_item'), 'users.name')
             ->where('transactions.id_outlet', $outlet->id_outlet)
             ->whereDate('transaction_date', date('Y-m-d'))
             ->where('transaction_payment_status', 'Completed')
@@ -216,7 +216,10 @@ class ApiOutletApp extends Controller
             array_slice($dataList, 3, count($dataList) - 1, true);
 
             $dataList['order_id'] = strtoupper($dataList['order_id']);
-            if ($dataList['reject_at'] != null) {
+            if ($dataList['taken_by_system_at'] != null) {
+                $dataList['status'] = 'Completed';
+                $listCompleted[]    = $dataList;
+            }elseif ($dataList['reject_at'] != null) {
                 $dataList['status'] = 'Rejected';
                 $listCompleted[]    = $dataList;
             } elseif ($dataList['receive_at'] == null) {
