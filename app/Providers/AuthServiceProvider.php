@@ -33,9 +33,9 @@ class AuthServiceProvider extends ServiceProvider
             Passport::tokensCan([
                 'be' => 'Manage admin panel scope',
                 'apps' => 'Manage mobile scope',
-                'franchise' => 'General scope franchise',
+                'franchise-client' => 'General scope franchise',
                 'franchise-super-admin' => 'Manage super admin franchise scope',
-                'franchise-admin' => 'Manage admin franchise scope'
+                'franchise-user' => 'Manage admin franchise scope'
             ]);
             Passport::routes(function ($router) {
                 return $router->forAccessTokens();
