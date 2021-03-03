@@ -80,6 +80,12 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::post('list-transaction', 'ApiReportDisburseController@listTransaction');
             Route::get('list-bank', 'ApiReportDisburseController@listBank');
         });
+
+        Route::group(['prefix' => 'outlet'], function () {
+            Route::get('detail','ApiOutletFranchiseController@detail');
+            Route::post('update','ApiOutletFranchiseController@update');
+            Route::post('update-schedule','ApiOutletFranchiseController@updateSchedule');
+        });
     });
 
 });
