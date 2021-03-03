@@ -3146,6 +3146,19 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['cancelable'] = 1;
                         $result['rejectable']                  = 0;
                         break;
+                    case 'picked':
+                        $result['delivery_info']['delivery_status'] = 'Driver mengambil pesanan di Outlet';
+                        $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 0;
+                        $result['rejectable']                  = 0;
+                        break;
                     case 'enroute drop':
                     case 'out_for_delivery':
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
@@ -4026,6 +4039,19 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['cancelable'] = 1;
                         $result['rejectable']                  = 0;
                         break;
+                    case 'picked':
+                        $result['delivery_info']['delivery_status'] = 'Driver mengambil pesanan di Outlet';
+                        $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 0;
+                        $result['rejectable']                  = 0;
+                        break;
                     case 'enroute drop':
                     case 'out_for_delivery':
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
@@ -4419,6 +4445,8 @@ class ApiOutletApp extends Controller
             $tokens = $outletToken->pluck('token')->toArray();
             if (!empty($tokens)) {
                 $subject = $subject;
+                $data['type'] = 'trx';
+                $data['id_reference'] = $id_trx;
                 $push    = PushNotificationHelper::sendPush($tokens, $subject, $stringBody, null, $data);
             }
         } else {
