@@ -202,7 +202,6 @@ class ApiReportDisburseController extends Controller
 
                 if($rule == 'and'){
                     foreach ($post['conditions'] as $condition){
-                        \Log::info($condition['subject']);
                         if(!empty($condition['subject'])){
                             if($condition['subject'] == 'beneficiary_bank_name'){
                                 $data->where('disburse.'.$condition['subject'], $condition['operator']);
@@ -266,7 +265,7 @@ class ApiReportDisburseController extends Controller
 
         $config = [];
         if(isset($post['export']) && $post['export'] == 1){
-            $data = Transaction::join('transaction_pickup', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            $data = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
                 ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
                 ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
                 ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
