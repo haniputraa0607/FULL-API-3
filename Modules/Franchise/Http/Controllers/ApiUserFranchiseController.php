@@ -11,6 +11,7 @@ use Modules\Franchise\Entities\UserFranchise;
 use App\Lib\MyHelper;
 use Modules\Franchise\Entities\UserFranchiseOultet;
 use Modules\Franchise\Http\Requests\users_create;
+use App\Jobs\SendEmailUserFranchiseJob;
 
 class ApiUserFranchiseController extends Controller
 {
@@ -52,7 +53,24 @@ class ApiUserFranchiseController extends Controller
             }
         }
 
-        $list = $list->paginate(30);
+        if(isset($post['export']) && $post['export'] == 1){
+            $list = $list->get()->toArray();
+            $result = [];
+            foreach ($list as $user){
+                $outlet_code = UserFranchiseOultet::join('outlets', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
+                                ->where('id_user_franchise' , $user['id_user_franchise'])->first()['outlet_code']??NULL;
+                $result[] = [
+                    'email' => $user['email'],
+                    'name' => $user['name'],
+                    'level (Super Admin, Admin)' => $user['level'],
+                    'outlet_code' => $outlet_code,
+                    'status' => $user['user_franchise_status']
+                ];
+            }
+            $list = $result;
+        }else{
+            $list = $list->paginate(30);
+        }
 
         return response()->json(MyHelper::checkGet($list));
     }
@@ -284,5 +302,130 @@ class ApiUserFranchiseController extends Controller
         $update = UserFranchise::where('id_user_franchise', $dataAdmin['id_user_franchise'])->update($dataUpdate);
 
         return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function import(Request $request){
+        $post = $request->json()->all();
+        $arrId = [];
+        $result = [
+            'updated' => 0,
+            'create' => 0,
+            'failed' => 0,
+            'more_msg' => [],
+            'more_msg_extended' => []
+        ];
+
+        if(empty($post['data'])){
+            return response()->json(['status' => 'fail', 'messages' => ['File is empty']]);
+        }
+
+        foreach ($post['data'] as $key => $value) {
+            $outlet = Outlet::where('outlet_code', $value[3])->first()['id_outlet']??null;
+            if($value[2] == 'Admin' && is_null($outlet)){
+                $result['failed']++;
+                $result['more_msg_extended'][] = "Outlet code  {$value[3]} not found";
+                continue;
+            }
+
+            $check = UserFranchise::where('email', $value[0])->first();
+
+            if($check){
+                $dataUpdate = [
+                    'name' => $value[1],
+                    'level' => $value[2],
+                    'user_franchise_status' => $value[4]
+                ];
+
+                $user = UserFranchise::where('id_user_franchise', $check['id_user_franchise'])->update($dataUpdate);
+
+                if(!$user){
+                    $result['failed']++;
+                    $result['more_msg_extended'][] = "Failed create user  {$value[1]}";
+                    continue;
+                }else{
+                    $result['updated']++;
+                }
+
+                UserFranchiseOultet::where('id_user_franchise' , $check['id_user_franchise'])->delete();
+                if($value[2] == 'Admin'){
+                    UserFranchiseOultet::create(['id_user_franchise' => $check['id_user_franchise'], 'id_outlet' => $outlet]);
+                }
+            }else{
+                $dataCreate = [
+                    'email' => $value[0],
+                    'name' => $value[1],
+                    'level' => $value[2],
+                    'user_franchise_status' => $value[4]
+                ];
+
+                $user = UserFranchise::create($dataCreate);
+
+                if(!$user){
+                    $result['failed']++;
+                    $result['more_msg_extended'][] = "Failed create user  {$value[1]}";
+                    continue;
+                }else{
+                    $result['create']++;
+                }
+
+                if($value[2] == 'Admin'){
+                    UserFranchiseOultet::create(['id_user_franchise' => $user['id_user_franchise'], 'id_outlet' => $outlet]);
+                }
+
+                $arrId[] = $user['id_user_franchise'];
+            }
+        }
+
+        if(!empty($arrId)){
+            $arr_chunk = array_chunk($arrId, 20);
+            SendEmailUserFranchiseJob::dispatch($arr_chunk)->allOnConnection('database');
+        }
+
+        $response = [];
+
+        if($result['updated']){
+            $response[] = 'Update '.$result['updated'].' user';
+        }
+        if($result['create']){
+            $response[] = 'Create '.$result['create'].' new user';
+        }
+        if($result['failed']){
+            $response[] = 'Failed create '.$result['failed'].' user';
+        }
+        $response = array_merge($response,$result['more_msg_extended']);
+        return MyHelper::checkGet($response);
+    }
+
+    public function resetPassword(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['email']) && !empty($post['email'])){
+            $user = UserFranchise::where('email', $post['email'])->first();
+            if(empty($user)){
+                return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
+            }
+
+            $pin = MyHelper::createRandomPIN(6, 'angka');
+            $dataUpdate['password'] = bcrypt($pin);
+            $dataUpdate['first_update_password'] =0;
+            $update = UserFranchise::where('id_user_franchise', $user['id_user_franchise'])->update($dataUpdate);
+
+            if($update){
+                $autocrm = app($this->autocrm)->SendAutoCRM(
+                    'Reset Pin User Franchise',
+                    $post['email'],
+                    [
+                        'pin_franchise' => $pin,
+                        'email' => $user['email'],
+                        'name' => $user['name'],
+                        'url' => env('URL_PORTAL_MITRA')
+                    ], null, false, false, 'franchise', 1
+                );
+            }
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Email can not be empty']]);
+        }
+
     }
 }
