@@ -2428,7 +2428,8 @@ class ApiOutletApp extends Controller
                         'subject' => 'Order '.$trx['transaction_pickup']['order_id'],
                         'string_body' => "$text_start Segera pilih tindakan atau pesanan batal otomatis.",
                         'type' => 'trx',
-                        'id_reference'=> $trx['id_transaction']
+                        'id_reference'=> $trx['id_transaction'],
+                        'id_transaction'=> $trx['id_transaction']
                     ];
                     $this->outletNotif($dataNotif,$trx->id_outlet);
                 }
@@ -4445,8 +4446,6 @@ class ApiOutletApp extends Controller
             $tokens = $outletToken->pluck('token')->toArray();
             if (!empty($tokens)) {
                 $subject = $subject;
-                $data['type'] = 'trx';
-                $data['id_reference'] = $id_trx;
                 $push    = PushNotificationHelper::sendPush($tokens, $subject, $stringBody, null, $data);
             }
         } else {
@@ -5106,7 +5105,8 @@ class ApiOutletApp extends Controller
                         'subject' => 'Order '.$transaction['order_id'],
                         'string_body' => 'Dalam ' . ( 5 - $difference ) . ' menit, pesanan batal otomatis. Segera pilih tindakan.',
                         'type' => 'trx',
-                        'id_reference'=> $transaction['id_transaction']
+                        'id_reference'=> $transaction['id_transaction'],
+                        'id_transaction'=> $transaction['id_transaction']
                     ];
                     $this->outletNotif($dataNotif, $transaction->id_outlet);
                 } else {
@@ -5130,7 +5130,8 @@ class ApiOutletApp extends Controller
                             'subject' => 'Order Dibatalkan',
                             'string_body' => $transaction['order_id'] . ' - '. $transaction['transaction_receipt_number'],
                             'type' => 'trx',
-                            'id_reference'=> $transaction['id_transaction']
+                            'id_reference'=> $transaction['id_transaction'],
+                            'id_transaction'=> $transaction['id_transaction']
                         ];
                         $this->outletNotif($dataNotif,$transaction->id_outlet);
                         $processed['cancelled']++;
