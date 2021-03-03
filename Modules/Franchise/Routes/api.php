@@ -65,6 +65,13 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::post('summary', 'ApiReportDisburseController@summary');
             Route::post('list-transaction', 'ApiReportDisburseController@listTransaction');
         });
+
+        Route::get('select-list/{table}','ApiReportTransactionController@listForSelect');
+
+        Route::group(['prefix' => 'report-transaction'], function() {
+            Route::post('product', 'ApiReportTransactionController@product');
+            Route::post('modifier', 'ApiReportTransactionController@modifier');
+        });
     });
 
 });
