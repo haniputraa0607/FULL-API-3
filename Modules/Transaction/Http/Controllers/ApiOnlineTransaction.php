@@ -3475,13 +3475,13 @@ class ApiOnlineTransaction extends Controller
                             ['%name%', '%receipt_number%', '%order_id%'],
                             [$user->name, $trx->receipt_number, $detail['order_id']],
                         ];
-                        $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message_outlet','value_text'), true);
+                        // $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message_outlet','value_text'), true);
                         $dataPush += [
                             'push_notif_local' => 1,
-                            'title_5mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 5 menit lagi'),
-                            'msg_5mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !'),
-                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_15mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
-                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_15mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
+                            'title_5mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 5 menit lagi'),
+                            'msg_5mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
+                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 15 menit lagi'),
+                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
                             'pickup_time'       => $detail->pickup_at,
                         ];
                     } else {
@@ -3506,13 +3506,13 @@ class ApiOnlineTransaction extends Controller
                             ['%name%', '%receipt_number%', '%order_id%'],
                             [$user->name, $trx->receipt_number, $detail['order_id']],
                         ];
-                        $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message_outlet','value_text'), true);
+                        // $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message_outlet','value_text'), true);
                         $dataOutletSend += [
                             'push_notif_local' => 1,
-                            'title_5mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 5 menit lagi'),
-                            'msg_5mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !'),
-                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_15mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
-                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_15mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
+                            'title_5mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 5 menit lagi'),
+                            'msg_5mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
+                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 15 menit lagi'),
+                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
                             'pickup_time'       => $detail->pickup_at,
                         ];
                     }else {

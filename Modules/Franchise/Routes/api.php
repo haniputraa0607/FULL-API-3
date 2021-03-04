@@ -14,6 +14,9 @@ use Illuminate\Http\Request;
 */
 
 Route::group(['prefix' => 'franchise'], function () {
+    Route::group(['middleware' => ['auth_client', 'scopes:franchise']], function () {
+        Route::post('reset-password', 'ApiUserFranchiseController@resetPassword');
+    });
     Route::group(['middleware' => ['auth:franchise', 'scopes:franchise-super-admin']], function () {
         Route::group(['prefix' => 'user'], function() {
             Route::any('/', 'ApiUserFranchiseController@index');
@@ -24,6 +27,7 @@ Route::group(['prefix' => 'franchise'], function () {
 
             Route::post('autoresponse', 'ApiUserFranchiseController@autoresponse');
             Route::post('autoresponse/new-user/update', 'ApiUserFranchiseController@updateAutoresponse');
+            Route::post('import', 'ApiUserFranchiseController@import');
         });
         Route::get('outlets', 'ApiUserFranchiseController@allOutlet');
         Route::post('profile', 'ApiUserFranchiseController@updateProfile');
@@ -43,7 +47,6 @@ Route::group(['prefix' => 'franchise'], function () {
         Route::post('profile-admin', 'ApiUserFranchiseController@updateProfile');
 
         Route::group(['prefix' => 'transaction'], function () {
-
 		    Route::any('filter', 'ApiTransactionFranchiseController@transactionFilter');
 		    Route::post('detail','ApiTransactionFranchiseController@transactionDetail');
 
@@ -69,6 +72,19 @@ Route::group(['prefix' => 'franchise'], function () {
         Route::group(['prefix' => 'report-disburse'], function() {
             Route::post('summary', 'ApiReportDisburseController@summary');
             Route::post('list-transaction', 'ApiReportDisburseController@listTransaction');
+        });
+        Route::group(['prefix' => 'report-disburse'], function() {
+            Route::post('summary', 'ApiReportDisburseController@summary');
+            Route::post('list', 'ApiReportDisburseController@listDisburse');
+            Route::post('detail', 'ApiReportDisburseController@detailDisburse');
+            Route::post('list-transaction', 'ApiReportDisburseController@listTransaction');
+            Route::get('list-bank', 'ApiReportDisburseController@listBank');
+        });
+
+        Route::group(['prefix' => 'outlet'], function () {
+            Route::get('detail','ApiOutletFranchiseController@detail');
+            Route::post('update','ApiOutletFranchiseController@update');
+            Route::post('update-schedule','ApiOutletFranchiseController@updateSchedule');
         });
     });
 
