@@ -90,6 +90,13 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::post('update','ApiOutletFranchiseController@update');
             Route::post('update-schedule','ApiOutletFranchiseController@updateSchedule');
         });
+
+        Route::get('select-list/{table}','ApiReportTransactionController@listForSelect');
+
+        Route::group(['prefix' => 'report-transaction'], function() {
+            Route::post('product', 'ApiReportTransactionController@product');
+            Route::post('modifier', 'ApiReportTransactionController@modifier');
+        });
     });
 
 });
