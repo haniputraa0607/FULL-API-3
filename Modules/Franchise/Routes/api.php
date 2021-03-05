@@ -81,6 +81,10 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::get('list-bank', 'ApiReportDisburseController@listBank');
         });
 
+        Route::group(['prefix' => 'report-sales'], function() {
+            Route::post('summary', 'ApiReportSalesController@summary');
+        });
+
         Route::group(['prefix' => 'outlet'], function () {
             Route::get('detail','ApiOutletFranchiseController@detail');
             Route::post('update','ApiOutletFranchiseController@update');
