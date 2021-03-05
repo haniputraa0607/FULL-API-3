@@ -11,7 +11,8 @@ class OutletGroup extends Model
 
     protected $fillable = [
         'outlet_group_name',
-        'outlet_group_type'
+        'outlet_group_type',
+        'is_all_outlet'
     ];
 
     public function outlet_group_filter_outlet(){

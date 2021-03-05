@@ -28,7 +28,7 @@ class ApiUserFranchiseController extends Controller
     public function index(Request $request)
     {
         $post = $request->json()->all();
-        $list = UserFranchise::orderBy('created_at', 'desc');
+        $list = UserFranchise::whereNotNull('id_user_franchise');
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
             $rule = 'and';
@@ -37,16 +37,44 @@ class ApiUserFranchiseController extends Controller
             }
 
             if($rule == 'and'){
-                foreach ($post['conditions'] as $row){
-                    if(isset($row['subject'])){
-                        $list->where($row['subject'], 'like', '%'.$row['parameter'].'%');
+                foreach ($post['conditions'] as $condition){
+                    if(isset($condition['subject'])){
+                        if($condition['subject'] == 'level' || $condition['subject'] == 'user_franchise_status'){
+                            $list->where($condition['subject'], $condition['operator']);
+                        }elseif($condition['subject'] == 'id_outlet'){
+                            $list->whereIn('id_user_franchise', function ($query) use ($condition){
+                                $query->select('id_user_franchise')
+                                    ->from('user_franchise_outlet')
+                                    ->where('user_franchise_outlet.id_outlet', $condition['operator']);
+                            });
+                        }else{
+                            if($condition['operator'] == '='){
+                                $list->where($condition['subject'], $condition['parameter']);
+                            }else{
+                                $list->where($condition['subject'], 'like', '%'.$condition['parameter'].'%');
+                            }
+                        }
                     }
                 }
             }else{
-                $list->where(function ($subquery) use ($post){
-                    foreach ($post['conditions'] as $row){
-                        if(isset($row['subject'])){
-                            $subquery->orWhere($row['subject'], 'like', '%'.$row['parameter'].'%');
+                $list->where(function ($q) use ($post){
+                    foreach ($post['conditions'] as $condition){
+                        if(isset($conditionsss['subject'])){
+                            if($condition['subject'] == 'level' || $condition['subject'] == 'user_franchise_status'){
+                                $q->orWhere($condition['subject'], $condition['operator']);
+                            }elseif($condition['subject'] == 'id_outlet'){
+                                $q->orWhereIn('id_user_franchise', function ($query) use ($condition){
+                                    $query->select('id_user_franchise')
+                                        ->from('user_franchise_outlet')
+                                        ->where('user_franchise_outlet.id_outlet', $condition['operator']);
+                                });
+                            }else{
+                                if($condition['operator'] == '='){
+                                    $q->orWhere($condition['subject'], $condition['parameter']);
+                                }else{
+                                    $q->orWhere($condition['subject'], 'like', '%'.$condition['parameter'].'%');
+                                }
+                            }
                         }
                     }
                 });
@@ -62,14 +90,42 @@ class ApiUserFranchiseController extends Controller
                 $result[] = [
                     'email' => $user['email'],
                     'name' => $user['name'],
-                    'level (Super Admin, Admin)' => $user['level'],
+                    'level (Super Admin, User Franchise)' => $user['level'],
                     'outlet_code' => $outlet_code,
                     'status' => $user['user_franchise_status']
                 ];
             }
             $list = $result;
         }else{
-            $list = $list->paginate(30);
+            $order = $post['order']??'created_at';
+            $orderType = $post['order_type']??'desc';
+
+            if($order != 'outlet'){
+                $list = $list->orderBy($order, $orderType)->paginate(30)->toArray();
+            }else{
+                $list = $list->paginate(30)->toArray();
+            }
+
+            foreach ($list['data'] as $key => $val){
+                $outlet = UserFranchiseOultet::join('outlets', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
+                    ->where('id_user_franchise' , $val['id_user_franchise'])->first();
+                $list['data'][$key]['outlet_code'] = $outlet['outlet_code']??null;
+                $list['data'][$key]['outlet_name'] = $outlet['outlet_name']??null;
+            }
+
+            if($order == 'outlet' && $orderType == 'asc'){
+                $data = $list['data'];
+                usort($data, function ($a, $b) {
+                    return $a['outlet_code'] <=> $b['outlet_code'];
+                });
+                $list['data'] = $data;
+            }elseif ($order == 'outlet' && $orderType == 'desc'){
+                $data = $list['data'];
+                usort($data, function ($a, $b) {
+                    return $a['outlet_code'] < $b['outlet_code'];
+                });
+                $list['data'] = $data;
+            }
         }
 
         return response()->json(MyHelper::checkGet($list));
@@ -104,7 +160,7 @@ class ApiUserFranchiseController extends Controller
 
             $create = UserFranchise::create($dataCreate);
             if($create){
-                if($post['level'] == 'Admin'){
+                if($post['level'] == 'User Franchise'){
                     UserFranchiseOultet::where('id_user_franchise' , $create['id_user_franchise'])->delete();
                     $createUserOutlet = UserFranchiseOultet::create(['id_user_franchise' => $create['id_user_franchise'], 'id_outlet' => $post['id_outlet']]);
                 }
@@ -168,7 +224,7 @@ class ApiUserFranchiseController extends Controller
             $update = UserFranchise::where('id_user_franchise', $post['id_user_franchise'])->update($dataUpdate);
             if($update){
                 UserFranchiseOultet::where('id_user_franchise' , $post['id_user_franchise'])->delete();
-                if($post['level'] == 'Admin'){
+                if($post['level'] == 'User Franchise'){
                     $createUserOutlet = UserFranchiseOultet::create(['id_user_franchise' => $post['id_user_franchise'], 'id_outlet' => $post['id_outlet']]);
                 }
 
@@ -321,7 +377,7 @@ class ApiUserFranchiseController extends Controller
 
         foreach ($post['data'] as $key => $value) {
             $outlet = Outlet::where('outlet_code', $value[3])->first()['id_outlet']??null;
-            if($value[2] == 'Admin' && is_null($outlet)){
+            if($value[2] == 'User Franchise' && is_null($outlet)){
                 $result['failed']++;
                 $result['more_msg_extended'][] = "Outlet code  {$value[3]} not found";
                 continue;
@@ -347,7 +403,7 @@ class ApiUserFranchiseController extends Controller
                 }
 
                 UserFranchiseOultet::where('id_user_franchise' , $check['id_user_franchise'])->delete();
-                if($value[2] == 'Admin'){
+                if($value[2] == 'User Franchise'){
                     UserFranchiseOultet::create(['id_user_franchise' => $check['id_user_franchise'], 'id_outlet' => $outlet]);
                 }
             }else{
@@ -368,7 +424,7 @@ class ApiUserFranchiseController extends Controller
                     $result['create']++;
                 }
 
-                if($value[2] == 'Admin'){
+                if($value[2] == 'User Franchise'){
                     UserFranchiseOultet::create(['id_user_franchise' => $user['id_user_franchise'], 'id_outlet' => $outlet]);
                 }
 

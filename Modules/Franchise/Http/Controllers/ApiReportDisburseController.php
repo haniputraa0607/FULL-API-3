@@ -186,6 +186,8 @@ class ApiReportDisburseController extends Controller
 
             if ($post['status'] == 'success'){
                 $data->where('disburse.disburse_status', 'Success');
+            }elseif($post['status'] == 'fail'){
+                $data->whereIn('disburse_status', ['Fail', 'Failed Create Payouts']);
             }
 
             if(isset($post['date_start']) && !empty($post['date_start']) &&
@@ -203,8 +205,13 @@ class ApiReportDisburseController extends Controller
                 if($rule == 'and'){
                     foreach ($post['conditions'] as $condition){
                         if(!empty($condition['subject'])){
-                            if($condition['subject'] == 'beneficiary_bank_name'){
-                                $data->where('disburse.'.$condition['subject'], $condition['operator']);
+                            if($condition['subject'] == 'beneficiary_bank_name' || $condition['subject'] == 'disburse_status'){
+                                if($condition['operator'] == 'Fail'){
+                                    $data->whereIn('disburse_status', ['Fail', 'Failed Create Payouts']);
+                                }else{
+                                    $data->where('disburse.'.$condition['subject'], $condition['operator']);
+                                }
+
                             }else{
                                 if($condition['operator'] == '='){
                                     $data->where('disburse.'.$condition['subject'], $condition['parameter']);
@@ -218,8 +225,12 @@ class ApiReportDisburseController extends Controller
                     $data->where(function ($q) use($post){
                         foreach ($post['conditions'] as $condition){
                             if(!empty($condition['subject'])){
-                                if($condition['subject'] == 'beneficiary_bank_name'){
-                                    $q->orWhere('disburse.'.$condition['subject'], $condition['operator']);
+                                if($condition['subject'] == 'beneficiary_bank_name' || $condition['subject'] == 'disburse_status'){
+                                    if($condition['operator'] == 'Fail'){
+                                        $q->whereIn('disburse_status', ['Fail', 'Failed Create Payouts']);
+                                    }else{
+                                        $q->where('disburse.'.$condition['subject'], $condition['operator']);
+                                    }
                                 }else{
                                     if($condition['operator'] == '='){
                                         $q->orWhere('disburse.'.$condition['subject'], $condition['parameter']);
@@ -240,7 +251,7 @@ class ApiReportDisburseController extends Controller
                 total_fee_item as "Total Fee Item", total_payment_charge as "Total MDR PG"')
                     ->get()->toArray();
             }else{
-                $data = $data->select('disburse.reference_no', 'disburse_outlet.*', 'disburse.beneficiary_name', 'disburse.beneficiary_account_number', 'bank_name.bank_name')->orderBy('disburse.'.$order, $orderType)->paginate(30);
+                $data = $data->select('disburse.disburse_status', 'disburse.created_at as disburse_date', 'disburse.error_message', 'disburse.reference_no', 'disburse_outlet.*', 'disburse.beneficiary_name', 'disburse.beneficiary_account_number', 'bank_name.bank_name')->orderBy('disburse.'.$order, $orderType)->paginate(30);
             }
 
             return response()->json(MyHelper::checkGet($data));
