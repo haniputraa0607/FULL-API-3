@@ -11,6 +11,7 @@ use Modules\Franchise\Entities\UserFranchise;
 use App\Lib\MyHelper;
 use Modules\Franchise\Entities\UserFranchiseOultet;
 use Modules\Franchise\Http\Requests\users_create;
+use App\Jobs\SendEmailUserFranchiseJob;
 
 class ApiUserFranchiseController extends Controller
 {
@@ -27,7 +28,7 @@ class ApiUserFranchiseController extends Controller
     public function index(Request $request)
     {
         $post = $request->json()->all();
-        $list = UserFranchise::orderBy('created_at', 'desc');
+        $list = UserFranchise::whereNotNull('id_user_franchise');
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
             $rule = 'and';
@@ -36,23 +37,96 @@ class ApiUserFranchiseController extends Controller
             }
 
             if($rule == 'and'){
-                foreach ($post['conditions'] as $row){
-                    if(isset($row['subject'])){
-                        $list->where($row['subject'], 'like', '%'.$row['parameter'].'%');
+                foreach ($post['conditions'] as $condition){
+                    if(isset($condition['subject'])){
+                        if($condition['subject'] == 'level' || $condition['subject'] == 'user_franchise_status'){
+                            $list->where($condition['subject'], $condition['operator']);
+                        }elseif($condition['subject'] == 'id_outlet'){
+                            $list->whereIn('id_user_franchise', function ($query) use ($condition){
+                                $query->select('id_user_franchise')
+                                    ->from('user_franchise_outlet')
+                                    ->where('user_franchise_outlet.id_outlet', $condition['operator']);
+                            });
+                        }else{
+                            if($condition['operator'] == '='){
+                                $list->where($condition['subject'], $condition['parameter']);
+                            }else{
+                                $list->where($condition['subject'], 'like', '%'.$condition['parameter'].'%');
+                            }
+                        }
                     }
                 }
             }else{
-                $list->where(function ($subquery) use ($post){
-                    foreach ($post['conditions'] as $row){
-                        if(isset($row['subject'])){
-                            $subquery->orWhere($row['subject'], 'like', '%'.$row['parameter'].'%');
+                $list->where(function ($q) use ($post){
+                    foreach ($post['conditions'] as $condition){
+                        if(isset($conditionsss['subject'])){
+                            if($condition['subject'] == 'level' || $condition['subject'] == 'user_franchise_status'){
+                                $q->orWhere($condition['subject'], $condition['operator']);
+                            }elseif($condition['subject'] == 'id_outlet'){
+                                $q->orWhereIn('id_user_franchise', function ($query) use ($condition){
+                                    $query->select('id_user_franchise')
+                                        ->from('user_franchise_outlet')
+                                        ->where('user_franchise_outlet.id_outlet', $condition['operator']);
+                                });
+                            }else{
+                                if($condition['operator'] == '='){
+                                    $q->orWhere($condition['subject'], $condition['parameter']);
+                                }else{
+                                    $q->orWhere($condition['subject'], 'like', '%'.$condition['parameter'].'%');
+                                }
+                            }
                         }
                     }
                 });
             }
         }
 
-        $list = $list->paginate(30);
+        if(isset($post['export']) && $post['export'] == 1){
+            $list = $list->get()->toArray();
+            $result = [];
+            foreach ($list as $user){
+                $outlet_code = UserFranchiseOultet::join('outlets', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
+                                ->where('id_user_franchise' , $user['id_user_franchise'])->first()['outlet_code']??NULL;
+                $result[] = [
+                    'email' => $user['email'],
+                    'name' => $user['name'],
+                    'level (Super Admin, User Franchise)' => $user['level'],
+                    'outlet_code' => $outlet_code,
+                    'status' => $user['user_franchise_status']
+                ];
+            }
+            $list = $result;
+        }else{
+            $order = $post['order']??'created_at';
+            $orderType = $post['order_type']??'desc';
+
+            if($order != 'outlet'){
+                $list = $list->orderBy($order, $orderType)->paginate(30)->toArray();
+            }else{
+                $list = $list->paginate(30)->toArray();
+            }
+
+            foreach ($list['data'] as $key => $val){
+                $outlet = UserFranchiseOultet::join('outlets', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
+                    ->where('id_user_franchise' , $val['id_user_franchise'])->first();
+                $list['data'][$key]['outlet_code'] = $outlet['outlet_code']??null;
+                $list['data'][$key]['outlet_name'] = $outlet['outlet_name']??null;
+            }
+
+            if($order == 'outlet' && $orderType == 'asc'){
+                $data = $list['data'];
+                usort($data, function ($a, $b) {
+                    return $a['outlet_code'] <=> $b['outlet_code'];
+                });
+                $list['data'] = $data;
+            }elseif ($order == 'outlet' && $orderType == 'desc'){
+                $data = $list['data'];
+                usort($data, function ($a, $b) {
+                    return $a['outlet_code'] < $b['outlet_code'];
+                });
+                $list['data'] = $data;
+            }
+        }
 
         return response()->json(MyHelper::checkGet($list));
     }
@@ -86,7 +160,7 @@ class ApiUserFranchiseController extends Controller
 
             $create = UserFranchise::create($dataCreate);
             if($create){
-                if($post['level'] == 'Admin'){
+                if($post['level'] == 'User Franchise'){
                     UserFranchiseOultet::where('id_user_franchise' , $create['id_user_franchise'])->delete();
                     $createUserOutlet = UserFranchiseOultet::create(['id_user_franchise' => $create['id_user_franchise'], 'id_outlet' => $post['id_outlet']]);
                 }
@@ -150,7 +224,7 @@ class ApiUserFranchiseController extends Controller
             $update = UserFranchise::where('id_user_franchise', $post['id_user_franchise'])->update($dataUpdate);
             if($update){
                 UserFranchiseOultet::where('id_user_franchise' , $post['id_user_franchise'])->delete();
-                if($post['level'] == 'Admin'){
+                if($post['level'] == 'User Franchise'){
                     $createUserOutlet = UserFranchiseOultet::create(['id_user_franchise' => $post['id_user_franchise'], 'id_outlet' => $post['id_outlet']]);
                 }
 
@@ -284,5 +358,130 @@ class ApiUserFranchiseController extends Controller
         $update = UserFranchise::where('id_user_franchise', $dataAdmin['id_user_franchise'])->update($dataUpdate);
 
         return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function import(Request $request){
+        $post = $request->json()->all();
+        $arrId = [];
+        $result = [
+            'updated' => 0,
+            'create' => 0,
+            'failed' => 0,
+            'more_msg' => [],
+            'more_msg_extended' => []
+        ];
+
+        if(empty($post['data'])){
+            return response()->json(['status' => 'fail', 'messages' => ['File is empty']]);
+        }
+
+        foreach ($post['data'] as $key => $value) {
+            $outlet = Outlet::where('outlet_code', $value[3])->first()['id_outlet']??null;
+            if($value[2] == 'User Franchise' && is_null($outlet)){
+                $result['failed']++;
+                $result['more_msg_extended'][] = "Outlet code  {$value[3]} not found";
+                continue;
+            }
+
+            $check = UserFranchise::where('email', $value[0])->first();
+
+            if($check){
+                $dataUpdate = [
+                    'name' => $value[1],
+                    'level' => $value[2],
+                    'user_franchise_status' => $value[4]
+                ];
+
+                $user = UserFranchise::where('id_user_franchise', $check['id_user_franchise'])->update($dataUpdate);
+
+                if(!$user){
+                    $result['failed']++;
+                    $result['more_msg_extended'][] = "Failed create user  {$value[1]}";
+                    continue;
+                }else{
+                    $result['updated']++;
+                }
+
+                UserFranchiseOultet::where('id_user_franchise' , $check['id_user_franchise'])->delete();
+                if($value[2] == 'User Franchise'){
+                    UserFranchiseOultet::create(['id_user_franchise' => $check['id_user_franchise'], 'id_outlet' => $outlet]);
+                }
+            }else{
+                $dataCreate = [
+                    'email' => $value[0],
+                    'name' => $value[1],
+                    'level' => $value[2],
+                    'user_franchise_status' => $value[4]
+                ];
+
+                $user = UserFranchise::create($dataCreate);
+
+                if(!$user){
+                    $result['failed']++;
+                    $result['more_msg_extended'][] = "Failed create user  {$value[1]}";
+                    continue;
+                }else{
+                    $result['create']++;
+                }
+
+                if($value[2] == 'User Franchise'){
+                    UserFranchiseOultet::create(['id_user_franchise' => $user['id_user_franchise'], 'id_outlet' => $outlet]);
+                }
+
+                $arrId[] = $user['id_user_franchise'];
+            }
+        }
+
+        if(!empty($arrId)){
+            $arr_chunk = array_chunk($arrId, 20);
+            SendEmailUserFranchiseJob::dispatch($arr_chunk)->allOnConnection('database');
+        }
+
+        $response = [];
+
+        if($result['updated']){
+            $response[] = 'Update '.$result['updated'].' user';
+        }
+        if($result['create']){
+            $response[] = 'Create '.$result['create'].' new user';
+        }
+        if($result['failed']){
+            $response[] = 'Failed create '.$result['failed'].' user';
+        }
+        $response = array_merge($response,$result['more_msg_extended']);
+        return MyHelper::checkGet($response);
+    }
+
+    public function resetPassword(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['email']) && !empty($post['email'])){
+            $user = UserFranchise::where('email', $post['email'])->first();
+            if(empty($user)){
+                return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
+            }
+
+            $pin = MyHelper::createRandomPIN(6, 'angka');
+            $dataUpdate['password'] = bcrypt($pin);
+            $dataUpdate['first_update_password'] =0;
+            $update = UserFranchise::where('id_user_franchise', $user['id_user_franchise'])->update($dataUpdate);
+
+            if($update){
+                $autocrm = app($this->autocrm)->SendAutoCRM(
+                    'Reset Pin User Franchise',
+                    $post['email'],
+                    [
+                        'pin_franchise' => $pin,
+                        'email' => $user['email'],
+                        'name' => $user['name'],
+                        'url' => env('URL_PORTAL_MITRA')
+                    ], null, false, false, 'franchise', 1
+                );
+            }
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Email can not be empty']]);
+        }
+
     }
 }

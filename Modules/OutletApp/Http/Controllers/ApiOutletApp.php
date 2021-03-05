@@ -131,7 +131,7 @@ class ApiOutletApp extends Controller
             ->leftJoin('users', 'users.id', 'transactions.id_user')
             ->select('transactions.id_transaction', 'transaction_receipt_number', 'order_id', 'transaction_date',
                 DB::raw('(CASE WHEN pickup_by = "Customer" THEN "Pickup Order" ELSE "Delivery" END) AS transaction_type'),
-                'pickup_by', 'pickup_type', 'pickup_at', 'receive_at', 'ready_at', 'taken_at', 'reject_at', 'transaction_grandtotal', DB::raw('sum(transaction_product_qty) as total_item'), 'users.name')
+                'pickup_by', 'pickup_type', 'pickup_at', 'receive_at', 'ready_at', 'taken_at', 'reject_at', 'taken_by_system_at', 'transaction_grandtotal', DB::raw('sum(transaction_product_qty) as total_item'), 'users.name')
             ->where('transactions.id_outlet', $outlet->id_outlet)
             ->whereDate('transaction_date', date('Y-m-d'))
             ->where('transaction_payment_status', 'Completed')
@@ -216,7 +216,10 @@ class ApiOutletApp extends Controller
             array_slice($dataList, 3, count($dataList) - 1, true);
 
             $dataList['order_id'] = strtoupper($dataList['order_id']);
-            if ($dataList['reject_at'] != null) {
+            if ($dataList['taken_by_system_at'] != null) {
+                $dataList['status'] = 'Completed';
+                $listCompleted[]    = $dataList;
+            }elseif ($dataList['reject_at'] != null) {
                 $dataList['status'] = 'Rejected';
                 $listCompleted[]    = $dataList;
             } elseif ($dataList['receive_at'] == null) {
@@ -1685,6 +1688,19 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        if ($order->picked_by != 'Customer') {
+            $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+            if($pickup_gosend && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Driver has been booked'],
+                    'should_taken' => true,
+                ]);
+            } else {
+                goto reject;
+            }
+        }
+
         if ($order->ready_at) {
             if ($order->picked_by == 'Customer') {
                 return response()->json([
@@ -2392,12 +2408,28 @@ class ApiOutletApp extends Controller
             if ((time() - strtotime($firstbook)) > $time_limit) {
                 if (!$updateGoSend->stop_booking_at) {
                     $updateGoSend->update(['stop_booking_at' => date('Y-m-d H:i:s')]);
+
+                    $text_start = 'Driver tidak ditemukan. ';
+                    switch ($trx['transaction_pickup']['transaction_pickup_go_send']['latest_status']) {
+                        case 'no_driver':
+                            $text_start = 'Driver tidak ditemukan.';
+                            break;
+                        
+                        case 'rejected':
+                            $text_start = $trx['transaction_pickup']['order_id'].' Driver batal mengantar Pesanan.';
+                            break;
+
+                        case 'cancelled':
+                            $text_start = $trx['transaction_pickup']['order_id'].' Driver batal mengambil Pesanan.';
+                            break;
+                    }
                     // kirim notifikasi
                     $dataNotif = [
                         'subject' => 'Order '.$trx['transaction_pickup']['order_id'],
-                        'string_body' => 'Driver tidak ditemukan. Segera pilih tindakan atau pesanan batal otomatis.',
+                        'string_body' => "$text_start Segera pilih tindakan atau pesanan batal otomatis.",
                         'type' => 'trx',
-                        'id_reference'=> $trx['id_transaction']
+                        'id_reference'=> $trx['id_transaction'],
+                        'id_transaction'=> $trx['id_transaction']
                     ];
                     $this->outletNotif($dataNotif,$trx->id_outlet);
                 }
@@ -3034,18 +3066,20 @@ class ApiOutletApp extends Controller
                 $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
             } elseif ($list['detail']['reject_at'] != null) {
                 $reason = $list['detail']['reject_reason'];
+                $ditolak = 'ORDER DITOLAK';
                 if (strpos($reason, 'auto reject order') !== false) {
+                    $ditolak = 'ORDER DITOLAK OTOMATIS';
                     if (strpos($reason, 'no driver') !== false) {
-                        $reason = 'Driver tidak ditemukan';
+                        $reason = 'GAGAL MENEMUKAN DRIVER';
                     } elseif (strpos($reason, 'not ready') !== false) {
-                        $reason = 'Auto reject sistem karena tidak diproses ready';
+                        $reason = 'STATUS ORDER TIDAK DIPROSES READY';
                     } else {
-                        $reason = 'Auto reject sistem karena tidak diterima';
+                        $reason = 'OUTLET GAGAL MENERIMA ORDER';
                     }
                 }
                 if($reason) $reason = "\n$reason";
                 $result['transaction_status']      = 0;
-                $result['transaction_status_text'] = "ORDER DITOLAK$reason";
+                $result['transaction_status_text'] = "$ditolak$reason";
             } elseif ($list['detail']['taken_by_system_at'] != null) {
                 $result['transaction_status']      = 1;
                 $result['transaction_status_text'] = 'ORDER SELESAI';
@@ -3111,6 +3145,19 @@ class ApiOutletApp extends Controller
                             'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                         ];
                         $result['delivery_info']['cancelable'] = 1;
+                        $result['rejectable']                  = 0;
+                        break;
+                    case 'picked':
+                        $result['delivery_info']['delivery_status'] = 'Driver mengambil pesanan di Outlet';
+                        $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 0;
                         $result['rejectable']                  = 0;
                         break;
                     case 'enroute drop':
@@ -3912,18 +3959,20 @@ class ApiOutletApp extends Controller
                 $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
             } elseif ($list['detail']['reject_at'] != null) {
                 $reason = $list['detail']['reject_reason'];
+                $ditolak = 'ORDER DITOLAK';
                 if (strpos($reason, 'auto reject order') !== false) {
+                    $ditolak = 'ORDER DITOLAK OTOMATIS';
                     if (strpos($reason, 'no driver') !== false) {
-                        $reason = 'Driver tidak ditemukan';
+                        $reason = 'GAGAL MENEMUKAN DRIVER';
                     } elseif (strpos($reason, 'not ready') !== false) {
-                        $reason = 'Auto reject sistem karena tidak diproses ready';
+                        $reason = 'STATUS ORDER TIDAK DIPROSES READY';
                     } else {
-                        $reason = 'Auto reject sistem karena tidak diterima';
+                        $reason = 'OUTLET GAGAL MENERIMA ORDER';
                     }
                 }
                 if($reason) $reason = "\n$reason";
                 $result['transaction_status']      = 0;
-                $result['transaction_status_text'] = "ORDER DITOLAK$reason";
+                $result['transaction_status_text'] = "$ditolak$reason";
             } elseif ($list['detail']['taken_by_system_at'] != null) {
                 $result['transaction_status']      = 1;
                 $result['transaction_status_text'] = 'ORDER SELESAI';
@@ -3991,6 +4040,19 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['cancelable'] = 1;
                         $result['rejectable']                  = 0;
                         break;
+                    case 'picked':
+                        $result['delivery_info']['delivery_status'] = 'Driver mengambil pesanan di Outlet';
+                        $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 0;
+                        $result['rejectable']                  = 0;
+                        break;
                     case 'enroute drop':
                     case 'out_for_delivery':
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
@@ -4010,15 +4072,17 @@ class ApiOutletApp extends Controller
                         break;
                     case 'completed':
                     case 'delivered':
-                        if($list['detail']['ready_at'] == null){
-                            $result['transaction_status'] = 4;
-                            $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
-                        }elseif($list['detail']['taken_at'] == null){
-                            $result['transaction_status'] = 3;
-                            $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
-                        }else{
-                            $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
-                            $result['transaction_status'] = 2;
+                        if($list['detail']['taken_by_system_at'] == null){
+                            if($list['detail']['ready_at'] == null){
+                                $result['transaction_status'] = 4;
+                                $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
+                            }elseif($list['detail']['taken_at'] == null){
+                                $result['transaction_status'] = 3;
+                                $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
+                            }else{
+                                $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
+                                $result['transaction_status'] = 2;
+                            }
                         }
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['driver']          = [
@@ -5041,7 +5105,8 @@ class ApiOutletApp extends Controller
                         'subject' => 'Order '.$transaction['order_id'],
                         'string_body' => 'Dalam ' . ( 5 - $difference ) . ' menit, pesanan batal otomatis. Segera pilih tindakan.',
                         'type' => 'trx',
-                        'id_reference'=> $transaction['id_transaction']
+                        'id_reference'=> $transaction['id_transaction'],
+                        'id_transaction'=> $transaction['id_transaction']
                     ];
                     $this->outletNotif($dataNotif, $transaction->id_outlet);
                 } else {
@@ -5062,10 +5127,11 @@ class ApiOutletApp extends Controller
 
                     if ($reject['status'] == 'success') {
                         $dataNotif = [
-                            'subject' => 'Order Cancelled',
+                            'subject' => 'Order Dibatalkan',
                             'string_body' => $transaction['order_id'] . ' - '. $transaction['transaction_receipt_number'],
                             'type' => 'trx',
-                            'id_reference'=> $transaction['id_transaction']
+                            'id_reference'=> $transaction['id_transaction'],
+                            'id_transaction'=> $transaction['id_transaction']
                         ];
                         $this->outletNotif($dataNotif,$transaction->id_outlet);
                         $processed['cancelled']++;
