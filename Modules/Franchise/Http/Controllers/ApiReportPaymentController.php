@@ -166,7 +166,8 @@ class ApiReportPaymentController extends Controller
                 $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name','transaction_payment_balances.balance_nominal as amount')
                     ->join('transaction_payment_balances', 'transactions.id_transaction', '=', 'transaction_payment_balances.id_transaction');
             }else{
-                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name',DB::raw('(CASE WHEN transaction_payment_midtrans.gross_amount IS NULL THEN transaction_payment_ipay88s.amount
+                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name',
+                    DB::raw('(CASE WHEN transaction_payment_midtrans.gross_amount IS NULL THEN transaction_payment_ipay88s.amount/100
                         ELSE transaction_payment_midtrans.gross_amount END) as amount'))
                     ->where(function ($q) use($post){
                         $q->where('transaction_payment_midtrans.payment_type', $post['trx_payment'])->orWhere('transaction_payment_ipay88s.payment_method', $post['trx_payment']);
