@@ -39,7 +39,15 @@ return [
     |
     */
 
-    'debug' => env('APP_DEBUG', true),
+    // 'debug' => env('APP_DEBUG', true),
+    'debug' => env('APP_ENV', 'local') != 'production' ? array_key_exists('REMOTE_ADDR', $_SERVER)
+    ? in_array($_SERVER['REMOTE_ADDR'], explode(',', env('DEV_IP', '')))
+    : true : false,
+    'debug_blacklist' => [
+    	'_COOKIE' => array_keys($_COOKIE),
+    	'_SERVER' => array_keys($_SERVER),
+    	'_ENV' => array_keys($_ENV), 
+    ],
 
     /*
     |--------------------------------------------------------------------------
