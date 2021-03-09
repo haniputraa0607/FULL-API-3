@@ -8,6 +8,7 @@ use Illuminate\Routing\Controller;
 use App\Http\Models\DailyReportTrxMenu;
 use App\Http\Models\ProductCategory;
 use App\Http\Models\Product;
+use App\Http\Models\TransactionProduct;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\Brand\Entities\Brand;
@@ -17,9 +18,44 @@ class ApiReportTransactionController extends Controller
 {
     public function product(Request $request)
     {
-        $result = DailyReportTrxMenu::select('trx_date', 'product_name', 'total_qty', 'total_nominal', 'total_product_discount', 'id_report_trx_menu', 'id_outlet', \DB::raw('GROUP_CONCAT(product_variants.product_variant_name) as variant_name'))
-            ->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
-            ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
+        if (($request->rule['9998']['parameter']??false) == ($request->rule['9999']['parameter']??false) && ($request->rule['9998']['parameter']??false) == date('Y-m-d')) {
+            $date = date('Y-m-d');
+            $result = \DB::table(\DB::raw("
+                (SELECT 
+                    DATE(MIN(transaction_date)) AS trx_date,
+                    product_name,
+                    transaction_products.id_product,
+                    transaction_products.id_brand,
+                    transactions.id_outlet,
+                    transaction_products.id_product_variant_group,
+                    products.id_product_category,
+                    SUM(transaction_product_qty) AS total_qty,
+                    SUM(transaction_product_subtotal) AS total_nominal,
+                    SUM(transaction_product_discount) AS total_product_discount,
+                    0 AS id_report_trx_menu
+                FROM
+                    `transaction_products`
+                        INNER JOIN
+                    `transactions` ON `transactions`.`id_transaction` = `transaction_products`.`id_transaction`
+                        INNER JOIN
+                    `transaction_pickups` ON `transactions`.`id_transaction` = `transaction_pickups`.`id_transaction`
+                        INNER JOIN
+                    `products` ON `products`.`id_product` = `transaction_products`.`id_product`
+                WHERE
+                    `transaction_payment_status` = 'Completed'
+                        AND (`taken_at` IS NOT NULL
+                        OR `taken_by_system_at` IS NOT NULL)
+                        AND DATE(transaction_date) = '$date'
+                GROUP BY DATE(transaction_date) , transaction_products.id_product , transaction_products.id_product_variant_group) as daily_report_trx_menu
+            "))
+                ->select('trx_date', 'product_name', 'total_qty', 'total_nominal', 'total_product_discount', 'id_report_trx_menu', \DB::raw('GROUP_CONCAT(product_variants.product_variant_name) as variant_name'))
+                ->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
+                ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
+        } else {
+            $result = DailyReportTrxMenu::select('trx_date', 'product_name', 'total_qty', 'total_nominal', 'total_product_discount', 'id_report_trx_menu', \DB::raw('GROUP_CONCAT(product_variants.product_variant_name) as variant_name'))
+                ->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
+                ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
+        }
 
         $countTotal = null;
 
@@ -46,7 +82,7 @@ class ApiReportTransactionController extends Controller
             }
         }
 
-        $result->groupBy('trx_date', 'product_name', 'total_qty', 'total_nominal', 'total_product_discount', 'id_report_trx_menu', 'id_outlet');
+        $result->groupBy('trx_date', 'product_name', 'total_qty', 'total_nominal', 'total_product_discount', 'id_report_trx_menu');
         $result->orderBy('id_report_trx_menu', 'DESC');
         if ($request->page) {
             $result = $result->paginate($request->length ?: 15)->toArray();
