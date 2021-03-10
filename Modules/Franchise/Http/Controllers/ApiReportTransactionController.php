@@ -8,7 +8,9 @@ use Illuminate\Routing\Controller;
 use App\Http\Models\DailyReportTrxMenu;
 use App\Http\Models\ProductCategory;
 use App\Http\Models\Product;
+use App\Http\Models\TransactionProduct;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\Brand\Entities\Brand;
 use App\Lib\MyHelper;
 
@@ -16,7 +18,44 @@ class ApiReportTransactionController extends Controller
 {
     public function product(Request $request)
     {
-        $result = DailyReportTrxMenu::select('trx_date', 'product_name', 'total_qty', 'total_nominal', 'total_product_discount', 'id_report_trx_menu', 'id_outlet');
+        if (($request->rule['9998']['parameter']??false) == ($request->rule['9999']['parameter']??false) && ($request->rule['9998']['parameter']??false) == date('Y-m-d')) {
+            $date = date('Y-m-d');
+            $result = \DB::table(\DB::raw("
+                (SELECT 
+                    DATE(MIN(transaction_date)) AS trx_date,
+                    product_name,
+                    transaction_products.id_product,
+                    transaction_products.id_brand,
+                    transactions.id_outlet,
+                    transaction_products.id_product_variant_group,
+                    products.id_product_category,
+                    SUM(transaction_product_qty) AS total_qty,
+                    SUM(transaction_product_subtotal) AS total_nominal,
+                    SUM(transaction_product_discount) AS total_product_discount,
+                    0 AS id_report_trx_menu
+                FROM
+                    `transaction_products`
+                        INNER JOIN
+                    `transactions` ON `transactions`.`id_transaction` = `transaction_products`.`id_transaction`
+                        INNER JOIN
+                    `transaction_pickups` ON `transactions`.`id_transaction` = `transaction_pickups`.`id_transaction`
+                        INNER JOIN
+                    `products` ON `products`.`id_product` = `transaction_products`.`id_product`
+                WHERE
+                    `transaction_payment_status` = 'Completed'
+                        AND (`taken_at` IS NOT NULL
+                        OR `taken_by_system_at` IS NOT NULL)
+                        AND DATE(transaction_date) = '$date'
+                GROUP BY DATE(transaction_date) , transaction_products.id_product , transaction_products.id_product_variant_group) as daily_report_trx_menu
+            "))
+                ->select('trx_date', 'product_name', 'total_qty', 'total_nominal', 'total_product_discount', 'id_report_trx_menu', \DB::raw('GROUP_CONCAT(product_variants.product_variant_name) as variant_name'))
+                ->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
+                ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
+        } else {
+            $result = DailyReportTrxMenu::select('trx_date', 'product_name', 'total_qty', 'total_nominal', 'total_product_discount', 'id_report_trx_menu', \DB::raw('GROUP_CONCAT(product_variants.product_variant_name) as variant_name'))
+                ->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
+                ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
+        }
 
         $countTotal = null;
 
@@ -29,6 +68,7 @@ class ApiReportTransactionController extends Controller
             $columns = [
                 'trx_date', 
                 'product_name', 
+                'variant_name', 
                 'total_qty', 
                 'total_nominal', 
                 'total_product_discount', 
@@ -42,6 +82,7 @@ class ApiReportTransactionController extends Controller
             }
         }
 
+        $result->groupBy('trx_date', 'product_name', 'total_qty', 'total_nominal', 'total_product_discount', 'id_report_trx_menu');
         $result->orderBy('id_report_trx_menu', 'DESC');
         if ($request->page) {
             $result = $result->paginate($request->length ?: 15)->toArray();
@@ -59,7 +100,6 @@ class ApiReportTransactionController extends Controller
 
     public function filterList($model, $rule, $operator = 'and')
     {
-        $model->groupBy('trx_date', 'product_name', 'total_qty', 'total_nominal', 'total_product_discount', 'id_report_trx_menu', 'id_outlet');
         $new_rule = [];
         $where    = $operator == 'and' ? 'where' : 'orWhere';
         foreach ($rule as $var) {
@@ -76,6 +116,24 @@ class ApiReportTransactionController extends Controller
                     foreach ($rules as $rul) {
                         $model2->$where($col_name, $rul['operator'], $rul['parameter']);
                     }
+                }
+            }
+
+            $col_name = 'id_product_variants';
+            if ($rules = $new_rule[$col_name] ?? false) {
+                foreach ($rules as $rul) {
+                    $model2->{$where.'In'}('daily_report_trx_menu.id_product_variant_group', function($model3) use ($rul) {
+                        $model3->selectRaw("id_product_variant_group from (SELECT `product_variant_groups`.`id_product_variant_group`,
+                                CONCAT(',', GROUP_CONCAT(id_product_variant), ',') AS variant_ids
+                            FROM `product_variant_groups` 
+                            INNER JOIN `product_variant_pivot` 
+                                ON `product_variant_pivot`.`id_product_variant_group` = `product_variant_groups`.`id_product_variant_group` 
+                            GROUP BY `product_variant_groups`.`id_product_variant_group`) as t1
+                        ");
+                        foreach ($rul['parameter'] as $id_variant) {
+                            $model3->where('variant_ids', 'like',"%,$id_variant,%");
+                        }
+                    });
                 }
             }
         });
@@ -112,6 +170,23 @@ class ApiReportTransactionController extends Controller
             
             case 'product_variant_groups':
                 $result = ProductVariantGroup::select('id_product_variant_group', 'product_variant_group_code as product_variant_group_name')->get();
+                break;
+            
+            case 'product_variants':
+                $variants = ProductVariant::select('id_product_variant', 'product_variant_name', 'id_parent')->whereNotNull('id_parent')->with('parent')->get();
+                $result = [];
+                foreach ($variants as $variant) {
+                    if (!($result[$variant['parent']['product_variant_name']] ?? false)) {
+                        if (!$variant['parent']) {
+                            continue;
+                        }
+                        $result[$variant['parent']['product_variant_name']] = $variant['parent']->toArray();
+                    }
+                    $child = $variant->toArray();
+                    unset($child['parent']);
+                    $result[$variant['parent']['product_variant_name']]['children'][] = $child;
+                }
+                $result = array_values($result);
                 break;
             
         }

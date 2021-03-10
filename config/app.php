@@ -41,7 +41,7 @@ return [
 
     // 'debug' => env('APP_DEBUG', true),
     'debug' => env('APP_ENV', 'local') != 'production' ? array_key_exists('REMOTE_ADDR', $_SERVER)
-    ? in_array($_SERVER['REMOTE_ADDR'], explode(',', env('DEV_IP', '')))
+    ? in_array($_SERVER['REMOTE_ADDR'], explode(',', env('DEV_IP', '127.0.0.1')))
     : true : false,
     'debug_blacklist' => [
     	'_COOKIE' => array_keys($_COOKIE),
