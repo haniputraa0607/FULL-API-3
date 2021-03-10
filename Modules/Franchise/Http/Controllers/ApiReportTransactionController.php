@@ -228,6 +228,11 @@ class ApiReportTransactionController extends Controller
 
         $result->groupBy('trx_date', 'product_modifiers.text', 'total_qty', 'total_nominal', 'id_report_trx_modifier');
         $result->orderBy('id_report_trx_modifier', 'DESC');
+
+        if ($request->return_builder) {
+            return $result;
+        }
+
         if ($request->page) {
             $result = $result->paginate($request->length ?: 15)->toArray();
             if (is_null($countTotal)) {
@@ -352,41 +357,10 @@ class ApiReportTransactionController extends Controller
         $filename = $export_queue->url_export;
         $delete = MyHelper::deleteFile($filename);
         if ($delete) {
-            $export_queue->status_export = 'Deleted';
+            $export_queue->status_export = ExportFranchiseQueue::STATUS_EXPORT_DELETED;
             $export_queue->save();
         }
         return MyHelper::checkDelete($delete);
-    }
-
-    public function actionProductExport(Request $request){
-        $post = $request->json()->all();
-        $action = $post['action'];
-        $id_export_franchise_queue = $post['id_export_franchise_queue'];
-
-        if($action == 'download'){
-            $data = ExportFranchiseQueue::where('id_export_franchise_queue', $id_export_franchise_queue)->first();
-            if(!empty($data)){
-                $data['url_export'] = config('url.storage_url_api').$data['url_export'];
-            }
-            return response()->json(MyHelper::checkGet($data));
-        }
-        elseif($action == 'deleted'){
-            $data = ExportQueue::where('id_export_franchise_queue', $id_export_franchise_queue)->first();
-            $file = public_path().'/'.$data['url_export'];
-            if(config('configs.STORAGE') == 'local'){
-                $delete = File::delete($file);
-            }else{
-                $delete = MyHelper::deleteFile($file);
-            }
-
-            if($delete){
-                $update = ExportFranchiseQueue::where('id_export_franchise_queue', $id_export_franchise_queue)->update(['status_export' => 'Deleted']);
-                return response()->json(MyHelper::checkUpdate($update));
-            }else{
-                return response()->json(['status' => 'fail', 'messages' => ['failed to delete file']]);
-            }
-
-        }
     }
 
     public function exportProductExcel($queue){
@@ -423,6 +397,131 @@ class ApiReportTransactionController extends Controller
         $directory = 'franchise/report/transaction/'.$excelFile;
 
         $store  = (new FilterResultExport($data, $filter, 'Product Transaction'))->store($directory);
+
+        if ($store) {
+            $path = storage_path('app/'.$directory);
+            $contents = File::get($path);
+            if (config('configs.STORAGE') != 'local') {
+                $store = Storage::disk(config('configs.STORAGE'))->put($directory, $contents, 'public');
+            }
+            $delete = File::delete($path);
+            ExportFranchiseQueue::where('id_export_franchise_queue', $queue['id_export_franchise_queue'])->update(['url_export' => $directory, 'status_export' => 'Ready']);
+        }
+    }
+
+
+    /**
+     * Create a new export queue
+     * @param  Request $request
+     * @return Response
+     */
+    public function newModifierExport(Request $request)
+    {
+        $post = $request->json()->all();
+        unset($post['filter']['_token']);
+
+        $insertToQueue = [
+            'id_user_franchise' => $request->user()->id_user_franchise,
+            'id_outlet' => $post['id_outlet'],
+            'filter' => json_encode($post['filter']),
+            'report_type' => ExportFranchiseQueue::REPORT_TYPE_REPORT_TRANSACTION_MODIFIER,
+            'status_export' => ExportFranchiseQueue::STATUS_EXPORT_RUNNING
+        ];
+
+        $create = ExportFranchiseQueue::create($insertToQueue);
+        if ($create) {
+            ExportFranchiseJob::dispatch($create)->allOnConnection('export_franchise_queue');
+        }
+        return response()->json(MyHelper::checkCreate($create));
+    }
+
+    /**
+     * Display list of exported transaction
+     * @param Request $request
+     * return Response
+     */
+    public function listModifierExport(Request $request) {
+        // return $request->all();
+        $result = ExportFranchiseQueue::where('report_type', ExportFranchiseQueue::REPORT_TYPE_REPORT_TRANSACTION_MODIFIER)->where('id_user_franchise', $request->user()->id_user_franchise);
+        if ($request->id_outlet) {
+            $result->where('id_outlet', $request->id_outlet);
+        }
+
+        if (is_array($orders = $request->order)) {
+            $columns = [
+                'created_at',
+                 null,
+                'status_export',
+            ];
+            foreach ($orders as $column) {
+                if ($colname = ($columns[$column['column']] ?? false)) {
+                    $result->orderBy($colname, $column['dir']);
+                }
+            }
+        }
+
+        $result->orderBy('id_export_franchise_queue', 'DESC');
+
+        if ($request->page) {
+            $result = $result->paginate($request->length ?: 15)->toArray();
+            $countTotal = $result['total'];
+            // needed for datatables
+            $result['recordsTotal'] = $countTotal;
+        } else {
+            $result = $result->get();
+        }
+
+        return MyHelper::checkGet($result);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     * @param int $id
+     * @return Response
+     */
+    public function destroyModifierExport(ExportFranchiseQueue $export_queue)
+    {
+        $filename = $export_queue->url_export;
+        $delete = MyHelper::deleteFile($filename);
+        if ($delete) {
+            $export_queue->status_export = ExportFranchiseQueue::STATUS_EXPORT_DELETED;
+            $export_queue->save();
+        }
+        return MyHelper::checkDelete($delete);
+    }
+
+    public function exportModifierExcel($queue){
+        $filter = (array)json_decode($queue['filter'], true);
+
+        $filter['rule'][] = [
+            'subject' => 'id_outlet',
+            'operator' => '=',
+            'parameter' => $queue->id_outlet,
+            'hide' => '1'
+        ];
+
+        $list = $this->modifier(new Request(array_merge($filter, ['return_builder' => true])));
+        $data = [];
+        foreach ($list->cursor() as $cursor) {
+            if (get_class($cursor) == 'stdClass') { // today
+                $add = (array) $cursor;
+            } else {
+                $add = $cursor->toArray();
+            }
+            $data[] = [
+                'Transaction Date' => \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel($add['trx_date']),
+                'Topping Name' => $add['text'],
+                'Total Sold' => $add['total_qty'],
+                'Nominal Sold' => $add['total_nominal'],
+            ];
+        }
+
+        $rand_string = MyHelper::createrandom(5);
+
+        $excelFile = "Report_Transaction_Topping_{$queue->id_export_franchise_queue}_{$rand_string}.xlsx";
+        $directory = 'franchise/report/transaction/'.$excelFile;
+
+        $store  = (new FilterResultExport($data, $filter, 'Topping Transaction'))->store($directory);
 
         if ($store) {
             $path = storage_path('app/'.$directory);

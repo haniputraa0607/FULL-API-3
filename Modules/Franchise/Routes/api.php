@@ -97,7 +97,13 @@ Route::group(['prefix' => 'franchise'], function () {
                 Route::delete('export/{export_queue}','ApiReportTransactionController@destroyProductExport');
                 Route::any('export/action', 'ApiReportTransactionController@actionProductExport');
             });
-            Route::post('modifier', 'ApiReportTransactionController@modifier');
+            Route::prefix('modifier')->group(function(){
+                Route::post('/', 'ApiReportTransactionController@modifier');
+                Route::get('export','ApiReportTransactionController@listModifierExport');
+                Route::post('export','ApiReportTransactionController@newModifierExport');
+                Route::delete('export/{export_queue}','ApiReportTransactionController@destroyModifierExport');
+                Route::any('export/action', 'ApiReportTransactionController@actionModifierExport');
+            });
         });
     });
 
