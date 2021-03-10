@@ -347,10 +347,10 @@ class ApiReportTransactionController extends Controller
      * @param int $id
      * @return Response
      */
-    public function destroyProductExport(ExportQueue $export_queue)
+    public function destroyProductExport(ExportFranchiseQueue $export_queue)
     {
-        $filename = str_replace([env('STORAGE_URL_API').'download/', env('STORAGE_URL_API')], '', $export_queue->url_export);
-        $delete = Storage::delete($filename);
+        $filename = $export_queue->url_export;
+        $delete = MyHelper::deleteFile($filename);
         if ($delete) {
             $export_queue->status_export = 'Deleted';
             $export_queue->save();
@@ -417,7 +417,9 @@ class ApiReportTransactionController extends Controller
             ];
         }
 
-        $excelFile = "Report_Transaction_Product_{$queue->id_export_franchise_queue}.xlsx";
+        $rand_string = MyHelper::createrandom(5);
+
+        $excelFile = "Report_Transaction_Product_{$queue->id_export_franchise_queue}_{$rand_string}.xlsx";
         $directory = 'franchise/report/transaction/'.$excelFile;
 
         $store  = (new FilterResultExport($data, $filter, 'Product Transaction'))->store($directory);
