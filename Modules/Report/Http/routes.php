@@ -66,4 +66,6 @@ Route::group(['middleware' => ['api','log_activities', 'auth:api', 'user_agent',
     Route::any('export/action', 'ApiReportExport@actionExport');
     Route::any('export/create', 'ApiReportExport@exportCreate');
     Route::any('export/list', 'ApiReportExport@listExport');
+
+    Route::post('generate/{method}', 'ApiCronReport@generate');
 });

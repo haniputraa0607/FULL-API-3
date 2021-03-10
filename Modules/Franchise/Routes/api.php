@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
 */
 
 Route::group(['prefix' => 'franchise'], function () {
-    Route::group(['middleware' => ['auth_client', 'scopes:franchise']], function () {
+    Route::group(['middleware' => ['auth_client', 'scopes:franchise-client']], function () {
         Route::post('reset-password', 'ApiUserFranchiseController@resetPassword');
     });
     Route::group(['middleware' => ['auth:franchise', 'scopes:franchise-super-admin']], function () {
@@ -33,14 +33,14 @@ Route::group(['prefix' => 'franchise'], function () {
         Route::post('profile', 'ApiUserFranchiseController@updateProfile');
     });
 
-    Route::group(['middleware' => ['auth:franchise', 'scopes:franchise']], function () {
+    Route::group(['middleware' => ['auth:franchise', 'scopes:franchise-client']], function () {
         Route::group(['prefix' => 'user'], function() {
             Route::post('update-first-pin', 'ApiUserFranchiseController@updateFirstPin');
             Route::post('detail/for-login', 'ApiUserFranchiseController@detail');
         });
     });
 
-    Route::group(['middleware' => ['auth:franchise', 'scopes:franchise-admin']], function () {
+    Route::group(['middleware' => ['auth:franchise', 'scopes:franchise-user']], function () {
         Route::group(['prefix' => 'user'], function() {
             Route::post('detail-admin', 'ApiUserFranchiseController@detail');
         });
@@ -81,10 +81,22 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::get('list-bank', 'ApiReportDisburseController@listBank');
         });
 
+        Route::group(['prefix' => 'report-sales'], function() {
+            Route::post('summary', 'ApiReportSalesController@summary');
+            Route::post('list', 'ApiReportSalesController@listDaily');
+        });
+
         Route::group(['prefix' => 'outlet'], function () {
             Route::get('detail','ApiOutletFranchiseController@detail');
             Route::post('update','ApiOutletFranchiseController@update');
             Route::post('update-schedule','ApiOutletFranchiseController@updateSchedule');
+        });
+
+        Route::get('select-list/{table}','ApiReportTransactionController@listForSelect');
+
+        Route::group(['prefix' => 'report-transaction'], function() {
+            Route::post('product', 'ApiReportTransactionController@product');
+            Route::post('modifier', 'ApiReportTransactionController@modifier');
         });
     });
 

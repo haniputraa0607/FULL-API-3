@@ -93,9 +93,16 @@ class ApiOutletGroupFilterController extends Controller
         if(!isset($post['outlets']) && !isset($post['conditions'])){
             return response()->json(['status' => 'fail', 'messages' => ['Data outlets or conditions can not be empty']]);
         }else{
+            $isAllOutlet = 0;
+
+            if(isset($post['outlets']) && in_array("all", $post['outlets'])){
+                $isAllOutlet = 1;
+            }
+
             $dataOutletGroup = [
                 'outlet_group_name' => $post['outlet_group_name'],
-                'outlet_group_type' => $post['outlet_group_type']
+                'outlet_group_type' => $post['outlet_group_type'],
+                'is_all_outlet' => $isAllOutlet
             ];
 
             DB::beginTransaction();
@@ -144,7 +151,7 @@ class ApiOutletGroupFilterController extends Controller
                         return response()->json(['status' => 'fail', 'messages' => ['Failed save outlet group filter conditions']]);
                     }
                 }
-            }else{
+            }elseif($isAllOutlet == 0){
                 $dataOutlet = [];
                 foreach ($post['outlets'] as $outlet){
                     $dataOutlet[] = [
@@ -197,9 +204,16 @@ class ApiOutletGroupFilterController extends Controller
         if(!isset($post['outlets']) && !isset($post['conditions'])){
             return response()->json(['status' => 'fail', 'messages' => ['Data outlets or conditions can not be empty']]);
         }elseif(isset($post['id_outlet_group']) && !empty($post['id_outlet_group'])){
+            $isAllOutlet = 0;
+
+            if(isset($post['outlets']) && in_array("all", $post['outlets'])){
+                $isAllOutlet = 1;
+            }
+
             $dataOutletGroup = [
                 'outlet_group_name' => $post['outlet_group_name'],
-                'outlet_group_type' => $post['outlet_group_type']
+                'outlet_group_type' => $post['outlet_group_type'],
+                'is_all_outlet' => $isAllOutlet
             ];
 
             DB::beginTransaction();
@@ -252,7 +266,7 @@ class ApiOutletGroupFilterController extends Controller
                         return response()->json(['status' => 'fail', 'messages' => ['Failed save outlet group filter conditions']]);
                     }
                 }
-            }else{
+            }elseif($isAllOutlet == 0){
                 $dataOutlet = [];
                 foreach ($post['outlets'] as $outlet){
                     $dataOutlet[] = [
@@ -301,11 +315,18 @@ class ApiOutletGroupFilterController extends Controller
             }
 
             if($getOutletGroup['outlet_group_type'] == 'Outlets'){
-                $arrIdOutlet = OutletGroupFilterOutlet::where('id_outlet_group', $id_outlet_group)->pluck('id_outlet')->toArray();
-                $outlets = Outlet::join('cities', 'cities.id_city', '=', 'outlets.id_city')
-                            ->join('provinces', 'provinces.id_province', '=', 'cities.id_province')
-                            ->whereIn('id_outlet', $arrIdOutlet)->where('outlet_status', 'Active')
-                            ->select('id_outlet', 'outlet_code', 'outlet_name')->get()->toArray();
+                if($getOutletGroup['is_all_outlet'] == 1){
+                    $outlets = Outlet::join('cities', 'cities.id_city', '=', 'outlets.id_city')
+                        ->join('provinces', 'provinces.id_province', '=', 'cities.id_province')
+                        ->where('outlet_status', 'Active')
+                        ->select('id_outlet', 'outlet_code', 'outlet_name')->get()->toArray();
+                }else{
+                    $arrIdOutlet = OutletGroupFilterOutlet::where('id_outlet_group', $id_outlet_group)->pluck('id_outlet')->toArray();
+                    $outlets = Outlet::join('cities', 'cities.id_city', '=', 'outlets.id_city')
+                        ->join('provinces', 'provinces.id_province', '=', 'cities.id_province')
+                        ->whereIn('id_outlet', $arrIdOutlet)->where('outlet_status', 'Active')
+                        ->select('id_outlet', 'outlet_code', 'outlet_name')->get()->toArray();
+                }
 
                 return $outlets;
             }else{
