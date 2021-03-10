@@ -81,10 +81,22 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::get('list-bank', 'ApiReportDisburseController@listBank');
         });
 
+        Route::group(['prefix' => 'report-sales'], function() {
+            Route::post('summary', 'ApiReportSalesController@summary');
+            Route::post('list', 'ApiReportSalesController@listDaily');
+        });
+
         Route::group(['prefix' => 'outlet'], function () {
             Route::get('detail','ApiOutletFranchiseController@detail');
             Route::post('update','ApiOutletFranchiseController@update');
             Route::post('update-schedule','ApiOutletFranchiseController@updateSchedule');
+        });
+
+        Route::get('select-list/{table}','ApiReportTransactionController@listForSelect');
+
+        Route::group(['prefix' => 'report-transaction'], function() {
+            Route::post('product', 'ApiReportTransactionController@product');
+            Route::post('modifier', 'ApiReportTransactionController@modifier');
         });
     });
 

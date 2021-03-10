@@ -36,6 +36,11 @@ Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'sco
 
     Route::any('list-by-outlet', 'ApiProductPlasticController@listProductByOutlet');
     Route::post('update-stock', 'ApiProductPlasticController@updateStock');
+
+    Route::post('list-use-plastic-product', 'ApiProductPlasticController@listUsePlasticProduct');
+    Route::post('update-use-plastic-product', 'ApiProductPlasticController@updateUsePlasticProduct');
+    Route::post('list-use-plastic-product-variant', 'ApiProductPlasticController@listUsePlasticProductVariant');
+    Route::post('update-use-plastic-product-variant', 'ApiProductPlasticController@updateUsePlasticProductVariant');
 });
 
 Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'plastic-type'], function()

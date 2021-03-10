@@ -28,6 +28,11 @@ class ProductVariant extends Model
         return $this->hasMany(ProductVariant::class, 'id_parent', 'id_product_variant');
     }
 
+    public function parent()
+    {
+        return $this->belongsTo(ProductVariant::class, 'id_parent');
+    }
+
     public function getIsCorAttribute()
     {
         return $this->is_cor;
