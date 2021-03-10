@@ -90,7 +90,13 @@ Route::group(['prefix' => 'franchise'], function () {
         Route::get('select-list/{table}','ApiReportTransactionController@listForSelect');
 
         Route::group(['prefix' => 'report-transaction'], function() {
-            Route::post('product', 'ApiReportTransactionController@product');
+            Route::prefix('product')->group(function(){
+                Route::post('/', 'ApiReportTransactionController@product');
+                Route::get('export','ApiReportTransactionController@listProductExport');
+                Route::post('export','ApiReportTransactionController@newProductExport');
+                Route::delete('export/{export_queue}','ApiReportTransactionController@destroyProductExport');
+                Route::any('export/action', 'ApiReportTransactionController@actionProductExport');
+            });
             Route::post('modifier', 'ApiReportTransactionController@modifier');
         });
     });
