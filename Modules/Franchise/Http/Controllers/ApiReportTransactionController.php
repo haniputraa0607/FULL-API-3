@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Http\Models\DailyReportTrxMenu;
+use Modules\Report\Entities\DailyReportTrxModifier;
 use App\Http\Models\ProductCategory;
 use App\Http\Models\Product;
 use App\Http\Models\TransactionProduct;
@@ -13,6 +14,12 @@ use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\Brand\Entities\Brand;
 use App\Lib\MyHelper;
+use App\Http\Models\ProductModifier;
+use Modules\Franchise\Entities\ExportFranchiseQueue;
+use App\Jobs\ExportFranchiseJob;
+use App\Exports\FilterResultExport;
+use Storage;
+use File;
 
 class ApiReportTransactionController extends Controller
 {
@@ -30,7 +37,7 @@ class ApiReportTransactionController extends Controller
                     transaction_products.id_product_variant_group,
                     products.id_product_category,
                     SUM(transaction_product_qty) AS total_qty,
-                    SUM(transaction_product_subtotal) AS total_nominal,
+                    SUM((transaction_product_price + transaction_variant_subtotal) * transaction_product_qty) AS total_nominal,
                     SUM(transaction_product_discount) AS total_product_discount,
                     0 AS id_report_trx_menu
                 FROM
@@ -84,6 +91,11 @@ class ApiReportTransactionController extends Controller
 
         $result->groupBy('trx_date', 'product_name', 'total_qty', 'total_nominal', 'total_product_discount', 'id_report_trx_menu');
         $result->orderBy('id_report_trx_menu', 'DESC');
+
+        if ($request->return_builder) {
+            return $result;
+        }
+
         if ($request->page) {
             $result = $result->paginate($request->length ?: 15)->toArray();
             if (is_null($countTotal)) {
@@ -152,6 +164,376 @@ class ApiReportTransactionController extends Controller
         }
     }
 
+    public function modifier(Request $request)
+    {
+        if (($request->rule['9998']['parameter']??false) == ($request->rule['9999']['parameter']??false) && ($request->rule['9998']['parameter']??false) == date('Y-m-d')) {
+            $date = date('Y-m-d');
+            $result = \DB::table(\DB::raw("
+                (SELECT 
+                    DATE(MIN(transaction_date)) AS trx_date,
+                    transaction_product_modifiers.text,
+                    transaction_product_modifiers.id_product_modifier,
+                    transactions.id_outlet,
+                    SUM(qty) AS total_qty,
+                    SUM(transaction_product_modifier_price * qty) AS total_nominal,
+                    0 AS id_report_trx_modifier
+                FROM
+                    `transaction_product_modifiers`
+                        INNER JOIN
+                    `transactions` ON `transactions`.`id_transaction` = `transaction_product_modifiers`.`id_transaction`
+                        INNER JOIN
+                    `transaction_pickups` ON `transactions`.`id_transaction` = `transaction_pickups`.`id_transaction`
+                WHERE
+                    `transaction_payment_status` = 'Completed'
+                        AND (`taken_at` IS NOT NULL
+                        OR `taken_by_system_at` IS NOT NULL)
+                        AND DATE(transaction_date) = '$date'
+                GROUP BY DATE(transaction_date) , transaction_product_modifiers.id_product_modifier) as daily_report_trx_modifier
+            "))
+                ->select('trx_date', 'product_modifiers.text', 'total_qty', 'total_nominal', 'id_report_trx_modifier')
+                ->join('product_modifiers', function($join) {
+                    $join->on('product_modifiers.id_product_modifier', 'daily_report_trx_modifier.id_product_modifier')
+                        ->where('modifier_type', '<>', 'Modifier Group');
+                });
+        } else {
+            $result = DailyReportTrxModifier::select('trx_date', 'product_modifiers.text', 'total_qty', 'total_nominal', 'id_report_trx_modifier')
+                ->join('product_modifiers', function($join) {
+                    $join->on('product_modifiers.id_product_modifier', 'daily_report_trx_modifier.id_product_modifier')
+                        ->where('modifier_type', '<>', 'Modifier Group');
+                });
+        }
+
+        $countTotal = null;
+
+        if ($request->rule) {
+            $countTotal = $result->count();
+            $this->filterModifierList($result, $request->rule, $request->operator ?: 'and');
+        }
+
+        if (is_array($orders = $request->order)) {
+            $columns = [
+                'trx_date', 
+                'text', 
+                'total_qty', 
+                'total_nominal', 
+                'id_report_trx_modifier',
+            ];
+
+            foreach ($orders as $column) {
+                if ($colname = ($columns[$column['column']] ?? false)) {
+                    $result->orderBy($colname, $column['dir']);
+                }
+            }
+        }
+
+        $result->groupBy('trx_date', 'product_modifiers.text', 'total_qty', 'total_nominal', 'id_report_trx_modifier');
+        $result->orderBy('id_report_trx_modifier', 'DESC');
+
+        if ($request->return_builder) {
+            return $result;
+        }
+
+        if ($request->page) {
+            $result = $result->paginate($request->length ?: 15)->toArray();
+            if (is_null($countTotal)) {
+                $countTotal = $result['total'];
+            }
+            // needed by datatables
+            $result['recordsTotal'] = $countTotal;
+        } else {
+            $result = $result->get();
+        }
+
+        return MyHelper::checkGet($result);
+    }
+
+    public function filterModifierList($model, $rule, $operator = 'and')
+    {
+        $new_rule = [];
+        $where    = $operator == 'and' ? 'where' : 'orWhere';
+        foreach ($rule as $var) {
+            $var1 = ['operator' => $var['operator'] ?? '=', 'parameter' => $var['parameter'] ?? null, 'hide' => $var['hide'] ?? false];
+            if ($var1['operator'] == 'like') {
+                $var1['parameter'] = '%' . $var1['parameter'] . '%';
+            }
+            $new_rule[$var['subject']][] = $var1;
+        }
+        $model->where(function($model2) use ($model, $where, $new_rule){
+            $inner = ['id_product_modifier', 'total_qty', 'total_nominal'];
+            foreach ($inner as $col_name) {
+                if ($rules = $new_rule[$col_name] ?? false) {
+                    foreach ($rules as $rul) {
+                        $model2->$where('daily_report_trx_modifier.'.$col_name, $rul['operator'], $rul['parameter']);
+                    }
+                }
+            }
+        });
+
+        $col_name = 'id_outlet';
+        if ($rules = $new_rule[$col_name] ?? false) {
+            foreach ($rules as $rul) {
+                $model->where($col_name, $rul['operator'], $rul['parameter']);
+            }
+        }
+
+        if ($rules = $new_rule['transaction_date'] ?? false) {
+            foreach ($rules as $rul) {
+                $model->where(\DB::raw('DATE(trx_date)'), $rul['operator'], $rul['parameter']);
+            }
+        }
+    }
+
+    /**
+     * Create a new export queue
+     * @param  Request $request
+     * @return Response
+     */
+    public function newProductExport(Request $request)
+    {
+        $post = $request->json()->all();
+        unset($post['filter']['_token']);
+
+        $insertToQueue = [
+            'id_user_franchise' => $request->user()->id_user_franchise,
+            'id_outlet' => $post['id_outlet'],
+            'filter' => json_encode($post['filter']),
+            'report_type' => ExportFranchiseQueue::REPORT_TYPE_REPORT_TRANSACTION_PRODUCT,
+            'status_export' => ExportFranchiseQueue::STATUS_EXPORT_RUNNING
+        ];
+
+        $create = ExportFranchiseQueue::create($insertToQueue);
+        if ($create) {
+            ExportFranchiseJob::dispatch($create)->allOnConnection('export_franchise_queue');
+        }
+        return response()->json(MyHelper::checkCreate($create));
+    }
+
+    /**
+     * Display list of exported transaction
+     * @param Request $request
+     * return Response
+     */
+    public function listProductExport(Request $request) {
+        // return $request->all();
+        $result = ExportFranchiseQueue::where('report_type', ExportFranchiseQueue::REPORT_TYPE_REPORT_TRANSACTION_PRODUCT)->where('id_user_franchise', $request->user()->id_user_franchise);
+        if ($request->id_outlet) {
+            $result->where('id_outlet', $request->id_outlet);
+        }
+
+        if (is_array($orders = $request->order)) {
+            $columns = [
+                'created_at',
+                 null,
+                'status_export',
+            ];
+            foreach ($orders as $column) {
+                if ($colname = ($columns[$column['column']] ?? false)) {
+                    $result->orderBy($colname, $column['dir']);
+                }
+            }
+        }
+
+        $result->orderBy('id_export_franchise_queue', 'DESC');
+
+        if ($request->page) {
+            $result = $result->paginate($request->length ?: 15)->toArray();
+            $countTotal = $result['total'];
+            // needed for datatables
+            $result['recordsTotal'] = $countTotal;
+        } else {
+            $result = $result->get();
+        }
+
+        return MyHelper::checkGet($result);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     * @param int $id
+     * @return Response
+     */
+    public function destroyProductExport(ExportFranchiseQueue $export_queue)
+    {
+        $filename = $export_queue->url_export;
+        $delete = MyHelper::deleteFile($filename);
+        if ($delete) {
+            $export_queue->status_export = ExportFranchiseQueue::STATUS_EXPORT_DELETED;
+            $export_queue->save();
+        }
+        return MyHelper::checkDelete($delete);
+    }
+
+    public function exportProductExcel($queue){
+        $filter = (array)json_decode($queue['filter'], true);
+
+        $filter['rule'][] = [
+            'subject' => 'id_outlet',
+            'operator' => '=',
+            'parameter' => $queue->id_outlet,
+            'hide' => '1'
+        ];
+
+        $list = $this->product(new Request(array_merge($filter, ['return_builder' => true])));
+        $data = [];
+        foreach ($list->cursor() as $cursor) {
+            if (get_class($cursor) == 'stdClass') { // today
+                $add = (array) $cursor;
+            } else {
+                $add = $cursor->toArray();
+            }
+            $data[] = [
+                'Transaction Date' => \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel($add['trx_date']),
+                'Product Name' => $add['product_name'],
+                'Variant' => $add['variant_name'],
+                'Total Sold' => $add['total_qty'],
+                'Nominal Sold' => $add['total_nominal'],
+                'Total Discount' => $add['total_product_discount'] ?: '0',
+            ];
+        }
+
+        $rand_string = MyHelper::createrandom(5);
+
+        $excelFile = "Report_Transaction_Product_{$queue->id_export_franchise_queue}_{$rand_string}.xlsx";
+        $directory = 'franchise/report/transaction/'.$excelFile;
+
+        $store  = (new FilterResultExport($data, $filter, 'Product Transaction'))->store($directory);
+
+        if ($store) {
+            $path = storage_path('app/'.$directory);
+            $contents = File::get($path);
+            if (config('configs.STORAGE') != 'local') {
+                $store = Storage::disk(config('configs.STORAGE'))->put($directory, $contents, 'public');
+            }
+            $delete = File::delete($path);
+            ExportFranchiseQueue::where('id_export_franchise_queue', $queue['id_export_franchise_queue'])->update(['url_export' => $directory, 'status_export' => 'Ready']);
+        }
+    }
+
+
+    /**
+     * Create a new export queue
+     * @param  Request $request
+     * @return Response
+     */
+    public function newModifierExport(Request $request)
+    {
+        $post = $request->json()->all();
+        unset($post['filter']['_token']);
+
+        $insertToQueue = [
+            'id_user_franchise' => $request->user()->id_user_franchise,
+            'id_outlet' => $post['id_outlet'],
+            'filter' => json_encode($post['filter']),
+            'report_type' => ExportFranchiseQueue::REPORT_TYPE_REPORT_TRANSACTION_MODIFIER,
+            'status_export' => ExportFranchiseQueue::STATUS_EXPORT_RUNNING
+        ];
+
+        $create = ExportFranchiseQueue::create($insertToQueue);
+        if ($create) {
+            ExportFranchiseJob::dispatch($create)->allOnConnection('export_franchise_queue');
+        }
+        return response()->json(MyHelper::checkCreate($create));
+    }
+
+    /**
+     * Display list of exported transaction
+     * @param Request $request
+     * return Response
+     */
+    public function listModifierExport(Request $request) {
+        // return $request->all();
+        $result = ExportFranchiseQueue::where('report_type', ExportFranchiseQueue::REPORT_TYPE_REPORT_TRANSACTION_MODIFIER)->where('id_user_franchise', $request->user()->id_user_franchise);
+        if ($request->id_outlet) {
+            $result->where('id_outlet', $request->id_outlet);
+        }
+
+        if (is_array($orders = $request->order)) {
+            $columns = [
+                'created_at',
+                 null,
+                'status_export',
+            ];
+            foreach ($orders as $column) {
+                if ($colname = ($columns[$column['column']] ?? false)) {
+                    $result->orderBy($colname, $column['dir']);
+                }
+            }
+        }
+
+        $result->orderBy('id_export_franchise_queue', 'DESC');
+
+        if ($request->page) {
+            $result = $result->paginate($request->length ?: 15)->toArray();
+            $countTotal = $result['total'];
+            // needed for datatables
+            $result['recordsTotal'] = $countTotal;
+        } else {
+            $result = $result->get();
+        }
+
+        return MyHelper::checkGet($result);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     * @param int $id
+     * @return Response
+     */
+    public function destroyModifierExport(ExportFranchiseQueue $export_queue)
+    {
+        $filename = $export_queue->url_export;
+        $delete = MyHelper::deleteFile($filename);
+        if ($delete) {
+            $export_queue->status_export = ExportFranchiseQueue::STATUS_EXPORT_DELETED;
+            $export_queue->save();
+        }
+        return MyHelper::checkDelete($delete);
+    }
+
+    public function exportModifierExcel($queue){
+        $filter = (array)json_decode($queue['filter'], true);
+
+        $filter['rule'][] = [
+            'subject' => 'id_outlet',
+            'operator' => '=',
+            'parameter' => $queue->id_outlet,
+            'hide' => '1'
+        ];
+
+        $list = $this->modifier(new Request(array_merge($filter, ['return_builder' => true])));
+        $data = [];
+        foreach ($list->cursor() as $cursor) {
+            if (get_class($cursor) == 'stdClass') { // today
+                $add = (array) $cursor;
+            } else {
+                $add = $cursor->toArray();
+            }
+            $data[] = [
+                'Transaction Date' => \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel($add['trx_date']),
+                'Topping Name' => $add['text'],
+                'Total Sold' => $add['total_qty'],
+                'Nominal Sold' => $add['total_nominal'],
+            ];
+        }
+
+        $rand_string = MyHelper::createrandom(5);
+
+        $excelFile = "Report_Transaction_Topping_{$queue->id_export_franchise_queue}_{$rand_string}.xlsx";
+        $directory = 'franchise/report/transaction/'.$excelFile;
+
+        $store  = (new FilterResultExport($data, $filter, 'Topping Transaction'))->store($directory);
+
+        if ($store) {
+            $path = storage_path('app/'.$directory);
+            $contents = File::get($path);
+            if (config('configs.STORAGE') != 'local') {
+                $store = Storage::disk(config('configs.STORAGE'))->put($directory, $contents, 'public');
+            }
+            $delete = File::delete($path);
+            ExportFranchiseQueue::where('id_export_franchise_queue', $queue['id_export_franchise_queue'])->update(['url_export' => $directory, 'status_export' => 'Ready']);
+        }
+    }
+
     public function listForSelect($table)
     {
         $result = [];
@@ -187,6 +569,10 @@ class ApiReportTransactionController extends Controller
                     $result[$variant['parent']['product_variant_name']]['children'][] = $child;
                 }
                 $result = array_values($result);
+                break;
+
+            case 'modifiers':
+                $result = ProductModifier::select('id_product_modifier', 'text')->where('modifier_type', '<>', 'Modifier Group')->get();
                 break;
             
         }
