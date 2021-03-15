@@ -97,6 +97,7 @@ Route::group(['prefix' => 'franchise'], function () {
         Route::group(['prefix' => 'report-transaction'], function() {
             Route::prefix('product')->group(function(){
                 Route::post('/', 'ApiReportTransactionController@product');
+                Route::post('summary', 'ApiReportTransactionController@productSummary');
                 Route::get('export','ApiReportTransactionController@listProductExport');
                 Route::post('export','ApiReportTransactionController@newProductExport');
                 Route::delete('export/{export_queue}','ApiReportTransactionController@destroyProductExport');
@@ -104,6 +105,7 @@ Route::group(['prefix' => 'franchise'], function () {
             });
             Route::prefix('modifier')->group(function(){
                 Route::post('/', 'ApiReportTransactionController@modifier');
+                Route::post('summary', 'ApiReportTransactionController@modifierSummary');
                 Route::get('export','ApiReportTransactionController@listModifierExport');
                 Route::post('export','ApiReportTransactionController@newModifierExport');
                 Route::delete('export/{export_queue}','ApiReportTransactionController@destroyModifierExport');

@@ -2597,20 +2597,6 @@ class ApiOutletApp extends Controller
                             $newTrx->update(['cashback_insert_status' => 1]);
                             $checkMembership = app($this->membership)->calculateMembership($user['phone']);
                             DB::commit();
-                            $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], [
-                                "outlet_name"      => $outlet['outlet_name'],
-                                'id_transaction'   => $trx->id_transaction,
-                                "id_reference"     => $trx->transaction_receipt_number . ',' . $trx->id_outlet,
-                                "transaction_date" => $trx->transaction_date,
-                                'order_id'         => $trx->order_id,
-                            ]);
-                            if ($send != true) {
-                                // DB::rollback();
-                                return response()->json([
-                                    'status'   => 'fail',
-                                    'messages' => ['Failed Send notification to customer'],
-                                ]);
-                            }
                         }
                         $arrived_at = date('Y-m-d H:i:s', ($status['orderArrivalTime']??false)?strtotime($status['orderArrivalTime']):time());
                         TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);

@@ -110,6 +110,92 @@ class ApiReportTransactionController extends Controller
         return MyHelper::checkGet($result);
     }
 
+    public function productSummary(Request $request)
+    {
+        if (($request->rule['9998']['parameter']??false) == ($request->rule['9999']['parameter']??false) && ($request->rule['9998']['parameter']??false) == date('Y-m-d')) {
+            $date = date('Y-m-d');
+            $result = \DB::table(\DB::raw("
+                (SELECT 
+                    DATE(MIN(transaction_date)) AS trx_date,
+                    product_name,
+                    transaction_products.id_product,
+                    transaction_products.id_brand,
+                    transactions.id_outlet,
+                    transaction_products.id_product_variant_group,
+                    products.id_product_category,
+                    SUM(transaction_product_qty) AS total_qty,
+                    SUM((transaction_product_price + transaction_variant_subtotal) * transaction_product_qty) AS total_nominal,
+                    SUM(transaction_product_discount) AS total_product_discount,
+                    0 AS id_report_trx_menu
+                FROM
+                    `transaction_products`
+                        INNER JOIN
+                    `transactions` ON `transactions`.`id_transaction` = `transaction_products`.`id_transaction`
+                        INNER JOIN
+                    `transaction_pickups` ON `transactions`.`id_transaction` = `transaction_pickups`.`id_transaction`
+                        INNER JOIN
+                    `products` ON `products`.`id_product` = `transaction_products`.`id_product`
+                WHERE
+                    `transaction_payment_status` = 'Completed'
+                        AND (`taken_at` IS NOT NULL
+                        OR `taken_by_system_at` IS NOT NULL)
+                        AND DATE(transaction_date) = '$date'
+                GROUP BY DATE(transaction_date) , transaction_products.id_product , transaction_products.id_product_variant_group) as daily_report_trx_menu
+            "))
+                ->select('product_name', \DB::raw('SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(product_variants.product_variant_name) as variant_name'))
+                ->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
+                ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
+        } else {
+            $result = DailyReportTrxMenu::select('product_name', \DB::raw('SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(product_variants.product_variant_name) as variant_name'))
+                ->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
+                ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
+        }
+
+        $countTotal = null;
+
+        if ($request->rule) {
+            $countTotal = $result->count();
+            $this->filterList($result, $request->rule, $request->operator ?: 'and');
+        }
+
+        if (is_array($orders = $request->order)) {
+            $columns = [
+                'product_name', 
+                'variant_name', 
+                'total_qty', 
+                'total_nominal', 
+                'total_product_discount', 
+                'id_report_trx_menu',
+            ];
+
+            foreach ($orders as $column) {
+                if ($colname = ($columns[$column['column']] ?? false)) {
+                    $result->orderBy($colname, $column['dir']);
+                }
+            }
+        }
+
+        $result->groupBy('product_name','daily_report_trx_menu.id_product_variant_group');
+        $result->orderBy('id_report_trx_menu', 'DESC');
+
+        if ($request->return_builder) {
+            return $result;
+        }
+
+        if ($request->page) {
+            $result = $result->paginate($request->length ?: 15)->toArray();
+            if (is_null($countTotal)) {
+                $countTotal = $result['total'];
+            }
+            // needed by datatables
+            $result['recordsTotal'] = $countTotal;
+        } else {
+            $result = $result->get();
+        }
+
+        return MyHelper::checkGet($result);
+    }
+
     public function filterList($model, $rule, $operator = 'and')
     {
         $new_rule = [];
@@ -227,6 +313,89 @@ class ApiReportTransactionController extends Controller
         }
 
         $result->groupBy('trx_date', 'product_modifiers.text', 'total_qty', 'total_nominal', 'id_report_trx_modifier');
+        $result->orderBy('id_report_trx_modifier', 'DESC');
+
+        if ($request->return_builder) {
+            return $result;
+        }
+
+        if ($request->page) {
+            $result = $result->paginate($request->length ?: 15)->toArray();
+            if (is_null($countTotal)) {
+                $countTotal = $result['total'];
+            }
+            // needed by datatables
+            $result['recordsTotal'] = $countTotal;
+        } else {
+            $result = $result->get();
+        }
+
+        return MyHelper::checkGet($result);
+    }
+
+    public function modifierSummary(Request $request)
+    {
+        if (($request->rule['9998']['parameter']??false) == ($request->rule['9999']['parameter']??false) && ($request->rule['9998']['parameter']??false) == date('Y-m-d')) {
+            $date = date('Y-m-d');
+            $result = \DB::table(\DB::raw("
+                (SELECT 
+                    DATE(MIN(transaction_date)) AS trx_date,
+                    transaction_product_modifiers.text,
+                    transaction_product_modifiers.id_product_modifier,
+                    transactions.id_outlet,
+                    SUM(qty) AS total_qty,
+                    SUM(transaction_product_modifier_price * qty) AS total_nominal,
+                    0 AS id_report_trx_modifier
+                FROM
+                    `transaction_product_modifiers`
+                        INNER JOIN
+                    `transactions` ON `transactions`.`id_transaction` = `transaction_product_modifiers`.`id_transaction`
+                        INNER JOIN
+                    `transaction_pickups` ON `transactions`.`id_transaction` = `transaction_pickups`.`id_transaction`
+                WHERE
+                    `transaction_payment_status` = 'Completed'
+                        AND (`taken_at` IS NOT NULL
+                        OR `taken_by_system_at` IS NOT NULL)
+                        AND DATE(transaction_date) = '$date'
+                GROUP BY DATE(transaction_date) , transaction_product_modifiers.id_product_modifier) as daily_report_trx_modifier
+            "))
+                ->select('product_modifiers.text', \DB::raw('SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal'))
+                ->join('product_modifiers', function($join) {
+                    $join->on('product_modifiers.id_product_modifier', 'daily_report_trx_modifier.id_product_modifier')
+                        ->where('modifier_type', '<>', 'Modifier Group');
+                });
+        } else {
+            $result = DailyReportTrxModifier::select('product_modifiers.text', \DB::raw('SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal'))
+                ->join('product_modifiers', function($join) {
+                    $join->on('product_modifiers.id_product_modifier', 'daily_report_trx_modifier.id_product_modifier')
+                        ->where('modifier_type', '<>', 'Modifier Group');
+                });
+        }
+
+        $countTotal = null;
+
+        if ($request->rule) {
+            $countTotal = $result->count();
+            $this->filterModifierList($result, $request->rule, $request->operator ?: 'and');
+        }
+
+        if (is_array($orders = $request->order)) {
+            $columns = [
+                'trx_date', 
+                'text', 
+                'total_qty', 
+                'total_nominal', 
+                'id_report_trx_modifier',
+            ];
+
+            foreach ($orders as $column) {
+                if ($colname = ($columns[$column['column']] ?? false)) {
+                    $result->orderBy($colname, $column['dir']);
+                }
+            }
+        }
+
+        $result->groupBy('product_modifiers.text');
         $result->orderBy('id_report_trx_modifier', 'DESC');
 
         if ($request->return_builder) {
