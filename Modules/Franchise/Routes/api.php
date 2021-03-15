@@ -95,8 +95,20 @@ Route::group(['prefix' => 'franchise'], function () {
         Route::get('select-list/{table}','ApiReportTransactionController@listForSelect');
 
         Route::group(['prefix' => 'report-transaction'], function() {
-            Route::post('product', 'ApiReportTransactionController@product');
-            Route::post('modifier', 'ApiReportTransactionController@modifier');
+            Route::prefix('product')->group(function(){
+                Route::post('/', 'ApiReportTransactionController@product');
+                Route::get('export','ApiReportTransactionController@listProductExport');
+                Route::post('export','ApiReportTransactionController@newProductExport');
+                Route::delete('export/{export_queue}','ApiReportTransactionController@destroyProductExport');
+                Route::any('export/action', 'ApiReportTransactionController@actionProductExport');
+            });
+            Route::prefix('modifier')->group(function(){
+                Route::post('/', 'ApiReportTransactionController@modifier');
+                Route::get('export','ApiReportTransactionController@listModifierExport');
+                Route::post('export','ApiReportTransactionController@newModifierExport');
+                Route::delete('export/{export_queue}','ApiReportTransactionController@destroyModifierExport');
+                Route::any('export/action', 'ApiReportTransactionController@actionModifierExport');
+            });
         });
     });
 
