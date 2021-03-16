@@ -568,6 +568,7 @@ class ApiNotification extends Controller {
             'status' => $trx['transaction_payment_status'],
             'name'  => $trx->user->name,
             'order_id' => $mid['order_id'],
+            'receipt_number' => $receipt,
             'outlet_name' => $outlet,
             'detail' => $detail,
             'id_reference' => $mid['order_id'].','.$trx['id_outlet'],
