@@ -5138,6 +5138,29 @@ class ApiOutletApp extends Controller
         }
     }
 
+    public function cronNotReceived()
+    {
+        $log = MyHelper::logCron('Send Notif Order Not Received/Rejected');
+        try {
+            $trxs = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->where('transaction_payment_status', 'Completed')
+                ->whereDate('transaction_date', date('Y-m-d'))
+                ->whereNull('receive_at')
+                ->whereNull('reject_at')
+                ->pluck('transactions.id_transaction');
+            foreach ($trxs as $id_trx) {
+                app($this->trx)->outletNotif($id_trx, true);
+            }
+
+            $processed = $trxs->count();
+            $log->success($processed);
+            return $processed;
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+            return ['status' => 'fail', 'messages' => [$e->getMessage()]];
+        }
+    }
+
     function mergeBundlingProducts($items)
     {
         $new_items = [];
