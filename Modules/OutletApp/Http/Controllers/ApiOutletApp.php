@@ -5072,8 +5072,8 @@ class ApiOutletApp extends Controller
                 ->whereNotNull('stop_booking_at')
                 ->where([
                     'transaction_payment_status' => 'Completed',
-                    'transaction_pickup_go_sends.latest_status' => 'no_driver',
                 ])
+                ->whereIn('transaction_pickup_go_sends.latest_status', ['no_driver', 'rejected', 'cancelled'])
                 ->with('outlet')
                 ->get();
             $processed = [
