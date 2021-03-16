@@ -748,6 +748,7 @@ class ApiOutletApp extends Controller
                 "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number,
             ]);
             if ($send != true) {
                 return response()->json([
@@ -867,6 +868,7 @@ class ApiOutletApp extends Controller
                 "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number,
             ]);
             if ($send != true) {
                 // DB::rollback();

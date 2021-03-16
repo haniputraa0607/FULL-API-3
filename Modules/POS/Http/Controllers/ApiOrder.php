@@ -401,6 +401,7 @@ class ApiOrder extends Controller
                 'id_transaction' => $order->id_transaction, 
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number,
             ]);
             if($send != true){
                 DB::rollback();
@@ -482,6 +483,7 @@ class ApiOrder extends Controller
                 'id_transaction' => $order->id_transaction, 
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number,
             ]);
             if($send != true){
                 // DB::rollback();

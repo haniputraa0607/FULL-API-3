@@ -192,6 +192,7 @@ class ApiGosendController extends Controller
                             "id_reference"     => $trx->transaction_receipt_number . ',' . $trx->id_outlet,
                             "transaction_date" => $trx->transaction_date,
                             'order_id'         => $trx->order_id,
+                            'receipt_number'   => $trx->transaction_receipt_number,
                         ]);
                         if ($send != true) {
                             // DB::rollback();
