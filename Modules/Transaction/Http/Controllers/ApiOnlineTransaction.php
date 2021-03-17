@@ -2040,7 +2040,8 @@ class ApiOnlineTransaction extends Controller
 
                 $settingTime = Setting::where('key', 'processing_time')->first();
                 if($settingTime && $settingTime->value){
-                    if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
+                    if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime($outlet['today']['close']))){
+                    // if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
                         // DB::rollback();
                         // return response()->json([
                         //     'status'    => 'fail',
@@ -3425,7 +3426,7 @@ class ApiOnlineTransaction extends Controller
         return $send;
     }
 
-    public function outletNotif($id_trx)
+    public function outletNotif($id_trx, $fromCron = false)
     {
         $trx = Transaction::where('id_transaction', $id_trx)->first();
         if ($trx['trasaction_type'] == 'Pickup Order') {
@@ -3476,14 +3477,20 @@ class ApiOnlineTransaction extends Controller
                             [$user->name, $trx->receipt_number, $detail['order_id']],
                         ];
                         // $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message_outlet','value_text'), true);
-                        $dataPush += [
-                            'push_notif_local' => 1,
-                            'title_5mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 5 menit lagi'),
-                            'msg_5mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
-                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 15 menit lagi'),
-                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
-                            'pickup_time'       => $detail->pickup_at,
-                        ];
+                        if (!$fromCron) {
+                            $dataPush += [
+                                'push_notif_local' => 1,
+                                'title_5mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 5 menit lagi'),
+                                'msg_5mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
+                                'title_15mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 15 menit lagi'),
+                                'msg_15mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
+                                'pickup_time'       => $detail->pickup_at,
+                            ];
+                        } else {
+                            $dataPush += [
+                                'push_notif_local' => 0
+                            ];                        
+                        }
                     } else {
                         $dataPush += [
                             'push_notif_local' => 0
@@ -3507,14 +3514,20 @@ class ApiOnlineTransaction extends Controller
                             [$user->name, $trx->receipt_number, $detail['order_id']],
                         ];
                         // $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message_outlet','value_text'), true);
-                        $dataOutletSend += [
-                            'push_notif_local' => 1,
-                            'title_5mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 5 menit lagi'),
-                            'msg_5mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
-                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 15 menit lagi'),
-                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
-                            'pickup_time'       => $detail->pickup_at,
-                        ];
+                        if (!$fromCron) {
+                            $dataOutletSend += [
+                                'push_notif_local' => 1,
+                                'title_5mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 5 menit lagi'),
+                                'msg_5mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
+                                'title_15mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 15 menit lagi'),
+                                'msg_15mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
+                                'pickup_time'       => $detail->pickup_at,
+                            ];
+                        } else {
+                            $dataOutletSend += [
+                                'push_notif_local' => 0
+                            ];
+                        }
                     }else {
                         $dataOutletSend += [
                             'push_notif_local' => 0

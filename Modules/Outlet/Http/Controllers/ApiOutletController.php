@@ -1638,7 +1638,8 @@ class ApiOutletController extends Controller
 		            if($outlet['today']['open'] && $now < date('H:i', strtotime($outlet['today']['open']))){
 		                $outlet['today']['status'] = 'closed';
 		                $outlet['today']['status_detail'] = 'Hari ini buka pada '.$outlet['today']['open'];
-		            }elseif($outlet['today']['close'] && $now > date('H:i', strtotime('-'.$processing.' minutes', strtotime($outlet['today']['close'])))){
+                    // }elseif($outlet['today']['close'] && $now > date('H:i', strtotime('-'.$processing.' minutes', strtotime($outlet['today']['close'])))){
+		            }elseif($outlet['today']['close'] && $now > date('H:i', strtotime($outlet['today']['close']))){
 		            	$schedule = OutletSchedule::where('id_outlet', $outlet['id_outlet'])->get()->toArray();
 			            $new_days = $this->reorderDays($schedule, $outlet['today']['day']);
 			            $i = 0;

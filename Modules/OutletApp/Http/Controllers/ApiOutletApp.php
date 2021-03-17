@@ -748,6 +748,7 @@ class ApiOutletApp extends Controller
                 "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number,
             ]);
             if ($send != true) {
                 return response()->json([
@@ -867,6 +868,7 @@ class ApiOutletApp extends Controller
                 "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number,
             ]);
             if ($send != true) {
                 // DB::rollback();
@@ -952,6 +954,7 @@ class ApiOutletApp extends Controller
                 "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number
             ]);
             if ($send != true) {
                 DB::rollback();
@@ -2033,6 +2036,7 @@ class ApiOutletApp extends Controller
                 "transaction_date" => $order->transaction_date,
                 'id_transaction'   => $order->id_transaction,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number,
             ]);
             if ($send != true) {
                 DB::rollback();
@@ -2597,20 +2601,6 @@ class ApiOutletApp extends Controller
                             $newTrx->update(['cashback_insert_status' => 1]);
                             $checkMembership = app($this->membership)->calculateMembership($user['phone']);
                             DB::commit();
-                            $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], [
-                                "outlet_name"      => $outlet['outlet_name'],
-                                'id_transaction'   => $trx->id_transaction,
-                                "id_reference"     => $trx->transaction_receipt_number . ',' . $trx->id_outlet,
-                                "transaction_date" => $trx->transaction_date,
-                                'order_id'         => $trx->order_id,
-                            ]);
-                            if ($send != true) {
-                                // DB::rollback();
-                                return response()->json([
-                                    'status'   => 'fail',
-                                    'messages' => ['Failed Send notification to customer'],
-                                ]);
-                            }
                         }
                         $arrived_at = date('Y-m-d H:i:s', ($status['orderArrivalTime']??false)?strtotime($status['orderArrivalTime']):time());
                         TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
@@ -5084,8 +5074,8 @@ class ApiOutletApp extends Controller
                 ->whereNotNull('stop_booking_at')
                 ->where([
                     'transaction_payment_status' => 'Completed',
-                    'transaction_pickup_go_sends.latest_status' => 'no_driver',
                 ])
+                ->whereIn('transaction_pickup_go_sends.latest_status', ['no_driver', 'rejected', 'cancelled'])
                 ->with('outlet')
                 ->get();
             $processed = [
@@ -5142,6 +5132,29 @@ class ApiOutletApp extends Controller
                 }
             }
 
+            $log->success($processed);
+            return $processed;
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+            return ['status' => 'fail', 'messages' => [$e->getMessage()]];
+        }
+    }
+
+    public function cronNotReceived()
+    {
+        $log = MyHelper::logCron('Send Notif Order Not Received/Rejected');
+        try {
+            $trxs = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->where('transaction_payment_status', 'Completed')
+                ->whereDate('transaction_date', date('Y-m-d'))
+                ->whereNull('receive_at')
+                ->whereNull('reject_at')
+                ->pluck('transactions.id_transaction');
+            foreach ($trxs as $id_trx) {
+                app($this->trx)->outletNotif($id_trx, true);
+            }
+
+            $processed = $trxs->count();
             $log->success($processed);
             return $processed;
         } catch (\Exception $e) {
