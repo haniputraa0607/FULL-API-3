@@ -2040,7 +2040,8 @@ class ApiOnlineTransaction extends Controller
 
                 $settingTime = Setting::where('key', 'processing_time')->first();
                 if($settingTime && $settingTime->value){
-                    if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
+                    if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime($outlet['today']['close']))){
+                    // if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
                         // DB::rollback();
                         // return response()->json([
                         //     'status'    => 'fail',
