@@ -18,6 +18,7 @@ use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\ProductModifierGlobalPrice;
 use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
+use App\Lib\MyHelper;
 
 use DB;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
@@ -523,6 +524,19 @@ class ApiSettingTransactionV2 extends Controller
             $cashbackFormula = $this->convertFormula('cashback');
             $value = $this->cashbackValue();
             $max = $this->cashbackValueMax();
+            $settingIncludeBundling = MyHelper::setting('cashback_include_bundling');
+            /**
+             * This setting is used to calculate whether the cashback earned is also based on the bundled product
+             * By default, subtotals include bundled products
+             * So to calculate without bundling products, the formula used must be ( service + subtotal - totalBundling ) * value
+             */
+            if ($settingIncludeBundling) {
+                /**
+                 * When the setting allows bundling in the calculation, then the subtotal is not subtracted by the bundling product subtotal,
+                 * or it can also be written a subtotal - 0
+                 */
+                $totalBundling = 0;
+            }
 
             $count = floor(eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $cashbackFormula) . ';'));
 
