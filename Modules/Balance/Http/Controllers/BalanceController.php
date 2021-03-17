@@ -260,7 +260,8 @@ class BalanceController extends Controller
                     $dataMultiple = [
                         'id_transaction' => $idTrx,
                         'type'           => 'Balance',
-                        'id_payment'     => $savePaymentBalance['id_transaction_payment_balance']
+                        'id_payment'     => $savePaymentBalance['id_transaction_payment_balance'],
+                        'payment_detail' => 'Balance'
                     ];
 
                     $saveMultiple = TransactionMultiplePayment::create($dataMultiple);
@@ -321,7 +322,8 @@ class BalanceController extends Controller
                 $dataMultiple = [
                     'id_transaction' => $idTrx,
                     'type'           => 'Balance',
-                    'id_payment'     => $savePaymentBalance['id_transaction_payment_balance']
+                    'id_payment'     => $savePaymentBalance['id_transaction_payment_balance'],
+                    'payment_detail' => 'Balance'
                 ];
 
                 $saveMultiple = TransactionMultiplePayment::create($dataMultiple);
