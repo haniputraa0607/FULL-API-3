@@ -361,6 +361,7 @@ class ApiConfirm extends Controller
                 'id_transaction' => $check['id_transaction'],
                 'type'           => 'Midtrans',
                 'id_payment'     => $insertNotifMidtrans['id_transaction_payment'],
+                'payment_detail' => $dataNotifMidtrans['payment_type'],
             ];
 
             $saveMultiple = TransactionMultiplePayment::create($dataMultiple);
@@ -442,6 +443,7 @@ class ApiConfirm extends Controller
                 'id_transaction' => $check['id_transaction'],
                 'type'           => 'IPay88',
                 'id_payment'     => $trx_ipay88->id_transaction_payment_ipay88,
+                'payment_detail' => $post['payment_id'] ?? null,
             ];
             $saveMultiple = TransactionMultiplePayment::updateOrCreate([
                 'id_transaction' => $check['id_transaction'],
@@ -496,6 +498,7 @@ class ApiConfirm extends Controller
                     'id_transaction' => $check['id_transaction'],
                     'type'           => 'Shopeepay',
                     'id_payment'     => $paymentShopeepay->id_transaction_payment_shopee_pay,
+                    'payment_detail' => 'Shopeepay',
                 ];
                 // save multiple payment
                 $saveMultiple = TransactionMultiplePayment::updateOrCreate([
@@ -587,6 +590,7 @@ class ApiConfirm extends Controller
                 'id_transaction' => $check['id_transaction'],
                 'type'           => 'Shopeepay',
                 'id_payment'     => $paymentShopeepay->id_transaction_payment_shopee_pay,
+                'payment_detail' => 'Shopeepay',
             ];
             // save multiple payment
             $saveMultiple = TransactionMultiplePayment::updateOrCreate([
@@ -763,6 +767,7 @@ class ApiConfirm extends Controller
                 'id_transaction' => $trx['id_transaction'],
                 'type'           => 'Ovo',
                 'id_payment'     => $insertPayOvo['id_transaction_payment_ovo'],
+                'payment_detail' => 'Ovo',
             ];
 
             $saveMultiple = TransactionMultiplePayment::create($dataMultiple);
