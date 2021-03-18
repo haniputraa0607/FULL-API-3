@@ -216,7 +216,7 @@ class ApiReportTransactionController extends Controller
             foreach ($inner as $col_name) {
                 if ($rules = $new_rule[$col_name] ?? false) {
                     foreach ($rules as $rul) {
-                        $model2->$where($col_name, $rul['operator'], $rul['parameter']);
+                        $model2->$where('daily_report_trx_menu.'.$col_name, $rul['operator'], $rul['parameter']);
                     }
                 }
             }
