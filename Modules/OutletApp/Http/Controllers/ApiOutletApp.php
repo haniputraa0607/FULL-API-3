@@ -2141,6 +2141,8 @@ class ApiOutletApp extends Controller
         $receipt_number = $request->json('receipt_number');
         $search_receipt_number = $request->json('search_receipt_number');
         $search_order_id       = $request->json('search_order_id');
+        $min_price      = $request->json('min_price');
+        $max_price      = $request->json('max_price');
         $perpage        = $request->json('perpage');
         $request_number = $request->json('request_number') ?: 'thousand_id';
         $data           = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%Y-%m-%d") as trx_date,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,SUM(transaction_product_qty) as total_products,transaction_grandtotal'))
@@ -2168,6 +2170,14 @@ class ApiOutletApp extends Controller
 
         if ($search_receipt_number) {
             $data->where('transactions.transaction_receipt_number', 'like', "%$search_receipt_number%");
+        }
+
+        if ($min_price) {
+            $data->where('transactions.transaction_grandtotal', '>=', $min_price);
+        }
+
+        if ($max_price) {
+            $data->where('transactions.transaction_grandtotal', '<=', $max_price);
         }
 
         if ($trx_status == 'taken') {
@@ -2206,6 +2216,14 @@ class ApiOutletApp extends Controller
 
             case 'newest':
                 $data->orderBy('transaction_date','DESC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            case 'price_asc':
+                $data->orderBy('transaction_grandtotal','ASC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            case 'price_desc':
+                $data->orderBy('transaction_grandtotal','DESC')->orderBy('transactions.id_transaction','DESC');
                 break;
             
             case 'shortest_pickup_time':
