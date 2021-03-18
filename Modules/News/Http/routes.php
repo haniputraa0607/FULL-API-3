@@ -37,11 +37,14 @@ Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes
     Route::post('delete', ['middleware' => 'feature_control:23', 'uses' => 'ApiNews@delete']);
     Route::post('form-data', 'ApiNews@formData');// get news form data
     Route::post('custom-form/auth', 'ApiNews@customForm');// submit custom form webview (user logged in)
+    Route::get('position/list', ['uses' => 'ApiNews@positionListNews']);
+    Route::post('position/assign', ['uses' => 'ApiNews@positionNews']);
 
     Route::any('be/category', ['middleware' => 'feature_control:164', 'uses' => 'ApiNewsCategoryController@index']);
     Route::group(['prefix'=>'category'], function() {
         Route::post('create', ['middleware' => 'feature_control:165', 'uses' => 'ApiNewsCategoryController@store']);// create news category
         Route::post('update', ['middleware' => 'feature_control:166', 'uses' => 'ApiNewsCategoryController@update']);// update news category
         Route::post('delete', ['middleware' => 'feature_control:167', 'uses' => 'ApiNewsCategoryController@destroy']);// delete news category
+        Route::post('position/assign', ['uses' => 'ApiNewsCategoryController@positionCategory']);
     });
 });
