@@ -514,11 +514,16 @@ class ApiUser extends Controller
 
         $resultCount = $finalResult->count(); // get total result
         if ($columns) {
+            foreach ($columns as $in=>$c){
+                if($c == 'email' || $c == 'name' || $c == 'phone'){
+                    $columns[$in] = 'users.'.$c;
+                }
+            }
             $finalResult->select($columns);
         }
         if ($key_free ?? false) {
             $finalResult->where(function ($query) use ($keyword) {
-                $query->orWhere('name', 'like', '%' . $keyword . '%')->orWhere('email', 'like', '%' . $keyword . '%')->orWhere('phone', 'like', '%' . $keyword . '%');
+                $query->orWhere('users.name', 'like', '%' . $keyword . '%')->orWhere('users.email', 'like', '%' . $keyword . '%')->orWhere('users.phone', 'like', '%' . $keyword . '%');
             });
         }
         if ($objOnly) {
