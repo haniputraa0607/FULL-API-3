@@ -13,6 +13,7 @@ class NewsCategory extends Model
      */
     protected $fillable = [
     	'category_name',
+        'news_category_order'
 	];
 
 	public function news(){

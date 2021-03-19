@@ -3,6 +3,7 @@
 namespace App\Http\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Modules\ProductBundling\Entities\BundlingCategory;
 
 class News extends Model
 {
@@ -57,6 +58,7 @@ class News extends Model
 		'news_button_form_text',
 		'news_button_form_expired',
 		'news_form_success_message',
+        'news_order',
 		'created_at',
 		'updated_at'
 	];
@@ -130,4 +132,8 @@ class News extends Model
 	public function newsCategory(){
 		return $this->belongsTo(NewsCategory::class,'id_news_category','id_news_category');
 	}
+
+    public function category(){
+        return $this->hasMany(NewsCategory::class, 'id_news_category', 'id_news_category');
+    }
 }

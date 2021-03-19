@@ -23,6 +23,13 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  */
 class ExportFranchiseQueue extends Eloquent
 {
+	CONST REPORT_TYPE_REPORT_TRANSACTION_PRODUCT = 'Report Transaction Product';
+	CONST REPORT_TYPE_REPORT_TRANSACTION_MODIFIER = 'Report Transaction Modifier';
+
+	CONST STATUS_EXPORT_RUNNING = 'Running';
+	CONST STATUS_EXPORT_READY = 'Ready';
+	CONST STATUS_EXPORT_DELETED = 'Deleted';
+
 	protected $table = 'export_franchise_queues';
 	protected $primaryKey = 'id_export_franchise_queue';
 

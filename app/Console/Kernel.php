@@ -176,6 +176,12 @@ class Kernel extends ConsoleKernel
         $schedule->call('Modules\OutletApp\Http\Controllers\ApiOutletApp@cronDriverNotFound')->cron('*/1 * * * *');
 
         /**
+         * Notif Order not Received/Rejected 
+         * run every minute
+         */
+        // $schedule->call('Modules\OutletApp\Http\Controllers\ApiOutletApp@cronNotReceived')->everyMinute();
+
+        /**
          * Sync Bundling
          * run every day at
          */

@@ -748,6 +748,7 @@ class ApiOutletApp extends Controller
                 "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number,
             ]);
             if ($send != true) {
                 return response()->json([
@@ -867,6 +868,7 @@ class ApiOutletApp extends Controller
                 "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number,
             ]);
             if ($send != true) {
                 // DB::rollback();
@@ -952,6 +954,7 @@ class ApiOutletApp extends Controller
                 "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number
             ]);
             if ($send != true) {
                 DB::rollback();
@@ -2033,6 +2036,7 @@ class ApiOutletApp extends Controller
                 "transaction_date" => $order->transaction_date,
                 'id_transaction'   => $order->id_transaction,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number,
             ]);
             if ($send != true) {
                 DB::rollback();
@@ -2135,16 +2139,48 @@ class ApiOutletApp extends Controller
         $trx_date       = $request->json('trx_date');
         $trx_status     = $request->json('trx_status');
         $trx_type       = $request->json('trx_type');
-        $keyword        = $request->json('search_order_id');
+        $order_id       = $request->json('order_id');
+        $receipt_number = $request->json('receipt_number');
+        $search_receipt_number = $request->json('search_receipt_number');
+        $search_order_id       = $request->json('search_order_id');
+        $min_price      = $request->json('min_price');
+        $max_price      = $request->json('max_price');
         $perpage        = $request->json('perpage');
         $request_number = $request->json('request_number') ?: 'thousand_id';
         $data           = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%Y-%m-%d") as trx_date,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,SUM(transaction_product_qty) as total_products,transaction_grandtotal'))
             ->where('transactions.id_outlet', $request->user()->id_outlet)
             ->where('trasaction_type', 'Pickup Order')
             ->join('transaction_pickups', 'transactions.id_transaction', '=', 'transaction_pickups.id_transaction')
-            ->whereDate('transaction_date', $trx_date)
             ->join('transaction_products', 'transaction_products.id_transaction', '=', 'transactions.id_transaction')
             ->groupBy('transaction_products.id_transaction');
+
+        if ($trx_date) {
+            $data->whereDate('transaction_date', $trx_date);
+        }
+
+        if ($order_id) {
+            $data->where('transaction_pickups.order_id', $order_id);
+        }
+
+        if ($search_order_id) {
+            $data->where('order_id', 'like', "%$search_order_id%");
+        }
+
+        if ($receipt_number) {
+            $data->where('transactions.transaction_receipt_number', $receipt_number);
+        }
+
+        if ($search_receipt_number) {
+            $data->where('transactions.transaction_receipt_number', 'like', "%$search_receipt_number%");
+        }
+
+        if ($min_price) {
+            $data->where('transactions.transaction_grandtotal', '>=', $min_price);
+        }
+
+        if ($max_price) {
+            $data->where('transactions.transaction_grandtotal', '<=', $max_price);
+        }
 
         if ($trx_status == 'taken') {
             $data->where('transaction_payment_status', 'Completed')
@@ -2175,9 +2211,6 @@ class ApiOutletApp extends Controller
             $data->where('pickup_by', 'Customer');
         }
 
-        if ($keyword) {
-            $data->where('order_id', 'like', "%$keyword%");
-        }
         switch ($request->sort) {
             case 'oldest':
                 $data->orderBy('transaction_date','ASC')->orderBy('transactions.id_transaction','ASC');
@@ -2185,6 +2218,14 @@ class ApiOutletApp extends Controller
 
             case 'newest':
                 $data->orderBy('transaction_date','DESC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            case 'price_asc':
+                $data->orderBy('transaction_grandtotal','ASC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            case 'price_desc':
+                $data->orderBy('transaction_grandtotal','DESC')->orderBy('transactions.id_transaction','DESC');
                 break;
             
             case 'shortest_pickup_time':
@@ -5070,8 +5111,8 @@ class ApiOutletApp extends Controller
                 ->whereNotNull('stop_booking_at')
                 ->where([
                     'transaction_payment_status' => 'Completed',
-                    'transaction_pickup_go_sends.latest_status' => 'no_driver',
                 ])
+                ->whereIn('transaction_pickup_go_sends.latest_status', ['no_driver', 'rejected', 'cancelled'])
                 ->with('outlet')
                 ->get();
             $processed = [
@@ -5128,6 +5169,29 @@ class ApiOutletApp extends Controller
                 }
             }
 
+            $log->success($processed);
+            return $processed;
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+            return ['status' => 'fail', 'messages' => [$e->getMessage()]];
+        }
+    }
+
+    public function cronNotReceived()
+    {
+        $log = MyHelper::logCron('Send Notif Order Not Received/Rejected');
+        try {
+            $trxs = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->where('transaction_payment_status', 'Completed')
+                ->whereDate('transaction_date', date('Y-m-d'))
+                ->whereNull('receive_at')
+                ->whereNull('reject_at')
+                ->pluck('transactions.id_transaction');
+            foreach ($trxs as $id_trx) {
+                app($this->trx)->outletNotif($id_trx, true);
+            }
+
+            $processed = $trxs->count();
             $log->success($processed);
             return $processed;
         } catch (\Exception $e) {

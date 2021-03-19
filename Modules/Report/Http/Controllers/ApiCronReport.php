@@ -651,14 +651,6 @@ class ApiCronReport extends Controller
 
     function generate(Request $request, $method)
     {
-        if (!$request->trx_date) {
-            return [
-                'status' => 'fail',
-                'messages' => [
-                    'trx_date is required'
-                ]
-            ];
-        }
         $id_outlets = $request->id_outlets;
         if ($request->id_outlets && !is_array($request->id_outlets)) {
             return [
@@ -678,7 +670,7 @@ class ApiCronReport extends Controller
 
         if (method_exists($this, $method)) {
             if ($method == 'dailyReportProduct' && $request->clear_old_data) {
-                DailyReportTrxMenu::where('trx_date', date('Y-m-d', strtotime($request->trx_date)))
+                DailyReportTrxMenu::whereBetween('trx_date', [date('Y-m-d 00:00:00', strtotime($request->trx_date_start)),date('Y-m-d 23:59:59', strtotime($request->trx_date_end))])
                     ->whereIn('id_outlet', $id_outlets)
                     ->delete();
             }
@@ -738,7 +730,7 @@ class ApiCronReport extends Controller
                 $product = json_decode(json_encode($product), true);
                 foreach ($product as $key => $value) {
 					// $sum = array();
-					$sum[$value['id_product']]['trx_date'] = $date;
+					$sum[$value['id_product']]['trx_date'] = $value['trx_date'];
 					$sum[$value['id_product']]['id_product'] = $value['id_product'];
                     $sum[$value['id_product']]['id_product_variant_group'] = $value['id_product_variant_group'];
                     $sum[$value['id_product']]['id_product_category'] = $value['id_product_category'];
@@ -770,7 +762,7 @@ class ApiCronReport extends Controller
                         'id_outlet'                 => $value['id_outlet'],
                         'id_brand' 	                => $value['id_brand']
                     ], $value);
-					
+
 					$saveGlobal = GlobalDailyReportTrxMenu::updateOrCreate([
                         'trx_date'   => date('Y-m-d', strtotime($value['trx_date'])), 
                         'id_product' => $value['id_product']
