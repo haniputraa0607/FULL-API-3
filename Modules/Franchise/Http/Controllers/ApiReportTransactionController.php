@@ -55,14 +55,14 @@ class ApiReportTransactionController extends Controller
                         AND DATE(transaction_date) = '$date'
                 GROUP BY DATE(transaction_date) , transaction_products.id_product , transaction_products.id_product_variant_group) as daily_report_trx_menu
             "))
-                ->select('trx_date', 'product_name', 'total_qty', 'total_nominal', 'total_product_discount', 'id_report_trx_menu', \DB::raw('GROUP_CONCAT(product_variants.product_variant_name) as variant_name'))
-                ->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
-                ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
+                ->select('trx_date', 'product_name', 'total_qty', 'total_nominal', 'total_product_discount', 'id_report_trx_menu', \DB::raw('GROUP_CONCAT(product_variants.product_variant_name) as variant_name, name_brand, product_category_name'));
         } else {
-            $result = DailyReportTrxMenu::select('trx_date', 'product_name', 'total_qty', 'total_nominal', 'total_product_discount', 'id_report_trx_menu', \DB::raw('GROUP_CONCAT(product_variants.product_variant_name) as variant_name'))
-                ->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
-                ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
+            $result = DailyReportTrxMenu::select('trx_date', 'product_name', 'total_qty', 'total_nominal', 'total_product_discount', 'id_report_trx_menu', \DB::raw('GROUP_CONCAT(product_variants.product_variant_name) as variant_name, name_brand, product_category_name'));
         }
+        $result->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
+            ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
+            ->leftJoin('product_categories', 'product_categories.id_product_category', 'daily_report_trx_menu.id_product_category')
+            ->leftJoin('brands', 'brands.id_brand', 'daily_report_trx_menu.id_brand');
 
         $countTotal = null;
 
@@ -76,6 +76,8 @@ class ApiReportTransactionController extends Controller
                 'trx_date', 
                 'product_name', 
                 'variant_name', 
+                'name_brand',
+                'product_category_name',
                 'total_qty', 
                 'total_nominal', 
                 'total_product_discount', 
@@ -142,14 +144,14 @@ class ApiReportTransactionController extends Controller
                         AND DATE(transaction_date) = '$date'
                 GROUP BY DATE(transaction_date) , transaction_products.id_product , transaction_products.id_product_variant_group) as daily_report_trx_menu
             "))
-                ->select('product_name', \DB::raw('SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(product_variants.product_variant_name) as variant_name'))
-                ->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
-                ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
+                ->select('product_name', \DB::raw('SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(product_variants.product_variant_name) as variant_name, name_brand, product_category_name'));
         } else {
-            $result = DailyReportTrxMenu::select('product_name', \DB::raw('SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(product_variants.product_variant_name) as variant_name'))
-                ->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
-                ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
+            $result = DailyReportTrxMenu::select('product_name', \DB::raw('SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(product_variants.product_variant_name) as variant_name, name_brand, product_category_name'));
         }
+        $result->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
+            ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
+            ->leftJoin('product_categories', 'product_categories.id_product_category', 'daily_report_trx_menu.id_product_category')
+            ->leftJoin('brands', 'brands.id_brand', 'daily_report_trx_menu.id_brand');
 
         $countTotal = null;
 
@@ -162,6 +164,8 @@ class ApiReportTransactionController extends Controller
             $columns = [
                 'product_name', 
                 'variant_name', 
+                'name_brand',
+                'product_category_name',
                 'total_qty', 
                 'total_nominal', 
                 'total_product_discount', 
@@ -212,7 +216,7 @@ class ApiReportTransactionController extends Controller
             foreach ($inner as $col_name) {
                 if ($rules = $new_rule[$col_name] ?? false) {
                     foreach ($rules as $rul) {
-                        $model2->$where($col_name, $rul['operator'], $rul['parameter']);
+                        $model2->$where('daily_report_trx_menu.'.$col_name, $rul['operator'], $rul['parameter']);
                     }
                 }
             }
