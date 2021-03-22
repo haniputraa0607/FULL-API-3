@@ -565,9 +565,9 @@ class ApiNews extends Controller
         } else {
 
             if (!isset($post['id_news'])) {
-                $news = $news->orderBy('news_category_order', 'asc')->orderBy('news_order', 'asc')->orderBy('news_post_date', 'DESC')->paginate(10)->toArray();
+                $news = $news->orderBy('news_category_order', 'asc')->orderBy('news_order', 'asc')->orderBy('news_post_date', 'DESC')->orderBy('id_news', 'DESC')->paginate(10)->toArray();
             } else {
-                $news = $news->orderBy('news_category_order', 'asc')->orderBy('news_order', 'asc')->orderBy('news_post_date', 'DESC')->get()->toArray();
+                $news = $news->orderBy('news_category_order', 'asc')->orderBy('news_order', 'asc')->orderBy('news_post_date', 'DESC')->orderBy('id_news', 'DESC')->get()->toArray();
             }
         }
         if (isset($news['data'])) {
@@ -795,6 +795,7 @@ class ApiNews extends Controller
             'news.news_order')
             ->orderBy('news_order', 'asc')
             ->orderBy('news_post_date', 'DESC')
+            ->orderBy('id_news', 'DESC')
             ->get()->toArray();
         return response()->json(MyHelper::checkGet($data));
     }
