@@ -41,6 +41,10 @@ Route::group(['prefix' => 'franchise'], function () {
     });
 
     Route::group(['middleware' => ['auth:franchise', 'scopes:franchise-user']], function () {
+        Route::post('dashboard', 'ApiDashboardController@dashboard');
+        Route::post('dashboard/top-ten-product', 'ApiDashboardController@topTenProduct');
+        Route::post('dashboard/summary-sales', 'ApiDashboardController@summarySales');
+
         Route::group(['prefix' => 'user'], function() {
             Route::post('detail-admin', 'ApiUserFranchiseController@detail');
         });
