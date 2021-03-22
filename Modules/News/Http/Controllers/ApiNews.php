@@ -565,9 +565,9 @@ class ApiNews extends Controller
         } else {
 
             if (!isset($post['id_news'])) {
-                $news = $news->orderBy('news_category_order', 'asc')->orderBy('news_order', 'asc')->paginate(10)->toArray();
+                $news = $news->orderBy('news_category_order', 'asc')->orderBy('news_order', 'asc')->orderBy('news_post_date', 'DESC')->paginate(10)->toArray();
             } else {
-                $news = $news->orderBy('news_category_order', 'asc')->orderBy('news_order', 'asc')->get()->toArray();
+                $news = $news->orderBy('news_category_order', 'asc')->orderBy('news_order', 'asc')->orderBy('news_post_date', 'DESC')->get()->toArray();
             }
         }
         if (isset($news['data'])) {
