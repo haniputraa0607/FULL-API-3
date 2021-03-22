@@ -176,7 +176,7 @@ class ApiUser extends Controller
                 foreach ($conditions as $key => $cond) {
                     $query = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
                         ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
-                        // ->leftJoin('crm_user_data', 'crm_user_data.id_user', '=', 'users.id')
+                        ->leftJoin('crm_user_data', 'crm_user_data.id_user', '=', 'users.id')
                         ->orderBy($order_field, $order_method);
 
                     if ($cond != null) {
@@ -345,7 +345,7 @@ class ApiUser extends Controller
                 foreach ($conditions as $key => $cond) {
                     $query = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
                         ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
-                        // ->leftJoin('crm_user_data', 'crm_user_data.id_user', '=', 'users.id')
+                        ->leftJoin('crm_user_data', 'crm_user_data.id_user', '=', 'users.id')
                         ->orderBy($order_field, $order_method);
 
                     if ($cond != null) {
@@ -488,7 +488,7 @@ class ApiUser extends Controller
         } else {
             $query = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
                 ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
-                // ->leftJoin('crm_user_data', 'crm_user_data.id_user', '=', 'users.id')
+                ->leftJoin('crm_user_data', 'crm_user_data.id_user', '=', 'users.id')
                 ->orderBy($order_field, $order_method);
 
             /*============= Final query when condition is null =============*/
@@ -578,16 +578,16 @@ class ApiUser extends Controller
                             $query = $query->where($var, '=', $condition['parameter']);
                     }
 
-                    // if ($condition['subject'] == 'r_quartile' || $condition['subject'] == 'f_quartile' || $condition['subject'] == 'm_quartile' || $condition['subject'] == 'RFMScore') {
-                    //     $var = "crm_user_data." . $condition['subject'];
+                    if ($condition['subject'] == 'r_quartile' || $condition['subject'] == 'f_quartile' || $condition['subject'] == 'm_quartile' || $condition['subject'] == 'RFMScore') {
+                        $var = "crm_user_data." . $condition['subject'];
 
-                    //     if ($condition['operator'] == 'like')
-                    //         $query = $query->where($var, 'like', '%' . $condition['parameter'] . '%');
-                    //     elseif (strtoupper($condition['operator']) == 'WHERE IN')
-                    //         $query = $query->whereIn($var, explode(',', $condition['parameter']));
-                    //     else
-                    //         $query = $query->where($var, '=', $condition['parameter']);
-                    // }
+                        if ($condition['operator'] == 'like')
+                            $query = $query->where($var, 'like', '%' . $condition['parameter'] . '%');
+                        elseif (strtoupper($condition['operator']) == 'WHERE IN')
+                            $query = $query->whereIn($var, explode(',', $condition['parameter']));
+                        else
+                            $query = $query->where($var, '=', $condition['parameter']);
+                    }
 
                     if ($condition['subject'] == 'gender' || $condition['subject'] == 'is_suspended' || $condition['subject'] == 'email_verified' || $condition['subject'] == 'phone_verified' || $condition['subject'] == 'email_unsubscribed' || $condition['subject'] == 'provider' || $condition['subject'] == 'city_name' || $condition['subject'] == 'city_postal_code' || $condition['subject'] == 'province_name' || $condition['subject'] == 'level') {
                         if ($condition['subject'] == 'city_name' || $condition['subject'] == 'city_postal_code') $var = "cities." . $condition['subject'];
