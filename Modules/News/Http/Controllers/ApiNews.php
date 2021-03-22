@@ -794,6 +794,7 @@ class ApiNews extends Controller
         $data = News::with('category')->select('news.id_news', 'news.id_news_category', 'news.news_title',
             'news.news_order')
             ->orderBy('news_order', 'asc')
+            ->orderBy('news_post_date', 'DESC')
             ->get()->toArray();
         return response()->json(MyHelper::checkGet($data));
     }
