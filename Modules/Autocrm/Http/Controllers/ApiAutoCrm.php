@@ -942,7 +942,7 @@ class ApiAutoCrm extends Controller
 				}
 
 				if($replace['keyword'] == "%points%"){
-					if (is_numeric($replaced)) {
+					if (is_integer($replaced)) {
 						$points = number_format($replaced, 0, ',', '.');
 					} else {
 						$points = $replaced;
