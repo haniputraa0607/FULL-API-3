@@ -2464,10 +2464,22 @@ class ApiPromoCampaign extends Controller
 	                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
 	                ->where('step_complete', '=', 1)
 	                ->where( function($q){
-	                	$q->whereColumn('usage','<','limitation_usage')
-	                		->orWhere('code_type','Single')
-	                        ->orWhere('limitation_usage',0);
-	                } )
+		            	$q->where(function($q2) {
+		            		$q2->where('code_type', 'Multiple')
+			            		->where(function($q3) {
+					            	$q3->whereColumn('usage','<','limitation_usage')
+					            		->orWhere('limitation_usage',0);
+			            		});
+
+		            	}) 
+		            	->orWhere(function($q2) {
+		            		$q2->where('code_type','Single')
+			            		->where(function($q3) {
+					            	$q3->whereColumn('total_coupon','>','used_code')
+					            		->orWhere('total_coupon',0);
+			            		});
+		            	});
+		            })
 	                ->with([
 						'promo_campaign.promo_campaign_outlets',
 						'promo_campaign.brand',
@@ -2496,14 +2508,22 @@ class ApiPromoCampaign extends Controller
 	        if(!$code){
 	            return [
 	                'status'=>'fail',
-	                'messages'=>['Promo code not valid']
+	                'messages'=>['Promo tidak tersedia']
 	            ];
 	        }
+
+	        if ($code['promo_campaign']['date_start'] > date('Y-m-d H:i:s')) {
+	        	$date_start = MyHelper::dateFormatInd($code['promo_campaign']['date_start'], false, false).' pukul '.date('H:i', strtotime($code['promo_campaign']['date_start']));
+        		return [
+	                'status'=>'fail',
+	                'messages'=>['Promo dapat diklaim mulai tanggal '.$date_start]
+	            ];
+        	}
 
 	        if ($code['promo_campaign']['date_end'] < date('Y-m-d H:i:s')) {
         		return [
 	                'status'=>'fail',
-	                'messages'=>['Promo campaign is ended']
+	                'messages'=>['Mohon maaf, Promo sudah berakhir']
 	            ];
         	}
 
@@ -2526,7 +2546,7 @@ class ApiPromoCampaign extends Controller
 	        if(!$pct->validateUser($code['id_promo_campaign'], $id_user, $phone, $device_type, $device_id, $errors,$code['id_promo_campaign_promo_code'])){
 	            return [
 	                'status'=>'fail',
-	                'messages'=>$errors??['Promo code not valid']
+	                'messages'=>$errors??['Promo tidak tersedia']
 	            ];
 	        }
 
@@ -2567,21 +2587,22 @@ class ApiPromoCampaign extends Controller
 			if(!$deals){
 	            return [
 	                'status'=>'fail',
-	                'messages'=>['Voucher not valid']
+	                'messages'=>['Voucher tidak tersedia']
 	            ];
 	        }
 
 	        if ($deals['voucher_expired_at'] < date('Y-m-d H:i:s')) {
         		return [
 	                'status'=>'fail',
-	                'messages'=>['Voucher is expired']
+	                'messages'=>['Batas waktu penggunaan voucher sudah berakhir']
 	            ];
         	}
 
         	if ($deals['voucher_active_at'] > date('Y-m-d H:i:s') && !empty($deals['voucher_active_at']) ) {
+        		$date_start = MyHelper::dateFormatInd($deals['voucher_active_at'], false, false).' pukul '.date('H:i', strtotime($deals['voucher_active_at']));
         		return [
 	                'status'=>'fail',
-	                'messages'=>['Voucher is not active yet']
+	                'messages'=>['Voucher dapat digunakan mulai tanggal '.$date_start]
 	            ];
         	}
 
@@ -2597,21 +2618,22 @@ class ApiPromoCampaign extends Controller
         	if(!$subs){
 	            return [
 	                'status'=>'fail',
-	                'messages'=>['Subscription not valid']
+	                'messages'=>['Subscription tidak tersedia']
 	            ];
 	        }
 
 	        if ($subs['subscription_expired_at'] < date('Y-m-d H:i:s')) {
         		return [
 	                'status'=>'fail',
-	                'messages'=>['Subscription is expired']
+	                'messages'=>['Batas waktu penggunaan subscription sudah berakhir']
 	            ];
         	}
 
         	if ($subs['subscription_active_at'] > date('Y-m-d H:i:s') && !empty($subs['subscription_active_at']) ) {
+        		$date_start = MyHelper::dateFormatInd($subs['subscription_active_at'], false, false).' pukul '.date('H:i', strtotime($subs['subscription_active_at']));
         		return [
 	                'status'=>'fail',
-	                'messages'=>['Subscription is not active yet']
+	                'messages'=>['Promo dapat digunakan mulai tanggal '.$date_start]
 	            ];
         	}
 
@@ -3233,10 +3255,22 @@ class ApiPromoCampaign extends Controller
     	$code = $code->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
 		            ->where('step_complete', '=', 1)
 		            ->where( function($q){
-		            	$q->whereColumn('usage','<','limitation_usage')
-		            		->orWhere('code_type','Single')
-		            		->orWhere('limitation_usage',0);
-		            } );
+		            	$q->where(function($q2) {
+		            		$q2->where('code_type', 'Multiple')
+			            		->where(function($q3) {
+					            	$q3->whereColumn('usage','<','limitation_usage')
+					            		->orWhere('limitation_usage',0);
+			            		});
+
+		            	}) 
+		            	->orWhere(function($q2) {
+		            		$q2->where('code_type','Single')
+			            		->where(function($q3) {
+					            	$q3->whereColumn('total_coupon','>','used_code')
+					            		->orWhere('total_coupon',0);
+			            		});
+		            	});
+		            });
 
 	    if (!empty($outlet)) {
 	    	$code = $code->with(['promo_campaign.promo_campaign_outlets', 'promo_campaign.outlet_groups']);
