@@ -94,6 +94,9 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::get('detail','ApiOutletFranchiseController@detail');
             Route::post('update','ApiOutletFranchiseController@update');
             Route::post('update-schedule','ApiOutletFranchiseController@updateSchedule');
+            Route::post('update-bank-account','ApiOutletFranchiseController@updateBankAccount');
+
+            Route::any('bank', ['uses' => '\Modules\Disburse\Http\Controllers\ApiDisburseSettingController@getBank']);
         });
 
         Route::get('select-list/{table}','ApiReportTransactionController@listForSelect');
