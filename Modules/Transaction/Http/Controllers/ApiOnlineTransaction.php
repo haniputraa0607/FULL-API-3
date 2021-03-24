@@ -223,7 +223,8 @@ class ApiOnlineTransaction extends Controller
 
                 $settingTime = Setting::where('key', 'processing_time')->first();
                 if($settingTime && $settingTime->value){
-                    if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
+                    // if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
+                    if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime($outlet['today']['close']))){
                         DB::rollback();
                         return response()->json([
                             'status'    => 'fail',
@@ -345,10 +346,22 @@ class ApiOnlineTransaction extends Controller
             $code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
                 ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
                 ->where( function($q){
-                    $q->whereColumn('usage','<','limitation_usage')
-                        ->orWhere('code_type','Single')
-                        ->orWhere('limitation_usage',0);
-                } )
+	            	$q->where(function($q2) {
+	            		$q2->where('code_type', 'Multiple')
+		            		->where(function($q3) {
+				            	$q3->whereColumn('usage','<','limitation_usage')
+				            		->orWhere('limitation_usage',0);
+		            		});
+
+	            	}) 
+	            	->orWhere(function($q2) {
+	            		$q2->where('code_type','Single')
+		            		->where(function($q3) {
+				            	$q3->whereColumn('total_coupon','>','used_code')
+				            		->orWhere('total_coupon',0);
+		            		});
+	            	});
+	            })
                 ->first();
             if ($code)
             {
