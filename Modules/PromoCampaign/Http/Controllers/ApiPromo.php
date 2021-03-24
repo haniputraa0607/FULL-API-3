@@ -102,6 +102,8 @@ class ApiPromo extends Controller
     				$remove = 1;
     			}elseif($promo->voucher_expired_at < $datenow){
     				$remove = 1;
+    			}elseif($promo->voucher_active_at > $datenow){
+    				$remove = 1;
     			}
     		}
 
@@ -111,7 +113,7 @@ class ApiPromo extends Controller
     		$promo = app($this->promo_campaign)->checkPromoCode(null, 1, 1, $user_promo->id_reference, 1);
     		if ($promo) 
 			{
-				if ($promo->date_end < $datenow) {
+				if ($promo->date_end < $datenow || $promo->date_start > $datenow) {
 					$remove = 1;
 				}else{
 					$pct = new PromoCampaignTools;
@@ -127,7 +129,7 @@ class ApiPromo extends Controller
     		$promo = app($this->subscription_use)->checkSubscription(null, null, 1, 1, null, $user_promo->id_reference, 1, 1);
 
     		if ($promo) {
-    			if ($promo->subscription_expired_at < $datenow) {
+    			if ($promo->subscription_expired_at < $datenow || $promo->subscription_active_at > $datenow) {
     				$remove = 1;
     			}elseif ( $promo->subscription_user->subscription->daily_usage_limit ) {
 					$subs_voucher_today = SubscriptionUserVoucher::where('id_subscription_user', '=', $promo->id_subscription_user)
