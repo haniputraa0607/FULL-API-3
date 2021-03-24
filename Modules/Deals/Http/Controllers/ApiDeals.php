@@ -1661,7 +1661,7 @@ class ApiDeals extends Controller
         if ($deals) {
         	if ($post['step'] == 'all' && $deals_type != 'Promotion' && $deals_type != 'promotion-deals') {
 	        	$deals_array = $deals->toArray();
-	        	if ($deals_type == 'Deals') {
+	        	if ($deals_type == 'Deals' || $deals_type == 'Hidden' || $deals_type == 'WelcomeVoucher') {
 	        		$type = 'deals';
 	        	}else{
 	        		$type = $deals_type;
