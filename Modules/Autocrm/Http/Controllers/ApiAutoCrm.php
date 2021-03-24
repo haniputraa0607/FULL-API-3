@@ -30,6 +30,7 @@ use App\Lib\classJatisSMS;
 use App\Lib\apiwha;
 use App\Lib\ValueFirst;
 use Modules\Franchise\Entities\UserFranchise;
+use Modules\Franchise\Entities\FranchiseEmailLog;
 use Validator;
 use Hash;
 use DB;
@@ -62,7 +63,7 @@ class ApiAutoCrm extends Controller
 			}
 		}
 		else{
-			if($recipient_type == 'outlet'){
+			if($recipient_type == 'outlet' || $recipient_type == 'outlet_franchise'){
 				// auto response for outlet is email only, therefore recipient is email
 				$users = [[
 					'email' => $receipient, 
@@ -71,6 +72,8 @@ class ApiAutoCrm extends Controller
 
 				$query[0]['autocrm_email_subject'] = MyHelper::simpleReplace($query[0]['autocrm_email_subject'] ,$variables);
 				$query[0]['autocrm_email_content'] = MyHelper::simpleReplace($query[0]['autocrm_email_content'] ,$variables);
+				$query[0]['autocrm_forward_email_subject'] = MyHelper::simpleReplace($query[0]['autocrm_forward_email_subject'] ,$variables);
+				$query[0]['autocrm_forward_email_content'] = MyHelper::simpleReplace($query[0]['autocrm_forward_email_content'] ,$variables);
 			}elseif($recipient_type == 'franchise'){
                 $users = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('email','=',$receipient)->get()->toArray();
             }
@@ -197,7 +200,7 @@ class ApiAutoCrm extends Controller
 
 					}
 
-					if ($recipient_type != 'outlet') {
+					if ($recipient_type != 'outlet' && $recipient_type != 'outlet_franchise') {
 						$logData = [];
 						$logData['id_user'] = $user['id'];
 						$logData['email_log_to'] = $user['email'];
@@ -205,6 +208,14 @@ class ApiAutoCrm extends Controller
 						$logData['email_log_message'] = $content;
 
 						$logs = AutocrmEmailLog::create($logData);
+					}elseif($recipient_type == 'outlet_franchise') {
+						$logData = [];
+						$logData['id_outlet'] = $variables['id_outlet'];
+						$logData['email_log_to'] = $user['email'];
+						$logData['email_log_subject'] = $subject;
+						$logData['email_log_message'] = $content;
+
+						$logs = FranchiseEmailLog::create($logData);
 					}
 				}
 			}
@@ -280,13 +291,23 @@ class ApiAutoCrm extends Controller
 							
 						}
 
-						$logData = [];
-						$logData['id_user'] = $user['id'];
-						$logData['email_log_to'] = $email;
-						$logData['email_log_subject'] = $subject;
-						$logData['email_log_message'] = $content;
+						if($recipient_type == 'outlet_franchise') {
+							$logData = [];
+							$logData['id_outlet'] = $variables['id_outlet'];
+							$logData['email_log_to'] = $email;
+							$logData['email_log_subject'] = $subject;
+							$logData['email_log_message'] = $content;
 
-						$logs = AutocrmEmailLog::create($logData);
+							$logs = FranchiseEmailLog::create($logData);
+						}else{
+							$logData = [];
+							$logData['id_user'] = $user['id'];
+							$logData['email_log_to'] = $email;
+							$logData['email_log_subject'] = $subject;
+							$logData['email_log_message'] = $content;
+
+							$logs = AutocrmEmailLog::create($logData);
+						}
 					}
 				}
 			}
