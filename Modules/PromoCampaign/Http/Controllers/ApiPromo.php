@@ -560,7 +560,9 @@ class ApiPromo extends Controller
     	$post = $request->json()->all();
     	$error_msg = [];
     	$end_period = null;
+    	$start_period = null;
     	$publish_end_period = null;
+    	$publish_start_period = null;
     	$expiry_date = null;
 
     	if (!empty($post['expiry_duration']) && !empty($post['expiry_date'])) {
@@ -571,17 +573,25 @@ class ApiPromo extends Controller
 	        }
     	}
 
+    	if (isset($post['start_period']) && !empty($post['start_period'])) {
+            $start_period	= date('Y-m-d H:i:s', strtotime($post['start_period']));
+        }
+
     	if (isset($post['end_period']) && !empty($post['end_period'])) {
             $end_period	= date('Y-m-d H:i:s', strtotime($post['end_period']));
-	        if ($end_period < date('Y-m-d H:i:s')) {
-	        	$error_msg[] = 'End period must be a date after '.date('Y-m-d H:i:s').'.';
+	        if ($end_period < ($start_period ?? date('Y-m-d H:i:s'))) {
+	        	$error_msg[] = 'End period must be a date after '. ($start_period ?? date('Y-m-d H:i:s')).'.';
 	        }
         }
 
-        if (isset($post['publish_end_period']) && !empty($post['publish_end_period'])) {
+        if (isset($post['publish_start_period']) && !empty($post['publish_start_period'])) {
+            $publish_start_period = date('Y-m-d H:i:s', strtotime($post['publish_start_period']));
+        }
+
+		if (isset($post['publish_end_period']) && !empty($post['publish_end_period'])) {
             $publish_end_period = date('Y-m-d H:i:s', strtotime($post['publish_end_period']));
-	        if (isset($post['publish_end_period']) && $publish_end_period < date('Y-m-d H:i:s')) {
-	        	$error_msg[] = 'Publish end period must be a date after '.date('Y-m-d H:i:s').'.';
+	        if (isset($post['publish_end_period']) && $publish_end_period < ($publish_start_period ?? date('Y-m-d H:i:s'))) {
+	        	$error_msg[] = 'Publish end period must be a date after '.($publish_start_period ?? date('Y-m-d H:i:s')).'.';
 	        }
         }
 
@@ -604,16 +614,23 @@ class ApiPromo extends Controller
     		$id_table 	= 'id_deals';
     		$id_post 	= $post['id_deals'];
 
+    		$data['deals_start'] = $start_period;
     		$data['deals_end'] = $end_period;
+    		$data['deals_publish_start'] = $publish_start_period;
     		$data['deals_publish_end'] = $publish_end_period;
-    		$data['deals_voucher_expired'] = $expiry_date;
-    		$data['deals_voucher_duration'] = $post['expiry_duration'];
+    		if (isset($post['expiry_date'])) {
+    			$data['deals_voucher_expired'] = $expiry_date;
+    		}
+    		if (isset($post['expiry_duration'])) {
+    			$data['deals_voucher_duration'] = $post['expiry_duration'];
+    		}
     	}
     	if (isset($post['id_promo_campaign'])) {
     		$table 		= new PromoCampaign;
     		$id_table 	= 'id_promo_campaign';
     		$id_post 	= $post['id_promo_campaign'];
 
+    		$data['date_start'] = $start_period;
     		$data['date_end'] = $end_period;
     	}
     	if (isset($post['id_subscription'])) {
@@ -621,7 +638,9 @@ class ApiPromo extends Controller
     		$id_table 	= 'id_subscription';
     		$id_post 	= $post['id_subscription'];
 
+    		$data['subscription_start'] = $start_period;
     		$data['subscription_end'] = $end_period;
+    		$data['subscription_publish_start'] = $publish_start_period;
     		$data['subscription_publish_end'] = $publish_end_period;
     		$data['subscription_voucher_expired'] = $expiry_date;
     		$data['subscription_voucher_duration'] = $post['expiry_duration'];
