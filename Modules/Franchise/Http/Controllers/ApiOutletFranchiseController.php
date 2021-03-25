@@ -73,6 +73,7 @@ class ApiOutletFranchiseController extends Controller
 	{
 		$post = $request->json()->all();
 		$outlet = Outlet::where('id_outlet', $request->id_outlet)->first();
+		$user_franchise = $request->user();
 
 		if (!$outlet) {
 			$result = [
@@ -133,6 +134,15 @@ class ApiOutletFranchiseController extends Controller
 
 			if (isset($queue_data)) {
 				SendOutletJob::dispatch($queue_data)->allOnConnection('outletqueue');
+				if (isset($user_franchise->email)) {
+
+		        	$autocrm = app($this->autocrm)->SendAutoCRM(
+                        'Outlet Pin Sent User Franchise',
+                        $user_franchise->email,
+                        $queue_data[0], 
+                        null, false, false, 'franchise', 1, false
+                    );
+		        }
 			}
 		}
 
