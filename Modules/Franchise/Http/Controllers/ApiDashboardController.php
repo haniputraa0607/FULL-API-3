@@ -43,63 +43,63 @@ class ApiDashboardController extends Controller
             $result = [
                 [
                     'title' => 'Total Sales',
-                    'amount' => $trx['total_sales']??0
+                    'amount' => number_format($trx['total_sales']??0,0,",",".")
                 ],
                 [
                     'title' => 'Total Nominal Sales',
-                    'amount' => number_format($trx['total_nominal_sales']??0,2,",",".")
+                    'amount' => 'Rp '.number_format($trx['total_nominal_sales']??0,0,",",".")
                 ],
                 [
                     'title' => 'Grand Total',
-                    'amount' => number_format($trx['grand_total']??0,2,",",".")
+                    'amount' => 'Rp '.number_format($trx['grand_total']??0,0,",",".")
                 ],
                 [
                     'title' => 'Sub Total',
-                    'amount' => number_format($trx['sub_total']??0,2,",",".")
+                    'amount' => 'Rp '.number_format($trx['sub_total']??0,0,",",".")
                 ],
                 [
                     'title' => 'Total Delivery',
-                    'amount' => number_format($trx['total_delivery']??0,2,",",".")
+                    'amount' => 'Rp '.number_format($trx['total_delivery']??0,0,",",".")
                 ],
                 [
                     'title' => 'Total Discount',
-                    'amount' => number_format($trx['total_dicount']??0,2,",",".")
+                    'amount' => 'Rp '.number_format($trx['total_dicount']??0,0,",",".")
                 ],
                 [
                     'title' => 'Income Outlet',
-                    'amount' => number_format($trx['incomes_outlet']??0,2,",",".")
+                    'amount' => 'Rp '.number_format($trx['incomes_outlet']??0,0,",",".")
                 ],
                 [
                     'title' => 'Disburse Success',
-                    'amount' => number_format($trx['disburse_success']??0,2,",",".")
+                    'amount' => 'Rp '.number_format($trx['disburse_success']??0,2,",",".")
                 ]
             ];
 
             if(!empty($trx) && $trx['total_sales'] != 0){
                 $result[] =  [
                     'title' => 'Average Grand Total',
-                    'amount' => number_format($trx['grand_total']/$trx['total_sales'],2,",",".")
+                    'amount' => 'Rp '.number_format($trx['grand_total']/$trx['total_sales'],0,",",".")
                 ];
                 $result[] =  [
                     'title' => 'Average Sub Total',
-                    'amount' => number_format($trx['sub_total']/$trx['total_sales'],2,",",".")
+                    'amount' => 'Rp '.number_format($trx['sub_total']/$trx['total_sales'],0,",",".")
                 ];
                 $result[] =  [
                     'title' => 'Average Sales',
-                    'amount' => number_format($trx['total_sales']/$trx['count_date'],2,",",".")
+                    'amount' => number_format($trx['total_sales']/$trx['count_date'],0,",",".")
                 ];
             }else{
                 $result[] =  [
                     'title' => 'Average Grand Total',
-                    'amount' => number_format(0,2,",",".")
+                    'amount' => 'Rp '.number_format(0,0,",",".")
                 ];
                 $result[] =  [
                     'title' => 'Average Sub Total',
-                    'amount' => number_format(0,2,",",".")
+                    'amount' => 'Rp '.number_format(0,0,",",".")
                 ];
                 $result[] =  [
                     'title' => 'Average Sales',
-                    'amount' => number_format(0,2,",",".")
+                    'amount' => number_format(0,0,",",".")
                 ];
             }
             return response()->json(MyHelper::checkGet($result));
@@ -115,7 +115,13 @@ class ApiDashboardController extends Controller
                 ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
                 ->join('transaction_products', 'transaction_products.id_transaction', 'transactions.id_transaction')
                 ->join('products', 'products.id_product', 'transaction_products.id_product')
-                ->select(DB::raw('sum(transaction_product_qty) as sum_qty'), 'products.product_code', 'products.product_name')
+                ->select(DB::raw('sum(transaction_product_qty) as sum_qty'), DB::raw('sum((transaction_product_price+transaction_variant_subtotal) * transaction_product_qty) as total_nominal'),
+                    'transaction_product_discount_all',
+                    'products.product_code', 'products.product_name',
+                    DB::raw("(SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
+                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
+                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
+                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants"))
                 ->groupBy('transaction_products.id_product')
                 ->orderBy('sum_qty', 'desc');
 
