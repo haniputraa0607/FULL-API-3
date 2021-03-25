@@ -3229,7 +3229,7 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']         = 'PENGANTARAN DIBATALKAN';
                         $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
                         $result['delivery_info']['cancelable']     = 0;
-                        $result['rejectable']              = ($list['transaction_pickup_go_send']['retry_count'] == 5) ? 1 : 0;
+                        $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
                     case 'driver not found':
                     case 'no_driver':
@@ -3237,7 +3237,7 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']          = 'DRIVER TIDAK DITEMUKAN';
                         $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
                         $result['delivery_info']['cancelable']      = 0;
-                        $result['rejectable']              = ($list['transaction_pickup_go_send']['retry_count'] == 5) ? 1 : 0;
+                        $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
                 }
             }
