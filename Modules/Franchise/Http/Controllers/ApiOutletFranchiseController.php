@@ -147,6 +147,9 @@ class ApiOutletFranchiseController extends Controller
 		}
 
 		$result = MyHelper::checkUpdate($data);
+		if ($request->update_pin_type == 'random' && !empty($pin)) {
+			$result['result']['pin'] = $pin;
+		}
 
 		return $result;
 	}
