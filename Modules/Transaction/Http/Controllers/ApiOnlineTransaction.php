@@ -605,9 +605,14 @@ class ApiOnlineTransaction extends Controller
             $post['payment_type'] = null;
         }
 
-        if ($post['payment_type']) {
+        if ($post['payment_type'] && $post['payment_type'] != 'Balance') {
             $available_payment = $this->availablePayment(new Request())['result'] ?? [];
-            dd($available_payment);
+            if (!in_array($post['payment_type'], array_column($available_payment, 'payment_gateway'))) {
+                return [
+                    'status' => 'fail',
+                    'messages' => 'Metode pembayaran yang dipilih tidak tersedia untuk saat ini'
+                ];
+            }
         }
 
         if (!isset($post['shipping'])) {

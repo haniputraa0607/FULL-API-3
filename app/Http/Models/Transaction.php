@@ -106,6 +106,8 @@ class Transaction extends Model
 		'need_manual_void'
 	];
 
+	public $manual_refund = 0;
+
 	public function user()
 	{
 		return $this->belongsTo(\App\Http\Models\User::class, 'id_user');

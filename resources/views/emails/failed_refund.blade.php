@@ -5,6 +5,9 @@
 			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Receipt Number</th>
 			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Customer Name</th>
 			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Customer Phone</th>
+			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Payment Method</th>
+			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Grandtotal</th>
+			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Manual Refund</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -22,6 +25,15 @@
 			<td style="border:1px solid #C0C0C0;padding:5px;">
 				{{ $transaction['phone'] }}
 			</td>
+			<td style="border:1px solid #C0C0C0;padding:5px;">
+				{{ $transaction['trasaction_payment_type'] }}
+			</td>
+			<td style="border:1px solid #C0C0C0;padding:5px;">
+				{{ \App\Lib\MyHelper::requestNumber($transaction['transaction_grandtotal'], '_CURRENCY') }}
+			</td>
+			<td style="border:1px solid #C0C0C0;padding:5px;">
+				{{ \App\Lib\MyHelper::requestNumber($transaction->manual_refund, '_CURRENCY') }}
+			</td>
 		</tr>
 		@endif
 		@foreach($transactions ?? [] as $transaction)
@@ -37,6 +49,15 @@
 			</td>
 			<td style="border:1px solid #C0C0C0;padding:5px;">
 				{{ $transaction['phone'] }}
+			</td>
+			<td style="border:1px solid #C0C0C0;padding:5px;">
+				{{ $transaction['trasaction_payment_type'] }}
+			</td>
+			<td style="border:1px solid #C0C0C0;padding:5px;">
+				{{ \App\Lib\MyHelper::requestNumber($transaction['transaction_grandtotal'], '_CURRENCY') }}
+			</td>
+			<td style="border:1px solid #C0C0C0;padding:5px;">
+				{{ \App\Lib\MyHelper::requestNumber($transaction->manual_refund, '_CURRENCY') }}
 			</td>
 		</tr>
 		@endforeach
