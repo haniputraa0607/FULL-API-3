@@ -39,7 +39,7 @@ class ApiReportGosend extends Controller
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->join('transaction_pickup_go_sends', 'transaction_pickup_go_sends.id_transaction_pickup', 'transaction_pickups.id_transaction_pickup')
             ->where('transactions.transaction_payment_status','Completed')
-            ->whereNull('transaction_pickups.reject_at');
+            ->orderBy('transactions.transaction_date', 'desc');
 
         if(isset($post['date_start']) && !empty($post['date_start']) &&
             isset($post['date_end']) && !empty($post['date_end'])){
