@@ -47,8 +47,9 @@ class ApiOutletFranchiseController extends Controller
 	function __construct() {
 		date_default_timezone_set('Asia/Jakarta');
 
-		$this->outlet 	= "Modules\Outlet\Http\Controllers\ApiOutletController";
+		$this->outlet = "Modules\Outlet\Http\Controllers\ApiOutletController";
 		$this->autocrm 	= "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+		$this->disburse_setting = "Modules\Disburse\Http\Controllers\ApiDisburseSettingController";
 	}
 
 	public function detail(Request $request)
@@ -255,9 +256,11 @@ class ApiOutletFranchiseController extends Controller
 				return $msg;
 			}
 
+			$old_outlet = BankAccountOutlet::where('id_bank_account', $check_account->id_bank_account)->groupBy('id_outlet')->pluck('id_outlet')->toArray();
 			$update = BankAccountOutlet::where('id_outlet', $request->id_outlet)->update(['id_bank_account' => $check_account->id_bank_account]);
 
 			if ($update) {
+				app($this->disburse_setting)->addLogEditBankAccount($request, 'update', $check_account->id_bank_account, $check_account, $old_outlet, 'outlet');
 				$result = MyHelper::checkUpdate($update);
 				return $result;
 			}
@@ -292,6 +295,7 @@ class ApiOutletFranchiseController extends Controller
 		        ];
 
 	            $bankAccount = BankAccount::create($dt);
+	            app($this->disburse_setting)->addLogEditBankAccount($request, 'create', $bankAccount->id_bank_account);
 
 	            if($bankAccount){
 	                $delete = true;
@@ -312,6 +316,7 @@ class ApiOutletFranchiseController extends Controller
 
 	                if($delete){
 	                    $insertBankAccountOutlet = BankAccountOutlet::insert($dtToInsert);
+	                    app($this->disburse_setting)->addLogEditBankAccount($request, 'update', $bankAccount->id_bank_account, $bankAccount, [], 'outlet');
 	                    if($insertBankAccountOutlet){
 	                        DB::commit();
 	                        return response()->json(['status' => 'success']);
