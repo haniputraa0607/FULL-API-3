@@ -33,6 +33,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
+use Modules\Franchise\Http\Requests\SendRequestAdmin;
+
 use App\Jobs\SendOutletJob;
 use App\Lib\MyHelper;
 
@@ -45,7 +47,8 @@ class ApiOutletFranchiseController extends Controller
 	function __construct() {
 		date_default_timezone_set('Asia/Jakarta');
 
-		$this->outlet       = "Modules\Outlet\Http\Controllers\ApiOutletController";
+		$this->outlet 	= "Modules\Outlet\Http\Controllers\ApiOutletController";
+		$this->autocrm 	= "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
 	}
 
 	public function detail(Request $request)
@@ -70,6 +73,7 @@ class ApiOutletFranchiseController extends Controller
 	{
 		$post = $request->json()->all();
 		$outlet = Outlet::where('id_outlet', $request->id_outlet)->first();
+		$user_franchise = $request->user();
 
 		if (!$outlet) {
 			$result = [
@@ -130,10 +134,22 @@ class ApiOutletFranchiseController extends Controller
 
 			if (isset($queue_data)) {
 				SendOutletJob::dispatch($queue_data)->allOnConnection('outletqueue');
+				if (isset($user_franchise->email)) {
+
+		        	$autocrm = app($this->autocrm)->SendAutoCRM(
+                        'Outlet Pin Sent User Franchise',
+                        $user_franchise->email,
+                        $queue_data[0], 
+                        null, false, false, 'franchise', 1, false
+                    );
+		        }
 			}
 		}
 
 		$result = MyHelper::checkUpdate($data);
+		if ($request->update_pin_type == 'random' && !empty($pin)) {
+			$result['result']['pin'] = $pin;
+		}
 
 		return $result;
 	}
@@ -315,6 +331,46 @@ class ApiOutletFranchiseController extends Controller
 	        else{
 	            return response()->json(['status' => 'fail', 'messages' => 'Validasi akun gagal']);
 	        }
+		}
+	}
+
+	public function requestAdmin(SendRequestAdmin $request)
+	{	
+		$outlet = Outlet::where('id_outlet', $request->id_outlet)->first();
+		if (!$outlet) {
+			$result = [
+				'status' => 'fail', 
+				'messages' => ['Outlet not found']
+			];
+			return $result;
+		}
+
+		$data = [
+			'id_outlet'			=> $outlet->id_outlet, 
+			'outlet_name'		=> $outlet->outlet_name, 
+			'outlet_code'		=> $outlet->outlet_code,
+			'outlet_phone'		=> $outlet->outlet_phone,
+			'outlet_address'	=> $request->address,
+			'latitude'			=> $request->longitude,
+			'longitude'			=> $request->latitude
+		];
+
+		$send = app($this->autocrm)->SendAutoCRM('Request Admin User Franchise', $outlet->outlet_email, $data, null, null, null, 'outlet_franchise');
+
+		if ($send) {
+			return [
+				'status' => 'success',
+				'messages' => [
+					'Permintaan berhasil dikirim, data akan diubah setelah mendapatkan persetujuan oleh Admin'
+				]
+			];
+		}else{
+			return [
+				'status' => 'success',
+				'messages' => [
+					'Terjadi kesalahan, gagal mengirim permintaan'
+				]
+			];
 		}
 	}
 }
