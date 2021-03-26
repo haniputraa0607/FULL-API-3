@@ -605,6 +605,11 @@ class ApiOnlineTransaction extends Controller
             $post['payment_type'] = null;
         }
 
+        if ($post['payment_type']) {
+            $available_payment = $this->availablePayment(new Request())['result'] ?? [];
+            dd($available_payment);
+        }
+
         if (!isset($post['shipping'])) {
             $post['shipping'] = 0;
         }
@@ -3790,10 +3795,24 @@ class ApiOnlineTransaction extends Controller
         $last_status = [];
         foreach ($setting as $value) {
             $payment = $availablePayment[$value['code'] ?? ''] ?? false;
-            if (!$payment || !($payment['status'] ?? false) || (!$request->show_all && !($value['status'] ?? false))) {
+            if (!$payment) {
                 unset($availablePayment[$value['code']]);
                 continue;
             }
+
+            if (is_array($payment['available_time'] ?? false)) {
+                $available_time = $payment['available_time'];
+                $current_time = time();
+                if ($current_time < strtotime($available_time['start']) || $current_time > strtotime($available_time['end'])) {
+                    $value['status'] = 0;
+                }
+            }
+
+            if (!($payment['status'] ?? false) || (!$request->show_all && !($value['status'] ?? false))) {
+                unset($availablePayment[$value['code']]);
+                continue;
+            }
+
             if(!is_numeric($payment['status'])){
                 $var = explode(':',$payment['status']);
                 if(($config[$var[0]]??false) != ($var[1]??true)) {

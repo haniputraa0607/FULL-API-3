@@ -88,7 +88,7 @@ class Kernel extends ConsoleKernel
          * update all pickup transaction that have been more than 1 x 24 hours
          * run every day at 04:00
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@completeTransactionPickup')->dailyAt('01:00');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@completeTransactionPickup')->dailyAt('23:55');
 
         /**
          * calculate achievement all transaction that have not calculated the achievement

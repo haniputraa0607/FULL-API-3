@@ -389,7 +389,7 @@ class ApiCronTrxController extends Controller
     public function completeTransactionPickup(){
         $log = MyHelper::logCron('Complete Transaction Pickup');
         try {
-            $trxs = Transaction::whereDate('transaction_date', '<', date('Y-m-d'))
+            $trxs = Transaction::whereDate('transaction_date', '<=', date('Y-m-d'))
                 ->where('trasaction_type', 'Pickup Order')
                 ->join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
                 ->whereNull('taken_at')
@@ -404,6 +404,10 @@ class ApiCronTrxController extends Controller
                 'failed_reject' => 0,
                 'errors' => []
             ];
+
+            $shared = \App\Lib\TemporaryDataManager::create('reject_order');
+            $shared->reject_batch = true;
+
             foreach ($trxs as $newTrx) {
                 $idTrx[] = $newTrx->id_transaction;
                 if(
@@ -441,14 +445,21 @@ class ApiCronTrxController extends Controller
                         // taken
                         if (($reject['should_taken'] ?? false) === true) {
                             TransactionPickup::where('id_transaction', $newTrx->id_transaction)
-                                        ->update(['taken_by_system_at' => date('Y-m-d 00:00:00')]);
+                                        ->update(['taken_by_system_at' => date('Y-m-d H:i:s')]);
                         }
                         $processed['failed_reject']++;
                         $processed['errors'][] = $reject['messages'] ?? 'Something went wrong';
                     }
                 }
             }
-            
+
+            if ($shared['void_failed'] ?? []) {
+                $variables = [
+                    'detail' => view('emails.failed_refund', ['transactions' => $shared['void_failed']])->render()
+                ];
+                app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $shared['void_failed'][0]['phone'], $variables, null, true);
+            }
+
             // // apply point if ready_at null
             // foreach ($trxs as $newTrx) {
             //     $idTrx[] = $newTrx->id_transaction;
@@ -499,7 +510,7 @@ class ApiCronTrxController extends Controller
             //update taken_by_sistem_at
             $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
                                         ->whereNotNull('ready_at')
-                                        ->update(['taken_by_system_at' => date('Y-m-d 00:00:00')]);
+                                        ->update(['taken_by_system_at' => date('Y-m-d H:i:s')]);
 
             //change status transaction to invalid transaction
             $dataTrx = Transaction::join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')

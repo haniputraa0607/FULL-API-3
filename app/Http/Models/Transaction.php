@@ -102,7 +102,8 @@ class Transaction extends Model
 		'show_rate_popup',
 		'transaction_discount_delivery',
 		'transaction_discount_item',
-		'transaction_discount_bill'
+		'transaction_discount_bill',
+		'need_manual_void'
 	];
 
 	public function user()
