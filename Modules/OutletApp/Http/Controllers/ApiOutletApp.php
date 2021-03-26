@@ -1671,7 +1671,6 @@ class ApiOutletApp extends Controller
         $outlet = $request->user();
 
         $shared = \App\Lib\TemporaryDataManager::create('reject_order');
-        $shared['void_failed'] = collect([]);
         $refund_failed_process_balance = MyHelper::setting('refund_failed_process_balance');
 
         $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')

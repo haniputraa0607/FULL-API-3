@@ -392,6 +392,7 @@ class ApiCronTrxController extends Controller
             $trxs = Transaction::whereDate('transaction_date', '<=', date('Y-m-d'))
                 ->where('trasaction_type', 'Pickup Order')
                 ->join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+                ->where('transaction_payment_status', 'Completed')
                 ->whereNull('taken_at')
                 ->whereNull('reject_at')
                 ->whereNull('taken_by_system_at')
@@ -406,8 +407,9 @@ class ApiCronTrxController extends Controller
             ];
 
             $shared = \App\Lib\TemporaryDataManager::create('reject_order');
-            $shared->reject_batch = true;
-
+            $shared['reject_batch'] = true;
+            $shared['void_failed'] = collect([]);
+            
             foreach ($trxs as $newTrx) {
                 $idTrx[] = $newTrx->id_transaction;
                 if(
