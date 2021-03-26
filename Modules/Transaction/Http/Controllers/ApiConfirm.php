@@ -57,6 +57,16 @@ class ApiConfirm extends Controller
         $post = $request->json()->all();
         $user = User::where('id', $request->user()->id)->first();
 
+        if ($post['payment_type'] && $post['payment_type'] != 'Balance') {
+            $available_payment = app($this->trx)->availablePayment(new Request())['result'] ?? [];
+            if (!in_array($post['payment_type'], array_column($available_payment, 'payment_gateway'))) {
+                return [
+                    'status' => 'fail',
+                    'messages' => 'Metode pembayaran yang dipilih tidak tersedia untuk saat ini'
+                ];
+            }
+        }
+
         $productMidtrans   = [];
         $dataDetailProduct = [];
 
