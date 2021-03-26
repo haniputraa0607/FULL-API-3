@@ -871,6 +871,7 @@ class ApiCronTrxController extends Controller
                     "transaction_date" => $order->transaction_date,
                     'id_transaction'   => $order->id_transaction,
                     'order_id'         => $order->order_id,
+                    'receipt_number'   => $order->transaction_receipt_number,
                 ]);
                 if ($send != true) {
                     DB::rollback();

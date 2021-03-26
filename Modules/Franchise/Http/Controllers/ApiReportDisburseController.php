@@ -247,9 +247,15 @@ class ApiReportDisburseController extends Controller
             $orderType = $post['order_type']??'desc';
 
             if(isset($post['export']) && $post['export'] == 1){
-                $data = $data->selectRaw('disburse_status as "Disburse Status", bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", disburse_outlet.disburse_nominal as "Nominal Disburse",
-                total_fee_item as "Total Fee Item", total_payment_charge as "Total MDR PG"')
-                    ->get()->toArray();
+                if($post['status'] == 'success'){
+                    $data = $data->selectRaw('disburse_status as "Disburse Status", bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", disburse_outlet.disburse_nominal as "Nominal Disburse",
+                        total_fee_item as "Total Fee Item", total_payment_charge as "Total MDR PG"')
+                        ->get()->toArray();
+                }else{
+                    $data = $data->selectRaw('disburse_status as "Disburse Status", error_message as "Error Message", bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", disburse_outlet.disburse_nominal as "Nominal Disburse",
+                        total_fee_item as "Total Fee Item", total_payment_charge as "Total MDR PG"')
+                        ->get()->toArray();
+                }
             }else{
                 $data = $data->select('disburse.disburse_status', 'disburse.created_at as disburse_date', 'disburse.error_message', 'disburse.reference_no', 'disburse_outlet.*', 'disburse.beneficiary_name', 'disburse.beneficiary_account_number', 'bank_name.bank_name')->orderBy('disburse.'.$order, $orderType)->paginate(30);
             }
@@ -268,7 +274,7 @@ class ApiReportDisburseController extends Controller
             ->leftJoin('bank_name', 'bank_name.bank_code', 'disburse.beneficiary_bank_name')
             ->where('disburse_outlet.id_disburse_outlet', $post['id_disburse_outlet'])
             ->select('disburse_outlet.id_disburse_outlet', 'outlets.outlet_name', 'outlets.outlet_code', 'disburse.id_disburse', 'disburse_outlet.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
-                'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name')->first();
+                'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name', 'disburse.error_message')->first();
         $data = Transaction::join('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
             ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
             ->where('disburse_outlet_transactions.id_disburse_outlet', $post['id_disburse_outlet'])

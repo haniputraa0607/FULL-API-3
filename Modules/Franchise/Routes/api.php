@@ -41,6 +41,10 @@ Route::group(['prefix' => 'franchise'], function () {
     });
 
     Route::group(['middleware' => ['auth:franchise', 'scopes:franchise-user']], function () {
+        Route::post('dashboard', 'ApiDashboardController@dashboard');
+        Route::post('dashboard/top-ten-product', 'ApiDashboardController@topTenProduct');
+        Route::post('dashboard/summary-sales', 'ApiDashboardController@summarySales');
+
         Route::group(['prefix' => 'user'], function() {
             Route::post('detail-admin', 'ApiUserFranchiseController@detail');
         });
@@ -90,6 +94,10 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::get('detail','ApiOutletFranchiseController@detail');
             Route::post('update','ApiOutletFranchiseController@update');
             Route::post('update-schedule','ApiOutletFranchiseController@updateSchedule');
+            Route::post('update-bank-account','ApiOutletFranchiseController@updateBankAccount');
+            Route::post('request-admin','ApiOutletFranchiseController@requestAdmin');
+
+            Route::any('bank', ['uses' => '\Modules\Disburse\Http\Controllers\ApiDisburseSettingController@getBank']);
         });
 
         Route::get('select-list/{table}','ApiReportTransactionController@listForSelect');

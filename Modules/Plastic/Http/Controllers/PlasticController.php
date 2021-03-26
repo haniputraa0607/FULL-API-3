@@ -189,7 +189,9 @@ class PlasticController extends Controller
                     }else{
                         $product_price = ProductGlobalPrice::where('id_product', $value['id_product'])->first()['product_global_price'];
                     }
-                    $sorted_plastic_max[$key]['plastic_price_raw'] = $value['total_used'] * $product_price;
+                    $total_use = ceil($value['total_used']);
+                    $sorted_plastic_max[$key]['plastic_price_raw'] = $total_use * $product_price;
+                    $sorted_plastic_max[$key]['total_used'] = $total_use;
                     $total_plastic_price += $sorted_plastic_max[$key]['plastic_price_raw'];
                 }
 

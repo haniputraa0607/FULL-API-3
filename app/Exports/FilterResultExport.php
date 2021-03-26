@@ -11,6 +11,12 @@ use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use App\Lib\MyHelper;
+use App\Http\Models\Product;
+use App\Http\Models\ProductCategory;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariant;
+use App\Http\Models\Outlet;
+use Modules\Brand\Entities\Brand;
 
 class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, WithTitle, WithColumnFormatting
 {
@@ -21,9 +27,13 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
     protected $padding;
     protected $header;
     protected $columnFormats;
+    protected $loadedData = [];
 
 	public function __construct($data, $filter, $title = '', $columnFormats = null)
 	{
+        if (!$data) {
+            $data = [['Result' => 'No data found']];
+        }
 		$this->data = $data;
         $this->title = $title;
         $this->filter = $filter;
@@ -36,11 +46,11 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
                 if (!isset($rule['parameter']) || is_null($rule['parameter']) || !($rule['hide']??'')) {
                     continue;
                 }
-                $this->header[] = [
+                $this->header[] = $this->filterPrettier([
                     $rule['subject'],
                     $rule['operator'] ?? '=',
                     $rule['parameter']
-                ];
+                ]);
             }
             if (($this->filter['operator']??'and') == 'or') {
                 $this->header[] = ['Valid when minimum one condition is met'];
@@ -50,11 +60,11 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
                 if (!isset($rule['parameter']) || is_null($rule['parameter']) || ($rule['hide']??'')) {
                     continue;
                 }
-                $this->header[] = [
+                $this->header[] = $this->filterPrettier([
                     $rule['subject'],
                     $rule['operator'] ?? '=',
                     $rule['parameter']
-                ];
+                ]);
             }
         } else {
             $this->header[] = ['No Filter applied'];
@@ -185,6 +195,120 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
             'D' => '#,##0',
             'E' => '"Rp "#,##0',
             'F' => '"Rp "#,##0',
+        ];
+    }
+
+    protected function loadOnce($key, $closures) {
+        return function() use ($key, $closures) {
+            if (!isset($this->loadedData[$key])) {
+                $this->loadedData[$key] = $closures();
+            }
+            return $this->loadedData[$key];            
+        };
+    }
+
+    protected function filterPrettier($rule) {
+        $filters = [
+            'id_outlet' => [
+                'label' => 'Outlet',
+                'data' => $this->loadOnce('id_outlets', function() {
+                    $itemRaw = Outlet::select('id_outlet as id_item', 'outlet_name as item_name')->get();
+                    $items = [];
+                    $itemRaw->each(function($item) use (&$items) {
+                        $items[$item->id_item] = $item->item_name;
+                    });
+                    return $items;
+                })
+            ],
+            'id_product' => [
+                'label' => 'Product',
+                'data' => $this->loadOnce('id_products', function() {
+                    $productRaw = Product::select('id_product', 'product_name')->get();
+                    $products = [];
+                    $productRaw->each(function($item) use (&$products) {
+                        $products[$item->id_product] = $item->product_name;
+                    });
+                    return $products;
+                })
+            ],
+            'transaction_date' => [
+                'label' => 'Date',
+            ],
+            'id_brand' => [
+                'label' => 'Brand',
+                'data' => $this->loadOnce('id_brands', function() {
+                    $itemRaw = Brand::select('id_brand as id_item', 'name_brand as item_name')->get();
+                    $items = [];
+                    $itemRaw->each(function($item) use (&$items) {
+                        $items[$item->id_item] = $item->item_name;
+                    });
+                    return $items;
+                })
+            ],
+            'id_product_category' => [
+                'label' => 'Category',
+                'data' => $this->loadOnce('id_product_categories', function() {
+                    $itemRaw = ProductCategory::select('id_product_category as id_item', 'product_category_name as item_name')->get();
+                    $items = [];
+                    $itemRaw->each(function($item) use (&$items) {
+                        $items[$item->id_item] = $item->item_name;
+                    });
+                    return $items;
+                })
+            ],
+            'id_product_variant_group' => [
+                'label' => 'Product Variant Group Code',
+                'data' => $this->loadOnce('id_product_variant_groups', function() {
+                    $itemRaw = ProductVariantGroup::select('id_product_variant_group as id_item', 'product_variant_group_code as item_name')->get();
+                    $items = [];
+                    $itemRaw->each(function($item) use (&$items) {
+                        $items[$item->id_item] = $item->item_name;
+                    });
+                    return $items;
+                })
+            ],
+            'id_product_variants' => [
+                'label' => 'Product Variant',
+                'render' => function($value) {
+                    $variants = $this->loadOnce('id_product_variants', function() {
+                        $itemRaw = ProductVariant::select('id_product_variant as id_item', 'product_variant_name as item_name')->get();
+                        $items = [];
+                        $itemRaw->each(function($item) use (&$items) {
+                            $items[$item->id_item] = $item->item_name;
+                        });
+                        return $items;
+                    })();
+                    $value = implode(', ', array_map(function($val) use ($variants) {
+                        return $variants[$val] ?? '';
+                    }, $value));
+                    return $value;
+                }
+            ],
+        ];
+
+        $filter = $filters[$rule[0]] ?? [];
+        if (!$filter) {
+            return $rule;
+        }
+
+        if (($filter['data'] ?? false)) {
+            return [
+                $filter['label'],
+                $rule[1],
+                $filter['data']()[$rule[2]] ?? $rule[2]
+            ];
+        } elseif (isset($filter['render'])) {
+            return [
+                $filter['label'],
+                $rule[1],
+                $filter['render']($rule[2])
+            ];
+        }
+
+        return [
+            $filter['label'],
+            $rule[1],
+            $rule[2]
         ];
     }
 }

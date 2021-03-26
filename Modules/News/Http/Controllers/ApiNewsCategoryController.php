@@ -49,7 +49,7 @@ class ApiNewsCategoryController extends Controller
                 ];
             }
         }else{
-            $list=$list->get();
+            $list=$list->orderBy('news_category_order', 'asc')->get();
         }
         return MyHelper::checkGet($list);
     }
@@ -84,5 +84,23 @@ class ApiNewsCategoryController extends Controller
         $post=$request->json()->all();
         $delete=NewsCategory::where('id_news_category',$post['id_news_category'])->delete();
         return MyHelper::checkDelete($delete);
+    }
+
+    public function positionCategory(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if (!isset($post['category_ids'])) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Category id is required']
+            ];
+        }
+        // update position
+        foreach ($post['category_ids'] as $key => $category_id) {
+            $update = NewsCategory::find($category_id)->update(['news_category_order' => $key + 1]);
+        }
+
+        return ['status' => 'success'];
     }
 }
