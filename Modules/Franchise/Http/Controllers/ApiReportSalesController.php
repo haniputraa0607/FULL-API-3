@@ -40,13 +40,13 @@ class ApiReportSalesController extends Controller
 						COUNT(CASE WHEN transactions.id_transaction AND transaction_pickups.reject_at IS NULL THEN 1 ELSE NULL END) AS total_transaction, 
 						COUNT(CASE WHEN transaction_pickups.pickup_by = "Customer" AND transaction_pickups.reject_at IS NULL THEN 1 ELSE NULL END) as total_transaction_pickup,
 						COUNT(CASE WHEN transaction_pickups.pickup_by = "GO-SEND" AND transaction_pickups.reject_at IS NULL THEN 1 ELSE NULL END) as total_transaction_delivery,
-						SUM(CASE WHEN transactions.transaction_subtotal IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_subtotal ELSE 0 END) as total_subtotal,
-						ABS(
-							SUM(
-								CASE WHEN transactions.transaction_discount IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_discount ELSE 0 END
-								+ CASE WHEN transactions.transaction_discount_delivery IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_discount_delivery ELSE 0 END
-								+ CASE WHEN transactions.transaction_discount_bill IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_discount_bill ELSE 0 END
-							)
+						SUM(CASE WHEN transactions.transaction_gross IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_gross ELSE 0 END) as total_subtotal,
+						SUM(
+							CASE WHEN transactions.transaction_discount_item IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount_item) 
+								WHEN transactions.transaction_discount IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount)
+								ELSE 0 END
+							+ CASE WHEN transactions.transaction_discount_delivery IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
+							+ CASE WHEN transactions.transaction_discount_bill IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
 						) as total_discount,
 						SUM(CASE WHEN transaction_pickups.reject_at IS NULL THEN transactions.transaction_shipment_go_send + transactions.transaction_shipment ELSE 0 END) as total_delivery,
 						SUM(CASE WHEN transaction_pickups.reject_at IS NULL THEN transactions.transaction_grandtotal ELSE 0 END) as total_grandtotal,
@@ -158,13 +158,13 @@ class ApiReportSalesController extends Controller
 						COUNT(CASE WHEN transactions.id_transaction AND transaction_pickups.reject_at IS NULL THEN 1 ELSE NULL END) AS total_transaction, 
 						COUNT(CASE WHEN transaction_pickups.pickup_by = "Customer" AND transaction_pickups.reject_at IS NULL THEN 1 ELSE NULL END) as total_transaction_pickup,
 						COUNT(CASE WHEN transaction_pickups.pickup_by = "GO-SEND" AND transaction_pickups.reject_at IS NULL THEN 1 ELSE NULL END) as total_transaction_delivery,
-						SUM(CASE WHEN transactions.transaction_subtotal IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_subtotal ELSE 0 END) as total_subtotal,
-						ABS(
-							SUM(
-								CASE WHEN transactions.transaction_discount IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_discount ELSE 0 END
-								+ CASE WHEN transactions.transaction_discount_delivery IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_discount_delivery ELSE 0 END
-								+ CASE WHEN transactions.transaction_discount_bill IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_discount_bill ELSE 0 END
-							)
+						SUM(CASE WHEN transactions.transaction_gross IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_gross ELSE 0 END) as total_subtotal,
+						SUM(
+							CASE WHEN transactions.transaction_discount_item IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount_item) 
+								WHEN transactions.transaction_discount IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount)
+								ELSE 0 END
+							+ CASE WHEN transactions.transaction_discount_delivery IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
+							+ CASE WHEN transactions.transaction_discount_bill IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
 						) as total_discount,
 						SUM(CASE WHEN transaction_pickups.reject_at IS NULL THEN transactions.transaction_shipment_go_send + transactions.transaction_shipment ELSE 0 END) as total_delivery,
 						SUM(CASE WHEN transaction_pickups.reject_at IS NULL THEN transactions.transaction_grandtotal ELSE 0 END) as total_grandtotal,
