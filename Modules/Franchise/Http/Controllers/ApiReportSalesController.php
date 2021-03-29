@@ -55,11 +55,33 @@ class ApiReportSalesController extends Controller
 						FLOOR(
 							(
 								COUNT(CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1 ELSE NULL END) 
-								/ ( COUNT(CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1 ELSE NULL END) 
-									+ COUNT(CASE WHEN transaction_pickups.reject_at IS NOT NULL THEN 1 ELSE NULL END) ) 
+								/ COUNT(CASE WHEN transactions.transaction_payment_status = "Completed" THEN 1 ELSE NULL END)
 							)
 							* 100
-						) as acceptance_rate
+						) as acceptance_rate,
+						COUNT(
+							CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1
+								 WHEN transaction_pickups.reject_reason NOT LIKE "auto reject order by system%" THEN 1
+							ELSE NULL END
+						) as total_response,
+						COUNT(
+							CASE WHEN transaction_pickups.reject_reason = "auto reject order by system" THEN 1
+							ELSE NULL END
+						) as total_auto_reject,
+						COUNT(
+							CASE WHEN transaction_pickups.receive_at IS NULL AND transaction_pickups.reject_reason NOT LIKE "auto reject order by system%" THEN 1
+							ELSE NULL END
+						) as total_manual_reject,
+						FLOOR(
+							(
+								COUNT(
+									CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1
+										 WHEN transaction_pickups.reject_reason NOT LIKE "auto reject order by system%" THEN 1
+									ELSE NULL END
+								)/ COUNT(CASE WHEN transactions.transaction_payment_status = "Completed" THEN 1 ELSE NULL END)
+							)
+							* 100
+						) as response_rate
 					'));
 
         if(isset($post['filter_type']) && $post['filter_type'] == 'range_date'){
@@ -128,15 +150,35 @@ class ApiReportSalesController extends Controller
                 'amount' => number_format($report['total_accept']??0,0,",",".")
             ],
             [
+                // 'title' => 'Acceptance Rate',
+                'title' => 'Acceptance Rate Order',
+                'amount' => number_format($report['acceptance_rate']??0,0,",",".")."%"
+            ],
+            [
+                // 'title' => 'Acceptance Rate',
+                'title' => 'Jumlah Response Order',
+                'amount' => number_format($report['total_response']??0,0,",",".")
+            ],
+            [
+                // 'title' => 'Acceptance Rate',
+                'title' => 'Response Rate Order',
+                'amount' => number_format($report['response_rate']??0,0,",",".")."%"
+            ],
+            [
                 // 'title' => 'Total Reject',
                 'title' => 'Jumlah Reject',
                 'amount' => number_format($report['total_reject']??0,0,",",".")
             ],
             [
                 // 'title' => 'Acceptance Rate',
-                'title' => 'Acceptance Rate Order',
-                'amount' => number_format($report['acceptance_rate']??0,0,",",".")."%"
-            ]
+                'title' => 'Jumlah Auto Reject',
+                'amount' => number_format($report['total_auto_reject']??0,0,",",".")
+            ],
+            [
+                // 'title' => 'Acceptance Rate',
+                'title' => 'Jumlah Manual Reject',
+                'amount' => number_format($report['total_manual_reject']??0,0,",",".")
+            ],
     	];
 
         return MyHelper::checkGet($result);
@@ -173,11 +215,33 @@ class ApiReportSalesController extends Controller
 						FLOOR(
 							(
 								COUNT(CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1 ELSE NULL END) 
-								/ ( COUNT(CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1 ELSE NULL END) 
-									+ COUNT(CASE WHEN transaction_pickups.reject_at IS NOT NULL THEN 1 ELSE NULL END) ) 
+								/ COUNT(CASE WHEN transactions.transaction_payment_status = "Completed" THEN 1 ELSE NULL END)
 							)
 							* 100
-						) as acceptance_rate
+						) as acceptance_rate,
+						COUNT(
+							CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1
+								 WHEN transaction_pickups.reject_reason NOT LIKE "auto reject order by system%" THEN 1
+							ELSE NULL END
+						) as total_response,
+						COUNT(
+							CASE WHEN transaction_pickups.reject_reason = "auto reject order by system" THEN 1
+							ELSE NULL END
+						) as total_auto_reject,
+						COUNT(
+							CASE WHEN transaction_pickups.receive_at IS NULL AND transaction_pickups.reject_reason NOT LIKE "auto reject order by system%" THEN 1
+							ELSE NULL END
+						) as total_manual_reject,
+						FLOOR(
+							(
+								COUNT(
+									CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1
+										 WHEN transaction_pickups.reject_reason NOT LIKE "auto reject order by system%" THEN 1
+									ELSE NULL END
+								)/ COUNT(CASE WHEN transactions.transaction_payment_status = "Completed" THEN 1 ELSE NULL END)
+							)
+							* 100
+						) as response_rate
 					'))
     				->groupBy(DB::raw('Date(transactions.transaction_date)'));
 
