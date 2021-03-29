@@ -2077,7 +2077,7 @@ Message :
                     'autocrm_sms_toogle' => '0',
                     'autocrm_push_toogle' => '0',
                     'autocrm_inbox_toogle' => '0',
-                    'autocrm_forward_toogle' => '0',
+                    'autocrm_forward_toogle' => '1',
                     'autocrm_email_subject' => null,
                     'autocrm_email_content' => null,
                     'autocrm_sms_content' => null,
