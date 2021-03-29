@@ -105,22 +105,22 @@ class ApiReportSalesController extends Controller
             [
                 // 'title' => 'Total Subtotal',
                 'title' => 'Sub Total',
-                'amount' => number_format($report['total_subtotal']??0,2,",",".")
+                'amount' => 'Rp. '.number_format($report['total_subtotal']??0,2,",",".")
             ],
             [
                 // 'title' => 'Total Discount',
                 'title' => 'Diskon',
-                'amount' => number_format($report['total_discount']??0,2,",",".")
+                'amount' => 'Rp. '.number_format($report['total_discount']??0,2,",",".")
             ],
             [
                 // 'title' => 'Total Delivery',
                 'title' => 'Delivery',
-                'amount' => number_format($report['total_delivery']??0,2,",",".")
+                'amount' => 'Rp. '.number_format($report['total_delivery']??0,2,",",".")
             ],
             [
                 // 'title' => 'Total Grandtotal',
                 'title' => 'Grand Total',
-                'amount' => number_format($report['total_grandtotal']??0,2,",",".")
+                'amount' => 'Rp. '.number_format($report['total_grandtotal']??0,2,",",".")
             ],
             [
                 // 'title' => 'Total Accept',
