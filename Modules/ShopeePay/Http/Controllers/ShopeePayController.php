@@ -1110,7 +1110,7 @@ class ShopeePayController extends Controller
             'merchant_ext_id'      => $this->merchant_ext_id,
             'store_ext_id'         => $this->store_ext_id,
         ];
-        $minimal_refund_time = '12:00';
+        $minimal_refund_time = '06:00';
         switch ($type) {
             case 'trx':
                 if (is_numeric($reference)) {
