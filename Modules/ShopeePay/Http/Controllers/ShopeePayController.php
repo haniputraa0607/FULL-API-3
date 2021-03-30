@@ -1436,8 +1436,8 @@ class ShopeePayController extends Controller
                         $void_failed[] = $order;
                         $result['manual_refund']++;
                     }
-                    $trx->update(['manual_refund' => '2']);
                 }
+                $trx->update(['manual_refund' => '2']);
             }
             if ($void_failed->count()) {
                 $variables = [
