@@ -17,7 +17,7 @@ Route::group(['prefix' => 'franchise'], function () {
     Route::group(['middleware' => ['auth_client', 'scopes:franchise-client']], function () {
         Route::post('reset-password', 'ApiUserFranchiseController@resetPassword');
     });
-    Route::group(['middleware' => ['auth:franchise', 'scopes:franchise-super-admin']], function () {
+    Route::group(['middleware' => ['auth:api', 'scopes:be']], function () {
         Route::group(['prefix' => 'user'], function() {
             Route::any('/', 'ApiUserFranchiseController@index');
             Route::post('store', 'ApiUserFranchiseController@store');
@@ -30,7 +30,6 @@ Route::group(['prefix' => 'franchise'], function () {
             Route::post('import', 'ApiUserFranchiseController@import');
         });
         Route::get('outlets', 'ApiUserFranchiseController@allOutlet');
-        Route::post('profile', 'ApiUserFranchiseController@updateProfile');
     });
 
     Route::group(['middleware' => ['auth:franchise', 'scopes:franchise-client']], function () {

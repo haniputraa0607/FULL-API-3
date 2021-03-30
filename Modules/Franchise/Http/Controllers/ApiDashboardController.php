@@ -46,10 +46,6 @@ class ApiDashboardController extends Controller
                     'amount' => number_format($trx['total_sales']??0,0,",",".")
                 ],
                 [
-                    'title' => 'Total Nominal Sales',
-                    'amount' => 'Rp '.number_format($trx['total_nominal_sales']??0,0,",",".")
-                ],
-                [
                     'title' => 'Grand Total',
                     'amount' => 'Rp '.number_format($trx['grand_total']??0,0,",",".")
                 ],
@@ -115,13 +111,15 @@ class ApiDashboardController extends Controller
                 ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
                 ->join('transaction_products', 'transaction_products.id_transaction', 'transactions.id_transaction')
                 ->join('products', 'products.id_product', 'transaction_products.id_product')
-                ->select(DB::raw('sum(transaction_product_qty) as sum_qty'), DB::raw('sum((transaction_product_price+transaction_variant_subtotal) * transaction_product_qty) as total_nominal'),
-                    'transaction_product_discount_all',
+                ->select('transaction_products.id_product_variant_group','transaction_products.id_product',
+                    DB::raw('sum(transaction_product_qty) as sum_qty'), DB::raw('sum((transaction_product_price+transaction_variant_subtotal) * transaction_product_qty) as total_nominal'),
+                    DB::raw('sum((transaction_product_bundling_discount*transaction_product_qty) + transaction_product_discount) as discount_all'),
                     'products.product_code', 'products.product_name',
                     DB::raw("(SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
                         JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
                         JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
                         WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants"))
+                ->groupBy('transaction_products.id_product_variant_group')
                 ->groupBy('transaction_products.id_product')
                 ->orderBy('sum_qty', 'desc');
 
