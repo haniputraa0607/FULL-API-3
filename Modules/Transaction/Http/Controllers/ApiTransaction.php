@@ -4682,10 +4682,19 @@ class ApiTransaction extends Controller
 
     public function listFailedVoidPayment(Request $request)
     {
-        $result = Transaction::select('transactions.id_transaction', 'transaction_date', 'transaction_receipt_number', 'name', 'phone', 'trasaction_payment_type', 'transaction_grandtotal', 'need_manual_void', \DB::raw('transaction_grandtotal - coalesce(transaction_payment_balances.balance_nominal, 0) as manual_refund_nominal'))
+        $result = Transaction::select('transactions.id_transaction', 'transaction_date', 'transaction_receipt_number', 'name', 'phone', 'trasaction_payment_type', 'transaction_grandtotal', 'need_manual_void', 'order_id', 'outlets.outlet_name', 'outlet_code', \DB::raw('transaction_grandtotal - coalesce(transaction_payment_balances.balance_nominal, 0) as manual_refund_nominal'))
             ->join('users', 'users.id', 'transactions.id_user')
+            ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
             ->where('need_manual_void', '<>', '0');
+
+        $countTotal = null;
+
+        if ($request->rule) {
+            $countTotal = $result->count();
+            $this->filterList($result, $request->rule, $request->operator ?: 'and');
+        }
 
         if (is_array($orders = $request->order)) {
             $columns = [
@@ -4707,10 +4716,53 @@ class ApiTransaction extends Controller
         $result->orderBy('transactions.id_transaction', $column['dir'] ?? 'DESC');
 
         if ($request->page) {
-            $result = $result->paginate();
+            $result = $result->paginate($request->length ?: 15)->toArray();
+            if (is_null($countTotal)) {
+                $countTotal = $result['total'];
+            }
+            // needed by datatables
+            $result['recordsTotal'] = $countTotal;
         } else {
             $result = $result->get();
         }
         return MyHelper::checkGet($result);
+    }
+
+    public function filterList($model, $rule, $operator = 'and')
+    {
+        $new_rule = [];
+        $where    = $operator == 'and' ? 'where' : 'orWhere';
+        foreach ($rule as $var) {
+            $var1 = ['operator' => $var['operator'] ?? '=', 'parameter' => $var['parameter'] ?? null, 'hide' => $var['hide'] ?? false];
+            if ($var1['operator'] == 'like') {
+                $var1['parameter'] = '%' . $var1['parameter'] . '%';
+            }
+            $new_rule[$var['subject']][] = $var1;
+        }
+        $model->where(function($model2) use ($model, $where, $new_rule){
+            $inner = ['transaction_receipt_number', 'name', 'phone', 'order_id'];
+            foreach ($inner as $col_name) {
+                if ($rules = $new_rule[$col_name] ?? false) {
+                    foreach ($rules as $rul) {
+                        $model2->$where($col_name, $rul['operator'], $rul['parameter']);
+                    }
+                }
+            }
+
+            $inner = ['id_outlet'];
+            foreach ($inner as $col_name) {
+                if ($rules = $new_rule[$col_name] ?? false) {
+                    foreach ($rules as $rul) {
+                        $model2->$where('transactions'.$col_name, $rul['operator'], $rul['parameter']);
+                    }
+                }
+            }
+        });
+
+        if ($rules = $new_rule['transaction_date'] ?? false) {
+            foreach ($rules as $rul) {
+                $model->where(\DB::raw('DATE(transaction_date)'), $rul['operator'], $rul['parameter']);
+            }
+        }
     }
 }
