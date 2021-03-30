@@ -1440,8 +1440,6 @@ class ShopeePayController extends Controller
                 }
             }
             if ($void_failed->count()) {
-                \Log::debug('masuk send auto');
-                \Log::debug($order->phone);
                 $variables = [
                     'detail' => view('emails.failed_refund', ['transactions' => $void_failed])->render()
                 ];
