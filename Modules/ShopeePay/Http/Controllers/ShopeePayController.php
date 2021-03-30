@@ -1384,7 +1384,7 @@ class ShopeePayController extends Controller
      */
     public function cronRefund()
     {
-        $log = MyHelper::logCron('Auto Reject Not Ready');
+        $log = MyHelper::logCron('Refund ShopeePay 06:00');
         try {
             $trxs = TransactionPaymentShopeePay::where('manual_refund', '1')->get();
             $refund_failed_process_balance = MyHelper::setting('refund_failed_process_balance');
