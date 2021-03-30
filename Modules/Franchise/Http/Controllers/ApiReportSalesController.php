@@ -256,19 +256,28 @@ class ApiReportSalesController extends Controller
 
     	$order = $post['order']??'transaction_date';
         $orderType = $post['order_type']??'desc';
+        $list = $list->orderBy($order, $orderType);
+
+        $sub = $list;
+
+        $query = DB::table(DB::raw('('.$sub->toSql().') as report_sales'))
+		        ->mergeBindings($sub->getQuery());
+
+		$this->filterSalesReport($query, $post);
+
         if($post['export'] == 1){
-            $list = $list->orderBy($order, $orderType)->get();
+            $query = $query->get();
         }else{
-            $list = $list->orderBy($order, $orderType)->paginate(30);
+            $query = $query->paginate(30);
         }
 
-        if (!$list) {
+        if (!$query) {
         	return response()->json(['status' => 'fail', 'messages' => ['Empty']]);
         }
 
-        $list = $list->toArray();
+        $result = $query->toArray();
 
-        /*$data = $list['data'] ?? $list;
+        /*$data = $result['data'] ?? $result;
         foreach ($data as $key => &$value) {
       //   	$value['acceptance_rate'] = 0;
 	    	// if ($value['total_accept']) {
@@ -281,11 +290,35 @@ class ApiReportSalesController extends Controller
         }
 
         if($post['export'] != 1){
-        	$list['data'] = $data;
-        	$data = $list;
+        	$result['data'] = $data;
+        	$data = $result;
         }
 
         return MyHelper::checkGet($data);*/
-        return MyHelper::checkGet($list);
-    }   
+        return MyHelper::checkGet($result);
+    }
+
+    function filterSalesReport($query, $filter)
+    {
+    	if (isset($filter['rule'])) {
+            foreach ($filter['rule'] as $key => $con) {
+            	if(is_object($con)){
+                    $con = (array)$con;
+                }
+                if (isset($con['subject'])) {
+                    if ($con['subject'] != 'all_transaction') {
+                    	$var = $con['subject'];
+
+                        if ($filter['operator'] == 'and') {
+                            $query = $query->where($var, $con['operator'], $con['parameter']);
+                        } else {
+                            $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+                        }
+                    }
+                }
+            }
+        }
+
+        return $query;
+    }
 }
