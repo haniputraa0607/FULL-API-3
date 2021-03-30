@@ -3437,7 +3437,8 @@ class ApiOutletApp extends Controller
                     if(!empty($valueMod['id_product_modifier_group'])){
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][] = [
                             'product_variant_name' => $valueMod['text'],
-                            'product_variant_price' => 0
+                            'product_variant_price' => 0,
+                            'is_modifier' => 1
                         ];
                     }else{
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][] = [
@@ -4171,7 +4172,8 @@ class ApiOutletApp extends Controller
                     if(!empty($valueMod['id_product_modifier_group'])){
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][] = [
                             'product_variant_name' => $valueMod['text'],
-                            'product_variant_price' => 0
+                            'product_variant_price' => 0,
+                            'is_modifier' => 1
                         ];
                     }else{
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][] = [
