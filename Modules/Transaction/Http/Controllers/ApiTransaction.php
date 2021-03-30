@@ -4679,4 +4679,38 @@ class ApiTransaction extends Controller
 
         return MyHelper::checkGet($list);
     }
+
+    public function listFailedVoidPayment(Request $request)
+    {
+        $result = Transaction::select('transactions.id_transaction', 'transaction_date', 'transaction_receipt_number', 'name', 'phone', 'trasaction_payment_type', 'transaction_grandtotal', 'need_manual_void', \DB::raw('transaction_grandtotal - coalesce(transaction_payment_balances.balance_nominal, 0) as manual_refund_nominal'))
+            ->join('users', 'users.id', 'transactions.id_user')
+            ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
+            ->where('need_manual_void', '<>', '0');
+
+        if (is_array($orders = $request->order)) {
+            $columns = [
+                'transaction_date', 
+                'transaction_receipt_number', 
+                'name', 
+                'phone',
+                'trasaction_payment_type',
+                'transaction_grandtotal', 
+                'manual_refund_nominal', 
+            ];
+
+            foreach ($orders as $column) {
+                if ($colname = ($columns[$column['column']] ?? false)) {
+                    $result->orderBy($colname, $column['dir']);
+                }
+            }
+        }
+        $result->orderBy('transactions.id_transaction', $column['dir'] ?? 'DESC');
+
+        if ($request->page) {
+            $result = $result->paginate();
+        } else {
+            $result = $result->get();
+        }
+        return MyHelper::checkGet($result);
+    }
 }
