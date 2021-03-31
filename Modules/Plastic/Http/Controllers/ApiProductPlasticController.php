@@ -675,7 +675,7 @@ class ApiProductPlasticController extends Controller
 
             if($rule == 'and'){
                 foreach ($post['rule'] as $condition){
-                    if(!empty($condition['subject'])){
+                    if(!empty($condition['subject']) && isset($condition['operator'])){
                         if($condition['operator'] == '='){
                             $data->where($condition['subject'], $condition['parameter']);
                         }else{
@@ -687,7 +687,7 @@ class ApiProductPlasticController extends Controller
                 $data->where(function ($q) use ($post){
                     foreach ($post['rule'] as $condition){
                         if(!empty($condition['subject'])){
-                            if($condition['operator'] == '='){
+                            if($condition['operator'] == '=' && isset($condition['operator'])){
                                 $q->orWhere($condition['subject'], $condition['parameter']);
                             }else{
                                 $q->orWhere($condition['subject'], 'like', '%'.$condition['parameter'].'%');
@@ -720,7 +720,6 @@ class ApiProductPlasticController extends Controller
             ->select('product_variant_groups.id_product_variant_group', 'products.id_product', 'products.product_name', 'products.product_code', 'product_variant_groups.product_variant_groups_plastic_used',
                 'product_variant_groups.product_variant_group_code', 'product_variant_groups.id_product_variant_group')
             ->where('product_variant_status', 1)
-            ->where('product_visibility', 'Visible')
             ->orderBy('products.product_code', 'asc')
             ->with(['product_variant_pivot']);
 
@@ -729,7 +728,7 @@ class ApiProductPlasticController extends Controller
 
             if($rule == 'and'){
                 foreach ($post['rule'] as $condition){
-                    if(!empty($condition['subject'])){
+                    if(!empty($condition['subject']) && isset($condition['operator'])){
                         if($condition['operator'] == '='){
                             $data->where($condition['subject'], $condition['parameter']);
                         }else{
@@ -740,7 +739,7 @@ class ApiProductPlasticController extends Controller
             }else{
                 $data->where(function ($q) use ($post){
                     foreach ($post['rule'] as $condition){
-                        if(!empty($condition['subject'])){
+                        if(!empty($condition['subject']) && isset($condition['operator'])){
                             if($condition['operator'] == '='){
                                 $q->orWhere($condition['subject'], $condition['parameter']);
                             }else{
