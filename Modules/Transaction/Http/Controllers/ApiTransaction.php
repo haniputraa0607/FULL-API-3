@@ -4722,6 +4722,7 @@ class ApiTransaction extends Controller
             }
             // needed by datatables
             $result['recordsTotal'] = $countTotal;
+            $result['recordsFiltered'] = $result['total'];
         } else {
             $result = $result->get();
         }
@@ -4753,7 +4754,7 @@ class ApiTransaction extends Controller
             foreach ($inner as $col_name) {
                 if ($rules = $new_rule[$col_name] ?? false) {
                     foreach ($rules as $rul) {
-                        $model2->$where('transactions'.$col_name, $rul['operator'], $rul['parameter']);
+                        $model2->$where('transactions.'.$col_name, $rul['operator'], $rul['parameter']);
                     }
                 }
             }
