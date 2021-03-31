@@ -4,6 +4,7 @@ namespace Modules\Franchise\Http\Controllers;
 
 use App\Http\Models\Autocrm;
 use App\Http\Models\Outlet;
+use App\Http\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -29,7 +30,6 @@ class ApiUserFranchiseController extends Controller
     {
         $post = $request->json()->all();
         $list = UserFranchise::whereNotNull('id_user_franchise');
-
         if(isset($post['conditions']) && !empty($post['conditions'])){
             $rule = 'and';
             if(isset($post['rule'])){
@@ -59,7 +59,7 @@ class ApiUserFranchiseController extends Controller
             }else{
                 $list->where(function ($q) use ($post){
                     foreach ($post['conditions'] as $condition){
-                        if(isset($conditionsss['subject'])){
+                        if(isset($condition['subject'])){
                             if($condition['subject'] == 'level' || $condition['subject'] == 'user_franchise_status'){
                                 $q->orWhere($condition['subject'], $condition['operator']);
                             }elseif($condition['subject'] == 'id_outlet'){
@@ -88,9 +88,9 @@ class ApiUserFranchiseController extends Controller
                 $outlet_code = UserFranchiseOultet::join('outlets', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
                                 ->where('id_user_franchise' , $user['id_user_franchise'])->first()['outlet_code']??NULL;
                 $result[] = [
+                    'username' => $user['username'],
                     'email' => $user['email'],
                     'name' => $user['name'],
-                    'level (Super Admin, User Franchise)' => $user['level'],
                     'outlet_code' => $outlet_code,
                     'status' => $user['user_franchise_status']
                 ];
@@ -140,7 +140,7 @@ class ApiUserFranchiseController extends Controller
     {
         $post = $request->json()->all();
 
-        $check = UserFranchise::where('email', $post['email'])->first();
+        $check = UserFranchise::where('username', $post['username'])->first();
 
         if(!$check){
             if(isset($post['auto_generate_pin'])){
@@ -149,13 +149,19 @@ class ApiUserFranchiseController extends Controller
                 $pin = $post['pin'];
             }
 
+            $status = 'Inactive';
+            if(!empty($post['user_franchise_status'])){
+                $status = 'Active';
+            }
 
+            $post['level'] = $post['level']??'User Franchise';
             $dataCreate = [
+                'username' => $post['username'],
                 'name' => $post['name'],
                 'email' => $post['email'],
                 'password' => bcrypt($pin),
                 'level' => $post['level'],
-                'user_franchise_status' => $post['user_franchise_status']??'Inactive'
+                'user_franchise_status' => $status
             ];
 
             $create = UserFranchise::create($dataCreate);
@@ -167,10 +173,10 @@ class ApiUserFranchiseController extends Controller
 
                 $autocrm = app($this->autocrm)->SendAutoCRM(
                     'New User Franchise',
-                    $post['email'],
+                    $post['username'],
                     [
                         'pin_franchise' => $pin,
-                        'email' => $post['email'],
+                        'username' => $post['username'],
                         'name' => $post['name'],
                         'url' => env('URL_PORTAL_MITRA')
                     ], null, false, false, 'franchise', 1
@@ -178,7 +184,7 @@ class ApiUserFranchiseController extends Controller
             }
             return response()->json(MyHelper::checkCreate($create));
         }else{
-            return response()->json(['status' => 'fail', 'messages' => ['Email already exist']]);
+            return response()->json(['status' => 'fail', 'messages' => ['Username already exist']]);
         }
     }
 
@@ -195,19 +201,24 @@ class ApiUserFranchiseController extends Controller
             if(empty($post['password_admin'])){
                 return response()->json(['status' => 'fail', 'messages' => ['Your password can not be empty ']]);
             }
-            $dataAdmin = UserFranchise::where('id_user_franchise', auth()->user()->id_user_franchise)->first();
+            $dataAdmin = User::where('id', $request->user()->id)->first();
 
             if(!password_verify($post['password_admin'], $dataAdmin['password'])){
                 return response()->json(['status' => 'fail', 'message' => 'Wrong input your password']);
             }
 
-
+            $status = 'Inactive';
+            if(!empty($post['user_franchise_status'])){
+                $status = 'Active';
+            }
+            $post['level'] = $post['level']??'User Franchise';
             $dataUpdate = [
                 'name' => $post['name'],
                 'email' => $post['email'],
                 'level' => $post['level'],
-                'user_franchise_status' => $post['user_franchise_status']??'Inactive'
+                'user_franchise_status' => $status
             ];
+
             $sendCrm = 0;
             if(isset($post['reset_pin'])){
                 $pin = MyHelper::createRandomPIN(6, 'angka');
@@ -231,10 +242,10 @@ class ApiUserFranchiseController extends Controller
                 if($sendCrm == 1){
                     $autocrm = app($this->autocrm)->SendAutoCRM(
                         'Reset Pin User Franchise',
-                        $post['email'],
+                        $post['username'],
                         [
                             'pin_franchise' => $pin,
-                            'email' => $post['email'],
+                            'username' => $post['username'],
                             'name' => $post['name'],
                             'url' => env('URL_PORTAL_MITRA')
                         ], null, false, false, 'franchise', 1
@@ -257,11 +268,6 @@ class ApiUserFranchiseController extends Controller
         $post = $request->json()->all();
 
         if (isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
-            $dataAdmin = UserFranchise::where('id_user_franchise', auth()->user()->id_user_franchise)->first();
-            if($dataAdmin['level'] != 'Super Admin'){
-                return response()->json(['status' => 'fail', 'messages' => ["You don't have permission"]]);
-            }
-
             $delete = UserFranchise::where('id_user_franchise', $post['id_user_franchise'])->delete();
             return response()->json(MyHelper::checkDelete($delete));
         }else{
@@ -278,8 +284,8 @@ class ApiUserFranchiseController extends Controller
         $post = $request->json()->all();
 
         $data = [];
-        if(isset($post['email']) && !empty($post['email'])){
-            $data = UserFranchise::where('email', $post['email'])->first();
+        if(isset($post['username']) && !empty($post['username'])){
+            $data = UserFranchise::where('username', $post['username'])->first();
         }elseif (isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
             $data = UserFranchise::where('id_user_franchise', $post['id_user_franchise'])->first();
         }
@@ -337,15 +343,10 @@ class ApiUserFranchiseController extends Controller
         if(!empty($post['password']) && $post['password'] != $post['password2']){
             return response()->json(['status' => 'fail', 'messages' => ["Pin don't match"]]);
         }
-        $checkEmail = UserFranchise::where('email', $post['email'])->first();
         $dataAdmin = UserFranchise::where('id_user_franchise', auth()->user()->id_user_franchise)->first();
 
         if(empty($dataAdmin)){
             return response()->json(['status' => 'fail', 'messages' => ["User not found"]]);
-        }
-
-        if($checkEmail && $checkEmail['id_user_franchise'] != $dataAdmin['id_user_franchise']){
-            return response()->json(['status' => 'fail', 'messages' => ["email already use"]]);
         }
 
         $dataUpdate = [
@@ -364,69 +365,71 @@ class ApiUserFranchiseController extends Controller
         $post = $request->json()->all();
         $arrId = [];
         $result = [
+            'invalid' => 0,
             'updated' => 0,
             'create' => 0,
             'failed' => 0,
             'more_msg' => [],
             'more_msg_extended' => []
         ];
+        $data = $post['data'][0]??[];
 
-        if(empty($post['data'])){
+        if(empty($data)){
             return response()->json(['status' => 'fail', 'messages' => ['File is empty']]);
         }
 
-        foreach ($post['data'] as $key => $value) {
-            $outlet = Outlet::where('outlet_code', $value[3])->first()['id_outlet']??null;
-            if($value[2] == 'User Franchise' && is_null($outlet)){
-                $result['failed']++;
-                $result['more_msg_extended'][] = "Outlet code  {$value[3]} not found";
+        foreach ($data as $key => $value) {
+            if(empty($value['username'])){
+                $result['invalid']++;
                 continue;
             }
 
-            $check = UserFranchise::where('email', $value[0])->first();
+            if(empty($value['outlet_code'])){
+                $result['invalid']++;
+                continue;
+            }
+            $outlet = Outlet::where('outlet_code', $value['outlet_code'])->first()['id_outlet']??null;
+            $check = UserFranchise::where('username', $value['username'])->first();
 
             if($check){
                 $dataUpdate = [
-                    'name' => $value[1],
-                    'level' => $value[2],
-                    'user_franchise_status' => $value[4]
+                    'email' => $value['email'],
+                    'name' => $value['name'],
+                    'level' => 'User Franchise',
+                    'user_franchise_status' => $value['status']
                 ];
 
                 $user = UserFranchise::where('id_user_franchise', $check['id_user_franchise'])->update($dataUpdate);
 
                 if(!$user){
                     $result['failed']++;
-                    $result['more_msg_extended'][] = "Failed create user  {$value[1]}";
+                    $result['more_msg_extended'][] = "Failed create user  {$value['username']}";
                     continue;
                 }else{
                     $result['updated']++;
                 }
 
                 UserFranchiseOultet::where('id_user_franchise' , $check['id_user_franchise'])->delete();
-                if($value[2] == 'User Franchise'){
-                    UserFranchiseOultet::create(['id_user_franchise' => $check['id_user_franchise'], 'id_outlet' => $outlet]);
-                }
+                UserFranchiseOultet::create(['id_user_franchise' => $check['id_user_franchise'], 'id_outlet' => $outlet]);
             }else{
                 $dataCreate = [
-                    'email' => $value[0],
-                    'name' => $value[1],
-                    'level' => $value[2],
-                    'user_franchise_status' => $value[4]
+                    'username' => $value['username'],
+                    'name' => $value['name'],
+                    'email' => $value['email'],
+                    'level' => 'User Franchise',
+                    'user_franchise_status' => $value['status']
                 ];
 
                 $user = UserFranchise::create($dataCreate);
 
                 if(!$user){
                     $result['failed']++;
-                    $result['more_msg_extended'][] = "Failed create user  {$value[1]}";
+                    $result['more_msg_extended'][] = "Failed create user  {$value['username']}";
                     continue;
                 }else{
                     $result['create']++;
                 }
-
-                if($value[2] == 'User Franchise'){
-                    UserFranchiseOultet::create(['id_user_franchise' => $user['id_user_franchise'], 'id_outlet' => $outlet]);
-                }
+                UserFranchiseOultet::create(['id_user_franchise' => $user['id_user_franchise'], 'id_outlet' => $outlet]);
 
                 $arrId[] = $user['id_user_franchise'];
             }
@@ -439,6 +442,9 @@ class ApiUserFranchiseController extends Controller
 
         $response = [];
 
+        if($result['invalid']){
+            $response[] = 'Invalid '.$result['updated'].' data';
+        }
         if($result['updated']){
             $response[] = 'Update '.$result['updated'].' user';
         }
@@ -455,8 +461,9 @@ class ApiUserFranchiseController extends Controller
     public function resetPassword(Request $request){
         $post = $request->json()->all();
 
-        if(isset($post['email']) && !empty($post['email'])){
-            $user = UserFranchise::where('email', $post['email'])->first();
+        if(isset($post['email']) && !empty($post['email']) &&
+            isset($post['username']) && !empty($post['username'])){
+            $user = UserFranchise::where('email', $post['email'])->where('username', $post['username'])->first();
             if(empty($user)){
                 return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
             }
@@ -469,10 +476,10 @@ class ApiUserFranchiseController extends Controller
             if($update){
                 $autocrm = app($this->autocrm)->SendAutoCRM(
                     'Reset Pin User Franchise',
-                    $post['email'],
+                    $post['username'],
                     [
                         'pin_franchise' => $pin,
-                        'email' => $user['email'],
+                        'username' => $user['username'],
                         'name' => $user['name'],
                         'url' => env('URL_PORTAL_MITRA')
                     ], null, false, false, 'franchise', 1

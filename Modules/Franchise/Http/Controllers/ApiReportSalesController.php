@@ -40,13 +40,13 @@ class ApiReportSalesController extends Controller
 						COUNT(CASE WHEN transactions.id_transaction AND transaction_pickups.reject_at IS NULL THEN 1 ELSE NULL END) AS total_transaction, 
 						COUNT(CASE WHEN transaction_pickups.pickup_by = "Customer" AND transaction_pickups.reject_at IS NULL THEN 1 ELSE NULL END) as total_transaction_pickup,
 						COUNT(CASE WHEN transaction_pickups.pickup_by = "GO-SEND" AND transaction_pickups.reject_at IS NULL THEN 1 ELSE NULL END) as total_transaction_delivery,
-						SUM(CASE WHEN transactions.transaction_subtotal IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_subtotal ELSE 0 END) as total_subtotal,
-						ABS(
-							SUM(
-								CASE WHEN transactions.transaction_discount IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_discount ELSE 0 END
-								+ CASE WHEN transactions.transaction_discount_delivery IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_discount_delivery ELSE 0 END
-								+ CASE WHEN transactions.transaction_discount_bill IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_discount_bill ELSE 0 END
-							)
+						SUM(CASE WHEN transactions.transaction_gross IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_gross ELSE 0 END) as total_subtotal,
+						SUM(
+							CASE WHEN transactions.transaction_discount_item IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount_item) 
+								WHEN transactions.transaction_discount IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount)
+								ELSE 0 END
+							+ CASE WHEN transactions.transaction_discount_delivery IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
+							+ CASE WHEN transactions.transaction_discount_bill IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
 						) as total_discount,
 						SUM(CASE WHEN transaction_pickups.reject_at IS NULL THEN transactions.transaction_shipment_go_send + transactions.transaction_shipment ELSE 0 END) as total_delivery,
 						SUM(CASE WHEN transaction_pickups.reject_at IS NULL THEN transactions.transaction_grandtotal ELSE 0 END) as total_grandtotal,
@@ -55,11 +55,33 @@ class ApiReportSalesController extends Controller
 						FLOOR(
 							(
 								COUNT(CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1 ELSE NULL END) 
-								/ ( COUNT(CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1 ELSE NULL END) 
-									+ COUNT(CASE WHEN transaction_pickups.reject_at IS NOT NULL THEN 1 ELSE NULL END) ) 
+								/ COUNT(CASE WHEN transactions.transaction_payment_status = "Completed" THEN 1 ELSE NULL END)
 							)
 							* 100
-						) as acceptance_rate
+						) as acceptance_rate,
+						COUNT(
+							CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1
+								 WHEN transaction_pickups.reject_reason NOT LIKE "auto reject order by system%" THEN 1
+							ELSE NULL END
+						) as total_response,
+						COUNT(
+							CASE WHEN transaction_pickups.reject_reason = "auto reject order by system" THEN 1
+							ELSE NULL END
+						) as total_auto_reject,
+						COUNT(
+							CASE WHEN transaction_pickups.receive_at IS NULL AND transaction_pickups.reject_reason NOT LIKE "auto reject order by system%" THEN 1
+							ELSE NULL END
+						) as total_manual_reject,
+						FLOOR(
+							(
+								COUNT(
+									CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1
+										 WHEN transaction_pickups.reject_reason NOT LIKE "auto reject order by system%" THEN 1
+									ELSE NULL END
+								)/ COUNT(CASE WHEN transactions.transaction_payment_status = "Completed" THEN 1 ELSE NULL END)
+							)
+							* 100
+						) as response_rate
 					'));
 
         if(isset($post['filter_type']) && $post['filter_type'] == 'range_date'){
@@ -105,27 +127,42 @@ class ApiReportSalesController extends Controller
             [
                 // 'title' => 'Total Subtotal',
                 'title' => 'Sub Total',
-                'amount' => number_format($report['total_subtotal']??0,2,",",".")
+                'amount' => 'Rp. '.number_format($report['total_subtotal']??0,2,",",".")
             ],
             [
                 // 'title' => 'Total Discount',
                 'title' => 'Diskon',
-                'amount' => number_format($report['total_discount']??0,2,",",".")
+                'amount' => 'Rp. '.number_format($report['total_discount']??0,2,",",".")
             ],
             [
                 // 'title' => 'Total Delivery',
                 'title' => 'Delivery',
-                'amount' => number_format($report['total_delivery']??0,2,",",".")
+                'amount' => 'Rp. '.number_format($report['total_delivery']??0,2,",",".")
             ],
             [
                 // 'title' => 'Total Grandtotal',
                 'title' => 'Grand Total',
-                'amount' => number_format($report['total_grandtotal']??0,2,",",".")
+                'amount' => 'Rp. '.number_format($report['total_grandtotal']??0,2,",",".")
             ],
             [
                 // 'title' => 'Total Accept',
                 'title' => 'Jumlah Accept',
                 'amount' => number_format($report['total_accept']??0,0,",",".")
+            ],
+            [
+                // 'title' => 'Acceptance Rate',
+                'title' => 'Acceptance Rate Order',
+                'amount' => number_format($report['acceptance_rate']??0,0,",",".")."%"
+            ],
+            [
+                // 'title' => 'Acceptance Rate',
+                'title' => 'Jumlah Response Order',
+                'amount' => number_format($report['total_response']??0,0,",",".")
+            ],
+            [
+                // 'title' => 'Acceptance Rate',
+                'title' => 'Response Rate Order',
+                'amount' => number_format($report['response_rate']??0,0,",",".")."%"
             ],
             [
                 // 'title' => 'Total Reject',
@@ -134,9 +171,14 @@ class ApiReportSalesController extends Controller
             ],
             [
                 // 'title' => 'Acceptance Rate',
-                'title' => 'Acceptance Rate Order',
-                'amount' => number_format($report['acceptance_rate']??0,0,",",".")."%"
-            ]
+                'title' => 'Jumlah Auto Reject',
+                'amount' => number_format($report['total_auto_reject']??0,0,",",".")
+            ],
+            [
+                // 'title' => 'Acceptance Rate',
+                'title' => 'Jumlah Manual Reject',
+                'amount' => number_format($report['total_manual_reject']??0,0,",",".")
+            ],
     	];
 
         return MyHelper::checkGet($result);
@@ -158,13 +200,13 @@ class ApiReportSalesController extends Controller
 						COUNT(CASE WHEN transactions.id_transaction AND transaction_pickups.reject_at IS NULL THEN 1 ELSE NULL END) AS total_transaction, 
 						COUNT(CASE WHEN transaction_pickups.pickup_by = "Customer" AND transaction_pickups.reject_at IS NULL THEN 1 ELSE NULL END) as total_transaction_pickup,
 						COUNT(CASE WHEN transaction_pickups.pickup_by = "GO-SEND" AND transaction_pickups.reject_at IS NULL THEN 1 ELSE NULL END) as total_transaction_delivery,
-						SUM(CASE WHEN transactions.transaction_subtotal IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_subtotal ELSE 0 END) as total_subtotal,
-						ABS(
-							SUM(
-								CASE WHEN transactions.transaction_discount IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_discount ELSE 0 END
-								+ CASE WHEN transactions.transaction_discount_delivery IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_discount_delivery ELSE 0 END
-								+ CASE WHEN transactions.transaction_discount_bill IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_discount_bill ELSE 0 END
-							)
+						SUM(CASE WHEN transactions.transaction_gross IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_gross ELSE 0 END) as total_subtotal,
+						SUM(
+							CASE WHEN transactions.transaction_discount_item IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount_item) 
+								WHEN transactions.transaction_discount IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount)
+								ELSE 0 END
+							+ CASE WHEN transactions.transaction_discount_delivery IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
+							+ CASE WHEN transactions.transaction_discount_bill IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
 						) as total_discount,
 						SUM(CASE WHEN transaction_pickups.reject_at IS NULL THEN transactions.transaction_shipment_go_send + transactions.transaction_shipment ELSE 0 END) as total_delivery,
 						SUM(CASE WHEN transaction_pickups.reject_at IS NULL THEN transactions.transaction_grandtotal ELSE 0 END) as total_grandtotal,
@@ -173,11 +215,33 @@ class ApiReportSalesController extends Controller
 						FLOOR(
 							(
 								COUNT(CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1 ELSE NULL END) 
-								/ ( COUNT(CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1 ELSE NULL END) 
-									+ COUNT(CASE WHEN transaction_pickups.reject_at IS NOT NULL THEN 1 ELSE NULL END) ) 
+								/ COUNT(CASE WHEN transactions.transaction_payment_status = "Completed" THEN 1 ELSE NULL END)
 							)
 							* 100
-						) as acceptance_rate
+						) as acceptance_rate,
+						COUNT(
+							CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1
+								 WHEN transaction_pickups.reject_reason NOT LIKE "auto reject order by system%" THEN 1
+							ELSE NULL END
+						) as total_response,
+						COUNT(
+							CASE WHEN transaction_pickups.reject_reason = "auto reject order by system" THEN 1
+							ELSE NULL END
+						) as total_auto_reject,
+						COUNT(
+							CASE WHEN transaction_pickups.receive_at IS NULL AND transaction_pickups.reject_reason NOT LIKE "auto reject order by system%" THEN 1
+							ELSE NULL END
+						) as total_manual_reject,
+						FLOOR(
+							(
+								COUNT(
+									CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1
+										 WHEN transaction_pickups.reject_reason NOT LIKE "auto reject order by system%" THEN 1
+									ELSE NULL END
+								)/ COUNT(CASE WHEN transactions.transaction_payment_status = "Completed" THEN 1 ELSE NULL END)
+							)
+							* 100
+						) as response_rate
 					'))
     				->groupBy(DB::raw('Date(transactions.transaction_date)'));
 
@@ -192,19 +256,28 @@ class ApiReportSalesController extends Controller
 
     	$order = $post['order']??'transaction_date';
         $orderType = $post['order_type']??'desc';
+        $list = $list->orderBy($order, $orderType);
+
+        $sub = $list;
+
+        $query = DB::table(DB::raw('('.$sub->toSql().') as report_sales'))
+		        ->mergeBindings($sub->getQuery());
+
+		$this->filterSalesReport($query, $post);
+
         if($post['export'] == 1){
-            $list = $list->orderBy($order, $orderType)->get();
+            $query = $query->get();
         }else{
-            $list = $list->orderBy($order, $orderType)->paginate(30);
+            $query = $query->paginate(30);
         }
 
-        if (!$list) {
+        if (!$query) {
         	return response()->json(['status' => 'fail', 'messages' => ['Empty']]);
         }
 
-        $list = $list->toArray();
+        $result = $query->toArray();
 
-        /*$data = $list['data'] ?? $list;
+        /*$data = $result['data'] ?? $result;
         foreach ($data as $key => &$value) {
       //   	$value['acceptance_rate'] = 0;
 	    	// if ($value['total_accept']) {
@@ -217,11 +290,35 @@ class ApiReportSalesController extends Controller
         }
 
         if($post['export'] != 1){
-        	$list['data'] = $data;
-        	$data = $list;
+        	$result['data'] = $data;
+        	$data = $result;
         }
 
         return MyHelper::checkGet($data);*/
-        return MyHelper::checkGet($list);
-    }   
+        return MyHelper::checkGet($result);
+    }
+
+    function filterSalesReport($query, $filter)
+    {
+    	if (isset($filter['rule'])) {
+            foreach ($filter['rule'] as $key => $con) {
+            	if(is_object($con)){
+                    $con = (array)$con;
+                }
+                if (isset($con['subject'])) {
+                    if ($con['subject'] != 'all_transaction') {
+                    	$var = $con['subject'];
+
+                        if ($filter['operator'] == 'and') {
+                            $query = $query->where($var, $con['operator'], $con['parameter']);
+                        } else {
+                            $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+                        }
+                    }
+                }
+            }
+        }
+
+        return $query;
+    }
 }

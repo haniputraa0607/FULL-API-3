@@ -1790,7 +1790,22 @@ class ApiOutletApp extends Controller
                 }
             }
 
-            $user = User::where('id', $order['id_user'])->first()->toArray();
+            $user = User::where('id', $order['id_user'])->first();
+            if (!$user) {
+                TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                    'taken_by_system_at' => date('Y-m-d H:i:s'),
+                    'reject_at'     => null,
+                    'reject_type'   => null,
+                    'reject_reason' => null,
+                ]);
+                \DB::commit();
+                return [
+                    'status' => 'fail',
+                    'messages' => ['User not found']
+                ];
+            }
+            $user = $user->toArray();
+
             $rejectBalance = false;
 
             //refund ke balance
@@ -3560,7 +3575,8 @@ class ApiOutletApp extends Controller
                     if(!empty($valueMod['id_product_modifier_group'])){
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][] = [
                             'product_variant_name' => $valueMod['text'],
-                            'product_variant_price' => 0
+                            'product_variant_price' => 0,
+                            'is_modifier' => 1
                         ];
                     }else{
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][] = [
@@ -4294,7 +4310,8 @@ class ApiOutletApp extends Controller
                     if(!empty($valueMod['id_product_modifier_group'])){
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][] = [
                             'product_variant_name' => $valueMod['text'],
-                            'product_variant_price' => 0
+                            'product_variant_price' => 0,
+                            'is_modifier' => 1
                         ];
                     }else{
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][] = [

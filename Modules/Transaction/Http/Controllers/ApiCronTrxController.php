@@ -389,7 +389,7 @@ class ApiCronTrxController extends Controller
     public function completeTransactionPickup(){
         $log = MyHelper::logCron('Complete Transaction Pickup');
         try {
-            $trxs = Transaction::whereDate('transaction_date', '<=', date('Y-m-d'))
+            $trxs = Transaction::whereDate('transaction_date', '=', date('Y-m-d'))
                 ->where('trasaction_type', 'Pickup Order')
                 ->join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
                 ->where('transaction_payment_status', 'Completed')
