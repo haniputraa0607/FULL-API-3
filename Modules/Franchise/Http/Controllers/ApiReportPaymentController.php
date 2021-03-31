@@ -242,7 +242,7 @@ class ApiReportPaymentController extends Controller
 
         $id_oultet = UserFranchiseOultet::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
 
-        if($id_oultet) {
+        if($id_oultet && !empty($post['date_start']) && !empty($post['date_start'])) {
             $dateStart = date('Y-m-d', strtotime($post['date_start']));
             $dateEnd = date('Y-m-d', strtotime($post['date_end']));
             $payments = DailyReportPayment::where('refund_with_point', 0)

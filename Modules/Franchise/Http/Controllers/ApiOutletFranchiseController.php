@@ -47,8 +47,9 @@ class ApiOutletFranchiseController extends Controller
 	function __construct() {
 		date_default_timezone_set('Asia/Jakarta');
 
-		$this->outlet 	= "Modules\Outlet\Http\Controllers\ApiOutletController";
+		$this->outlet = "Modules\Outlet\Http\Controllers\ApiOutletController";
 		$this->autocrm 	= "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+		$this->disburse_setting = "Modules\Disburse\Http\Controllers\ApiDisburseSettingController";
 	}
 
 	public function detail(Request $request)
@@ -221,6 +222,7 @@ class ApiOutletFranchiseController extends Controller
 	public function updateBankAccount(Request $request)
 	{
 		// return $request->all();
+		$old_account = BankAccountOutlet::where('id_outlet', $request->id_outlet)->first();
 		$check_account = BankAccount::where('beneficiary_account', $request->beneficiary_account)->first();
 
 		if ($check_account) {
@@ -235,29 +237,48 @@ class ApiOutletFranchiseController extends Controller
 				$outlet_name_string = implode(', ', $outlet_name_arr);
 			}
 
-			if ( $check_account->id_bank_name != $request->id_bank_name
-				|| $check_account->beneficiary_name != $request->beneficiary_name
-				|| $check_account->beneficiary_alias != $request->beneficiary_alias
-				|| $check_account->beneficiary_account != $request->beneficiary_account
-				|| $check_account->beneficiary_email != $request->beneficiary_email
-			) {
-				$msg = [
-					'status' => 'fail',
-					'messages' => [
-						'Akun sudah pernah dibuat, data yang dimasukkan tidak sesuai'
-					]
+			if ($old_account->id_bank_account != $check_account->id_bank_account) {
+				if ( $check_account->id_bank_name != $request->id_bank_name
+					|| $check_account->beneficiary_name != $request->beneficiary_name
+					|| $check_account->beneficiary_alias != $request->beneficiary_alias
+					|| $check_account->beneficiary_account != $request->beneficiary_account
+					|| $check_account->beneficiary_email != $request->beneficiary_email
+				) {
+					$msg = [
+						'status' => 'fail',
+						'messages' => [
+							'Akun sudah pernah dibuat, data yang dimasukkan tidak sesuai'
+						]
+					];
+
+					if ($outlet_name_string) {
+						$msg['messages'][] = 'Akun telah digunakan untuk outlet '.$outlet_name_string;
+					}
+
+					return $msg;
+				}
+			}else{
+				$data_update = [
+					'id_bank_name' => $request->id_bank_name,
+					'beneficiary_name' => $request->beneficiary_name,
+					'beneficiary_alias' => $request->beneficiary_alias,
+					'beneficiary_email' => $request->beneficiary_email
 				];
 
-				if ($outlet_name_string) {
-					$msg['messages'][] = 'Akun telah digunakan untuk outlet '.$outlet_name_string;
-				}
-
-				return $msg;
+				$update = BankAccount::where('id_bank_account', $check_account->id_bank_account)->update($data_update);
+				app($this->disburse_setting)->addLogEditBankAccount($request, 'update', $check_account->id_bank_account, $check_account);
 			}
 
-			$update = BankAccountOutlet::where('id_outlet', $request->id_outlet)->update(['id_bank_account' => $check_account->id_bank_account]);
+			$old_outlet = BankAccountOutlet::where('id_bank_account', $check_account->id_bank_account)->groupBy('id_outlet')->pluck('id_outlet')->toArray();
+
+			if ($request->update_all_outlet) {
+				$update = BankAccountOutlet::where('id_bank_account', $old_account->id_bank_account)->update(['id_bank_account' => $check_account->id_bank_account]);
+			}else{
+				$update = BankAccountOutlet::where('id_outlet', $request->id_outlet)->update(['id_bank_account' => $check_account->id_bank_account]);
+			}
 
 			if ($update) {
+				app($this->disburse_setting)->addLogEditBankAccount($request, 'update', $check_account->id_bank_account, $check_account, $old_outlet, 'outlet');
 				$result = MyHelper::checkUpdate($update);
 				return $result;
 			}
@@ -292,8 +313,27 @@ class ApiOutletFranchiseController extends Controller
 		        ];
 
 	            $bankAccount = BankAccount::create($dt);
+	            app($this->disburse_setting)->addLogEditBankAccount($request, 'create', $bankAccount->id_bank_account);
 
 	            if($bankAccount){
+
+	            	if ($request->update_all_outlet) {
+						$update = BankAccountOutlet::where('id_bank_account', $old_account->id_bank_account)->update(['id_bank_account' => $bankAccount->id_bank_account]);
+					}else{
+						$update = BankAccountOutlet::where('id_outlet', $request->id_outlet)->update(['id_bank_account' => $bankAccount->id_bank_account]);
+					}
+
+					if ($update) {
+						app($this->disburse_setting)->addLogEditBankAccount($request, 'update', $bankAccount->id_bank_account, $bankAccount, [], 'outlet');
+						$result = MyHelper::checkUpdate($update);
+	                    DB::commit();
+						return $result;
+					}else{
+	                    DB::rollBack();
+	                    return response()->json(['status' => 'fail', 'messages' => 'Gagal menyimpan akun bank outlet']);
+	                }
+
+
 	                $delete = true;
 	                $dtToInsert = [];
 	                if ($request->id_outlet){
@@ -312,6 +352,7 @@ class ApiOutletFranchiseController extends Controller
 
 	                if($delete){
 	                    $insertBankAccountOutlet = BankAccountOutlet::insert($dtToInsert);
+	                    app($this->disburse_setting)->addLogEditBankAccount($request, 'update', $bankAccount->id_bank_account, $bankAccount, [], 'outlet');
 	                    if($insertBankAccountOutlet){
 	                        DB::commit();
 	                        return response()->json(['status' => 'success']);

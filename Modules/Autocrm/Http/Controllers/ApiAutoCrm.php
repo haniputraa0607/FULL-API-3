@@ -55,7 +55,7 @@ class ApiAutoCrm extends Controller
 
 		if (!isset($recipient_type)) {
 			if($franchise){
-                $users = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('email','=',$receipient)->get()->toArray();
+                $users = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('username','=',$receipient)->get()->toArray();
             }elseif($outlet){
                 $users = UserOutlet::select('id_user_outlet as id', 'user_outlets.*')->where('phone','=',$receipient)->get()->toArray();
 			}else{
@@ -75,7 +75,7 @@ class ApiAutoCrm extends Controller
 				$query[0]['autocrm_forward_email_subject'] = MyHelper::simpleReplace($query[0]['autocrm_forward_email_subject'] ,$variables);
 				$query[0]['autocrm_forward_email_content'] = MyHelper::simpleReplace($query[0]['autocrm_forward_email_content'] ,$variables);
 			}elseif($recipient_type == 'franchise'){
-                $users = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('email','=',$receipient)->get()->toArray();
+                $users = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('username','=',$receipient)->get()->toArray();
             }
 		}
 		if(empty($users)){
@@ -736,7 +736,7 @@ class ApiAutoCrm extends Controller
 		$query = TextReplace::where('status','=','Activated')->get()->toArray();
 
 		if($franchise){
-            $user = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('email','=',$receipient)->get()->first();
+            $user = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('username','=',$receipient)->get()->first();
         }else{
             if($wherefield != null){
                 $user = User::leftJoin('cities','cities.id_city','=','users.id_city')
