@@ -70,6 +70,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
         Route::post('update-price', 'ApiProductModifierController@updatePrice');
         Route::post('list-detail', 'ApiProductModifierController@listDetail');
         Route::post('update-detail', 'ApiProductModifierController@updateDetail');
+        Route::post('position-assign', 'ApiProductModifierController@positionAssign');
     });
 
     /* product modifier group */
