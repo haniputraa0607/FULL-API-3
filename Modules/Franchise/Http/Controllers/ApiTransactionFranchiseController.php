@@ -169,7 +169,7 @@ class ApiTransactionFranchiseController extends Controller
                 $query->where('pickup_by','Customer');
             }
         }
-        
+
        	$query = $this->filterTransaction($query, $post);
 
         if (isset($post['conditions'])) {
@@ -1526,233 +1526,290 @@ class ApiTransactionFranchiseController extends Controller
     public function filterTransaction($query, $filter)
     {
     	if (isset($filter['conditions'])) {
-            foreach ($filter['conditions'] as $key => $con) {
-            	if(is_object($con)){
-                    $con = (array)$con;
-                }
-                if (isset($con['subject'])) {
-                    if ($con['subject'] == 'receipt') {
-                        $var = 'transactions.transaction_receipt_number';
-                    } elseif ($con['subject'] == 'name' || $con['subject'] == 'phone' || $con['subject'] == 'email') {
-                        $var = 'users.'.$con['subject'];
-                    } elseif ($con['subject'] == 'product_name' || $con['subject'] == 'product_code') {
-                        $var = 'products.'.$con['subject'];
-                    } elseif ($con['subject'] == 'product_category') {
-                        $var = 'product_categories.product_category_name';
-                    } elseif ($con['subject'] == 'order_id') {
-                        $var = 'transaction_pickups.order_id';
-                    }
+    		$query->where(function($query) use ($filter){
+	            foreach ($filter['conditions'] as $key => $con) {
+	            	if(is_object($con)){
+	                    $con = (array)$con;
+	                }
+	                if (isset($con['subject'])) {
+	                    if ($con['subject'] == 'receipt') {
+	                        $var = 'transactions.transaction_receipt_number';
+	                    } elseif ($con['subject'] == 'name' || $con['subject'] == 'phone' || $con['subject'] == 'email') {
+	                        $var = 'users.'.$con['subject'];
+	                    } elseif ($con['subject'] == 'product_name' || $con['subject'] == 'product_code') {
+	                        $var = 'products.'.$con['subject'];
+	                    } elseif ($con['subject'] == 'product_category') {
+	                        $var = 'product_categories.product_category_name';
+	                    } elseif ($con['subject'] == 'order_id') {
+	                        $var = 'transaction_pickups.order_id';
+	                    }
 
-                    if (in_array($con['subject'], ['outlet_code', 'outlet_name'])) {
-                        $var = 'outlets.'.$con['subject'];
-                        if ($filter['rule'] == 'and') {
-                            if ($con['operator'] == 'like') {
-                                $query = $query->where($var, 'like', '%'.$con['parameter'].'%');
-                            } else {
-                                $query = $query->where($var, '=', $con['parameter']);
-                            }
-                        } else {
-                            if ($con['operator'] == 'like') {
-                                $query = $query->orWhere($var, 'like', '%'.$con['parameter'].'%');
-                            } else {
-                                $query = $query->orWhere($var, '=', $con['parameter']);
-                            }
-                        }
-                    }
-                    if (in_array($con['subject'], ['receipt', 'name', 'phone', 'email', 'product_name', 'product_code', 'product_category', 'order_id'])) {
-                        if ($filter['rule'] == 'and') {
-                            if ($con['operator'] == 'like') {
-                                $query = $query->where($var, 'like', '%'.$con['parameter'].'%');
-                            } else {
-                                $query = $query->where($var, '=', $con['parameter']);
-                            }
-                        } else {
-                            if ($con['operator'] == 'like') {
-                                $query = $query->orWhere($var, 'like', '%'.$con['parameter'].'%');
-                            } else {
-                                $query = $query->orWhere($var, '=', $con['parameter']);
-                            }
-                        }
-                    }
-
-                    if ($con['subject'] == 'product_weight' || $con['subject'] == 'product_price') {
-                        $var = 'products.'.$con['subject'];
-                        if ($filter['rule'] == 'and') {
-                            $query = $query->where($var, $con['operator'], $con['parameter']);
-                        } else {
-                            $query = $query->orWhere($var, $con['operator'], $con['parameter']);
-                        }
-                    }
-
-                    if ($con['subject'] == 'grand_total' || $con['subject'] == 'product_tax') {
-                        if ($con['subject'] == 'grand_total') {
-                            $var = 'transactions.transaction_grandtotal';
-                        } else {
-                            $var = 'transactions.transaction_tax';
-                        }
-
-                        if ($filter['rule'] == 'and') {
-                            $query = $query->where($var, $con['operator'], $con['parameter']);
-                        } else {
-                            $query = $query->orWhere($var, $con['operator'], $con['parameter']);
-                        }
-                    }
-
-                    if ($con['subject'] == 'transaction_status') {
-                        if ($filter['rule'] == 'and') {
-                        	if ($con['operator'] == 'not') {
-                        		if($con['parameter'] == 'pending'){
-	                                $query = $query->whereNotNull('transaction_pickups.receive_at');
-	                            }elseif($con['parameter'] == 'taken_by_driver'){
-	                                $query = $query->whereNull('transaction_pickups.taken_at')
-	                                    ->whereIn('transaction_pickups.pickup_by', ['Customer']);
-	                            }elseif ($con['parameter'] == 'taken_by_customer'){
-	                                $query = $query->whereNull('transaction_pickups.taken_at')
-	                                    ->where('transaction_pickups.pickup_by', '!=', 'Customer');
-	                            }elseif ($con['parameter'] == 'taken_by_system'){
-	                                $query = $query->whereNull('transaction_pickups.ready_at')
-	                                    ->whereNull('transaction_pickups.taken_by_system_at');
-	                            }elseif($con['parameter'] == 'receive_at'){
-	                                $query = $query->whereNull('transaction_pickups.receive_at')
-	                                    ->whereNotNull('transaction_pickups.ready_at');
-	                            }elseif($con['parameter'] == 'ready_at'){
-	                                $query = $query->whereNull('transaction_pickups.ready_at')
-	                                    ->whereNotNull('transaction_pickups.taken_at');
-	                            }else{
-	                                $query = $query->whereNull('transaction_pickups.'.$con['parameter']);
+	                    if (in_array($con['subject'], ['outlet_code', 'outlet_name'])) {
+	                        $var = 'outlets.'.$con['subject'];
+	                        if ($filter['rule'] == 'and') {
+	                            if ($con['operator'] == 'like') {
+	                                $query = $query->where($var, 'like', '%'.$con['parameter'].'%');
+	                            } else {
+	                                $query = $query->where($var, '=', $con['parameter']);
 	                            }
-                        	}else{
-	                        	if($con['parameter'] == 'pending'){
-	                                $query = $query->whereNull('transaction_pickups.receive_at');
-	                            }elseif($con['parameter'] == 'taken_by_driver'){
-	                                $query = $query->whereNotNull('transaction_pickups.taken_at')
-	                                    ->whereNotIn('transaction_pickups.pickup_by', ['Customer']);
-	                            }elseif ($con['parameter'] == 'taken_by_customer'){
-	                                $query = $query->whereNotNull('transaction_pickups.taken_at')
-	                                    ->where('transaction_pickups.pickup_by', 'Customer');
-	                            }elseif ($con['parameter'] == 'taken_by_system'){
-	                                $query = $query->whereNotNull('transaction_pickups.ready_at')
-	                                    ->whereNotNull('transaction_pickups.taken_by_system_at');
-	                            }elseif($con['parameter'] == 'receive_at'){
-	                                $query = $query->whereNotNull('transaction_pickups.receive_at')
-	                                    ->whereNull('transaction_pickups.ready_at');
-	                            }elseif($con['parameter'] == 'ready_at'){
-	                                $query = $query->whereNotNull('transaction_pickups.ready_at')
-	                                    ->whereNull('transaction_pickups.taken_at');
-	                            }else{
-	                                $query = $query->whereNotNull('transaction_pickups.'.$con['parameter']);
-	                            }
-                        	}
-                        } else {
-                        	if ($con['operator'] == 'not') {
-	                            if($con['parameter'] == 'pending'){
-	                                $query = $query->orWhereNull('transaction_pickups.receive_at');
-	                            }elseif($con['parameter'] == 'taken_by_driver'){
-	                                $query = $query->orWhere(function ($q){
-	                                    $q->whereNull('transaction_pickups.taken_at')
-	                                        ->whereIn('transaction_pickups.pickup_by', ['Customer']);
-	                                });
-	                            }elseif ($con['parameter'] == 'taken_by_customer'){
-	                                $query = $query->orWhere(function ($q){
-	                                    $q->whereNull('transaction_pickups.taken_at')
-	                                        ->where('transaction_pickups.pickup_by', '!=', 'Customer');
-	                                });
-	                            }elseif ($con['parameter'] == 'taken_by_system'){
-	                                $query = $query->orWhere(function ($q){
-	                                    $q->whereNull('transaction_pickups.ready_at')
-	                                        ->whereNull('transaction_pickups.taken_by_system_at');
-	                                });
-	                            }elseif($con['parameter'] == 'receive_at'){
-	                                $query = $query->orWhere(function ($q){
-	                                    $q->whereNull('transaction_pickups.receive_at')
-	                                        ->whereNotNull('transaction_pickups.ready_at');
-	                                });
-	                            }elseif($con['parameter'] == 'ready_at'){
-	                                $query = $query->orWhere(function ($q) {
-	                                    $q->whereNull('transaction_pickups.ready_at')
-	                                        ->whereNotNull('transaction_pickups.taken_at');
-	                                });
-	                            }else{
-	                                $query = $query->orWhereNull('transaction_pickups.'.$con['parameter']);
+	                        } else {
+	                            if ($con['operator'] == 'like') {
+	                                $query = $query->orWhere($var, 'like', '%'.$con['parameter'].'%');
+	                            } else {
+	                                $query = $query->orWhere($var, '=', $con['parameter']);
 	                            }
 	                        }
-	                        else{
-	                        	if($con['parameter'] == 'pending'){
-	                                $query = $query->orWhereNotNull('transaction_pickups.receive_at');
-	                            }elseif($con['parameter'] == 'taken_by_driver'){
-	                                $query = $query->orWhere(function ($q){
-	                                    $q->whereNotNull('transaction_pickups.taken_at')
-	                                        ->whereNotIn('transaction_pickups.pickup_by', ['Customer']);
-	                                });
-	                            }elseif ($con['parameter'] == 'taken_by_customer'){
-	                                $query = $query->orWhere(function ($q){
-	                                    $q->whereNotNull('transaction_pickups.taken_at')
-	                                        ->where('transaction_pickups.pickup_by', 'Customer');
-	                                });
-	                            }elseif ($con['parameter'] == 'taken_by_system'){
-	                                $query = $query->orWhere(function ($q){
-	                                    $q->whereNotNull('transaction_pickups.ready_at')
-	                                        ->whereNotNull('transaction_pickups.taken_by_system_at');
-	                                });
-	                            }elseif($con['parameter'] == 'receive_at'){
-	                                $query = $query->orWhere(function ($q){
-	                                    $q->whereNotNull('transaction_pickups.receive_at')
-	                                        ->whereNull('transaction_pickups.ready_at');
-	                                });
-	                            }elseif($con['parameter'] == 'ready_at'){
-	                                $query = $query->orWhere(function ($q) {
-	                                    $q->whereNotNull('transaction_pickups.ready_at')
-	                                        ->whereNull('transaction_pickups.taken_at');
-	                                });
-	                            }else{
-	                                $query = $query->orWhereNotNull('transaction_pickups.'.$con['parameter']);
+	                    }
+	                    if (in_array($con['subject'], ['receipt', 'name', 'phone', 'email', 'product_name', 'product_code', 'product_category', 'order_id'])) {
+	                        if ($filter['rule'] == 'and') {
+	                            if ($con['operator'] == 'like') {
+	                                $query = $query->where($var, 'like', '%'.$con['parameter'].'%');
+	                            } else {
+	                                $query = $query->where($var, '=', $con['parameter']);
+	                            }
+	                        } else {
+	                            if ($con['operator'] == 'like') {
+	                                $query = $query->orWhere($var, 'like', '%'.$con['parameter'].'%');
+	                            } else {
+	                                $query = $query->orWhere($var, '=', $con['parameter']);
 	                            }
 	                        }
-                        }
-                    }
+	                    }
 
-                    if (in_array($con['subject'], ['status', 'courier', 'id_outlet', 'id_product', 'pickup_by', 'id_product_category'])) {
-                        switch ($con['subject']) {
-                            case 'status':
-                                $var = 'transactions.transaction_payment_status';
-                                break;
+	                    if ($con['subject'] == 'product_weight' || $con['subject'] == 'product_price') {
+	                        $var = 'products.'.$con['subject'];
+	                        if ($filter['rule'] == 'and') {
+	                            $query = $query->where($var, $con['operator'], $con['parameter']);
+	                        } else {
+	                            $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+	                        }
+	                    }
 
-                            case 'courier':
-                                $var = 'transactions.transaction_courier';
-                                break;
+	                    if ($con['subject'] == 'grand_total' || $con['subject'] == 'product_tax') {
+	                        if ($con['subject'] == 'grand_total') {
+	                            $var = 'transactions.transaction_grandtotal';
+	                        } else {
+	                            $var = 'transactions.transaction_tax';
+	                        }
 
-                            case 'id_product':
-                                $var = 'products.id_product';
-                                $con['operator'] = $con['parameter'];
-                                break;
+	                        if ($filter['rule'] == 'and') {
+	                            $query = $query->where($var, $con['operator'], $con['parameter']);
+	                        } else {
+	                            $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+	                        }
+	                    }
 
-                            case 'id_outlet':
-                                $var = 'outlets.id_outlet';
-                                break;
+	                    if ($con['subject'] == 'transaction_status') {
+	                    	if ($filter['rule'] == 'and') {
+	                    		$where = "where";
+	                    	}else{
+	                    		$where = "orWhere";
+	                    	}
 
-                            case 'id_product_category':
-                                // $var = 'brand_product.id_product_category';
-                                $var = 'products.id_product_category';
-                                $con['operator'] = $con['parameter'];
-                                break;
+	                    	$query = $query->$where(function($query) use ($con) {
+			                                $query_pending = function($q, $where = 'where'){
+			                                	$q->$where(function($q2){
+					                                $q2->whereNull('transaction_pickups.receive_at')
+				                            			->whereNull('transaction_pickups.ready_at')
+				                            			->whereNull('transaction_pickups.taken_at')
+				                            			->whereNull('transaction_pickups.taken_by_system_at')
+				                            			->whereNull('transaction_pickups.reject_at');
+			                                	});
+			                                };
 
-                            case 'pickup_by':
-                                $var = 'transaction_pickups.pickup_by';
-                                $con['operator'] = $con['parameter'];
-                                break;
+			                                $query_taken_by_driver = function($q, $where = 'where'){
+			                                	$q->$where(function($q2){
+					                                $q2->whereNotNull('transaction_pickups.taken_at')
+					                                    ->whereNotIn('transaction_pickups.pickup_by', ['Customer']);
+												});				                                    	
+			                                };
 
-                            default:
-                                continue 2;
-                        }
+			                                $query_taken_by_customer = function($q, $where = 'where'){
+			                                	$q->$where(function($q2){
+					                                $q2->whereNotNull('transaction_pickups.taken_at')
+					                                    ->where('transaction_pickups.pickup_by', 'Customer');
+												});				                                    	
+			                                };
 
-                        if ($filter['rule'] == 'and') {
-                            $query = $query->where($var, '=', $con['operator']);
-                        } else {
-                            $query = $query->orWhere($var, '=', $con['operator']);
-                        }
-                    }
-                }
-            }
+			                                $query_taken_by_system = function($q, $where = 'where'){
+			                                	$q->$where(function($q2){
+					                                $q2->whereNotNull('transaction_pickups.ready_at')
+					                                    ->whereNotNull('transaction_pickups.taken_by_system_at');
+												});				                                    	
+			                                };
+
+			                                $query_receive_at = function($q, $where = 'where'){
+			                                	$q->$where(function($q2){
+					                                $q2->whereNotNull('transaction_pickups.receive_at')
+					                                    ->whereNull('transaction_pickups.ready_at');
+												});				                                    	
+			                                };
+
+			                                $query_ready_at = function($q, $where = 'where'){
+			                                	$q->$where(function($q2){
+					                                $q2->whereNotNull('transaction_pickups.ready_at')
+					                                    ->whereNull('transaction_pickups.taken_at');
+												});				                                    	
+			                                };
+
+			                                $query_reject = function($q, $where = 'where'){
+			                                	$q->$where(function($q2){
+			                                		$q2->whereNotNull('transaction_pickups.reject_at');
+												});			                                	
+			                                };
+
+
+			                        	if ($con['operator'] == 'not') {
+			                        		if($con['parameter'] == 'pending'){
+				                                $query = $query->where(function($q) use ($query_receive_at, $query_reject){
+				                                	$query_receive_at($q, 'orWhere');
+				                                	$query_reject($q, 'orWhere');
+				                                });
+				                            }
+				                            elseif($con['parameter'] == 'taken_by_driver'){
+				                                $query = $query->where(function($q) use ($query_ready_at, $query_receive_at, $query_pending){
+						                                	$query_receive_at($q, 'orWhere');
+						                                	$query_ready_at($q, 'orWhere');
+						                                	$query_pending($q, 'orWhere');
+						                                })->whereNull('transaction_pickups.reject_at');
+				                            }
+				                            elseif ($con['parameter'] == 'taken_by_customer'){
+				                                $query = $query->where(function($q) use ($query_ready_at, $query_receive_at, $query_pending){
+						                                	$query_receive_at($q, 'orWhere');
+						                                	$query_ready_at($q, 'orWhere');
+						                                	$query_pending($q, 'orWhere');
+						                                })->whereNull('transaction_pickups.reject_at');
+				                            }
+				                            elseif ($con['parameter'] == 'taken_by_system'){
+				                                $query = $query->where(function($q) use ($query_ready_at, $query_receive_at, $query_pending){
+						                                	$query_receive_at($q, 'orWhere');
+						                                	$query_ready_at($q, 'orWhere');
+						                                	$query_pending($q, 'orWhere');
+						                                })->whereNull('transaction_pickups.reject_at');
+				                            }
+				                            elseif($con['parameter'] == 'receive_at'){
+				                                $query = $query->where(function($q) use ($query_pending){
+						                                	$query_pending($q, 'orWhere');
+						                                })->whereNull('transaction_pickups.reject_at');
+				                            }
+				                            elseif($con['parameter'] == 'ready_at'){
+				                                $query = $query->where(function($q) use ($query_receive_at, $query_pending){
+						                                	$query_receive_at($q, 'orWhere');
+						                                	$query_pending($q, 'orWhere');
+						                                })->whereNull('transaction_pickups.reject_at');
+				                            }
+				                            else{
+				                                $query = $query->whereNull('transaction_pickups.'.$con['parameter']);
+				                            }
+			                        		/*if($con['parameter'] == 'pending'){
+				                                $query = $query->whereNotNull('transaction_pickups.receive_at')
+			                                			->orWhereNotNull('transaction_pickups.ready_at')
+			                                			->orWhereNotNull('transaction_pickups.taken_at')
+			                                			->orWhereNotNull('transaction_pickups.taken_by_system_at')
+			                                			->orWhereNotNull('transaction_pickups.reject_at');
+
+				                            }
+				                            elseif($con['parameter'] == 'taken_by_driver'){
+				                                $query = $query->whereNull('transaction_pickups.taken_at')
+				                                    ->whereIn('transaction_pickups.pickup_by', ['Customer']);
+				                            }
+				                            elseif ($con['parameter'] == 'taken_by_customer'){
+				                                $query = $query->whereNull('transaction_pickups.taken_at')
+				                                    ->where('transaction_pickups.pickup_by', '!=', 'Customer');
+				                            }
+				                            elseif ($con['parameter'] == 'taken_by_system'){
+				                                $query = $query->whereNull('transaction_pickups.ready_at')
+				                                    ->whereNull('transaction_pickups.taken_by_system_at');
+				                            }
+				                            elseif($con['parameter'] == 'receive_at'){
+				                                $query = $query->whereNull('transaction_pickups.receive_at')
+				                                    ->whereNotNull('transaction_pickups.ready_at');
+				                            }
+				                            elseif($con['parameter'] == 'ready_at'){
+				                                $query = $query->whereNull('transaction_pickups.ready_at')
+				                                    ->whereNotNull('transaction_pickups.taken_at');
+				                            }
+				                            else{
+				                                $query = $query->whereNull('transaction_pickups.'.$con['parameter']);
+				                            }*/
+			                        	}else{
+				                        	if($con['parameter'] == 'pending'){
+				                                $query = $query->whereNull('transaction_pickups.receive_at')
+			                                			->whereNull('transaction_pickups.ready_at')
+			                                			->whereNull('transaction_pickups.taken_at')
+			                                			->whereNull('transaction_pickups.taken_by_system_at')
+			                                			->whereNull('transaction_pickups.reject_at');
+				                            }
+				                            elseif($con['parameter'] == 'taken_by_driver'){
+				                                $query = $query->whereNotNull('transaction_pickups.taken_at')
+				                                    	->whereNotIn('transaction_pickups.pickup_by', ['Customer']);
+				                            }
+				                            elseif ($con['parameter'] == 'taken_by_customer'){
+				                                $query = $query->whereNotNull('transaction_pickups.taken_at')
+				                                    	->where('transaction_pickups.pickup_by', 'Customer');
+				                            }
+				                            elseif ($con['parameter'] == 'taken_by_system'){
+				                                $query = $query->whereNotNull('transaction_pickups.ready_at')
+				                                    	->whereNotNull('transaction_pickups.taken_by_system_at');
+				                            }
+				                            elseif($con['parameter'] == 'receive_at'){
+				                                $query = $query->whereNotNull('transaction_pickups.receive_at')
+				                                    	->whereNull('transaction_pickups.ready_at');
+				                            }
+				                            elseif($con['parameter'] == 'ready_at'){
+				                                $query = $query->whereNotNull('transaction_pickups.ready_at')
+				                                    	->whereNull('transaction_pickups.taken_at');
+				                            }
+				                            else{
+				                                $query = $query->whereNotNull('transaction_pickups.'.$con['parameter']);
+				                            }
+			                        	}
+		                    		});
+	                    }
+
+	                    if (in_array($con['subject'], ['status', 'courier', 'id_outlet', 'id_product', 'pickup_by', 'id_product_category'])) {
+	                        switch ($con['subject']) {
+	                            case 'status':
+	                                $var = 'transactions.transaction_payment_status';
+	                                break;
+
+	                            case 'courier':
+	                                $var = 'transactions.transaction_courier';
+	                                break;
+
+	                            case 'id_product':
+	                                $var = 'products.id_product';
+	                                $con['operator'] = $con['parameter'];
+	                                break;
+
+	                            case 'id_outlet':
+	                                $var = 'outlets.id_outlet';
+	                                break;
+
+	                            case 'id_product_category':
+	                                // $var = 'brand_product.id_product_category';
+	                                $var = 'products.id_product_category';
+	                                $con['operator'] = $con['parameter'];
+	                                break;
+
+	                            case 'pickup_by':
+	                                $var = 'transaction_pickups.pickup_by';
+	                                $con['operator'] = $con['parameter'];
+	                                break;
+
+	                            default:
+	                                continue 2;
+	                        }
+
+	                        if ($filter['rule'] == 'and') {
+	                            $query = $query->where($var, '=', $con['operator']);
+	                        } else {
+	                            $query = $query->orWhere($var, '=', $con['operator']);
+	                        }
+	                    }
+	                }
+	            }
+    		});
         }
 
         return $query;
