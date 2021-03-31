@@ -241,7 +241,7 @@ class ApiUserFranchiseController extends Controller
 
                 if($sendCrm == 1){
                     $autocrm = app($this->autocrm)->SendAutoCRM(
-                        'Reset Pin User Franchise',
+                        'Reset Password User Franchise',
                         $post['username'],
                         [
                             'pin_franchise' => $pin,
@@ -443,7 +443,7 @@ class ApiUserFranchiseController extends Controller
         $response = [];
 
         if($result['invalid']){
-            $response[] = 'Invalid '.$result['updated'].' data';
+            $response[] = 'Invalid '.$result['invalid'].' data';
         }
         if($result['updated']){
             $response[] = 'Update '.$result['updated'].' user';
@@ -475,7 +475,7 @@ class ApiUserFranchiseController extends Controller
 
             if($update){
                 $autocrm = app($this->autocrm)->SendAutoCRM(
-                    'Reset Pin User Franchise',
+                    'Reset Password User Franchise',
                     $post['username'],
                     [
                         'pin_franchise' => $pin,
