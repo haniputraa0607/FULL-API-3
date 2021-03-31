@@ -3000,6 +3000,56 @@ class FeaturesTableSeeder extends Seeder
                     'order' => 116,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
+                ),
+            300 =>
+                array(
+                    'id_feature' => 301,
+                    'feature_type' => 'List',
+                    'feature_module' => 'User Franchise',
+                    'show_hide' => 1,
+                    'order' => 116,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            301 =>
+                array(
+                    'id_feature' => 302,
+                    'feature_type' => 'Detail',
+                    'feature_module' => 'User Franchise',
+                    'show_hide' => 1,
+                    'order' => 116,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            302 =>
+                array(
+                    'id_feature' => 303,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'User Franchise',
+                    'show_hide' => 1,
+                    'order' => 116,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            303 =>
+                array(
+                    'id_feature' => 304,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'User Franchise',
+                    'show_hide' => 1,
+                    'order' => 116,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            304 =>
+                array(
+                    'id_feature' => 305,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'User Franchise',
+                    'show_hide' => 1,
+                    'order' => 116,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
                 )
         ));
     }
