@@ -1432,8 +1432,10 @@ class ShopeePayController extends Controller
                         $result['reject_balance']++;
                     } else {
                         $order->update(['need_manual_void' => 1]);
-                        $order->manual_refund = $trx['amount']/100;
-                        $void_failed[] = $order;
+                        $order2 = clone $order;
+                        $order2->payment_method = 'ShopeePay';
+                        $order2->manual_refund = $trx['amount']/100;
+                        $void_failed[] = $order2;
                         $result['manual_refund']++;
                     }
                 }

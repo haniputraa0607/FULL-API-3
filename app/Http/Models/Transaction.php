@@ -107,6 +107,7 @@ class Transaction extends Model
 	];
 
 	public $manual_refund = 0;
+	public $payment_method = null;
 
 	public function user()
 	{

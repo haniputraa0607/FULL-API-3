@@ -26,7 +26,7 @@
 				{{ $transaction['phone'] }}
 			</td>
 			<td style="border:1px solid #C0C0C0;padding:5px;">
-				{{ $transaction['trasaction_payment_type'] }}
+				{{ $transaction->payment_method }}
 			</td>
 			<td style="border:1px solid #C0C0C0;padding:5px;">
 				{{ \App\Lib\MyHelper::requestNumber($transaction['transaction_grandtotal'], '_CURRENCY') }}
@@ -51,7 +51,7 @@
 				{{ $transaction['phone'] }}
 			</td>
 			<td style="border:1px solid #C0C0C0;padding:5px;">
-				{{ $transaction['trasaction_payment_type'] }}
+				{{ $transaction->payment_method }}
 			</td>
 			<td style="border:1px solid #C0C0C0;padding:5px;">
 				{{ \App\Lib\MyHelper::requestNumber($transaction['transaction_grandtotal'], '_CURRENCY') }}

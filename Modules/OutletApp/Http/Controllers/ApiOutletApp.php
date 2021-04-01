@@ -1845,12 +1845,14 @@ class ApiOutletApp extends Controller
                                         $doRefundPayment = false;
                                     } else {
                                         $order->update(['need_manual_void' => 1]);
-                                        $order->manual_refund = $payOvo['amount'];
+                                        $order2 = clone $order;
+                                        $order2->manual_refund = $payOvo['amount'];
+                                        $order2->payment_method = 'Ovo';
                                         if ($shared['reject_batch'] ?? false) {
-                                            $shared['void_failed'][] = $order;
+                                            $shared['void_failed'][] = $order2;
                                         } else {
                                             $variables = [
-                                                'detail' => view('emails.failed_refund', ['transaction' => $order])->render()
+                                                'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
                                             ];
                                             app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
                                         }
@@ -1889,12 +1891,14 @@ class ApiOutletApp extends Controller
                                         $doRefundPayment = false;
                                     } else {
                                         $order->update(['need_manual_void' => 1]);
-                                        $order->manual_refund = $payIpay['amount']/100;
+                                        $order2 = clone $order;
+                                        $order2->manual_refund = $payIpay['amount']/100;
+                                        $order2->payment_method = 'Ipay88';
                                         if ($shared['reject_batch'] ?? false) {
-                                            $shared['void_failed'][] = $order;
+                                            $shared['void_failed'][] = $order2;
                                         } else {
                                             $variables = [
-                                                'detail' => view('emails.failed_refund', ['transaction' => $order])->render()
+                                                'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
                                             ];
                                             app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
                                         }
@@ -1933,12 +1937,14 @@ class ApiOutletApp extends Controller
                                         $doRefundPayment = false;
                                     } else {
                                         $order->update(['need_manual_void' => 1]);
-                                        $order->manual_refund = $payShopeepay['amount']/100;
+                                        $order2 = clone $order;
+                                        $order2->payment_method = 'ShopeePay';
+                                        $order2->manual_refund = $payShopeepay['amount']/100;
                                         if ($shared['reject_batch'] ?? false) {
-                                            $shared['void_failed'][] = $order;
+                                            $shared['void_failed'][] = $order2;
                                         } else {
                                             $variables = [
-                                                'detail' => view('emails.failed_refund', ['transaction' => $order])->render()
+                                                'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
                                             ];
                                             app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
                                         }
@@ -1977,12 +1983,14 @@ class ApiOutletApp extends Controller
                                         $doRefundPayment = false;
                                     } else {
                                         $order->update(['need_manual_void' => 1]);
-                                        $order->manual_refund = $payMidtrans['gross_amount'];
+                                        $order2 = clone $order;
+                                        $order2->payment_method = 'Midtrans';
+                                        $order2->manual_refund = $payMidtrans['gross_amount'];
                                         if ($shared['reject_batch'] ?? false) {
-                                            $shared['void_failed'][] = $order;
+                                            $shared['void_failed'][] = $order2;
                                         } else {
                                             $variables = [
-                                                'detail' => view('emails.failed_refund', ['transaction' => $order])->render()
+                                                'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
                                             ];
                                             app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
                                         }
@@ -2026,12 +2034,14 @@ class ApiOutletApp extends Controller
                                 $doRefundPayment = false;
                             } else {
                                 $order->update(['need_manual_void' => 1]);
-                                $order->manual_refund = $payMidtrans['gross_amount'];
+                                $order2 = clone $order;
+                                $order2->payment_method = 'Midtrans';
+                                $order2->manual_refund = $payMidtrans['gross_amount'];
                                 if ($shared['reject_batch'] ?? false) {
-                                    $shared['void_failed'][] = $order;
+                                    $shared['void_failed'][] = $order2;
                                 } else {
                                     $variables = [
-                                        'detail' => view('emails.failed_refund', ['transaction' => $order])->render()
+                                        'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
                                     ];
                                     app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
                                 }
@@ -2070,12 +2080,14 @@ class ApiOutletApp extends Controller
                                 $doRefundPayment = false;
                             } else {
                                 $order->update(['need_manual_void' => 1]);
-                                $order->manual_refund = $payOvo['amount'];
+                                $order2 = clone $order;
+                                $order2->payment_method = 'Ovo';
+                                $order2->manual_refund = $payOvo['amount'];
                                 if ($shared['reject_batch'] ?? false) {
-                                    $shared['void_failed'][] = $order;
+                                    $shared['void_failed'][] = $order2;
                                 } else {
                                     $variables = [
-                                        'detail' => view('emails.failed_refund', ['transaction' => $order])->render()
+                                        'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
                                     ];
                                     app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
                                 }
@@ -2111,12 +2123,14 @@ class ApiOutletApp extends Controller
                                 $doRefundPayment = false;
                             } else {
                                 $order->update(['need_manual_void' => 1]);
-                                $order->manual_refund = $payIpay['amount']/100;
+                                $order2 = clone $order;
+                                $order2->payment_method = 'Ipay88';
+                                $order2->manual_refund = $payIpay['amount']/100;
                                 if ($shared['reject_batch'] ?? false) {
-                                    $shared['void_failed'][] = $order;
+                                    $shared['void_failed'][] = $order2;
                                 } else {
                                     $variables = [
-                                        'detail' => view('emails.failed_refund', ['transaction' => $order])->render()
+                                        'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
                                     ];
                                     app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
                                 }
