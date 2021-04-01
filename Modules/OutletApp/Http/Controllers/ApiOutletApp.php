@@ -2349,7 +2349,7 @@ class ApiOutletApp extends Controller
             $data->where('pickup_by', 'Customer');
         }
 
-        switch ($request->sort) {
+        switch ($request->sort ?: $request->sort_by) {
             case 'oldest':
                 $data->orderBy('transaction_date','ASC')->orderBy('transactions.id_transaction','ASC');
                 break;
