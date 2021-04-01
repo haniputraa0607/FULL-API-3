@@ -3231,7 +3231,7 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']         = 'PENGANTARAN DIBATALKAN';
                         $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
                         $result['delivery_info']['cancelable']     = 0;
-                        $result['rejectable']              = ($list['transaction_pickup_go_send']['retry_count'] == 5) ? 1 : 0;
+                        $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
                     case 'driver not found':
                     case 'no_driver':
@@ -3239,7 +3239,7 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']          = 'DRIVER TIDAK DITEMUKAN';
                         $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
                         $result['delivery_info']['cancelable']      = 0;
-                        $result['rejectable']              = ($list['transaction_pickup_go_send']['retry_count'] == 5) ? 1 : 0;
+                        $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
                 }
             }
@@ -3437,7 +3437,8 @@ class ApiOutletApp extends Controller
                     if(!empty($valueMod['id_product_modifier_group'])){
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][] = [
                             'product_variant_name' => $valueMod['text'],
-                            'product_variant_price' => 0
+                            'product_variant_price' => 0,
+                            'is_modifier' => 1
                         ];
                     }else{
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][] = [
@@ -4171,7 +4172,8 @@ class ApiOutletApp extends Controller
                     if(!empty($valueMod['id_product_modifier_group'])){
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][] = [
                             'product_variant_name' => $valueMod['text'],
-                            'product_variant_price' => 0
+                            'product_variant_price' => 0,
+                            'is_modifier' => 1
                         ];
                     }else{
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][] = [

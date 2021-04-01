@@ -26,6 +26,8 @@ use App\Http\Models\Product;
 use Modules\Promotion\Entities\DealsPromotionBrand;
 use Modules\Promotion\Entities\DealsPromotionOutlet;
 use Modules\Promotion\Entities\DealsPromotionOutletGroup;
+use Modules\Promotion\Entities\DealsPromotionContent;
+use Modules\Promotion\Entities\DealsPromotionContentDetail;
 
 use Modules\Deals\Entities\DealsProductDiscount;
 use Modules\Deals\Entities\DealsProductDiscountRule;
@@ -1661,7 +1663,7 @@ class ApiDeals extends Controller
         if ($deals) {
         	if ($post['step'] == 'all' && $deals_type != 'Promotion' && $deals_type != 'promotion-deals') {
 	        	$deals_array = $deals->toArray();
-	        	if ($deals_type == 'Deals') {
+	        	if ($deals_type == 'Deals' || $deals_type == 'Hidden' || $deals_type == 'WelcomeVoucher') {
 	        		$type = 'deals';
 	        	}else{
 	        		$type = $deals_type;
@@ -1713,8 +1715,8 @@ class ApiDeals extends Controller
             ];
 		}
 
-    	$update = app($this->subscription)->createOrUpdateContent($post, $source);
-
+    	// $update = app($this->subscription)->createOrUpdateContent($post, $source);
+    	$update = $this->updateContentV2($post, $source);
     	if ($update)
     	{
     		if ($post['deals_type'] != 'Promotion') {
@@ -2111,6 +2113,74 @@ class ApiDeals extends Controller
         }
 
         $save = DealsPromotionTemplate::where('id_deals_promotion_template', $id)->update($data);
+
+        return $save;
+    }
+
+    public function updateContentV2($data, $type='deals')
+    {
+        $post = $data;
+
+        if ($type == 'deals') {
+        	$contentTable = new DealsContent;
+        	$contentTableDetail = new DealsContentDetail;
+        }elseif ($type == 'deals_promotion') {
+        	$contentTable = new DealsPromotionContent;
+        	$contentTableDetail = new DealsPromotionContentDetail;
+        	$type = 'deals';
+        }
+
+        $data_content = [];
+        $data_content_detail = [];
+        $content_order = 1;
+
+        //Rapiin data yg masuk
+        foreach ($post['id_deals_content'] as $key => $value) {
+            $data_content[$key]['id_deals'] = $post['id_deals'];
+            $data_content[$key]['id_deals_content'] = $value;
+            $data_content[$key]['title'] = $post['content_title'][$key];
+            $data_content[$key]['is_active'] = ($post['visible'][$key+1]??0) ? 1 : null;
+            $data_content[$key]['order'] = ($content_order++);
+            $data_content[$key]['created_at'] = date('Y-m-d H:i:s');
+            $data_content[$key]['updated_at'] = date('Y-m-d H:i:s');
+
+            $detail_order = 1;
+            if ( ($post['id_content_detail'][$key+1]??0) ) {
+                foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
+                    $data_content_detail[$key][$key2]['id_deals_content'] = $value;
+                    $data_content_detail[$key][$key2]['id_deals_content_detail'] = $value2;
+                    $data_content_detail[$key][$key2]['content'] = $post['content_detail'][$key+1][$key2];
+                    $data_content_detail[$key][$key2]['order'] = $detail_order++;
+                    $data_content_detail[$key][$key2]['created_at'] = date('Y-m-d H:i:s');
+                    $data_content_detail[$key][$key2]['updated_at'] = date('Y-m-d H:i:s');
+                }
+            }
+        }
+
+        // hapus content & detail
+        $del_content = $contentTable::where('id_deals','=',$post['id_deals'])->delete();
+
+        // create content & detail
+        foreach ($post['id_deals_content'] as $key => $value) 
+        {
+            $save = $contentTable::create($data_content[$key]);
+
+            $id_deals_content = $save['id_deals_content'];
+
+            if ( ($post['id_content_detail'][$key+1]??0) ) {
+
+                foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
+
+                    $data_content_detail[$key][$key2]['id_deals_content'] = $id_deals_content;
+
+                    $save = $contentTableDetail::create($data_content_detail[$key][$key2]);
+                }
+            }
+        }
+
+        // update description
+        // $data_subs['deals_description'] = $post['deals_description'];
+        // $save = Deal::where('id_deals','=',$post['id_deals'])->update($data_subs);
 
         return $save;
     }
