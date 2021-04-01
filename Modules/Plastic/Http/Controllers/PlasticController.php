@@ -98,7 +98,12 @@ class PlasticController extends Controller
 
         if($id_plastic_type){
             $plastics = Product::where('product_type', 'plastic')
-                ->leftJoin('product_detail', 'products.id_product', 'product_detail.id_product')
+                ->leftJoin('product_detail', function($join) use($id_outlet)
+                {
+                    $join->on('products.id_product','product_detail.id_product')
+                    ->where('product_detail.id_outlet',$id_outlet);
+
+                })
                 ->where(function ($sub){
                     $sub->whereNull('product_detail_stock_status')
                         ->orWhere('product_detail_stock_status', 'Available');
