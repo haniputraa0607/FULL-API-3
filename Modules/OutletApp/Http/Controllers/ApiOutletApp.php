@@ -5395,7 +5395,12 @@ class ApiOutletApp extends Controller
         $data = [];
         if($plastic_type['id_plastic_type']??NULL){
             $plastics = Product::where('product_type', 'plastic')
-                ->leftJoin('product_detail', 'products.id_product', 'product_detail.id_product')
+                ->leftJoin('product_detail', function($join) use($outlet)
+                {
+                    $join->on('products.id_product','product_detail.id_product')
+                        ->where('product_detail.id_outlet',$outlet['id_outlet']);
+
+                })
                 ->where(function ($sub) use($outlet){
                     $sub->whereNull('product_detail.id_outlet')
                         ->orWhere('product_detail.id_outlet', $outlet['id_outlet']);
@@ -5434,7 +5439,12 @@ class ApiOutletApp extends Controller
         }
 
         $plastics = Product::where('product_type', 'plastic')
-            ->leftJoin('product_detail', 'products.id_product', 'product_detail.id_product')
+            ->leftJoin('product_detail', function($join) use($outlet)
+            {
+                $join->on('products.id_product','product_detail.id_product')
+                    ->where('product_detail.id_outlet',$outlet['id_outlet']);
+
+            })
             ->where(function ($sub) use($outlet){
                 $sub->whereNull('product_detail.id_outlet')
                     ->orWhere('product_detail.id_outlet', $outlet['id_outlet']);
