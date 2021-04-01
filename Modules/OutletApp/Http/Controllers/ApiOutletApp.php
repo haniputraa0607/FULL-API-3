@@ -1840,7 +1840,8 @@ class ApiOutletApp extends Controller
                                     'reject_type'   => 'refund',
                                 ]);
                                 $refund = Ovo::Void($transaction);
-                                if ($refund['status_code'] != '200') {
+                                if ($refund['response']['responseCode'] != '00') {
+                                    $order->update(['failed_void_reason' => $refund['response']['response_description'] ?? '']);
                                     if ($refund_failed_process_balance) {
                                         $doRefundPayment = false;
                                     } else {
@@ -1882,11 +1883,12 @@ class ApiOutletApp extends Controller
                         if ($payIpay) {
                             $doRefundPayment = strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88');
                             if($doRefundPayment){
-                                $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay);
+                                $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay, 'trx', 'user', $message);
                                 TransactionPickup::where('id_transaction', $order['id_transaction'])->update([
                                     'reject_type'   => 'refund',
                                 ]);
                                 if (!$refund) {
+                                    $order->update(['failed_void_reason' => $message ?? '']);
                                     if ($refund_failed_process_balance) {
                                         $doRefundPayment = false;
                                     } else {
@@ -1934,6 +1936,7 @@ class ApiOutletApp extends Controller
                                     'reject_type'   => 'refund',
                                 ]);
                                 if (!$refund) {
+                                    $order->update(['failed_void_reason' => implode(', ', $errors ?: [])]);
                                     if ($refund_failed_process_balance) {
                                         $doRefundPayment = false;
                                     } else {
@@ -1980,6 +1983,7 @@ class ApiOutletApp extends Controller
                                     'reject_type'   => 'refund',
                                 ]);
                                 if ($refund['status'] != 'success') {
+                                    $order->update(['failed_void_reason' => implode(', ', $refund['messages'] ?? [])]);
                                     if ($refund_failed_process_balance) {
                                         $doRefundPayment = false;
                                     } else {

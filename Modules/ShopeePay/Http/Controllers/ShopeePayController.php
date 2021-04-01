@@ -1192,6 +1192,9 @@ class ShopeePayController extends Controller
             return $postData;
         }
         $response = $this->send($url, $postData, ['type' => 'void', 'id_reference' => $postData['payment_reference_id']]);
+        if ($errcode = ($response['response']['errcode'] ?? -3)) {
+            $errors[] = $this->errcode[$errcode] ?? 'Something went wrong';
+        }
         /**
          * $response
          * {
