@@ -179,7 +179,7 @@ class Kernel extends ConsoleKernel
          * Notif Order not Received/Rejected 
          * run every minute
          */
-        // $schedule->call('Modules\OutletApp\Http\Controllers\ApiOutletApp@cronNotReceived')->everyMinute();
+        $schedule->call('Modules\OutletApp\Http\Controllers\ApiOutletApp@cronNotReceived')->everyMinute();
 
         /**
          * Sync Bundling
