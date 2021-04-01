@@ -108,6 +108,7 @@ class Transaction extends Model
 
 	public $manual_refund = 0;
 	public $payment_method = null;
+	public $payment_detail = null;
 
 	public function user()
 	{
@@ -131,7 +132,7 @@ class Transaction extends Model
 
 	public function transaction_payment_midtrans()
 	{
-		return $this->hasMany(\App\Http\Models\TransactionPaymentMidtran::class, 'id_transaction');
+		return $this->hasOne(\App\Http\Models\TransactionPaymentMidtran::class, 'id_transaction');
 	}
 
 	public function transaction_payment_offlines()

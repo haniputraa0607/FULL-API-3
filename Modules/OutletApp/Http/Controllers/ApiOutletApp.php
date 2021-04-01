@@ -1894,6 +1894,7 @@ class ApiOutletApp extends Controller
                                         $order2 = clone $order;
                                         $order2->manual_refund = $payIpay['amount']/100;
                                         $order2->payment_method = 'Ipay88';
+                                        $order2->payment_detail = $payIpay['payment_method'];
                                         if ($shared['reject_batch'] ?? false) {
                                             $shared['void_failed'][] = $order2;
                                         } else {
@@ -1985,6 +1986,7 @@ class ApiOutletApp extends Controller
                                         $order->update(['need_manual_void' => 1]);
                                         $order2 = clone $order;
                                         $order2->payment_method = 'Midtrans';
+                                        $order2->payment_detail = $payMidtrans['payment_type'];
                                         $order2->manual_refund = $payMidtrans['gross_amount'];
                                         if ($shared['reject_batch'] ?? false) {
                                             $shared['void_failed'][] = $order2;
@@ -2036,6 +2038,7 @@ class ApiOutletApp extends Controller
                                 $order->update(['need_manual_void' => 1]);
                                 $order2 = clone $order;
                                 $order2->payment_method = 'Midtrans';
+                                $order2->payment_detail = $payMidtrans['payment_type'];
                                 $order2->manual_refund = $payMidtrans['gross_amount'];
                                 if ($shared['reject_batch'] ?? false) {
                                     $shared['void_failed'][] = $order2;
@@ -2125,6 +2128,7 @@ class ApiOutletApp extends Controller
                                 $order->update(['need_manual_void' => 1]);
                                 $order2 = clone $order;
                                 $order2->payment_method = 'Ipay88';
+                                $order2->payment_detail = $payIpay['payment_method'];
                                 $order2->manual_refund = $payIpay['amount']/100;
                                 if ($shared['reject_batch'] ?? false) {
                                     $shared['void_failed'][] = $order2;

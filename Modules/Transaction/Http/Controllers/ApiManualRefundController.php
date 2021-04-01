@@ -25,7 +25,8 @@ class ApiManualRefundController extends Controller
             ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
             ->leftJoin('manual_refunds', 'manual_refunds.id_transaction', 'transactions.id_transaction')
             ->leftJoin('users as validator', 'validator.id', 'manual_refunds.created_by')
-            ->where('need_manual_void', '<>', '0');
+            ->where('need_manual_void', '<>', '0')
+            ->with('transaction_payment_midtrans', 'transaction_payment_ipay88');
 
         $countTotal = null;
 
