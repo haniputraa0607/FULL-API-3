@@ -10,6 +10,8 @@ use App\Http\Models\TransactionVoucher;
 use Modules\Franchise\Entities\UserFranchise;
 use Modules\Franchise\Entities\UserFranchiseOultet;
 
+use Modules\Subscription\Entities\SubscriptionUserVoucher;
+
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -97,6 +99,25 @@ class ApiReportPromoController extends Controller
     			break;
 
     		case 'subscription':
+    			$list = SubscriptionUserVoucher::join('transactions', 'transactions.id_transaction', 'subscription_user_vouchers.id_transaction')
+    					->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+    					->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
+		    			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+		        		->where('transactions.id_outlet', $request->id_outlet)
+		    			->groupBy('subscriptions.id_subscription')
+		    			->where('transactions.transaction_payment_status', 'Completed')
+		    			->whereNull('transaction_pickups.reject_at')
+		        		->select(
+		        			'subscriptions.subscription_title as title',
+		        			'subscriptions.subscription_discount_type',
+		        			DB::raw('
+		        				CASE WHEN subscriptions.subscription_discount_type = "payment_method" THEN "payment method"
+									WHEN subscriptions.subscription_discount_type = "discount" THEN "bill discount"
+									WHEN subscriptions.subscription_discount_type = "discount_delivery" THEN "delivery discount"
+								ELSE NULL END as type
+		        			'),
+		        			DB::raw($select_trx)
+		        		);
     			break;
     		
     		default:
