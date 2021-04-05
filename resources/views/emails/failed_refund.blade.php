@@ -8,6 +8,7 @@
 			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Payment Method</th>
 			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Grandtotal</th>
 			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Manual Refund</th>
+			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Failed Void Reason</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -34,6 +35,9 @@
 			<td style="border:1px solid #C0C0C0;padding:5px;">
 				{{ \App\Lib\MyHelper::requestNumber($transaction->manual_refund, '_CURRENCY') }}
 			</td>
+			<td style="border:1px solid #C0C0C0;padding:5px;">
+				{{ $transaction->failed_void_reason }}
+			</td>
 		</tr>
 		@endif
 		@foreach($transactions ?? [] as $transaction)
@@ -58,6 +62,9 @@
 			</td>
 			<td style="border:1px solid #C0C0C0;padding:5px;">
 				{{ \App\Lib\MyHelper::requestNumber($transaction->manual_refund, '_CURRENCY') }}
+			</td>
+			<td style="border:1px solid #C0C0C0;padding:5px;">
+				{{ $transaction->failed_void_reason }}
 			</td>
 		</tr>
 		@endforeach
