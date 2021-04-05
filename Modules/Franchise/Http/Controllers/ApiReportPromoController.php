@@ -36,8 +36,8 @@ class ApiReportPromoController extends Controller
 			COUNT(transactions.id_transaction) AS total_transaction, 
 			SUM(transactions.transaction_gross) AS total_gross_sales, 
 			SUM(
-				CASE WHEN transactions.transaction_shipment IS NOT NULL THEN transactions.transaction_shipment 
-					WHEN transactions.transaction_shipment_go_send IS NOT NULL THEN transactions.transaction_shipment_go_send
+				CASE WHEN transactions.transaction_shipment IS NOT NULL AND transactions.transaction_shipment != 0 THEN transactions.transaction_shipment 
+					WHEN transactions.transaction_shipment_go_send IS NOT NULL AND transactions.transaction_shipment_go_send != 0 THEN transactions.transaction_shipment_go_send
 				ELSE 0 END
 			) as total_delivery_fee,
 			SUM(
@@ -76,6 +76,24 @@ class ApiReportPromoController extends Controller
     			break;
 
     		case 'promo-campaign':
+    			$list = Transaction::join('promo_campaign_promo_codes', 'transactions.id_promo_campaign_promo_code', 'promo_campaign_promo_codes.id_promo_campaign_promo_code')
+    					->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', 'promo_campaign_promo_codes.id_promo_campaign')
+		    			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+		        		->where('transactions.id_outlet', $request->id_outlet)
+		    			->groupBy('promo_campaigns.id_promo_campaign')
+		    			->where('transactions.transaction_payment_status', 'Completed')
+		    			->whereNull('transaction_pickups.reject_at')
+		        		->select(
+		        			'promo_campaigns.promo_title as title',
+		        			'promo_campaigns.promo_type',
+		        			DB::raw('
+		        				CASE WHEN promo_campaigns.promo_type IN ("Product discount","Tier discount","Buy X Get Y") THEN "product discount"
+									WHEN promo_campaigns.promo_type = "Discount bill" THEN "bill discount"
+									WHEN promo_campaigns.promo_type = "Discount delivery" THEN "delivery discount"
+								ELSE NULL END as type
+		        			'),
+		        			DB::raw($select_trx)
+		        		);
     			break;
 
     		case 'subscription':
