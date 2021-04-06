@@ -36,11 +36,22 @@ class ApiReportSalesController extends Controller
     				->where('transactions.transaction_payment_status', 'Completed')
 					// ->whereNull('reject_at')
 					->select(DB::raw('
+						# tanggal transaksi
 						Date(transactions.transaction_date) as transaction_date,
+
+						# total transaksi
 						COUNT(CASE WHEN transactions.id_transaction AND transaction_pickups.reject_at IS NULL THEN 1 ELSE NULL END) AS total_transaction, 
+
+						# pickup
 						COUNT(CASE WHEN transaction_pickups.pickup_by = "Customer" AND transaction_pickups.reject_at IS NULL THEN 1 ELSE NULL END) as total_transaction_pickup,
+
+						# delivery
 						COUNT(CASE WHEN transaction_pickups.pickup_by = "GO-SEND" AND transaction_pickups.reject_at IS NULL THEN 1 ELSE NULL END) as total_transaction_delivery,
+
+						# subtotal
 						SUM(CASE WHEN transactions.transaction_gross IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN transactions.transaction_gross ELSE 0 END) as total_subtotal,
+
+						# diskon
 						SUM(
 							CASE WHEN transactions.transaction_discount_item IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount_item) 
 								WHEN transactions.transaction_discount IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount)
@@ -48,10 +59,20 @@ class ApiReportSalesController extends Controller
 							+ CASE WHEN transactions.transaction_discount_delivery IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
 							+ CASE WHEN transactions.transaction_discount_bill IS NOT NULL AND transaction_pickups.reject_at IS NULL THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
 						) as total_discount,
+
+						# delivery
 						SUM(CASE WHEN transaction_pickups.reject_at IS NULL THEN transactions.transaction_shipment_go_send + transactions.transaction_shipment ELSE 0 END) as total_delivery,
+
+						# grandtotal
 						SUM(CASE WHEN transaction_pickups.reject_at IS NULL THEN transactions.transaction_grandtotal ELSE 0 END) as total_grandtotal,
+
+						# accept
 						COUNT(CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1 ELSE NULL END) as total_accept,
+
+						# reject
 						COUNT(CASE WHEN transaction_pickups.reject_at IS NOT NULL THEN 1 ELSE NULL END) as total_reject,
+
+						# rate accept
 						FLOOR(
 							(
 								COUNT(CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1 ELSE NULL END) 
@@ -59,19 +80,27 @@ class ApiReportSalesController extends Controller
 							)
 							* 100
 						) as acceptance_rate,
+
+						# response
 						COUNT(
 							CASE WHEN transaction_pickups.receive_at IS NOT NULL THEN 1
 								 WHEN transaction_pickups.reject_reason NOT LIKE "auto reject order by system%" THEN 1
 							ELSE NULL END
 						) as total_response,
+
+						# auto reject response
 						COUNT(
 							CASE WHEN transaction_pickups.reject_reason = "auto reject order by system" THEN 1
 							ELSE NULL END
 						) as total_auto_reject,
+
+						# manual reject response
 						COUNT(
 							CASE WHEN transaction_pickups.receive_at IS NULL AND transaction_pickups.reject_reason NOT LIKE "auto reject order by system%" THEN 1
 							ELSE NULL END
 						) as total_manual_reject,
+
+						# rate response
 						FLOOR(
 							(
 								COUNT(
@@ -81,7 +110,10 @@ class ApiReportSalesController extends Controller
 								)/ COUNT(CASE WHEN transactions.transaction_payment_status = "Completed" THEN 1 ELSE NULL END)
 							)
 							* 100
-						) as response_rate
+						) as response_rate,
+
+						# payment complete
+						COUNT(CASE WHEN transactions.transaction_payment_status = "Completed" THEN 1 ELSE NULL END) as total_complete_payment
 					'));
 
         if(isset($post['filter_type']) && $post['filter_type'] == 'range_date'){
@@ -109,75 +141,80 @@ class ApiReportSalesController extends Controller
     	}*/
 
     	$result = [
-    		[
-                // 'title' => 'Total Transaction',
-                'title' => 'Jumlah Transaksi',
-                'amount' => number_format($report['total_transaction']??0,0,",",".")
-            ],
             [
-                // 'title' => 'Total Transaction Pickup',
-                'title' => 'Jumlah Pickup',
-                'amount' => number_format($report['total_transaction_pickup']??0,0,",",".")
-            ],
-            [
-                // 'title' => 'Total Transaction Delivery',
-                'title' => 'Jumlah Delivery',
-                'amount' => number_format($report['total_transaction_delivery']??0,0,",",".")
-            ],
-            [
-                // 'title' => 'Total Subtotal',
                 'title' => 'Sub Total',
-                'amount' => 'Rp. '.number_format($report['total_subtotal']??0,2,",",".")
+                'amount' => 'Rp. '.number_format($report['total_subtotal']??0,0,",","."),
+                "tooltip" => 'total transaksi sebelum di potong diskon dan ditambahkan delivery'
             ],
             [
-                // 'title' => 'Total Discount',
                 'title' => 'Diskon',
-                'amount' => 'Rp. '.number_format($report['total_discount']??0,2,",",".")
+                'amount' => 'Rp. '.number_format($report['total_discount']??0,0,",","."),
+                "tooltip" => 'total diskon transaksi (diskon produk, diskon biaya delivery dan diskon bill)'
             ],
             [
-                // 'title' => 'Total Delivery',
-                'title' => 'Delivery',
-                'amount' => 'Rp. '.number_format($report['total_delivery']??0,2,",",".")
+                'title' => 'Delivery Fee',
+                'amount' => 'Rp. '.number_format($report['total_delivery']??0,0,",","."),
+                "tooltip" => 'total biaya delivery'
             ],
             [
-                // 'title' => 'Total Grandtotal',
                 'title' => 'Grand Total',
-                'amount' => 'Rp. '.number_format($report['total_grandtotal']??0,2,",",".")
+                'amount' => 'Rp. '.number_format($report['total_grandtotal']??0,0,",","."),
+                "tooltip" => 'total nominal transaksi setelah di potong diskon dan ditambahkan biaya delivery'
             ],
             [
-                // 'title' => 'Total Accept',
-                'title' => 'Jumlah Accept',
-                'amount' => number_format($report['total_accept']??0,0,",",".")
+                'title' => 'Pembayaran Sukses',
+                'amount' => number_format($report['total_reject']??0,0,",","."),
+                "tooltip" => 'jumlah transaksi dengan status pembyaran sukses (mengabaikan status reject order)'
+            ],
+    		[
+                'title' => 'Transaksi Sukses',
+                'amount' => number_format($report['total_transaction']??0,0,",","."),
+                "tooltip" => 'jumlah transaksi dengan status pembayaran sukses dan tidak di reject'
             ],
             [
-                // 'title' => 'Acceptance Rate',
-                'title' => 'Acceptance Rate Order',
-                'amount' => number_format($report['acceptance_rate']??0,0,",",".")."%"
+                'title' => 'Pickup',
+                'amount' => number_format($report['total_transaction_pickup']??0,0,",","."),
+                "tooltip" => 'jumlah transaksi sukses dengan tipe pickup'
             ],
             [
-                // 'title' => 'Acceptance Rate',
-                'title' => 'Jumlah Response Order',
-                'amount' => number_format($report['total_response']??0,0,",",".")
+                'title' => 'Delivery',
+                'amount' => number_format($report['total_transaction_delivery']??0,0,",","."),
+                "tooltip" => 'jumlah transaksi sukses dengan tipe delivery'
             ],
             [
-                // 'title' => 'Acceptance Rate',
+                'title' => 'Response Order',
+                'amount' => number_format($report['total_response']??0,0,",","."),
+                "tooltip" => 'jumlah transaksi yang di response oleh outlet (diterima atau di manual reject)'
+            ],
+            [
                 'title' => 'Response Rate Order',
-                'amount' => number_format($report['response_rate']??0,0,",",".")."%"
+                'amount' => number_format($report['response_rate']??0,0,",",".")."%",
+                "tooltip" => 'persentase jumlah order yang di response oleh outlet dibandingkan dengan jumlah transaksi dengan status pembayaran suskes (transaksi yang masuk)'
             ],
             [
-                // 'title' => 'Total Reject',
-                'title' => 'Jumlah Reject',
-                'amount' => number_format($report['total_reject']??0,0,",",".")
+                'title' => 'Accept',
+                'amount' => number_format($report['total_accept']??0,0,",","."),
+                "tooltip" => 'jumlah transaksi yang diterima oleh outlet'
             ],
             [
-                // 'title' => 'Acceptance Rate',
-                'title' => 'Jumlah Auto Reject',
-                'amount' => number_format($report['total_auto_reject']??0,0,",",".")
+                'title' => 'Acceptance Rate Order',
+                'amount' => number_format($report['acceptance_rate']??0,0,",",".")."%",
+                "tooltip" => 'persentase jumlah transaksi yang diterima oleh outlet dibandingkan dengan jumlah transaksi dengan status pembayaran suskes (transaksi yang masuk)'
             ],
             [
-                // 'title' => 'Acceptance Rate',
-                'title' => 'Jumlah Manual Reject',
-                'amount' => number_format($report['total_manual_reject']??0,0,",",".")
+                'title' => 'Auto Reject Response',
+                'amount' => number_format($report['total_auto_reject']??0,0,",","."),
+                "tooltip" => 'jumlah transaksi yang tidak di response oleh outlet dan terproses auto reject oleh sistem'
+            ],
+            [
+                'title' => 'Manual Reject Response',
+                'amount' => number_format($report['total_manual_reject']??0,0,",","."),
+                "tooltip" => 'jumlah transaksi yang di reject oleh outlet saat transaksi masuk ke jilid+	'
+            ],
+            [
+                'title' => 'Reject',
+                'amount' => number_format($report['total_reject']??0,0,",","."),
+                "tooltip" => 'jumlah transaksi dengan status reject (semua kondisi reject: manual reject, auto reject karena tidak di response, auto reject karena driver tidak ditemukan dsb)'
             ],
     	];
 
@@ -241,7 +278,8 @@ class ApiReportSalesController extends Controller
 								)/ COUNT(CASE WHEN transactions.transaction_payment_status = "Completed" THEN 1 ELSE NULL END)
 							)
 							* 100
-						) as response_rate
+						) as response_rate,
+						COUNT(CASE WHEN transactions.transaction_payment_status = "Completed" THEN 1 ELSE NULL END) as total_complete_payment
 					'))
     				->groupBy(DB::raw('Date(transactions.transaction_date)'));
 
