@@ -43,9 +43,9 @@ class ApiReportPromoController extends Controller
 				CASE WHEN transactions.transaction_shipment IS NOT NULL AND transactions.transaction_shipment != 0 THEN transactions.transaction_shipment 
 					WHEN transactions.transaction_shipment_go_send IS NOT NULL AND transactions.transaction_shipment_go_send != 0 THEN transactions.transaction_shipment_go_send
 				ELSE 0 END
-			) as total_delivery_fee,
-			COUNT(CASE WHEN transaction_pickups.pickup_by != "Customer" THEN 1 ELSE NULL END) as total_transaction_delivery,
-			COUNT(CASE WHEN transaction_pickups.pickup_by = "Customer" THEN 1 ELSE NULL END) as total_transaction_pickup
+			) AS total_delivery_fee,
+			COUNT(CASE WHEN transaction_pickups.pickup_by != "Customer" THEN 1 ELSE NULL END) AS total_transaction_delivery,
+			COUNT(CASE WHEN transaction_pickups.pickup_by = "Customer" THEN 1 ELSE NULL END) AS total_transaction_pickup
 		';
 
 		$total_discount_promo = '
@@ -55,7 +55,14 @@ class ApiReportPromoController extends Controller
 					ELSE 0 END
 				+ CASE WHEN transactions.transaction_discount_delivery IS NOT NULL THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
 				+ CASE WHEN transactions.transaction_discount_bill IS NOT NULL THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
-			) as total_discount
+			) AS total_discount,
+			SUM(
+				CASE WHEN transactions.transaction_discount_item IS NOT NULL AND transactions.transaction_discount_item != 0 THEN ABS(transactions.transaction_discount_item) 
+					WHEN transactions.transaction_discount IS NOT NULL AND transactions.transaction_discount != 0 THEN ABS(transactions.transaction_discount)
+					ELSE 0 END
+				+ CASE WHEN transactions.transaction_discount_delivery IS NOT NULL THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
+				+ CASE WHEN transactions.transaction_discount_bill IS NOT NULL THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
+			)/COUNT(transactions.id_transaction) AS average_discount
 		';
 
     	switch ($promo) {
@@ -65,13 +72,13 @@ class ApiReportPromoController extends Controller
 		        		->join('deals', 'deals_vouchers.id_deals', 'deals.id_deals')
 		    			->groupBy('deals_vouchers.id_deals')
 		        		->select(
-		        			'deals.deals_title as title',
+		        			'deals.deals_title AS title',
 		        			'deals.promo_type',
 		        			DB::raw('
 		        				CASE WHEN deals.promo_type IN ("Product discount","Tier discount","Buy X Get Y") THEN "product discount"
 									WHEN deals.promo_type = "Discount bill" THEN "bill discount"
 									WHEN deals.promo_type = "Discount delivery" THEN "delivery discount"
-								ELSE NULL END as type
+								ELSE NULL END AS type
 		        			'),
 		        			DB::raw($select_trx),
 		        			DB::raw($total_discount_promo)
@@ -84,13 +91,13 @@ class ApiReportPromoController extends Controller
     					->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', 'promo_campaign_promo_codes.id_promo_campaign')
 		    			->groupBy('promo_campaigns.id_promo_campaign')
 		        		->select(
-		        			'promo_campaigns.promo_title as title',
+		        			'promo_campaigns.promo_title AS title',
 		        			'promo_campaigns.promo_type',
 		        			DB::raw('
 		        				CASE WHEN promo_campaigns.promo_type IN ("Product discount","Tier discount","Buy X Get Y") THEN "product discount"
 									WHEN promo_campaigns.promo_type = "Discount bill" THEN "bill discount"
 									WHEN promo_campaigns.promo_type = "Discount delivery" THEN "delivery discount"
-								ELSE NULL END as type
+								ELSE NULL END AS type
 		        			'),
 		        			DB::raw($select_trx),
 		        			DB::raw($total_discount_promo)
@@ -103,13 +110,13 @@ class ApiReportPromoController extends Controller
     					->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
 		    			->groupBy('subscriptions.id_subscription')
 		        		->select(
-		        			'subscriptions.subscription_title as title',
+		        			'subscriptions.subscription_title AS title',
 		        			'subscriptions.subscription_discount_type',
 		        			DB::raw('
 		        				CASE WHEN subscriptions.subscription_discount_type = "payment_method" THEN "payment method"
 									WHEN subscriptions.subscription_discount_type = "discount" THEN "bill discount"
 									WHEN subscriptions.subscription_discount_type = "discount_delivery" THEN "delivery discount"
-								ELSE NULL END as type
+								ELSE NULL END AS type
 		        			'),
 		        			DB::raw($select_trx),
 		        			DB::raw($total_discount_promo)
@@ -121,10 +128,13 @@ class ApiReportPromoController extends Controller
     					->join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
 		    			->groupBy('transaction_bundling_products.id_bundling')
 		        		->select(
-		        			'bundling.bundling_name as title',
-		        			DB::raw('"product discount" as type'),
+		        			'bundling.bundling_name AS title',
+		        			DB::raw('"product discount" AS type'),
 		        			DB::raw($select_trx),
-		        			DB::raw('SUM(transaction_bundling_products.transaction_bundling_product_total_discount) as total_discount')
+		        			DB::raw('
+		        				SUM(transaction_bundling_products.transaction_bundling_product_total_discount) AS total_discount,
+		        				SUM(transaction_bundling_products.transaction_bundling_product_total_discount)/COUNT(transactions.id_transaction) AS average_discount
+		        			')
 		        		);
     			break;
     		
@@ -158,7 +168,7 @@ class ApiReportPromoController extends Controller
 
         $sub = $list;
 
-        $query = DB::table(DB::raw('('.$sub->toSql().') as report_promo'))
+        $query = DB::table(DB::raw('('.$sub->toSql().') AS report_promo'))
 		        ->mergeBindings($sub->getQuery());
 
 		$this->filterPromoReport($query, $post);
