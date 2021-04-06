@@ -819,6 +819,16 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        if ($order->pickup_by != 'Customer') {
+            $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+            if(!$pickup_gosend || !$pickup_gosend['latest_status'] || in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled', 'confirmed'])) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Driver belum ditemukan']
+                ]);
+            }
+        }
+
         DB::beginTransaction();
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['ready_at' => date('Y-m-d H:i:s')]);
 
@@ -1691,7 +1701,7 @@ class ApiOutletApp extends Controller
             ]);
         }
 
-        if ($order->picked_by != 'Customer') {
+        if ($order->pickup_by != 'Customer') {
             $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
             if($pickup_gosend && $pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
                 return response()->json([
@@ -1705,7 +1715,7 @@ class ApiOutletApp extends Controller
         }
 
         if ($order->ready_at) {
-            if ($order->picked_by == 'Customer') {
+            if ($order->pickup_by == 'Customer') {
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['Order Has Been Ready'],
