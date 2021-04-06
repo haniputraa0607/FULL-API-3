@@ -56,7 +56,14 @@ class ApiIrisController extends Controller
             $reference_no = $post['reference_no'];
             //if status alredy success then no update to database
             $check = Disburse::where('reference_no', $reference_no)->first();
-            if($check['disburse_status'] == 'Success'){
+            if($check['disburse_status'] == 'Success' || $check['disburse_status'] == 'Fail'){
+                $dataLog = [
+                    'subject' => 'Callback IRIS',
+                    'id_reference' => $post['reference_no']??null,
+                    'request'=> json_encode($post),
+                    'response' => json_encode(['status' => 'success'])
+                ];
+                LogIRIS::create($dataLog);
                 return response()->json(['status' => 'success']);
             }
 
