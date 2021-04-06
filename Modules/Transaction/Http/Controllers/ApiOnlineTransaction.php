@@ -25,6 +25,7 @@ use App\Http\Models\TransactionProductModifier;
 use Modules\ProductBundling\Entities\BundlingOutlet;
 use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 use Modules\ProductVariant\Entities\TransactionProductVariant;
 use App\Http\Models\TransactionShipment;
@@ -1197,6 +1198,31 @@ class ApiOnlineTransaction extends Controller
                     return response()->json([
                         'status'    => 'fail',
                         'messages'  => ['Product Price Not Valid']
+                    ]);
+                }
+            }
+
+            if(!empty($valueProduct['id_product_variant_group'])){
+                $productVariantGroup = ProductVariantGroup::where('id_product_variant_group', $valueProduct['id_product_variant_group'])->first();
+                if($productVariantGroup['product_variant_group_visibility'] == 'Hidden'){
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'product_sold_out_status' => true,
+                        'messages'  => ['Product '.$checkProduct['product_name'].' tidak tersedia dan akan terhapus dari cart.']
+                    ]);
+                }
+
+                $soldOutProductVariantGroup = ProductVariantGroupDetail::where('id_product_variant_group', $valueProduct['id_product_variant_group'])
+                    ->where('id_outlet', $post['id_outlet'])
+                    ->first()['product_variant_group_stock_status']??'Available';
+
+                if($soldOutProductVariantGroup == 'Sold Out'){
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'product_sold_out_status' => true,
+                        'messages'  => ['Product '.$checkProduct['product_name'].' tidak tersedia dan akan terhapus dari cart.']
                     ]);
                 }
             }
@@ -2606,10 +2632,21 @@ class ApiOnlineTransaction extends Controller
             $product['variants'] = $variants;
 
             if($product['id_product_variant_group']){
-                if($outlet['outlet_different_price']){
-                    $product_variant_group_price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $outlet['id_outlet'])->first()['product_variant_group_price']??0;
+                $productVariantGroup = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first();
+                if($productVariantGroup['product_variant_group_visibility'] == 'Hidden'){
+                    $error_msg[] = MyHelper::simpleReplace(
+                        'Product %product_name% tidak tersedia',
+                        [
+                            'product_name' => $product['product_name']
+                        ]
+                    );
+                    continue;
                 }else{
-                    $product_variant_group_price = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                    if($outlet['outlet_different_price']){
+                        $product_variant_group_price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $outlet['id_outlet'])->first()['product_variant_group_price']??0;
+                    }else{
+                        $product_variant_group_price = $productVariantGroup['product_variant_group_price']??0;
+                    }
                 }
             }else{
                 $product_variant_group_price = (int) $product['product_price'];
