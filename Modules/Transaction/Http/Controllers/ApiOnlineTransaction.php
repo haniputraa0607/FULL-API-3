@@ -25,6 +25,7 @@ use App\Http\Models\TransactionProductModifier;
 use Modules\ProductBundling\Entities\BundlingOutlet;
 use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 use Modules\ProductVariant\Entities\TransactionProductVariant;
 use App\Http\Models\TransactionShipment;
@@ -1197,6 +1198,21 @@ class ApiOnlineTransaction extends Controller
                     return response()->json([
                         'status'    => 'fail',
                         'messages'  => ['Product Price Not Valid']
+                    ]);
+                }
+            }
+
+            if(!empty($valueProduct['id_product_variant_group'])){
+                $soldOutProductVariantGroup = ProductVariantGroupDetail::where('id_product_variant_group', $valueProduct['id_product_variant_group'])
+                    ->where('id_outlet', $post['id_outlet'])
+                    ->first()['product_variant_group_stock_status']??'Available';
+
+                if($soldOutProductVariantGroup == 'Sold Out'){
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'product_sold_out_status' => true,
+                        'messages'  => ['Product '.$checkProduct['product_name'].' tidak tersedia dan akan terhapus dari cart.']
                     ]);
                 }
             }
