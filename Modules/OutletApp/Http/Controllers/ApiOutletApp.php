@@ -1499,6 +1499,7 @@ class ApiOutletApp extends Controller
                         $variants = [];
                         if($dt['product_variant_status'] == 1){
                             $variants = ProductVariantGroup::where('id_product', $dt['id_product'])
+                                ->where('product_variant_group_visibility', 'Visible')
                                 ->select([
                                     'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
                                     DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
@@ -1517,6 +1518,7 @@ class ApiOutletApp extends Controller
                     $variants = [];
                     if($dt['product_variant_status'] == 1){
                         $variants = ProductVariantGroup::where('id_product', $dt['id_product'])
+                            ->where('product_variant_group_visibility', 'Visible')
                             ->select([
                                 'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
                                 DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
