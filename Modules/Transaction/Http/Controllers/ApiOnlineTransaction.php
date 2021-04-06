@@ -3012,11 +3012,19 @@ class ApiOnlineTransaction extends Controller
                 }
                 $product['note'] = $p['note']??'';
                 if($product['product_variant_status'] && !empty($product['id_product_variant_group'])){
-                    if($outlet['outlet_different_price'] == 1){
-                        $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                    $checkAvailable = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first();
+                    if($checkAvailable['product_variant_group_visibility'] == 'Hidden'){
+                        $errorBundlingName[] = $bundling['bundling_name'];
+                        unset($post['item_bundling'][$key]);
+                        continue 2;
                     }else{
-                        $price = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                        if($outlet['outlet_different_price'] == 1){
+                            $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                        }else{
+                            $price = $checkAvailable['product_variant_group_price']??0;
+                        }
                     }
+
                 }elseif(!empty($p['id_product'])){
                     if($outlet['outlet_different_price'] == 1){
                         $price = ProductSpecialPrice::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
@@ -4222,10 +4230,20 @@ class ApiOnlineTransaction extends Controller
                 }
 
                 if($product['product_variant_status'] && !empty($product['id_product_variant_group'])){
-                    if($outlet['outlet_different_price'] == 1){
-                        $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                    $checkAvailable = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first();
+                    if($checkAvailable['product_variant_group_visibility'] == 'Hidden'){
+                        DB::rollback();
+                        return [
+                            'status'    => 'fail',
+                            'product_sold_out_status' => true,
+                            'messages'  => ['Product '.$checkProduct['product_name'].'pada '.$product['bundling_name'].' tidak tersedia']
+                        ];
                     }else{
-                        $price = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                        if($outlet['outlet_different_price'] == 1){
+                            $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                        }else{
+                            $price = $checkAvailable['product_variant_group_price']??0;
+                        }
                     }
                 }elseif(!empty($product['id_product'])){
                     if($outlet['outlet_different_price'] == 1){

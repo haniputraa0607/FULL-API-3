@@ -33,9 +33,11 @@ class ApiProductVariantGroupController extends Controller
                     if(!empty($dt['group_id'])){
                         $update = ProductVariantGroup::where('id_product_variant_group', $dt['group_id'])
                             ->update(['product_variant_group_price' => str_replace(".","",$dt['price']),
-                                'product_variant_group_code' => $dt['code']]);
+                                'product_variant_group_code' => $dt['code'], 'product_variant_group_visibility' => $dt['visibility']??'Visible']);
 
                         if($update){
+                            //udpate visibility group detail
+                            ProductVariantGroupDetail::where('id_product_variant_group', $dt['group_id'])->update(['product_variant_group_visibility' => $dt['visibility']??'Visible']);
                             $del = ProductVariantPivot::where('id_product_variant_group', $dt['group_id'])->delete();
                             if($del){
                                 $explode = explode(',', $dt['id']);
@@ -55,7 +57,8 @@ class ApiProductVariantGroupController extends Controller
                             [
                                 'id_product' => $id_product['id_product'],
                                 'product_variant_group_code' =>$dt['code'],
-                                'product_variant_group_price' => str_replace(".","",$dt['price'])
+                                'product_variant_group_price' => str_replace(".","",$dt['price']),
+                                'product_variant_group_visibility' => $dt['visibility']??'Visible'
                             ]
                         );
                         if($create){
