@@ -253,7 +253,7 @@ class ApiReportPromoController extends Controller
 			        		transaction_products.id_product_variant_group,
 			        		transaction_products.type,
 			        		SUM(transaction_products.transaction_product_qty) AS sold_qty,
-			        		SUM(transaction_products.transaction_product_price * transaction_products.transaction_product_qty) AS total_gross_sales
+			        		SUM( (transaction_products.transaction_product_price+transaction_products.transaction_variant_subtotal)  * transaction_products.transaction_product_qty) AS total_gross_sales
 			        	')
 			    	)
 			    	->groupBy('transaction_products.id_product', 'transaction_products.id_product_variant_group');
@@ -292,6 +292,17 @@ class ApiReportPromoController extends Controller
     			break;
 
     		case 'subscription':
+
+    			$data_promo = Subscription::where('id_subscription', $id_promo)
+							->select(
+			        			'subscriptions.subscription_title AS title',
+			        			DB::raw('
+			        				CASE WHEN subscriptions.subscription_discount_type = "payment_method" THEN "payment method"
+										WHEN subscriptions.subscription_discount_type = "discount" THEN "bill discount"
+										WHEN subscriptions.subscription_discount_type = "discount_delivery" THEN "delivery discount"
+									ELSE NULL END AS type
+			        			')
+			        		)->first();
 
     			$detail->join('subscription_user_vouchers', 'transactions.id_transaction', 'subscription_user_vouchers.id_transaction')
     					->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
@@ -353,12 +364,12 @@ class ApiReportPromoController extends Controller
 		    					SUM(transactions.transaction_discount_bill) AS total_discount,
 		    					COUNT(transaction_products.id_transaction) AS total_unit_trx,
 		    					SUM( 
-		    						(transaction_products.transaction_product_price*transaction_products.transaction_product_qty)
+		    						( (transaction_products.transaction_product_price+transaction_products.transaction_variant_subtotal) *transaction_products.transaction_product_qty)
 		    						/transactions.transaction_subtotal * transactions.transaction_discount_bill 
 		    					) AS total_discount,
 
 		    					SUM( 
-		    						(transaction_products.transaction_product_price*transaction_products.transaction_product_qty)
+		    						( (transaction_products.transaction_product_price+transaction_products.transaction_variant_subtotal) *transaction_products.transaction_product_qty)
 		    						/transactions.transaction_subtotal * transactions.transaction_discount_bill 
 		    					)/ SUM(transaction_products.transaction_product_qty) AS average_discount
 
@@ -371,7 +382,21 @@ class ApiReportPromoController extends Controller
     			break;
 
     		case 'payment method':
-    			# code...
+    			$detail->join('transaction_payment_subscriptions', 'transactions.id_transaction', 'transaction_payment_subscriptions.id_transaction')
+						->addSelect(
+		    				DB::raw('
+		    					SUM( 
+		    						( (transaction_products.transaction_product_price+transaction_products.transaction_variant_subtotal) *transaction_products.transaction_product_qty)
+		    						/transactions.transaction_subtotal * transaction_payment_subscriptions.subscription_nominal 
+		    					) AS total_discount,
+
+		    					SUM( 
+		    						( (transaction_products.transaction_product_price+transaction_products.transaction_variant_subtotal) *transaction_products.transaction_product_qty)
+		    						/transactions.transaction_subtotal * transaction_payment_subscriptions.subscription_nominal 
+		    					)/ SUM(transaction_products.transaction_product_qty) AS average_discount
+
+		    				')
+		    			);
     			break;
 
     		default:
