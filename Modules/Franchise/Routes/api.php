@@ -90,6 +90,7 @@ Route::group(['prefix' => 'franchise'], function () {
         });
 
         Route::group(['prefix' => 'report-promo'], function() {
+            Route::post('detail', 'ApiReportPromoController@detailPromo');
             Route::post('{promo}', 'ApiReportPromoController@listPromo');
         });
 

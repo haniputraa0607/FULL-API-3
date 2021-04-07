@@ -6,6 +6,8 @@ use App\Http\Models\Autocrm;
 use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionVoucher;
+use App\Http\Models\TransactionProduct;
+use App\Http\Models\Deal;
 
 use Modules\Franchise\Entities\UserFranchise;
 use Modules\Franchise\Entities\UserFranchiseOultet;
@@ -21,6 +23,7 @@ use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
 use DB;
 use DateTime;
+use Modules\PromoCampaign\Lib\PromoCampaignTools;
 
 class ApiReportPromoController extends Controller
 {
@@ -72,6 +75,7 @@ class ApiReportPromoController extends Controller
 		        		->join('deals', 'deals_vouchers.id_deals', 'deals.id_deals')
 		    			->groupBy('deals_vouchers.id_deals')
 		        		->select(
+		        			'deals_vouchers.id_deals AS id_promo',
 		        			'deals.deals_title AS title',
 		        			'deals.promo_type',
 		        			DB::raw('
@@ -91,6 +95,7 @@ class ApiReportPromoController extends Controller
     					->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', 'promo_campaign_promo_codes.id_promo_campaign')
 		    			->groupBy('promo_campaigns.id_promo_campaign')
 		        		->select(
+		        			'promo_campaigns.id_promo_campaign AS id_promo',
 		        			'promo_campaigns.promo_title AS title',
 		        			'promo_campaigns.promo_type',
 		        			DB::raw('
@@ -110,6 +115,7 @@ class ApiReportPromoController extends Controller
     					->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
 		    			->groupBy('subscriptions.id_subscription')
 		        		->select(
+		        			'subscriptions.id_subscription AS id_promo',
 		        			'subscriptions.subscription_title AS title',
 		        			'subscriptions.subscription_discount_type',
 		        			DB::raw('
@@ -128,6 +134,7 @@ class ApiReportPromoController extends Controller
     					->join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
 		    			->groupBy('transaction_bundling_products.id_bundling')
 		        		->select(
+		        			'transaction_bundling_products.id_bundling AS id_promo',
 		        			'bundling.bundling_name AS title',
 		        			DB::raw('"product discount" AS type'),
 		        			DB::raw($select_trx),
@@ -185,10 +192,16 @@ class ApiReportPromoController extends Controller
 
         $result = $query->toArray();
 
+        if ( isset($result['data']) ) {
+        	foreach ($result['data'] as &$value) {
+        		$value->id_promo = MyHelper::encSlug($value->id_promo);
+        	}
+        }
+
         return MyHelper::checkGet($result);
     }
 
-    function filterPromoReport($query, $filter)
+    public function filterPromoReport($query, $filter)
     {
     	if (isset($filter['rule'])) {
             foreach ($filter['rule'] as $key => $con) {
@@ -213,5 +226,168 @@ class ApiReportPromoController extends Controller
         }
 
         return $query;
+    }
+
+    public function detailPromo(Request $request)
+    {
+    	$post = $request->json()->all();
+    	$promo = $request->promo;
+        if(!$request->id_outlet){
+        	return response()->json(['status' => 'fail', 'messages' => ['ID outlet can not be empty']]);
+        }
+    	$id_promo = MyHelper::decSlug($request->id_promo);
+
+    	$detail = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
+    				->join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+    				->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+	    			->where('transactions.transaction_payment_status', 'Completed')
+	    			->whereNull('transaction_pickups.reject_at')
+			        ->where('transactions.id_outlet', $request->id_outlet)
+			        ->with('product_variant_group.product_variant_pivot_simple')
+			        ->select(
+			        	DB::raw('
+			        		transaction_products.id_product,
+			        		transaction_products.id_brand,
+			        		products.product_code,
+			        		products.product_name,
+			        		transaction_products.id_product_variant_group,
+			        		transaction_products.type,
+			        		SUM(transaction_products.transaction_product_qty) AS sold_qty,
+			        		SUM(transaction_products.transaction_product_price * transaction_products.transaction_product_qty) AS total_gross_sales
+			        	')
+			    	)
+			    	->groupBy('transaction_products.id_product', 'transaction_products.id_product_variant_group');
+
+		switch ($promo) {
+    		case 'deals':
+    			$data_promo = Deal::where('id_deals', $id_promo)
+    							->select(DB::raw('
+    								deals.deals_title AS promo_title,
+			        				CASE WHEN deals.promo_type IN ("Product discount","Tier discount","Buy X Get Y") THEN "product discount"
+										WHEN deals.promo_type = "Discount bill" THEN "bill discount"
+										WHEN deals.promo_type = "Discount delivery" THEN "delivery discount"
+									ELSE NULL END AS type
+			        			'))
+    							->first();
+
+    			$detail->join('transaction_vouchers', 'transactions.id_transaction', 'transaction_vouchers.id_transaction')
+    					->join('deals_vouchers', 'deals_vouchers.id_deals_voucher', 'transaction_vouchers.id_deals_voucher')
+    					->where('deals_vouchers.id_deals', $id_promo);
+    			break;
+
+    		case 'promo-campaign':
+
+    			$detail->join('promo_campaign_promo_codes', 'transactions.id_promo_campaign_promo_code', 'promo_campaign_promo_codes.id_promo_campaign_promo_code')
+		    			->where('promo_campaign_promo_codes.id_promo_campaign', $id_promo);
+    			break;
+
+    		case 'subscription':
+
+    			$detail->join('subscription_user_vouchers', 'transactions.id_transaction', 'subscription_user_vouchers.id_transaction')
+    					->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+		    			->where('subscription_users.id_subscription', $id_promo);
+    			break;
+
+    		case 'bundling':
+
+    			$detail->join('transaction_bundling_products', 'transactions.id_transaction', 'transaction_bundling_products.id_transaction')
+    					->where('transaction_bundling_products.id_bundling', $id_promo)
+    					->whereNotNull('transaction_products.id_product_bundling');
+    			break;
+    		
+    		default:
+            	return [
+            		'status' => 'fail',
+            		'messages' => [
+            			'Promo tidak ditemukan'
+            		]
+            	];
+    			break;
+    	}
+
+    	if (!$data_promo) {
+    		return [
+        		'status' => 'fail',
+        		'messages' => [
+        			'Promo tidak ditemukan'
+        		]
+        	];
+    	}
+
+    	switch ($data_promo['type']) {
+    		case 'product discount':
+    			$detail->where('transaction_products.transaction_product_discount', '!=', 0)
+		    			->addSelect(
+		    				DB::raw('
+		    					SUM(transaction_products.transaction_product_discount) AS total_discount,
+		    					SUM(transaction_products.transaction_product_discount)/SUM(transaction_products.transaction_product_qty) AS average_discount
+		    				')
+		    			);
+    			break;
+    		
+    		case 'bill discount':
+    			$sub = TransactionProduct::groupBy('id_transaction')
+		    			->select(DB::raw('
+		    				id_transaction,
+		    				SUM(transaction_product_qty) AS total_qty
+		    			'));
+
+		    	$detail->joinSub($sub, 'sub_trx_product', function ($join) {
+				            $join->on('transaction_products.id_transaction', 'sub_trx_product.id_transaction');
+				        })
+		    			->whereNotNull('transactions.transaction_discount_bill')
+						->addSelect(
+		    				DB::raw('
+		    					total_qty,
+		    					SUM(transactions.transaction_discount_bill) AS total_discount,
+		    					SUM( 
+	    							transaction_products.transaction_product_qty / total_qty * transactions.transaction_discount_bill 
+	    						) AS unit_discount,
+		    					SUM( transaction_products.transaction_product_qty ) AS total_product_qty,
+		    					SUM( 
+	    							transaction_products.transaction_product_qty / total_qty * transactions.transaction_discount_bill 
+	    						) / SUM( transaction_products.transaction_product_qty )
+		    					AS average_discount
+		    				')
+		    			);
+    			break;
+
+    		case 'delivery discount':
+    			# code...
+    			break;
+
+    		case 'payment method':
+    			# code...
+    			break;
+
+    		default:
+    			# code...
+    			break;
+    	}
+
+		$order = $post['order'] ?? 'product_code';
+        $orderType = $post['order_type'] ?? 'asc';
+        $detail = $detail->orderBy($order, $orderType);
+
+		$detail = $detail->get()->toArray();
+
+		if ($detail) {
+			$pct = new PromoCampaignTools;
+			foreach ($detail as &$value) {
+				if (isset($value['product_variant_group']['product_variant_pivot_simple'])) {
+					$variant_name = implode(',', array_column($value['product_variant_group']['product_variant_pivot_simple'], 'product_variant_name'));
+				}
+				$value['variant_group'] = $variant_name ?? null;
+				$value['price_now'] = ($pct->getProductPrice($request->id_outlet, $value['id_product'], $value['id_product_variant_group'])['product_price'] ?? null);
+				unset($value['product_variant_group']);
+
+			}
+		}
+
+		$result['data'] = $detail;
+		$result['data_promo'] = $data_promo;
+		$result = MyHelper::checkGet($result);
+
+		return $result;    	
     }
 }
