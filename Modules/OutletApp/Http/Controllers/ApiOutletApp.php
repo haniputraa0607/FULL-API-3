@@ -1499,6 +1499,7 @@ class ApiOutletApp extends Controller
                         $variants = [];
                         if($dt['product_variant_status'] == 1){
                             $variants = ProductVariantGroup::where('id_product', $dt['id_product'])
+                                ->where('product_variant_group_visibility', 'Visible')
                                 ->select([
                                     'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
                                     DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
@@ -1517,6 +1518,7 @@ class ApiOutletApp extends Controller
                     $variants = [];
                     if($dt['product_variant_status'] == 1){
                         $variants = ProductVariantGroup::where('id_product', $dt['id_product'])
+                            ->where('product_variant_group_visibility', 'Visible')
                             ->select([
                                 'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
                                 DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
@@ -1859,6 +1861,7 @@ class ApiOutletApp extends Controller
                                         $order2 = clone $order;
                                         $order2->manual_refund = $payOvo['amount'];
                                         $order2->payment_method = 'Ovo';
+                                        $order2->payment_reference_number = $payOvo['approval_code'];
                                         if ($shared['reject_batch'] ?? false) {
                                             $shared['void_failed'][] = $order2;
                                         } else {
@@ -1907,6 +1910,7 @@ class ApiOutletApp extends Controller
                                         $order2->manual_refund = $payIpay['amount']/100;
                                         $order2->payment_method = 'Ipay88';
                                         $order2->payment_detail = $payIpay['payment_method'];
+                                        $order2->payment_reference_number = $payIpay['trans_id'];
                                         if ($shared['reject_batch'] ?? false) {
                                             $shared['void_failed'][] = $order2;
                                         } else {
@@ -1954,6 +1958,7 @@ class ApiOutletApp extends Controller
                                         $order2 = clone $order;
                                         $order2->payment_method = 'ShopeePay';
                                         $order2->manual_refund = $payShopeepay['amount']/100;
+                                        $order2->payment_reference_number = $payShopeepay['transaction_sn'];
                                         if ($shared['reject_batch'] ?? false) {
                                             $shared['void_failed'][] = $order2;
                                         } else {
@@ -2002,6 +2007,7 @@ class ApiOutletApp extends Controller
                                         $order2->payment_method = 'Midtrans';
                                         $order2->payment_detail = $payMidtrans['payment_type'];
                                         $order2->manual_refund = $payMidtrans['gross_amount'];
+                                        $order2->payment_reference_number = $payMidtrans['vt_transaction_id'];
                                         if ($shared['reject_batch'] ?? false) {
                                             $shared['void_failed'][] = $order2;
                                         } else {
@@ -2054,6 +2060,7 @@ class ApiOutletApp extends Controller
                                 $order2->payment_method = 'Midtrans';
                                 $order2->payment_detail = $payMidtrans['payment_type'];
                                 $order2->manual_refund = $payMidtrans['gross_amount'];
+                                $order2->payment_reference_number = $payMidtrans['vt_transaction_id'];
                                 if ($shared['reject_batch'] ?? false) {
                                     $shared['void_failed'][] = $order2;
                                 } else {
@@ -2100,6 +2107,7 @@ class ApiOutletApp extends Controller
                                 $order2 = clone $order;
                                 $order2->payment_method = 'Ovo';
                                 $order2->manual_refund = $payOvo['amount'];
+                                $order2->payment_reference_number = $payOvo['approval_code'];
                                 if ($shared['reject_batch'] ?? false) {
                                     $shared['void_failed'][] = $order2;
                                 } else {
@@ -2144,6 +2152,7 @@ class ApiOutletApp extends Controller
                                 $order2->payment_method = 'Ipay88';
                                 $order2->payment_detail = $payIpay['payment_method'];
                                 $order2->manual_refund = $payIpay['amount']/100;
+                                $order2->payment_reference_number = $payIpay['trans_id'];
                                 if ($shared['reject_batch'] ?? false) {
                                     $shared['void_failed'][] = $order2;
                                 } else {
