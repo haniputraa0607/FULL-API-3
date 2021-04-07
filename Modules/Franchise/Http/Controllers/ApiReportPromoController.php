@@ -9,6 +9,10 @@ use App\Http\Models\TransactionVoucher;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\Deal;
 
+use Modules\PromoCampaign\Entities\PromoCampaign;
+
+use Modules\Subscription\Entities\Subscription;
+
 use Modules\Franchise\Entities\UserFranchise;
 use Modules\Franchise\Entities\UserFranchiseOultet;
 
@@ -53,18 +57,14 @@ class ApiReportPromoController extends Controller
 
 		$total_discount_promo = '
 			SUM(
-				CASE WHEN transactions.transaction_discount_item IS NOT NULL AND transactions.transaction_discount_item != 0 THEN ABS(transactions.transaction_discount_item) 
-					WHEN transactions.transaction_discount IS NOT NULL AND transactions.transaction_discount != 0 THEN ABS(transactions.transaction_discount)
-					ELSE 0 END
-				+ CASE WHEN transactions.transaction_discount_delivery IS NOT NULL THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
-				+ CASE WHEN transactions.transaction_discount_bill IS NOT NULL THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
+				CASE WHEN transactions.transaction_discount != 0 THEN ABS(transactions.transaction_discount) ELSE 0 END
+				+ CASE WHEN transactions.transaction_discount_delivery != 0 THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
+				+ CASE WHEN transactions.transaction_discount_bill != 0 THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
 			) AS total_discount,
 			SUM(
-				CASE WHEN transactions.transaction_discount_item IS NOT NULL AND transactions.transaction_discount_item != 0 THEN ABS(transactions.transaction_discount_item) 
-					WHEN transactions.transaction_discount IS NOT NULL AND transactions.transaction_discount != 0 THEN ABS(transactions.transaction_discount)
-					ELSE 0 END
-				+ CASE WHEN transactions.transaction_discount_delivery IS NOT NULL THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
-				+ CASE WHEN transactions.transaction_discount_bill IS NOT NULL THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
+				CASE WHEN transactions.transaction_discount != 0 THEN ABS(transactions.transaction_discount) ELSE 0 END
+				+ CASE WHEN transactions.transaction_discount_delivery != 0 THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
+				+ CASE WHEN transactions.transaction_discount_bill != 0 THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
 			)/COUNT(transactions.id_transaction) AS average_discount
 		';
 
@@ -277,6 +277,16 @@ class ApiReportPromoController extends Controller
 
     		case 'promo-campaign':
 
+    			$data_promo = PromoCampaign::where('id_promo_campaign', $id_promo)
+    							->select(DB::raw('
+    								promo_campaigns.promo_title AS promo_title,
+			        				CASE WHEN promo_campaigns.promo_type IN ("Product discount","Tier discount","Buy X Get Y") THEN "product discount"
+										WHEN promo_campaigns.promo_type = "Discount bill" THEN "bill discount"
+										WHEN promo_campaigns.promo_type = "Discount delivery" THEN "delivery discount"
+									ELSE NULL END AS type
+			        			'))
+    							->first();
+
     			$detail->join('promo_campaign_promo_codes', 'transactions.id_promo_campaign_promo_code', 'promo_campaign_promo_codes.id_promo_campaign_promo_code')
 		    			->where('promo_campaign_promo_codes.id_promo_campaign', $id_promo);
     			break;
@@ -326,28 +336,32 @@ class ApiReportPromoController extends Controller
     			break;
     		
     		case 'bill discount':
-    			$sub = TransactionProduct::groupBy('id_transaction')
+    			/*$sub = TransactionProduct::groupBy('id_transaction')
 		    			->select(DB::raw('
 		    				id_transaction,
-		    				SUM(transaction_product_qty) AS total_qty
+		    				count(id_transaction) AS trx_qty
 		    			'));
 
 		    	$detail->joinSub($sub, 'sub_trx_product', function ($join) {
 				            $join->on('transaction_products.id_transaction', 'sub_trx_product.id_transaction');
-				        })
-		    			->whereNotNull('transactions.transaction_discount_bill')
+				        })*/
+		    	$detail->whereNotNull('transactions.transaction_discount_bill')
+		    			->where('transactions.transaction_discount_bill', '!=', 0)
 						->addSelect(
 		    				DB::raw('
-		    					total_qty,
+		    					transaction_products.id_transaction,
 		    					SUM(transactions.transaction_discount_bill) AS total_discount,
+		    					COUNT(transaction_products.id_transaction) AS total_unit_trx,
 		    					SUM( 
-	    							transaction_products.transaction_product_qty / total_qty * transactions.transaction_discount_bill 
-	    						) AS unit_discount,
-		    					SUM( transaction_products.transaction_product_qty ) AS total_product_qty,
+		    						(transaction_products.transaction_product_price*transaction_products.transaction_product_qty)
+		    						/transactions.transaction_subtotal * transactions.transaction_discount_bill 
+		    					) AS total_discount,
+
 		    					SUM( 
-	    							transaction_products.transaction_product_qty / total_qty * transactions.transaction_discount_bill 
-	    						) / SUM( transaction_products.transaction_product_qty )
-		    					AS average_discount
+		    						(transaction_products.transaction_product_price*transaction_products.transaction_product_qty)
+		    						/transactions.transaction_subtotal * transactions.transaction_discount_bill 
+		    					)/ SUM(transaction_products.transaction_product_qty) AS average_discount
+
 		    				')
 		    			);
     			break;
@@ -374,10 +388,11 @@ class ApiReportPromoController extends Controller
 		if ($detail) {
 			$pct = new PromoCampaignTools;
 			foreach ($detail as &$value) {
+				$variant_name = null;
 				if (isset($value['product_variant_group']['product_variant_pivot_simple'])) {
 					$variant_name = implode(',', array_column($value['product_variant_group']['product_variant_pivot_simple'], 'product_variant_name'));
 				}
-				$value['variant_group'] = $variant_name ?? null;
+				$value['variant_group'] = $variant_name;
 				$value['price_now'] = ($pct->getProductPrice($request->id_outlet, $value['id_product'], $value['id_product_variant_group'])['product_price'] ?? null);
 				unset($value['product_variant_group']);
 
