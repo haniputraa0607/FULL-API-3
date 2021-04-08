@@ -25,7 +25,7 @@ class ApiDashboardController extends Controller
                     ->selectRaw('
                         COUNT(DISTINCT DATE(transaction_date)) as count_date,
                         COUNT(transactions.id_transaction) as total_sales, SUM(transaction_gross) as total_nominal_sales,
-                        SUM(transaction_grandtotal) as grand_total, SUM(transaction_subtotal) as sub_total,
+                        SUM(transaction_grandtotal) as grand_total, SUM(transaction_gross) as sub_total,
                         SUM(transaction_shipment_go_send) as total_delivery, SUM(transaction_discount_item+transaction_discount_bill+transaction_discount_delivery) as total_dicount,
                         SUM(CASE WHEN disburse.disburse_status = "Success" THEN disburse_outlet.disburse_nominal ELSE NULL END) as disburse_success,
                         SUM(disburse_outlet_transactions.income_outlet) as incomes_outlet
@@ -42,62 +42,77 @@ class ApiDashboardController extends Controller
             $trx = $trx->first();
             $result = [
                 [
-                    'title' => 'Total Sales',
-                    'amount' => number_format($trx['total_sales']??0,0,",",".")
+                    'title' => 'Sub Total',
+                    'amount' => 'Rp '.number_format($trx['sub_total']??0,0,",","."),
+                    'tooltip' => "Total nominal transaksi sebelum di potong diskon dan ditambahkan delivery"
+                ],
+                [
+                    'title' => 'Discount',
+                    'amount' => 'Rp '.number_format($trx['total_dicount']??0,0,",","."),
+                    'tooltip' => "Total diskon transaksi (diskon produk, diskon biaya delivery dan diskon bill)"
+                ],
+                [
+                    'title' => 'Delivery Fee',
+                    'amount' => 'Rp '.number_format($trx['total_delivery']??0,0,",","."),
+                    'tooltip' => "Total biaya delivery"
                 ],
                 [
                     'title' => 'Grand Total',
-                    'amount' => 'Rp '.number_format($trx['grand_total']??0,0,",",".")
+                    'amount' => 'Rp '.number_format($trx['grand_total']??0,0,",","."),
+                    'tooltip' => "Total nominal transaksi setelah di potong diskon dan ditambahkan biaya delivery"
                 ],
                 [
-                    'title' => 'Sub Total',
-                    'amount' => 'Rp '.number_format($trx['sub_total']??0,0,",",".")
+                    'title' => 'Total Sales',
+                    'amount' => number_format($trx['total_sales']??0,0,",","."),
+                    'tooltip' => "Jumlah transaksi dengan status pembayaran sukses dan tidak di reject"
                 ],
-                [
-                    'title' => 'Total Delivery',
-                    'amount' => 'Rp '.number_format($trx['total_delivery']??0,0,",",".")
-                ],
-                [
-                    'title' => 'Total Discount',
-                    'amount' => 'Rp '.number_format($trx['total_dicount']??0,0,",",".")
-                ],
-                [
-                    'title' => 'Income Outlet',
-                    'amount' => 'Rp '.number_format($trx['incomes_outlet']??0,0,",",".")
-                ],
-                [
-                    'title' => 'Disburse Success',
-                    'amount' => 'Rp '.number_format($trx['disburse_success']??0,2,",",".")
-                ]
             ];
 
             if(!empty($trx) && $trx['total_sales'] != 0){
                 $result[] =  [
-                    'title' => 'Average Grand Total',
-                    'amount' => 'Rp '.number_format($trx['grand_total']/$trx['total_sales'],0,",",".")
+                    'title' => 'Average Sales',
+                    'amount' => number_format($trx['total_sales']/$trx['count_date'],0,",","."),
+                    'tooltip' => "Rata - rata jumlah transaksi dengan status pembayaran sukses dan tidak di reject per hari"
                 ];
                 $result[] =  [
                     'title' => 'Average Sub Total',
-                    'amount' => 'Rp '.number_format($trx['sub_total']/$trx['total_sales'],0,",",".")
+                    'amount' => 'Rp '.number_format($trx['sub_total']/$trx['total_sales'],0,",","."),
+                    'tooltip' => "Rata - rata nominal transaksi sebelum di potong diskon dan ditambahkan delivery per hari"
                 ];
                 $result[] =  [
-                    'title' => 'Average Sales',
-                    'amount' => number_format($trx['total_sales']/$trx['count_date'],0,",",".")
+                    'title' => 'Average Grand Total',
+                    'amount' => 'Rp '.number_format($trx['grand_total']/$trx['total_sales'],0,",","."),
+                    'tooltip' => "Rata - rata nominal transaksi setelah di potong diskon dan ditambahkan biaya delivery per hari"
                 ];
             }else{
                 $result[] =  [
-                    'title' => 'Average Grand Total',
-                    'amount' => 'Rp '.number_format(0,0,",",".")
+                    'title' => 'Average Sales',
+                    'amount' => number_format(0,0,",","."),
+                    'tooltip' => "Rata - rata jumlah transaksi dengan status pembayaran sukses dan tidak di reject per hari"
                 ];
                 $result[] =  [
                     'title' => 'Average Sub Total',
-                    'amount' => 'Rp '.number_format(0,0,",",".")
+                    'amount' => 'Rp '.number_format(0,0,",","."),
+                    'tooltip' => "Rata - rata nominal transaksi sebelum di potong diskon dan ditambahkan delivery per hari"
                 ];
                 $result[] =  [
-                    'title' => 'Average Sales',
-                    'amount' => number_format(0,0,",",".")
+                    'title' => 'Average Grand Total',
+                    'amount' => 'Rp '.number_format(0,0,",","."),
+                    'tooltip' => "Rata - rata nominal transaksi setelah di potong diskon dan ditambahkan biaya delivery per hari"
                 ];
             }
+
+            $result[] = [
+                'title' => 'Income Outlet',
+                'amount' => 'Rp '.number_format($trx['incomes_outlet']??0,0,",","."),
+                'tooltip' => "Total nominal yang akan didapatkan outlet"
+            ];
+            $result[] = [
+                'title' => 'Disburse Success',
+                'amount' => 'Rp '.number_format($trx['disburse_success']??0,2,",","."),
+                'tooltip' => "Total nominal pendapatan outlet yang sudah sukses di proses disburse"
+            ];
+
             return response()->json(MyHelper::checkGet($result));
         }
 
@@ -119,6 +134,7 @@ class ApiDashboardController extends Controller
                         JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
                         JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
                         WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants"))
+                ->where('transactions.transaction_payment_status', 'Completed')->whereNull('reject_at')
                 ->groupBy('transaction_products.id_product_variant_group')
                 ->groupBy('transaction_products.id_product')
                 ->orderBy('sum_qty', 'desc');

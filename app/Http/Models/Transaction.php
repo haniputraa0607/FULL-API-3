@@ -110,6 +110,7 @@ class Transaction extends Model
 	public $manual_refund = 0;
 	public $payment_method = null;
 	public $payment_detail = null;
+	public $payment_reference_number = null;
 
 	public function user()
 	{
@@ -148,6 +149,11 @@ class Transaction extends Model
 	public function transaction_payment_ipay88()
 	{
 		return $this->hasOne(\Modules\IPay88\Entities\TransactionPaymentIpay88::class, 'id_transaction');
+	}
+
+	public function transaction_payment_shopee_pay()
+	{
+		return $this->hasOne(\Modules\ShopeePay\Entities\TransactionPaymentShopeePay::class, 'id_transaction');
 	}
 
 	public function transaction_payment_subscription()

@@ -819,6 +819,16 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        if ($order->pickup_by != 'Customer') {
+            $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+            if(!$pickup_gosend || !$pickup_gosend['latest_status'] || in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled', 'confirmed'])) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Driver belum ditemukan']
+                ]);
+            }
+        }
+
         DB::beginTransaction();
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['ready_at' => date('Y-m-d H:i:s')]);
 
@@ -1489,6 +1499,7 @@ class ApiOutletApp extends Controller
                         $variants = [];
                         if($dt['product_variant_status'] == 1){
                             $variants = ProductVariantGroup::where('id_product', $dt['id_product'])
+                                ->where('product_variant_group_visibility', 'Visible')
                                 ->select([
                                     'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
                                     DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
@@ -1507,6 +1518,7 @@ class ApiOutletApp extends Controller
                     $variants = [];
                     if($dt['product_variant_status'] == 1){
                         $variants = ProductVariantGroup::where('id_product', $dt['id_product'])
+                            ->where('product_variant_group_visibility', 'Visible')
                             ->select([
                                 'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
                                 DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
@@ -1696,9 +1708,9 @@ class ApiOutletApp extends Controller
             ]);
         }
 
-        if ($order->picked_by != 'Customer') {
+        if ($order->pickup_by != 'Customer') {
             $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-            if($pickup_gosend && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
+            if($pickup_gosend && $pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['Driver has been booked'],
@@ -1710,14 +1722,14 @@ class ApiOutletApp extends Controller
         }
 
         if ($order->ready_at) {
-            if ($order->picked_by == 'Customer') {
+            if ($order->pickup_by == 'Customer') {
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['Order Has Been Ready'],
                 ]);
             } else {
                 $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-                if(!in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
+                if($pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
                     return response()->json([
                         'status'   => 'fail',
                         'messages' => ['Driver has been booked'],
@@ -1849,6 +1861,7 @@ class ApiOutletApp extends Controller
                                         $order2 = clone $order;
                                         $order2->manual_refund = $payOvo['amount'];
                                         $order2->payment_method = 'Ovo';
+                                        $order2->payment_reference_number = $payOvo['approval_code'];
                                         if ($shared['reject_batch'] ?? false) {
                                             $shared['void_failed'][] = $order2;
                                         } else {
@@ -1897,6 +1910,7 @@ class ApiOutletApp extends Controller
                                         $order2->manual_refund = $payIpay['amount']/100;
                                         $order2->payment_method = 'Ipay88';
                                         $order2->payment_detail = $payIpay['payment_method'];
+                                        $order2->payment_reference_number = $payIpay['trans_id'];
                                         if ($shared['reject_batch'] ?? false) {
                                             $shared['void_failed'][] = $order2;
                                         } else {
@@ -1944,6 +1958,7 @@ class ApiOutletApp extends Controller
                                         $order2 = clone $order;
                                         $order2->payment_method = 'ShopeePay';
                                         $order2->manual_refund = $payShopeepay['amount']/100;
+                                        $order2->payment_reference_number = $payShopeepay['transaction_sn'];
                                         if ($shared['reject_batch'] ?? false) {
                                             $shared['void_failed'][] = $order2;
                                         } else {
@@ -1992,6 +2007,7 @@ class ApiOutletApp extends Controller
                                         $order2->payment_method = 'Midtrans';
                                         $order2->payment_detail = $payMidtrans['payment_type'];
                                         $order2->manual_refund = $payMidtrans['gross_amount'];
+                                        $order2->payment_reference_number = $payMidtrans['vt_transaction_id'];
                                         if ($shared['reject_batch'] ?? false) {
                                             $shared['void_failed'][] = $order2;
                                         } else {
@@ -2044,6 +2060,7 @@ class ApiOutletApp extends Controller
                                 $order2->payment_method = 'Midtrans';
                                 $order2->payment_detail = $payMidtrans['payment_type'];
                                 $order2->manual_refund = $payMidtrans['gross_amount'];
+                                $order2->payment_reference_number = $payMidtrans['vt_transaction_id'];
                                 if ($shared['reject_batch'] ?? false) {
                                     $shared['void_failed'][] = $order2;
                                 } else {
@@ -2090,6 +2107,7 @@ class ApiOutletApp extends Controller
                                 $order2 = clone $order;
                                 $order2->payment_method = 'Ovo';
                                 $order2->manual_refund = $payOvo['amount'];
+                                $order2->payment_reference_number = $payOvo['approval_code'];
                                 if ($shared['reject_batch'] ?? false) {
                                     $shared['void_failed'][] = $order2;
                                 } else {
@@ -2134,6 +2152,7 @@ class ApiOutletApp extends Controller
                                 $order2->payment_method = 'Ipay88';
                                 $order2->payment_detail = $payIpay['payment_method'];
                                 $order2->manual_refund = $payIpay['amount']/100;
+                                $order2->payment_reference_number = $payIpay['trans_id'];
                                 if ($shared['reject_batch'] ?? false) {
                                     $shared['void_failed'][] = $order2;
                                 } else {
@@ -4287,7 +4306,7 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']         = 'PENGANTARAN DIBATALKAN';
                         $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
                         $result['delivery_info']['cancelable']     = 0;
-                        $result['rejectable']              = ($list['transaction_pickup_go_send']['retry_count'] == 5) ? 1 : 0;
+                        $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
                     case 'driver not found':
                     case 'no_driver':
@@ -4295,7 +4314,7 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']          = 'DRIVER TIDAK DITEMUKAN';
                         $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
                         $result['delivery_info']['cancelable']      = 0;
-                        $result['rejectable']              = ($list['transaction_pickup_go_send']['retry_count'] == 5) ? 1 : 0;
+                        $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
                 }
             }
