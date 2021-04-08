@@ -13,7 +13,8 @@ class TransactionMultiplePayment extends Model
 		'type',
 		'id_payment',
 		'created_at',
-		'updated_at'
+		'updated_at',
+		'payment_detail',
 	];
 
 	public function transaction()

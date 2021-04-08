@@ -25,6 +25,7 @@ use App\Http\Models\TransactionProductModifier;
 use Modules\ProductBundling\Entities\BundlingOutlet;
 use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 use Modules\ProductVariant\Entities\TransactionProductVariant;
 use App\Http\Models\TransactionShipment;
@@ -223,7 +224,8 @@ class ApiOnlineTransaction extends Controller
 
                 $settingTime = Setting::where('key', 'processing_time')->first();
                 if($settingTime && $settingTime->value){
-                    if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
+                    // if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
+                    if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime($outlet['today']['close']))){
                         DB::rollback();
                         return response()->json([
                             'status'    => 'fail',
@@ -345,10 +347,22 @@ class ApiOnlineTransaction extends Controller
             $code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
                 ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
                 ->where( function($q){
-                    $q->whereColumn('usage','<','limitation_usage')
-                        ->orWhere('code_type','Single')
-                        ->orWhere('limitation_usage',0);
-                } )
+	            	$q->where(function($q2) {
+	            		$q2->where('code_type', 'Multiple')
+		            		->where(function($q3) {
+				            	$q3->whereColumn('usage','<','limitation_usage')
+				            		->orWhere('limitation_usage',0);
+		            		});
+
+	            	}) 
+	            	->orWhere(function($q2) {
+	            		$q2->where('code_type','Single')
+		            		->where(function($q3) {
+				            	$q3->whereColumn('total_coupon','>','used_code')
+				            		->orWhere('total_coupon',0);
+		            		});
+	            	});
+	            })
                 ->first();
             if ($code)
             {
@@ -603,6 +617,16 @@ class ApiOnlineTransaction extends Controller
 
         if (!isset($post['payment_type'])) {
             $post['payment_type'] = null;
+        }
+
+        if ($post['payment_type'] && $post['payment_type'] != 'Balance') {
+            $available_payment = $this->availablePayment(new Request())['result'] ?? [];
+            if (!in_array($post['payment_type'], array_column($available_payment, 'payment_gateway'))) {
+                return [
+                    'status' => 'fail',
+                    'messages' => 'Metode pembayaran yang dipilih tidak tersedia untuk saat ini'
+                ];
+            }
         }
 
         if (!isset($post['shipping'])) {
@@ -1174,6 +1198,31 @@ class ApiOnlineTransaction extends Controller
                     return response()->json([
                         'status'    => 'fail',
                         'messages'  => ['Product Price Not Valid']
+                    ]);
+                }
+            }
+
+            if(!empty($valueProduct['id_product_variant_group'])){
+                $productVariantGroup = ProductVariantGroup::where('id_product_variant_group', $valueProduct['id_product_variant_group'])->first();
+                if($productVariantGroup['product_variant_group_visibility'] == 'Hidden'){
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'product_sold_out_status' => true,
+                        'messages'  => ['Product '.$checkProduct['product_name'].' tidak tersedia dan akan terhapus dari cart.']
+                    ]);
+                }
+
+                $soldOutProductVariantGroup = ProductVariantGroupDetail::where('id_product_variant_group', $valueProduct['id_product_variant_group'])
+                    ->where('id_outlet', $post['id_outlet'])
+                    ->first()['product_variant_group_stock_status']??'Available';
+
+                if($soldOutProductVariantGroup == 'Sold Out'){
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'product_sold_out_status' => true,
+                        'messages'  => ['Product '.$checkProduct['product_name'].' tidak tersedia dan akan terhapus dari cart.']
                     ]);
                 }
             }
@@ -2040,7 +2089,8 @@ class ApiOnlineTransaction extends Controller
 
                 $settingTime = Setting::where('key', 'processing_time')->first();
                 if($settingTime && $settingTime->value){
-                    if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
+                    if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime($outlet['today']['close']))){
+                    // if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
                         // DB::rollback();
                         // return response()->json([
                         //     'status'    => 'fail',
@@ -2582,10 +2632,21 @@ class ApiOnlineTransaction extends Controller
             $product['variants'] = $variants;
 
             if($product['id_product_variant_group']){
-                if($outlet['outlet_different_price']){
-                    $product_variant_group_price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $outlet['id_outlet'])->first()['product_variant_group_price']??0;
+                $productVariantGroup = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first();
+                if($productVariantGroup['product_variant_group_visibility'] == 'Hidden'){
+                    $error_msg[] = MyHelper::simpleReplace(
+                        'Product %product_name% tidak tersedia',
+                        [
+                            'product_name' => $product['product_name']
+                        ]
+                    );
+                    continue;
                 }else{
-                    $product_variant_group_price = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                    if($outlet['outlet_different_price']){
+                        $product_variant_group_price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $outlet['id_outlet'])->first()['product_variant_group_price']??0;
+                    }else{
+                        $product_variant_group_price = $productVariantGroup['product_variant_group_price']??0;
+                    }
                 }
             }else{
                 $product_variant_group_price = (int) $product['product_price'];
@@ -2715,18 +2776,18 @@ class ApiOnlineTransaction extends Controller
             $plastic = app($this->plastic)->check($post);
             $result['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
             $result['plastic']['plastic_name'] = 'Kantong Belanja';
-            $result['plastic']['plastic_pop_up'] = 'Kantong Belanja Berbayar';
+            $result['plastic']['plastic_pop_up'] = 'Kantong Belanja Ramah Lingkungan';
             if($post['type'] == 'Pickup Order'){
                 $result['plastic']['is_checked'] = true;
                 $result['plastic']['is_mandatory'] = false;
-                $result['plastic']['info'] = "Harga kantong belanja akan dihitung berdasarkan jumlah item";
+                $result['plastic']['info'] = "Untuk mendukung #JanjiSayangBumi, outlet tidak menyediakan kantong sekali pakai";
                 if(!isset($post['is_plastic_checked']) || $post['is_plastic_checked'] == false){
                     $result['plastic']['plastic_price_total'] = 0;
                 }
             }elseif($post['type'] == 'GO-SEND'){
                 $result['plastic']['is_checked'] = true;
                 $result['plastic']['is_mandatory'] = true;
-                $result['plastic']['info'] = "Harga kantong belanja akan dihitung berdasarkan jumlah item";
+                $result['plastic']['info'] = "Untuk mendukung #JanjiSayangBumi, outlet tidak menyediakan kantong sekali pakai";
             }else{
                 return [
                     'status' => 'fail',
@@ -2998,11 +3059,19 @@ class ApiOnlineTransaction extends Controller
                 }
                 $product['note'] = $p['note']??'';
                 if($product['product_variant_status'] && !empty($product['id_product_variant_group'])){
-                    if($outlet['outlet_different_price'] == 1){
-                        $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                    $checkAvailable = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first();
+                    if($checkAvailable['product_variant_group_visibility'] == 'Hidden'){
+                        $errorBundlingName[] = $bundling['bundling_name'];
+                        unset($post['item_bundling'][$key]);
+                        continue 2;
                     }else{
-                        $price = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                        if($outlet['outlet_different_price'] == 1){
+                            $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                        }else{
+                            $price = $checkAvailable['product_variant_group_price']??0;
+                        }
                     }
+
                 }elseif(!empty($p['id_product'])){
                     if($outlet['outlet_different_price'] == 1){
                         $price = ProductSpecialPrice::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_special_price']??0;
@@ -3425,7 +3494,7 @@ class ApiOnlineTransaction extends Controller
         return $send;
     }
 
-    public function outletNotif($id_trx)
+    public function outletNotif($id_trx, $fromCron = false)
     {
         $trx = Transaction::where('id_transaction', $id_trx)->first();
         if ($trx['trasaction_type'] == 'Pickup Order') {
@@ -3475,15 +3544,21 @@ class ApiOnlineTransaction extends Controller
                             ['%name%', '%receipt_number%', '%order_id%'],
                             [$user->name, $trx->receipt_number, $detail['order_id']],
                         ];
-                        $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message_outlet','value_text'), true);
-                        $dataPush += [
-                            'push_notif_local' => 1,
-                            'title_5mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 5 menit lagi'),
-                            'msg_5mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !'),
-                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_15mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
-                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_15mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
-                            'pickup_time'       => $detail->pickup_at,
-                        ];
+                        // $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message_outlet','value_text'), true);
+                        if (!$fromCron) {
+                            $dataPush += [
+                                'push_notif_local' => 1,
+                                'title_5mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 5 menit lagi'),
+                                'msg_5mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
+                                'title_15mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 15 menit lagi'),
+                                'msg_15mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
+                                'pickup_time'       => $detail->pickup_at,
+                            ];
+                        } else {
+                            $dataPush += [
+                                'push_notif_local' => 0
+                            ];                        
+                        }
                     } else {
                         $dataPush += [
                             'push_notif_local' => 0
@@ -3506,15 +3581,21 @@ class ApiOnlineTransaction extends Controller
                             ['%name%', '%receipt_number%', '%order_id%'],
                             [$user->name, $trx->receipt_number, $detail['order_id']],
                         ];
-                        $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message_outlet','value_text'), true);
-                        $dataOutletSend += [
-                            'push_notif_local' => 1,
-                            'title_5mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 5 menit lagi'),
-                            'msg_5mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !'),
-                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_15mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
-                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_15mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
-                            'pickup_time'       => $detail->pickup_at,
-                        ];
+                        // $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message_outlet','value_text'), true);
+                        if (!$fromCron) {
+                            $dataOutletSend += [
+                                'push_notif_local' => 1,
+                                'title_5mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 5 menit lagi'),
+                                'msg_5mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
+                                'title_15mnt'       => str_replace($replacer[0], $replacer[1], 'Pesanan %order_id% akan diambil 15 menit lagi'),
+                                'msg_15mnt'         => str_replace($replacer[0], $replacer[1], 'Segera siapkan pesanan %order_id% atas nama %name%'),
+                                'pickup_time'       => $detail->pickup_at,
+                            ];
+                        } else {
+                            $dataOutletSend += [
+                                'push_notif_local' => 0
+                            ];
+                        }
                     }else {
                         $dataOutletSend += [
                             'push_notif_local' => 0
@@ -3777,10 +3858,24 @@ class ApiOnlineTransaction extends Controller
         $last_status = [];
         foreach ($setting as $value) {
             $payment = $availablePayment[$value['code'] ?? ''] ?? false;
-            if (!$payment || !($payment['status'] ?? false) || (!$request->show_all && !($value['status'] ?? false))) {
+            if (!$payment) {
                 unset($availablePayment[$value['code']]);
                 continue;
             }
+
+            if (is_array($payment['available_time'] ?? false)) {
+                $available_time = $payment['available_time'];
+                $current_time = time();
+                if ($current_time < strtotime($available_time['start']) || $current_time > strtotime($available_time['end'])) {
+                    $value['status'] = 0;
+                }
+            }
+
+            if (!($payment['status'] ?? false) || (!$request->show_all && !($value['status'] ?? false))) {
+                unset($availablePayment[$value['code']]);
+                continue;
+            }
+
             if(!is_numeric($payment['status'])){
                 $var = explode(':',$payment['status']);
                 if(($config[$var[0]]??false) != ($var[1]??true)) {
@@ -4196,10 +4291,20 @@ class ApiOnlineTransaction extends Controller
                 }
 
                 if($product['product_variant_status'] && !empty($product['id_product_variant_group'])){
-                    if($outlet['outlet_different_price'] == 1){
-                        $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                    $checkAvailable = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first();
+                    if($checkAvailable['product_variant_group_visibility'] == 'Hidden'){
+                        DB::rollback();
+                        return [
+                            'status'    => 'fail',
+                            'product_sold_out_status' => true,
+                            'messages'  => ['Product '.$checkProduct['product_name'].'pada '.$product['bundling_name'].' tidak tersedia']
+                        ];
                     }else{
-                        $price = ProductVariantGroup::where('id_product_variant_group', $product['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                        if($outlet['outlet_different_price'] == 1){
+                            $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $product['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                        }else{
+                            $price = $checkAvailable['product_variant_group_price']??0;
+                        }
                     }
                 }elseif(!empty($product['id_product'])){
                     if($outlet['outlet_different_price'] == 1){

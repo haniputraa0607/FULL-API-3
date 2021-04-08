@@ -1123,6 +1123,10 @@ class ApiSubscription extends Controller
             $total = $total->paginate(1)->toArray();
 
             $data['total'] = $total['total']??0;
+
+            $getProduct = app($this->promo_campaign)->getProduct('subscription',$data);
+    		$desc = app($this->promo_campaign)->getPromoDescription('subscription', $data, $getProduct['product']??'', true);
+    		$data['description'] = $desc;
         }
 
         $data['total_used_voucher'] = SubscriptionUserVoucher::join('subscription_users', 'subscription_user_vouchers.id_subscription_user','=','subscription_users.id_subscription_user')->where('id_subscription','=',$post['id_subscription'])->whereNotNull('used_at')->count();

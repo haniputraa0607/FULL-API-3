@@ -649,12 +649,49 @@ class ApiCronReport extends Controller
         return true;
     }
 
+    function generate(Request $request, $method)
+    {
+        $id_outlets = $request->id_outlets;
+        if ($request->id_outlets && !is_array($request->id_outlets)) {
+            return [
+                'status' => 'fail',
+                'messages' => 'id_outlets should be array of integer (id_outlet)'
+            ];
+        } elseif ($request->id_outlets) {
+            $id_outlets = $request->id_outlets;
+            if ($request->clear_old_data) {
+                DailyReportTrxMenu::where('trx_date', date('Y-m-d', strtotime($request->trx_date)))
+                    ->whereIn('id_outlet', $request->id_outlets)
+                    ->delete();
+            }
+        } else {
+            $id_outlets = Outlet::pluck('id_outlet');
+        }
+
+        if (method_exists($this, $method)) {
+            if ($method == 'dailyReportProduct' && $request->clear_old_data) {
+                DailyReportTrxMenu::whereBetween('trx_date', [date('Y-m-d 00:00:00', strtotime($request->trx_date_start)),date('Y-m-d 23:59:59', strtotime($request->trx_date_end))])
+                    ->whereIn('id_outlet', $id_outlets)
+                    ->delete();
+            }
+            $result = $this->$method($id_outlets, [$request->trx_date_start, $request->trx_date_end]);
+            return [
+                'status' => $result ? 'success' : 'fail',
+                'result' => $result
+            ];
+        }
+        return [
+            'status' => 'fail',
+            'messages' => ['Unknown method']
+        ];
+    }
+
     /* REPORT PRODUCT */
     function dailyReportProduct($outletAll, $date) 
     {
         foreach ($outletAll as $outlet) {
              $product = DB::select(DB::raw('
-                        SELECT transaction_products.id_product, transaction_products.type, transaction_products.id_brand, transactions.id_outlet, 
+                        SELECT transaction_products.id_product, transaction_products.id_product_variant_group, products.id_product_category, transaction_products.type, transaction_products.id_brand, transactions.id_outlet, 
                         (select SUM(transaction_products.transaction_product_qty)) as total_qty, 
                         (select SUM(transaction_products.transaction_product_subtotal)) as total_nominal, 
                         (select SUM(transaction_products.transaction_product_discount)) as total_product_discount, 
@@ -680,12 +717,12 @@ class ApiCronReport extends Controller
 						LEFT JOIN users ON users.id = transactions.id_user
 						LEFT JOIN products ON transaction_products.id_product = products.id_product
 						LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction
-						WHERE transactions.transaction_date BETWEEN "'. date('Y-m-d', strtotime($date)) .' 00:00:00" 
-                        AND "'. date('Y-m-d', strtotime($date)) .' 23:59:59"
+						WHERE transactions.transaction_date BETWEEN "'. date('Y-m-d', strtotime(is_array($date) ? $date[0] : $date)) .' 00:00:00" 
+                        AND "'. date('Y-m-d', strtotime(is_array($date) ? $date[1] : $date)) .' 23:59:59"
                         AND transactions.id_outlet = "'. $outlet .'"
                         AND transaction_payment_status = "Completed"
                         AND transaction_pickups.reject_at IS NULL
-                        GROUP BY transaction_products.id_product,transaction_products.id_brand
+                        GROUP BY transaction_products.id_product, products.id_product_category, transaction_products.id_product_variant_group, transaction_products.id_brand
                         ORDER BY transaction_products.id_product ASC
                     '));
 
@@ -693,8 +730,10 @@ class ApiCronReport extends Controller
                 $product = json_decode(json_encode($product), true);
                 foreach ($product as $key => $value) {
 					// $sum = array();
-					$sum[$value['id_product']]['trx_date'] = $date;
+					$sum[$value['id_product']]['trx_date'] = $value['trx_date'];
 					$sum[$value['id_product']]['id_product'] = $value['id_product'];
+                    $sum[$value['id_product']]['id_product_variant_group'] = $value['id_product_variant_group'];
+                    $sum[$value['id_product']]['id_product_category'] = $value['id_product_category'];
                     $sum[$value['id_product']]['type'] = $value['type'];
 					$sum[$value['id_product']]['product_name'] = $value['product_name'];
 					$sum[$value['id_product']]['total_qty'] = ($sum[$value['id_product']]['total_qty']??0) + $value['total_qty'];
@@ -717,12 +756,13 @@ class ApiCronReport extends Controller
 					$sum[$value['id_product']]['cust_old'] = $value['cust_old'];
 
                     $save = DailyReportTrxMenu::updateOrCreate([
-                        'trx_date'   => date('Y-m-d', strtotime($value['trx_date'])), 
-                        'id_product' => $value['id_product'],
-                        'id_outlet'  => $value['id_outlet'],
-                        'id_brand' 	 => $value['id_brand']
+                        'trx_date'                  => date('Y-m-d', strtotime($value['trx_date'])), 
+                        'id_product'                => $value['id_product'],
+                        'id_product_variant_group'  => $value['id_product_variant_group'],
+                        'id_outlet'                 => $value['id_outlet'],
+                        'id_brand' 	                => $value['id_brand']
                     ], $value);
-					
+
 					$saveGlobal = GlobalDailyReportTrxMenu::updateOrCreate([
                         'trx_date'   => date('Y-m-d', strtotime($value['trx_date'])), 
                         'id_product' => $value['id_product']

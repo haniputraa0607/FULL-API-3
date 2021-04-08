@@ -222,6 +222,7 @@ class ApiPOS extends Controller
                 'id_transaction' => $check['id_transaction'],
                 "transaction_date" => $check['transaction_date'],
                 'order_id'         => $trxPickup->order_id??'',
+                'receipt_number'   => $check['transaction_receipt_number'],
             ]);
 
             return response()->json(['status' => 'success', 'result' => $transactions]);

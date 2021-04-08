@@ -88,7 +88,7 @@ class Kernel extends ConsoleKernel
          * update all pickup transaction that have been more than 1 x 24 hours
          * run every day at 04:00
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@completeTransactionPickup')->dailyAt('01:00');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@completeTransactionPickup')->dailyAt('23:55');
 
         /**
          * calculate achievement all transaction that have not calculated the achievement
@@ -164,6 +164,11 @@ class Kernel extends ConsoleKernel
         $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancelSubscription')->cron('*/1 * * * *');
 
         /**
+         * process refund shopeepay at 06:00
+         */
+        $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronRefund')->dailyAt('06:01');
+
+        /**
          * Check the status of Gosend which is not updated after 5 minutes
          * run every 3 minutes
          */
@@ -174,6 +179,12 @@ class Kernel extends ConsoleKernel
          * run every 5 minutes
          */
         $schedule->call('Modules\OutletApp\Http\Controllers\ApiOutletApp@cronDriverNotFound')->cron('*/1 * * * *');
+
+        /**
+         * Notif Order not Received/Rejected 
+         * run every minute
+         */
+        $schedule->call('Modules\OutletApp\Http\Controllers\ApiOutletApp@cronNotReceived')->everyMinute();
 
         /**
          * Sync Bundling

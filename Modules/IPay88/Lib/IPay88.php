@@ -887,7 +887,7 @@ class IPay88
      * @param  Model $model Transaction/DealsUser Model
      * @return [type]         [description]
      */
-    public function void($model, $type = 'trx', $triggers = 'user')
+    public function void($model, $type = 'trx', $triggers = 'user', &$message = null)
     {
     	if (is_numeric($model)) {
     		switch ($type) {
@@ -937,8 +937,7 @@ class IPay88
         } catch (\Exception $e) {
             Log::error($e->getMessage());
         }
-
+        $message = $response['response']['Message'] ?? '';
         return $response['response']['Code']??'0';
     }
 }
-?>

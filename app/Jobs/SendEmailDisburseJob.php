@@ -75,7 +75,7 @@ class SendEmailDisburseJob implements ShouldQueue
                 }
 
                 app('Modules\Disburse\Http\Controllers\ApiIrisController')->sendForwardEmailDisburse('Failed Send Disburse',['list_outlet' => $table]);
-            }else{
+            }elseif($getDataDisburse['disburse_status'] == 'Success'){
                 $getSettingSendEmail = Setting::where('key', 'disburse_setting_email_send_to')->first();
                 if(!empty($getSettingSendEmail)){
                     $feeDisburse = (int)$getDataDisburse['disburse_fee'];
@@ -220,7 +220,7 @@ class SendEmailDisburseJob implements ShouldQueue
                         if($getDataDisburse['beneficiary_email']){
                             $fileName = 'Disburse_['.date('d M Y').']['.$this->data['reference_no'].'].xlsx';
                             $path = storage_path('app/excel_email/'.$fileName);
-                            $listOutlet = array_column($disburseOutlet, 'Outlet');
+                            $listOutlet = array_unique(array_column($disburseOutlet, 'Outlet'));
                             $disburseOutlet[] = [
                                 'Transaction Date' => '',
                                 'Outlet' => 'Fee Disburse',

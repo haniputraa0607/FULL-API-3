@@ -691,10 +691,16 @@ class ApiCategoryController extends Controller
                     }else{
                         $id_brand[] = BrandProduct::where('id_product', $p['id_product'])->first()['id_brand'];
                         if($p['product_variant_status'] && !empty($p['id_product_variant_group'])){
-                            if($outlet['outlet_different_price'] == 1){
-                                $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $p['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                            $cekVisibility = ProductVariantGroup::where('id_product_variant_group', $p['id_product_variant_group'])->first();
+
+                            if($cekVisibility['product_variant_group_visibility'] == 'Hidden'){
+                                continue 2;
                             }else{
-                                $price = ProductVariantGroup::where('id_product_variant_group', $p['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                                if($outlet['outlet_different_price'] == 1){
+                                    $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $p['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                                }else{
+                                    $price = $cekVisibility['product_variant_group_price']??0;
+                                }
                             }
                         }elseif(!empty($p['id_product'])){
                             if($outlet['outlet_different_price'] == 1){
@@ -860,10 +866,16 @@ class ApiCategoryController extends Controller
                     }else{
                         $id_brand[] = BrandProduct::where('id_product', $p['id_product'])->first()['id_brand'];
                         if($p['product_variant_status'] && !empty($p['id_product_variant_group'])){
-                            if($outlet['outlet_different_price'] == 1){
-                                $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $p['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                            $cekVisibility = ProductVariantGroup::where('id_product_variant_group', $p['id_product_variant_group'])->first();
+
+                            if($cekVisibility['product_variant_group_visibility'] == 'Hidden'){
+                                continue 2;
                             }else{
-                                $price = ProductVariantGroup::where('id_product_variant_group', $p['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                                if($outlet['outlet_different_price'] == 1){
+                                    $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $p['id_product_variant_group'])->where('id_outlet', $post['id_outlet'])->first()['product_variant_group_price']??0;
+                                }else{
+                                    $price = $cekVisibility['product_variant_group_price']??0;
+                                }
                             }
                         }elseif(!empty($p['id_product'])){
                             if($outlet['outlet_different_price'] == 1){

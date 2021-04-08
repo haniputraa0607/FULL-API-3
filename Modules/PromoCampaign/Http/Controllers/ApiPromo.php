@@ -44,6 +44,7 @@ use App\Http\Models\Voucher;
 use App\Http\Models\Treatment;
 use App\Http\Models\Deal;
 use App\Http\Models\DealsUser;
+use App\Http\Models\DealsPromotionTemplate;
 
 use Modules\PromoCampaign\Http\Requests\Step1PromoCampaignRequest;
 use Modules\PromoCampaign\Http\Requests\Step2PromoCampaignRequest;
@@ -101,6 +102,8 @@ class ApiPromo extends Controller
     				$remove = 1;
     			}elseif($promo->voucher_expired_at < $datenow){
     				$remove = 1;
+    			}elseif($promo->voucher_active_at > $datenow){
+    				$remove = 1;
     			}
     		}
 
@@ -110,7 +113,7 @@ class ApiPromo extends Controller
     		$promo = app($this->promo_campaign)->checkPromoCode(null, 1, 1, $user_promo->id_reference, 1);
     		if ($promo) 
 			{
-				if ($promo->date_end < $datenow) {
+				if ($promo->date_end < $datenow || $promo->date_start > $datenow) {
 					$remove = 1;
 				}else{
 					$pct = new PromoCampaignTools;
@@ -126,7 +129,7 @@ class ApiPromo extends Controller
     		$promo = app($this->subscription_use)->checkSubscription(null, null, 1, 1, null, $user_promo->id_reference, 1, 1);
 
     		if ($promo) {
-    			if ($promo->subscription_expired_at < $datenow) {
+    			if ($promo->subscription_expired_at < $datenow || $promo->subscription_active_at > $datenow) {
     				$remove = 1;
     			}elseif ( $promo->subscription_user->subscription->daily_usage_limit ) {
 					$subs_voucher_today = SubscriptionUserVoucher::where('id_subscription_user', '=', $promo->id_subscription_user)
@@ -559,7 +562,9 @@ class ApiPromo extends Controller
     	$post = $request->json()->all();
     	$error_msg = [];
     	$end_period = null;
+    	$start_period = null;
     	$publish_end_period = null;
+    	$publish_start_period = null;
     	$expiry_date = null;
 
     	if (!empty($post['expiry_duration']) && !empty($post['expiry_date'])) {
@@ -570,17 +575,25 @@ class ApiPromo extends Controller
 	        }
     	}
 
+    	if (isset($post['start_period']) && !empty($post['start_period'])) {
+            $start_period	= date('Y-m-d H:i:s', strtotime($post['start_period']));
+        }
+
     	if (isset($post['end_period']) && !empty($post['end_period'])) {
             $end_period	= date('Y-m-d H:i:s', strtotime($post['end_period']));
-	        if ($end_period < date('Y-m-d H:i:s')) {
-	        	$error_msg[] = 'End period must be a date after '.date('Y-m-d H:i:s').'.';
+	        if ($end_period < ($start_period ?? date('Y-m-d H:i:s'))) {
+	        	$error_msg[] = 'End period must be a date after '. ($start_period ?? date('Y-m-d H:i:s')).'.';
 	        }
         }
 
-        if (isset($post['publish_end_period']) && !empty($post['publish_end_period'])) {
+        if (isset($post['publish_start_period']) && !empty($post['publish_start_period'])) {
+            $publish_start_period = date('Y-m-d H:i:s', strtotime($post['publish_start_period']));
+        }
+
+		if (isset($post['publish_end_period']) && !empty($post['publish_end_period'])) {
             $publish_end_period = date('Y-m-d H:i:s', strtotime($post['publish_end_period']));
-	        if (isset($post['publish_end_period']) && $publish_end_period < date('Y-m-d H:i:s')) {
-	        	$error_msg[] = 'Publish end period must be a date after '.date('Y-m-d H:i:s').'.';
+	        if (isset($post['publish_end_period']) && $publish_end_period < ($publish_start_period ?? date('Y-m-d H:i:s'))) {
+	        	$error_msg[] = 'Publish end period must be a date after '.($publish_start_period ?? date('Y-m-d H:i:s')).'.';
 	        }
         }
 
@@ -603,16 +616,23 @@ class ApiPromo extends Controller
     		$id_table 	= 'id_deals';
     		$id_post 	= $post['id_deals'];
 
+    		$data['deals_start'] = $start_period;
     		$data['deals_end'] = $end_period;
+    		$data['deals_publish_start'] = $publish_start_period;
     		$data['deals_publish_end'] = $publish_end_period;
-    		$data['deals_voucher_expired'] = $expiry_date;
-    		$data['deals_voucher_duration'] = $post['expiry_duration'];
+    		if (isset($post['expiry_date'])) {
+    			$data['deals_voucher_expired'] = $expiry_date;
+    		}
+    		if (isset($post['expiry_duration'])) {
+    			$data['deals_voucher_duration'] = $post['expiry_duration'];
+    		}
     	}
     	if (isset($post['id_promo_campaign'])) {
     		$table 		= new PromoCampaign;
     		$id_table 	= 'id_promo_campaign';
     		$id_post 	= $post['id_promo_campaign'];
 
+    		$data['date_start'] = $start_period;
     		$data['date_end'] = $end_period;
     	}
     	if (isset($post['id_subscription'])) {
@@ -620,7 +640,9 @@ class ApiPromo extends Controller
     		$id_table 	= 'id_subscription';
     		$id_post 	= $post['id_subscription'];
 
+    		$data['subscription_start'] = $start_period;
     		$data['subscription_end'] = $end_period;
+    		$data['subscription_publish_start'] = $publish_start_period;
     		$data['subscription_publish_end'] = $publish_end_period;
     		$data['subscription_voucher_expired'] = $expiry_date;
     		$data['subscription_voucher_duration'] = $post['expiry_duration'];
@@ -631,5 +653,46 @@ class ApiPromo extends Controller
     	$extend = MyHelper::checkUpdate($extend);
 
     	return $extend;
+    }
+
+    public function updatePromoDescription(Request $request)
+    {
+    	$post = $request->json()->all();
+    	$error_msg = [];
+
+        if (!empty($error_msg)) {
+        	return [
+        		'status' => 'fail',
+        		'messages' => $error_msg
+        	];
+        }
+
+    	if (isset($post['id_deals'])) {
+    		$table 		= new Deal;
+    		$id_table 	= 'id_deals';
+    		$id_post 	= $post['id_deals'];
+    	}
+    	if (isset($post['id_promo_campaign'])) {
+    		$table 		= new PromoCampaign;
+    		$id_table 	= 'id_promo_campaign';
+    		$id_post 	= $post['id_promo_campaign'];
+    	}
+    	if (isset($post['id_subscription'])) {
+    		$table 		= new Subscription;
+    		$id_table 	= 'id_subscription';
+    		$id_post 	= $post['id_subscription'];
+    	}
+    	if (isset($post['id_deals_promotion_template'])) {
+    		$table 		= new DealsPromotionTemplate;
+    		$id_table 	= 'id_deals_promotion_template';
+    		$id_post 	= $post['id_deals_promotion_template'];
+    	}
+
+    	$data['promo_description'] = $post['promo_description'];
+    	$update = $table::where($id_table,$id_post)->update($data);
+
+    	$update = MyHelper::checkUpdate($update);
+
+    	return $update;
     }
 }

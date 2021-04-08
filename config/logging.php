@@ -36,7 +36,10 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => ['daily'],
+            'channels' => [
+				'daily',
+				env('TEAMS_NOTIF')?'teams':''
+			],
             'ignore_exceptions' => false,
         ],
 
@@ -52,6 +55,13 @@ return [
             'level' => 'debug',
             'days' => 14,
         ],
+
+		'teams' => [
+			'driver' => 'custom',
+			'via' => \CMDISP\MonologMicrosoftTeams\TeamsLogChannel::class,
+			'level' => 'error',
+			'url' => env('TEAMS_WEBHOOK_URL'),
+		],
 
         'slack' => [
             'driver' => 'slack',

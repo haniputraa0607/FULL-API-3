@@ -1766,7 +1766,10 @@ class PromoCampaignTools{
 
         if ($id_product_variant_group) {
         	if($different_price){
-        		$productPrice = ProductVariantGroupSpecialPrice::select('product_variant_group_price')->where('id_product_variant_group', $id_product_variant_group)->first();
+        		$productPrice = ProductVariantGroupSpecialPrice::select('product_variant_group_price')
+        						->where('id_product_variant_group', $id_product_variant_group)
+        						->where('id_outlet', $id_outlet)
+        						->first();
 
 	            if($productPrice){
 	                $productPrice['product_price'] = $productPrice['product_variant_group_price'];

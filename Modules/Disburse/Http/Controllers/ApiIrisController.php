@@ -56,8 +56,14 @@ class ApiIrisController extends Controller
             $reference_no = $post['reference_no'];
             //if status alredy success then no update to database
             $check = Disburse::where('reference_no', $reference_no)->first();
-            if($check['disburse_status'] == 'Success'){
-                LogTopupIris::create(['response' => json_encode($post)]);
+            if($check['disburse_status'] == 'Success' || $check['disburse_status'] == 'Fail'){
+                $dataLog = [
+                    'subject' => 'Callback IRIS',
+                    'id_reference' => $post['reference_no']??null,
+                    'request'=> json_encode($post),
+                    'response' => json_encode(['status' => 'success'])
+                ];
+                LogIRIS::create($dataLog);
                 return response()->json(['status' => 'success']);
             }
 
@@ -104,9 +110,9 @@ class ApiIrisController extends Controller
             $getCurrenDay = date('d');
             $getSettingDate = Setting::where('key', 'disburse_date')->first();
             $getSettingDate = (array)json_decode($getSettingDate['value_text']??'');
-            $getMinSendDate = $getSettingDate['min_date_send_disburse']??25;
+            $getMinSendDate = $getSettingDate['min_date_send_disburse']??5;
 
-            if($getCurrenDay >= (int)$getMinSendDate){
+            if((int)$getCurrenDay >= (int)$getMinSendDate){
                 $currentDate = date('Y-m-d');
                 $day = date('D', strtotime($currentDate));
                 $getHoliday = $this->getHoliday();
@@ -114,7 +120,6 @@ class ApiIrisController extends Controller
                 if($day != 'Sat' && $day != 'Sun' && array_search($currentDate, $getHoliday) === false){
                     $getSettingFeeDisburse = Setting::where('key', 'disburse_setting_fee_transfer')->first();
                     $lastDate = $getSettingDate['last_date_disburse']??null;
-                    $dateCutOf = $getSettingDate['date_cut_of']??20;
                     $monthDb = date('n', strtotime($lastDate));
                     $monthCurrent = date('n');
 
@@ -126,9 +131,9 @@ class ApiIrisController extends Controller
                          -today is not holiday when return true
                          -cron runs on weekdays
                         */
-
-                        $year = date('Y');
-                        $month = date('m');
+                        $dateCutOf = date("t", strtotime($currentDate.' -1 MONTH'));
+                        $year = date('Y', strtotime($currentDate.' -1 MONTH'));
+                        $month = date('m', strtotime($currentDate.' -1 MONTH'));
                         $dateForQuery = date('Y-m-d', strtotime($year.'-'.$month.'-'.$dateCutOf));
                         $feeDisburse = (int)$getSettingFeeDisburse['value'];
 

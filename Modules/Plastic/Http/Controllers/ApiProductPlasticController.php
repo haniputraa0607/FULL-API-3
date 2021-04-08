@@ -662,4 +662,114 @@ class ApiProductPlasticController extends Controller
 
         return response()->json(MyHelper::checkUpdate($save));
     }
+
+    public function listUsePlasticProduct(Request $request){
+        $post = $request->json()->all();
+
+        $data = Product::where('product_type', 'product')
+                ->where('product_variant_status', 0)
+                ->select('id_product', 'product_code', 'product_name', 'plastic_used as total_use_plastic');
+
+        if(isset($post['rule']) && !empty($post['rule'])){
+            $rule = $post['operator']??'and';
+
+            if($rule == 'and'){
+                foreach ($post['rule'] as $condition){
+                    if(!empty($condition['subject']) && isset($condition['operator'])){
+                        if($condition['operator'] == '='){
+                            $data->where($condition['subject'], $condition['parameter']);
+                        }else{
+                            $data->where($condition['subject'], 'like', '%'.$condition['parameter'].'%');
+                        }
+                    }
+                }
+            }else{
+                $data->where(function ($q) use ($post){
+                    foreach ($post['rule'] as $condition){
+                        if(!empty($condition['subject'])){
+                            if($condition['operator'] == '=' && isset($condition['operator'])){
+                                $q->orWhere($condition['subject'], $condition['parameter']);
+                            }else{
+                                $q->orWhere($condition['subject'], 'like', '%'.$condition['parameter'].'%');
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        $data = $data->paginate(15);
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function updateUsePlasticProduct(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['sameall']) && !empty($post['sameall'])){
+            $update = Product::where('product_variant_status', 0)->update(['plastic_used' => $post['plastic_used']]);
+        }else{
+            $update = Product::where('id_product', $post['id_product'])->update(['plastic_used' => $post['plastic_used']]);
+        }
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function listUsePlasticProductVariant(Request $request){
+        $post = $request->json()->all();
+
+        $data = ProductVariantGroup::join('products', 'products.id_product', 'product_variant_groups.id_product')
+            ->select('product_variant_groups.id_product_variant_group', 'products.id_product', 'products.product_name', 'products.product_code', 'product_variant_groups.product_variant_groups_plastic_used',
+                'product_variant_groups.product_variant_group_code', 'product_variant_groups.id_product_variant_group')
+            ->where('product_variant_status', 1)
+            ->orderBy('products.product_code', 'asc')
+            ->with(['product_variant_pivot']);
+
+        if(isset($post['rule']) && !empty($post['rule'])){
+            $rule = $post['operator']??'and';
+
+            if($rule == 'and'){
+                foreach ($post['rule'] as $condition){
+                    if(!empty($condition['subject']) && isset($condition['operator'])){
+                        if($condition['operator'] == '='){
+                            $data->where($condition['subject'], $condition['parameter']);
+                        }else{
+                            $data->where($condition['subject'], 'like', '%'.$condition['parameter'].'%');
+                        }
+                    }
+                }
+            }else{
+                $data->where(function ($q) use ($post){
+                    foreach ($post['rule'] as $condition){
+                        if(!empty($condition['subject']) && isset($condition['operator'])){
+                            if($condition['operator'] == '='){
+                                $q->orWhere($condition['subject'], $condition['parameter']);
+                            }else{
+                                $q->orWhere($condition['subject'], 'like', '%'.$condition['parameter'].'%');
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        $data = $data->paginate(15)->toArray();
+
+        foreach ($data['data'] as $key => $pv) {
+            $arr = array_column($pv['product_variant_pivot'], 'product_variant_name');
+            $name = implode(',',$arr);
+            $data['data'][$key]['product_variant_name'] = $name;
+        }
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function updateUsePlasticProductVariant(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['sameall']) && !empty($post['sameall'])){
+            $update = ProductVariantGroup::join('products', 'products.id_product', 'product_variant_groups.id_product')
+                    ->where('product_variant_status', 1)->update(['product_variant_groups_plastic_used' => $post['product_variant_groups_plastic_used']]);
+        }else{
+            $update = ProductVariantGroup::where('id_product_variant_group', $post['id_product_variant_group'])->update(['product_variant_groups_plastic_used' => $post['product_variant_groups_plastic_used']]);
+        }
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
 }

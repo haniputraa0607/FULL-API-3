@@ -31,6 +31,9 @@ class ApiProductModifierController extends Controller
         $post   = $request->json()->all();
         $promod = (new ProductModifier)->newQuery();
         $promod->whereNotIn('type', ['Modifier Group']);
+        if($request->order_position){
+            $promod->orderBy('product_modifier_order', 'asc');
+        }
         if ($post['rule'] ?? false) {
             $filter = $this->filterList($promod, $post['rule'], $post['operator'] ?? 'and');
         } else {
@@ -446,5 +449,22 @@ class ApiProductModifierController extends Controller
         }
         $filtered = $query->count();
         return ['total' => $total, 'filtered' => $filtered];
+    }
+
+    public function positionAssign(Request $request){
+        $post = $request->json()->all();
+
+        if (!isset($post['modifier_ids'])) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Product modifier id is required']
+            ];
+        }
+        // update position
+        foreach ($post['modifier_ids'] as $key => $id) {
+            $update = ProductModifier::find($id)->update(['product_modifier_order'=>$key+1]);
+        }
+
+        return ['status' => 'success'];
     }
 }

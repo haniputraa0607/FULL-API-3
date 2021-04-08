@@ -3002,6 +3002,19 @@ class ApiTransaction extends Controller
                             ];
                             $result['delivery_info']['cancelable'] = 1;
                             break;
+                        case 'picked':
+                            $result['delivery_info']['delivery_status'] = 'Driver mengambil pesanan di Outlet';
+                            $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
+                            $result['delivery_info']['driver']          = [
+                                'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
+                                'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
+                                'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                                'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                            ];
+                            $result['delivery_info']['cancelable'] = 1;
+                            break;
                         case 'enroute drop':
                         case 'out_for_delivery':
                             $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
@@ -3047,6 +3060,10 @@ class ApiTransaction extends Controller
                             break;
                     }
                 }
+                $result['delivery_info_be'] = [
+                    'delivery_address' => $list['transaction_pickup_go_send']['destination_address']?:'',
+                    'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note'] ?: '',
+                ];
             }
 
             $nameBrandBundling = Setting::where('key', 'brand_bundling_name')->first();
@@ -3288,6 +3305,12 @@ class ApiTransaction extends Controller
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
+                                case 'picked':
+                                    $statusOrder[] = [
+                                        'text'  => 'Driver mengambil pesanan di Outlet',
+                                        'date'  => $valueGosend['created_at']
+                                    ];
+                                    break;
                                 case 'enroute drop':
                                 case 'out_for_delivery':
                                     $statusOrder[] = [
@@ -3353,7 +3376,7 @@ class ApiTransaction extends Controller
                         } else {
                             $result['detail']['detail_status'][$keyStatus]['text'] = 'Pesanan telah ditolak karena '.strtolower($list['detail']['reject_reason']);
                         }
-
+                        $result['detail']['reject_reason'] = $list['detail']['reject_reason'];
                         $result['detail']['detail_status'][$keyStatus]['reason'] = $list['detail']['reject_reason'];
                     }
                 }
@@ -4042,7 +4065,7 @@ class ApiTransaction extends Controller
                 $gmap = [
                     'id_user_address' => 0,
                     'short_address' => $gmap['name'],
-                    'address' => $gmap['vicinity'],
+                    'address' => $gmap['vicinity']??'',
                     'latitude' => $coor['latitude'],
                     'longitude' => $coor['longitude'],
                     'description' => '',

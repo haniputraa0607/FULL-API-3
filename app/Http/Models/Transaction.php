@@ -102,8 +102,15 @@ class Transaction extends Model
 		'show_rate_popup',
 		'transaction_discount_delivery',
 		'transaction_discount_item',
-		'transaction_discount_bill'
+		'transaction_discount_bill',
+		'need_manual_void',
+		'failed_void_reason'
 	];
+
+	public $manual_refund = 0;
+	public $payment_method = null;
+	public $payment_detail = null;
+	public $payment_reference_number = null;
 
 	public function user()
 	{
@@ -127,7 +134,7 @@ class Transaction extends Model
 
 	public function transaction_payment_midtrans()
 	{
-		return $this->hasMany(\App\Http\Models\TransactionPaymentMidtran::class, 'id_transaction');
+		return $this->hasOne(\App\Http\Models\TransactionPaymentMidtran::class, 'id_transaction');
 	}
 
 	public function transaction_payment_offlines()
@@ -142,6 +149,11 @@ class Transaction extends Model
 	public function transaction_payment_ipay88()
 	{
 		return $this->hasOne(\Modules\IPay88\Entities\TransactionPaymentIpay88::class, 'id_transaction');
+	}
+
+	public function transaction_payment_shopee_pay()
+	{
+		return $this->hasOne(\Modules\ShopeePay\Entities\TransactionPaymentShopeePay::class, 'id_transaction');
 	}
 
 	public function transaction_payment_subscription()

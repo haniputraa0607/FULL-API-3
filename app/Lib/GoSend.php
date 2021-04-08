@@ -247,6 +247,19 @@ class GoSend
 
         $ref_status2 = array_flip($ref_status);
 
+        $outlet_message = [
+            'confirmed' => 'Mencari Driver',
+            'allocated' => 'Driver ditemukan',
+            'out_for_pickup' => 'Driver menuju ke Outlet',
+            'picked' => 'Driver mengambil Pesanan',
+            'out_for_delivery' => 'Driver menuju Alamat Tujuan',
+            'cancelled' => 'Driver batal mengambil Pesanan',
+            'delivered' => 'Pesanan sampai ke Alamat Tujuan',
+            'rejected' => 'Driver batal mengantar Pesanan',
+            'no_driver' => 'Driver tidak ditemukan',
+            'on_hold' => 'Driver terkendala saat pengantaran'
+        ];
+
         if (!$found) {
             $trx_pickup = TransactionPickup::where('id_transaction', $dataUpdate['id_transaction'])->first();
             $trx = Transaction::where('id_transaction', $dataUpdate['id_transaction'])->first();
@@ -257,11 +270,12 @@ class GoSend
             $outlet  = Outlet::where('id_outlet', $trx->id_outlet)->first();
             $phone   = User::select('phone')->where('id', $trx->id_user)->pluck('phone')->first();
             $dataPush = [
-                'type' => 'update_delivery',
-                'subject' => 'Update Delivery',
-                'string_body' => $trx->transaction_receipt_number.' '.($ref_status[$dataUpdate['status']] ?? $dataUpdate['status']),
+                'type' => 'trx',
+                'subject' => 'Info Pesanan Delivery',
+                'string_body' => $trx_pickup->order_id.' '.($outlet_message[$dataUpdate['status']] ?? $dataUpdate['status']),
                 'status' => $dataUpdate['status'],
                 'id_transaction' => $trx->id_transaction,
+                'id_reference' => $trx->id_transaction,
                 'order_id' => $trx_pickup->order_id
             ];
             app("Modules\OutletApp\Http\Controllers\ApiOutletApp")->outletNotif($dataPush,$outlet->id_outlet);
@@ -269,7 +283,7 @@ class GoSend
             $delivery_status = ($ref_status2[$dataUpdate['status']] ?? $dataUpdate['status']);
 
             $replacer = [
-                'confirmed'             => 'Pesanan nomor ('.$dataUpdate['go_send_order_no'].') sudah diterima dan sedang diproses oleh jilid',
+                'confirmed'             => 'Pesanan nomor ('.$trx->transaction_receipt_number.') sudah diterima dan sedang diproses oleh jilid',
                 'out_for_pickup'        => 'Tunggu sebentar ya, driver mu sedang menuju ke jilid',
                 'out_for_delivery'      => 'Menu favoritmu sedang diantar oleh driver',
                 'cancelled'             => 'Maaf, pesananmu tidak dapat diambil oleh jilid',
@@ -279,7 +293,8 @@ class GoSend
             if($replacer[$delivery_status] ?? false) {
                 $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
                     [
-                        'id_reference'    => $dataUpdate['id_transaction'],
+                        'id_reference'    => $trx->id_transaction,
+                        'id_transaction'    => $trx->id_transaction,
                         'receipt_number'  => $trx->transaction_receipt_number,
                         'outlet_code'     => $outlet->outlet_code,
                         'outlet_name'     => $outlet->outlet_name,

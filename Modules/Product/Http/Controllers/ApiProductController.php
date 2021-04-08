@@ -49,6 +49,7 @@ use Modules\Product\Http\Requests\product\UpdateAllowSync;
 use Modules\PromoCampaign\Entities\UserPromo;
 use App\Http\Models\Deal;
 use Modules\PromoCampaign\Entities\PromoCampaign;
+use Modules\Subscription\Entities\Subscription;
 
 class ApiProductController extends Controller
 {
@@ -1885,7 +1886,7 @@ class ApiProductController extends Controller
                 if ($appliedPromo) {
                     switch ($appliedPromo->promo_type) {
                         case 'deals':
-                            $query = Deal::join('deals_vouchers', 'deals_vouchers.id_deals', 'deals.id_deals')
+                            $query = Deal::select('*', 'deals.id_deals as id_deals')->join('deals_vouchers', 'deals_vouchers.id_deals', 'deals.id_deals')
                                 ->join('deals_users', 'deals_users.id_deals_voucher', 'deals_vouchers.id_deals_voucher')
                                 ->where('id_deals_user', $appliedPromo->id_reference)
                                 ->with([
@@ -1924,10 +1925,12 @@ class ApiProductController extends Controller
                             break;
                         
                         case 'subscription':
-                            $query = Subscription::join('subscription_users', 'subscription_users.id_subscription_voucher', 'subscription_vouchers.id_subscription_voucher')
-                                ->where('id_subscription_user', $appliedPromo->id_reference)
+                            $query = Subscription::join('subscription_users', 'subscription_users.id_subscription', 'subscriptions.id_subscription')
+                                ->join('subscription_user_vouchers', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+                                ->where('id_subscription_user_voucher', $appliedPromo->id_reference)
                                 ->with([
-                                    'subscription_products'
+                                    'subscription_products',
+                                    'subscription_products.product'
                                 ])
                                 ->first();
                             if (!$query) {
@@ -1939,8 +1942,19 @@ class ApiProductController extends Controller
                             goto skip;
                             break;
                     }
-                    $promoVariant = app('\Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign')->getProduct($appliedPromo->promo_type, $query->toArray(), $post['id_outlet'])['applied_product'] ?? optional();
-                    $productVariantIdPromo = array_column($promoVariant, 'id_product_variant_group');
+                    $promoVariant = app('\Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign')->getProduct($appliedPromo->promo_type, $query->toArray(), $post['id_outlet'])['applied_product'] ?? [];
+                    $productVariantIdPromo = [];
+                    if (is_array($promoVariant)) {
+                        $productVariantIdPromo = array_filter(array_column($promoVariant, 'id_product_variant_group'));
+                        if (!$productVariantIdPromo) {
+                            $productPromo = array_filter(array_column($promoVariant, 'id_product'));
+                            if (in_array($product['id_product'], $productPromo)) {
+                                $productVariantIdPromo = ProductVariantGroup::where('id_product', $product['id_product'])->pluck('id_product_variant_group')->toArray();
+                            }
+                        };
+                    } elseif ($promoVariant == '*') {
+                        $productVariantIdPromo = ProductVariantGroup::where('id_product', $product['id_product'])->pluck('id_product_variant_group')->toArray();
+                    }
                     if ($productVariantIdPromo) {
                         $product['variants'] = $this->addPromoFlag($product['variants'], $productVariantIdPromo);
                         unset($product['variants']['promo']);
@@ -1956,7 +1970,7 @@ class ApiProductController extends Controller
             $product['selected_available'] = (!!Product::getVariantParentId($post['selected']['id_product_variant_group'], $product['variants'], $post['selected']['extra_modifiers'] ?? []))?1:0;
         }
         $product['popup_message'] = $product['selected_available'] ? '' : 'Varian yang dipilih tidak tersedia';
-        $product['modifiers'] = $product_modifiers->get()->toArray();
+        $product['modifiers'] = $product_modifiers->orderBy('product_modifier_order', 'asc')->get()->toArray();
         foreach ($product['modifiers'] as $key => &$modifier) {
             $modifier['price'] = (int) $modifier['price'];
             unset($modifier['product_modifier_prices']);

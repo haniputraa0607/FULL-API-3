@@ -30,6 +30,7 @@ use App\Lib\classJatisSMS;
 use App\Lib\apiwha;
 use App\Lib\ValueFirst;
 use Modules\Franchise\Entities\UserFranchise;
+use Modules\Franchise\Entities\FranchiseEmailLog;
 use Validator;
 use Hash;
 use DB;
@@ -48,13 +49,13 @@ class ApiAutoCrm extends Controller
 		$this->apiwha = new apiwha();
     }
 
-	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null, $forward_only = false, $outlet = false, $recipient_type = null, $franchise = null){
+	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null, $forward_only = false, $outlet = false, $recipient_type = null, $franchise = null, $save_log=true){
 
 		$query = Autocrm::where('autocrm_title','=',$autocrm_title)->with('whatsapp_content')->get()->toArray();
 
 		if (!isset($recipient_type)) {
 			if($franchise){
-                $users = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('email','=',$receipient)->get()->toArray();
+                $users = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('username','=',$receipient)->get()->toArray();
             }elseif($outlet){
                 $users = UserOutlet::select('id_user_outlet as id', 'user_outlets.*')->where('phone','=',$receipient)->get()->toArray();
 			}else{
@@ -62,7 +63,7 @@ class ApiAutoCrm extends Controller
 			}
 		}
 		else{
-			if($recipient_type == 'outlet'){
+			if($recipient_type == 'outlet' || $recipient_type == 'outlet_franchise'){
 				// auto response for outlet is email only, therefore recipient is email
 				$users = [[
 					'email' => $receipient, 
@@ -71,8 +72,10 @@ class ApiAutoCrm extends Controller
 
 				$query[0]['autocrm_email_subject'] = MyHelper::simpleReplace($query[0]['autocrm_email_subject'] ,$variables);
 				$query[0]['autocrm_email_content'] = MyHelper::simpleReplace($query[0]['autocrm_email_content'] ,$variables);
+				$query[0]['autocrm_forward_email_subject'] = MyHelper::simpleReplace($query[0]['autocrm_forward_email_subject'] ,$variables);
+				$query[0]['autocrm_forward_email_content'] = MyHelper::simpleReplace($query[0]['autocrm_forward_email_content'] ,$variables);
 			}elseif($recipient_type == 'franchise'){
-                $users = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('email','=',$receipient)->get()->toArray();
+                $users = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('username','=',$receipient)->get()->toArray();
             }
 		}
 		if(empty($users)){
@@ -197,14 +200,24 @@ class ApiAutoCrm extends Controller
 
 					}
 
-					if ($recipient_type != 'outlet') {
-						$logData = [];
-						$logData['id_user'] = $user['id'];
-						$logData['email_log_to'] = $user['email'];
-						$logData['email_log_subject'] = $subject;
-						$logData['email_log_message'] = $content;
+					if ($save_log) {
+						if ($recipient_type != 'outlet' && $recipient_type != 'outlet_franchise') {
+							$logData = [];
+							$logData['id_user'] = $user['id'];
+							$logData['email_log_to'] = $user['email'];
+							$logData['email_log_subject'] = $subject;
+							$logData['email_log_message'] = $content;
 
-						$logs = AutocrmEmailLog::create($logData);
+							$logs = AutocrmEmailLog::create($logData);
+						}elseif($recipient_type == 'outlet_franchise') {
+							$logData = [];
+							$logData['id_outlet'] = $variables['id_outlet'];
+							$logData['email_log_to'] = $user['email'];
+							$logData['email_log_subject'] = $subject;
+							$logData['email_log_message'] = $content;
+
+							$logs = FranchiseEmailLog::create($logData);
+						}
 					}
 				}
 			}
@@ -280,13 +293,25 @@ class ApiAutoCrm extends Controller
 							
 						}
 
-						$logData = [];
-						$logData['id_user'] = $user['id'];
-						$logData['email_log_to'] = $email;
-						$logData['email_log_subject'] = $subject;
-						$logData['email_log_message'] = $content;
+						if ($save_log) {
+							if($recipient_type == 'outlet_franchise') {
+								$logData = [];
+								$logData['id_outlet'] = $variables['id_outlet'];
+								$logData['email_log_to'] = $email;
+								$logData['email_log_subject'] = $subject;
+								$logData['email_log_message'] = $content;
 
-						$logs = AutocrmEmailLog::create($logData);
+								$logs = FranchiseEmailLog::create($logData);
+							}else{
+								$logData = [];
+								$logData['id_user'] = $user['id'];
+								$logData['email_log_to'] = $email;
+								$logData['email_log_subject'] = $subject;
+								$logData['email_log_message'] = $content;
+
+								$logs = AutocrmEmailLog::create($logData);
+							}
+						}
 					}
 				}
 			}
@@ -297,16 +322,16 @@ class ApiAutoCrm extends Controller
 					$gateway = env('SMS_GATEWAY');
 
 					if(env('OTP_TYPE') == 'MISSCALL'){
-              $gateway = env('MISSCALL_GATEWAY');
-          }else{
-              if (in_array($autocrm_title, ['Pin Sent', 'Pin Forgot'])) {
-                  // if user not 0 and even, send using alternative
-                  if ($user['sms_increment'] % 2) {
-                      $gateway = env('SMS_GATEWAY_ALT');
-                  }
-                  User::where('id', $user['id'])->update(['sms_increment' => $user['sms_increment']+1]);
-              }
-          }
+						$gateway = env('MISSCALL_GATEWAY');
+					}else{
+						if (in_array($autocrm_title, ['Pin Sent', 'Pin Forgot'])) {
+                  			// if user not 0 and even, send using alternative
+							if ($user['sms_increment'] % 2) {
+								$gateway = env('SMS_GATEWAY_ALT');
+							}
+							User::where('id', $user['id'])->update(['sms_increment' => $user['sms_increment']+1]);
+						}
+					}
 
 					switch ($gateway) {
 						case 'Jatis':
@@ -711,7 +736,7 @@ class ApiAutoCrm extends Controller
 		$query = TextReplace::where('status','=','Activated')->get()->toArray();
 
 		if($franchise){
-            $user = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('email','=',$receipient)->get()->first();
+            $user = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('username','=',$receipient)->get()->first();
         }else{
             if($wherefield != null){
                 $user = User::leftJoin('cities','cities.id_city','=','users.id_city')
@@ -942,7 +967,7 @@ class ApiAutoCrm extends Controller
 				}
 
 				if($replace['keyword'] == "%points%"){
-					if (is_numeric($replaced)) {
+					if (is_integer($replaced)) {
 						$points = number_format($replaced, 0, ',', '.');
 					} else {
 						$points = $replaced;
