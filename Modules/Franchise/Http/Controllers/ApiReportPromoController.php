@@ -16,6 +16,8 @@ use Modules\Subscription\Entities\Subscription;
 use Modules\Franchise\Entities\UserFranchise;
 use Modules\Franchise\Entities\UserFranchiseOultet;
 
+use Modules\ProductBundling\Entities\Bundling;
+
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 
 use Modules\Transaction\Entities\TransactionBundlingProduct;
@@ -294,15 +296,15 @@ class ApiReportPromoController extends Controller
     		case 'subscription':
 
     			$data_promo = Subscription::where('id_subscription', $id_promo)
-							->select(
-			        			'subscriptions.subscription_title AS title',
-			        			DB::raw('
-			        				CASE WHEN subscriptions.subscription_discount_type = "payment_method" THEN "payment method"
-										WHEN subscriptions.subscription_discount_type = "discount" THEN "bill discount"
-										WHEN subscriptions.subscription_discount_type = "discount_delivery" THEN "delivery discount"
-									ELSE NULL END AS type
-			        			')
-			        		)->first();
+								->select(
+				        			'subscriptions.subscription_title AS promo_title',
+				        			DB::raw('
+				        				CASE WHEN subscriptions.subscription_discount_type = "payment_method" THEN "payment method"
+											WHEN subscriptions.subscription_discount_type = "discount" THEN "bill discount"
+											WHEN subscriptions.subscription_discount_type = "discount_delivery" THEN "delivery discount"
+										ELSE NULL END AS type
+				        			')
+				        		)->first();
 
     			$detail->join('subscription_user_vouchers', 'transactions.id_transaction', 'subscription_user_vouchers.id_transaction')
     					->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
@@ -311,9 +313,15 @@ class ApiReportPromoController extends Controller
 
     		case 'bundling':
 
-    			$detail->join('transaction_bundling_products', 'transactions.id_transaction', 'transaction_bundling_products.id_transaction')
+    			$data_promo	= Bundling::where('id_bundling', $id_promo)
+								->select(
+				        			'bundling.bundling_name AS promo_title',
+				        			DB::raw('"bundling" AS type')
+				        		)->first();
+
+    			$detail->leftJoin('transaction_bundling_products', 'transactions.id_transaction', 'transaction_bundling_products.id_transaction')
     					->where('transaction_bundling_products.id_bundling', $id_promo)
-    					->whereNotNull('transaction_products.id_product_bundling');
+    					->whereNotNull('transaction_products.id_bundling_product');
     			break;
     		
     		default:
@@ -378,7 +386,12 @@ class ApiReportPromoController extends Controller
     			break;
 
     		case 'delivery discount':
-    			# code...
+    			return [
+            		'status' => 'fail',
+            		'messages' => [
+            			'Promo tidak ditemukan'
+            		]
+            	];
     			break;
 
     		case 'payment method':
@@ -399,8 +412,23 @@ class ApiReportPromoController extends Controller
 		    			);
     			break;
 
+    		case 'bundling':
+    			
+	    		$detail->addSelect(
+		    				DB::raw('
+		    					SUM(transaction_products.transaction_product_discount_all) AS total_discount,
+		    					SUM(transaction_products.transaction_product_discount_all)/SUM(transaction_products.transaction_product_qty) AS average_discount
+		    				')
+		    			);
+    			break;
+
     		default:
-    			# code...
+    			return [
+            		'status' => 'fail',
+            		'messages' => [
+            			'Promo tidak ditemukan'
+            		]
+            	];
     			break;
     	}
 
