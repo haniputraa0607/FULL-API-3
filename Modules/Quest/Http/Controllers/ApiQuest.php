@@ -776,10 +776,15 @@ class ApiQuest extends Controller
             goto flag;
         }
 
+        $user = User::find($id_user);
+        if (!$user) {
+            goto flag;
+        }
+
         if ($benefit->benefit_type == 'point') {
             app($this->balance)->addLogBalance( $id_user, $benefit->value, $quest->id_quest, 'Quest Benefit', 0);
             // addLogBalance
-            $autocrm = app($this->autocrm)->SendAutoCRM('Receive Quest Point', $data['phone'],
+            $autocrm = app($this->autocrm)->SendAutoCRM('Receive Quest Point', $user->phone,
                 [
                     'quest_name'         => $quest->name,
                     'point_received'     => MyHelper::requestNumber($benefit->value, '_POINT'),
@@ -799,10 +804,10 @@ class ApiQuest extends Controller
 
             for($i=0;$i<$total_benefit;$i++){
                 if ($total_voucher > $total_claimed || $total_voucher === 0) {
-                    $generateVoucher = app($this->hidden_deals)->autoClaimedAssign($deals, $data['user']);
+                    $generateVoucher = app($this->hidden_deals)->autoClaimedAssign($deals, [$id_user]);
                     $count++;
                     app($this->deals_claim)->updateDeals($deals);
-                    $deals = Deal::where('id_deals', $val['id_deals'])->first();
+                    $deals = Deal::where('id_deals', $deals->id_user)->first();
                     $total_claimed = $deals['deals_total_claimed'];
                 } else {
                     break;
@@ -810,7 +815,7 @@ class ApiQuest extends Controller
             }
 
             if ($count) {
-                $autocrm = app($this->autocrm)->SendAutoCRM('Receive Quest Voucher', $data['phone'],
+                $autocrm = app($this->autocrm)->SendAutoCRM('Receive Quest Voucher', $user->phone,
                     [
                         'count_voucher'      => (string) $count,
                         'deals_title'        => $deals->deals_title,
@@ -819,7 +824,7 @@ class ApiQuest extends Controller
                     ]
                 );
             } else {
-                $autocrm = app($this->autocrm)->SendAutoCRM('Quest Voucher Runs Out', $data['phone'],
+                $autocrm = app($this->autocrm)->SendAutoCRM('Quest Voucher Runs Out', $user->phone,
                     [
                         'count_voucher'      => (string) $count,
                         'deals_title'        => $deals->deals_title,

@@ -844,6 +844,7 @@ class ApiOutletApp extends Controller
             $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
             MyHelper::updateFlagTransactionOnline($newTrx, 'success', $newTrx->user);
 
+            \App\Jobs\UpdateQuestProgressJob::dispatch($order->id_transaction)->onConnection('quest');
             if (!in_array('Balance', $column) || $use_referral) {
 
                 $promo_source = null;
