@@ -1110,7 +1110,7 @@ class ShopeePayController extends Controller
             'merchant_ext_id'      => $this->merchant_ext_id,
             'store_ext_id'         => $this->store_ext_id,
         ];
-        $minimal_refund_time = '06:00';
+        $minimal_refund_time = '03:00';
         switch ($type) {
             case 'trx':
                 if (is_numeric($reference)) {
@@ -1390,12 +1390,12 @@ class ShopeePayController extends Controller
     }
 
     /**
-     * Cron refund shopeepay at 06:00
+     * Cron refund shopeepay
      * @return array    result in array
      */
     public function cronRefund()
     {
-        $log = MyHelper::logCron('Refund ShopeePay 06:00');
+        $log = MyHelper::logCron('Refund ShopeePay');
         try {
             $trxs = TransactionPaymentShopeePay::where('manual_refund', '1')->get();
             $refund_failed_process_balance = MyHelper::setting('refund_failed_process_balance');
