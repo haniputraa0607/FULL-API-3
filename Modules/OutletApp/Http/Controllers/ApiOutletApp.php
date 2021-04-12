@@ -987,6 +987,9 @@ class ApiOutletApp extends Controller
     {
         $outlet                    = $request->user();
         $profile['outlet_name']    = $outlet['outlet_name'];
+        if($outlet['outlet_status'] == 'Inactive'){
+            $profile['outlet_name'] = '[TIDAK AKTIF]'.$profile['outlet_name'];
+        }
         $profile['outlet_code']    = $outlet['outlet_code'];
         $profile['outlet_address'] = $outlet['outlet_address'];
         $profile['outlet_phone']   = $outlet['outlet_phone'];
