@@ -50,6 +50,7 @@ use Modules\OutletApp\Http\Requests\ProductSoldOut;
 use Modules\OutletApp\Http\Requests\UpdateToken;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
 use Modules\OutletApp\Jobs\AchievementCheck;
+use Modules\Plastic\Entities\PlasticTypeOutlet;
 use Modules\Product\Entities\ProductDetail;
 use App\Http\Models\ProductModifierDetail;
 use Modules\Product\Entities\ProductStockStatusUpdate;
@@ -130,7 +131,7 @@ class ApiOutletApp extends Controller
             ->leftJoin('users', 'users.id', 'transactions.id_user')
             ->select('transactions.id_transaction', 'transaction_receipt_number', 'order_id', 'transaction_date',
                 DB::raw('(CASE WHEN pickup_by = "Customer" THEN "Pickup Order" ELSE "Delivery" END) AS transaction_type'),
-                'pickup_by', 'pickup_type', 'pickup_at', 'receive_at', 'ready_at', 'taken_at', 'reject_at', 'transaction_grandtotal', DB::raw('sum(transaction_product_qty) as total_item'), 'users.name')
+                'pickup_by', 'pickup_type', 'pickup_at', 'receive_at', 'ready_at', 'taken_at', 'reject_at', 'taken_by_system_at', 'transaction_grandtotal', DB::raw('sum(transaction_product_qty) as total_item'), 'users.name')
             ->where('transactions.id_outlet', $outlet->id_outlet)
             ->whereDate('transaction_date', date('Y-m-d'))
             ->where('transaction_payment_status', 'Completed')
@@ -215,7 +216,10 @@ class ApiOutletApp extends Controller
             array_slice($dataList, 3, count($dataList) - 1, true);
 
             $dataList['order_id'] = strtoupper($dataList['order_id']);
-            if ($dataList['reject_at'] != null) {
+            if ($dataList['taken_by_system_at'] != null) {
+                $dataList['status'] = 'Completed';
+                $listCompleted[]    = $dataList;
+            }elseif ($dataList['reject_at'] != null) {
                 $dataList['status'] = 'Rejected';
                 $listCompleted[]    = $dataList;
             } elseif ($dataList['receive_at'] == null) {
@@ -744,6 +748,7 @@ class ApiOutletApp extends Controller
                 "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number,
             ]);
             if ($send != true) {
                 return response()->json([
@@ -768,7 +773,7 @@ class ApiOutletApp extends Controller
         return response()->json(MyHelper::checkUpdate($pickup));
     }
 
-    public function SetReady(DetailOrder $request)
+    public function SetReady(DetailOrder $request, $autoready = false)
     {
         $post   = $request->json()->all();
         $outlet = $request->user();
@@ -814,8 +819,18 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        if ($order->pickup_by != 'Customer') {
+            $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+            if(!$pickup_gosend || !$pickup_gosend['latest_status'] || in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled', 'confirmed'])) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Driver belum ditemukan']
+                ]);
+            }
+        }
+
         DB::beginTransaction();
-        $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['ready_at' => date('Y-m-d H:i:s')]);
+        $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['ready_at' => date('Y-m-d H:i:s'), 'is_autoready' => $autoready ? 1 : 0]);
 
         // sendPoint delivery after status delivered only
         if ($pickup && $order->pickup_by == 'Customer' && $order->cashback_insert_status != 1) {
@@ -863,6 +878,7 @@ class ApiOutletApp extends Controller
                 "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number,
             ]);
             if ($send != true) {
                 // DB::rollback();
@@ -948,6 +964,7 @@ class ApiOutletApp extends Controller
                 "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number
             ]);
             if ($send != true) {
                 DB::rollback();
@@ -970,6 +987,9 @@ class ApiOutletApp extends Controller
     {
         $outlet                    = $request->user();
         $profile['outlet_name']    = $outlet['outlet_name'];
+        if($outlet['outlet_status'] == 'Inactive'){
+            $profile['outlet_name'] = '[TIDAK AKTIF]'.$profile['outlet_name'];
+        }
         $profile['outlet_code']    = $outlet['outlet_code'];
         $profile['outlet_address'] = $outlet['outlet_address'];
         $profile['outlet_phone']   = $outlet['outlet_phone'];
@@ -1482,6 +1502,7 @@ class ApiOutletApp extends Controller
                         $variants = [];
                         if($dt['product_variant_status'] == 1){
                             $variants = ProductVariantGroup::where('id_product', $dt['id_product'])
+                                ->where('product_variant_group_visibility', 'Visible')
                                 ->select([
                                     'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
                                     DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
@@ -1500,6 +1521,7 @@ class ApiOutletApp extends Controller
                     $variants = [];
                     if($dt['product_variant_status'] == 1){
                         $variants = ProductVariantGroup::where('id_product', $dt['id_product'])
+                            ->where('product_variant_group_visibility', 'Visible')
                             ->select([
                                 'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
                                 DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
@@ -1558,6 +1580,7 @@ class ApiOutletApp extends Controller
             ->where('product_prices.product_visibility', '=', 'Visible')
             ->where('product_prices.product_status', '=', 'Active')
             ->with('product_category')
+            ->where('product_type', 'product')
         // ->select('id_product_category', 'product_category_name')
             ->get();
 
@@ -1663,10 +1686,15 @@ class ApiOutletApp extends Controller
 
         $outlet = $request->user();
 
+        $shared = \App\Lib\TemporaryDataManager::create('reject_order');
+        $refund_failed_process_balance = MyHelper::setting('refund_failed_process_balance');
+
         $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->where('order_id', $post['order_id'])
             ->whereDate('transaction_date', $dateNow ?? date('Y-m-d'))
             ->where('transactions.id_outlet', $outlet->id_outlet)
+            // join user used by autocrm void failed
+            ->leftJoin('users', 'transactions.id_user', 'users.id')
             ->first();
 
         if (!$order) {
@@ -1683,15 +1711,28 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        if ($order->pickup_by != 'Customer') {
+            $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+            if($pickup_gosend && $pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Driver has been booked'],
+                    'should_taken' => true,
+                ]);
+            } else {
+                goto reject;
+            }
+        }
+
         if ($order->ready_at) {
-            if ($order->picked_by == 'Customer') {
+            if ($order->pickup_by == 'Customer') {
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['Order Has Been Ready'],
                 ]);
             } else {
                 $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-                if(!in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
+                if($pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
                     return response()->json([
                         'status'   => 'fail',
                         'messages' => ['Driver has been booked'],
@@ -1764,7 +1805,22 @@ class ApiOutletApp extends Controller
                 }
             }
 
-            $user = User::where('id', $order['id_user'])->first()->toArray();
+            $user = User::where('id', $order['id_user'])->first();
+            if (!$user) {
+                TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                    'taken_by_system_at' => date('Y-m-d H:i:s'),
+                    'reject_at'     => null,
+                    'reject_type'   => null,
+                    'reject_reason' => null,
+                ]);
+                \DB::commit();
+                return [
+                    'status' => 'fail',
+                    'messages' => ['User not found']
+                ];
+            }
+            $user = $user->toArray();
+
             $rejectBalance = false;
 
             //refund ke balance
@@ -1789,7 +1845,8 @@ class ApiOutletApp extends Controller
                     } elseif ($pay['type'] == 'Ovo') {
                         $payOvo = TransactionPaymentOvo::find($pay['id_payment']);
                         if ($payOvo) {
-                            if(Configs::select('is_active')->where('config_name','refund ovo')->pluck('is_active')->first()){
+                            $doRefundPayment = Configs::select('is_active')->where('config_name','refund ovo')->pluck('is_active')->first();
+                            if($doRefundPayment){
                                 $point = 0;
                                 $transaction = TransactionPaymentOvo::where('transaction_payment_ovos.id_transaction', $post['id_transaction'])
                                     ->join('transactions','transactions.id_transaction','=','transaction_payment_ovos.id_transaction')
@@ -1798,14 +1855,33 @@ class ApiOutletApp extends Controller
                                     'reject_type'   => 'refund',
                                 ]);
                                 $refund = Ovo::Void($transaction);
-                                if ($refund['status_code'] != '200') {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'   => 'fail',
-                                        'messages' => ['Refund Ovo Failed'],
-                                    ]);
+                                if ($refund['response']['responseCode'] != '00') {
+                                    $order->update(['failed_void_reason' => $refund['response']['response_description'] ?? '']);
+                                    if ($refund_failed_process_balance) {
+                                        $doRefundPayment = false;
+                                    } else {
+                                        $order->update(['need_manual_void' => 1]);
+                                        $order2 = clone $order;
+                                        $order2->manual_refund = $payOvo['amount'];
+                                        $order2->payment_method = 'Ovo';
+                                        $order2->payment_reference_number = $payOvo['approval_code'];
+                                        if ($shared['reject_batch'] ?? false) {
+                                            $shared['void_failed'][] = $order2;
+                                        } else {
+                                            $variables = [
+                                                'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                            ];
+                                            app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
+                                        }
+                                    }
                                 }
-                            }else{
+                            }
+
+                            // don't use elseif / else because in the if block there are conditions that should be included in this process too
+                            if (!$doRefundPayment) {
+                                TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                                    'reject_type'   => 'point',
+                                ]);
                                 $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payOvo['amount'], $order['id_transaction'], 'Rejected Order Ovo', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
@@ -1821,19 +1897,40 @@ class ApiOutletApp extends Controller
                         $point = 0;
                         $payIpay = TransactionPaymentIpay88::find($pay['id_payment']);
                         if ($payIpay) {
-                            if(strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88')){
-                                $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay);
+                            $doRefundPayment = strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88');
+                            if($doRefundPayment){
+                                $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay, 'trx', 'user', $message);
                                 TransactionPickup::where('id_transaction', $order['id_transaction'])->update([
                                     'reject_type'   => 'refund',
                                 ]);
                                 if (!$refund) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'   => 'fail',
-                                        'messages' => ['Refund Payment Failed'],
-                                    ]);
+                                    $order->update(['failed_void_reason' => $message ?? '']);
+                                    if ($refund_failed_process_balance) {
+                                        $doRefundPayment = false;
+                                    } else {
+                                        $order->update(['need_manual_void' => 1]);
+                                        $order2 = clone $order;
+                                        $order2->manual_refund = $payIpay['amount']/100;
+                                        $order2->payment_method = 'Ipay88';
+                                        $order2->payment_detail = $payIpay['payment_method'];
+                                        $order2->payment_reference_number = $payIpay['trans_id'];
+                                        if ($shared['reject_batch'] ?? false) {
+                                            $shared['void_failed'][] = $order2;
+                                        } else {
+                                            $variables = [
+                                                'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                            ];
+                                            app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
+                                        }
+                                    }
                                 }
-                            }else{
+                            }
+
+                            // don't use elseif / else because in the if block there are conditions that should be included in this process too
+                            if (!$doRefundPayment) {
+                                TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                                    'reject_type'   => 'point',
+                                ]);
                                 $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
@@ -1849,19 +1946,39 @@ class ApiOutletApp extends Controller
                         $point = 0;
                         $payShopeepay = TransactionPaymentShopeePay::find($pay['id_payment']);
                         if ($payShopeepay) {
-                            if(MyHelper::setting('refund_shopeepay')) {
+                            $doRefundPayment = MyHelper::setting('refund_shopeepay');
+                            if($doRefundPayment){
                                 $refund = app($this->shopeepay)->void($payShopeepay['id_transaction'], 'trx', $errors);
                                 TransactionPickup::where('id_transaction', $order['id_transaction'])->update([
                                     'reject_type'   => 'refund',
                                 ]);
                                 if (!$refund) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'   => 'fail',
-                                        'messages' => ['Refund Payment Failed'],
-                                    ]);
+                                    $order->update(['failed_void_reason' => implode(', ', $errors ?: [])]);
+                                    if ($refund_failed_process_balance) {
+                                        $doRefundPayment = false;
+                                    } else {
+                                        $order->update(['need_manual_void' => 1]);
+                                        $order2 = clone $order;
+                                        $order2->payment_method = 'ShopeePay';
+                                        $order2->manual_refund = $payShopeepay['amount']/100;
+                                        $order2->payment_reference_number = $payShopeepay['transaction_sn'];
+                                        if ($shared['reject_batch'] ?? false) {
+                                            $shared['void_failed'][] = $order2;
+                                        } else {
+                                            $variables = [
+                                                'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                            ];
+                                            app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
+                                        }
+                                    }
                                 }
-                            }else{
+                            }
+
+                            // don't use elseif / else because in the if block there are conditions that should be included in this process too
+                            if (!$doRefundPayment) {
+                                TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                                    'reject_type'   => 'point',
+                                ]);
                                 $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payShopeepay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
@@ -1877,16 +1994,40 @@ class ApiOutletApp extends Controller
                         $point = 0;
                         $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
                         if ($payMidtrans) {
-                            if(MyHelper::setting('refund_midtrans')){
+                            $doRefundPayment = MyHelper::setting('refund_midtrans');
+                            if ($doRefundPayment) {
                                 $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
                                 TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                                     'reject_type'   => 'refund',
                                 ]);
                                 if ($refund['status'] != 'success') {
-                                    DB::rollback();
-                                    return response()->json($refund);
+                                    $order->update(['failed_void_reason' => implode(', ', $refund['messages'] ?? [])]);
+                                    if ($refund_failed_process_balance) {
+                                        $doRefundPayment = false;
+                                    } else {
+                                        $order->update(['need_manual_void' => 1]);
+                                        $order2 = clone $order;
+                                        $order2->payment_method = 'Midtrans';
+                                        $order2->payment_detail = $payMidtrans['payment_type'];
+                                        $order2->manual_refund = $payMidtrans['gross_amount'];
+                                        $order2->payment_reference_number = $payMidtrans['vt_transaction_id'];
+                                        if ($shared['reject_batch'] ?? false) {
+                                            $shared['void_failed'][] = $order2;
+                                        } else {
+                                            $variables = [
+                                                'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                            ];
+                                            app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
+                                        }
+                                    }
                                 }
-                            } else {
+                            }
+
+                            // don't use elseif / else because in the if block there are conditions that should be included in this process too
+                            if (!$doRefundPayment) {
+                                TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                                    'reject_type'   => 'point',
+                                ]);
                                 $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
@@ -1907,16 +2048,39 @@ class ApiOutletApp extends Controller
                 $payIpay     = TransactionPaymentIpay88::where('id_transaction', $order['id_transaction'])->first();
                 if ($payMidtrans) {
                     $point = 0;
-                    if(MyHelper::setting('refund_midtrans')){
+                    $doRefundPayment = MyHelper::setting('refund_midtrans');
+                    if ($doRefundPayment) {
                         $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
                         TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                             'reject_type'   => 'refund',
                         ]);
                         if ($refund['status'] != 'success') {
-                            DB::rollback();
-                            return response()->json($refund);
+                            if ($refund_failed_process_balance) {
+                                $doRefundPayment = false;
+                            } else {
+                                $order->update(['need_manual_void' => 1]);
+                                $order2 = clone $order;
+                                $order2->payment_method = 'Midtrans';
+                                $order2->payment_detail = $payMidtrans['payment_type'];
+                                $order2->manual_refund = $payMidtrans['gross_amount'];
+                                $order2->payment_reference_number = $payMidtrans['vt_transaction_id'];
+                                if ($shared['reject_batch'] ?? false) {
+                                    $shared['void_failed'][] = $order2;
+                                } else {
+                                    $variables = [
+                                        'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                    ];
+                                    app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
+                                }
+                            }
                         }
-                    } else {
+                    }
+
+                    // don't use elseif / else because in the if block there are conditions that should be included in this process too
+                    if (!$doRefundPayment) {
+                        TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                            'reject_type'   => 'point',
+                        ]);
                         $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
                         if ($refund == false) {
                             DB::rollback();
@@ -1928,7 +2092,8 @@ class ApiOutletApp extends Controller
                         $rejectBalance = true;
                     }
                 } elseif ($payOvo) {
-                    if(Configs::select('is_active')->where('config_name','refund ovo')->pluck('is_active')->first()){
+                    $doRefundPayment = Configs::select('is_active')->where('config_name','refund ovo')->pluck('is_active')->first();
+                    if ($doRefundPayment) {
                         $point = 0;
                         $transaction = TransactionPaymentOvo::where('transaction_payment_ovos.id_transaction', $post['id_transaction'])
                             ->join('transactions','transactions.id_transaction','=','transaction_payment_ovos.id_transaction')
@@ -1938,13 +2103,31 @@ class ApiOutletApp extends Controller
                             'reject_type'   => 'refund',
                         ]);
                         if ($refund['status_code'] != '200') {
-                            DB::rollback();
-                            return response()->json([
-                                'status'   => 'fail',
-                                'messages' => ['Refund Ovo Failed'],
-                            ]);
+                            if ($refund_failed_process_balance) {
+                                $doRefundPayment = false;
+                            } else {
+                                $order->update(['need_manual_void' => 1]);
+                                $order2 = clone $order;
+                                $order2->payment_method = 'Ovo';
+                                $order2->manual_refund = $payOvo['amount'];
+                                $order2->payment_reference_number = $payOvo['approval_code'];
+                                if ($shared['reject_batch'] ?? false) {
+                                    $shared['void_failed'][] = $order2;
+                                } else {
+                                    $variables = [
+                                        'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                    ];
+                                    app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
+                                }
+                            }
                         }
-                    }else{
+                    }
+
+                    // don't use elseif / else because in the if block there are conditions that should be included in this process too
+                    if (!$doRefundPayment) {
+                        TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                            'reject_type'   => 'point',
+                        ]);
                         $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payOvo['amount'], $order['id_transaction'], 'Rejected Order Ovo', $order['transaction_grandtotal']);
                         if ($refund == false) {
                             DB::rollback();
@@ -1957,19 +2140,39 @@ class ApiOutletApp extends Controller
                     }
                 } elseif ($payIpay) {
                     $point = 0;
-                    if(strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88')){
+                    $doRefundPayment = strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88');
+                    if ($doRefundPayment) {
                         $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay);
                         TransactionPickup::where('id_transaction', $order['id_transaction'])->update([
                             'reject_type'   => 'refund',
                         ]);
                         if (!$refund) {
-                            DB::rollback();
-                            return response()->json([
-                                'status'   => 'fail',
-                                'messages' => ['Refund Payment Failed'],
-                            ]);
+                            if ($refund_failed_process_balance) {
+                                $doRefundPayment = false;
+                            } else {
+                                $order->update(['need_manual_void' => 1]);
+                                $order2 = clone $order;
+                                $order2->payment_method = 'Ipay88';
+                                $order2->payment_detail = $payIpay['payment_method'];
+                                $order2->manual_refund = $payIpay['amount']/100;
+                                $order2->payment_reference_number = $payIpay['trans_id'];
+                                if ($shared['reject_batch'] ?? false) {
+                                    $shared['void_failed'][] = $order2;
+                                } else {
+                                    $variables = [
+                                        'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                    ];
+                                    app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
+                                }
+                            }
                         }
-                    }else{
+                    }
+
+                    // don't use elseif / else because in the if block there are conditions that should be included in this process too
+                    if (!$doRefundPayment) {
+                        TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                            'reject_type'   => 'point',
+                        ]);
                         $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                         if ($refund == false) {
                             DB::rollback();
@@ -2015,6 +2218,7 @@ class ApiOutletApp extends Controller
                 "transaction_date" => $order->transaction_date,
                 'id_transaction'   => $order->id_transaction,
                 'order_id'         => $order->order_id,
+                'receipt_number'   => $order->transaction_receipt_number,
             ]);
             if ($send != true) {
                 DB::rollback();
@@ -2117,16 +2321,48 @@ class ApiOutletApp extends Controller
         $trx_date       = $request->json('trx_date');
         $trx_status     = $request->json('trx_status');
         $trx_type       = $request->json('trx_type');
-        $keyword        = $request->json('search_order_id');
+        $order_id       = $request->json('order_id');
+        $receipt_number = $request->json('receipt_number');
+        $search_receipt_number = $request->json('search_receipt_number');
+        $search_order_id       = $request->json('search_order_id');
+        $min_price      = $request->json('min_price');
+        $max_price      = $request->json('max_price');
         $perpage        = $request->json('perpage');
         $request_number = $request->json('request_number') ?: 'thousand_id';
-        $data           = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%Y-%m-%d") as trx_date,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,count(*) as total_products,transaction_grandtotal'))
+        $data           = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%Y-%m-%d") as trx_date,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,SUM(transaction_product_qty) as total_products,transaction_grandtotal'))
             ->where('transactions.id_outlet', $request->user()->id_outlet)
             ->where('trasaction_type', 'Pickup Order')
             ->join('transaction_pickups', 'transactions.id_transaction', '=', 'transaction_pickups.id_transaction')
-            ->whereDate('transaction_date', $trx_date)
             ->join('transaction_products', 'transaction_products.id_transaction', '=', 'transactions.id_transaction')
-            ->groupBy('transactions.id_transaction');
+            ->groupBy('transaction_products.id_transaction');
+
+        if ($trx_date) {
+            $data->whereDate('transaction_date', $trx_date);
+        }
+
+        if ($order_id) {
+            $data->where('transaction_pickups.order_id', $order_id);
+        }
+
+        if ($search_order_id) {
+            $data->where('order_id', 'like', "%$search_order_id%");
+        }
+
+        if ($receipt_number) {
+            $data->where('transactions.transaction_receipt_number', $receipt_number);
+        }
+
+        if ($search_receipt_number) {
+            $data->where('transactions.transaction_receipt_number', 'like', "%$search_receipt_number%");
+        }
+
+        if ($min_price) {
+            $data->where('transactions.transaction_grandtotal', '>=', $min_price);
+        }
+
+        if ($max_price) {
+            $data->where('transactions.transaction_grandtotal', '<=', $max_price);
+        }
 
         if ($trx_status == 'taken') {
             $data->where('transaction_payment_status', 'Completed')
@@ -2157,16 +2393,21 @@ class ApiOutletApp extends Controller
             $data->where('pickup_by', 'Customer');
         }
 
-        if ($keyword) {
-            $data->where('order_id', 'like', "%$keyword%");
-        }
-        switch ($request->sort) {
+        switch ($request->sort ?: $request->sort_by) {
             case 'oldest':
                 $data->orderBy('transaction_date','ASC')->orderBy('transactions.id_transaction','ASC');
                 break;
 
             case 'newest':
                 $data->orderBy('transaction_date','DESC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            case 'price_asc':
+                $data->orderBy('transaction_grandtotal','ASC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            case 'price_desc':
+                $data->orderBy('transaction_grandtotal','DESC')->orderBy('transactions.id_transaction','DESC');
                 break;
             
             case 'shortest_pickup_time':
@@ -2379,7 +2620,7 @@ class ApiOutletApp extends Controller
         //update id from go-send
         $updateGoSend = TransactionPickupGoSend::find($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
         if ($fromRetry) {
-            $time_limit = 1200; // 20 minutes
+            $time_limit = 600; // 10 minutes
 
             if ($updateGoSend->manual_order_no) {
                 $firstbook = TransactionPickupGoSendUpdate::select('created_at')->where('go_send_order_no', $updateGoSend->manual_order_no)->orderBy('id_transaction_pickup_go_send_update')->pluck('created_at')->first();
@@ -2390,12 +2631,28 @@ class ApiOutletApp extends Controller
             if ((time() - strtotime($firstbook)) > $time_limit) {
                 if (!$updateGoSend->stop_booking_at) {
                     $updateGoSend->update(['stop_booking_at' => date('Y-m-d H:i:s')]);
+
+                    $text_start = 'Driver tidak ditemukan. ';
+                    switch ($trx['transaction_pickup']['transaction_pickup_go_send']['latest_status']) {
+                        case 'no_driver':
+                            $text_start = 'Driver tidak ditemukan.';
+                            break;
+                        
+                        case 'rejected':
+                            $text_start = $trx['transaction_pickup']['order_id'].' Driver batal mengantar Pesanan.';
+                            break;
+
+                        case 'cancelled':
+                            $text_start = $trx['transaction_pickup']['order_id'].' Driver batal mengambil Pesanan.';
+                            break;
+                    }
                     // kirim notifikasi
                     $dataNotif = [
                         'subject' => 'Order '.$trx['transaction_pickup']['order_id'],
-                        'string_body' => 'Driver tidak ditemukan. Segera pilih tindakan atau pesanan batal otomatis.',
+                        'string_body' => "$text_start Segera pilih tindakan atau pesanan batal otomatis.",
                         'type' => 'trx',
-                        'id_reference'=> $trx['id_transaction']
+                        'id_reference'=> $trx['id_transaction'],
+                        'id_transaction'=> $trx['id_transaction']
                     ];
                     $this->outletNotif($dataNotif,$trx->id_outlet);
                 }
@@ -2563,20 +2820,6 @@ class ApiOutletApp extends Controller
                             $newTrx->update(['cashback_insert_status' => 1]);
                             $checkMembership = app($this->membership)->calculateMembership($user['phone']);
                             DB::commit();
-                            $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], [
-                                "outlet_name"      => $outlet['outlet_name'],
-                                'id_transaction'   => $trx->id_transaction,
-                                "id_reference"     => $trx->transaction_receipt_number . ',' . $trx->id_outlet,
-                                "transaction_date" => $trx->transaction_date,
-                                'order_id'         => $trx->order_id,
-                            ]);
-                            if ($send != true) {
-                                // DB::rollback();
-                                return response()->json([
-                                    'status'   => 'fail',
-                                    'messages' => ['Failed Send notification to customer'],
-                                ]);
-                            }
                         }
                         $arrived_at = date('Y-m-d H:i:s', ($status['orderArrivalTime']??false)?strtotime($status['orderArrivalTime']):time());
                         TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
@@ -2657,6 +2900,900 @@ class ApiOutletApp extends Controller
         $list = Transaction::where([['transactions.id_transaction', $id]])->leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->with([
             // 'user.city.province',
             'user',
+            'productTransaction.product.product_category',
+            'productTransaction.modifiers' => function($query) {
+                $query->orderByRaw('CASE WHEN id_product_modifier_group IS NULL THEN 1 ELSE 0 END');
+            },
+            'productTransaction.variants' => function($query){
+                $query->select('id_transaction_product','transaction_product_variants.id_product_variant','transaction_product_variants.id_product_variant','product_variants.product_variant_name', 'transaction_product_variant_price')->join('product_variants','product_variants.id_product_variant','=','transaction_product_variants.id_product_variant');
+            },
+            'productTransaction.product.product_photos',
+            'productTransaction.product.product_discounts',
+            'transaction_payment_offlines',
+            'transaction_vouchers.deals_voucher.deal',
+            'promo_campaign_promo_code.promo_campaign',
+            'transaction_payment_subscription.subscription_user_voucher.subscription_user.subscription',
+            'transaction_pickup_go_send',
+            'outlet.city'])
+            ->where('transactions.id_outlet', $request->user()->id_outlet)
+            ->first();
+        if (!$list) {
+            return MyHelper::checkGet([], 'empty');
+        }
+        $list                        = $list->toArray();
+        $label                       = [];
+        $label2                      = [];
+        $product_count               = 0;
+        $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'], 'id_brand', null, function ($key, &$val) use (&$product_count) {
+            $product_count += array_sum(array_column($val, 'transaction_product_qty'));
+            $brand = Brand::select('name_brand')->find($key);
+            if (!$brand) {
+                return 'No Brand';
+            }
+            return $brand->name_brand;
+        });
+        $cart = $list['transaction_subtotal'] + $list['transaction_shipment'] + $list['transaction_service'] + $list['transaction_tax'] - $list['transaction_discount'];
+
+        $list['transaction_carttotal']  = $cart;
+        $list['transaction_item_total'] = $product_count;
+
+        $order = Setting::where('key', 'transaction_grand_total_order')->value('value');
+        $exp   = explode(',', $order);
+        $exp2  = explode(',', $order);
+
+        foreach ($exp as $i => $value) {
+            if ($exp[$i] == 'subtotal') {
+                unset($exp[$i]);
+                unset($exp2[$i]);
+                continue;
+            }
+
+            if ($exp[$i] == 'tax') {
+                $exp[$i]  = 'transaction_tax';
+                $exp2[$i] = 'transaction_tax';
+                array_push($label, 'Tax');
+                array_push($label2, 'Tax');
+            }
+
+            if ($exp[$i] == 'service') {
+                $exp[$i]  = 'transaction_service';
+                $exp2[$i] = 'transaction_service';
+                array_push($label, 'Service Fee');
+                array_push($label2, 'Service Fee');
+            }
+
+            if ($exp[$i] == 'shipping') {
+                if ($list['trasaction_type'] == 'Pickup Order') {
+                    unset($exp[$i]);
+                    unset($exp2[$i]);
+                    continue;
+                } else {
+                    $exp[$i]  = 'transaction_shipment';
+                    $exp2[$i] = 'transaction_shipment';
+                    array_push($label, 'Delivery Cost');
+                    array_push($label2, 'Delivery Cost');
+                }
+            }
+
+            if ($exp[$i] == 'discount') {
+                $exp2[$i] = 'transaction_discount';
+                array_push($label2, 'Discount');
+                unset($exp[$i]);
+                continue;
+            }
+
+            if (stristr($exp[$i], 'empty')) {
+                unset($exp[$i]);
+                unset($exp2[$i]);
+                continue;
+            }
+        }
+
+        switch ($list['trasaction_payment_type']) {
+            case 'Balance':
+                $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get()->toArray();
+                if ($multiPayment) {
+                    foreach ($multiPayment as $keyMP => $mp) {
+                        switch ($mp['type']) {
+                            case 'Balance':
+                                $log = LogBalance::where('id_reference', $mp['id_transaction'])->where('source', 'Online Transaction')->first();
+                                if ($log['balance'] < 0) {
+                                    $list['balance'] = $log['balance'];
+                                    $list['check'] = 'tidak topup';
+                                } else {
+                                    $list['balance'] = $list['transaction_grandtotal'] - $log['balance'];
+                                    $list['check'] = 'topup';
+                                }
+                                $list['payment'][] = [
+                                    'name'      => 'Balance',
+                                    'amount'    => $list['balance']
+                                ];
+                                break;
+                            case 'Manual':
+                                $payment = TransactionPaymentManual::with('manual_payment_method.manual_payment')->where('id_transaction', $list['id_transaction'])->first();
+                                $list['payment'] = $payment;
+                                $list['payment'][] = [
+                                    'name'      => 'Cash',
+                                    'amount'    => $payment['payment_nominal']
+                                ];
+                                break;
+                            case 'Midtrans':
+                                $payMidtrans = TransactionPaymentMidtran::find($mp['id_payment']);
+                                $payment['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)).' '.strtoupper($payMidtrans->bank);
+                                $payment['amount']    = $payMidtrans->gross_amount;
+                                $list['payment'][] = $payment;
+                                break;
+                            case 'Ovo':
+                                $payment = TransactionPaymentOvo::find($mp['id_payment']);
+                                $payment['name']    = 'OVO';
+                                $list['payment'][] = $payment;
+                                break;
+                            case 'IPay88':
+                                $PayIpay = TransactionPaymentIpay88::find($mp['id_payment']);
+                                $payment['name']    = $PayIpay->payment_method;
+                                $payment['amount']    = $PayIpay->amount / 100;
+                                $list['payment'][] = $payment;
+                                break;
+                            case 'Shopeepay':
+                                $shopeePay = TransactionPaymentShopeePay::find($mp['id_payment']);
+                                $payment['name']    = 'ShopeePay';
+                                $payment['amount']  = $shopeePay->amount / 100;
+                                $list['payment'][]  = $payment;
+                                break;
+                            case 'Offline':
+                                $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
+                                foreach ($payment as $key => $value) {
+                                    $list['payment'][$key] = [
+                                        'name'      => $value['payment_bank'],
+                                        'amount'    => $value['payment_amount']
+                                    ];
+                                }
+                                break;
+                            default:
+                                $list['payment'][] = [
+                                    'name'      => null,
+                                    'amount'    => null
+                                ];
+                                break;
+                        }
+                    }
+                } else {
+                    $log = LogBalance::where('id_reference', $list['id_transaction'])->first();
+                    if ($log['balance'] < 0) {
+                        $list['balance'] = $log['balance'];
+                        $list['check'] = 'tidak topup';
+                    } else {
+                        $list['balance'] = $list['transaction_grandtotal'] - $log['balance'];
+                        $list['check'] = 'topup';
+                    }
+                    $list['payment'][] = [
+                        'name'      => 'Balance',
+                        'amount'    => $list['balance']
+                    ];
+                }
+                break;
+            case 'Manual':
+                $payment = TransactionPaymentManual::with('manual_payment_method.manual_payment')->where('id_transaction', $list['id_transaction'])->first();
+                $list['payment'] = $payment;
+                $list['payment'][] = [
+                    'name'      => 'Cash',
+                    'amount'    => $payment['payment_nominal']
+                ];
+                break;
+            case 'Midtrans':
+                $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+                $payment = [];
+                foreach($multiPayment as $dataKey => $dataPay){
+                    if($dataPay['type'] == 'Midtrans'){
+                        $payMidtrans = TransactionPaymentMidtran::find($dataPay['id_payment']);
+                        $payment[$dataKey]['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)).' '.strtoupper($payMidtrans->bank);
+                        $payment[$dataKey]['amount']    = $payMidtrans->gross_amount;
+                    }else{
+                        $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
+                        $payment[$dataKey] = $dataPay;
+                        $list['balance'] = $dataPay['balance_nominal'];
+                        $payment[$dataKey]['name']          = 'Balance';
+                        $payment[$dataKey]['amount']        = $dataPay['balance_nominal'];
+                    }
+                }
+                $list['payment'] = $payment;
+                break;
+            case 'Ovo':
+                $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+                $payment = [];
+                foreach($multiPayment as $dataKey => $dataPay){
+                    if($dataPay['type'] == 'Ovo'){
+                        $payment[$dataKey] = TransactionPaymentOvo::find($dataPay['id_payment']);
+                        $payment[$dataKey]['name']    = 'OVO';
+                    }else{
+                        $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
+                        $payment[$dataKey] = $dataPay;
+                        $list['balance'] = $dataPay['balance_nominal'];
+                        $payment[$dataKey]['name']          = 'Balance';
+                        $payment[$dataKey]['amount']        = $dataPay['balance_nominal'];
+                    }
+                }
+                $list['payment'] = $payment;
+                break;
+            case 'Ipay88':
+                $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+                $payment = [];
+                foreach($multiPayment as $dataKey => $dataPay){
+                    if($dataPay['type'] == 'IPay88'){
+                        $PayIpay = TransactionPaymentIpay88::find($dataPay['id_payment']);
+                        $payment[$dataKey]['name']    = $PayIpay->payment_method;
+                        $payment[$dataKey]['amount']    = $PayIpay->amount / 100;
+                    }else{
+                        $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
+                        $payment[$dataKey] = $dataPay;
+                        $list['balance'] = $dataPay['balance_nominal'];
+                        $payment[$dataKey]['name']          = 'Balance';
+                        $payment[$dataKey]['amount']        = $dataPay['balance_nominal'];
+                    }
+                }
+                $list['payment'] = $payment;
+                break;
+            case 'Shopeepay':
+                $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+                $payment = [];
+                foreach($multiPayment as $dataKey => $dataPay){
+                    if($dataPay['type'] == 'Shopeepay'){
+                        $payShopee = TransactionPaymentShopeePay::find($dataPay['id_payment']);
+                        $payment[$dataKey]['name']      = 'ShopeePay';
+                        $payment[$dataKey]['amount']    = $payShopee->amount / 100;
+                    }else{
+                        $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
+                        $payment[$dataKey]              = $dataPay;
+                        $list['balance']                = $dataPay['balance_nominal'];
+                        $payment[$dataKey]['name']      = 'Balance';
+                        $payment[$dataKey]['amount']    = $dataPay['balance_nominal'];
+                    }
+                }
+                $list['payment'] = $payment;
+                break;
+            case 'Offline':
+                $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
+                foreach ($payment as $key => $value) {
+                    $list['payment'][$key] = [
+                        'name'      => $value['payment_bank'],
+                        'amount'    => $value['payment_amount']
+                    ];
+                }
+                break;
+            default:
+                $list['payment'] = [];
+                break;
+        }
+
+        if (!empty($list['transaction_payment_subscription'])) {
+            $payment_subscription = abs($list['transaction_payment_subscription']['subscription_nominal']);
+            $result['promo_name'] = $list['transaction_payment_subscription']['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'];
+            $list['payment'][] = [
+                'name'      => 'Subscription',
+                'amount'    => $payment_subscription
+            ];
+        }
+
+        array_splice($exp, 0, 0, 'transaction_subtotal');
+        array_splice($label, 0, 0, 'Cart Total');
+
+        array_splice($exp2, 0, 0, 'transaction_subtotal');
+        array_splice($label2, 0, 0, 'Cart Total');
+
+        array_values($exp);
+        array_values($label);
+
+        array_values($exp2);
+        array_values($label2);
+
+        $imp         = implode(',', $exp);
+        $order_label = implode(',', $label);
+
+        $imp2         = implode(',', $exp2);
+        $order_label2 = implode(',', $label2);
+
+        $detail = [];
+
+        $pickupType = $list['trasaction_type'];
+        if ($list['trasaction_type'] == 'Pickup Order') {
+            $detail = TransactionPickup::where('id_transaction', $list['id_transaction'])->first()->toArray();
+            if ($detail) {
+                $qr = $detail['order_id'] . strtotime($list['transaction_date']);
+
+                $qrCode = 'https://chart.googleapis.com/chart?chl=' . $qr . '&chs=250x250&cht=qr&chld=H%7C0';
+                $qrCode = html_entity_decode($qrCode);
+
+                $newDetail = [];
+                foreach ($detail as $key => $value) {
+                    $newDetail[$key] = $value;
+                    if ($key == 'order_id') {
+                        $newDetail['order_id_qrcode'] = $qrCode;
+                    }
+                }
+
+                $detail = $newDetail;
+
+                if ($detail['pickup_by'] == 'GO-SEND') {
+                    $pickupType = 'Delivery';
+                }
+            }
+        } elseif ($list['trasaction_type'] == 'Delivery') {
+            $detail = TransactionShipment::with('city.province')->where('id_transaction', $list['id_transaction'])->first();
+        }
+
+        $list['detail']      = $detail;
+        $list['order']       = $imp;
+        $list['order_label'] = $order_label;
+
+        $list['order_v2']       = $imp2;
+        $list['order_label_v2'] = $order_label2;
+
+        $list['date'] = $list['transaction_date'];
+        $list['type'] = 'trx';
+
+        $result = [
+            'id_transaction'              => $list['id_transaction'],
+            'user_name'                   => $list['user']['name'],
+            'user_phone'                  => $list['user']['phone'],
+            'transaction_receipt_number'  => $list['transaction_receipt_number'],
+            'transaction_date'            => date('d M Y H:i', strtotime($list['transaction_date'])),
+            'trasaction_type'             => $pickupType,
+            'transaction_grandtotal'      => MyHelper::requestNumber($list['transaction_grandtotal'], '_CURRENCY'),
+            'transaction_subtotal'        => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY'),
+            'transaction_discount'        => MyHelper::requestNumber($list['transaction_discount'], '_CURRENCY'),
+            'transaction_cashback_earned' => MyHelper::requestNumber($list['transaction_cashback_earned'], '_POINT'),
+            'trasaction_payment_type'     => $list['trasaction_payment_type'],
+            'transaction_payment_status'  => $list['transaction_payment_status'],
+            'rejectable'                  => 0,
+            'outlet'                      => [
+                'outlet_name'    => $list['outlet']['outlet_name'],
+                'outlet_address' => $list['outlet']['outlet_address'],
+                'call'           => $list['outlet']['call'],
+            ],
+        ];
+
+        if ($list['trasaction_payment_type'] != 'Offline') {
+            $result['detail'] = [
+                'order_id_qrcode' => $list['detail']['order_id_qrcode'],
+                'order_id'        => $list['detail']['order_id'],
+                'pickup_type'     => $list['detail']['pickup_type'],
+                'pickup_date'     => date('d F Y', strtotime($list['detail']['pickup_at'])),
+                'pickup_time'     => ($list['detail']['pickup_type'] == 'right now') ? 'RIGHT NOW' : date('H : i', strtotime($list['detail']['pickup_at'])),
+            ];
+
+            if (empty($list['detail']['pickup_at'])) {
+                $proc_time = Setting::where('key', 'processing_time')->first();
+                $pickup_at = date('H:i', strtotime('+'.$proc_time->value.' minutes', strtotime($list['transaction_date'])));
+            }
+            $result['detail']['pickup_at'] = !empty($list['detail']['pickup_at']) ? date('H:i', strtotime($list['detail']['pickup_at'])) : $pickup_at;
+
+            if (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Cancelled') {
+                $result['transaction_status']      = 0;
+                $result['transaction_status_text'] = 'ORDER ANDA DIBATALKAN';
+            } elseif (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Pending') {
+                $result['transaction_status']      = 6;
+                $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
+            } elseif ($list['detail']['reject_at'] != null) {
+                $reason = $list['detail']['reject_reason'];
+                $ditolak = 'ORDER DITOLAK';
+                if (strpos($reason, 'auto reject order') !== false) {
+                    $ditolak = 'ORDER DITOLAK OTOMATIS';
+                    if (strpos($reason, 'no driver') !== false) {
+                        $reason = 'GAGAL MENEMUKAN DRIVER';
+                    } elseif (strpos($reason, 'not ready') !== false) {
+                        $reason = 'STATUS ORDER TIDAK DIPROSES READY';
+                    } else {
+                        $reason = 'OUTLET GAGAL MENERIMA ORDER';
+                    }
+                }
+                if($reason) $reason = "\n$reason";
+                $result['transaction_status']      = 0;
+                $result['transaction_status_text'] = "$ditolak$reason";
+            } elseif ($list['detail']['taken_by_system_at'] != null) {
+                $result['transaction_status']      = 1;
+                $result['transaction_status_text'] = 'ORDER SELESAI';
+            } elseif ($list['detail']['taken_at'] != null) {
+                $result['transaction_status']      = 2;
+                $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
+            } elseif ($list['detail']['ready_at'] != null) {
+                $result['transaction_status']      = 3;
+                $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
+            } elseif ($list['detail']['receive_at'] != null) {
+                $result['transaction_status']      = 4;
+                $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
+            } else {
+                $result['transaction_status']      = 5;
+                $result['transaction_status_text'] = 'ORDER PENDING';
+                $result['rejectable']              = 1;
+            }
+
+            if ($list['transaction_pickup_go_send'] && !$list['detail']['reject_at']) {
+                // $result['transaction_status'] = 5;
+                $result['delivery_info'] = [
+                    'driver'            => null,
+                    'delivery_status'   => '',
+                    'delivery_address'  => $list['transaction_pickup_go_send']['destination_address']?:'',
+                    'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note']?:'',
+                    'booking_status'    => 0,
+                    'cancelable'        => 1,
+                    'go_send_order_no'  => $list['transaction_pickup_go_send']['go_send_order_no']?:'',
+                    'live_tracking_url' => $list['transaction_pickup_go_send']['live_tracking_url']?:'',
+                ];
+                if ($list['transaction_pickup_go_send']['go_send_id']) {
+                    $result['delivery_info']['booking_status'] = 1;
+                }
+                switch (strtolower($list['transaction_pickup_go_send']['latest_status'])) {
+                    case 'finding driver':
+                    case 'confirmed':
+                        $result['delivery_info']['delivery_status'] = 'Sedang mencari driver';
+                        $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
+                        $result['rejectable']                       = 0;
+                        break;
+                    case 'driver allocated':
+                    case 'allocated':
+                        $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
+                        $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        $result['rejectable']                       = 0;
+                        break;
+                    case 'enroute pickup':
+                    case 'out_for_pickup':
+                        $result['delivery_info']['delivery_status'] = 'Driver dalam perjalanan menuju Outlet';
+                        $result['transaction_status_text']          = 'DRIVER SEDANG MENUJU OUTLET';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 1;
+                        $result['rejectable']                  = 0;
+                        break;
+                    case 'picked':
+                        $result['delivery_info']['delivery_status'] = 'Driver mengambil pesanan di Outlet';
+                        $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 0;
+                        $result['rejectable']                  = 0;
+                        break;
+                    case 'enroute drop':
+                    case 'out_for_delivery':
+                        $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
+                        if($list['detail']['ready_at'] != null){
+                            $result['transaction_status_text']          = 'PROSES PENGANTARAN';
+                            $result['transaction_status']               = 3;
+                        }
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 0;
+                        $result['rejectable']                  = 0;
+                        break;
+                    case 'completed':
+                    case 'delivered':
+                        if($list['detail']['ready_at'] == null){
+                            $result['transaction_status'] = 4;
+                            $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
+                        }elseif($list['detail']['taken_at'] == null){
+                            $result['transaction_status'] = 3;
+                            $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
+                        }else{
+                            $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
+                            $result['transaction_status'] = 2;
+                        }
+                        $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 0;
+                        break;
+                    case 'cancelled':
+                        $result['delivery_info']['booking_status'] = 0;
+                        $result['transaction_status_text']         = 'PENGANTARAN DIBATALKAN';
+                        $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
+                        $result['delivery_info']['cancelable']     = 0;
+                        $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
+                        break;
+                    case 'driver not found':
+                    case 'no_driver':
+                        $result['delivery_info']['booking_status']  = 0;
+                        $result['transaction_status_text']          = 'DRIVER TIDAK DITEMUKAN';
+                        $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
+                        $result['delivery_info']['cancelable']      = 0;
+                        $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
+                        break;
+                }
+            }
+        }
+
+        //get item bundling
+        $itemBundling = [];
+        $itemBundlingPerBrand = [];
+        $quantityItemBundling = 0;
+        $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
+            ->where('id_transaction', $id)->get()->toArray();
+        foreach ($getBundling as $key=>$bundling){
+            $getPriceToping =  $bundling['transaction_bundling_product_subtotal']/$bundling['transaction_bundling_product_qty'];
+
+            $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
+                ->join('brands', 'brands.id_brand', 'transaction_products.id_brand')
+                ->orderBy('order_brand', 'desc')
+                ->where('id_transaction_bundling_product', $bundling['id_transaction_bundling_product'])->get()->toArray();
+
+            $products = [];
+            $productPerBrand = [];
+            $basePriceBundling = 0;
+            $subTotalBundlingWithoutModifier = 0;
+            $subItemBundlingWithoutModifie = 0;
+            foreach ($bundlingProduct as $bp){
+                $quantityItemBundling = $quantityItemBundling + ($bp['transaction_product_bundling_qty'] * $bundling['transaction_bundling_product_qty']);
+                $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                    ->whereNull('transaction_product_modifiers.id_product_modifier_group')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as text', DB::raw('FLOOR(transaction_product_modifier_price * '.$bp['transaction_product_bundling_qty'].' * '.$bundling['transaction_bundling_product_qty'].') as product_modifier_price'))->get()->toArray();
+                $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->select('product_variants.id_product_variant', 'product_variants.product_variant_name', 'transaction_product_variant_price')->get()->toArray();
+                $variantNoPrice =  TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                    ->whereNotNull('transaction_product_modifiers.id_product_modifier_group')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->select('transaction_product_modifiers.id_product_modifier as id_product_variant', 'transaction_product_modifiers.text as product_variant_name', 'transaction_product_modifier_price as transaction_product_variant_price')->get()->toArray();
+
+                $products[] = [
+                    'product_name' => $bp['product_name'],
+                    'product_note' => $bp['transaction_product_note'],
+                    'transaction_product_price' => (int)($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']),
+                    'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
+                    'modifiers' => $mod,
+                    'variants' => array_merge($variantPrice, $variantNoPrice)
+                ];
+
+                //set product per brand
+                $checkBrand = array_search($bp['id_brand'], array_column($productPerBrand, 'id_brand'));
+                if($checkBrand === false){
+                    $productPerBrand[] = [
+                        'id_brand' => $bp['id_brand'],
+                        'brand_name' => $bp['name_brand'],
+                        'brand_code' => $bp['code_brand'],
+                        'products' => [[
+                            'id_brand' => $bp['id_brand'],
+                            'id_product' => $bp['id_product'],
+                            'id_product_variant_group' => $bp['id_product_variant_group'],
+                            'product_name' => $bp['product_name'],
+                            'product_note' => $bp['transaction_product_note'],
+                            'transaction_product_price' => (int)($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']),
+                            'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
+                            'modifiers' => $mod,
+                            'variants' => array_merge($variantPrice, $variantNoPrice)
+                        ]]
+                    ];
+                }else{
+                    $productPerBrand[$checkBrand]['products'][] = [
+                        'id_brand' => $bp['id_brand'],
+                        'id_product' => $bp['id_product'],
+                        'id_product_variant_group' => $bp['id_product_variant_group'],
+                        'product_name' => $bp['product_name'],
+                        'product_note' => $bp['transaction_product_note'],
+                        'transaction_product_price' => (int)($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']),
+                        'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
+                        'modifiers' => $mod,
+                        'variants' => array_merge($variantPrice, $variantNoPrice)
+                    ];
+                }
+
+                $basePriceBundling = $basePriceBundling + (($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']) * $bp['transaction_product_bundling_qty']);
+                $subTotalBundlingWithoutModifier = $subTotalBundlingWithoutModifier + (($bp['transaction_product_subtotal'] - ($bp['transaction_modifier_subtotal'] * $bp['transaction_product_bundling_qty'])));
+                $subItemBundlingWithoutModifie = $subItemBundlingWithoutModifie + ($bp['transaction_product_bundling_price'] * $bp['transaction_product_bundling_qty']);
+            }
+
+            $itemBundling[] = [
+                'bundling_name' => $bundling['bundling_name'],
+                'bundling_qty' => $bundling['transaction_bundling_product_qty'],
+                'bundling_price_no_discount' => $basePriceBundling * $bundling['transaction_bundling_product_qty'],
+                'bundling_subtotal' => $subTotalBundlingWithoutModifier * $bundling['transaction_bundling_product_qty'],
+                'bundling_sub_item' => '@'.MyHelper::requestNumber($subItemBundlingWithoutModifie,'_CURRENCY'),
+                'products' => $products
+            ];
+
+            //set bundling per brand
+            $checkBundlingPerBrand = array_search($bundling['id_bundling'], array_column($itemBundlingPerBrand, 'id_bundling'));
+            if($checkBundlingPerBrand === false){
+                $itemBundlingPerBrand[] = [
+                    'id_bundling' => $bundling['id_bundling'],
+                    'bundling_name' => $bundling['bundling_name'],
+                    'bundling_qty' => $bundling['transaction_bundling_product_qty'],
+                    'bundling_subtotal' => (int)$bundling['transaction_bundling_product_subtotal'],
+                    'bundling_sub_item' => '@'.MyHelper::requestNumber($getPriceToping,'_CURRENCY'),
+                    'brands' => $productPerBrand
+                ];
+            }else{
+                $dtBrands = $itemBundlingPerBrand[$checkBundlingPerBrand]['brands'];
+                foreach ($productPerBrand as $pb){
+                    $checkBundlingProductBrand = array_search($pb['id_brand'], array_column($dtBrands, 'id_brand'));
+                    if($checkBundlingProductBrand === false){
+                        $itemBundlingPerBrand[$checkBundlingPerBrand]['brands'][] = $pb;
+                    }else{
+                        $mergeProduct = array_merge($pb['products'], $dtBrands[$checkBundlingProductBrand]['products']);
+                        $productsBrand = [];
+                        foreach ($mergeProduct as $value){
+                            $check = array_search($value['id_product'], array_column($productsBrand, 'id_product'));
+                            if($check === false){
+                                $productsBrand[] = [
+                                    'id_brand' => $value['id_brand'],
+                                    'id_product' => $value['id_product'],
+                                    'id_product_variant_group' => $value['id_product_variant_group'],
+                                    'product_name' => $value['product_name'],
+                                    'product_note' => $value['product_note'],
+                                    'transaction_product_price' => (int)$value['transaction_product_price'],
+                                    'transaction_product_qty' => $bundling['transaction_bundling_product_qty'],
+                                    'modifiers' => $value['modifiers'],
+                                    'variants' => $value['variants']
+                                ];
+                            }else{
+                                $checkModifiers = $productsBrand[$check]['modifiers'];
+                                $checkNote = $productsBrand[$check]['product_note'];
+                                $checkIdProductVariantGroup = $productsBrand[$check]['id_product_variant_group'];
+
+                                $mergeModifiers = array_merge($checkModifiers, $value['modifiers']);
+                                $mergeModifiersUnique = array_map("unserialize", array_unique(array_map("serialize", $mergeModifiers)));
+
+                                if($checkIdProductVariantGroup == $value['id_product_variant_group'] &&
+                                    count($checkModifiers) == count($value['modifiers']) &&
+                                    count($checkModifiers) == count($value['modifiers']) &&
+                                    count($mergeModifiersUnique) == count($value['modifiers']) && $checkNote == $value['product_note']){
+                                    $productsBrand[$check]['transaction_product_qty'] = $productsBrand[$check]['transaction_product_qty'] + $value['transaction_product_qty'];
+                                }else{
+                                    $productsBrand[] = [
+                                        'id_brand' => $value['id_brand'],
+                                        'id_product' => $value['id_product'],
+                                        'id_product_variant_group' => $value['id_product_variant_group'],
+                                        'product_name' => $value['product_name'],
+                                        'product_note' => $value['product_note'],
+                                        'transaction_product_price' => (int)$value['transaction_product_price'],
+                                        'transaction_product_qty' => $value['transaction_product_qty'],
+                                        'modifiers' => $value['modifiers'],
+                                        'variants' => $value['variants']
+                                    ];
+                                }
+                            }
+                        }
+                        $itemBundlingPerBrand[$checkBundlingPerBrand]['bundling_qty'] = $itemBundlingPerBrand[$checkBundlingPerBrand]['bundling_qty'] + 1;
+                        $itemBundlingPerBrand[$checkBundlingPerBrand]['brands'][$checkBundlingProductBrand]['products'] = $productsBrand;
+                    }
+                }
+            }
+        }
+
+        $result['product_bundling_transaction_name'] = 'Bundling';
+        $result['product_bundling_transaction_detail'] = $itemBundling;
+        $result['product_bundling_transaction_perbrand'] = $itemBundlingPerBrand;
+        $result['product_transaction'] = [];
+
+        $discount = 0;
+        $quantity = 0;
+        $keynya   = 0;
+        foreach ($list['product_transaction'] as $keyTrx => $valueTrx) {
+            $result['product_transaction'][$keynya]['brand'] = $keyTrx;
+            foreach ($valueTrx as $keyProduct => $valueProduct) {
+                $quantity                                                                                        = $quantity + $valueProduct['transaction_product_qty'];
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_qty']       = $valueProduct['transaction_product_qty'];
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_subtotal']  = MyHelper::requestNumber($valueProduct['transaction_product_subtotal'], '_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_sub_item']  = '@' . MyHelper::requestNumber($valueProduct['transaction_product_subtotal'] / $valueProduct['transaction_product_qty'], '_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_modifier_subtotal'] = MyHelper::requestNumber($valueProduct['transaction_modifier_subtotal'], '_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_variant_subtotal']  = MyHelper::requestNumber($valueProduct['transaction_variant_subtotal'],'_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_note']      = $valueProduct['transaction_product_note'];
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_discount']  = $valueProduct['transaction_product_discount'];
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_name']       = $valueProduct['product']['product_name'];
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_price']      = MyHelper::requestNumber($valueProduct['transaction_product_price'], '_CURRENCY');
+                $discount                                                                                        = $discount + $valueProduct['transaction_product_discount'];
+                $variantsPrice = 0;
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'] = [];
+                foreach ($valueProduct['variants'] as $keyMod => $valueMod) {
+                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][$keyMod]['product_variant_name']   = $valueMod['product_variant_name'];
+                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][$keyMod]['product_variant_price']  = (int)$valueMod['transaction_product_variant_price'];
+                    $variantsPrice = $variantsPrice + $valueMod['transaction_product_variant_price'];
+                }
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'] = [];
+                foreach ($valueProduct['modifiers'] as $keyMod => $valueMod) {
+                    if(!empty($valueMod['id_product_modifier_group'])){
+                        $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][] = [
+                            'product_variant_name' => $valueMod['text'],
+                            'product_variant_price' => 0,
+                            'is_modifier' => 1
+                        ];
+                    }else{
+                        $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][] = [
+                            'product_modifier_name' => $valueMod['text'],
+                            'product_modifier_qty' => $valueMod['qty'],
+                            'product_modifier_price' => (int)($valueMod['transaction_product_modifier_price'] * $valueProduct['transaction_product_qty'])
+                        ];
+                    }
+                }
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_sub_item']      = '@'.MyHelper::requestNumber($valueProduct['transaction_product_price']+$variantsPrice, '_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product_variant_group_price'] = (int)($valueProduct['transaction_product_price'] + $variantsPrice);
+            }
+            $keynya++;
+        }
+
+        $result['payment_detail'][] = [
+            'name'   => 'Subtotal',
+            'desc'   => $quantity + $quantityItemBundling . ' items',
+            'amount' => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY'),
+        ];
+
+        if ($list['transaction_discount']) {
+            $discount = abs($list['transaction_discount']);
+            $p = 0;
+            if (!empty($list['transaction_vouchers'])) {
+                foreach ($list['transaction_vouchers'] as $valueVoc) {
+                    $result['promo']['code'][$p++]   = $valueVoc['deals_voucher']['voucher_code'];
+                    $result['payment_detail'][] = [
+                        'name'          => 'Diskon (Promo)',
+                        'desc'          => null,
+                        "is_discount"   => 1,
+                        'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                    ];
+                }
+            }
+
+            if (!empty($list['promo_campaign_promo_code'])) {
+                $result['promo']['code'][$p++]   = $list['promo_campaign_promo_code']['promo_code'];
+                $result['payment_detail'][] = [
+                    'name'          => 'Diskon (Promo)',
+                    'desc'          => null,
+                    "is_discount"   => 1,
+                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                ];
+            }
+
+            if (!empty($list['id_subscription_user_voucher']) && !empty($list['transaction_discount'])) {
+                $result['payment_detail'][] = [
+                    'name'          => 'Subscription (Diskon)',
+                    'desc'          => null,
+                    "is_discount"   => 1,
+                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                ];
+            }
+        }
+
+        if ($list['transaction_shipment_go_send'] > 0) {
+            $result['payment_detail'][] = [
+                'name'      => 'Delivery',
+                'desc'      => $list['detail']['pickup_by'],
+                'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'],'_CURRENCY')
+            ];
+        }
+
+        if ($list['transaction_discount_delivery']) {
+            $discount = abs($list['transaction_discount_delivery']);
+            $p = 0;
+            if (!empty($list['transaction_vouchers'])) {
+                foreach ($list['transaction_vouchers'] as $valueVoc) {
+                    $result['promo']['code'][$p++]   = $valueVoc['deals_voucher']['voucher_code'];
+                    $result['payment_detail'][] = [
+                        'name'          => 'Diskon (Delivery)',
+                        'desc'          => null,
+                        "is_discount"   => 1,
+                        'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                    ];
+                }
+            }
+
+            if (!empty($list['promo_campaign_promo_code'])) {
+                $result['promo']['code'][$p++]   = $list['promo_campaign_promo_code']['promo_code'];
+                $result['payment_detail'][] = [
+                    'name'          => 'Diskon (Delivery)',
+                    'desc'          => null,
+                    "is_discount"   => 1,
+                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                ];
+            }
+
+            if (!empty($list['id_subscription_user_voucher']) && !empty($list['transaction_discount_delivery'])) {
+                $result['payment_detail'][] = [
+                    'name'          => 'Subscription (Delivery)',
+                    'desc'          => null,
+                    "is_discount"   => 1,
+                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                ];
+            }
+        }
+
+        $result['promo']['discount'] = $discount;
+        $result['promo']['discount'] = MyHelper::requestNumber($discount, '_CURRENCY');
+
+        if ($list['trasaction_payment_type'] != 'Offline') {
+            if ($list['transaction_payment_status'] == 'Cancelled') {
+                $result['detail']['detail_status'][] = [
+                    'text' => 'Your order has been canceled',
+                    'date' => MyHelper::dateFormatInd($list['void_date'])
+                ];
+            }
+            if ($list['detail']['reject_at'] != null) {
+                $result['detail']['detail_status'][] = [
+                    'text'   => 'Order rejected',
+                    'date' => MyHelper::dateFormatInd($list['detail']['reject_at']),
+                    'reason' => $list['detail']['reject_reason'],
+                ];
+            }
+            if ($list['detail']['taken_by_system_at'] != null) {
+                $result['detail']['detail_status'][] = [
+                    'text' => 'Your order has been done by system',
+                    'date' => MyHelper::dateFormatInd($list['detail']['taken_by_system_at'])
+                ];
+            }
+            if ($list['detail']['taken_at'] != null) {
+                $result['detail']['detail_status'][] = [
+                    'text' => 'Your order has been taken',
+                    'date' => MyHelper::dateFormatInd($list['detail']['taken_at'])
+
+                ];
+            }
+            if ($list['detail']['ready_at'] != null) {
+                $result['detail']['detail_status'][] = [
+                    'text' => 'Your order is ready ',
+                    'date' => MyHelper::dateFormatInd($list['detail']['ready_at'])
+                ];
+            }
+            if ($list['detail']['receive_at'] != null) {
+                $result['detail']['detail_status'][] = [
+                    'text' => 'Your order has been received',
+                    'date' => MyHelper::dateFormatInd($list['detail']['receive_at'])
+                ];
+            }
+            $result['detail']['detail_status'][] = [
+                'text' => 'Your order awaits confirmation ',
+                'date' => MyHelper::dateFormatInd($list['transaction_date'])
+            ];
+        }
+
+        foreach ($list['payment'] as $key => $value) {
+            if ($value['name'] == 'Balance') {
+                $result['transaction_payment'][$key] = [
+                    'name'       => (env('POINT_NAME')) ? env('POINT_NAME') : $value['name'],
+                    'is_balance' => 1,
+                    'amount'     => MyHelper::requestNumber($value['amount'], '_POINT'),
+                ];
+            } else {
+                $result['transaction_payment'][$key] = [
+                    'name'   => $value['name'],
+                    'amount' => MyHelper::requestNumber($value['amount'], '_CURRENCY'),
+                ];
+            }
+        }
+
+        return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function transactionDetailV2(TransactionDetail $request)
+    {
+        $id = $request->json('id_transaction');
+
+        $list = Transaction::where([['transactions.id_transaction', $id]])->leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->with([
+            // 'user.city.province',
+            'user',
+            'plasticTransaction.product',
             'productTransaction.product.product_category',
             'productTransaction.modifiers' => function($query) {
                 $query->orderByRaw('CASE WHEN id_product_modifier_group IS NULL THEN 1 ELSE 0 END');
@@ -3031,8 +4168,21 @@ class ApiOutletApp extends Controller
                 $result['transaction_status']      = 6;
                 $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
             } elseif ($list['detail']['reject_at'] != null) {
+                $reason = $list['detail']['reject_reason'];
+                $ditolak = 'ORDER DITOLAK';
+                if (strpos($reason, 'auto reject order') !== false) {
+                    $ditolak = 'ORDER DITOLAK OTOMATIS';
+                    if (strpos($reason, 'no driver') !== false) {
+                        $reason = 'GAGAL MENEMUKAN DRIVER';
+                    } elseif (strpos($reason, 'not ready') !== false) {
+                        $reason = 'STATUS ORDER TIDAK DIPROSES READY';
+                    } else {
+                        $reason = 'OUTLET GAGAL MENERIMA ORDER';
+                    }
+                }
+                if($reason) $reason = "\n$reason";
                 $result['transaction_status']      = 0;
-                $result['transaction_status_text'] = 'ORDER ANDA DITOLAK';
+                $result['transaction_status_text'] = "$ditolak$reason";
             } elseif ($list['detail']['taken_by_system_at'] != null) {
                 $result['transaction_status']      = 1;
                 $result['transaction_status_text'] = 'ORDER SELESAI';
@@ -3100,6 +4250,19 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['cancelable'] = 1;
                         $result['rejectable']                  = 0;
                         break;
+                    case 'picked':
+                        $result['delivery_info']['delivery_status'] = 'Driver mengambil pesanan di Outlet';
+                        $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 0;
+                        $result['rejectable']                  = 0;
+                        break;
                     case 'enroute drop':
                     case 'out_for_delivery':
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
@@ -3119,15 +4282,17 @@ class ApiOutletApp extends Controller
                         break;
                     case 'completed':
                     case 'delivered':
-                        if($list['detail']['ready_at'] == null){
-                            $result['transaction_status'] = 4;
-                            $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
-                        }elseif($list['detail']['taken_at'] == null){
-                            $result['transaction_status'] = 3;
-                            $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
-                        }else{
-                            $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
-                            $result['transaction_status'] = 2;
+                        if($list['detail']['taken_by_system_at'] == null){
+                            if($list['detail']['ready_at'] == null){
+                                $result['transaction_status'] = 4;
+                                $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
+                            }elseif($list['detail']['taken_at'] == null){
+                                $result['transaction_status'] = 3;
+                                $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
+                            }else{
+                                $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
+                                $result['transaction_status'] = 2;
+                            }
                         }
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['driver']          = [
@@ -3144,7 +4309,7 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']         = 'PENGANTARAN DIBATALKAN';
                         $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
                         $result['delivery_info']['cancelable']     = 0;
-                        $result['rejectable']              = ($list['transaction_pickup_go_send']['retry_count'] == 5) ? 1 : 0;
+                        $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
                     case 'driver not found':
                     case 'no_driver':
@@ -3152,180 +4317,19 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']          = 'DRIVER TIDAK DITEMUKAN';
                         $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
                         $result['delivery_info']['cancelable']      = 0;
-                        $result['rejectable']              = ($list['transaction_pickup_go_send']['retry_count'] == 5) ? 1 : 0;
+                        $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
                 }
             }
         }
 
-        //get item bundling
-        $itemBundling = [];
-        $itemBundlingPerBrand = [];
-        $quantityItemBundling = 0;
-        $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
-            ->where('id_transaction', $id)->get()->toArray();
-        foreach ($getBundling as $key=>$bundling){
-            $getPriceToping =  $bundling['transaction_bundling_product_subtotal']/$bundling['transaction_bundling_product_qty'];
-
-            $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
-                ->join('brands', 'brands.id_brand', 'transaction_products.id_brand')
-                ->orderBy('order_brand', 'desc')
-                ->where('id_transaction_bundling_product', $bundling['id_transaction_bundling_product'])->get()->toArray();
-
-            $products = [];
-            $productPerBrand = [];
-            $basePriceBundling = 0;
-            $subTotalBundlingWithoutModifier = 0;
-            $subItemBundlingWithoutModifie = 0;
-            foreach ($bundlingProduct as $bp){
-                $quantityItemBundling = $quantityItemBundling + ($bp['transaction_product_bundling_qty'] * $bundling['transaction_bundling_product_qty']);
-                $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
-                    ->whereNull('transaction_product_modifiers.id_product_modifier_group')
-                    ->where('id_transaction_product', $bp['id_transaction_product'])
-                    ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as text', DB::raw('FLOOR(transaction_product_modifier_price * '.$bp['transaction_product_bundling_qty'].' * '.$bundling['transaction_bundling_product_qty'].') as product_modifier_price'))->get()->toArray();
-                $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
-                    ->where('id_transaction_product', $bp['id_transaction_product'])
-                    ->select('product_variants.id_product_variant', 'product_variants.product_variant_name', 'transaction_product_variant_price')->get()->toArray();
-                $variantNoPrice =  TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
-                    ->whereNotNull('transaction_product_modifiers.id_product_modifier_group')
-                    ->where('id_transaction_product', $bp['id_transaction_product'])
-                    ->select('transaction_product_modifiers.id_product_modifier as id_product_variant', 'transaction_product_modifiers.text as product_variant_name', 'transaction_product_modifier_price as transaction_product_variant_price')->get()->toArray();
-
-                $products[] = [
-                    'product_name' => $bp['product_name'],
-                    'product_note' => $bp['transaction_product_note'],
-                    'transaction_product_price' => (int)($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']),
-                    'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
-                    'modifiers' => $mod,
-                    'variants' => array_merge($variantPrice, $variantNoPrice)
-                ];
-
-                //set product per brand
-                $checkBrand = array_search($bp['id_brand'], array_column($productPerBrand, 'id_brand'));
-                if($checkBrand === false){
-                    $productPerBrand[] = [
-                        'id_brand' => $bp['id_brand'],
-                        'brand_name' => $bp['name_brand'],
-                        'brand_code' => $bp['code_brand'],
-                        'products' => [[
-                            'id_brand' => $bp['id_brand'],
-                            'id_product' => $bp['id_product'],
-                            'id_product_variant_group' => $bp['id_product_variant_group'],
-                            'product_name' => $bp['product_name'],
-                            'product_note' => $bp['transaction_product_note'],
-                            'transaction_product_price' => (int)($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']),
-                            'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
-                            'modifiers' => $mod,
-                            'variants' => array_merge($variantPrice, $variantNoPrice)
-                        ]]
-                    ];
-                }else{
-                    $productPerBrand[$checkBrand]['products'][] = [
-                        'id_brand' => $bp['id_brand'],
-                        'id_product' => $bp['id_product'],
-                        'id_product_variant_group' => $bp['id_product_variant_group'],
-                        'product_name' => $bp['product_name'],
-                        'product_note' => $bp['transaction_product_note'],
-                        'transaction_product_price' => (int)($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']),
-                        'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
-                        'modifiers' => $mod,
-                        'variants' => array_merge($variantPrice, $variantNoPrice)
-                    ];
-                }
-
-                $basePriceBundling = $basePriceBundling + (($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']) * $bp['transaction_product_bundling_qty']);
-                $subTotalBundlingWithoutModifier = $subTotalBundlingWithoutModifier + (($bp['transaction_product_subtotal'] - ($bp['transaction_modifier_subtotal'] * $bp['transaction_product_bundling_qty'])));
-                $subItemBundlingWithoutModifie = $subItemBundlingWithoutModifie + ($bp['transaction_product_bundling_price'] * $bp['transaction_product_bundling_qty']);
-            }
-
-            $itemBundling[] = [
-                'bundling_name' => $bundling['bundling_name'],
-                'bundling_qty' => $bundling['transaction_bundling_product_qty'],
-                'bundling_price_no_discount' => $basePriceBundling * $bundling['transaction_bundling_product_qty'],
-                'bundling_subtotal' => $subTotalBundlingWithoutModifier * $bundling['transaction_bundling_product_qty'],
-                'bundling_sub_item' => '@'.MyHelper::requestNumber($subItemBundlingWithoutModifie,'_CURRENCY'),
-                'products' => $products
-            ];
-
-            //set bundling per brand
-            $checkBundlingPerBrand = array_search($bundling['id_bundling'], array_column($itemBundlingPerBrand, 'id_bundling'));
-            if($checkBundlingPerBrand === false){
-                $itemBundlingPerBrand[] = [
-                    'id_bundling' => $bundling['id_bundling'],
-                    'bundling_name' => $bundling['bundling_name'],
-                    'bundling_qty' => $bundling['transaction_bundling_product_qty'],
-                    'bundling_subtotal' => (int)$bundling['transaction_bundling_product_subtotal'],
-                    'bundling_sub_item' => '@'.MyHelper::requestNumber($getPriceToping,'_CURRENCY'),
-                    'brands' => $productPerBrand
-                ];
-            }else{
-                $dtBrands = $itemBundlingPerBrand[$checkBundlingPerBrand]['brands'];
-                foreach ($productPerBrand as $pb){
-                    $checkBundlingProductBrand = array_search($pb['id_brand'], array_column($dtBrands, 'id_brand'));
-                    if($checkBundlingProductBrand === false){
-                        $itemBundlingPerBrand[$checkBundlingPerBrand]['brands'][] = $pb;
-                    }else{
-                        $mergeProduct = array_merge($pb['products'], $dtBrands[$checkBundlingProductBrand]['products']);
-                        $productsBrand = [];
-                        foreach ($mergeProduct as $value){
-                            $check = array_search($value['id_product'], array_column($productsBrand, 'id_product'));
-                            if($check === false){
-                                $productsBrand[] = [
-                                    'id_brand' => $value['id_brand'],
-                                    'id_product' => $value['id_product'],
-                                    'id_product_variant_group' => $value['id_product_variant_group'],
-                                    'product_name' => $value['product_name'],
-                                    'product_note' => $value['product_note'],
-                                    'transaction_product_price' => (int)$value['transaction_product_price'],
-                                    'transaction_product_qty' => $bundling['transaction_bundling_product_qty'],
-                                    'modifiers' => $value['modifiers'],
-                                    'variants' => $value['variants']
-                                ];
-                            }else{
-                                $checkModifiers = $productsBrand[$check]['modifiers'];
-                                $checkNote = $productsBrand[$check]['product_note'];
-                                $checkIdProductVariantGroup = $productsBrand[$check]['id_product_variant_group'];
-
-                                $mergeModifiers = array_merge($checkModifiers, $value['modifiers']);
-                                $mergeModifiersUnique = array_map("unserialize", array_unique(array_map("serialize", $mergeModifiers)));
-
-                                if($checkIdProductVariantGroup == $value['id_product_variant_group'] &&
-                                    count($checkModifiers) == count($value['modifiers']) &&
-                                    count($checkModifiers) == count($value['modifiers']) &&
-                                    count($mergeModifiersUnique) == count($value['modifiers']) && $checkNote == $value['product_note']){
-                                    $productsBrand[$check]['transaction_product_qty'] = $productsBrand[$check]['transaction_product_qty'] + $value['transaction_product_qty'];
-                                }else{
-                                    $productsBrand[] = [
-                                        'id_brand' => $value['id_brand'],
-                                        'id_product' => $value['id_product'],
-                                        'id_product_variant_group' => $value['id_product_variant_group'],
-                                        'product_name' => $value['product_name'],
-                                        'product_note' => $value['product_note'],
-                                        'transaction_product_price' => (int)$value['transaction_product_price'],
-                                        'transaction_product_qty' => $value['transaction_product_qty'],
-                                        'modifiers' => $value['modifiers'],
-                                        'variants' => $value['variants']
-                                    ];
-                                }
-                            }
-                        }
-                        $itemBundlingPerBrand[$checkBundlingPerBrand]['bundling_qty'] = $itemBundlingPerBrand[$checkBundlingPerBrand]['bundling_qty'] + 1;
-                        $itemBundlingPerBrand[$checkBundlingPerBrand]['brands'][$checkBundlingProductBrand]['products'] = $productsBrand;
-                    }
-                }
-            }
-        }
-
-        $result['product_bundling_transaction_name'] = 'Bundling';
-        $result['product_bundling_transaction_detail'] = $itemBundling;
-        $result['product_bundling_transaction_perbrand'] = $itemBundlingPerBrand;
-        $result['product_transaction'] = [];
-
         $discount = 0;
         $quantity = 0;
         $keynya   = 0;
+        $productPerBrand = [];
         foreach ($list['product_transaction'] as $keyTrx => $valueTrx) {
             $result['product_transaction'][$keynya]['brand'] = $keyTrx;
+            $forProdBrand = [];
             foreach ($valueTrx as $keyProduct => $valueProduct) {
                 $quantity                                                                                        = $quantity + $valueProduct['transaction_product_qty'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_qty']       = $valueProduct['transaction_product_qty'];
@@ -3350,7 +4354,8 @@ class ApiOutletApp extends Controller
                     if(!empty($valueMod['id_product_modifier_group'])){
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][] = [
                             'product_variant_name' => $valueMod['text'],
-                            'product_variant_price' => 0
+                            'product_variant_price' => 0,
+                            'is_modifier' => 1
                         ];
                     }else{
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][] = [
@@ -3362,13 +4367,138 @@ class ApiOutletApp extends Controller
                 }
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_sub_item']      = '@'.MyHelper::requestNumber($valueProduct['transaction_product_price']+$variantsPrice, '_CURRENCY');
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product_variant_group_price'] = (int)($valueProduct['transaction_product_price'] + $variantsPrice);
+
+                $forProdBrand[] = [
+                    'bundling_name' => null,
+                    'product_name' => $valueProduct['product']['product_name'],
+                    'product_note' => $valueProduct['transaction_product_note'],
+                    'transaction_product_qty' => $valueProduct['transaction_product_qty'],
+                    'product_modifiers' => $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'],
+                    'product_variants' => $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'],
+                ];
             }
+            $productPerBrand[$keyTrx] = $forProdBrand;
             $keynya++;
+        }
+        //get item bundling
+        $bundlingGroup = [];
+        $itemBundling = [];
+        $quantityItemBundling = 0;
+        $productBundlingPerBrand = [];
+        $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
+            ->where('id_transaction', $id)->get()->toArray();
+        foreach ($getBundling as $key=>$bundling){
+            $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
+                ->join('brands', 'brands.id_brand', 'transaction_products.id_brand')
+                ->orderBy('order_brand', 'desc')
+                ->where('id_transaction_bundling_product', $bundling['id_transaction_bundling_product'])->get()->toArray();
+
+            $products = [];
+            $basePriceBundling = 0;
+            $subTotalBundlingWithoutModifier = 0;
+            $subItemBundlingWithoutModifie = 0;
+            foreach ($bundlingProduct as $bp){
+                $quantityItemBundling = $quantityItemBundling + $bp['transaction_product_qty'];
+                $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                    ->whereNull('transaction_product_modifiers.id_product_modifier_group')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as product_modifier_name', DB::raw('FLOOR(transaction_product_modifier_price * '.$bp['transaction_product_bundling_qty'].' * '.$bundling['transaction_bundling_product_qty'].') as product_modifier_price'))->get()->toArray();
+                $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->select('product_variants.id_product_variant', 'product_variants.product_variant_name', 'transaction_product_variant_price')->get()->toArray();
+                $variantNoPrice =  TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                    ->whereNotNull('transaction_product_modifiers.id_product_modifier_group')
+                    ->where('id_transaction_product', $bp['id_transaction_product'])
+                    ->select('transaction_product_modifiers.id_product_modifier as id_product_variant', 'transaction_product_modifiers.text as product_variant_name', 'transaction_product_modifier_price as transaction_product_variant_price')->get()->toArray();
+
+                $products[] = [
+                    'product_name' => $bp['product_name'],
+                    'product_note' => $bp['transaction_product_note'],
+                    'transaction_product_price' => (int)($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']),
+                    'transaction_product_qty' => $bp['transaction_product_bundling_qty'],
+                    'modifiers' => $mod,
+                    'variants' => array_merge($variantPrice, $variantNoPrice)
+                ];
+
+                $bundlingGroup[$bp['name_brand'].'|'.$bundling['bundling_name']][] =
+                    [
+                        'product_name' => $bp['product_name'],
+                        'product_note' => $bp['transaction_product_note'],
+                        'transaction_product_qty' => $bp['transaction_product_bundling_qty']*$bundling['transaction_bundling_product_qty'],
+                        'product_modifiers' => $mod,
+                        'product_variants' => array_merge($variantPrice, $variantNoPrice)
+                    ];
+
+                $basePriceBundling = $basePriceBundling + (($bp['transaction_product_price'] + $bp['transaction_variant_subtotal']) * $bp['transaction_product_bundling_qty']);
+                $subTotalBundlingWithoutModifier = $subTotalBundlingWithoutModifier + (($bp['transaction_product_subtotal'] - ($bp['transaction_modifier_subtotal'] * $bp['transaction_product_bundling_qty'])));
+                $subItemBundlingWithoutModifie = $subItemBundlingWithoutModifie + ($bp['transaction_product_bundling_price'] * $bp['transaction_product_bundling_qty']);
+            }
+
+            $itemBundling[] = [
+                'bundling_name' => $bundling['bundling_name'],
+                'bundling_qty' => $bundling['transaction_bundling_product_qty'],
+                'bundling_price_no_discount' => $basePriceBundling * $bundling['transaction_bundling_product_qty'],
+                'bundling_subtotal' => $subTotalBundlingWithoutModifier * $bundling['transaction_bundling_product_qty'],
+                'bundling_sub_item' => '@'.MyHelper::requestNumber($subItemBundlingWithoutModifie,'_CURRENCY'),
+                'products' => $products
+            ];
+        }
+
+        foreach ($bundlingGroup as $key=>$bg){
+            $brand = explode('|', $key)[0];
+            $merge =$this->mergeBundlingProducts($bg);
+            $productBundlingPerBrand[$brand][] = [
+                'bundling_name' => explode('|', $key)[1],
+                'products' => $merge
+            ];
+        }
+        $nameBrandBundling = Setting::where('key', 'brand_bundling_name')->first();
+        $result['name_brand_bundling'] = $nameBrandBundling['value']??'Bundling';
+        $result['product_bundling_transaction_detail'] = $itemBundling;
+
+        $brandProduct = array_keys($productPerBrand);
+        $brandProductBundling = array_keys($productBundlingPerBrand);
+        $allBrand = array_unique(array_merge($brandProduct,$brandProductBundling));
+
+        $perBrandResult = [];
+        foreach ($allBrand as $brand){
+            $perBrandResult[] = [
+                'brand' => $brand,
+                'item' => $productPerBrand[$brand]??[],
+                'item_bundling' => $productBundlingPerBrand[$brand]??[],
+            ];
+        }
+        $result['product_perbrand'] = $perBrandResult;
+
+        if(!isset($result['product_transaction'])){
+            $result['product_transaction'] = [];
+        }
+
+        $result['plastic_transaction_detail'] = [];
+        $result['plastic_name'] = '';
+        $quantityPlastic = 0;
+        if(isset($list['plastic_transaction'])){
+            $result['plastic_name'] = 'Kantong Belanja';
+            $subtotal_plastic = 0;
+            foreach($list['plastic_transaction'] as $key => $value){
+                $quantityPlastic = $quantityPlastic + $value['transaction_product_qty'];
+                $subtotal_plastic += $value['transaction_product_subtotal'];
+
+                $result['plastic_transaction_detail'][] = [
+                    'plastic_name' => $value['product']['product_name'],
+                    'plasctic_qty' => $value['transaction_product_qty'],
+                    'plastic_base_price' => '@'.MyHelper::requestNumber((int)$value['transaction_product_price'],'_CURRENCY'),
+                    'plasctic_subtotal' => MyHelper::requestNumber($value['transaction_product_subtotal'],'_CURRENCY')
+                ];
+            }
+
+            $result['plastic_transaction'] = [];
+            $result['plastic_transaction']['transaction_plastic_total'] = $subtotal_plastic;
         }
 
         $result['payment_detail'][] = [
             'name'   => 'Subtotal',
-            'desc'   => $quantity + $quantityItemBundling . ' items',
+            'desc'   => $quantity + $quantityItemBundling + $quantityPlastic . ' items',
             'amount' => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY'),
         ];
 
@@ -3512,9 +4642,10 @@ class ApiOutletApp extends Controller
                 ];
             }
         }
-
+      
         return response()->json(MyHelper::checkGet($result));
     }
+
     public function outletNotif($data, $id_outlet)
     {
         $outletToken = OutletToken::where('id_outlet', $id_outlet)->get();
@@ -4164,8 +5295,8 @@ class ApiOutletApp extends Controller
                 ->whereNotNull('stop_booking_at')
                 ->where([
                     'transaction_payment_status' => 'Completed',
-                    'transaction_pickup_go_sends.latest_status' => 'no_driver',
                 ])
+                ->whereIn('transaction_pickup_go_sends.latest_status', ['no_driver', 'rejected', 'cancelled'])
                 ->with('outlet')
                 ->get();
             $processed = [
@@ -4185,7 +5316,8 @@ class ApiOutletApp extends Controller
                         'subject' => 'Order '.$transaction['order_id'],
                         'string_body' => 'Dalam ' . ( 5 - $difference ) . ' menit, pesanan batal otomatis. Segera pilih tindakan.',
                         'type' => 'trx',
-                        'id_reference'=> $transaction['id_transaction']
+                        'id_reference'=> $transaction['id_transaction'],
+                        'id_transaction'=> $transaction['id_transaction']
                     ];
                     $this->outletNotif($dataNotif, $transaction->id_outlet);
                 } else {
@@ -4206,10 +5338,11 @@ class ApiOutletApp extends Controller
 
                     if ($reject['status'] == 'success') {
                         $dataNotif = [
-                            'subject' => 'Order Cancelled',
+                            'subject' => 'Order Dibatalkan',
                             'string_body' => $transaction['order_id'] . ' - '. $transaction['transaction_receipt_number'],
                             'type' => 'trx',
-                            'id_reference'=> $transaction['id_transaction']
+                            'id_reference'=> $transaction['id_transaction'],
+                            'id_transaction'=> $transaction['id_transaction']
                         ];
                         $this->outletNotif($dataNotif,$transaction->id_outlet);
                         $processed['cancelled']++;
@@ -4226,5 +5359,187 @@ class ApiOutletApp extends Controller
             $log->fail($e->getMessage());
             return ['status' => 'fail', 'messages' => [$e->getMessage()]];
         }
+    }
+
+    public function cronNotReceived()
+    {
+        $log = MyHelper::logCron('Send Notif Order Not Received/Rejected');
+        try {
+            $trxs = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->where('transaction_payment_status', 'Completed')
+                ->whereDate('transaction_date', date('Y-m-d'))
+                ->whereNull('receive_at')
+                ->whereNull('reject_at')
+                ->pluck('transactions.id_transaction');
+            foreach ($trxs as $id_trx) {
+                app($this->trx)->outletNotif($id_trx, true);
+            }
+
+            $processed = $trxs->count();
+            $log->success($processed);
+            return $processed;
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+            return ['status' => 'fail', 'messages' => [$e->getMessage()]];
+        }
+    }
+
+    function mergeBundlingProducts($items)
+    {
+        $new_items = [];
+        $item_qtys = [];
+        $id_custom = [];
+
+        // create unique array
+        foreach ($items as $item) {
+            $new_item = [
+                'product_name' => $item['product_name'],
+                'product_note' => $item['product_note'],
+                'product_variants' => array_map("unserialize", array_unique(array_map("serialize", array_map(function($i){
+                    return [
+                        'id_product_variant' => $i['id_product_variant'],
+                        'product_variant_name' => $i['product_variant_name']
+                    ];
+                },$item['product_variants']??[])))),
+                'product_modifiers' => array_map(function($i){
+                    return [
+                        "id_product_modifier"=> $i['id_product_modifier'],
+                        "product_modifier_name"=> $i['product_modifier_name']
+                    ];
+                },$item['product_modifiers']??[]),
+            ];
+            usort($new_item['product_modifiers'],function($a, $b) { return $a['id_product_modifier'] <=> $b['id_product_modifier']; });
+            $pos = array_search($new_item, $new_items);
+            if($pos === false) {
+                $new_items[] = $new_item;
+                $item_qtys[] = $item['transaction_product_qty'];
+            } else {
+                $item_qtys[$pos] += $item['transaction_product_qty'];
+            }
+        }
+        // update qty
+        foreach ($new_items as $key => &$value) {
+            $value['transaction_product_qty'] = $item_qtys[$key];
+        }
+
+        return $new_items;
+    }
+
+    public function listProductPlastic(Request $request){
+        $outlet  = $request->user();
+
+        if($outlet['plastic_used_status'] == 'Inactive'){
+            return response()->json(['status' => 'fail', 'messages' => "This outlet don't use plastic"]);
+        }
+
+        $plastic_type = PlasticTypeOutlet::join('plastic_type', 'plastic_type.id_plastic_type', 'plastic_type_outlet.id_plastic_type')
+                ->groupBy('plastic_type_outlet.id_plastic_type')
+                ->where('id_outlet', $outlet['id_outlet'])->orderBy('plastic_type_order', 'asc')->first();
+        $plastics = 0;
+        $data = [];
+        if($plastic_type['id_plastic_type']??NULL){
+            $plastics = Product::where('product_type', 'plastic')
+                ->leftJoin('product_detail', function($join) use($outlet)
+                {
+                    $join->on('products.id_product','product_detail.id_product')
+                        ->where('product_detail.id_outlet',$outlet['id_outlet']);
+
+                })
+                ->where(function ($sub) use($outlet){
+                    $sub->whereNull('product_detail.id_outlet')
+                        ->orWhere('product_detail.id_outlet', $outlet['id_outlet']);
+                })
+                ->where('id_plastic_type', $plastic_type['id_plastic_type'])
+                ->where('product_visibility', 'Visible')->select('products.id_product', 'products.product_code', 'products.product_name',
+                    DB::raw('(CASE WHEN product_detail.product_detail_stock_status is NULL THEN "Available"
+                        ELSE product_detail.product_detail_stock_status END) as product_stock_status'))->count();
+
+            $data = [[
+                'id_plastic_type' => $plastic_type['id_plastic_type'],
+                'plastic_type_name' => $plastic_type['plastic_type_name'],
+                'total_item' => $plastics
+            ]];
+        }
+
+        if(!empty($data)){
+            $data = [
+                'plastic_name' => 'Kantong Belanja',
+                'list' => $data
+            ];
+        }
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function detailProductPlastic(Request $request){
+        $outlet  = $request->user();
+        $post = $request->all();
+
+        if($outlet['plastic_used_status'] == 'Inactive'){
+            return response()->json(['status' => 'fail', 'messages' => "This outlet don't use plastic"]);
+        }
+
+        if(!isset($post['id_plastic_type'])){
+            return response()->json(['status' => 'fail', 'messages' => "ID can not be empty"]);
+        }
+
+        $plastics = Product::where('product_type', 'plastic')
+            ->leftJoin('product_detail', function($join) use($outlet)
+            {
+                $join->on('products.id_product','product_detail.id_product')
+                    ->where('product_detail.id_outlet',$outlet['id_outlet']);
+
+            })
+            ->where(function ($sub) use($outlet){
+                $sub->whereNull('product_detail.id_outlet')
+                    ->orWhere('product_detail.id_outlet', $outlet['id_outlet']);
+            })
+            ->where('id_plastic_type', $post['id_plastic_type'])
+            ->where('product_visibility', 'Visible')->select('products.id_product', 'products.product_code', 'products.product_name',
+                DB::raw('(CASE WHEN product_detail.product_detail_stock_status is NULL THEN "Available"
+                        ELSE product_detail.product_detail_stock_status END) as product_stock_status'));
+
+        if(isset($post['page'])){
+            $plastics = $plastics->paginate(10)->toArray();
+        }else{
+            $plastics = $plastics->get()->toArray();
+        }
+
+        return response()->json(MyHelper::checkGet($plastics));
+    }
+
+    public function productPlasticSoldOut(Request $request)
+    {
+        $post = $request->all();
+        $id_outlet = $post['id_outlet']??auth()->user()->id_outlet;
+
+        if(!$id_outlet){
+            return response()->json(['status' => 'fail', 'messages' => 'Outlet ID is required']);
+        }
+
+        if(empty($post['available']) && empty($post['sold_out'])){
+            return response()->json(['status' => 'fail', 'messages' => 'Data for update is empty']);
+        }
+
+        if(isset($post['available']) && !empty($post['available'])){
+            $dataAvailable = array_unique($post['available']);
+            foreach ($dataAvailable as $id_product){
+                if($id_product){
+                    $status = 'Available';
+                    $updateOrCreate = ProductDetail::updateOrCreate(['id_outlet' =>$id_outlet, 'id_product' => $id_product], ['product_detail_stock_status' => $status]);
+                }
+            }
+        }
+
+        if(isset($post['sold_out']) && !empty($post['sold_out'])){
+            $dataSoldOut = array_unique($post['sold_out']);
+            foreach ($dataSoldOut as $id_product){
+                if($id_product){
+                    $status = 'Sold Out';
+                    $updateOrCreate = ProductDetail::updateOrCreate(['id_outlet' =>$id_outlet, 'id_product' => $id_product], ['product_detail_stock_status' => $status]);
+                }
+            }
+        }
+
+        return response()->json(MyHelper::checkUpdate($updateOrCreate));
     }
 }

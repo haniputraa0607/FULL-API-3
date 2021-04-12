@@ -116,7 +116,8 @@ class Deal extends Model
         'is_all_payment',
         'product_rule',
         'brand_rule',
-        'product_type'
+        'product_type',
+        'promo_description'
 	];
 
 	protected $appends  = ['url_deals_image', 'deals_status', 'deals_voucher_price_type', 'deals_voucher_price_pretty', 'url_webview'];
@@ -304,5 +305,10 @@ class Deal extends Model
 	public function deals_discount_bill_products()
 	{
 		return $this->hasMany(\Modules\Deals\Entities\DealsDiscountBillProduct::class, 'id_deals', 'id_deals');
+	}
+
+	public function outlet_groups()
+	{
+		return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'deals_outlet_groups', 'id_deals', 'id_outlet_group');
 	}
 }

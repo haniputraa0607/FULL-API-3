@@ -33,9 +33,11 @@ class ApiProductVariantGroupController extends Controller
                     if(!empty($dt['group_id'])){
                         $update = ProductVariantGroup::where('id_product_variant_group', $dt['group_id'])
                             ->update(['product_variant_group_price' => str_replace(".","",$dt['price']),
-                                'product_variant_group_code' => $dt['code']]);
+                                'product_variant_group_code' => $dt['code'], 'product_variant_group_visibility' => $dt['visibility']??'Visible']);
 
                         if($update){
+                            //udpate visibility group detail
+                            ProductVariantGroupDetail::where('id_product_variant_group', $dt['group_id'])->update(['product_variant_group_visibility' => $dt['visibility']??'Visible']);
                             $del = ProductVariantPivot::where('id_product_variant_group', $dt['group_id'])->delete();
                             if($del){
                                 $explode = explode(',', $dt['id']);
@@ -55,7 +57,8 @@ class ApiProductVariantGroupController extends Controller
                             [
                                 'id_product' => $id_product['id_product'],
                                 'product_variant_group_code' =>$dt['code'],
-                                'product_variant_group_price' => str_replace(".","",$dt['price'])
+                                'product_variant_group_price' => str_replace(".","",$dt['price']),
+                                'product_variant_group_visibility' => $dt['visibility']??'Visible'
                             ]
                         );
                         if($create){
@@ -499,7 +502,7 @@ class ApiProductVariantGroupController extends Controller
 
     public function export(Request $request){
         $post      = $request->json()->all();
-        $data = Product::with(['product_variant_group'])->where('product_visibility', 'Visible');
+        $data = Product::with(['product_variant_group'])->where('product_type', 'product')->where('product_visibility', 'Visible');
         $dataBrand = [];
         if(isset($post['id_brand']) && !empty($post['id_brand'])){
             $dataBrand = Brand::where('brands.id_brand', $post['id_brand'])->first();
@@ -817,6 +820,11 @@ class ApiProductVariantGroupController extends Controller
             ])->update($datUpdate);
 
             if($update1){
+                $basePrice = ProductVariantGroup::orderBy('product_variant_group_price', 'asc')->where('id_product', $productVariantGroup['id_product'])->first();
+                if(!empty($basePrice)){
+                    $save = ProductGlobalPrice::updateOrCreate(['id_product' => $productVariantGroup['id_product']], ['id_product' => $productVariantGroup['id_product'], 'product_global_price' => $basePrice['product_variant_group_price']]);
+                    $save->touch();
+                }
                 $result['updated']++;
             }else{
                 $result['no_update']++;
@@ -834,6 +842,7 @@ class ApiProductVariantGroupController extends Controller
                             'id_product_variant_group' => $productVariantGroup['id_product_variant_group']
                         ])->first();
                     if($pp){
+                        $id_outlet = $pp['id_outlet'];
                         $update = $pp->update(['product_variant_group_price'=>$col_value]);
                     }else{
                         $id_outlet = Outlet::select('id_outlet')->where('outlet_code',$outlet_code)->pluck('id_outlet')->first();
@@ -847,6 +856,19 @@ class ApiProductVariantGroupController extends Controller
                         ]);
                     }
                     if($update){
+                        $baseSpecialPrice = ProductVariantGroup::join('product_variant_group_special_prices as pvgsp', 'pvgsp.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
+                                    ->orderBy('pvgsp.product_variant_group_price', 'asc')
+                                    ->where('id_outlet', $id_outlet)
+                                    ->where('id_product', $productVariantGroup['id_product'])
+                                    ->select('pvgsp.*')
+                                    ->first();
+                        if(!empty($baseSpecialPrice)){
+                            $save =ProductSpecialPrice::updateOrCreate(['id_product' => $productVariantGroup['id_product'], 'id_outlet' => $id_outlet],
+                                ['product_special_price' => $baseSpecialPrice['product_variant_group_price'],
+                                  'id_product' => $productVariantGroup['id_product'],
+                                  'id_outlet' => $id_outlet]);
+                            $save->touch();
+                        }
                         $result['updated_price']++;
                     }else{
                         $result['updated_price_fail']++;

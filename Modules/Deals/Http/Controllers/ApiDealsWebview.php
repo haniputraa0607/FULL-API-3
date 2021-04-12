@@ -20,6 +20,11 @@ use Modules\Deals\Http\Requests\Deals\ListDeal;
 
 class ApiDealsWebview extends Controller
 {
+	function __construct()
+    {
+        $this->outlet_group_filter  = "Modules\Outlet\Http\Controllers\ApiOutletGroupFilterController";
+    }
+
     // deals detail webview
     public function dealsDetail(Request $request)
     {
@@ -29,6 +34,7 @@ class ApiDealsWebview extends Controller
         				$q->where('outlet_status', 'Active');
         			},
         			'outlets.city', 
+        			'outlet_groups',
         			'deals_content' => function($q){
         				$q->where('is_active',1);
         			},
@@ -69,6 +75,10 @@ class ApiDealsWebview extends Controller
             $deals['outlets'] = $outlets;
         }
 
+        if (!empty($deals['outlet_groups'])) {
+        	$deals['outlets'] = $this->getOutletGroupFilter($deals['outlet_groups'], $deals['deals_brands'], $deals['brand_rule']);
+        }
+
         if (!empty($deals['outlets'])) {
             $kota = array_column($deals['outlets'], 'city');
             $kota = array_values(array_map("unserialize", array_unique(array_map("serialize", $kota))));
@@ -103,6 +113,12 @@ class ApiDealsWebview extends Controller
         ];
         $response['button_text'] = 'BELI';
 
+        $available_voucher = ($deals['deals_voucher_type'] == 'Unlimited') ? 'Unlimited' : $deals['deals_total_voucher'] - $deals['deals_total_claimed'] . '/' . $deals['deals_total_voucher'];
+        $available_voucher_text = "";
+        if ($deals['deals_voucher_type'] != 'Unlimited') {
+        	$available_voucher_text = ($deals['deals_total_voucher'] - $deals['deals_total_claimed']). " kupon tersedia";
+        }
+
         $result = [
             'id_deals'                      => $deals['id_deals'],
             'deals_type'                    => $deals['deals_type'],
@@ -117,7 +133,8 @@ class ApiDealsWebview extends Controller
             'deals_image'                   => $deals['deals_image'],
             'deals_start'                   => $deals['deals_start'],
             'deals_end'                     => $deals['deals_end'],
-            'deals_voucher'                 => ($deals['deals_voucher_type'] == 'Unlimited') ? 'Unlimited' : $deals['deals_total_voucher'] - $deals['deals_total_claimed'] . '/' . $deals['deals_total_voucher'],
+            'deals_voucher'                 => $available_voucher,
+            'available_voucher_text'        => $available_voucher_text,
             'deals_title'                   => $deals['deals_title'],
             'deals_second_title'            => $deals['deals_second_title'],
             'deals_description'             => $deals['deals_description'],
@@ -325,4 +342,51 @@ class ApiDealsWebview extends Controller
         ];
         return response()->json($response);
     }*/
+
+    public function getOutletGroupFilter($promo_outlet_groups = [], $promo_brands = [], $brand_rule = 'or')
+    {
+    	$outlets = [];
+    	foreach ($promo_outlet_groups as $val) {
+    		$temp = app($this->outlet_group_filter)->outletGroupFilter($val['id_outlet_group']);
+			$outlets = array_merge($outlets, $temp);
+    	}
+
+    	$id_outlets = [];
+    	foreach ($outlets as $val) {
+    		$id_outlets[] = $val['id_outlet'];
+    	}
+
+    	$outlet_with_city = Outlet::whereIn('id_outlet', $id_outlets)
+    						->with(['city', 'brands' => function($q) {
+    							$q->select('brands.id_brand', 'id_outlet');
+    						}])
+    						->get()
+    						->toArray();
+
+    	$result = $outlet_with_city;
+
+    	if (!empty($promo_brands)) {
+    		$id_promo_brands = array_column($promo_brands, 'id_brand');
+    		$result = [];
+
+    		foreach ($outlet_with_city as $val) {
+    			$id_outlet_brands = array_column($val['brands'], 'id_brand');
+    			$check_brand 	= array_diff($id_promo_brands, $id_outlet_brands);
+
+		    	if ($brand_rule == 'or') {
+		    		if (count($check_brand) == count($promo_brands)) {
+			    		continue;
+			    	}
+		    	}else{
+			    	if (!empty($check_brand)) {
+		    			continue;
+		    		}
+		    	}
+
+    			$result[] = $val;
+    		}
+    	}
+
+    	return $result;
+    }
 }

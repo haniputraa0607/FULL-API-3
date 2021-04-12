@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Disburse\Entities;
+namespace Modules\Franchise\Entities;
 
 use App\Lib\MyHelper;
 use Illuminate\Database\Eloquent\Model;
@@ -16,27 +16,22 @@ class UserFranchise extends Authenticatable
     protected $table = 'user_franchises';
     protected $primaryKey = 'id_user_franchise';
 
-    public function findForPassport($username) {
-        if(substr($username, 0, 2) == '62'){
-            $username = substr($username,2);
-        }elseif(substr($username, 0, 3) == '+62'){
-            $username = substr($username,3);
-        }
-
-        if(substr($username, 0, 1) != '0'){
-            $username = '0'.$username;
-        }
-
-        return $this->where('phone', $username)->first();
+    public function findForPassport($email) {
+        return $this->where('username', $email)->first();
     }
     protected $appends = ['password_default_decrypt'];
 	protected $fillable = [
 		'id_user_franchise_seed',
+        'username',
 	    'phone',
+        'name',
+        'level',
 		'email',
+        'user_franchise_status',
         'password',
         'password_default_plain_text',
-        'user_franchise_type'
+        'user_franchise_type',
+        'first_update_password'
 	];
 
     public function getPasswordDefaultDecryptAttribute()

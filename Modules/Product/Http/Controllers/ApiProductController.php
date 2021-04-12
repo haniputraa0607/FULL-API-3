@@ -46,6 +46,10 @@ use Modules\Product\Http\Requests\product\UpdatePhoto;
 use Modules\Product\Http\Requests\product\DeletePhoto;
 use Modules\Product\Http\Requests\product\Import;
 use Modules\Product\Http\Requests\product\UpdateAllowSync;
+use Modules\PromoCampaign\Entities\UserPromo;
+use App\Http\Models\Deal;
+use Modules\PromoCampaign\Entities\PromoCampaign;
+use Modules\Subscription\Entities\Subscription;
 
 class ApiProductController extends Controller
 {
@@ -746,6 +750,7 @@ class ApiProductController extends Controller
                 $data['products'] = Product::select('product_code','product_name','product_description')
                     ->join('brand_product','brand_product.id_product','=','products.id_product')
                     ->where('id_brand',$post['id_brand'])
+                    ->where('product_type', 'product')
                     ->groupBy('products.id_product')
                     ->orderBy('position')
                     ->orderBy('products.id_product')
@@ -758,6 +763,7 @@ class ApiProductController extends Controller
                 $data['products'] = Product::select('product_categories.product_category_name','products.position','product_code','product_name','product_description','products.product_visibility')
                     ->join('brand_product','brand_product.id_product','=','products.id_product')
                     ->where('id_brand',$post['id_brand'])
+                    ->where('product_type', 'product')
                     ->leftJoin('product_categories','product_categories.id_product_category','=','brand_product.id_product_category')
                     ->groupBy('products.id_product')
                     ->groupBy('product_category_name')
@@ -781,6 +787,7 @@ class ApiProductController extends Controller
                     ->join('brand_product','brand_product.id_product','=','products.id_product')
                     ->leftJoin('product_global_price', 'product_global_price.id_product', 'products.id_product')
                     ->where('id_brand',$post['id_brand'])
+                    ->where('product_type', 'product')
                     ->orderBy('position')
                     ->orderBy('products.id_product')
                     ->distinct()
@@ -884,6 +891,7 @@ class ApiProductController extends Controller
 									->where('product_detail.id_outlet','=',$post['id_outlet'])
 									->where('product_detail.product_detail_visibility','=','Visible')
                                     ->where('product_detail.product_detail_status','=','Active')
+                                    ->where('products.product_type', 'product')
                                     ->with(['category', 'discount']);
 
             if (isset($post['visibility'])) {
@@ -894,6 +902,7 @@ class ApiProductController extends Controller
                                             ->where('product_detail.product_detail_status', 'Active')
                                             ->whereNotNull('id_product_category')
                                             ->where('id_outlet', $post['id_outlet'])
+                                            ->where('products.product_type', 'product')
                                             ->select('product_detail.id_product')->get();
                     $product = Product::whereNotIn('products.id_product', $idVisible)->with(['category', 'discount']);
                 }else{
@@ -904,11 +913,11 @@ class ApiProductController extends Controller
             }
 		} else {
 		    if(isset($post['product_setting_type']) && $post['product_setting_type'] == 'product_price'){
-                $product = Product::with(['category', 'discount', 'product_special_price', 'global_price']);
+                $product = Product::with(['category', 'discount', 'product_special_price', 'global_price'])->where('products.product_type', 'product');
             }elseif(isset($post['product_setting_type']) && $post['product_setting_type'] == 'outlet_product_detail'){
-                $product = Product::with(['category', 'discount', 'product_detail']);
+                $product = Product::with(['category', 'discount', 'product_detail'])->where('products.product_type', 'product');
             }else{
-                $product = Product::with(['category', 'discount']);
+                $product = Product::with(['category', 'discount'])->where('products.product_type', 'product');
             }
 		}
 
@@ -956,7 +965,8 @@ class ApiProductController extends Controller
         }
 
         if(isset($post['admin_list'])){
-            $product = $product->withCount('product_detail')->withCount('product_detail_hiddens')->with(['brands']);
+            $product = $product->where('product_type', 'product')
+                ->withCount('product_detail')->withCount('product_detail_hiddens')->with(['brands']);
         }
 
         if(isset($post['pagination'])){
@@ -1496,7 +1506,7 @@ class ApiProductController extends Controller
             $data['id_outlet'] = $post['id_outlet'];
         }
 
-        $getAllProduct = Product::pluck('id_product');
+        $getAllProduct = Product::where('product_type', 'product')->pluck('id_product');
         if($post['id_outlet'] == 0){
             if (isset($post['product_price'])) {
                 $dataGlobalPrice['product_global_price'] = $post['product_price'];
@@ -1592,7 +1602,7 @@ class ApiProductController extends Controller
             $data['product_detail_stock_status'] = $post['product_stock_status'];
         }
 
-        $getAllProduct = Product::pluck('id_product');
+        $getAllProduct = Product::where('product_type', 'plastic')->pluck('id_product');
 
         foreach ($getAllProduct as $id_product){
             $product = ProductDetail::where([
@@ -1871,6 +1881,87 @@ class ApiProductController extends Controller
             }else{
                 $product['variants'] = Product::getVariantTree($product['id_product'], $outlet)['variants_tree']??null;
             }
+            if ($product['variants']) {
+                $appliedPromo = UserPromo::where('id_user', $request->user()->id)->first();
+                if ($appliedPromo) {
+                    switch ($appliedPromo->promo_type) {
+                        case 'deals':
+                            $query = Deal::select('*', 'deals.id_deals as id_deals')->join('deals_vouchers', 'deals_vouchers.id_deals', 'deals.id_deals')
+                                ->join('deals_users', 'deals_users.id_deals_voucher', 'deals_vouchers.id_deals_voucher')
+                                ->where('id_deals_user', $appliedPromo->id_reference)
+                                ->with([
+                                    'deals_product_discount_rules',
+                                    'deals_discount_bill_rules',
+                                    'deals_tier_discount_rules',
+                                    'deals_buyxgety_rules',
+                                    'deals_product_discount',
+                                    'deals_tier_discount_product',
+                                    'deals_buyxgety_product_requirement',
+                                    'deals_discount_bill_products'
+                                ])
+                                ->first();
+                            if (!$query) {
+                                goto skip;
+                            }
+                            break;
+
+                        case 'promo_campaign':
+                            $query = PromoCampaign::join('promo_campaign_promo_codes', 'promo_campaign_promo_codes.id_promo_campaign', 'promo_campaigns.id_promo_campaign')
+                                ->where('id_promo_campaign_promo_code', $appliedPromo->id_reference)
+                                ->with([
+                                    'promo_campaign_product_discount_rules',
+                                    'promo_campaign_discount_bill_rules',
+                                    'promo_campaign_tier_discount_rules',
+                                    'promo_campaign_buyxgety_rules',
+                                    'promo_campaign_product_discount',
+                                    'promo_campaign_tier_discount_product',
+                                    'promo_campaign_buyxgety_product_requirement',
+                                    'promo_campaign_discount_bill_products'
+                                ])
+                                ->first();
+                            if (!$query) {
+                                goto skip;
+                            }
+                            break;
+                        
+                        case 'subscription':
+                            $query = Subscription::join('subscription_users', 'subscription_users.id_subscription', 'subscriptions.id_subscription')
+                                ->join('subscription_user_vouchers', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+                                ->where('id_subscription_user_voucher', $appliedPromo->id_reference)
+                                ->with([
+                                    'subscription_products',
+                                    'subscription_products.product'
+                                ])
+                                ->first();
+                            if (!$query) {
+                                goto skip;
+                            }
+                            break;
+                        
+                        default:
+                            goto skip;
+                            break;
+                    }
+                    $promoVariant = app('\Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign')->getProduct($appliedPromo->promo_type, $query->toArray(), $post['id_outlet'])['applied_product'] ?? [];
+                    $productVariantIdPromo = [];
+                    if (is_array($promoVariant)) {
+                        $productVariantIdPromo = array_filter(array_column($promoVariant, 'id_product_variant_group'));
+                        if (!$productVariantIdPromo) {
+                            $productPromo = array_filter(array_column($promoVariant, 'id_product'));
+                            if (in_array($product['id_product'], $productPromo)) {
+                                $productVariantIdPromo = ProductVariantGroup::where('id_product', $product['id_product'])->pluck('id_product_variant_group')->toArray();
+                            }
+                        };
+                    } elseif ($promoVariant == '*') {
+                        $productVariantIdPromo = ProductVariantGroup::where('id_product', $product['id_product'])->pluck('id_product_variant_group')->toArray();
+                    }
+                    if ($productVariantIdPromo) {
+                        $product['variants'] = $this->addPromoFlag($product['variants'], $productVariantIdPromo);
+                        unset($product['variants']['promo']);
+                    }
+                    skip:
+                }
+            }
         } else {
             $product['variants'] = null;
         }
@@ -1879,7 +1970,7 @@ class ApiProductController extends Controller
             $product['selected_available'] = (!!Product::getVariantParentId($post['selected']['id_product_variant_group'], $product['variants'], $post['selected']['extra_modifiers'] ?? []))?1:0;
         }
         $product['popup_message'] = $product['selected_available'] ? '' : 'Varian yang dipilih tidak tersedia';
-        $product['modifiers'] = $product_modifiers->get()->toArray();
+        $product['modifiers'] = $product_modifiers->orderBy('product_modifier_order', 'asc')->orderBy('text', 'asc')->get()->toArray();
         foreach ($product['modifiers'] as $key => &$modifier) {
             $modifier['price'] = (int) $modifier['price'];
             unset($modifier['product_modifier_prices']);
@@ -1894,6 +1985,37 @@ class ApiProductController extends Controller
         $product['outlet'] = Outlet::select('id_outlet','outlet_code','outlet_address','outlet_name')->find($post['id_outlet']);
 
         return MyHelper::checkGet($product);
+    }
+
+    protected function addPromoFlag($variant_tree, $id_variant_group_promo)
+    {
+        if (!$variant_tree || !$id_variant_group_promo) {
+            return $variant_tree;
+        }
+        if ($variant_tree['childs'] ?? false) {
+            foreach ($variant_tree['childs'] as $key => $child) {
+                if ($variant_tree['childs'][$key]['variant'] ?? false) {
+                    $variant_tree['childs'][$key]['variant'] = $this->addPromoFlag($variant_tree['childs'][$key]['variant'], $id_variant_group_promo);
+                    // read flag promo from child
+                    if ($variant_tree['childs'][$key]['variant']['promo'] ?? false) {
+                        // flag promo last child
+                        $variant_tree['childs'][$key]['promo'] = 1;
+                        // set flag promo for parent
+                        $variant_tree['promo'] = 1;
+                        // unset promo from child
+                        unset($variant_tree['childs'][$key]['variant']['promo']);
+                    }
+                } else {
+                    if (in_array($variant_tree['childs'][$key]['id_product_variant_group'] ?? false, $id_variant_group_promo)) {
+                        // flag promo last child
+                        $variant_tree['childs'][$key]['promo'] = 1;
+                        // flag promo parent of last child
+                        $variant_tree['promo'] = 1;
+                    }
+                }
+            }
+        }
+        return $variant_tree;
     }
 
     public function ajaxProductBrand(Request $request)

@@ -83,6 +83,13 @@ return [
             'retry_after' => 90,
         ],
 
+        'export_franchise_queue' => [
+            'driver' => 'database',
+            'table' => 'export_franchise_jobs',
+            'queue' => 'export_franchise_queue',
+            'retry_after' => 90,
+        ],
+
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host' => 'localhost',

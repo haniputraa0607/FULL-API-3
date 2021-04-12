@@ -77,303 +77,311 @@ class ApiNotification extends Controller {
 
         DB::beginTransaction();
 
-        // CHECK ORDER ID
-        if (stristr($midtrans['order_id'], "J+")) {
-            // TRANSACTION
-            $transac = Transaction::with('user.memberships', 'logTopup')->where('transaction_receipt_number', $midtrans['order_id'])->first();
-
-            $old_payment_status = $transac->transaction_payment_status;
-
-            if (empty($transac)) {
-                DB::rollback();
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['Transaction not found']
-                ]);
-            }
-
-            // PROCESS
-            $checkPayment = $this->checkPayment($transac, $midtrans);
-            if (!$checkPayment) {
-                DB::rollback();
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['Transaction not found']
-                ]);
-            }
-
-            // $sendNotif = $this->sendNotif($transac);
-            // if (!$sendNotif) {
-            //     return response()->json([
-            //         'status'   => 'fail',
-            //         'messages' => ['Transaction failed']
-            //     ]);
-            // }
-
-
-            $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('transaction_receipt_number', $midtrans['order_id'])->first();
-
-            $checkType = TransactionMultiplePayment::where('id_transaction', $newTrx['id_transaction'])->get()->toArray();
-            $column = array_column($checkType, 'type');
-
-            // $user = User::where('id', $newTrx['id_user'])->first();
-            // if (empty($user)) {
-            //     DB::rollback();
-            //     return response()->json([
-            //         'status'   => 'fail',
-            //         'messages' => ['Data Transaction Not Valid']
-            //     ]);
-            // }
-
-            //booking GO-SEND
-            if ($newTrx['trasaction_type'] == 'Pickup Order') {
-
-                $newTrx['detail'] = TransactionPickup::with('transaction_pickup_go_send')->where('id_transaction', $newTrx['id_transaction'])->first();
-                if ($newTrx['detail']) {
-                    //inset pickup_at when pickup_type = right now
-                    if($newTrx['detail']['pickup_type'] == 'right now'){
-                        $settingTime = Setting::where('key', 'processing_time')->first();
-                        if($settingTime && isset($settingTime['value'])){
-                            $updatePickup = TransactionPickup::where('id_transaction', $newTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'))]);
-                        }else{
-                            $updatePickup = TransactionPickup::where('id_transaction', $newTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s')]);
-                        }
-                    }
-                    // book gosend after outlet receive order only
-                    // if ($newTrx['detail']['pickup_by'] == 'GO-SEND') {
-                    //     $booking = $this->bookGoSend($newTrx);
-                    //     if (isset($booking['status'])) {
-                    //         return response()->json($booking);
-                    //     }
-                    // }
-                } else {
+        try{
+            // CHECK ORDER ID
+            if (stristr($midtrans['order_id'], "J+")) {
+                // TRANSACTION
+                $transac = Transaction::with('user.memberships', 'logTopup')->where('transaction_receipt_number', $midtrans['order_id'])->first();
+    
+                if (empty($transac)) {
                     DB::rollback();
                     return response()->json([
                         'status'   => 'fail',
-                        'messages' => ['Data Transaction Not Valid']
+                        'messages' => ['Transaction not found']
                     ]);
                 }
-            }
+                    
+                $old_payment_status = $transac->transaction_payment_status;
 
-            if ($midtrans['status_code'] == 200) {
-                // if (!in_array('Balance', $column)) {
-                //     $savePoint = $this->savePoint($newTrx);
-                //     if (!$savePoint) {
-                //         DB::rollback();
-                //         return response()->json([
-                //             'status'   => 'fail',
-                //             'messages' => ['Transaction failed']
-                //         ]);
-                //     }
+                // PROCESS
+                $checkPayment = $this->checkPayment($transac, $midtrans);
+                if (!$checkPayment) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Transaction not found']
+                    ]);
+                }
+    
+                // $sendNotif = $this->sendNotif($transac);
+                // if (!$sendNotif) {
+                //     return response()->json([
+                //         'status'   => 'fail',
+                //         'messages' => ['Transaction failed']
+                //     ]);
                 // }
-                if($midtrans['transaction_status'] == 'settlement' && $midtrans['payment_type'] == 'credit_card'){}
-                else{
-                    if($midtrans['transaction_status'] == 'settlement'){
-                        $notif = $this->notification($midtrans, $newTrx);
-                        if (!$notif) {
+    
+    
+                $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('transaction_receipt_number', $midtrans['order_id'])->first();
+    
+                $checkType = TransactionMultiplePayment::where('id_transaction', $newTrx['id_transaction'])->get()->toArray();
+                $column = array_column($checkType, 'type');
+    
+                // $user = User::where('id', $newTrx['id_user'])->first();
+                // if (empty($user)) {
+                //     DB::rollback();
+                //     return response()->json([
+                //         'status'   => 'fail',
+                //         'messages' => ['Data Transaction Not Valid']
+                //     ]);
+                // }
+    
+                //booking GO-SEND
+                if ($newTrx['trasaction_type'] == 'Pickup Order') {
+    
+                    $newTrx['detail'] = TransactionPickup::with('transaction_pickup_go_send')->where('id_transaction', $newTrx['id_transaction'])->first();
+                    if ($newTrx['detail']) {
+                        //inset pickup_at when pickup_type = right now
+                        if($newTrx['detail']['pickup_type'] == 'right now'){
+                            $settingTime = Setting::where('key', 'processing_time')->first();
+                            if($settingTime && isset($settingTime['value'])){
+                                $updatePickup = TransactionPickup::where('id_transaction', $newTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'))]);
+                            }else{
+                                $updatePickup = TransactionPickup::where('id_transaction', $newTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s')]);
+                            }
+                        }
+                        // book gosend after outlet receive order only
+                        // if ($newTrx['detail']['pickup_by'] == 'GO-SEND') {
+                        //     $booking = $this->bookGoSend($newTrx);
+                        //     if (isset($booking['status'])) {
+                        //         return response()->json($booking);
+                        //     }
+                        // }
+                    } else {
+                        DB::rollback();
+                        return response()->json([
+                            'status'   => 'fail',
+                            'messages' => ['Data Transaction Not Valid']
+                        ]);
+                    }
+                }
+    
+                if ($midtrans['status_code'] == 200) {
+                    // if (!in_array('Balance', $column)) {
+                    //     $savePoint = $this->savePoint($newTrx);
+                    //     if (!$savePoint) {
+                    //         DB::rollback();
+                    //         return response()->json([
+                    //             'status'   => 'fail',
+                    //             'messages' => ['Transaction failed']
+                    //         ]);
+                    //     }
+                    // }
+                    if($midtrans['transaction_status'] == 'settlement' && $midtrans['payment_type'] == 'credit_card'){}
+                    else{
+                        if($midtrans['transaction_status'] == 'settlement'){
+                            $notif = $this->notification($midtrans, $newTrx);
+                            if (!$notif) {
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => ['Transaction failed']
+                                ]);
+                            }
+        
+                            $sendNotifOutlet = app($this->trx)->outletNotif($newTrx['id_transaction']);
+        
+                            if($this->url_oauth != ''){
+                                $kirim = $this->kirimOutlet($newTrx['transaction_receipt_number']);
+                                if (isset($kirim['status']) && $kirim['status'] == 1) {
+        
+                                    // // apply cashback to referrer
+                                    // \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($newTrx);
+        
+                                    DB::commit();
+                                    // langsung
+                                    return response()->json(['status' => 'success']);
+                                } elseif (isset($kirim['status']) && $kirim['status'] == 'fail') {
+                                    if (isset($kirim['messages'])) {
+                                        DB::rollback();
+                                        return response()->json([
+                                            'status'   => 'fail',
+                                            'messages' => $kirim['messages']
+                                        ]);
+                                    }
+                                } else {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'   => 'fail',
+                                        'messages' => ['failed']
+                                    ]);
+                                }
+                            }else{
+                                //  // apply cashback to referrer
+                                // \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($newTrx);
+        
+                                DB::commit();
+                            }
+                        }
+                    }
+    
+                } elseif ($midtrans['status_code'] == 201) {
+                    $notifPending = $this->notificationPending($midtrans, $newTrx);
+                    if (!$notifPending) {
+                        return response()->json([
+                            'status'   => 'fail',
+                            'messages' => ['Transaction failed']
+                        ]);
+                    }
+                } elseif ($midtrans['status_code'] == 202) {
+                    if ($midtrans['transaction_status'] == 'deny') {
+                        $notifDeny = $this->notificationDenied($midtrans, $newTrx);
+                        if (!$notifDeny) {
                             return response()->json([
                                 'status'   => 'fail',
                                 'messages' => ['Transaction failed']
                             ]);
                         }
-    
-                        $sendNotifOutlet = app($this->trx)->outletNotif($newTrx['id_transaction']);
-    
-                        if($this->url_oauth != ''){
-                            $kirim = $this->kirimOutlet($newTrx['transaction_receipt_number']);
-                            if (isset($kirim['status']) && $kirim['status'] == 1) {
-    
-                                // // apply cashback to referrer
-                                // \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($newTrx);
-    
-                                DB::commit();
-                                // langsung
-                                return response()->json(['status' => 'success']);
-                            } elseif (isset($kirim['status']) && $kirim['status'] == 'fail') {
-                                if (isset($kirim['messages'])) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'   => 'fail',
-                                        'messages' => $kirim['messages']
-                                    ]);
-                                }
-                            } else {
-                                DB::rollback();
-                                return response()->json([
-                                    'status'   => 'fail',
-                                    'messages' => ['failed']
-                                ]);
-                            }
-                        }else{
-                            //  // apply cashback to referrer
-                            // \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($newTrx);
-    
-                            DB::commit();
+                    } else {
+                        $notifExpired = $this->notificationExpired($midtrans, $newTrx);
+                        if (!$notifExpired) {
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => ['Transaction failed']
+                            ]);
                         }
                     }
-                }
-
-            } elseif ($midtrans['status_code'] == 201) {
-                $notifPending = $this->notificationPending($midtrans, $newTrx);
-                if (!$notifPending) {
-                    return response()->json([
-                        'status'   => 'fail',
-                        'messages' => ['Transaction failed']
-                    ]);
-                }
-            } elseif ($midtrans['status_code'] == 202) {
-                if ($midtrans['transaction_status'] == 'deny') {
-                    $notifDeny = $this->notificationDenied($midtrans, $newTrx);
-                    if (!$notifDeny) {
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['Transaction failed']
-                        ]);
-                    }
-                } else {
-                    $notifExpired = $this->notificationExpired($midtrans, $newTrx);
-                    if (!$notifExpired) {
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['Transaction failed']
-                        ]);
-                    }
-                }
-                if (count($checkType) > 0) {
-                    foreach ($checkType as $key => $value) {
-                        if ($value['type'] == 'Balance') {
-                            if ($old_payment_status != 'Pending') {
-                                DB::commit();
-                                return response()->json(['status' => 'success']);
-                            }
-                            $checkBalance = TransactionPaymentBalance::where('id_transaction_payment_balance', $value['id_payment'])->first();
-                            if (!empty($checkBalance)) {
-                                $insertDataLogCash = app($this->balance)->addLogBalance($newTrx['id_user'], $checkBalance['balance_nominal'], $newTrx['id_transaction'], 'Rejected Order', $newTrx['transaction_grandtotal']);
-                                if (!$insertDataLogCash) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'    => 'fail',
-                                        'messages'  => ['Insert Cashback Failed']
-                                    ]);
+                    if (count($checkType) > 0) {
+                        foreach ($checkType as $key => $value) {
+                            if ($value['type'] == 'Balance') {
+                                if ($old_payment_status != 'Pending') {
+                                    DB::commit();
+                                    return response()->json(['status' => 'success']);
                                 }
-                                $usere = User::where('id', $newTrx['id_user'])->first();
-                                $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $usere->phone,
-                                    [
-                                        "outlet_name"       => $newTrx['outlet']['outlet_name'],
-                                        "transaction_date"  => $newTrx['transaction_date'],
-                                        'id_transaction'    => $newTrx['id_transaction'],
-                                        'receipt_number'    => $newTrx['transaction_receipt_number'],
-                                        'received_point'    => (string) $checkBalance['balance_nominal'],
-                                        'order_id'          => $newTrx['detail']['order_id'] ?? '',
-                                    ]
-                                );
-                                if($send != true){
-                                    DB::rollback();
-                                    return response()->json([
-                                            'status' => 'fail',
-                                            'messages' => ['Failed Send notification to customer']
+                                $checkBalance = TransactionPaymentBalance::where('id_transaction_payment_balance', $value['id_payment'])->first();
+                                if (!empty($checkBalance)) {
+                                    $insertDataLogCash = app($this->balance)->addLogBalance($newTrx['id_user'], $checkBalance['balance_nominal'], $newTrx['id_transaction'], 'Rejected Order', $newTrx['transaction_grandtotal']);
+                                    if (!$insertDataLogCash) {
+                                        DB::rollback();
+                                        return response()->json([
+                                            'status'    => 'fail',
+                                            'messages'  => ['Insert Cashback Failed']
                                         ]);
+                                    }
+                                    $usere = User::where('id', $newTrx['id_user'])->first();
+                                    $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $usere->phone,
+                                        [
+                                            "outlet_name"       => $newTrx['outlet']['outlet_name'],
+                                            "transaction_date"  => $newTrx['transaction_date'],
+                                            'id_transaction'    => $newTrx['id_transaction'],
+                                            'receipt_number'    => $newTrx['transaction_receipt_number'],
+                                            'received_point'    => (string) $checkBalance['balance_nominal'],
+                                            'order_id'          => $newTrx['detail']['order_id'] ?? '',
+                                        ]
+                                    );
+                                    if($send != true){
+                                        DB::rollback();
+                                        return response()->json([
+                                                'status' => 'fail',
+                                                'messages' => ['Failed Send notification to customer']
+                                            ]);
+                                    }
                                 }
                             }
                         }
                     }
                 }
+    
+                DB::commit();
+                return response()->json(['status' => 'success']);
             }
-
-            DB::commit();
-            return response()->json(['status' => 'success']);
-        }
-        else if (stristr($midtrans['order_id'], "SUBS")) {
-            // SUBSCRIPTION
-            $subs = SubscriptionPaymentMidtran::where('order_id', $midtrans['order_id'])->first();
-
-            if ($subs) {
-                $checkSubsPayment = $this->checkSubsPayment($subs, $midtrans);
-
-                if ($checkSubsPayment) {
-                    DB::commit();
-                    return response()->json(['status' => 'success']);
-                }
-            }
-        }
-        else {
-            if (stristr($midtrans['order_id'], "TOP")) {
-                //topup
-                DB::beginTransaction();
-                $checkLogMid = LogTopupMidtrans::where('order_id', $midtrans['order_id'])->first();
-                if (empty($checkLogMid)) {
-                    DB::rollback();
-                    return response()->json(['status' => 'fail']);
-                }
-
-                $checkLog = LogTopup::where('id_log_topup', $checkLogMid['id_log_topup'])->first();
-                if (empty($checkLog)) {
-                    DB::rollback();
-                    return response()->json(['status' => 'fail']);
-                }
-
-                $user = User::where('id', $checkLog['id_user'])->first();
-                if (empty($user)) {
-                    DB::rollback();
-                    return response()->json(['status' => 'fail']);
-                }
-
-                $dataMid = $this->processMidtrans($midtrans);
-                if (!$dataMid) {
-                    DB::rollback();
-                    return response()->json(['status' => 'fail']);
-                }
-
-                if (isset($dataMid['status_code']) && $dataMid['status_code'] == 200) {
-                    if ($dataMid['transaction_status'] == 'capture' || $dataMid['transaction_status'] == 'settlement') {
-                        $checkLog->topup_payment_status = 'Completed';
-                        $checkLog->update();
-                        if (!$checkLog) {
-                            DB::rollback();
-                            return response()->json(['status' => 'fail']);
-                        }
-
-                        $dataHash = [
-                            'id_log_topup'          => $checkLog['id_log_topup'],
-                            'id_user'               => $checkLog['id_user'],
-                            'balance_before'        => $checkLog['balance_before'],
-                            'nominal_bayar'         => $checkLog['nominal_bayar'],
-                            'topup_value'           => $checkLog['topup_value'],
-                            'balance_after'         => $checkLog['balance_after'],
-                            'transaction_reference' => null,
-                            'source'                => null,
-                            'topup_payment_status'  => $checkLog['topup_payment_status'],
-                            'payment_type'          => $checkLog['payment_type']
-                        ];
-
-                        $encodeCheck = json_encode($dataHash);
-                        $enc = Hash::make($encodeCheck);
-
-                        $checkLog->enc = $enc;
-                        $checkLog->update();
-                        if (!$checkLog) {
-                            DB::rollback();
-                            return response()->json(['status' => 'fail']);
-                        }
-                    }
-
-                    $this->notifTopup($checkLog, $user, $dataMid);
-                    return response()->json(['status' => 'success']);
-                }
-            } else {
-                // DEALS
-                $deals = DealsPaymentMidtran::where('order_id', $midtrans['order_id'])->first();
-
-                if ($deals) {
-                    $checkDealsPayment = $this->checkDealsPayment($deals, $midtrans);
-
-                    if ($checkDealsPayment) {
+            else if (stristr($midtrans['order_id'], "SUBS")) {
+                // SUBSCRIPTION
+                $subs = SubscriptionPaymentMidtran::where('order_id', $midtrans['order_id'])->first();
+    
+                if ($subs) {
+                    $checkSubsPayment = $this->checkSubsPayment($subs, $midtrans);
+    
+                    if ($checkSubsPayment) {
                         DB::commit();
                         return response()->json(['status' => 'success']);
                     }
                 }
             }
-
+            else {
+                if (stristr($midtrans['order_id'], "TOP")) {
+                    //topup
+                    DB::beginTransaction();
+                    $checkLogMid = LogTopupMidtrans::where('order_id', $midtrans['order_id'])->first();
+                    if (empty($checkLogMid)) {
+                        DB::rollback();
+                        return response()->json(['status' => 'fail']);
+                    }
+    
+                    $checkLog = LogTopup::where('id_log_topup', $checkLogMid['id_log_topup'])->first();
+                    if (empty($checkLog)) {
+                        DB::rollback();
+                        return response()->json(['status' => 'fail']);
+                    }
+    
+                    $user = User::where('id', $checkLog['id_user'])->first();
+                    if (empty($user)) {
+                        DB::rollback();
+                        return response()->json(['status' => 'fail']);
+                    }
+    
+                    $dataMid = $this->processMidtrans($midtrans);
+                    if (!$dataMid) {
+                        DB::rollback();
+                        return response()->json(['status' => 'fail']);
+                    }
+    
+                    if (isset($dataMid['status_code']) && $dataMid['status_code'] == 200) {
+                        if ($dataMid['transaction_status'] == 'capture' || $dataMid['transaction_status'] == 'settlement') {
+                            $checkLog->topup_payment_status = 'Completed';
+                            $checkLog->update();
+                            if (!$checkLog) {
+                                DB::rollback();
+                                return response()->json(['status' => 'fail']);
+                            }
+    
+                            $dataHash = [
+                                'id_log_topup'          => $checkLog['id_log_topup'],
+                                'id_user'               => $checkLog['id_user'],
+                                'balance_before'        => $checkLog['balance_before'],
+                                'nominal_bayar'         => $checkLog['nominal_bayar'],
+                                'topup_value'           => $checkLog['topup_value'],
+                                'balance_after'         => $checkLog['balance_after'],
+                                'transaction_reference' => null,
+                                'source'                => null,
+                                'topup_payment_status'  => $checkLog['topup_payment_status'],
+                                'payment_type'          => $checkLog['payment_type']
+                            ];
+    
+                            $encodeCheck = json_encode($dataHash);
+                            $enc = Hash::make($encodeCheck);
+    
+                            $checkLog->enc = $enc;
+                            $checkLog->update();
+                            if (!$checkLog) {
+                                DB::rollback();
+                                return response()->json(['status' => 'fail']);
+                            }
+                        }
+    
+                        $this->notifTopup($checkLog, $user, $dataMid);
+                        return response()->json(['status' => 'success']);
+                    }
+                } else {
+                    // DEALS
+                    $deals = DealsPaymentMidtran::where('order_id', $midtrans['order_id'])->first();
+    
+                    if ($deals) {
+                        $checkDealsPayment = $this->checkDealsPayment($deals, $midtrans);
+    
+                        if ($checkDealsPayment) {
+                            DB::commit();
+                            return response()->json(['status' => 'success']);
+                        }
+                    }
+                }
+    
+            }
+        }catch(\Log $error){
+            DB::rollback();
+            return response()->json([
+                'status'   => 'fail',
+                'messages' => ['Transaction not found']
+            ]);
         }
 
         DB::rollback();
@@ -560,6 +568,7 @@ class ApiNotification extends Controller {
             'status' => $trx['transaction_payment_status'],
             'name'  => $trx->user->name,
             'order_id' => $mid['order_id'],
+            'receipt_number' => $receipt,
             'outlet_name' => $outlet,
             'detail' => $detail,
             'id_reference' => $mid['order_id'].','.$trx['id_outlet'],

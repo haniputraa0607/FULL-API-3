@@ -53,7 +53,8 @@ class DealsPromotionBuyxgetyRule extends Eloquent
 		'discount_value',
 		'max_percent_discount',
 		'id_product_variant_group',
-		'id_brand'
+		'id_brand',
+		'is_all_product'
 	];
 
 	public function product()

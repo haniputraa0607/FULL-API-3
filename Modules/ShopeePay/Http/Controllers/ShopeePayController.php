@@ -41,6 +41,7 @@ class ShopeePayController extends Controller
         $this->promo_campaign      = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->deals_claim         = "Modules\Deals\Http\Controllers\ApiDealsClaim";
         $this->subscription        = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
+        $this->trx                 = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
         $this->errcode             = [
             '-2'  => 'a server dropped the connection',
             '-1'  => 'a server error occurred',
@@ -172,6 +173,9 @@ class ShopeePayController extends Controller
                 'order_id'     => $trx['transaction_receipt_number'],
                 'gross_amount' => ($trx['amount'] / 100),
             ];
+
+            //send notif to outlet
+            $sendNotifOutlet = app($this->trx)->outletNotif($trx->id_transaction);
             $send = app($this->notif)->notification($mid, $trx);
 
             $status_code = 200;
@@ -326,6 +330,14 @@ class ShopeePayController extends Controller
                     \Log::error('Failed get shopeepay status transaction ' . $singleTrx->transaction_receipt_number . ': ', $errors);
                     continue;
                 }
+
+                TransactionPaymentShopeePay::where('id_transaction', $singleTrx->id_transaction)->update([
+                    'transaction_sn' => $status['response']['transaction_list'][0]['transaction_sn'] ?? null,
+                    'payment_status' => $status['response']['payment_status'] ?? null,
+                    'user_id_hash'   => $status['response']['transaction_list'][0]['user_id_hash'] ?? null,
+                    'terminal_id'    => $status['response']['transaction_list'][0]['terminal_id'] ?? null,
+                ]);
+
                 // is transaction success?
                 $payment_status = ($status['response']['payment_status'] ?? false);
                 if ($payment_status == '1') {
@@ -377,7 +389,10 @@ class ShopeePayController extends Controller
                         'order_id'     => $singleTrx['transaction_receipt_number'],
                         'gross_amount' => ($singleTrx['amount'] / 100),
                     ];
-                    // $send = app($this->notif)->notification($mid, $singleTrx);
+
+                    //send notif to outlet
+                    $sendNotifOutlet = app($this->trx)->outletNotif($singleTrx->id_transaction);
+                    $send = app($this->notif)->notification($mid, $singleTrx);
 
                     continue;
                 }
@@ -480,6 +495,14 @@ class ShopeePayController extends Controller
                     continue;
                 }
                 DB::beginTransaction();
+
+                DealsPaymentShopeePay::where('id_deals_user', $singleTrx->id_deals_user)->update([
+                    'transaction_sn' => $status['response']['transaction_list'][0]['transaction_sn'] ?? null,
+                    'payment_status' => $status['response']['payment_status'] ?? null,
+                    'user_id_hash'   => $status['response']['transaction_list'][0]['user_id_hash'] ?? null,
+                    'terminal_id'    => $status['response']['transaction_list'][0]['terminal_id'] ?? null,
+                ]);
+
                 // is transaction success?
                 if (($status['response']['payment_status'] ?? false) == '1') {
                     if (($status['response']['transaction_list'][0]['amount'] ?? false) != $singleTrx->amount) {
@@ -612,6 +635,14 @@ class ShopeePayController extends Controller
                     continue;
                 }
                 DB::beginTransaction();
+
+                SubscriptionPaymentShopeePay::where('id_subscription_user', $singleTrx->id_subscription_user)->update([
+                    'transaction_sn' => $status['response']['transaction_list'][0]['transaction_sn'] ?? null,
+                    'payment_status' => $status['response']['payment_status'] ?? null,
+                    'user_id_hash'   => $status['response']['transaction_list'][0]['user_id_hash'] ?? null,
+                    'terminal_id'    => $status['response']['transaction_list'][0]['terminal_id'] ?? null,
+                ]);
+
                 // is transaction success?
                 if (($status['response']['payment_status'] ?? false) == '1') {
                     if (($status['response']['transaction_list'][0]['amount'] ?? false) != $singleTrx->amount) {
@@ -1059,7 +1090,8 @@ class ShopeePayController extends Controller
          *     }
          * }
          */
-        return $response;
+        $status = $this->checkStatus($reference, $type);
+        return (($status['response']['payment_status'] ?? false) == '3');
     }
 
     /**
@@ -1068,7 +1100,7 @@ class ShopeePayController extends Controller
      * @param  string $type type of transaction ('trx'/'deals')
      * @return Array       array formdata
      */
-    public function generateDataVoid($reference, $type = 'trx', &$errors = null, &$void_reference_id = null)
+    public function generateDataVoid($reference, $type = 'trx', &$errors = null, &$void_reference_id = null, &$payment_builder = null)
     {
         $void_reference_id = $void_reference_id ?: time() . rand(10, 99);
         $data              = [
@@ -1078,6 +1110,7 @@ class ShopeePayController extends Controller
             'merchant_ext_id'      => $this->merchant_ext_id,
             'store_ext_id'         => $this->store_ext_id,
         ];
+        $minimal_refund_time = '03:00';
         switch ($type) {
             case 'trx':
                 if (is_numeric($reference)) {
@@ -1091,6 +1124,11 @@ class ShopeePayController extends Controller
                         $errors = ['Invalid reference'];
                         return false;
                     }
+                }
+                $payment_builder = TransactionPaymentShopeePay::where('id_transaction', $reference['id_transaction']);
+                if (time() <= strtotime($minimal_refund_time)) {
+                    TransactionPaymentShopeePay::where('id_transaction', $reference['id_transaction'])->update(['manual_refund' => '1']);
+                    return true;
                 }
                 $data['payment_reference_id'] = $reference['transaction_receipt_number'];
                 break;
@@ -1108,6 +1146,11 @@ class ShopeePayController extends Controller
                         return false;
                     }
                 }
+                $payment_builder = DealsPaymentShopeePay::where('order_id', $reference['order_id']);
+                if (time() <= strtotime($minimal_refund_time)) {
+                    DealsPaymentShopeePay::where('order_id', $reference['order_id'])->update(['manual_refund' => '1']);
+                    return true;
+                }
                 $data['payment_reference_id'] = $reference['order_id'];
                 break;
 
@@ -1123,6 +1166,11 @@ class ShopeePayController extends Controller
                         $errors = ['Invalid reference'];
                         return false;
                     }
+                }
+                $payment_builder = SubscriptionPaymentShopeePay::where('order_id', $reference['order_id']);
+                if (time() <= strtotime($minimal_refund_time)) {
+                    SubscriptionPaymentShopeePay::where('order_id', $reference['order_id'])->update(['manual_refund' => '1']);
+                    return true;
                 }
                 $data['payment_reference_id'] = $reference['order_id'];
                 break;
@@ -1142,11 +1190,19 @@ class ShopeePayController extends Controller
     public function void($reference, $type = 'trx', &$errors = null, &$void_reference_id = null)
     {
         $url      = $this->base_url . 'v3/merchant-host/transaction/void/create';
-        $postData = $this->generateDataVoid($reference, $type, $errors, $void_reference_id);
-        if (!$postData) {
+        $postData = $this->generateDataVoid($reference, $type, $errors, $void_reference_id, $payment_builder);
+        if (!is_array($postData)) {
             return $postData;
         }
         $response = $this->send($url, $postData, ['type' => 'void', 'id_reference' => $postData['payment_reference_id']]);
+
+        if (($response['response']['errcode']?? 0) == 601 && $payment_builder) {
+            $payment_builder->update(['manual_refund' => '1']);
+            return true;
+        }
+        if ($errcode = ($response['response']['errcode'] ?? -3)) {
+            $errors[] = $this->errcode[$errcode] ?? 'Something went wrong';
+        }
         /**
          * $response
          * {
@@ -1184,7 +1240,7 @@ class ShopeePayController extends Controller
         
         // check status after void
         $status = $this->checkStatus($reference, $type);
-        return ($status['response']['payment_status'] == '4');
+        return (($status['response']['payment_status']??false) == '4');
     }
 
     /**
@@ -1331,5 +1387,83 @@ class ShopeePayController extends Controller
         }
         $response = $this->send($url, $postData, ['type' => 'transaction_list', 'id_reference' => 'LIST-' . time()]);
         return $response;
+    }
+
+    /**
+     * Cron refund shopeepay
+     * @return array    result in array
+     */
+    public function cronRefund()
+    {
+        $log = MyHelper::logCron('Refund ShopeePay');
+        try {
+            $trxs = TransactionPaymentShopeePay::where('manual_refund', '1')->get();
+            $refund_failed_process_balance = MyHelper::setting('refund_failed_process_balance');
+            $result = [
+                'refund_failed_process_balance' => $refund_failed_process_balance,
+                'found' => $trxs->count(),
+                'success_refund' => 0,
+                'reject_balance' => 0,
+                'failed_refund' => 0,
+                'manual_refund' => 0,
+                'errors' => []
+            ];
+            $void_failed = collect([]);
+            foreach ($trxs as $trx) {
+                $order = Transaction::where('transactions.id_transaction', $trx->id_transaction)
+                    ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                    ->join('users', 'users.id', 'transactions.id_user')
+                    ->with('outlet')
+                    ->first();
+                $refund = $this->refund($order);
+                if ($refund) {
+                    $result['success_refund']++;
+                } else {
+                    if ($refund_failed_process_balance) {
+                        TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                            'reject_type'   => 'point',
+                        ]);
+                        $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($trx['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                        if ($refund == false) {
+                            $result['errors'][] = "Insert Cashback Failed. [id_transaction = $order->id_transaction]";
+                            $result['failed_refund']++;
+                            continue;
+                        }
+
+                        $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $order['phone'],
+                        [
+                            "outlet_name"      => $order['outlet']['outlet_name'],
+                            "transaction_date" => $order['transaction_date'],
+                            'id_transaction'   => $order['id_transaction'],
+                            'receipt_number'   => $order['transaction_receipt_number'],
+                            'received_point'   => (string) $point,
+                            'order_id'         => $order['order_id'],
+                        ]);
+
+                        $result['reject_balance']++;
+                    } else {
+                        $order->update(['need_manual_void' => 1]);
+                        $order2 = clone $order;
+                        $order2->payment_method = 'ShopeePay';
+                        $order2->manual_refund = $trx['amount']/100;
+                        $void_failed[] = $order2;
+                        $result['manual_refund']++;
+                    }
+                }
+                $trx->update(['manual_refund' => '2']);
+            }
+            if ($void_failed->count()) {
+                $variables = [
+                    'detail' => view('emails.failed_refund', ['transactions' => $void_failed])->render()
+                ];
+                app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
+            }
+
+            $log->success($result);
+            return $result;
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+            return ['status' => 'fail', 'messages' => [$e->getMessage()]];
+        }
     }
 }

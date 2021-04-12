@@ -37,6 +37,7 @@ use Modules\Deals\Entities\DealsShipmentMethod;
 use Modules\Deals\Entities\DealsPaymentMethod;
 use Modules\Deals\Entities\DealsBrand;
 use Modules\Deals\Entities\DealsBuyxgetyProductModifier;
+use Modules\Deals\Entities\DealsOutletGroup;
 
 use Modules\Promotion\Http\Requests\DetailPromotion;
 use Modules\Promotion\Http\Requests\DeleteDealsPromotionTemplate;
@@ -66,7 +67,7 @@ class ApiPromotionDeals extends Controller
 		}
 
 		if ($request->json('brand')) {
-			$deals = $deals->with('brand');
+			$deals = $deals->with(['brand', 'brands']);
 		}
 
 		$deals = $deals->get();
@@ -183,12 +184,21 @@ class ApiPromotionDeals extends Controller
 	                'deals_promotion_discount_delivery_rules',
 	                'deals_promotion_shipment_method',
 	                'deals_promotion_payment_method',
-	                'brands'
+	                'brands',
+	                'outlets',
+	                'outlet_groups'
 	            ])
 	            ->first();
 	    $outlet = explode(',',$deals->deals_list_outlet);
         $deals->outlets = Outlet::whereIn('id_outlet',$outlet??[])->get();
-            
+        
+        if ($deals) {
+	        $deals_array = $deals->toArray();
+        	$getProduct = app($this->promo_campaign)->getProduct('deals_promotion',$deals_array);
+    		$desc = app($this->promo_campaign)->getPromoDescription('deals_promotion', $deals_array, $getProduct['product']??'', true);
+    		$deals['description'] = $desc;
+        }
+
 		return response()->json(MyHelper::checkGet($deals));
     }
 
@@ -246,6 +256,8 @@ class ApiPromotionDeals extends Controller
 		$dataDeals['product_rule'] 			= $dealsTemplate['product_rule'];
 		$dataDeals['brand_rule'] 			= $dealsTemplate['brand_rule'];
 		$dataDeals['product_type'] 			= $dealsTemplate['product_type'];
+		$dataDeals['is_all_outlet'] 		= $dealsTemplate['is_all_outlet'];
+		$dataDeals['promo_description'] 	= $dealsTemplate['promo_description'];
 
 		if ($post['duration'][$key] == 'duration') {
 			$dataDeals['deals_voucher_duration'] = $post['deals_voucher_expiry_duration'][$key];
@@ -378,29 +390,56 @@ class ApiPromotionDeals extends Controller
 								->delete();
 			}
 
-			if($dealsTemplate['deals_list_outlet'] != ""){
-				$deleteDealsOutlet =  DealsOutlet::where('id_deals', $id_deals)->delete();
-				if (!in_array("all", explode(',',$dealsTemplate['deals_list_outlet']))) {
-					$post['id_outlet'][$key] = explode(',',$dealsTemplate['deals_list_outlet']);
-
-					foreach($post['id_outlet'][$key] as $id_outlet){
-						$dataDealsOutlet = [];
-						$dataDealsOutlet['id_deals'] = $id_deals;
-						$dataDealsOutlet['id_outlet'] = $id_outlet;
-
-						$queryDealsOutlet = DealsOutlet::create($dataDealsOutlet);
-						if(!$queryDealsOutlet){
-							DB::rollBack();
-							$result = [
+			if(!$dataDeals['is_all_outlet']){
+				if ($dealsTemplate->deals_promotion_outlets || $dealsTemplate->deals_promotion_outlet_groups) {
+					// new outlet rule
+					if ($dealsTemplate->deals_promotion_outlets) {
+						$saveOutlet = $this->insertOutlet($dealsTemplate, $id_deals);
+						if (!$saveOutlet) {
+			 				$result = [
 								'status'	=> 'fail',
 								'messages'	=> ['Update Promotion Content Deals Failed.']
 							];
 							return $result;
+			 			}
+					}
+
+					if ($dealsTemplate->deals_promotion_outlet_groups) {
+			 			$saveOutletGroup = $this->insertOutletGroup($dealsTemplate, $id_deals);
+						if (!$saveOutletGroup) {
+			 				$result = [
+								'status'	=> 'fail',
+								'messages'	=> ['Update Promotion Content Deals Failed.']
+							];
+							return $result;
+			 			}
+					}
+
+				}elseif($dealsTemplate['deals_list_outlet'] != ""){
+					// old outlet rule
+					$deleteDealsOutlet =  DealsOutlet::where('id_deals', $id_deals)->delete();
+					if (!in_array("all", explode(',',$dealsTemplate['deals_list_outlet']))) {
+						$post['id_outlet'][$key] = explode(',',$dealsTemplate['deals_list_outlet']);
+
+						foreach($post['id_outlet'][$key] as $id_outlet){
+							$dataDealsOutlet = [];
+							$dataDealsOutlet['id_deals'] = $id_deals;
+							$dataDealsOutlet['id_outlet'] = $id_outlet;
+
+							$queryDealsOutlet = DealsOutlet::create($dataDealsOutlet);
+							if(!$queryDealsOutlet){
+								DB::rollBack();
+								$result = [
+									'status'	=> 'fail',
+									'messages'	=> ['Update Promotion Content Deals Failed.']
+								];
+								return $result;
+							}
 						}
 					}
 				}
-
 			}
+
 
 			// save multi brand
 			$saveBrand = $this->insertBrand($dealsTemplate, $id_deals);
@@ -558,6 +597,7 @@ class ApiPromotionDeals extends Controller
 				'discount_type'			=> $value['discount_type'],
 				'discount_value'		=> $value['discount_value'],
 				'max_percent_discount'	=> $value['max_percent_discount'],
+				'is_all_product'		=> $value['is_all_product'],
 				'created_at' 			=> date('Y-m-d H:i:s'),
         		'updated_at' 			=> date('Y-m-d H:i:s')
 			];
@@ -602,6 +642,7 @@ class ApiPromotionDeals extends Controller
 				'benefit_qty'  			=> $value['benefit_qty'],
 				'id_brand'  			=> $value['id_brand'],
 				'id_product_variant_group'=> $value['id_product_variant_group'],
+				'is_all_product'		=> $value['is_all_product'],
 				'created_at' 			=> date('Y-m-d H:i:s'),
     			'updated_at' 			=> date('Y-m-d H:i:s')
 			];
@@ -801,6 +842,53 @@ class ApiPromotionDeals extends Controller
 		$saveRule 	= $table::insert($product);
 
 		return $saveRule;
+    }
+
+    function insertOutlet($query, $id_deals)
+    {
+    	$deals_template = $query;
+
+    	$outlet_template = $deals_template->deals_promotion_outlets;
+
+    	$outlet = [];
+		foreach ($outlet_template as $key => $value) {
+			$outlet[] = [
+				'id_deals'	=> $id_deals,
+				'id_outlet' => $value['id_outlet']
+			];
+		}
+
+		$del_outlet 	= DealsOutlet::where('id_deals',$id_deals)->delete();
+		$save_outlet 	= DealsOutlet::insert($outlet);
+		if ($save_outlet) {
+			return true;
+		}else{
+			return false;
+		}
+    }
+
+    function insertOutletGroup($query, $id_deals)
+    {
+    	$deals_template = $query;
+
+    	$outlet_group_template = $deals_template->deals_promotion_outlet_groups;
+
+    	$outlet_group = [];
+		foreach ($outlet_group_template as $key => $value) {
+			$outlet_group[] = [
+				'id_deals'	=> $id_deals,
+				'id_outlet_group' => $value['id_outlet_group']
+			];
+		}
+
+		$del_outlet_group 	= DealsOutletGroup::where('id_deals',$id_deals)->delete();
+		$save_outlet_group 	= DealsOutletGroup::insert($outlet_group);
+
+		if ($save_outlet_group) {
+			return true;
+		}else{
+			return false;
+		}
     }
 
     public function deleteDeals($promoContent, $id_promotion_content)

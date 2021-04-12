@@ -525,14 +525,14 @@ class ApiNews extends Controller
 
         $news = News::with(['newsCategory' => function ($query) {
             $query->select('id_news_category', 'category_name');
-        }]);
+        }])->leftJoin('news_categories', 'news_categories.id_news_category', 'news.id_news_category');
 
         if (!$request->json('admin')) {
             $news->whereHas('newsCategory');
         }
 
         if (!isset($post['id_news'])) {
-            $news->select('id_news', 'id_news_category', 'news_title', 'news_publish_date', 'news_expired_date', 'news_post_date', 'news_slug', 'news_content_short', 'news_image_luar', 'news_image_dalam');
+            $news->select('id_news', 'news.id_news_category', 'news_title', 'news_publish_date', 'news_expired_date', 'news_post_date', 'news_slug', 'news_content_short', 'news_image_luar', 'news_image_dalam');
         } else {
             $news->with('news_form_structures');
         }
@@ -545,9 +545,9 @@ class ApiNews extends Controller
         }
 
         if ($post['id_news_category'] ?? false) {
-            $news->where('id_news_category', $post['id_news_category']);
+            $news->where('news.id_news_category', $post['id_news_category']);
         } elseif (($post['id_news_category'] ?? false) === 0 || ($post['id_news_category'] ?? false) === '0') {
-            $news->where('id_news_category', null);
+            $news->where('news.id_news_category', null);
         }
 
         if (isset($post['published'])) {
@@ -565,9 +565,9 @@ class ApiNews extends Controller
         } else {
 
             if (!isset($post['id_news'])) {
-                $news = $news->orderBy('news_post_date', 'DESC')->paginate(10)->toArray();
+                $news = $news->orderBy('news_category_order', 'asc')->orderBy('news_order', 'asc')->orderBy('news_post_date', 'DESC')->orderBy('id_news', 'DESC')->paginate(10)->toArray();
             } else {
-                $news = $news->orderBy('news_post_date', 'DESC')->get()->toArray();
+                $news = $news->orderBy('news_category_order', 'asc')->orderBy('news_order', 'asc')->orderBy('news_post_date', 'DESC')->orderBy('id_news', 'DESC')->get()->toArray();
             }
         }
         if (isset($news['data'])) {
@@ -788,5 +788,33 @@ class ApiNews extends Controller
         $data['news_form_data'] = $news_form_data;
 
         return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function positionListNews(){
+        $data = News::with('category')->select('news.id_news', 'news.id_news_category', 'news.news_title',
+            'news.news_order')
+            ->orderBy('news_order', 'asc')
+            ->orderBy('news_post_date', 'DESC')
+            ->orderBy('id_news', 'DESC')
+            ->get()->toArray();
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function positionNews(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if (!isset($post['news_ids'])) {
+            return [
+                'status' => 'fail',
+                'messages' => ['News id is required']
+            ];
+        }
+        // update position
+        foreach ($post['news_ids'] as $key => $news_id) {
+            $update = News::find($news_id)->update(['news_order'=>$key+1]);
+        }
+
+        return ['status' => 'success'];
     }
 }

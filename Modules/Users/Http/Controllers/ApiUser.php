@@ -176,6 +176,7 @@ class ApiUser extends Controller
                 foreach ($conditions as $key => $cond) {
                     $query = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
                         ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
+                        ->leftJoin('crm_user_data', 'crm_user_data.id_user', '=', 'users.id')
                         ->orderBy($order_field, $order_method);
 
                     if ($cond != null) {
@@ -344,6 +345,7 @@ class ApiUser extends Controller
                 foreach ($conditions as $key => $cond) {
                     $query = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
                         ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
+                        ->leftJoin('crm_user_data', 'crm_user_data.id_user', '=', 'users.id')
                         ->orderBy($order_field, $order_method);
 
                     if ($cond != null) {
@@ -486,6 +488,7 @@ class ApiUser extends Controller
         } else {
             $query = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
                 ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
+                ->leftJoin('crm_user_data', 'crm_user_data.id_user', '=', 'users.id')
                 ->orderBy($order_field, $order_method);
 
             /*============= Final query when condition is null =============*/
@@ -511,11 +514,16 @@ class ApiUser extends Controller
 
         $resultCount = $finalResult->count(); // get total result
         if ($columns) {
+            foreach ($columns as $in=>$c){
+                if($c == 'email' || $c == 'name' || $c == 'phone'){
+                    $columns[$in] = 'users.'.$c;
+                }
+            }
             $finalResult->select($columns);
         }
         if ($key_free ?? false) {
             $finalResult->where(function ($query) use ($keyword) {
-                $query->orWhere('name', 'like', '%' . $keyword . '%')->orWhere('email', 'like', '%' . $keyword . '%')->orWhere('phone', 'like', '%' . $keyword . '%');
+                $query->orWhere('users.name', 'like', '%' . $keyword . '%')->orWhere('users.email', 'like', '%' . $keyword . '%')->orWhere('users.phone', 'like', '%' . $keyword . '%');
             });
         }
         if ($objOnly) {
@@ -561,6 +569,17 @@ class ApiUser extends Controller
                 if ($rule == 'and') {
                     if ($condition['subject'] == 'id' || $condition['subject'] == 'name' || $condition['subject'] == 'phone' || $condition['subject'] == 'email' || $condition['subject'] == 'address') {
                         $var = "users." . $condition['subject'];
+
+                        if ($condition['operator'] == 'like')
+                            $query = $query->where($var, 'like', '%' . $condition['parameter'] . '%');
+                        elseif (strtoupper($condition['operator']) == 'WHERE IN')
+                            $query = $query->whereIn($var, explode(',', $condition['parameter']));
+                        else
+                            $query = $query->where($var, '=', $condition['parameter']);
+                    }
+
+                    if ($condition['subject'] == 'r_quartile' || $condition['subject'] == 'f_quartile' || $condition['subject'] == 'm_quartile' || $condition['subject'] == 'RFMScore') {
+                        $var = "crm_user_data." . $condition['subject'];
 
                         if ($condition['operator'] == 'like')
                             $query = $query->where($var, 'like', '%' . $condition['parameter'] . '%');
@@ -2741,11 +2760,10 @@ class ApiUser extends Controller
 
         $query = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
             ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
-            ->with('history_transactions.outlet_name', 'history_balance.detail_trx', 'user_membership')
+            ->with('history_transactions.outlet_name', 'history_transactions.transaction_pickup', 'history_balance.detail_trx', 'user_membership')
             ->where('phone', '=', $post['phone'])
             ->get()
             ->first();
-
 
         if ($query) {
 
@@ -2763,7 +2781,7 @@ class ApiUser extends Controller
                 ->whereNull('taken_at')
                 ->whereNull('reject_at')
                 ->where('id_user', $query['id'])
-                ->select('transactions.id_transaction', 'transaction_receipt_number', 'trasaction_type', 'transaction_grandtotal', 'transaction_payment_status', 'transaction_date', 'receive_at', 'ready_at', 'taken_at', 'reject_at')
+                ->select('transactions.id_transaction', 'id_outlet', 'transaction_receipt_number', 'trasaction_type', 'transaction_grandtotal', 'transaction_payment_status', 'transaction_date', 'receive_at', 'ready_at', 'taken_at', 'reject_at', 'pickup_by', 'reject_reason')
                 ->orderBy('transaction_date', 'DESC')
                 ->get();
 

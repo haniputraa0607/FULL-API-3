@@ -33,7 +33,7 @@ use Modules\Disburse\Entities\DisburseTransaction;
 use Modules\Disburse\Entities\LogIRIS;
 use Modules\Disburse\Entities\LogTopupIris;
 use Modules\Disburse\Entities\MDR;
-use Modules\Disburse\Entities\UserFranchisee;
+use  Modules\UserFranchise\Entities\UserFranchisee;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use Modules\Subscription\Entities\SubscriptionUser;
@@ -56,8 +56,14 @@ class ApiIrisController extends Controller
             $reference_no = $post['reference_no'];
             //if status alredy success then no update to database
             $check = Disburse::where('reference_no', $reference_no)->first();
-            if($check['disburse_status'] == 'Success'){
-                LogTopupIris::create(['response' => json_encode($post)]);
+            if($check['disburse_status'] == 'Success' || $check['disburse_status'] == 'Fail'){
+                $dataLog = [
+                    'subject' => 'Callback IRIS',
+                    'id_reference' => $post['reference_no']??null,
+                    'request'=> json_encode($post),
+                    'response' => json_encode(['status' => 'success'])
+                ];
+                LogIRIS::create($dataLog);
                 return response()->json(['status' => 'success']);
             }
 
@@ -104,9 +110,9 @@ class ApiIrisController extends Controller
             $getCurrenDay = date('d');
             $getSettingDate = Setting::where('key', 'disburse_date')->first();
             $getSettingDate = (array)json_decode($getSettingDate['value_text']??'');
-            $getMinSendDate = $getSettingDate['min_date_send_disburse']??25;
+            $getMinSendDate = $getSettingDate['min_date_send_disburse']??5;
 
-            if($getCurrenDay >= (int)$getMinSendDate){
+            if((int)$getCurrenDay >= (int)$getMinSendDate){
                 $currentDate = date('Y-m-d');
                 $day = date('D', strtotime($currentDate));
                 $getHoliday = $this->getHoliday();
@@ -114,7 +120,6 @@ class ApiIrisController extends Controller
                 if($day != 'Sat' && $day != 'Sun' && array_search($currentDate, $getHoliday) === false){
                     $getSettingFeeDisburse = Setting::where('key', 'disburse_setting_fee_transfer')->first();
                     $lastDate = $getSettingDate['last_date_disburse']??null;
-                    $dateCutOf = $getSettingDate['date_cut_of']??20;
                     $monthDb = date('n', strtotime($lastDate));
                     $monthCurrent = date('n');
 
@@ -126,9 +131,9 @@ class ApiIrisController extends Controller
                          -today is not holiday when return true
                          -cron runs on weekdays
                         */
-
-                        $year = date('Y');
-                        $month = date('m');
+                        $dateCutOf = date("t", strtotime($currentDate.' -1 MONTH'));
+                        $year = date('Y', strtotime($currentDate.' -1 MONTH'));
+                        $month = date('m', strtotime($currentDate.' -1 MONTH'));
                         $dateForQuery = date('Y-m-d', strtotime($year.'-'.$month.'-'.$dateCutOf));
                         $feeDisburse = (int)$getSettingFeeDisburse['value'];
 
@@ -520,6 +525,7 @@ class ApiIrisController extends Controller
 
         if(!empty($data)){
             $settingGlobalFee = Setting::where('key', 'global_setting_fee')->first()->value_text;
+            $settingProductPlastic = Setting::where('key', 'disburse_fee_product_plastic')->first()->value??0;
             $settingGlobalFee = json_decode($settingGlobalFee);
             $settingMDRAll = MDR::get()->toArray();
             $subTotal = $data['transaction_subtotal'];
@@ -549,6 +555,28 @@ class ApiIrisController extends Controller
             $charged = NULL;
 
             if(!empty($data['transaction_multiple_payment']) || !empty($data['transaction_payment_subscription'])){
+                //get data bundling product
+                $getBundlingProduct = TransactionProduct::where('id_transaction', $id_transaction)
+                    ->whereNotNull('id_bundling_product')
+                    ->select('transaction_product_qty', 'id_transaction_bundling_product', 'id_bundling_product', 'transaction_product_bundling_discount', 'transaction_product_bundling_charged_outlet', 'transaction_product_bundling_charged_central')
+                    ->get()->toArray();
+                $bundlingProductTotalDiscount = 0;
+                $bundlingProductFeeOutlet = 0;
+                $bundlingProductFeeCentral = 0;
+                foreach ($getBundlingProduct as $bp){
+                    $bundlingProductTotalDiscount = $bundlingProductTotalDiscount + ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                    $bpChargedOutlet = (floatval($bp['transaction_product_bundling_charged_outlet']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                    $bpChargedCentral = (floatval($bp['transaction_product_bundling_charged_central']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                    $bundlingProductFeeOutlet = $bundlingProductFeeOutlet + $bpChargedOutlet;
+                    $bundlingProductFeeCentral = $bundlingProductFeeCentral + $bpChargedCentral;
+                }
+                $subTotal = $subTotal + $bundlingProductTotalDiscount;
+                $nominalFeeToCentral = $subTotal;
+
+                if($settingProductPlastic == 0){
+                    $subtotalPlastic = TransactionProduct::where('id_transaction', $id_transaction)->where('type', 'Plastic')->sum('transaction_product_subtotal');
+                    $nominalFeeToCentral = $subTotal - $subtotalPlastic;
+                }
 
                 // ===== Calculate Fee Subscription ====== //
                 $totalChargedSubcriptionOutlet = 0;
@@ -784,20 +812,12 @@ class ApiIrisController extends Controller
                     }
                 }
 
-                //get data bundling product
-                $getBundlingProduct = TransactionProduct::where('id_transaction', $id_transaction)
-                    ->whereNotNull('id_bundling_product')
-                    ->select('transaction_product_qty', 'id_transaction_bundling_product', 'id_bundling_product', 'transaction_product_bundling_discount', 'transaction_product_bundling_charged_outlet', 'transaction_product_bundling_charged_central')
-                    ->get()->toArray();
-                $bundlingProductTotalDiscount = 0;
-                $bundlingProductFeeOutlet = 0;
-                $bundlingProductFeeCentral = 0;
-                foreach ($getBundlingProduct as $bp){
-                    $bundlingProductTotalDiscount = $bundlingProductTotalDiscount + ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
-                    $bpChargedOutlet = (floatval($bp['transaction_product_bundling_charged_outlet']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
-                    $bpChargedCentral = (floatval($bp['transaction_product_bundling_charged_central']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
-                    $bundlingProductFeeOutlet = $bundlingProductFeeOutlet + $bpChargedOutlet;
-                    $bundlingProductFeeCentral = $bundlingProductFeeCentral + $bpChargedCentral;
+                if(!empty($getBundlingProduct)){
+                    if($nominalFeeToCentral == 0){
+                        $nominalFeeToCentral = $subTotal - $bundlingProductTotalDiscount;
+                    }else{
+                        $nominalFeeToCentral = $nominalFeeToCentral - $bundlingProductTotalDiscount;
+                    }
                 }
 
                 $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
@@ -821,6 +841,7 @@ class ApiIrisController extends Controller
                     'bundling_product_fee_outlet' => $bundlingProductFeeOutlet,
                     'bundling_product_fee_central' => $bundlingProductFeeCentral,
                     'fee' => $percentFee,
+                    'fee_product_plastic_status' => $settingProductPlastic,
                     'mdr' => $feePG,
                     'mdr_central' => $feePGCentral,
                     'mdr_charged' => $charged,
@@ -866,11 +887,11 @@ class ApiIrisController extends Controller
         if(!empty($datas)){
             foreach ($datas as $data){
                 $settingGlobalFee = Setting::where('key', 'global_setting_fee')->first()->value_text;
+                $settingProductPlastic = Setting::where('key', 'disburse_fee_product_plastic')->first()->value??0;
                 $settingGlobalFee = json_decode($settingGlobalFee);
                 $settingMDRAll = MDR::get()->toArray();
                 $subTotal = $data['transaction_subtotal'];
                 $grandTotal = $data['transaction_grandtotal'];
-                $nominalFeeToCentral = $subTotal;
                 $feePGCentral = 0;
                 $feePG = 0;
                 $feePGType = 'Percent';
@@ -895,6 +916,29 @@ class ApiIrisController extends Controller
                 $charged = NULL;
 
                 if(!empty($data['transaction_multiple_payment']) || !empty($data['transaction_payment_subscription'])){
+                    //get data bundling product
+                    $getBundlingProduct = TransactionProduct::where('id_transaction', $data['id_transaction'])
+                        ->whereNotNull('id_bundling_product')
+                        ->select('transaction_product_qty', 'id_transaction_bundling_product', 'id_bundling_product', 'transaction_product_bundling_discount', 'transaction_product_bundling_charged_outlet', 'transaction_product_bundling_charged_central')
+                        ->get()->toArray();
+                    $bundlingProductTotalDiscount = 0;
+                    $bundlingProductFeeOutlet = 0;
+                    $bundlingProductFeeCentral = 0;
+                    foreach ($getBundlingProduct as $bp){
+                        $bundlingProductTotalDiscount = $bundlingProductTotalDiscount + ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                        $bpChargedOutlet = (floatval($bp['transaction_product_bundling_charged_outlet']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                        $bpChargedCentral = (floatval($bp['transaction_product_bundling_charged_central']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
+                        $bundlingProductFeeOutlet = $bundlingProductFeeOutlet + $bpChargedOutlet;
+                        $bundlingProductFeeCentral = $bundlingProductFeeCentral + $bpChargedCentral;
+                    }
+
+                    $subTotal = $subTotal + $bundlingProductTotalDiscount;
+                    $nominalFeeToCentral = $subTotal;
+
+                    if($settingProductPlastic == 0){
+                        $subtotalPlastic = TransactionProduct::where('id_transaction', $data['id_transaction'])->where('type', 'Plastic')->sum('transaction_product_subtotal');
+                        $nominalFeeToCentral = $subTotal - $subtotalPlastic;
+                    }
 
                     // ===== Calculate Fee Subscription ====== //
                     $totalChargedSubcriptionOutlet = 0;
@@ -1112,20 +1156,12 @@ class ApiIrisController extends Controller
                         }
                     }
 
-                    //get data bundling product
-                    $getBundlingProduct = TransactionProduct::where('id_transaction', $data['id_transaction'])
-                        ->whereNotNull('id_bundling_product')
-                        ->select('transaction_product_qty', 'id_transaction_bundling_product', 'id_bundling_product', 'transaction_product_bundling_discount', 'transaction_product_bundling_charged_outlet', 'transaction_product_bundling_charged_central')
-                        ->get()->toArray();
-                    $bundlingProductTotalDiscount = 0;
-                    $bundlingProductFeeOutlet = 0;
-                    $bundlingProductFeeCentral = 0;
-                    foreach ($getBundlingProduct as $bp){
-                        $bundlingProductTotalDiscount = $bundlingProductTotalDiscount + ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
-                        $bpChargedOutlet = (floatval($bp['transaction_product_bundling_charged_outlet']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
-                        $bpChargedCentral = (floatval($bp['transaction_product_bundling_charged_central']) / 100) * ($bp['transaction_product_bundling_discount'] * $bp['transaction_product_qty']);
-                        $bundlingProductFeeOutlet = $bundlingProductFeeOutlet + $bpChargedOutlet;
-                        $bundlingProductFeeCentral = $bundlingProductFeeCentral + $bpChargedCentral;
+                    if(!empty($getBundlingProduct)){
+                        if($nominalFeeToCentral == 0){
+                            $nominalFeeToCentral = $subTotal - $bundlingProductTotalDiscount;
+                        }else{
+                            $nominalFeeToCentral = $nominalFeeToCentral - $bundlingProductTotalDiscount;
+                        }
                     }
 
                     $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
@@ -1149,6 +1185,7 @@ class ApiIrisController extends Controller
                         'bundling_product_fee_outlet' => $bundlingProductFeeOutlet,
                         'bundling_product_fee_central' => $bundlingProductFeeCentral,
                         'fee' => $percentFee,
+                        'fee_product_plastic_status' => $settingProductPlastic,
                         'mdr' => $feePG,
                         'mdr_central' => $feePGCentral,
                         'mdr_charged' => $charged,

@@ -9,22 +9,18 @@
     </tr>
     <tr>
         <td width="30"><b>Total Gross Sales</b></td>
-        <td>: {{(float)$summary_fee['total_sub_total']}}</td>
+        <td>: {{(float)$summary_fee['total_sub_total']+abs((float)$summary_fee['total_discount_bundling'])}}</td>
     </tr>
     <tr>
-        <td width="30"><b>Total Discount</b></td>
-        <td>: {{(float)$summary_fee['total_discount_bundling']}}</td>
-    </tr>
-    <tr>
-        <td width="30"><b>Total Discount</b></td>
-        <td>: {{abs($summary_fee['total_discount'])+$summary_fee['total_subscription']+abs($summary_fee['total_discount_delivery'])}}</td>
+        <td width="30"><b>Total Discount + Promo</b></td>
+        <td>: {{abs($summary_fee['total_discount'])+$summary_fee['total_subscription']+abs($summary_fee['total_discount_delivery'])+abs((float)$summary_fee['total_discount_bundling'])}}</td>
     </tr>
     <tr>
         <td width="30"><b>Total Delivery</b></td>
         <td>: {{(float)$summary_fee['total_delivery']}}</td>
     </tr>
     <tr>
-        <td width="30"><b>Sub Total (Gross Sales + delivery - discount/promo)</b></td>
+        <td width="30"><b>Sub Total (Gross Sales + delivery - discount - promo)</b></td>
         <td>: {{(float)$summary_fee['total_gross_sales']-$summary_fee['total_subscription']}}</td>
     </tr>
     <tr>
@@ -61,6 +57,7 @@
     <thead>
     <tr>
         <th style="background-color: #dcdcdc;"> Name </th>
+        <th style="background-color: #dcdcdc;" width="20"> Variants </th>
         <th style="background-color: #dcdcdc;" width="20"> Type </th>
         <th style="background-color: #dcdcdc;" width="20"> Total Sold Out </th>
     </tr>
@@ -70,7 +67,8 @@
         @foreach($summary_product as $val)
             <tr>
                 <td style="text-align: left">{{$val['name']}}</td>
-                <td style="text-align: left">{{$val['type']}}</td>
+                <td style="text-align: left">{{$val['variants']??''}}</td>
+                <td style="text-align: left">{{ucfirst($val['type'])}}</td>
                 <td style="text-align: left">{{$val['total_qty']}}</td>
             </tr>
         @endforeach

@@ -89,7 +89,8 @@ class PromoCampaign extends Eloquent
         'is_all_payment',
         'product_rule',
         'brand_rule',
-        'product_type'
+        'product_type',
+        'promo_description'
 	];
 
 	public function user()
@@ -242,4 +243,9 @@ class PromoCampaign extends Eloquent
     {
         return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignDiscountBillProduct::class, 'id_promo_campaign', 'id_promo_campaign');
     }
+
+    public function outlet_groups()
+	{
+		return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'promo_campaign_outlet_groups', 'id_promo_campaign', 'id_outlet_group');
+	}
 }

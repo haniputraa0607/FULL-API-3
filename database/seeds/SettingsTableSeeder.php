@@ -920,6 +920,24 @@ class SettingsTableSeeder extends Seeder
                     'value_text' => '{"last_date_disburse":null,"date_cut_of":"20","min_date_send_disburse":"25"}',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            102 =>
+                array(
+                    'id_setting' => 103,
+                    'key' => 'brand_bundling_name',
+                    'value' => "Bundling",
+                    'value_text' => NULL,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            103 =>
+                array(
+                    'id_setting' => 102,
+                    'key' => 'disburse_fee_product_plastic',
+                    'value' => 0,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
                 )
         ));
     }

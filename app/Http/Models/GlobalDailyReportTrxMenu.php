@@ -22,6 +22,7 @@ class GlobalDailyReportTrxMenu extends Model
     protected $fillable = [
         'trx_date',
         'id_product',
+        'type',
         'total_rec',
         'total_qty',
         'total_nominal',

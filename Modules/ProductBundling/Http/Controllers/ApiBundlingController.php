@@ -4,6 +4,7 @@ namespace Modules\ProductBundling\Http\Controllers;
 
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
+use App\Http\Models\Setting;
 use App\Http\Models\TransactionProduct;
 use App\Lib\MyHelper;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ use Modules\Product\Entities\ProductModifierGroup;
 use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\ProductBundling\Entities\Bundling;
 use Modules\ProductBundling\Entities\BundlingOutlet;
+use Modules\ProductBundling\Entities\BundlingOutletGroup;
 use Modules\ProductBundling\Entities\BundlingPeriodeDay;
 use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductBundling\Entities\BundlingToday;
@@ -33,6 +35,8 @@ class ApiBundlingController extends Controller
     function __construct()
     {
         $this->product_variant_group = "Modules\ProductVariant\Http\Controllers\ApiProductVariantGroupController";
+        $this->outlet_group_filter = "Modules\Outlet\Http\Controllers\ApiOutletGroupFilterController";
+        $this->bundling      = "Modules\ProductBundling\Http\Controllers\ApiBundlingController";
     }
 
     /**
@@ -215,6 +219,9 @@ class ApiBundlingController extends Controller
     public function store(CreateBundling $request)
     {
         $post = $request->json()->all();
+        if(empty($post['bundling_description'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Description can not be empty']]);
+        }
         if(isset($post['data_product']) && !empty($post['data_product'])){
             DB::beginTransaction();
                 $checkCode = Bundling::where('bundling_code', $post['bundling_code'])->first();
@@ -224,8 +231,12 @@ class ApiBundlingController extends Controller
                 }
 
                 $isAllOutlet = 0;
-                if(in_array("all", $post['id_outlet'])){
+                if(isset($post['id_outlet']) && in_array("all", $post['id_outlet'])){
                     $isAllOutlet = 1;
+                }
+
+                if($post['bundling_specific_day_type'] == 'not_specific_day'){
+                    $post['bundling_specific_day_type'] = NULL;
                 }
                 //create bundling
                 $createBundling = [
@@ -237,7 +248,8 @@ class ApiBundlingController extends Controller
                     'bundling_promo_status' => $post['bundling_promo_status']??0,
                     'bundling_specific_day_type' => $post['bundling_specific_day_type']??null,
                     'id_bundling_category' => $post['id_bundling_category']??null,
-                    'all_outlet' => $isAllOutlet
+                    'all_outlet' => $isAllOutlet,
+                    'outlet_available_type' => $post['outlet_available_type']
                 ];
                 $create = Bundling::create($createBundling);
 
@@ -311,7 +323,7 @@ class ApiBundlingController extends Controller
                     $currentDate = date('Y-m-d');
                     if(date('Y-m-d', strtotime($post['bundling_start'])) <= $currentDate &&
                         date('Y-m-d', strtotime($post['bundling_end'])) >= $currentDate){
-                        BundlingToday::updateOrCreate(['id_bundling' => $post['id_bundling']], [
+                        BundlingToday::updateOrCreate(['id_bundling' => $create['id_bundling']], [
                             'id_bundling' => $create['id_bundling'],
                             'time_start' => '00:01:00',
                             'time_end' => '23:59:59',
@@ -366,21 +378,38 @@ class ApiBundlingController extends Controller
                 //update price
                 Bundling::where('id_bundling', $create['id_bundling'])->update(['bundling_price_before_discount' => $beforePrice, 'bundling_price_after_discount' => $afterPrice]);
 
-                if($isAllOutlet == 0){
-                    //create bundling outlet/outlet available
-                    $bundlingOutlet = [];
-                    foreach ($post['id_outlet'] as $outlet){
-                        $bundlingOutlet[] = [
+                if($post['outlet_available_type'] == 'Selected Outlet'){
+                    if($isAllOutlet == 0){
+                        //create bundling outlet/outlet available
+                        $bundlingOutlet = [];
+                        foreach ($post['id_outlet'] as $outlet){
+                            $bundlingOutlet[] = [
+                                'id_bundling' => $create['id_bundling'],
+                                'id_outlet' => $outlet,
+                                'created_at' => date('Y-m-d H:i:s'),
+                                'updated_at' => date('Y-m-d H:i:s')
+                            ];
+                        }
+                        $bundlingOutlet = BundlingOutlet::insert($bundlingOutlet);
+                        if(!$bundlingOutlet){
+                            DB::rollback();
+                            return response()->json(['status' => 'fail', 'messages' => ['Failed insert outlet available']]);
+                        }
+                    }
+                }else{
+                    $bundlingOutletGroup = [];
+                    foreach ($post['id_outlet_group'] as $og){
+                        $bundlingOutletGroup[] = [
                             'id_bundling' => $create['id_bundling'],
-                            'id_outlet' => $outlet,
+                            'id_outlet_group' => $og,
                             'created_at' => date('Y-m-d H:i:s'),
                             'updated_at' => date('Y-m-d H:i:s')
                         ];
                     }
-                    $bundlingOutlet = BundlingOutlet::insert($bundlingOutlet);
-                    if(!$bundlingOutlet){
+                    $insertBundlingOutletGroup = BundlingOutletGroup::insert($bundlingOutletGroup);
+                    if(!$insertBundlingOutletGroup){
                         DB::rollback();
-                        return response()->json(['status' => 'fail', 'messages' => ['Failed insert outlet available']]);
+                        return response()->json(['status' => 'fail', 'messages' => ['Failed insert outlet group filter']]);
                     }
                 }
 
@@ -401,7 +430,7 @@ class ApiBundlingController extends Controller
         $post = $request->json()->all();
         if(isset($post['id_bundling']) && !empty($post['id_bundling'])){
             $detail = Bundling::where('id_bundling', $post['id_bundling'])
-                    ->with(['bundling_product', 'bundling_periode_day'])->first();
+                    ->with(['bundling_product', 'bundling_periode_day', 'bundling_outlet_group'])->first();
 
             $brands = [];
             if(!empty($detail['bundling_product'])){
@@ -423,15 +452,15 @@ class ApiBundlingController extends Controller
                 }
             }
 
+            $brands = array_unique($brands);
             $count = count($brands);
             $paramValue = '';
+            $tmp = [];
             foreach ($brands as $index => $p){
-                if($index !== $count-1){
-                    $paramValue .= 'bo.id_brand = "'.$p.'" OR ';
-                }else{
-                    $paramValue .= 'bo.id_brand = "'.$p.'"';
-                }
+                $tmp[] = 'bo.id_brand = "'.$p.'"';
             }
+
+            $paramValue = implode(" OR ", $tmp);
 
             $outletAvailable = Outlet::join('brand_outlet as bo', 'bo.id_outlet', 'outlets.id_outlet')
                 ->groupBy('bo.id_outlet')
@@ -468,12 +497,20 @@ class ApiBundlingController extends Controller
     public function update(UpdateBundling $request)
     {
         $post = $request->json()->all();
+        if(empty($post['bundling_description'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Description can not be empty']]);
+        }
+
         if(isset($post['data_product']) && !empty($post['data_product'])){
             DB::beginTransaction();
 
             $isAllOutlet = 0;
-            if(in_array("all", $post['id_outlet'])){
+            if(in_array("all", $post['id_outlet']??[]) && $post['outlet_available_type'] == 'Selected Outlet'){
                 $isAllOutlet = 1;
+            }
+
+            if($post['bundling_specific_day_type'] == 'not_specific_day'){
+                $post['bundling_specific_day_type'] = NULL;
             }
 
             //update bundling
@@ -485,7 +522,8 @@ class ApiBundlingController extends Controller
                 'bundling_promo_status' => $post['bundling_promo_status']??0,
                 'bundling_specific_day_type' => $post['bundling_specific_day_type']??null,
                 'id_bundling_category' => $post['id_bundling_category']??null,
-                'all_outlet' => $isAllOutlet
+                'all_outlet' => $isAllOutlet,
+                'outlet_available_type' => $post['outlet_available_type']
             ];
             $update = Bundling::where('id_bundling', $post['id_bundling'])->update($updateBundling);
 
@@ -632,23 +670,41 @@ class ApiBundlingController extends Controller
             Bundling::where('id_bundling', $post['id_bundling'])->update(['bundling_price_before_discount' => $beforePrice, 'bundling_price_after_discount' => $afterPrice]);
 
             //delete bundling outlet
-            $delete = BundlingOutlet::where('id_bundling', $post['id_bundling'])->delete();
+            BundlingOutlet::where('id_bundling', $post['id_bundling'])->delete();
+            BundlingOutletGroup::where('id_bundling', $post['id_bundling'])->delete();
 
-            if($isAllOutlet == 0){
-                //create bundling outlet/outlet available
-                $bundlingOutlet = [];
-                foreach ($post['id_outlet'] as $outlet){
-                    $bundlingOutlet[] = [
+            if($post['outlet_available_type'] == 'Selected Outlet'){
+                if($isAllOutlet == 0){
+                    //create bundling outlet/outlet available
+                    $bundlingOutlet = [];
+                    foreach ($post['id_outlet'] as $outlet){
+                        $bundlingOutlet[] = [
+                            'id_bundling' => $post['id_bundling'],
+                            'id_outlet' => $outlet,
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ];
+                    }
+                    $bundlingOutlet = BundlingOutlet::insert($bundlingOutlet);
+                    if(!$bundlingOutlet){
+                        DB::rollback();
+                        return response()->json(['status' => 'fail', 'messages' => ['Failed insert outlet available']]);
+                    }
+                }
+            }else{
+                $bundlingOutletGroup = [];
+                foreach ($post['id_outlet_group'] as $og){
+                    $bundlingOutletGroup[] = [
                         'id_bundling' => $post['id_bundling'],
-                        'id_outlet' => $outlet,
+                        'id_outlet_group' => $og,
                         'created_at' => date('Y-m-d H:i:s'),
                         'updated_at' => date('Y-m-d H:i:s')
                     ];
                 }
-                $bundlingOutlet = BundlingOutlet::insert($bundlingOutlet);
-                if(!$bundlingOutlet){
+                $insertBundlingOutletGroup = BundlingOutletGroup::insert($bundlingOutletGroup);
+                if(!$insertBundlingOutletGroup){
                     DB::rollback();
-                    return response()->json(['status' => 'fail', 'messages' => ['Failed insert outlet available']]);
+                    return response()->json(['status' => 'fail', 'messages' => ['Failed insert outlet group filter']]);
                 }
             }
 
@@ -760,10 +816,17 @@ class ApiBundlingController extends Controller
             return ['status' => 'fail','messages' => ['Bundling detail not found']];
         }
 
-        if($getProductBundling[0]['all_outlet'] != 1){
+        if($getProductBundling[0]['all_outlet'] == 0 && $getProductBundling[0]['outlet_available_type'] == 'Selected Outlet'){
             //check available outlet
             $availableOutlet = BundlingOutlet::where('id_outlet', $post['id_outlet'])->where('id_bundling', $post['id_bundling'])->first();
             if (!$availableOutlet) {
+                return ['status' => 'fail','messages' => ['Product not available in this outlet']];
+            }
+        }elseif($getProductBundling[0]['all_outlet'] == 0 && $getProductBundling[0]['outlet_available_type'] == 'Outlet Group Filter'){
+            $arrBundlingIdProduct = array_column($getProductBundling, 'id_product');
+            $brands = BrandProduct::whereIn('id_product', $arrBundlingIdProduct)->pluck('id_brand')->toArray();
+            $availableBundling = app($this->bundling)->bundlingOutletGroupFilter($post['id_outlet'], $brands);
+            if(empty($availableBundling)){
                 return ['status' => 'fail','messages' => ['Product not available in this outlet']];
             }
         }
@@ -891,7 +954,7 @@ class ApiBundlingController extends Controller
                         ->orWhere('bpd.day', $dayNumber)
                         ->orWhereNull('bpd.id_bundling_periode_day');
                 })
-                ->select('bpd.day', 'bpd.time_start', 'bpd.time_end', 'bundling.id_bundling')->get()->toArray();
+                ->select('bpd.day', 'bpd.id_bundling_periode_day', 'bpd.time_start', 'bpd.time_end', 'bundling.id_bundling')->get()->toArray();
             $dataToInsert = [];
 
             foreach($getBundling as $b){
@@ -942,5 +1005,50 @@ class ApiBundlingController extends Controller
         }
 
         return ['status' => 'success'];
+    }
+
+    public function bundlingOutletGroupFilter($id_outlet, $brands, $id_bundling = null){
+        $currentHour = date('H:i:s');
+        $getBundlingOutletGroupFilter = Bundling::join('bundling_today as bt', 'bt.id_bundling', 'bundling.id_bundling')
+            ->join('bundling_product as bp', 'bp.id_bundling', 'bundling.id_bundling')
+            ->join('brand_product', 'brand_product.id_product', 'bp.id_product')
+            ->join('brand_outlet', 'brand_outlet.id_brand', 'brand_product.id_brand')
+            ->join('bundling_outlet_group as bog', 'bundling.id_bundling', 'bog.id_bundling')
+            ->where('bundling.outlet_available_type', 'Outlet Group Filter')
+            ->whereIn('brand_product.id_brand', $brands)
+            ->whereRaw('TIME_TO_SEC("'.$currentHour.'") >= TIME_TO_SEC(time_start) AND TIME_TO_SEC("'.$currentHour.'") <= TIME_TO_SEC(time_end)')
+            ->select('bog.*')
+            ->groupBy('bog.id_bundling_outlet_group');
+
+        if(!empty($id_bundling)){
+            $getBundlingOutletGroupFilter->where('bundling.id_bundling', $id_bundling);
+        }
+        $getBundlingOutletGroupFilter = $getBundlingOutletGroupFilter->get()->toArray();
+
+        $tmpBundling = [];
+
+        foreach ($getBundlingOutletGroupFilter as $bog){
+            $outlet = app($this->outlet_group_filter)->outletGroupFilter($bog['id_outlet_group']);
+            if(!empty($outlet)){
+                $check = array_search($id_outlet, array_column($outlet, 'id_outlet'));
+                if($check !== false){
+                    $tmpBundling[] = $bog['id_bundling'];
+                }
+            }
+        }
+
+        return array_unique($tmpBundling);
+    }
+
+    public function setting(Request $request){
+        $post = $request->json()->all();
+
+        if(empty($post)){
+            $set = Setting::where('key', 'brand_bundling_name')->first();
+            return response()->json(MyHelper::checkGet($set));
+        }else{
+            $set = Setting::updateOrCreate(['key' => 'brand_bundling_name'], ['key' => 'brand_bundling_name', 'value' => $post['brand_bundling_name']??'Bundling']);
+            return response()->json(MyHelper::checkUpdate($set));
+        }
     }
 }

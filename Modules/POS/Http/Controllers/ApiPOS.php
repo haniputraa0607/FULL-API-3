@@ -69,8 +69,8 @@ use Exception;
 use DB;
 use DateTime;
 use GuzzleHttp\Client;
-use Modules\Disburse\Entities\UserFranchisee;
-use Modules\Disburse\Entities\UserFranchiseeOultet;
+use  Modules\UserFranchise\Entities\UserFranchisee;
+use  Modules\UserFranchise\Entities\UserFranchiseeOultet;
 use Modules\POS\Jobs\SyncOutletSeed;
 
 class ApiPOS extends Controller
@@ -222,6 +222,7 @@ class ApiPOS extends Controller
                 'id_transaction' => $check['id_transaction'],
                 "transaction_date" => $check['transaction_date'],
                 'order_id'         => $trxPickup->order_id??'',
+                'receipt_number'   => $check['transaction_receipt_number'],
             ]);
 
             return response()->json(['status' => 'success', 'result' => $transactions]);

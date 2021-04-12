@@ -1962,9 +1962,9 @@ class ApiTransaction extends Controller
                             $htmlBundling .= '<td>'.htmlspecialchars($val['transaction_product_note']).'</td>';
                             $htmlBundling .= '<td></td>';
                             $htmlBundling .= '<td></td>';
+                            $htmlBundling .= '<td>'.$priceMod.'</td>';
                             $htmlBundling .= '<td>0</td>';
-                            $htmlBundling .= '<td>0</td>';
-                            $htmlBundling .= '<td>'.(0+$priceMod).'</td>';
+                            $htmlBundling .= '<td>'.($priceMod).'</td>';
                             $htmlBundling .= '<td></td><td></td><td></td>';
                             if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
                                 $htmlBundling .= '<td></td><td></td><td></td>';
@@ -1991,7 +1991,7 @@ class ApiTransaction extends Controller
                                     $htmlBundling .= '<td></td>';
                                     $htmlBundling .= '<td></td>';
                                     $htmlBundling .= '<td></td>';
-                                    $htmlBundling .= '<td>0</td>';
+                                    $htmlBundling .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
                                     $htmlBundling .= '<td>0</td>';
                                     $htmlBundling .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
                                     $htmlBundling .= '<td></td><td></td><td></td>';
@@ -2126,6 +2126,40 @@ class ApiTransaction extends Controller
 
                     $sub = 0;
                     if($key == ($count-1) || (isset($get[$key+1]['transaction_receipt_number']) && $val['transaction_receipt_number'] != $get[$key+1]['transaction_receipt_number'])){
+                        //for product plastic
+                        $productPlastics = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
+                                            ->where('id_transaction', $val['id_transaction'])->where('type', 'Plastic')
+                                            ->get()->toArray();
+
+                        foreach ($productPlastics as $plastic){
+                            for($j=0;$j<$plastic['transaction_product_qty'];$j++){
+                                $html .= '<tr>';
+                                $html .= $sameData;
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= $addAdditionalColumn;
+                                $html .= '<td>'.$plastic['product_name']??''.'</td>';
+                                $html .= $addAdditionalColumnVariant;
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
+                                $html .= '<td>0</td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
+                                $html .= '<td>0</td>';
+                                $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
+                                $html .= '<td></td><td></td><td></td>';
+                                if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                    $html .= '<td></td><td></td><td></td>';
+                                }
+                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                $html .= '</tr>';
+                            }
+                        }
+
                         if(!empty($val['transaction_payment_subscription'])) {
                             $getSubcription = SubscriptionUserVoucher::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                                 ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
@@ -2542,14 +2576,12 @@ class ApiTransaction extends Controller
                     $basePriceBundling = $basePriceBundling + ($productBasePrice * $bp['transaction_product_bundling_qty']);
                     $subTotalBundlingWithoutModifier = $subTotalBundlingWithoutModifier + (($bp['transaction_product_subtotal'] - ($bp['transaction_modifier_subtotal'] * $bp['transaction_product_bundling_qty'])));
                     $subItemBundlingWithoutModifie = $subItemBundlingWithoutModifie + ($bp['transaction_product_bundling_price'] * $bp['transaction_product_bundling_qty']);
+                    $quantityItemBundling = $quantityItemBundling + $bp['transaction_product_qty'];
                 }
                 $listItemBundling[$key]['bundling_price_no_discount'] = $basePriceBundling * $bundling['transaction_bundling_product_qty'];
                 $listItemBundling[$key]['bundling_subtotal'] = $subTotalBundlingWithoutModifier * $bundling['transaction_bundling_product_qty'];
                 $listItemBundling[$key]['bundling_sub_item'] = '@'.MyHelper::requestNumber($subItemBundlingWithoutModifie,'_CURRENCY');
-
-                $quantityItemBundling = $quantityItemBundling + ($bp['transaction_product_bundling_qty'] * $bundling['transaction_bundling_product_qty']);
             }
-
             $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
                 $product_count += array_sum(array_column($val,'transaction_product_qty'));
                 $brand = Brand::select('name_brand')->find($key);
@@ -2970,6 +3002,19 @@ class ApiTransaction extends Controller
                             ];
                             $result['delivery_info']['cancelable'] = 1;
                             break;
+                        case 'picked':
+                            $result['delivery_info']['delivery_status'] = 'Driver mengambil pesanan di Outlet';
+                            $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
+                            $result['delivery_info']['driver']          = [
+                                'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
+                                'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
+                                'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                                'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                            ];
+                            $result['delivery_info']['cancelable'] = 1;
+                            break;
                         case 'enroute drop':
                         case 'out_for_delivery':
                             $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
@@ -3015,9 +3060,15 @@ class ApiTransaction extends Controller
                             break;
                     }
                 }
+                $result['delivery_info_be'] = [
+                    'delivery_address' => $list['transaction_pickup_go_send']['destination_address']?:'',
+                    'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note'] ?: '',
+                ];
             }
 
-            $result['product_bundling_transaction_name'] = 'Bundling';
+            $nameBrandBundling = Setting::where('key', 'brand_bundling_name')->first();
+            $result['name_brand_bundling'] = $nameBrandBundling['value']??'Bundling';
+            $result['product_bundling_transaction_name'] = $nameBrandBundling['value']??'Bundling';
             $result['product_bundling_transaction'] = $listItemBundling;
             $result['product_transaction'] = [];
             $discount = 0;
@@ -3070,19 +3121,32 @@ class ApiTransaction extends Controller
                 $keynya++;
             }
 
+            $result['plastic_transaction_detail'] = [];
+            $result['plastic_name'] = '';
+            $quantityPlastic = 0;
             if(isset($list['plastic_transaction'])){
+                $result['plastic_name'] = 'Kantong Belanja';
                 $subtotal_plastic = 0;
                 foreach($list['plastic_transaction'] as $key => $value){
+                    $quantityPlastic = $quantityPlastic + $value['transaction_product_qty'];
                     $subtotal_plastic += $value['transaction_product_subtotal'];
+
+                    $result['plastic_transaction_detail'][] = [
+                        'plastic_name' => $value['product']['product_name'],
+                        'plasctic_qty' => $value['transaction_product_qty'],
+                        'plastic_base_price' => '@'.MyHelper::requestNumber((int)$value['transaction_product_price'],'_CURRENCY'),
+                        'plasctic_subtotal' => MyHelper::requestNumber($value['transaction_product_subtotal'],'_CURRENCY')
+                    ];
                 }
 
                 $result['plastic_transaction'] = [];
                 $result['plastic_transaction']['transaction_plastic_total'] = $subtotal_plastic;
             }
 
+            $totalItem = $quantity+$quantityItemBundling+$quantityPlastic;
             $result['payment_detail'][] = [
                 'name'      => 'Subtotal',
-                'desc'      => $quantity+$quantityItemBundling . ' items',
+                'desc'      => $totalItem . ' items',
                 'amount'    => MyHelper::requestNumber($list['transaction_subtotal'],'_CURRENCY')
             ];
 
@@ -3241,6 +3305,12 @@ class ApiTransaction extends Controller
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
+                                case 'picked':
+                                    $statusOrder[] = [
+                                        'text'  => 'Driver mengambil pesanan di Outlet',
+                                        'date'  => $valueGosend['created_at']
+                                    ];
+                                    break;
                                 case 'enroute drop':
                                 case 'out_for_delivery':
                                     $statusOrder[] = [
@@ -3306,7 +3376,7 @@ class ApiTransaction extends Controller
                         } else {
                             $result['detail']['detail_status'][$keyStatus]['text'] = 'Pesanan telah ditolak karena '.strtolower($list['detail']['reject_reason']);
                         }
-
+                        $result['detail']['reject_reason'] = $list['detail']['reject_reason'];
                         $result['detail']['detail_status'][$keyStatus]['reason'] = $list['detail']['reject_reason'];
                     }
                 }
@@ -3441,6 +3511,7 @@ class ApiTransaction extends Controller
             '))
             ->join('products','products.id_product','=','transaction_products.id_product')
             ->join('outlets','outlets.id_outlet','=','transaction_products.id_outlet')
+            ->where('transaction_products.type', 'product')
             ->whereNull('id_transaction_bundling_product')
             ->where(['id_transaction'=>$id_transaction])
             ->with(['modifiers'=>function($query){
@@ -3522,7 +3593,8 @@ class ApiTransaction extends Controller
                 $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                     ->whereNull('transaction_product_modifiers.id_product_modifier_group')
                     ->where('id_transaction_product', $bp['id_transaction_product'])
-                    ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as text', DB::raw('FLOOR(transaction_product_modifier_price * '.$bp['transaction_product_bundling_qty'].' * '.$bundling['transaction_bundling_product_qty'].') as product_modifier_price'))->get()->toArray();
+                    ->select('transaction_product_modifiers.code', 'transaction_product_modifiers.qty', 'transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as text',
+                        DB::raw('FLOOR(transaction_product_modifier_price * '.$bp['transaction_product_bundling_qty'].' * '.$bundling['transaction_bundling_product_qty'].') as product_modifier_price'))->get()->toArray();
                 $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
                     ->where('id_transaction_product', $bp['id_transaction_product'])
                     ->select('product_variants.id_product_variant', 'product_variants.product_variant_name',  DB::raw('FLOOR(transaction_product_variant_price) as product_variant_price'))->get()->toArray();
@@ -3554,6 +3626,7 @@ class ApiTransaction extends Controller
             }
 
             $itemBundling[] = [
+                'id_custom' => $key+1,
                 'id_bundling' => $bundling['id_bundling'],
                 'bundling_name' => $bundling['bundling_name'],
                 'bundling_qty' => $bundling['transaction_bundling_product_qty'],
@@ -3992,7 +4065,7 @@ class ApiTransaction extends Controller
                 $gmap = [
                     'id_user_address' => 0,
                     'short_address' => $gmap['name'],
-                    'address' => $gmap['vicinity'],
+                    'address' => $gmap['vicinity']??'',
                     'latitude' => $coor['latitude'],
                     'longitude' => $coor['longitude'],
                     'description' => '',

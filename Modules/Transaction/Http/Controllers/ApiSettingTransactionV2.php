@@ -18,6 +18,7 @@ use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\ProductModifierGlobalPrice;
 use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
+use App\Lib\MyHelper;
 
 use DB;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
@@ -128,11 +129,18 @@ class ApiSettingTransactionV2 extends Controller
         $tax      = isset($data['tax']) ? $data['tax'] : 0;
         $shipping = isset($data['shipping']) ? $data['shipping'] : 0;
         $discount = isset($data['discount']) ? $data['discount'] : 0;
+
+        if (!isset($data['total_bundling'])) {
+            $data['total_bundling'] = 0;
+        }
+        $totalBundling = isset($data['total_bundling']) ? $data['total_bundling'] : 0;
+
         // return $data;
         if ($value == 'subtotal') {
             $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet',$data['id_outlet'])->first();
             $different_price = $outlet->outlet_different_price;
             $dataSubtotal = [];
+            $dataSubtotalFinal = [];
             $dataSubtotalPerBrand = [];
             if ($discount_promo['item'] ?? false) {
                 $loopable = &$discount_promo['item'];
@@ -237,6 +245,7 @@ class ApiSettingTransactionV2 extends Controller
                 $price = (($productPrice['product_price'] + $mod_subtotal + $valueData['transaction_variant_subtotal']) * $valueData['qty']);
                 $valueData['transaction_product_subtotal'] = $price;
                 array_push($dataSubtotal, $price);
+                array_push($dataSubtotalFinal, $price);
 
                 if (isset($dataSubtotalPerBrand[$valueData['id_brand']])) {
                 	$dataSubtotalPerBrand[$valueData['id_brand']] += $price;
@@ -246,9 +255,11 @@ class ApiSettingTransactionV2 extends Controller
             }
 
             $bundlingNotIncludePromo = [];
+            $totalDiscountBundling = 0;
             if(isset($data['item_bundling_detail']) && !empty($data['item_bundling_detail'])){
                 $productBundling = &$data['item_bundling_detail']??[];
                 foreach ($productBundling as $keyBundling => &$valueBundling){
+                    $bundlingNoDiscount = 0;
                     $bundlingBasePrice = 0;
                     $totalDiscount = 0;
                     $mod_subtotal = 0;
@@ -358,16 +369,21 @@ class ApiSettingTransactionV2 extends Controller
                             $discount = ($discount > $getProduct['bundling_product_maximum_discount'] &&  $getProduct['bundling_product_maximum_discount'] > 0? $getProduct['bundling_product_maximum_discount']:$discount);
                             $calculate = ($price - $discount);
                         }
+                        $totalProduct = $p['product_qty']*$valueBundling['bundling_qty'];
+                        $subtotalNoDiscount = ($price  + $totalMod) * $totalProduct;
                         $p['transaction_product_price'] = $productBasePrice;
-                        $p['transaction_product_discount'] = $discount;
                         $p['transaction_product_bundling_discount'] = $discount;
+                        $p['transaction_product_discount_all'] = $discount * $totalProduct;
+                        $totalDiscountBundling = $totalDiscountBundling + ($discount * $totalProduct);
                         $p['transaction_product_bundling_price'] = $calculate;
                         $p['transaction_product_subtotal'] = ($calculate  + $totalMod) * $p['product_qty'];
+                        $p['transaction_product_net'] = ($calculate  + $totalMod) * $totalProduct;
                         $bundlingBasePrice = $bundlingBasePrice + ($calculate * $p['product_qty']);
                         $totalDiscount = $totalDiscount + ($discount * $p['product_qty']);
                         $p['transaction_product_bundling_charged_outlet'] = $getProduct['charged_outlet'];
                         $p['transaction_product_bundling_charged_central'] = $getProduct['charged_central'];
                         $mod_subtotal = $mod_subtotal + ($totalMod * $p['product_qty'] * $valueBundling['bundling_qty']);
+                        $bundlingNoDiscount = $bundlingNoDiscount + $subtotalNoDiscount;
 
                         if($getProduct['bundling_promo_status'] == 1){
                             if (isset($dataSubtotalPerBrand[$p['id_brand']])) {
@@ -381,15 +397,19 @@ class ApiSettingTransactionV2 extends Controller
 
                     $bundlingSubtotal = ($bundlingBasePrice * $valueBundling['bundling_qty']) + $mod_subtotal;
                     array_push($dataSubtotal, $bundlingSubtotal);
+                    array_push($dataSubtotalFinal, $bundlingNoDiscount);
                     $valueBundling['transaction_bundling_product_base_price'] = $bundlingBasePrice;
                     $valueBundling['transaction_bundling_product_subtotal'] = $bundlingSubtotal;
                     $valueBundling['transaction_bundling_product_total_discount'] = $totalDiscount;
+                    $data['total_bundling'] += $bundlingSubtotal;
                 }
             }
 
             return [
             	'subtotal' => $dataSubtotal,
+                'subtotal_final' => $dataSubtotalFinal,
             	'subtotal_per_brand' => $dataSubtotalPerBrand,
+                'total_discount_bundling' => $totalDiscountBundling,
                 'bundling_not_include_promo' => implode(',', array_unique($bundlingNotIncludePromo))
             ];
         }
@@ -504,6 +524,19 @@ class ApiSettingTransactionV2 extends Controller
             $cashbackFormula = $this->convertFormula('cashback');
             $value = $this->cashbackValue();
             $max = $this->cashbackValueMax();
+            $settingIncludeBundling = MyHelper::setting('cashback_include_bundling');
+            /**
+             * This setting is used to calculate whether the cashback earned is also based on the bundled product
+             * By default, subtotals include bundled products
+             * So to calculate without bundling products, the formula used must be ( service + subtotal - totalBundling ) * value
+             */
+            if ($settingIncludeBundling) {
+                /**
+                 * When the setting allows bundling in the calculation, then the subtotal is not subtracted by the bundling product subtotal,
+                 * or it can also be written a subtotal - 0
+                 */
+                $totalBundling = 0;
+            }
 
             $count = floor(eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $cashbackFormula) . ';'));
 

@@ -21,7 +21,7 @@ use Modules\Disburse\Entities\Disburse;
 
 use DB;
 use Modules\Disburse\Entities\DisburseOutletTransaction;
-use Modules\Disburse\Entities\UserFranchise;
+use Modules\Franchise\Entities\UserFranchise;
 use function Clue\StreamFilter\fun;
 
 use App\Http\Models\Setting;
@@ -912,7 +912,7 @@ class ApiDisburseController extends Controller
     public function sendRecapTransactionEachOultet(Request $request){
         $post = $request->json()->all();
         SendRecapManualy::dispatch(['data' => $post, 'type' => 'recap_transaction_each_outlet'])->onConnection('disbursequeue');
-        return 'Success';
+        return response()->json(['status' => 'success']);
     }
 
     public function exportToOutlet($post){
@@ -930,123 +930,10 @@ class ApiDisburseController extends Controller
                 ->get()->toArray();
 
             foreach ($transactions as $getOutlet){
-                $filter['date_start'] = $start;
-                $filter['date_end'] = $end;
-                $filter['detail'] = 1;
-                $filter['key'] = 'all';
-                $filter['rule'] = 'and';
-                $filter['conditions'] = [
-                    [
-                        'subject' => 'id_outlet',
-                        'operator' => $getOutlet['id_outlet'],
-                        'parameter' => null
-                    ],
-                    [
-                        'subject' => 'status',
-                        'operator' => 'Completed',
-                        'parameter' => null
-                    ]
-                ];
-
-                $summary = $this->summaryCalculationFeeWithRangeDate($start, $end, $getOutlet['id_outlet']);
-                $generateTrx = app($this->trx)->exportTransaction($filter, 1);
-                $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-                    ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-                    ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
-                    ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
-                    ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
-                    ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
-                    ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
-                    ->where('transaction_payment_status', 'Completed')
-                    ->whereNull('reject_at')
-                    ->where('transactions.id_outlet', $getOutlet['id_outlet'])
-                    ->whereDate('transactions.transaction_date', '>=',$start)
-                    ->whereDate('transactions.transaction_date', '<=',$end)
-                    ->with(['transaction_payment_subscription'=> function($q){
-                        $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
-                            ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
-                            ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
-                    }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
-                    ->select('transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
-                        'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
-                        'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
-                        'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code')
-                    ->get()->toArray();
-
-                if(!empty($generateTrx['list'])){
-                    $excelFile = 'Transaction_['.$start.'_'.$end.']['.$getOutlet['outlet_code'].'].xlsx';
-                    $store  = (new MultipleSheetExport([
-                        "Summary" => $summary,
-                        "Calculation Fee" => $dataDisburse,
-                        "Detail Transaction" => $generateTrx
-                    ]))->store('excel_email/'.$excelFile);
-
-                    $tmpPath = [];
-                    if($store){
-                        $tmpPath[] = storage_path('app/excel_email/'.$excelFile);
-                    }
-
-                    if(!empty($tmpPath)){
-                        $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
-                        $setting = array();
-                        foreach ($getSetting as $key => $value) {
-                            if($value['key'] == 'email_setting_url'){
-                                $setting[$value['key']]  = (array)json_decode($value['value_text']);
-                            }else{
-                                $setting[$value['key']] = $value['value'];
-                            }
-                        }
-
-                        $data = array(
-                            'customer' => '',
-                            'html_message' => 'Report Outlet '.$getOutlet['outlet_name'].', transaksi tanggal '.date('d M Y', strtotime($start)).' sampai '.date('d M Y', strtotime($end)),
-                            'setting' => $setting
-                        );
-
-                        $to = $getOutlet['outlet_email'];
-                        $subject = 'Report Transaksi ['.date('d M Y', strtotime($start)).' - '.date('d M Y', strtotime($end)).']';
-                        $name =  $getOutlet['outlet_name'];
-                        $variables['attachment'] = $tmpPath;
-
-                        try{
-                            Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
-                            {
-                                $message->to($to, $name)->subject($subject);
-                                if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-                                    $message->from($setting['email_sender'], $setting['email_from']);
-                                }else if(!empty($setting['email_sender'])){
-                                    $message->from($setting['email_sender']);
-                                }
-
-                                if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
-                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-                                }else if(!empty($setting['email_reply_to'])){
-                                    $message->replyTo($setting['email_reply_to']);
-                                }
-
-                                if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
-                                    $message->cc($setting['email_cc'], $setting['email_cc_name']);
-                                }
-
-                                if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
-                                    $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
-                                }
-
-                                // attachment
-                                if(isset($variables['attachment']) && !empty($variables['attachment'])){
-                                    foreach($variables['attachment'] as $attach){
-                                        $message->attach($attach);
-                                    }
-                                }
-                            });
-                        }catch(\Exception $e){
-                        }
-
-                        foreach ($tmpPath as $t){
-                            File::delete($t);
-                        }
-                    }
-                }
+                $dt['date_start'] = $start;
+                $dt['date_end'] = $end;
+                $dt['outlet_code'] = $getOutlet['outlet_code'];
+                SendRecapManualy::dispatch(['data' => $dt, 'type' => 'recap_transaction_each_outlet'])->onConnection('disbursequeue');
             }
             return 'success';
         }else{
@@ -1450,11 +1337,36 @@ class ApiDisburseController extends Controller
             ->whereDate('transaction_date', '>=',$date_start)
             ->whereDate('transaction_date', '<=',$date_end)
             ->where('transactions.id_outlet', $id_outlet)
+            ->where('p.product_type', 'product')
+            ->groupBy('transaction_products.id_product_variant_group')
             ->groupBy('transaction_products.id_product')
-            ->selectRaw("p.product_name as name, 'Product' as type, SUM(transaction_products.transaction_product_qty) as total_qty")->get()->toArray();
+            ->selectRaw("p.product_name as name, SUM(transaction_products.transaction_product_qty) as total_qty,
+                        p.product_type as type,
+                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
+                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
+                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
+                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants")->get()->toArray();
+
+        $summaryProductPlastic = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->join('products as p', 'p.id_product', 'transaction_products.id_product')
+            ->where('transaction_payment_status', 'Completed')
+            ->whereNull('reject_at')
+            ->whereDate('transaction_date', '>=',$date_start)
+            ->whereDate('transaction_date', '<=',$date_end)
+            ->where('transactions.id_outlet', $id_outlet)
+            ->where('p.product_type', 'plastic')
+            ->groupBy('transaction_products.id_product_variant_group')
+            ->groupBy('transaction_products.id_product')
+            ->selectRaw("p.product_name as name, SUM(transaction_products.transaction_product_qty) as total_qty,
+                        p.product_type as type,
+                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
+                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
+                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
+                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants")->get()->toArray();
+
         $summaryModifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'transaction_product_modifiers.id_transaction')
             ->join('transaction_products as tp', 'tp.id_transaction_product', 'transaction_product_modifiers.id_transaction_product')
-            ->leftJoin('transaction_bundling_products as tbp', 'tbp.id_transaction_bundling_product', 'tp.id_transaction_bundling_product')
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
             ->where('transaction_payment_status', 'Completed')
@@ -1464,9 +1376,10 @@ class ApiDisburseController extends Controller
             ->whereDate('transaction_date', '<=',$date_end)
             ->where('transactions.id_outlet', $id_outlet)
             ->groupBy('transaction_product_modifiers.id_product_modifier')
-            ->selectRaw("pm.text as name, 'Modifier' as type, tbp.transaction_bundling_product_qty, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty")->get()->toArray();
+            ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty,
+                        NULL as variants")->get()->toArray();
 
-        $summary = array_merge($summaryProduct,$summaryModifier);
+        $summary = array_merge($summaryProduct,$summaryModifier,$summaryProductPlastic);
         return [
             'summary_product' => $summary,
             'summary_fee' => $summaryFee,
@@ -1500,6 +1413,7 @@ class ApiDisburseController extends Controller
 
             if(!empty($getEmail)){
                 foreach ($getEmail as $e){
+                    $email = $e;
                     $tmpPath = [];
                     $tmpOutlet = [];
                     $outlets = Outlet::where('outlet_email', $e)->select('id_outlet', 'outlet_code', 'outlet_name', 'outlet_email')->get()->toArray();
@@ -1619,6 +1533,7 @@ class ApiDisburseController extends Controller
                             });
                         }catch(\Exception $e){
                             \Log::error($e);
+                            \Log::error($email);
                         }
 
                         foreach ($tmpPath as $t){
@@ -1666,12 +1581,17 @@ class ApiDisburseController extends Controller
             ->where('transaction_payment_status', 'Completed')
             ->whereNull('reject_at')
             ->whereDate('transaction_date', $date)
+            ->where('p.product_type', 'product')
             ->where('transactions.id_outlet', $id_outlet)
+            ->groupBy('transaction_products.id_product_variant_group')
             ->groupBy('transaction_products.id_product')
-            ->selectRaw("p.product_name as name, 'Product' as type, SUM(transaction_products.transaction_product_qty) as total_qty")->get()->toArray();
+            ->selectRaw("p.product_name as name, p.product_type as type, SUM(transaction_products.transaction_product_qty) as total_qty,
+                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
+                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
+                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
+                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants")->get()->toArray();
         $summaryModifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'transaction_product_modifiers.id_transaction')
             ->join('transaction_products as tp', 'tp.id_transaction_product', 'transaction_product_modifiers.id_transaction_product')
-            ->leftJoin('transaction_bundling_products as tbp', 'tbp.id_transaction_bundling_product', 'tp.id_transaction_bundling_product')
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
             ->where('transaction_payment_status', 'Completed')
@@ -1680,9 +1600,25 @@ class ApiDisburseController extends Controller
             ->whereDate('transaction_date', $date)
             ->where('transactions.id_outlet', $id_outlet)
             ->groupBy('transaction_product_modifiers.id_product_modifier')
-            ->selectRaw("pm.text as name, 'Modifier' as type, tbp.transaction_bundling_product_qty, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty")->get()->toArray();
+            ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty,
+                        NULL as variants")->get()->toArray();
+        $summaryProductPlastic = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->join('products as p', 'p.id_product', 'transaction_products.id_product')
+            ->where('transaction_payment_status', 'Completed')
+            ->whereNull('reject_at')
+            ->whereDate('transaction_date', $date)
+            ->where('transactions.id_outlet', $id_outlet)
+            ->where('p.product_type', 'plastic')
+            ->groupBy('transaction_products.id_product_variant_group')
+            ->groupBy('transaction_products.id_product')
+            ->selectRaw("p.product_name as name, p.product_type as type, SUM(transaction_products.transaction_product_qty) as total_qty,
+                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
+                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
+                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
+                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants")->get()->toArray();
 
-        $summary = array_merge($summaryProduct, $summaryModifier);
+        $summary = array_merge($summaryProduct, $summaryModifier,$summaryProductPlastic);
         return [
             'summary_product' => $summary,
             'summary_fee' => $summaryFee,
