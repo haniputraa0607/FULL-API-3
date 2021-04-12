@@ -26,6 +26,7 @@ class TransactionPaymentShopeePay extends Model
         'redirect_url_app',
         'redirect_url_http',
         'refund_reference_id',
-        'void_reference_id'
+        'void_reference_id',
+        'manual_refund'
     ];
 }

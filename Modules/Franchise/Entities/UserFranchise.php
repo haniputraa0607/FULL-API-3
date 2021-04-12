@@ -17,11 +17,12 @@ class UserFranchise extends Authenticatable
     protected $primaryKey = 'id_user_franchise';
 
     public function findForPassport($email) {
-        return $this->where('email', $email)->first();
+        return $this->where('username', $email)->first();
     }
     protected $appends = ['password_default_decrypt'];
 	protected $fillable = [
 		'id_user_franchise_seed',
+        'username',
 	    'phone',
         'name',
         'level',

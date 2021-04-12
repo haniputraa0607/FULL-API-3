@@ -773,7 +773,7 @@ class ApiOutletApp extends Controller
         return response()->json(MyHelper::checkUpdate($pickup));
     }
 
-    public function SetReady(DetailOrder $request)
+    public function SetReady(DetailOrder $request, $autoready = false)
     {
         $post   = $request->json()->all();
         $outlet = $request->user();
@@ -819,8 +819,18 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        if ($order->pickup_by != 'Customer') {
+            $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+            if(!$pickup_gosend || !$pickup_gosend['latest_status'] || in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled', 'confirmed'])) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Driver belum ditemukan']
+                ]);
+            }
+        }
+
         DB::beginTransaction();
-        $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['ready_at' => date('Y-m-d H:i:s')]);
+        $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['ready_at' => date('Y-m-d H:i:s'), 'is_autoready' => $autoready ? 1 : 0]);
 
         // sendPoint delivery after status delivered only
         if ($pickup && $order->pickup_by == 'Customer' && $order->cashback_insert_status != 1) {
@@ -977,6 +987,9 @@ class ApiOutletApp extends Controller
     {
         $outlet                    = $request->user();
         $profile['outlet_name']    = $outlet['outlet_name'];
+        if($outlet['outlet_status'] == 'Inactive'){
+            $profile['outlet_name'] = '[TIDAK AKTIF]'.$profile['outlet_name'];
+        }
         $profile['outlet_code']    = $outlet['outlet_code'];
         $profile['outlet_address'] = $outlet['outlet_address'];
         $profile['outlet_phone']   = $outlet['outlet_phone'];
@@ -1489,6 +1502,7 @@ class ApiOutletApp extends Controller
                         $variants = [];
                         if($dt['product_variant_status'] == 1){
                             $variants = ProductVariantGroup::where('id_product', $dt['id_product'])
+                                ->where('product_variant_group_visibility', 'Visible')
                                 ->select([
                                     'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
                                     DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
@@ -1507,6 +1521,7 @@ class ApiOutletApp extends Controller
                     $variants = [];
                     if($dt['product_variant_status'] == 1){
                         $variants = ProductVariantGroup::where('id_product', $dt['id_product'])
+                            ->where('product_variant_group_visibility', 'Visible')
                             ->select([
                                 'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
                                 DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
@@ -1671,10 +1686,15 @@ class ApiOutletApp extends Controller
 
         $outlet = $request->user();
 
+        $shared = \App\Lib\TemporaryDataManager::create('reject_order');
+        $refund_failed_process_balance = MyHelper::setting('refund_failed_process_balance');
+
         $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->where('order_id', $post['order_id'])
             ->whereDate('transaction_date', $dateNow ?? date('Y-m-d'))
             ->where('transactions.id_outlet', $outlet->id_outlet)
+            // join user used by autocrm void failed
+            ->leftJoin('users', 'transactions.id_user', 'users.id')
             ->first();
 
         if (!$order) {
@@ -1691,9 +1711,9 @@ class ApiOutletApp extends Controller
             ]);
         }
 
-        if ($order->picked_by != 'Customer') {
+        if ($order->pickup_by != 'Customer') {
             $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-            if($pickup_gosend && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
+            if($pickup_gosend && $pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['Driver has been booked'],
@@ -1705,14 +1725,14 @@ class ApiOutletApp extends Controller
         }
 
         if ($order->ready_at) {
-            if ($order->picked_by == 'Customer') {
+            if ($order->pickup_by == 'Customer') {
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['Order Has Been Ready'],
                 ]);
             } else {
                 $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-                if(!in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
+                if($pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
                     return response()->json([
                         'status'   => 'fail',
                         'messages' => ['Driver has been booked'],
@@ -1785,7 +1805,22 @@ class ApiOutletApp extends Controller
                 }
             }
 
-            $user = User::where('id', $order['id_user'])->first()->toArray();
+            $user = User::where('id', $order['id_user'])->first();
+            if (!$user) {
+                TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                    'taken_by_system_at' => date('Y-m-d H:i:s'),
+                    'reject_at'     => null,
+                    'reject_type'   => null,
+                    'reject_reason' => null,
+                ]);
+                \DB::commit();
+                return [
+                    'status' => 'fail',
+                    'messages' => ['User not found']
+                ];
+            }
+            $user = $user->toArray();
+
             $rejectBalance = false;
 
             //refund ke balance
@@ -1810,7 +1845,8 @@ class ApiOutletApp extends Controller
                     } elseif ($pay['type'] == 'Ovo') {
                         $payOvo = TransactionPaymentOvo::find($pay['id_payment']);
                         if ($payOvo) {
-                            if(Configs::select('is_active')->where('config_name','refund ovo')->pluck('is_active')->first()){
+                            $doRefundPayment = Configs::select('is_active')->where('config_name','refund ovo')->pluck('is_active')->first();
+                            if($doRefundPayment){
                                 $point = 0;
                                 $transaction = TransactionPaymentOvo::where('transaction_payment_ovos.id_transaction', $post['id_transaction'])
                                     ->join('transactions','transactions.id_transaction','=','transaction_payment_ovos.id_transaction')
@@ -1819,14 +1855,33 @@ class ApiOutletApp extends Controller
                                     'reject_type'   => 'refund',
                                 ]);
                                 $refund = Ovo::Void($transaction);
-                                if ($refund['status_code'] != '200') {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'   => 'fail',
-                                        'messages' => ['Refund Ovo Failed'],
-                                    ]);
+                                if ($refund['response']['responseCode'] != '00') {
+                                    $order->update(['failed_void_reason' => $refund['response']['response_description'] ?? '']);
+                                    if ($refund_failed_process_balance) {
+                                        $doRefundPayment = false;
+                                    } else {
+                                        $order->update(['need_manual_void' => 1]);
+                                        $order2 = clone $order;
+                                        $order2->manual_refund = $payOvo['amount'];
+                                        $order2->payment_method = 'Ovo';
+                                        $order2->payment_reference_number = $payOvo['approval_code'];
+                                        if ($shared['reject_batch'] ?? false) {
+                                            $shared['void_failed'][] = $order2;
+                                        } else {
+                                            $variables = [
+                                                'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                            ];
+                                            app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
+                                        }
+                                    }
                                 }
-                            }else{
+                            }
+
+                            // don't use elseif / else because in the if block there are conditions that should be included in this process too
+                            if (!$doRefundPayment) {
+                                TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                                    'reject_type'   => 'point',
+                                ]);
                                 $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payOvo['amount'], $order['id_transaction'], 'Rejected Order Ovo', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
@@ -1842,19 +1897,40 @@ class ApiOutletApp extends Controller
                         $point = 0;
                         $payIpay = TransactionPaymentIpay88::find($pay['id_payment']);
                         if ($payIpay) {
-                            if(strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88')){
-                                $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay);
+                            $doRefundPayment = strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88');
+                            if($doRefundPayment){
+                                $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay, 'trx', 'user', $message);
                                 TransactionPickup::where('id_transaction', $order['id_transaction'])->update([
                                     'reject_type'   => 'refund',
                                 ]);
                                 if (!$refund) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'   => 'fail',
-                                        'messages' => ['Refund Payment Failed'],
-                                    ]);
+                                    $order->update(['failed_void_reason' => $message ?? '']);
+                                    if ($refund_failed_process_balance) {
+                                        $doRefundPayment = false;
+                                    } else {
+                                        $order->update(['need_manual_void' => 1]);
+                                        $order2 = clone $order;
+                                        $order2->manual_refund = $payIpay['amount']/100;
+                                        $order2->payment_method = 'Ipay88';
+                                        $order2->payment_detail = $payIpay['payment_method'];
+                                        $order2->payment_reference_number = $payIpay['trans_id'];
+                                        if ($shared['reject_batch'] ?? false) {
+                                            $shared['void_failed'][] = $order2;
+                                        } else {
+                                            $variables = [
+                                                'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                            ];
+                                            app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
+                                        }
+                                    }
                                 }
-                            }else{
+                            }
+
+                            // don't use elseif / else because in the if block there are conditions that should be included in this process too
+                            if (!$doRefundPayment) {
+                                TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                                    'reject_type'   => 'point',
+                                ]);
                                 $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
@@ -1870,19 +1946,39 @@ class ApiOutletApp extends Controller
                         $point = 0;
                         $payShopeepay = TransactionPaymentShopeePay::find($pay['id_payment']);
                         if ($payShopeepay) {
-                            if(MyHelper::setting('refund_shopeepay')) {
+                            $doRefundPayment = MyHelper::setting('refund_shopeepay');
+                            if($doRefundPayment){
                                 $refund = app($this->shopeepay)->void($payShopeepay['id_transaction'], 'trx', $errors);
                                 TransactionPickup::where('id_transaction', $order['id_transaction'])->update([
                                     'reject_type'   => 'refund',
                                 ]);
                                 if (!$refund) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'   => 'fail',
-                                        'messages' => ['Refund Payment Failed'],
-                                    ]);
+                                    $order->update(['failed_void_reason' => implode(', ', $errors ?: [])]);
+                                    if ($refund_failed_process_balance) {
+                                        $doRefundPayment = false;
+                                    } else {
+                                        $order->update(['need_manual_void' => 1]);
+                                        $order2 = clone $order;
+                                        $order2->payment_method = 'ShopeePay';
+                                        $order2->manual_refund = $payShopeepay['amount']/100;
+                                        $order2->payment_reference_number = $payShopeepay['transaction_sn'];
+                                        if ($shared['reject_batch'] ?? false) {
+                                            $shared['void_failed'][] = $order2;
+                                        } else {
+                                            $variables = [
+                                                'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                            ];
+                                            app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
+                                        }
+                                    }
                                 }
-                            }else{
+                            }
+
+                            // don't use elseif / else because in the if block there are conditions that should be included in this process too
+                            if (!$doRefundPayment) {
+                                TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                                    'reject_type'   => 'point',
+                                ]);
                                 $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payShopeepay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
@@ -1898,16 +1994,40 @@ class ApiOutletApp extends Controller
                         $point = 0;
                         $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
                         if ($payMidtrans) {
-                            if(MyHelper::setting('refund_midtrans')){
+                            $doRefundPayment = MyHelper::setting('refund_midtrans');
+                            if ($doRefundPayment) {
                                 $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
                                 TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                                     'reject_type'   => 'refund',
                                 ]);
                                 if ($refund['status'] != 'success') {
-                                    DB::rollback();
-                                    return response()->json($refund);
+                                    $order->update(['failed_void_reason' => implode(', ', $refund['messages'] ?? [])]);
+                                    if ($refund_failed_process_balance) {
+                                        $doRefundPayment = false;
+                                    } else {
+                                        $order->update(['need_manual_void' => 1]);
+                                        $order2 = clone $order;
+                                        $order2->payment_method = 'Midtrans';
+                                        $order2->payment_detail = $payMidtrans['payment_type'];
+                                        $order2->manual_refund = $payMidtrans['gross_amount'];
+                                        $order2->payment_reference_number = $payMidtrans['vt_transaction_id'];
+                                        if ($shared['reject_batch'] ?? false) {
+                                            $shared['void_failed'][] = $order2;
+                                        } else {
+                                            $variables = [
+                                                'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                            ];
+                                            app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
+                                        }
+                                    }
                                 }
-                            } else {
+                            }
+
+                            // don't use elseif / else because in the if block there are conditions that should be included in this process too
+                            if (!$doRefundPayment) {
+                                TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                                    'reject_type'   => 'point',
+                                ]);
                                 $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
@@ -1928,16 +2048,39 @@ class ApiOutletApp extends Controller
                 $payIpay     = TransactionPaymentIpay88::where('id_transaction', $order['id_transaction'])->first();
                 if ($payMidtrans) {
                     $point = 0;
-                    if(MyHelper::setting('refund_midtrans')){
+                    $doRefundPayment = MyHelper::setting('refund_midtrans');
+                    if ($doRefundPayment) {
                         $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
                         TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                             'reject_type'   => 'refund',
                         ]);
                         if ($refund['status'] != 'success') {
-                            DB::rollback();
-                            return response()->json($refund);
+                            if ($refund_failed_process_balance) {
+                                $doRefundPayment = false;
+                            } else {
+                                $order->update(['need_manual_void' => 1]);
+                                $order2 = clone $order;
+                                $order2->payment_method = 'Midtrans';
+                                $order2->payment_detail = $payMidtrans['payment_type'];
+                                $order2->manual_refund = $payMidtrans['gross_amount'];
+                                $order2->payment_reference_number = $payMidtrans['vt_transaction_id'];
+                                if ($shared['reject_batch'] ?? false) {
+                                    $shared['void_failed'][] = $order2;
+                                } else {
+                                    $variables = [
+                                        'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                    ];
+                                    app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
+                                }
+                            }
                         }
-                    } else {
+                    }
+
+                    // don't use elseif / else because in the if block there are conditions that should be included in this process too
+                    if (!$doRefundPayment) {
+                        TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                            'reject_type'   => 'point',
+                        ]);
                         $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
                         if ($refund == false) {
                             DB::rollback();
@@ -1949,7 +2092,8 @@ class ApiOutletApp extends Controller
                         $rejectBalance = true;
                     }
                 } elseif ($payOvo) {
-                    if(Configs::select('is_active')->where('config_name','refund ovo')->pluck('is_active')->first()){
+                    $doRefundPayment = Configs::select('is_active')->where('config_name','refund ovo')->pluck('is_active')->first();
+                    if ($doRefundPayment) {
                         $point = 0;
                         $transaction = TransactionPaymentOvo::where('transaction_payment_ovos.id_transaction', $post['id_transaction'])
                             ->join('transactions','transactions.id_transaction','=','transaction_payment_ovos.id_transaction')
@@ -1959,13 +2103,31 @@ class ApiOutletApp extends Controller
                             'reject_type'   => 'refund',
                         ]);
                         if ($refund['status_code'] != '200') {
-                            DB::rollback();
-                            return response()->json([
-                                'status'   => 'fail',
-                                'messages' => ['Refund Ovo Failed'],
-                            ]);
+                            if ($refund_failed_process_balance) {
+                                $doRefundPayment = false;
+                            } else {
+                                $order->update(['need_manual_void' => 1]);
+                                $order2 = clone $order;
+                                $order2->payment_method = 'Ovo';
+                                $order2->manual_refund = $payOvo['amount'];
+                                $order2->payment_reference_number = $payOvo['approval_code'];
+                                if ($shared['reject_batch'] ?? false) {
+                                    $shared['void_failed'][] = $order2;
+                                } else {
+                                    $variables = [
+                                        'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                    ];
+                                    app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
+                                }
+                            }
                         }
-                    }else{
+                    }
+
+                    // don't use elseif / else because in the if block there are conditions that should be included in this process too
+                    if (!$doRefundPayment) {
+                        TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                            'reject_type'   => 'point',
+                        ]);
                         $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payOvo['amount'], $order['id_transaction'], 'Rejected Order Ovo', $order['transaction_grandtotal']);
                         if ($refund == false) {
                             DB::rollback();
@@ -1978,19 +2140,39 @@ class ApiOutletApp extends Controller
                     }
                 } elseif ($payIpay) {
                     $point = 0;
-                    if(strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88')){
+                    $doRefundPayment = strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88');
+                    if ($doRefundPayment) {
                         $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay);
                         TransactionPickup::where('id_transaction', $order['id_transaction'])->update([
                             'reject_type'   => 'refund',
                         ]);
                         if (!$refund) {
-                            DB::rollback();
-                            return response()->json([
-                                'status'   => 'fail',
-                                'messages' => ['Refund Payment Failed'],
-                            ]);
+                            if ($refund_failed_process_balance) {
+                                $doRefundPayment = false;
+                            } else {
+                                $order->update(['need_manual_void' => 1]);
+                                $order2 = clone $order;
+                                $order2->payment_method = 'Ipay88';
+                                $order2->payment_detail = $payIpay['payment_method'];
+                                $order2->manual_refund = $payIpay['amount']/100;
+                                $order2->payment_reference_number = $payIpay['trans_id'];
+                                if ($shared['reject_batch'] ?? false) {
+                                    $shared['void_failed'][] = $order2;
+                                } else {
+                                    $variables = [
+                                        'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                    ];
+                                    app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $order->phone, $variables, null, true);
+                                }
+                            }
                         }
-                    }else{
+                    }
+
+                    // don't use elseif / else because in the if block there are conditions that should be included in this process too
+                    if (!$doRefundPayment) {
+                        TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                            'reject_type'   => 'point',
+                        ]);
                         $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                         if ($refund == false) {
                             DB::rollback();
@@ -2211,7 +2393,7 @@ class ApiOutletApp extends Controller
             $data->where('pickup_by', 'Customer');
         }
 
-        switch ($request->sort) {
+        switch ($request->sort ?: $request->sort_by) {
             case 'oldest':
                 $data->orderBy('transaction_date','ASC')->orderBy('transactions.id_transaction','ASC');
                 break;
@@ -4127,7 +4309,7 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']         = 'PENGANTARAN DIBATALKAN';
                         $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
                         $result['delivery_info']['cancelable']     = 0;
-                        $result['rejectable']              = ($list['transaction_pickup_go_send']['retry_count'] == 5) ? 1 : 0;
+                        $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
                     case 'driver not found':
                     case 'no_driver':
@@ -4135,7 +4317,7 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']          = 'DRIVER TIDAK DITEMUKAN';
                         $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
                         $result['delivery_info']['cancelable']      = 0;
-                        $result['rejectable']              = ($list['transaction_pickup_go_send']['retry_count'] == 5) ? 1 : 0;
+                        $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
                 }
             }
@@ -5257,7 +5439,12 @@ class ApiOutletApp extends Controller
         $data = [];
         if($plastic_type['id_plastic_type']??NULL){
             $plastics = Product::where('product_type', 'plastic')
-                ->leftJoin('product_detail', 'products.id_product', 'product_detail.id_product')
+                ->leftJoin('product_detail', function($join) use($outlet)
+                {
+                    $join->on('products.id_product','product_detail.id_product')
+                        ->where('product_detail.id_outlet',$outlet['id_outlet']);
+
+                })
                 ->where(function ($sub) use($outlet){
                     $sub->whereNull('product_detail.id_outlet')
                         ->orWhere('product_detail.id_outlet', $outlet['id_outlet']);
@@ -5296,7 +5483,12 @@ class ApiOutletApp extends Controller
         }
 
         $plastics = Product::where('product_type', 'plastic')
-            ->leftJoin('product_detail', 'products.id_product', 'product_detail.id_product')
+            ->leftJoin('product_detail', function($join) use($outlet)
+            {
+                $join->on('products.id_product','product_detail.id_product')
+                    ->where('product_detail.id_outlet',$outlet['id_outlet']);
+
+            })
             ->where(function ($sub) use($outlet){
                 $sub->whereNull('product_detail.id_outlet')
                     ->orWhere('product_detail.id_outlet', $outlet['id_outlet']);

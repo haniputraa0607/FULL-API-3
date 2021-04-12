@@ -1970,7 +1970,7 @@ class ApiProductController extends Controller
             $product['selected_available'] = (!!Product::getVariantParentId($post['selected']['id_product_variant_group'], $product['variants'], $post['selected']['extra_modifiers'] ?? []))?1:0;
         }
         $product['popup_message'] = $product['selected_available'] ? '' : 'Varian yang dipilih tidak tersedia';
-        $product['modifiers'] = $product_modifiers->get()->toArray();
+        $product['modifiers'] = $product_modifiers->orderBy('product_modifier_order', 'asc')->orderBy('text', 'asc')->get()->toArray();
         foreach ($product['modifiers'] as $key => &$modifier) {
             $modifier['price'] = (int) $modifier['price'];
             unset($modifier['product_modifier_prices']);

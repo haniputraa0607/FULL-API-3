@@ -12,6 +12,7 @@ use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
 use Modules\Disburse\Entities\BankAccount;
 use Modules\Disburse\Entities\BankAccountOutlet;
+use Modules\Disburse\Entities\LogEditBankAccount;
 use Modules\Disburse\Entities\BankName;
 use Modules\Disburse\Entities\MDR;
 use DB;
@@ -85,12 +86,14 @@ class ApiDisburseSettingController extends Controller
             $bankAccount = BankAccount::where('beneficiary_account', $dt['beneficiary_account'])->first();//check account number is already exist or not
             if(!$bankAccount){
                 $bankAccount = BankAccount::create($dt);
+                $this->addLogEditBankAccount($request, 'create', $bankAccount->id_bank_account);
             }
 
             if($bankAccount){
                 $delete = true;
                 $dtToInsert = [];
                 if (isset($post['id_outlet']) && !empty($post['id_outlet'])){
+                    $old_outlet = BankAccountOutlet::where('id_bank_account', $bankAccount->id_bank_account)->groupBy('id_outlet')->pluck('id_outlet')->toArray();
                     $getDataBankOutlet = BankAccountOutlet::whereIn('id_outlet', $post['id_outlet'])->count();
                     if($getDataBankOutlet > 0) {
                         $delete = BankAccountOutlet::whereIn('id_outlet', $post['id_outlet'])->delete();
@@ -108,6 +111,7 @@ class ApiDisburseSettingController extends Controller
 
                 if($delete){
                     $insertBankAccountOutlet = BankAccountOutlet::insert($dtToInsert);
+                	$this->addLogEditBankAccount($request, 'update', $bankAccount->id_bank_account, $bankAccount, [], 'outlet');
                     if($insertBankAccountOutlet){
                         DB::commit();
                         return response()->json(['status' => 'success']);
@@ -162,10 +166,12 @@ class ApiDisburseSettingController extends Controller
             }else{
                 $getOldBankAccount = BankAccount::where('beneficiary_account', $post['beneficiary_account_number'])->first();
                 $bankAccount = BankAccount::where('beneficiary_account', $post['beneficiary_account_number'])->update($dt);
+                $this->addLogEditBankAccount($request, 'update', $getOldBankAccount->id_bank_account, $getOldBankAccount);
                 if($bankAccount){
 
                     if (isset($post['id_outlet'])){
                         $delete = true;
+                        $old_outlet = BankAccountOutlet::where('id_bank_account',$getOldBankAccount['id_bank_account'])->groupBy('id_outlet')->pluck('id_outlet')->toArray();
                         $getDataBankOutlet = BankAccountOutlet::whereIn('id_outlet', $post['id_outlet'])->orWhere('id_bank_account',$getOldBankAccount['id_bank_account'])->count();
                         if($getDataBankOutlet > 0){
                             $delete = BankAccountOutlet::whereIn('id_outlet', $post['id_outlet'])->orWhere('id_bank_account',$getOldBankAccount['id_bank_account'])->delete();
@@ -181,6 +187,7 @@ class ApiDisburseSettingController extends Controller
 
                     if($delete){
                         $insertBankAccountOutlet = BankAccountOutlet::insert($dtToInsert);
+                        $this->addLogEditBankAccount($request, 'update', $getOldBankAccount->id_bank_account, $getOldBankAccount, ($old_outlet ?? []), 'outlet');
                         if($insertBankAccountOutlet){
                             DB::commit();
                             return response()->json(['status' => 'success']);
@@ -206,8 +213,10 @@ class ApiDisburseSettingController extends Controller
 
         if(isset($post['id_bank_account']) && !empty($post['id_bank_account'])){
             $check = BankAccountOutlet::where('id_bank_account', $post['id_bank_account'])->pluck('id_outlet')->toArray();
-            if($check){
+            if(!$check){
+                $bankAccount = BankAccount::where('id_bank_account', $post['id_bank_account'])->first();
                 $del = BankAccount::where('id_bank_account', $post['id_bank_account'])->delete();
+            	$this->addLogEditBankAccount($request, 'delete', $bankAccount->id_bank_account, $bankAccount);
                 return response()->json(MyHelper::checkDelete($del));
             }else{
                 return response()->json(['status' => 'fail', 'message' => 'Can not delete bank account']);
@@ -691,5 +700,116 @@ class ApiDisburseSettingController extends Controller
         ];
 
         return response()->json(MyHelper::checkGet($datas));
+    }
+
+    public function addLogEditBankAccount($request, $action, $id_bank_account, $data_old = null, $outlet_list_old = [], $type = 'bank_account')
+    {
+    	$id_user = $request->user()->id ?? null;
+    	$id_user_franchise = $request->user()->id_user_franchise ?? null;
+    	$id_outlet = null;
+    	$data_new = null;
+    	$outlet_list_new = [];
+
+    	if ($id_bank_account) {
+    		$data_new = BankAccount::where('id_bank_account', $id_bank_account)->first();
+    		$outlet_list_new = BankAccountOutlet::where('id_bank_account', $id_bank_account)->groupBy('id_outlet')->pluck('id_outlet')->toArray();
+    	}
+
+    	$id_outlet_old = implode(',', $outlet_list_old) ?: null;
+    	$id_outlet_new = implode(',', $outlet_list_new) ?: null;
+
+    	$id_bank_name_old	= $data_old['id_bank_name'] ?? null;
+		$id_bank_name_new	= $data_new['id_bank_name'] ?? null;
+		$beneficiary_name_old	= $data_old['beneficiary_name'] ?? null;
+		$beneficiary_name_new	= $data_new['beneficiary_name'] ?? null;
+		$beneficiary_account_old	= $data_old['beneficiary_account'] ?? null;
+		$beneficiary_account_new	= $data_new['beneficiary_account'] ?? null;
+		$beneficiary_alias_old	= $data_old['beneficiary_alias'] ?? null;
+		$beneficiary_alias_new	= $data_new['beneficiary_alias'] ?? null;
+		$beneficiary_email_old	= $data_old['beneficiary_email'] ?? null;
+		$beneficiary_email_new	= $data_new['beneficiary_email'] ?? null;
+
+		if ($id_bank_name_old == $id_bank_name_new) {
+			$id_bank_name_old = null;
+			$id_bank_name_new = null;
+		}
+		if ($beneficiary_name_old == $beneficiary_name_new) {
+			$beneficiary_name_old = null;
+			$beneficiary_name_new = null;
+		}
+		if ($beneficiary_account_old == $beneficiary_account_new) {
+			$beneficiary_account_old = null;
+			$beneficiary_account_new = null;
+		}
+		if ($beneficiary_alias_old == $beneficiary_alias_new) {
+			$beneficiary_alias_old = null;
+			$beneficiary_alias_new = null;
+		}
+		if ($beneficiary_email_old == $beneficiary_email_new) {
+			$beneficiary_email_old = null;
+			$beneficiary_email_new = null;
+		}
+    	if ($id_outlet_old == $id_outlet_new) {
+    		$id_outlet_old = null;
+    		$id_outlet_new = null;
+    	}
+
+    	if ($id_user_franchise) {
+    		$id_outlet = $request->id_outlet;
+    	}
+
+    	if ($type == 'bank_account') {
+			$id_outlet_old = null;
+			$id_outlet_new = null;
+    	}else{
+    		$id_bank_name_old = null;
+			$id_bank_name_new = null;
+			$beneficiary_name_old = null;
+			$beneficiary_name_new = null;
+			$beneficiary_account_old = null;
+			$beneficiary_account_new = null;
+			$beneficiary_alias_old = null;
+			$beneficiary_alias_new = null;
+			$beneficiary_email_old = null;
+			$beneficiary_email_new = null;
+    	}
+
+    	$data = [			
+			'date_time'	=> date('Y-m-d H:i:s'),
+			'id_user'	=> $id_user,
+			'id_user_franchise'	=> $id_user_franchise,
+			'id_outlet'	=> $id_outlet,
+			'id_bank_account' => $id_bank_account,
+
+			'id_outlet_old'	=> $id_outlet_old,
+			'id_outlet_new'	=> $id_outlet_new,
+
+			'id_bank_name_old'	=> $id_bank_name_old,
+			'id_bank_name_new'	=> $id_bank_name_new,
+			'beneficiary_name_old'	=> $beneficiary_name_old,
+			'beneficiary_name_new'	=> $beneficiary_name_new,
+			'beneficiary_account_old'	=> $beneficiary_account_old,
+			'beneficiary_account_new'	=> $beneficiary_account_new,
+			'beneficiary_alias_old'	=> $beneficiary_alias_old,
+			'beneficiary_alias_new'	=> $beneficiary_alias_new,
+			'beneficiary_email_old'	=> $beneficiary_email_old,
+			'beneficiary_email_new'	=> $beneficiary_email_new,
+			'action' => $action ?? null
+    	];
+
+    	$changes = array_filter([$id_outlet_old, $id_outlet_new, $id_bank_name_old, $id_bank_name_new, $beneficiary_name_old, $beneficiary_name_new, $beneficiary_account_old, $beneficiary_account_new, $beneficiary_alias_old, $beneficiary_alias_new, $beneficiary_email_old, $beneficiary_email_new], function ($a) { return $a !== null;});
+
+    	if (empty($changes)) {
+    		return true;
+    	}
+
+    	try {
+    		$create = LogEditBankAccount::create($data);
+    		
+    	} catch (\Exception $e) {
+    		\Log::error($e);
+    	}
+
+    	return true;
     }
 }

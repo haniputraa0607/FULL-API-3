@@ -75,7 +75,7 @@ class SendEmailDisburseJob implements ShouldQueue
                 }
 
                 app('Modules\Disburse\Http\Controllers\ApiIrisController')->sendForwardEmailDisburse('Failed Send Disburse',['list_outlet' => $table]);
-            }else{
+            }elseif($getDataDisburse['disburse_status'] == 'Success'){
                 $getSettingSendEmail = Setting::where('key', 'disburse_setting_email_send_to')->first();
                 if(!empty($getSettingSendEmail)){
                     $feeDisburse = (int)$getDataDisburse['disburse_fee'];
