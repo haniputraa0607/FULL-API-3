@@ -115,6 +115,7 @@ class ApiReportPromoController extends Controller
     			$list = SubscriptionUserVoucher::join('transactions', 'transactions.id_transaction', 'subscription_user_vouchers.id_transaction')
     					->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
     					->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
+    					->leftJoin('transaction_payment_subscriptions', 'transaction_payment_subscriptions.id_transaction', 'transactions.id_transaction')
 		    			->groupBy('subscriptions.id_subscription')
 		        		->select(
 		        			'subscriptions.id_subscription AS id_promo',
@@ -124,10 +125,30 @@ class ApiReportPromoController extends Controller
 		        				CASE WHEN subscriptions.subscription_discount_type = "payment_method" THEN "payment method"
 									WHEN subscriptions.subscription_discount_type = "discount" THEN "bill discount"
 									WHEN subscriptions.subscription_discount_type = "discount_delivery" THEN "delivery discount"
-								ELSE NULL END AS type
+								ELSE NULL END AS type,
+
+								CASE WHEN subscriptions.subscription_discount_type = "payment_method" THEN 
+									SUM(transaction_payment_subscriptions.subscription_nominal)
+								ELSE
+									SUM(
+										CASE WHEN transactions.transaction_discount != 0 THEN ABS(transactions.transaction_discount) ELSE 0 END
+										+ CASE WHEN transactions.transaction_discount_delivery != 0 THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
+										+ CASE WHEN transactions.transaction_discount_bill != 0 THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
+									)
+								END AS total_discount,
+
+								CASE WHEN subscriptions.subscription_discount_type = "payment_method" THEN 
+									SUM(transaction_payment_subscriptions.subscription_nominal)
+								ELSE
+									SUM(
+										CASE WHEN transactions.transaction_discount != 0 THEN ABS(transactions.transaction_discount) ELSE 0 END
+										+ CASE WHEN transactions.transaction_discount_delivery != 0 THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
+										+ CASE WHEN transactions.transaction_discount_bill != 0 THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
+									)
+								END / COUNT(transactions.id_transaction) AS average_discount
 		        			'),
-		        			DB::raw($select_trx),
-		        			DB::raw($total_discount_promo)
+		        			DB::raw($select_trx)
+		        			// DB::raw($total_discount_promo)
 		        		);
     			break;
 
