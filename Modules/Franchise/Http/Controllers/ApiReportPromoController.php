@@ -260,6 +260,15 @@ class ApiReportPromoController extends Controller
 			    	)
 			    	->groupBy('transaction_products.id_product', 'transaction_products.id_product_variant_group');
 
+		if(isset($post['filter_type']) && $post['filter_type'] == 'range_date'){
+            $dateStart = date('Y-m-d', strtotime($post['date_start']));
+            $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+            $detail = $detail->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
+        }elseif (isset($post['filter_type']) && $post['filter_type'] == 'today'){
+            $currentDate = date('Y-m-d');
+            $detail = $detail->whereDate('transactions.transaction_date', $currentDate);
+        }
+
 		switch ($promo) {
     		case 'deals':
     			$data_promo = Deal::where('id_deals', $id_promo)
