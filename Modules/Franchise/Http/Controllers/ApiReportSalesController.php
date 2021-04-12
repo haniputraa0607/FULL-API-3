@@ -163,7 +163,7 @@ class ApiReportSalesController extends Controller
             ],
             [
                 'title' => 'Pembayaran Sukses',
-                'amount' => number_format($report['total_reject']??0,0,",","."),
+                'amount' => number_format($report['total_complete_payment']??0,0,",","."),
                 "tooltip" => 'jumlah transaksi dengan status pembyaran sukses (mengabaikan status reject order)'
             ],
     		[
