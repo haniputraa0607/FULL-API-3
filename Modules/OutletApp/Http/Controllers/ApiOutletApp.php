@@ -773,7 +773,7 @@ class ApiOutletApp extends Controller
         return response()->json(MyHelper::checkUpdate($pickup));
     }
 
-    public function SetReady(DetailOrder $request)
+    public function SetReady(DetailOrder $request, $autoready = false)
     {
         $post   = $request->json()->all();
         $outlet = $request->user();
@@ -830,7 +830,7 @@ class ApiOutletApp extends Controller
         }
 
         DB::beginTransaction();
-        $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['ready_at' => date('Y-m-d H:i:s')]);
+        $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['ready_at' => date('Y-m-d H:i:s'), 'is_autoready' => $autoready ? 1 : 0]);
 
         // sendPoint delivery after status delivered only
         if ($pickup && $order->pickup_by == 'Customer' && $order->cashback_insert_status != 1) {

@@ -67,10 +67,10 @@ class Kernel extends ConsoleKernel
         $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@autoReject')->cron('* * * * *');
 
         /**
-         * reject all transactions that outlets do not ready within a certain timeframe
+         * set ready order that outlets do not ready within 5 minutes after pickup_at
          * run every minute
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@autoRejectReady')->cron('* * * * *');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@autoReadyOrder')->cron('* * * * *');
 
         /**
          * cancel all pending deals that have been more than 5 minutes
