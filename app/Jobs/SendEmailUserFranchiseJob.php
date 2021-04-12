@@ -47,10 +47,10 @@ class SendEmailUserFranchiseJob implements ShouldQueue
             if($updatePin){
                 $autocrm = app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM(
                     'New User Franchise',
-                    $user['email'],
+                    $user['username'],
                     [
                         'pin_franchise' => $pin,
-                        'email' => $user['email'],
+                        'username' => $user['username'],
                         'name' => $user['name'],
                         'url' => env('URL_PORTAL_MITRA')
                     ], null, false, false, 'franchise', 1

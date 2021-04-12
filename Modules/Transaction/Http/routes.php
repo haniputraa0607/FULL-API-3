@@ -60,6 +60,9 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
 
     Route::any('log-invalid-flag/list', 'ApiInvalidTransactionController@logInvalidFlag');
     Route::any('log-invalid-flag/detail', 'ApiInvalidTransactionController@detailInvalidFlag');
+
+    Route::post('failed-void-payment', 'ApiManualRefundController@listFailedVoidPayment');
+    Route::post('failed-void-payment/confirm', 'ApiManualRefundController@confirmManualRefund');
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {

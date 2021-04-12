@@ -67,10 +67,10 @@ class Kernel extends ConsoleKernel
         $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@autoReject')->cron('* * * * *');
 
         /**
-         * reject all transactions that outlets do not ready within a certain timeframe
+         * set ready order that outlets do not ready within 5 minutes after pickup_at
          * run every minute
          */
-        // $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@autoRejectReady')->cron('* * * * *');
+        // $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@autoReadyOrder')->cron('* * * * *');
 
         /**
          * cancel all pending deals that have been more than 5 minutes
@@ -88,7 +88,7 @@ class Kernel extends ConsoleKernel
          * update all pickup transaction that have been more than 1 x 24 hours
          * run every day at 04:00
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@completeTransactionPickup')->dailyAt('01:00');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@completeTransactionPickup')->dailyAt('23:50');
 
         /**
          * calculate achievement all transaction that have not calculated the achievement
@@ -162,6 +162,11 @@ class Kernel extends ConsoleKernel
          * Void failed transaction subscription shopeepay
          */
         $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancelSubscription')->cron('*/1 * * * *');
+
+        /**
+         * process refund shopeepay at 06:00
+         */
+        // $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronRefund')->dailyAt('03:05');
 
         /**
          * Check the status of Gosend which is not updated after 5 minutes
