@@ -54,7 +54,7 @@ class ApiReportPaymentController extends Controller
                 $currentDate = date('Y-m-d');
                 $getData = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
                     ->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date',
-                        'payment_type', 'payment_method', 'transaction_payment_midtrans.gross_amount', 'transaction_payment_ipay88s.amount',
+                        'payment_type', 'payment_method', 'transaction_payment_midtrans.gross_amount', 'transaction_payment_ipay88s.id_transaction_payment_ipay88', 'transaction_payment_ipay88s.amount',
                         'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'transaction_payment_shopee_pays.amount as shopee_amount',
                         'transaction_payment_subscriptions.subscription_nominal', 'balance_nominal')
                     ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
@@ -69,21 +69,20 @@ class ApiReportPaymentController extends Controller
 
                 $payments = [];
                 foreach ($getData as $val){
-                    $paymentType = '';
                     $payment = '';
                     $paymentAmount = 0;
                     if(!empty($val['payment_type'])){
                         $payment = $val['payment_type'];
                         $paymentAmount = $val['gross_amount'];
-                    }elseif(!empty($val['payment_method'])){
+                    }elseif(!empty($val['id_transaction_payment_ipay88'])){
                         $payment = $val['payment_method'];
-                        $paymentAmount = $val['amount'];
+                        $paymentAmount = $val['amount']/100;
                     }elseif(!empty($val['id_transaction_payment_shopee_pay'])){
                         $payment = 'Shopee Pay';
                         $paymentAmount = $val['shopee_amount']/100;
                     }
 
-                    if(!empty($paymentType) && !empty($payment)){
+                    if(!empty($payment)){
                         $check = array_search($payment, array_column($payments, 'trx_payment'));
                         if($check === false){
                             $payments[] = [
