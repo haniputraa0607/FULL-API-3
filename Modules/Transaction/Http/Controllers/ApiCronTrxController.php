@@ -735,4 +735,68 @@ class ApiCronTrxController extends Controller
             return ['status' => 'fail', 'messages' => [$e->getMessage()]];
         }
     }
+
+    /**
+     * Set ready transaction not ready where transaction not ready after pickup_at - 5 minutes
+     * @return array        result
+     */
+    public function autoReadyOrder()
+    {
+        $log = MyHelper::logCron('Auto Ready Order');
+        try {
+            $max_pickup = 300; // 5 minutes
+            $trxs = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->where('transaction_payment_status', 'Completed')
+                ->where('pickup_by', 'Customer')
+                ->whereNotNull('receive_at')
+                ->whereNull('ready_at')
+                ->whereNull('taken_at')
+                ->whereNull('taken_by_system_at')
+                ->whereNull('reject_at')
+                ->with('outlet')
+                ->where('pickup_at', '<', date('Y-m-d H:i:s', time() - $max_pickup))
+                ->get();
+
+            $processed = [
+                'found' => $trxs->count(),
+                'setready' => 0,
+                'failed' => 0,
+                'errors' => []
+            ];
+
+            foreach ($trxs as $transaction) {
+                $params = [
+                    'order_id' => $transaction['order_id']
+                ];
+                // mocking request object and create fake request
+                $fake_request = new \Modules\OutletApp\Http\Requests\DetailOrder();
+                $fake_request->setJson(new \Symfony\Component\HttpFoundation\ParameterBag($params));
+                $fake_request->merge(['user' => $transaction->outlet]);
+                $fake_request->setUserResolver(function () use ($transaction) {
+                    return $transaction->outlet;
+                });
+
+                $reject = app('Modules\OutletApp\Http\Controllers\ApiOutletApp')->SetReady($fake_request, true);
+
+                if ($reject instanceof \Illuminate\Http\JsonResponse || $reject instanceof \Illuminate\Http\Response) {
+                    $reject = $reject->original;
+                }
+
+                if (is_array($reject)) {
+                    if (($reject['status'] ?? false) == 'success') {
+                        $processed['setready']++;
+                    } else {
+                        $processed['failed']++;
+                        $processed['errors'][] = $reject['messages'] ?? 'Something went wrong';
+                    }
+                }
+            }
+
+            $log->success($processed);
+            return $processed;
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+            return ['status' => 'fail', 'messages' => [$e->getMessage()]];
+        }
+    }
 }
