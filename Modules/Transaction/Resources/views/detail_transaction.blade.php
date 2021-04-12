@@ -11,6 +11,9 @@
         <th style="background-color: #dcdcdc;" width="10"> City </th>
         <th style="background-color: #dcdcdc;" width="20"> Receipt Number </th>
         <th style="background-color: #dcdcdc;" width="10"> Transaction Status </th>
+        @if(isset($data['show_reject_reason']) && $data['show_reject_reason'] == 1)
+        	<th style="background-color: #dcdcdc;" width="10"> Reject Reason </th>
+        @endif
         <th style="background-color: #dcdcdc;" width="10"> Transaction Date </th>
         <th style="background-color: #dcdcdc;" width="10"> Transaction Time </th>
         <th style="background-color: #dcdcdc;" width="10"> Brand </th>

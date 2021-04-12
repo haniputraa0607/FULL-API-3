@@ -1356,6 +1356,7 @@ class ApiTransactionFranchiseController extends Controller
             $dataDisburse = $dataDisburse->get()->toArray();
 
             if(!empty($generateTrx['list'])){
+            	$generateTrx['show_reject_reason'] = 1;
                 $excelFile = 'Transaction_['.$start.'_'.$end.']['.$getOutlet['outlet_code'].']_'.mt_rand(0, 1000).time().'.xlsx';
                 $directory = 'franchise/report/transaction/'.$excelFile;
 
@@ -1998,6 +1999,7 @@ class ApiTransactionFranchiseController extends Controller
                     $sameData .= '<td>'.$val['city_name'].'</td>';
                     $sameData .= '<td>'.$val['transaction_receipt_number'].'</td>';
                     $sameData .= '<td>'.$status.'</td>';
+                    $sameData .= '<td>'.$val['reject_reason'].'</td>';
                     $sameData .= '<td>'.date('d M Y', strtotime($val['transaction_date'])).'</td>';
                     $sameData .= '<td>'.date('H:i:s', strtotime($val['transaction_date'])).'</td>';
 
