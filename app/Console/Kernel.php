@@ -70,7 +70,7 @@ class Kernel extends ConsoleKernel
          * set ready order that outlets do not ready within 5 minutes after pickup_at
          * run every minute
          */
-        // $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@autoReadyOrder')->cron('* * * * *');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@autoReadyOrder')->cron('* * * * *');
 
         /**
          * cancel all pending deals that have been more than 5 minutes
