@@ -728,8 +728,15 @@ class ApiCategoryController extends Controller
                     }
                 }
 
+                $dontHave = 0;
                 $id_brand = array_unique($id_brand);
-                if(count($brands) >= count($id_brand)){
+                foreach ($id_brand as $val){
+                    if(!in_array($val, $brands)){
+                        $dontHave = 1;
+                    }
+                }
+
+                if($dontHave == 0){
                     $resBundling[] = [
                         "id_bundling" => $bundling,
                         "id_product_category" => $getProduct[0]['id_bundling_category']??'',
