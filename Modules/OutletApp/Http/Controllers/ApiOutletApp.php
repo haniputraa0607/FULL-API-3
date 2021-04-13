@@ -4690,9 +4690,10 @@ class ApiOutletApp extends Controller
     {
         $outlet  = $request->user();
         $holiday = OutletHoliday::distinct()
-            ->select(DB::raw('outlet_holidays.id_holiday,date_holidays.id_date_holiday,holiday_name,yearly,date_holidays.date,GROUP_CONCAT(date_edit.date order by date_edit.date) as date_edit'))
-            ->where('id_outlet', $outlet->id_outlet)
+            ->select(DB::raw('outlet_holidays.id_holiday,date_holidays.id_date_holiday,holiday_name,yearly,date_holidays.date,GROUP_CONCAT(date_edit.date order by date_edit.date) as date_edit,(CASE WHEN COUNT(distinct(oh.id_outlet)) > 1 THEN 1 ELSE 0 END) as read_only'))
+            ->where('outlet_holidays.id_outlet', $outlet->id_outlet)
             ->join('holidays', 'holidays.id_holiday', '=', 'outlet_holidays.id_holiday')
+            ->join('outlet_holidays as oh', 'oh.id_holiday', '=', 'outlet_holidays.id_holiday')
             ->join('date_holidays', 'date_holidays.id_holiday', '=', 'holidays.id_holiday')
             ->join('date_holidays as date_edit', 'date_edit.id_holiday', '=', 'holidays.id_holiday')
             ->where(function ($q) {
@@ -4807,9 +4808,12 @@ class ApiOutletApp extends Controller
         ];
 
         DB::beginTransaction();
-        $insertHoliday = Holiday::find($id_holiday);
+        $insertHoliday = Holiday::select(\DB::raw('holidays.*,(CASE WHEN COUNT(distinct(oh.id_outlet)) > 1 THEN 1 ELSE 0 END) as read_only'))->join('outlet_holidays as oh', 'oh.id_holiday', '=', 'holidays.id_holiday')->groupBy('holidays.id_holiday')->find($id_holiday);
         if (!$insertHoliday) {
             return MyHelper::checkGet([], 'Holiday not found');
+        }
+        if ($insertHoliday->read_only) {
+            return MyHelper::checkGet([], 'This holiday cannot be changed');
         }
         $insertHoliday->update($holiday);
         DateHoliday::where('id_holiday', $id_holiday)->delete();
@@ -4875,7 +4879,12 @@ class ApiOutletApp extends Controller
         $id_date_holiday = $request->id_date_holiday;
         $id_holiday      = $request->id_holiday;
         if ($id_date_holiday) {
-            $date_holiday = DateHoliday::where('id_date_holiday', $id_date_holiday)->first();
+            $date_holiday = DateHoliday::where('id_date_holiday', $id_date_holiday)->with(['holiday' => function ($q) {
+                $q->select(\DB::raw('holidays.*,(CASE WHEN COUNT(distinct(oh.id_outlet)) > 1 THEN 1 ELSE 0 END) as read_only'))->join('outlet_holidays as oh', 'oh.id_holiday', '=', 'holidays.id_holiday')->groupBy('holidays.id_holiday');
+            }])->first();
+            if ($date_holiday->holiday->read_only) {
+                return MyHelper::checkGet([], 'This holiday cannot be deleted');
+            };
             if (!$date_holiday) {
                 return MyHelper::checkDelete(false);
             }
@@ -4886,6 +4895,11 @@ class ApiOutletApp extends Controller
             } else {
                 $id_holiday = $date_holiday->id_holiday;
             }
+        } elseif ($id_holiday) {
+            $holiday = Holiday::select(\DB::raw('holidays.*,(CASE WHEN COUNT(distinct(oh.id_outlet)) > 1 THEN 1 ELSE 0 END) as read_only'))->join('outlet_holidays as oh', 'oh.id_holiday', '=', 'holidays.id_holiday')->groupBy('holidays.id_holiday')->find($id_holiday);
+            if ($holiday->read_only) {
+                return MyHelper::checkGet([], 'This holiday cannot be deleted');
+            };
         }
         if ($id_holiday) {
             $delete = Holiday::where(['holidays.id_holiday' => $id_holiday, 'id_outlet' => $request->user()->id_outlet])->join('outlet_holidays', 'outlet_holidays.id_holiday', '=', 'holidays.id_holiday')->delete();
