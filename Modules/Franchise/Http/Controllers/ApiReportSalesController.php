@@ -33,6 +33,7 @@ class ApiReportSalesController extends Controller
 
     	$report = Transaction::where('transactions.id_outlet', $request->id_outlet)
     				->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+    				->join('disburse_outlet_transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
     				->where('transactions.transaction_payment_status', 'Completed')
 					// ->whereNull('reject_at')
 					->select(DB::raw('
@@ -187,9 +188,9 @@ class ApiReportSalesController extends Controller
                 "tooltip" => 'jumlah transaksi yang di response oleh outlet (diterima atau di manual reject)'
             ],
             [
-                'title' => 'Response Rate Order',
-                'amount' => number_format($report['response_rate']??0,0,",",".")."%",
-                "tooltip" => 'persentase jumlah order yang di response oleh outlet dibandingkan dengan jumlah transaksi dengan status pembayaran suskes (transaksi yang masuk)'
+                'title' => 'Auto Reject Response',
+                'amount' => number_format($report['total_auto_reject']??0,0,",","."),
+                "tooltip" => 'jumlah transaksi yang tidak di response oleh outlet dan terproses auto reject oleh sistem'
             ],
             [
                 'title' => 'Accept',
@@ -197,19 +198,19 @@ class ApiReportSalesController extends Controller
                 "tooltip" => 'jumlah transaksi yang diterima oleh outlet'
             ],
             [
-                'title' => 'Acceptance Rate Order',
-                'amount' => number_format($report['acceptance_rate']??0,0,",",".")."%",
-                "tooltip" => 'persentase jumlah transaksi yang diterima oleh outlet dibandingkan dengan jumlah transaksi dengan status pembayaran suskes (transaksi yang masuk)'
-            ],
-            [
-                'title' => 'Auto Reject Response',
-                'amount' => number_format($report['total_auto_reject']??0,0,",","."),
-                "tooltip" => 'jumlah transaksi yang tidak di response oleh outlet dan terproses auto reject oleh sistem'
-            ],
-            [
                 'title' => 'Manual Reject Response',
                 'amount' => number_format($report['total_manual_reject']??0,0,",","."),
                 "tooltip" => 'jumlah transaksi yang di reject oleh outlet saat transaksi masuk ke jilid+	'
+            ],
+            [
+                'title' => 'Response Rate Order',
+                'amount' => number_format($report['response_rate']??0,0,",",".")."%",
+                "tooltip" => 'persentase jumlah order yang di response oleh outlet dibandingkan dengan jumlah transaksi dengan status pembayaran suskes (transaksi yang masuk)'
+            ],
+            [
+                'title' => 'Acceptance Rate Order',
+                'amount' => number_format($report['acceptance_rate']??0,0,",",".")."%",
+                "tooltip" => 'persentase jumlah transaksi yang diterima oleh outlet dibandingkan dengan jumlah transaksi dengan status pembayaran suskes (transaksi yang masuk)'
             ],
             [
                 'title' => 'Reject',
