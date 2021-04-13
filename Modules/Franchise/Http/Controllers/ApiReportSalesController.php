@@ -124,6 +124,8 @@ class ApiReportSalesController extends Controller
         }elseif (isset($post['filter_type']) && $post['filter_type'] == 'today'){
             $currentDate = date('Y-m-d');
             $report = $report->whereDate('transactions.transaction_date', $currentDate);
+        }else{
+            $report = $report->whereDate('transactions.transaction_date', date('Y-m-d'));
         }
 
         $report = $report->first();
@@ -291,6 +293,8 @@ class ApiReportSalesController extends Controller
         }elseif (isset($post['filter_type']) && $post['filter_type'] == 'today'){
             $currentDate = date('Y-m-d');
             $list = $list->whereDate('transactions.transaction_date', $currentDate);
+        }else{
+            $list = $list->whereDate('transactions.transaction_date', date('Y-m-d'));
         }
 
     	$order = $post['order']??'transaction_date';

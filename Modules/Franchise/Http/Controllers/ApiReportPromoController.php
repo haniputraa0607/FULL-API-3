@@ -190,6 +190,8 @@ class ApiReportPromoController extends Controller
         }elseif (isset($post['filter_type']) && $post['filter_type'] == 'today'){
             $currentDate = date('Y-m-d');
             $list = $list->whereDate('transactions.transaction_date', $currentDate);
+        }else{
+            $list = $list->whereDate('transactions.transaction_date', date('Y-m-d'));
         }
 
         $order = $post['order'] ?? 'title';
@@ -288,6 +290,8 @@ class ApiReportPromoController extends Controller
         }elseif (isset($post['filter_type']) && $post['filter_type'] == 'today'){
             $currentDate = date('Y-m-d');
             $detail = $detail->whereDate('transactions.transaction_date', $currentDate);
+        }else{
+            $detail = $detail->whereDate('transactions.transaction_date', date('Y-m-d'));
         }
 
 		switch ($promo) {
