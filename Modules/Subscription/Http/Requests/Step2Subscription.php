@@ -15,7 +15,7 @@ class Step2Subscription extends FormRequest
      */
     public function rules()
     {
-        return [
+        $rules = [
         	'subscription_type'         		=> 'required|in:welcome,subscription,inject',
             'id_subscription'                   => 'required',
             'prices_by'                         => 'sometimes|required',
@@ -25,8 +25,7 @@ class Step2Subscription extends FormRequest
             'subscription_total_type'                => '',
             'subscription_total'                => '',
             'user_limit'                        => 'nullable',
-            'subscription_voucher_start'        => '',
-            'subscription_voucher_expired'      => '',
+            'subscription_voucher_start'     	=> 'nullable|date',
             'subscription_voucher_duration'     => '',
             'subscription_voucher_total'        => 'required',
             'voucher_type'                      => 'required',
@@ -37,6 +36,14 @@ class Step2Subscription extends FormRequest
             'purchase_limit'                    => 'sometimes|required',
             'new_purchase_after'                => '',
         ];
+
+        if($this->subscription_voucher_start){
+        	$rules['subscription_voucher_expired']	= 'nullable|date|after:subscription_voucher_start';
+        }else{
+        	$rules['subscription_voucher_expired']	= 'nullable|date|after:'.date('Y-m-d H:i:s').'';
+        }
+
+        return $rules;
     }
 
     /**
@@ -58,4 +65,14 @@ class Step2Subscription extends FormRequest
     {
         return $this->json()->all();
     }
+
+    public function attributes()
+	{
+		$attributes = [
+            'subscription_voucher_expired'	=> 'Voucher Expiry',
+            'subscription_voucher_start'	=> 'Voucher Start Date'
+        ];
+
+	    return $attributes;
+	}
 }
