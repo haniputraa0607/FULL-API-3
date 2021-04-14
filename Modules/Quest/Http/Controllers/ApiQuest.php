@@ -1073,7 +1073,7 @@ class ApiQuest extends Controller
     {
         $quest = Quest::find($request->id_quest);
         if (!$quest) {
-            return MyHelper::checkGet([], '');
+            return MyHelper::checkGet([], 'Quest tidak ditemukan');
         }
         $quest->update([
             'description' => $request->quest['description'],
@@ -1105,5 +1105,60 @@ class ApiQuest extends Controller
         return [
             'status' => 'success'
         ];
+    }
+
+    public function updateQuest(Request $request)
+    {
+        $quest = Quest::find($request->id_quest);
+        if (!$quest) {
+            return MyHelper::checkGet([], 'Quest tidak ditemukan');
+        }
+        if ($quest->is_complete) {
+            return MyHelper::checkGet([], 'Quest not editable');
+        }
+        $toUpdate = $request->quest;
+
+        if ($toUpdate['image'] ?? false) {
+            $upload = MyHelper::uploadPhotoStrict($toUpdate['image'], $this->saveImage, 500, 500);
+            
+            if (isset($upload['status']) && $upload['status'] == "success") {
+                $toUpdate['image'] = $upload['path'];
+            } else {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Failed to upload image']
+                ]);
+            }
+        } else {
+            unset($toUpdate['image']);
+        }
+
+        $toUpdate['publish_start']     = date('Y-m-d H:i', strtotime($toUpdate['publish_start']));
+        $toUpdate['date_start']        = date('Y-m-d H:i', strtotime($toUpdate['date_start']));
+        if (!is_null($toUpdate['publish_end'])) {
+            $toUpdate['publish_end']   = date('Y-m-d H:i', strtotime($toUpdate['publish_end']));
+        }
+        if (!is_null($toUpdate['date_end'])) {
+            $toUpdate['date_end']      = date('Y-m-d H:i', strtotime($toUpdate['date_end']));
+        }
+
+
+        $update = $quest->update($toUpdate);
+        return MyHelper::checkUpdate($update);
+    }
+
+    public function updateBenefit(Request $request)
+    {
+        $quest = Quest::with('quest_benefit')->find($request->id_quest);
+        if (!$quest) {
+            return MyHelper::checkGet([], 'Quest tidak ditemukan');
+        }
+        if ($quest->is_complete) {
+            return MyHelper::checkGet([], 'Quest not editable');
+        }
+        $toUpdate = $request->quest_benefit;
+
+        $update = $quest->quest_benefit->update($toUpdate);
+        return MyHelper::checkUpdate($update);
     }
 }

@@ -20,6 +20,6 @@ class QuestBenefit extends Model
 
     public function deals()
     {
-    	return $this->hasOne(Deal::class, 'id_deals');
+    	return $this->belongsTo(Deal::class, 'id_deals');
     }
 }
