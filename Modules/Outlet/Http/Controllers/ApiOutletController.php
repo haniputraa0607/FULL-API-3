@@ -303,8 +303,8 @@ class ApiOutletController extends Controller
     }
 
     function updateStatus(UpdateStatus $request) {
-        $post = $this->checkInputOutlet($request->json()->all());
-        $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update($post);
+        $post = $request->json()->all();
+        $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update(['outlet_status' => $post['outlet_status']??'Inactive']);
         // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
 
         return response()->json(MyHelper::checkUpdate($save));
