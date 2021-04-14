@@ -21,6 +21,9 @@ use Modules\Quest\Entities\QuestUser;
 use Modules\Quest\Entities\QuestUserLog;
 use Modules\Quest\Entities\QuestUserRedemption;
 use App\Http\Models\Deal;
+use Modules\Quest\Entities\QuestContent;
+
+use Modules\Quest\Http\Requests\StoreRequest;
 
 class ApiQuest extends Controller
 {
@@ -48,61 +51,68 @@ class ApiQuest extends Controller
      * Show the form for creating a new resource.
      * @return Response
      */
-    public function store(Request $request)
+    public function store(StoreRequest $request)
     {
         $post = $request->json()->all();
 
-        if (!file_exists($this->saveImage)) {
-            mkdir($this->saveImage, 0777, true);
-        }
-
         DB::beginTransaction();
 
-        if (isset($request['id_quest'])) {
-            $request->validate([
-                'detail.*.name'                 => 'required',
-                // 'detail.*.short_description'    => 'required'
-            ]);
+        $request->validate([
+            'quest.name'                    => 'required',
+            'quest.publish_start'           => 'required',
+            'quest.date_start'              => 'required',
+            // 'quest.description'             => 'required',
+            'quest.image'                   => 'required',
+            'detail.*.name'                 => 'required',
+            // 'detail.*.short_description'    => 'required',
+            'detail.*.logo_badge'           => 'required'
+        ]);
+
+        $upload = MyHelper::uploadPhotoStrict($post['quest']['image'], $this->saveImage, 500, 500);
+        
+        if (isset($upload['status']) && $upload['status'] == "success") {
+            $post['quest']['image'] = $upload['path'];
         } else {
-            $request->validate([
-                'quest.name'                    => 'required',
-                'quest.publish_start'           => 'required',
-                'quest.date_start'              => 'required',
-                // 'quest.description'             => 'required',
-                'quest.image'                   => 'required',
-                'detail.*.name'                 => 'required',
-                // 'detail.*.short_description'    => 'required',
-                'detail.*.logo_badge'           => 'required'
+            return response()->json([
+                'status'   => 'fail',
+                'messages' => ['Failed to upload image']
             ]);
+        }
 
-            $upload = MyHelper::uploadPhotoStrict($post['quest']['image'], $this->saveImage, 500, 500);
-            
-            if (isset($upload['status']) && $upload['status'] == "success") {
-                $post['quest']['image'] = $upload['path'];
-            } else {
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['Failed to upload image']
+        $post['quest']['publish_start']     = date('Y-m-d H:i', strtotime($post['quest']['publish_start']));
+        $post['quest']['date_start']        = date('Y-m-d H:i', strtotime($post['quest']['date_start']));
+        if (!is_null($post['quest']['publish_end'])) {
+            $post['quest']['publish_end']   = date('Y-m-d H:i', strtotime($post['quest']['publish_end']));
+        }
+        if (!is_null($post['quest']['date_end'])) {
+            $post['quest']['date_end']      = date('Y-m-d H:i', strtotime($post['quest']['date_end']));
+        }
+
+        try {
+            $quest = Quest::create($post['quest']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status'    => 'fail',
+                'message'   => 'Add Quest Group Failed',
+                'error'     => $e->getMessage()
+            ]);
+        }
+
+        if ($quest_benefit = $post['quest_benefit'] ?? false) {
+            if ($quest_benefit['benefit_type'] == 'point') {
+                QuestBenefit::create([
+                    'id_quest' => $quest->id_quest,
+                    'benefit_type' => 'point',
+                    'value' => $quest_benefit['value'],
+                    'id_deals' => null,
                 ]);
-            }
-
-            $post['quest']['publish_start']     = date('Y-m-d H:i', strtotime($post['quest']['publish_start']));
-            $post['quest']['date_start']        = date('Y-m-d H:i', strtotime($post['quest']['date_start']));
-            if (!is_null($post['quest']['publish_end'])) {
-                $post['quest']['publish_end']   = date('Y-m-d H:i', strtotime($post['quest']['publish_end']));
-            }
-            if (!is_null($post['quest']['date_end'])) {
-                $post['quest']['date_end']      = date('Y-m-d H:i', strtotime($post['quest']['date_end']));
-            }
-
-            try {
-                $quest = Quest::create($post['quest']);
-            } catch (\Exception $e) {
-                DB::rollBack();
-                return response()->json([
-                    'status'    => 'fail',
-                    'message'   => 'Add Quest Group Failed',
-                    'error'     => $e->getMessage()
+            } elseif ($quest_benefit['benefit_type'] == 'voucher') {
+                QuestBenefit::create([
+                    'id_quest' => $quest->id_quest,
+                    'benefit_type' => 'voucher',
+                    'value' => $quest_benefit['value'],
+                    'id_deals' => $quest_benefit['id_deals'],
                 ]);
             }
         }
@@ -111,9 +121,9 @@ class ApiQuest extends Controller
             try {
                 foreach ($post['detail'] as $key => $value) {
                     if (isset($request['id_quest'])) {
-                        $value['id_quest']   = MyHelper::decSlug($request['id_quest']);
+                        $value['id_quest']   = $request['id_quest'];
                     } else {
-                        $value['id_quest']   = MyHelper::decSlug($quest->id_quest);
+                        $value['id_quest']   = $quest->id_quest;
                     }
     
                     $questDetail[$key] = QuestDetail::create($value);
@@ -848,13 +858,12 @@ class ApiQuest extends Controller
     public function show(Request $request)
     {
         try {
-            $data['quest']  = Quest::where('id_quest', MyHelper::decSlug($request['id_quest']))->first();
-            $data['detail'] = QuestDetail::with('product_category', 'product', 'outlet', 'province')->where('id_quest', MyHelper::decSlug($request['id_quest']))->get()->toArray();
+            $data['quest']  = Quest::with('quest_detail', 'quest_detail.product', 'quest_detail.outlet', 'quest_detail.province', 'quest_contents', 'quest_benefit', 'quest_benefit.deals')->where('id_quest', $request['id_quest'])->first();
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'status'    => 'fail',
-                'message'   => 'Get Quest Detail Failed',
+                'messages'   => ['Get Quest Detail Failed'],
                 'error'     => $e->getMessage()
             ]);
         }
@@ -951,7 +960,7 @@ class ApiQuest extends Controller
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
             })
-            ->where('quests.id_quest', MyHelper::decSlug($request['id_quest']) ?? $request->id_quest)
+            ->where('quests.id_quest', $request['id_quest'] ?? $request->id_quest)
             ->where('is_complete', 1)
             ->first();
         if ($quest['id_quest_user']) {
@@ -978,7 +987,7 @@ class ApiQuest extends Controller
                 ]
             ];
         }
-        $questDetail = QuestDetail::where(['id_quest' => MyHelper::decSlug($quest->id_quest)])->get();
+        $questDetail = QuestDetail::where(['id_quest' => $quest->id_quest])->get();
         $this->checkQuest($quest,$id_user, $questDetail);
         return [
             'status' => 'success',
@@ -1034,7 +1043,7 @@ class ApiQuest extends Controller
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
             })
-            ->where('quests.id_quest', MyHelper::decSlug($request['id_quest']) ?? $request->id_quest)
+            ->where('quests.id_quest', $request['id_quest'] ?? $request->id_quest)
             ->first();
         if (!$quest) {
             return MyHelper::checkGet($result, "Quest tidak ditemukan");
@@ -1048,5 +1057,53 @@ class ApiQuest extends Controller
         $result['details'] = $details;
 
         return MyHelper::checkGet($result, "Quest tidak ditemukan");
+    }
+
+    public function listDeals(Request $request)
+    {
+        $result = Deal::select('id_deals', 'deals_title')
+            ->where('deals_end', '<=', date('Y-m-d H:i:s'))
+            ->where('step_complete', '1')
+            ->get()
+            ->toArray();
+        return MyHelper::checkGet($result);
+    }
+
+    public function updateContent(Request $request)
+    {
+        $quest = Quest::find($request->id_quest);
+        if (!$quest) {
+            return MyHelper::checkGet([], '');
+        }
+        $quest->update([
+            'description' => $request->quest['description'],
+        ]);
+        $content_order = array_flip($request->content_order ?: []);
+        $id_contents = [];
+        foreach ($request->content ?: [] as $idx => $content) {
+            if ($content['id_quest_content'] ?? false) {
+                $quest_content = QuestContent::where('id_quest_content', $content['id_quest_content'])->update([
+                    'id_quest' => $quest->id_quest,
+                    'title' => $content['title'],
+                    'content' => $content['content'] ?: '',
+                    'is_active' => ($content['is_active'] ?? false) ? '1' : '0',
+                    'order' => ($content_order[$idx] ?? false) ? $content_order[$idx] + 1 : 0,
+                ]);
+                $id_contents[] = $content['id_quest_content'];
+            } else {
+                $quest_content = QuestContent::create([
+                    'id_quest' => $quest->id_quest,
+                    'title' => $content['title'],
+                    'content' => $content['content'] ?: '',
+                    'is_active' => ($content['is_active'] ?? false) ? '1' : '0',
+                    'order' => ($content_order[$idx] ?? false) ? $content_order[$idx] + 1 : 0,
+                ]);
+                $id_contents[] = $quest_content->id_quest_content;
+            }
+        }
+        QuestContent::where(['id_quest' => $quest->id_quest])->whereNotIn('id_quest_content', $id_contents)->delete();
+        return [
+            'status' => 'success'
+        ];
     }
 }

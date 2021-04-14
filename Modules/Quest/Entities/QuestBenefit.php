@@ -3,6 +3,7 @@
 namespace Modules\Quest\Entities;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Http\Models\Deal;
 
 class QuestBenefit extends Model
 {
@@ -16,4 +17,9 @@ class QuestBenefit extends Model
         'value',
         'id_deals'
     ];
+
+    public function deals()
+    {
+    	return $this->hasOne(Deal::class, 'id_deals');
+    }
 }

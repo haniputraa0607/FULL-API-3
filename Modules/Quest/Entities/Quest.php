@@ -23,10 +23,6 @@ class Quest extends Model
         'is_complete',
     ];
     
-    public function getIdQuestAttribute($value) {
-        return \App\Lib\MyHelper::encSlug($value);
-    }
-
     public function getImageUrlAttribute($value)
     {
         return $value ? env('STORAGE_URL_API') . $value : null;
@@ -34,7 +30,17 @@ class Quest extends Model
 
     public function quest_contents()
     {
-        return $this->hasMany(QuestContent::class, 'id_quest');
+        return $this->hasMany(QuestContent::class, 'id_quest')->orderBy('order');
+    }
+
+    public function quest_detail()
+    {
+        return $this->hasMany(QuestDetail::class, 'id_quest');
+    }
+
+    public function quest_benefit()
+    {
+        return $this->hasOne(QuestBenefit::class, 'id_quest');
     }
 
     public function getContentsAttribute()
