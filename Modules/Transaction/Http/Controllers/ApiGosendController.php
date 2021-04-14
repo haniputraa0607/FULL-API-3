@@ -186,21 +186,6 @@ class ApiGosendController extends Controller
                         $newTrx->update(['cashback_insert_status' => 1]);
                         $checkMembership = app($this->membership)->calculateMembership($user['phone']);
                         DB::commit();
-                        $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], [
-                            "outlet_name"      => $outlet['outlet_name'],
-                            'id_transaction'   => $trx->id_transaction,
-                            "id_reference"     => $trx->transaction_receipt_number . ',' . $trx->id_outlet,
-                            "transaction_date" => $trx->transaction_date,
-                            'order_id'         => $trx->order_id,
-                            'receipt_number'   => $trx->transaction_receipt_number,
-                        ]);
-                        if ($send != true) {
-                            // DB::rollback();
-                            return response()->json([
-                                'status'   => 'fail',
-                                'messages' => ['Failed Send notification to customer'],
-                            ]);
-                        }
                     }
                     $status = GoSend::getStatus($post['booking_id'], true);
                     $arrived_at = date('Y-m-d H:i:s', ($status['orderArrivalTime']??false)?strtotime($status['orderArrivalTime']):time());
