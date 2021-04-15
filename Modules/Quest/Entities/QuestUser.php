@@ -14,6 +14,7 @@ class QuestUser extends Model
         'id_quest',
         'id_quest_detail',
         'id_user',
+        'is_done',
         'json_rule',
         'json_rule_enc',
         'date'

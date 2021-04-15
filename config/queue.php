@@ -48,6 +48,13 @@ return [
             'retry_after' => 90,
         ],
 
+        'quest' => [
+            'driver' => 'database',
+            'table' => 'questjobs',
+            'queue' => 'default',
+            'retry_after' => 90,
+        ],
+
         'fraudqueue' => [
             'driver' => 'database',
             'table' => 'fraud_queue',
