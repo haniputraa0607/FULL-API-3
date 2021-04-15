@@ -15,6 +15,7 @@ use Modules\Brand\Entities\BrandOutlet;
 use Modules\Brand\Entities\BrandProduct;
 use App\Lib\MyHelper;
 use DB;
+use Illuminate\Support\Facades\Route;
 
 class ApiBrandController extends Controller
 {
@@ -192,8 +193,14 @@ class ApiBrandController extends Controller
 
     public function listBrand(Request $request)
     {
+        $currentPath= Route::getFacadeRoot()->current()->uri();
         $post = $request->json()->all();
-        $brand = Brand::select('id_brand','brand_active', 'name_brand', 'logo_brand', 'image_brand')->where('brand_visibility' , 1)->orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
+        $brand = Brand::select('id_brand','brand_active', 'name_brand', 'logo_brand', 'image_brand')->orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
+
+        if(strpos($currentPath, 'be') === false){
+            $brand = $brand->where('brand_visibility' , 1);
+        }
+
         if($request->json('active')){
             $brand->where('brand_active',1);
         }
