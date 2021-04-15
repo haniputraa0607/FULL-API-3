@@ -1249,7 +1249,7 @@ Message :
                 'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => NULL,
                 'autocrm_forward_email_content' => NULL,
-                'custom_text_replace'=>'%receipt_number%;%outlet_code%;%outlet_name%;%delivery_status%;%order_id%;',
+                'custom_text_replace'=>'%receipt_number%;%outlet_code%;%outlet_name%;%delivery_status_title%;%delivery_status_content%;%order_id%;',
                 'created_at' => '2020-04-13 13:53:17',
                 'updated_at' => '2020-04-13 15:02:20',
             ),

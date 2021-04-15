@@ -740,21 +740,23 @@ class ApiOutletApp extends Controller
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['receive_at' => date('Y-m-d H:i:s')]);
 
         if ($pickup) {
-            //send notif to customer
-            $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], [
-                "outlet_name"      => $outlet['outlet_name'],
-                'id_transaction'   => $order->id_transaction,
-                "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
-                "transaction_date" => $order->transaction_date,
-                'order_id'         => $order->order_id,
-                'receipt_number'   => $order->transaction_receipt_number,
-            ]);
-            if ($send != true) {
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['Failed Send notification to customer'],
+           //send notif to customer only for pickup
+            if ($order->pickup_by == 'Customer') {
+                $user = User::find($order->id_user);
+                $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], [
+                    "outlet_name"      => $outlet['outlet_name'],
+                    'id_transaction'   => $order->id_transaction,
+                    "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
+                    "transaction_date" => $order->transaction_date,
+                    'order_id'         => $order->order_id,
+                    'receipt_number'   => $order->transaction_receipt_number,
                 ]);
+                if ($send != true) {
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Failed Send notification to customer'],
+                    ]);
+                }
             }
             $result = ['status' => 'success'];
 
