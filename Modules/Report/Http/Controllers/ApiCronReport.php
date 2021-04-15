@@ -722,8 +722,8 @@ class ApiCronReport extends Controller
                         AND transactions.id_outlet = "'. $outlet .'"
                         AND transaction_payment_status = "Completed"
                         AND transaction_pickups.reject_at IS NULL
-                        GROUP BY transaction_products.id_product, products.id_product_category, transaction_products.id_product_variant_group, transaction_products.id_brand
-                        ORDER BY transaction_products.id_product ASC
+                        GROUP BY trx_date, transaction_products.id_product, products.id_product_category, transaction_products.id_product_variant_group, transaction_products.id_brand
+                        ORDER BY trx_date asc, transaction_products.id_product ASC
                     '));
 
             if (!empty($product)) {
