@@ -760,8 +760,8 @@ class ApiAutoCrm extends Controller
 				$variables['pin'] = substr($variables['pin'], 0, 3).'-'.substr($variables['pin'], 3, 3);
 			}
 
-            if(isset($variables['pin_franchise'])){
-                $variables['pin'] = $variables['pin_franchise'];
+            if(isset($variables['password'])){
+                $variables['pin'] = $variables['password'];
             }
 
 			//add numeric separator to point
