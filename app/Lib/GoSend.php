@@ -268,7 +268,9 @@ class GoSend
                 $trx->update(['show_rate_popup' => '1']);
             }
             $outlet  = Outlet::where('id_outlet', $trx->id_outlet)->first();
-            $phone   = User::select('phone')->where('id', $trx->id_user)->pluck('phone')->first();
+            $user = User::where('id', $trx->id_user)->first();
+            $phone = $user['phone'];
+            $userName = $user['name'];
             $dataPush = [
                 'type' => 'trx',
                 'subject' => 'Info Pesanan Delivery',
@@ -283,23 +285,33 @@ class GoSend
             $delivery_status = ($ref_status2[$dataUpdate['status']] ?? $dataUpdate['status']);
 
             $replacer = [
-                'confirmed'             => 'Pesanan nomor ('.$trx->transaction_receipt_number.') sudah diterima dan sedang diproses oleh jilid',
-                'out_for_pickup'        => 'Tunggu sebentar ya, driver mu sedang menuju ke jilid',
-                'out_for_delivery'      => 'Menu favoritmu sedang diantar oleh driver',
-                'cancelled'             => 'Maaf, pesananmu tidak dapat diambil oleh jilid',
-                'delivered'             => 'Pesananmu sudah sampai! Selamat menikmati',
-                'no_driver'             => 'Belum berhasil menemukan driver',
+                'confirmed'             => 'Pesanan Diterima!',
+                'out_for_pickup'        => 'Driver-mu sedang menuju ke outlet',
+                'out_for_delivery'      => 'Pesanan sedang diantar ke tempatmu!',
+                'cancelled'             => 'Pesananmu tidak dapat diambil oleh driver',
+                'delivered'             => 'Terima kasih sudah pesan di JIWA+!',
+                'no_driver'             => 'Driver belum berhasil ditemukan',
+            ];
+            $replacer_content = [
+                'confirmed'             => 'Mohon tunggu, pesanan sedang dipersiapkan',
+                'out_for_pickup'        => '',
+                'out_for_delivery'      => '',
+                'cancelled'             => 'Mohon tunggu konfirmasi dari outlet',
+                'delivered'             => 'Selamat menikmati Kak %name%',
+                'no_driver'             => 'Mohon tunggu konfirmasi dari outlet',
             ];
             if($replacer[$delivery_status] ?? false) {
                 $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
                     [
-                        'id_reference'    => $trx->id_transaction,
-                        'id_transaction'    => $trx->id_transaction,
-                        'receipt_number'  => $trx->transaction_receipt_number,
-                        'outlet_code'     => $outlet->outlet_code,
-                        'outlet_name'     => $outlet->outlet_name,
-                        'delivery_status' => $replacer[$delivery_status] ?? $delivery_status,
-                        'order_id'        => $trx_pickup->order_id,
+                        'id_reference'              => $trx->id_transaction,
+                        'id_transaction'            => $trx->id_transaction,
+                        'receipt_number'            => $trx->transaction_receipt_number,
+                        'outlet_code'               => $outlet->outlet_code,
+                        'outlet_name'               => $outlet->outlet_name,
+                        'delivery_status_title'     => $replacer[$delivery_status] ?? $delivery_status,
+                        'delivery_status_content'   => $replacer_content[$delivery_status] ?? $delivery_status,
+                        'order_id'                  => $trx_pickup->order_id,
+                        'name'                      => ucwords($userName)
                     ]
                 );                
             }
