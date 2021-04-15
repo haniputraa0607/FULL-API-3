@@ -252,12 +252,12 @@ class ApiReportDisburseController extends Controller
                         total_fee_item as "Total Fee Item", total_payment_charge as "Total MDR PG"')
                         ->get()->toArray();
                 }else{
-                    $data = $data->selectRaw('disburse_status as "Disburse Status", error_message as "Error Message", bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", disburse_outlet.disburse_nominal as "Nominal Disburse",
+                    $data = $data->selectRaw('disburse_status as "Disburse Status", bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", disburse_outlet.disburse_nominal as "Nominal Disburse",
                         total_fee_item as "Total Fee Item", total_payment_charge as "Total MDR PG"')
                         ->get()->toArray();
                 }
             }else{
-                $data = $data->select('disburse.disburse_status', 'disburse.created_at as disburse_date', 'disburse.error_message', 'disburse.reference_no', 'disburse_outlet.*', 'disburse.beneficiary_name', 'disburse.beneficiary_account_number', 'bank_name.bank_name')->orderBy('disburse.'.$order, $orderType)->paginate(30);
+                $data = $data->select('disburse.disburse_status', 'disburse.created_at as disburse_date', 'disburse.reference_no', 'disburse_outlet.*', 'disburse.beneficiary_name', 'disburse.beneficiary_account_number', 'bank_name.bank_name')->orderBy('disburse.'.$order, $orderType)->paginate(30);
             }
 
             return response()->json(MyHelper::checkGet($data));
