@@ -16,6 +16,7 @@ class QuestProductLog extends Model
         'id_user',
         'id_transaction',
         'id_product',
+        'id_product_category',
         'product_total',
         'product_nominal',
         'date',

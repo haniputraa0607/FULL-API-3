@@ -4,19 +4,18 @@ namespace Modules\Quest\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 
-class QuestOutletLog extends Model
+class QuestTransactionLog extends Model
 {
-    protected $table = 'quest_outlet_logs';
-
-    protected $primaryKey = 'id_quest_outlet_log';
+    protected $primaryKey = 'id_quest_transaction_log';
 
     protected $fillable = [
         'id_quest',
         'id_quest_detail',
         'id_user',
+        'id_transaction',
         'id_outlet',
-        'id_transactions',
-        'count',
+        'transaction_total',
+        'transaction_nominal',
         'date',
         'enc'
     ];

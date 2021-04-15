@@ -14,6 +14,7 @@ class QuestContent extends Model
         'id_quest',
         'title',
         'content',
-        'order'
+        'order',
+        'is_active'
     ];
 }
