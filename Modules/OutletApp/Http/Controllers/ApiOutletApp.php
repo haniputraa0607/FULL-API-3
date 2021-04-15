@@ -955,7 +955,7 @@ class ApiOutletApp extends Controller
         }
 
         $order->save();
-        if ($pickup && $order->pickup_by == 'Customer') {
+        if ($pickup) {
             //send notif to customer
             $user = User::find($order->id_user);
             $send = app($this->autocrm)->SendAutoCRM($order->pickup_by == 'Customer'?'Order Taken':'Order Taken By Driver', $user['phone'], [
@@ -974,11 +974,11 @@ class ApiOutletApp extends Controller
                 ]);
             }
 
+            AchievementCheck::dispatch(['id_transaction' => $order->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
 
 
+            DB::commit();
         }
-        AchievementCheck::dispatch(['id_transaction' => $order->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
-        DB::commit();
 
         return response()->json(MyHelper::checkUpdate($pickup));
     }
