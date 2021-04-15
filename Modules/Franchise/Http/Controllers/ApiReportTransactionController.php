@@ -144,9 +144,9 @@ class ApiReportTransactionController extends Controller
                         AND DATE(transaction_date) = '$date'
                 GROUP BY DATE(transaction_date) , transaction_products.id_product , transaction_products.id_product_variant_group) as daily_report_trx_menu
             "))
-                ->select('product_name', \DB::raw('SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(product_variants.product_variant_name) as variant_name, name_brand, product_category_name'));
+                ->select('product_name', \DB::raw('COUNT(DISTINCT product_variants.product_variant_name) as total_variant, SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(DISTINCT(product_variants.product_variant_name)) as variant_name, name_brand, product_category_name'));
         } else {
-            $result = DailyReportTrxMenu::select('product_name', \DB::raw('SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(product_variants.product_variant_name) as variant_name, name_brand, product_category_name'));
+            $result = DailyReportTrxMenu::select('product_name', \DB::raw('COUNT(DISTINCT product_variants.product_variant_name) as total_variant, SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(DISTINCT(product_variants.product_variant_name)) as variant_name, name_brand, product_category_name'));
         }
         $result->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
             ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
