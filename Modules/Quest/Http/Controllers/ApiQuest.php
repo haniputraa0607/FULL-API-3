@@ -1161,4 +1161,17 @@ class ApiQuest extends Controller
         $update = $quest->quest_benefit->update($toUpdate);
         return MyHelper::checkUpdate($update);
     }
+
+    public function start(Request $request)
+    {
+        $quest = Quest::with('quest_benefit')->find($request->id_quest);
+        if (!$quest) {
+            return MyHelper::checkGet([], 'Quest tidak ditemukan');
+        }
+        if ($quest->is_complete) {
+            return MyHelper::checkGet([], 'Quest not editable');
+        }
+        $update = $quest->update(['is_complete' => 1]);
+        return MyHelper::checkUpdate($update);
+    }
 }

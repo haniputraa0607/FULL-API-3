@@ -24,6 +24,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::any('detail', 'ApiQuest@show');
     Route::any('detail/update', 'ApiQuest@update');
     Route::any('destroy', 'ApiQuest@destroy');
+    Route::post('start', 'ApiQuest@start');
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'prefix' => 'quest'], function () {
