@@ -187,7 +187,15 @@ class ApiReportTransactionController extends Controller
         }
 
         if ($request->page) {
-            $result = $result->paginate($request->length ?: 15)->toArray();
+            // to support return all rows
+            $request_length = $request->length ?: 15;
+            if ($request_length == -1) {
+                $results = $result->get();
+                $result = (new \Illuminate\Pagination\LengthAwarePaginator($results, $results->count(), -1))->toArray();
+            } else {
+                $result = $result->paginate($request_length)->toArray();
+            }
+
             if (is_null($countTotal)) {
                 $countTotal = $result['total'];
             }
@@ -407,7 +415,15 @@ class ApiReportTransactionController extends Controller
         }
 
         if ($request->page) {
-            $result = $result->paginate($request->length ?: 15)->toArray();
+            // to support return all rows
+            $request_length = $request->length ?: 15;
+            if ($request_length == -1) {
+                $results = $result->get();
+                $result = (new \Illuminate\Pagination\LengthAwarePaginator($results, $results->count(), -1))->toArray();
+            } else {
+                $result = $result->paginate($request_length)->toArray();
+            }
+
             if (is_null($countTotal)) {
                 $countTotal = $result['total'];
             }
