@@ -137,6 +137,25 @@ class ApiQuest extends Controller
                 ]);
             }
         }
+
+        QuestContent::insert([
+            [
+                'id_quest' => $quest->id_quest,
+                'title' => 'Terms and Condition',
+                'content' => '',
+                'order' => 1,
+                'is_active' => 0,
+                'created_at' => date('Y-m-d H:i:s')
+            ],
+            [
+                'id_quest' => $quest->id_quest,
+                'title' => 'Benefit',
+                'content' => '',
+                'order' => 2,
+                'is_active' => 0,
+                'created_at' => date('Y-m-d H:i:s')
+            ],
+        ]);
         
         // if (isset($post['quest']) && date('Y-m-d H:i', strtotime($post['quest']['date_start'])) <= date('Y-m-d H:i')) {
         //     $getUser = User::select('id')->get()->toArray();
