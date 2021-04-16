@@ -166,7 +166,7 @@ class Kernel extends ConsoleKernel
         /**
          * process refund shopeepay at 06:00
          */
-        // $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronRefund')->dailyAt('03:05');
+        $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronRefund')->dailyAt('03:05');
 
         /**
          * Check the status of Gosend which is not updated after 5 minutes
