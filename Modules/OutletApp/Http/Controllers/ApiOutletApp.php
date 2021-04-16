@@ -2367,6 +2367,7 @@ class ApiOutletApp extends Controller
 
         if ($trx_status == 'taken') {
             $data->where('transaction_payment_status', 'Completed')
+                ->whereNull('reject_at')
                 ->where(function ($query) {
                     $query->whereNotNull('taken_at')
                         ->orWhereNotNull('taken_by_system_at');
