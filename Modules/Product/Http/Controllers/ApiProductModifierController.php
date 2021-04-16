@@ -71,7 +71,7 @@ class ApiProductModifierController extends Controller
                 'messages' => ['Failed create product modifier'],
             ];
         }
-        if ($post['modifier_type'] == 'Specific') {
+        if ($post['modifier_type'] == 'Specific' || $post['modifier_type'] == 'Global Brand') {
             $id_product_modifier = $createe->id_product_modifier;
             if ($brands = ($post['id_brand'] ?? false)) {
                 foreach ($brands as $id_brand) {
