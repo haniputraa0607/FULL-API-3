@@ -1244,13 +1244,16 @@ class ApiPromoCampaign extends Controller
     				'last_updated_by' 	=> $request->user()->id,
     				'campaign_name' 	=> $request->campaign_name,
     				'promo_title' 		=> $request->promo_title,
-    				'date_start' 		=> $this->generateDate($request->date_start),
     				'date_end' 			=> $this->generateDate($request->date_end),
-    				'charged_central'	=> $request->charged_central,
-    				'charged_outlet' 	=> $request->charged_outlet,
-    				'brand_rule'		=> $request->brand_rule,
-    				'product_type'		=> $request->product_type
     			];
+
+    			if ($request->user()->level == 'Super Admin') {
+    				$data['date_start'] 		= $this->generateDate($request->date_start);
+    				$data['charged_central']	= $request->charged_central;
+    				$data['charged_outlet'] 	= $request->charged_outlet;
+    				$data['brand_rule']			= $request->brand_rule;
+    				$data['product_type']		= $request->product_type;
+    			}
 
     			$update = PromoCampaign::where('id_promo_campaign', $request->id_promo_campaign)->update($data);
 
@@ -1260,11 +1263,14 @@ class ApiPromoCampaign extends Controller
 	                }
 	                else{
 	                	$update = PromoCampaignHaveTag::where('id_promo_campaign', '=', $request->id_promo_campaign)->delete();
+	                	$update = true;
 	                }
 
-	                if ($request->id_brand) {
-			        	$update = $this->insertPromoCampaignBrand($request->id_promo_campaign, $request->id_brand);
-	                }
+	                if ($request->user()->level == 'Super Admin') {
+		                if ($request->id_brand) {
+				        	$update = $this->insertPromoCampaignBrand($request->id_promo_campaign, $request->id_brand);
+		                }
+		            }
     			}
 
     			break;
