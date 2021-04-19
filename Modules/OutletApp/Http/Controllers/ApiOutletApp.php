@@ -1408,7 +1408,22 @@ class ApiOutletApp extends Controller
         usort($result, function ($a, $b) {
             return $a['order_brand'] <=> $b['order_brand'];
         });
-        $modifiers = ProductModifier::select(\DB::raw('0 as id_brand, min(product_modifiers.id_product_modifier) as id_product_category, type as product_category_name, count(distinct(product_modifiers.id_product_modifier)) as total_product, 0 as total_sold_out'));
+        $modifiers = ProductModifier::select(\DB::raw('0 as id_brand, min(product_modifiers.id_product_modifier) as id_product_category, type as product_category_name, count(distinct(product_modifiers.id_product_modifier)) as total_product, 0 as total_sold_out'))
+            ->where('modifier_type', '<>', 'Modifier Group')
+            ->leftJoin('product_modifier_details', function($join) use ($outlet) {
+                $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+                    ->where('product_modifier_details.id_outlet', $outlet['id_outlet']);
+            })
+            ->where(function($q){
+                $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+            })
+            ->where(function($query){
+                $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
+                        ->orWhere(function($q){
+                            $q->whereNull('product_modifier_details.product_modifier_visibility')
+                            ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                        });
+            });
 
         if ($outlet['outlet_different_price']) {
             $modifiers->join('product_modifier_prices', function($join) use ($outlet) {
