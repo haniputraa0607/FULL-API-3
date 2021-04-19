@@ -1706,9 +1706,12 @@ class ApiTransactionFranchiseController extends Controller
 						                                })->whereNull('transaction_pickups.reject_at');
 				                            }
 				                            elseif($con['parameter'] == 'receive_at'){
-				                                $query = $query->where(function($q) use ($query_pending){
-						                                	$query_pending($q, 'orWhere');
-						                                })->whereNull('transaction_pickups.reject_at');
+				                                $query = $query->where(function($q) {
+							                                $q->whereNull('transaction_pickups.receive_at')
+						                            			->whereNull('transaction_pickups.ready_at')
+						                            			->whereNull('transaction_pickups.taken_at')
+						                            			->whereNull('transaction_pickups.taken_by_system_at');
+						                                });
 				                            }
 				                            elseif($con['parameter'] == 'ready_at'){
 				                                $query = $query->where(function($q) use ($query_receive_at, $query_pending){
