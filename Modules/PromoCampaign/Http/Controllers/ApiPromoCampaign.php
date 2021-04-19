@@ -815,12 +815,13 @@ class ApiPromoCampaign extends Controller
                 ]);
            	}
 
+           	/* prevent update promo when promo is used
            	if (!empty($checkData[0]['promo_campaign_reports'])) {
            		return response()->json([
                     'status'  => 'fail',
                     'messages'  => ['Cannot update promo, promo already used']
                 ]);
-           	}
+           	}*/
 
            	$del_rule 	= false;
            	$brand_now 	= array_column($checkData[0]['promo_campaign_brands'], 'id_brand');
@@ -1243,7 +1244,12 @@ class ApiPromoCampaign extends Controller
     				'last_updated_by' 	=> $request->user()->id,
     				'campaign_name' 	=> $request->campaign_name,
     				'promo_title' 		=> $request->promo_title,
-    				'date_end' 			=> $this->generateDate($request->date_end)
+    				'date_start' 		=> $this->generateDate($request->date_start),
+    				'date_end' 			=> $this->generateDate($request->date_end),
+    				'charged_central'	=> $request->charged_central,
+    				'charged_outlet' 	=> $request->charged_outlet,
+    				'brand_rule'		=> $request->brand_rule,
+    				'product_type'		=> $request->product_type
     			];
 
     			$update = PromoCampaign::where('id_promo_campaign', $request->id_promo_campaign)->update($data);
@@ -1254,6 +1260,10 @@ class ApiPromoCampaign extends Controller
 	                }
 	                else{
 	                	$update = PromoCampaignHaveTag::where('id_promo_campaign', '=', $request->id_promo_campaign)->delete();
+	                }
+
+	                if ($request->id_brand) {
+			        	$update = $this->insertPromoCampaignBrand($request->id_promo_campaign, $request->id_brand);
 	                }
     			}
 
