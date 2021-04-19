@@ -1546,6 +1546,7 @@ class ApiOutletApp extends Controller
             ->where(function($q){
                 $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
             })
+            ->where('modifier_type','<>','Modifier Group')
             ->where(function($query){
                 $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
                         ->orWhere(function($q){
