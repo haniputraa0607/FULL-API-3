@@ -724,7 +724,7 @@ class ApiQuest extends Controller
         $quest_masters = Quest::whereIn('quests.id_quest', $quests->pluck('id_quest'))
             ->get()
             ->each(function($quest) use ($transaction) {
-                $this->checkQuestCompleted($quest, $transaction->id_user);
+                $this->checkQuestCompleted($quest, $transaction->id_user, true);
             });
         return true;
     }
@@ -776,7 +776,7 @@ class ApiQuest extends Controller
         return true;
     }
 
-    public function checkQuestCompleted($quest, $id_user)
+    public function checkQuestCompleted($quest, $id_user, $auto = false)
     {
         if (is_numeric($quest)) {
             $quest = Quest::where('id_quest', $quest)->first();
@@ -800,6 +800,11 @@ class ApiQuest extends Controller
         $benefit =  QuestBenefit::where(['id_quest' => $quest->id_quest])->first();
         if (!$benefit) {
             goto flag;
+        }
+
+        if (!$benefit->autoclaim_benefit && $auto) {
+            // not autoclaim
+            return false;
         }
 
         $user = User::find($id_user);
@@ -1021,10 +1026,15 @@ class ApiQuest extends Controller
 
     public function claimBenefit(Request $request)
     {
+        $claim = $this->checkQuestCompleted($request->id_quest, $request->user()->id);
+
+        if ($claim) {
+            return ['status' => 'success'];
+        }
         return [
             'status' => 'fail',
             'messages' => [
-                'Fitur belum tersedia'
+                'Failed claim benefit'
             ],
         ];
     }
