@@ -997,7 +997,13 @@ class ApiQuest extends Controller
             ];
         }
         $questDetail = QuestDetail::where(['id_quest' => $quest->id_quest])->get();
-        $this->checkQuest($quest,$id_user, $questDetail);
+        $questDetail->each(function($detail) use ($id_user) {
+            QuestUser::updateOrCreate([
+                'id_quest' => $detail->id_quest,
+                'id_quest_detail' => $detail->id_quest_detail,
+                'id_user' => $id_user,
+            ]);
+        });
         return [
             'status' => 'success',
             'result' => [
