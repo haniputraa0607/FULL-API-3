@@ -106,7 +106,8 @@ class ApiConfirm extends Controller
                 }
                 $dataProductMidtrans = [
                     'id'       => $value['product_variant_group']['product_variant_group_code'] ?? $value['product']['product_code'],
-                    'price'    => abs($value['transaction_product_price']+$value['transaction_variant_subtotal']+$value['transaction_modifier_subtotal']-($value['transaction_product_discount']/$value['transaction_product_qty'])),
+                    // 'price'    => abs($value['transaction_product_price']+$value['transaction_variant_subtotal']+$value['transaction_modifier_subtotal']-($value['transaction_product_discount']/$value['transaction_product_qty'])),
+                    'price'    => abs($value['transaction_product_price']+$value['transaction_variant_subtotal']+$value['transaction_modifier_subtotal']),
                     // 'name'     => $value['product']['product_name'].($more_name_text?'('.trim($more_name_text,',').')':''), // name + modifier too long
                     'name'     => $value['product']['product_name'],
                     'quantity' => $value['transaction_product_qty'],
@@ -244,7 +245,8 @@ class ApiConfirm extends Controller
             }
         }
 
-        if ($check['transaction_discount'] != 0 && (($countGrandTotal + $payment_balance) < $totalPriceProduct)) {
+        // if ($check['transaction_discount'] != 0 && (($countGrandTotal + $payment_balance) < $totalPriceProduct)) {
+        if ($check['transaction_discount'] != 0) {
             $dataDis = [
                 'id'       => null,
                 'price'    => -abs($check['transaction_discount']),
