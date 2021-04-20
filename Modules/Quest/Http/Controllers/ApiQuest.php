@@ -1045,9 +1045,11 @@ class ApiQuest extends Controller
             $quests = $quests->get();
         }
 
-        $quests->each(function($item) {
+        $time_server = date('Y-m-d H:i:s');
+        $quests->each(function($item) use ($time_server) {
             $item->append(['progress']);
             $item->makeHidden(['date_start']);
+            $item->time_server = $time_server;
         });
 
         $result = $quests->toArray();
@@ -1057,7 +1059,7 @@ class ApiQuest extends Controller
     public function detail(Request $request)
     {
         $id_user = $request->user()->id;
-        $quest = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'date_start', 'date_end')
+        $quest = Quest::select('quests.id_quest', 'name', 'image as image_url', 'description', 'short_description', 'date_start', 'date_end')
             ->join('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
@@ -1065,10 +1067,10 @@ class ApiQuest extends Controller
             ->where('quests.id_quest', $request['id_quest'] ?? $request->id_quest)
             ->first();
         if (!$quest) {
-            return MyHelper::checkGet($result, "Quest tidak ditemukan");
+            return MyHelper::checkGet([], "Quest tidak ditemukan");
         }
         $quest->append(['progress', 'contents']);
-        $quest->makeHidden(['date_start', 'quest_contents']);
+        $quest->makeHidden(['date_start', 'quest_contents', 'description']);
         $result = $quest->toArray();
 
         $details = QuestUser::select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();

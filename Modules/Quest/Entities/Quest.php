@@ -46,7 +46,8 @@ class Quest extends Model
     public function getContentsAttribute()
     {
         $result = $this->quest_contents->toArray();
-        $result = QuestContent::where('id_quest', \App\Lib\MyHelper::decSlug($this->id_quest))
+        $result = QuestContent::where('id_quest', $this->id_quest)
+            ->select('title', 'content')
             ->where('is_active', 1)
             ->orderBy('order')
             ->get()
@@ -85,7 +86,7 @@ class Quest extends Model
 
     public function getProgressAttribute()
     {
-        $questUsers = QuestUser::where('id_quest', \App\Lib\MyHelper::decSlug($this->id_quest))->get();
+        $questUsers = QuestUser::where('id_quest', $this->id_quest)->get();
 
         $result = [
             'total' => $questUsers->count(),
