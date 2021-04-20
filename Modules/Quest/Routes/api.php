@@ -33,4 +33,5 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'pr
     Route::any('detail-apps', 'ApiQuest@detail');
     Route::any('take', 'ApiQuest@takeMission');
     Route::any('me', 'ApiQuest@me');
+    Route::any('status', 'ApiQuest@status');
 });

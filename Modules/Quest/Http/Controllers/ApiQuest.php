@@ -1215,4 +1215,34 @@ class ApiQuest extends Controller
         $update = $quest->update(['is_complete' => 1]);
         return MyHelper::checkUpdate($update);
     }
+
+    public function status(Request $request)
+    {
+        $myQuest = QuestUser::where([
+                'quest_users.id_user' => $request->user()->id
+            ])
+            ->leftJoin('quest_user_redemptions', function($join) {
+                $join->on('quest_user_redemptions.id_quest', 'quest_users.id_quest')
+                    ->whereColumn('quest_user_redemptions.id_user', 'quest_users.id_user');
+            })
+            ->where(function($query) {
+                $query->where('redemption_status', '<>', 1)
+                    ->orWhereNull('redemption_status');
+            })
+            ->groupBy('quest_users.id_quest')
+            ->count();
+        if ($myQuest) {
+            return [
+                'status' => 'success',
+                'result' => [
+                    'total_quest' => $myQuest,
+                ]
+            ];
+        } else {
+            return [
+                'status' => 'fail',
+                'messages' => ['Belum ada misi yang berjalan']
+            ];
+        }
+    }
 }
