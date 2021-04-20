@@ -389,13 +389,15 @@ class ApiCronTrxController extends Controller
     public function completeTransactionPickup(){
         $log = MyHelper::logCron('Complete Transaction Pickup');
         try {
-            $trxs = Transaction::whereDate('transaction_date', '=', date('Y-m-d'))
+            $trxs = Transaction::whereDate('transaction_date', '>=', date('Y-m-d', strtotime('yesterday')))
                 ->where('trasaction_type', 'Pickup Order')
                 ->join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
                 ->where('transaction_payment_status', 'Completed')
+                ->whereNotNull('receive_at')
                 ->whereNull('taken_at')
                 ->whereNull('reject_at')
                 ->whereNull('taken_by_system_at')
+                ->where('transaction_pickups.pickup_at', '<=', date('Y-m-d H:i:s'))
                 ->with('outlet')
                 ->get();
             $idTrx = [];
@@ -588,7 +590,7 @@ class ApiCronTrxController extends Controller
                 ->whereNull('reject_at')
                 ->whereNull('taken_by_system_at')
                 ->with('outlet')
-                ->whereDate('transactions.transaction_date',date('Y-m-d'))
+                ->whereDate('transactions.transaction_date', '>=', date('Y-m-d', strtotime('yesterday')))
                 ->where(function($query) use ($max_time) {
                     $query->where(function($query2) use ($max_time) {
                         $query2->whereNotNull('completed_at')->where('completed_at', '<', $max_time);
