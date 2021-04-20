@@ -596,6 +596,7 @@ class ApiQuest extends Controller
                 continue;
             }
 
+            \DB::beginTransaction();
             // outlet 
             if ($quest->id_outlet || $quest->different_outlet) {
                 $questLog = QuestOutletLog::where([
@@ -606,6 +607,7 @@ class ApiQuest extends Controller
                 ])->first();
                 if ($questLog) {
                     if ($transaction->created_at <= $questLog->date) {
+                        \DB::rollBack();
                         continue;
                     }
                     $questLog->update([
@@ -630,7 +632,7 @@ class ApiQuest extends Controller
                     $q->join('products', 'products.id_product', 'transaction_products.id_product');
                 }]);
                 foreach ($transaction->productTransaction as $transaction_product) {
-                    if ($quest->id_product == $transaction_product->id_product || $quest->id_product_category == $transaction_product->id_product_category || $quest->different_product_category || $quest->product_total) {
+                    if (($quest->id_product == $transaction_product->id_product && (!$quest->id_product_variant_group || $quest->id_product_variant_group == $transaction_product->id_product_variant_group)) || $quest->id_product_category == $transaction_product->id_product_category || $quest->different_product_category || $quest->product_total) {
                         $questLog = QuestProductLog::where([
                             'id_quest' => $quest->id_quest,
                             'id_quest_detail' => $quest->id_quest_detail,
@@ -641,6 +643,7 @@ class ApiQuest extends Controller
                         ])->first();
                         if ($questLog) {
                             if ($transaction->created_at <= $questLog->date) {
+                                \DB::rollBack();
                                 continue;
                             }
                             $questLog->update([
@@ -692,6 +695,7 @@ class ApiQuest extends Controller
                 ])->first();
                 if ($questLog) {
                     if ($transaction->created_at <= $questLog->date) {
+                        \DB::rollBack();
                         continue;
                     }
                     $questLog->update([
@@ -712,6 +716,7 @@ class ApiQuest extends Controller
                 }
             }
             $this->checkQuestDetailCompleted($quest);
+            \DB::commit();
         }
 
         $quest_masters = Quest::whereIn('quests.id_quest', $quests->pluck('id_quest'))
