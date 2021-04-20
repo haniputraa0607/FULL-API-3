@@ -21,6 +21,7 @@ class Quest extends Model
         'short_description',
         'description',
         'is_complete',
+        'autoclaim_quest',
     ];
     
     public function getImageUrlAttribute($value)

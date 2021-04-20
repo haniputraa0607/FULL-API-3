@@ -96,6 +96,7 @@ class ApiQuest extends Controller
                     'benefit_type' => 'point',
                     'value' => $quest_benefit['value'],
                     'id_deals' => null,
+                    'autoclaim_benefit' => $quest_benefit['autoclaim_benefit'] ?? 0
                 ]);
             } elseif ($quest_benefit['benefit_type'] == 'voucher') {
                 QuestBenefit::create([
@@ -103,6 +104,7 @@ class ApiQuest extends Controller
                     'benefit_type' => 'voucher',
                     'value' => $quest_benefit['value'],
                     'id_deals' => $quest_benefit['id_deals'],
+                    'autoclaim_benefit' => $quest_benefit['autoclaim_benefit'] ?? 0
                 ]);
             }
         }
