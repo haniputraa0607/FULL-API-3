@@ -15,7 +15,8 @@ class QuestBenefit extends Model
         'id_quest',
         'benefit_type',
         'value',
-        'id_deals'
+        'id_deals',
+        'autoclaim_benefit',
     ];
 
     public function deals()
