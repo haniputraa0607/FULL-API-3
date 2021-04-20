@@ -307,7 +307,11 @@ class ApiUserFranchiseController extends Controller
         }
 
         if(!empty($data)){
-            $data['id_outlet'] = UserFranchiseOultet::where('id_user_franchise' , $data['id_user_franchise'])->first()['id_outlet']??NULL;
+            $franchiseOutlet = UserFranchiseOultet::join('outlets', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
+                                ->where('id_user_franchise' , $data['id_user_franchise'])->first();
+            $data['id_outlet'] = $franchiseOutlet['id_outlet']??null;
+            $data['outlet_name'] = $franchiseOutlet['outlet_name']??null;
+            $data['outlet_code'] = $franchiseOutlet['outlet_code']??null;
         }
 
         return response()->json(MyHelper::checkGet($data));
