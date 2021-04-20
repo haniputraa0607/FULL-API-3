@@ -15,6 +15,7 @@ class QuestDetail extends Model
         'name',
         'short_description',
         'id_product',
+        'id_product_variant_group',
         'product_total',
         'trx_nominal',
         'trx_total',

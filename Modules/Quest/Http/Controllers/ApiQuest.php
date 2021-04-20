@@ -21,6 +21,7 @@ use Modules\Quest\Entities\QuestUser;
 use Modules\Quest\Entities\QuestUserLog;
 use Modules\Quest\Entities\QuestUserRedemption;
 use App\Http\Models\Deal;
+use App\Http\Models\Product;
 use Modules\Quest\Entities\QuestContent;
 
 use Modules\Quest\Http\Requests\StoreRequest;
@@ -56,17 +57,6 @@ class ApiQuest extends Controller
         $post = $request->json()->all();
 
         DB::beginTransaction();
-
-        $request->validate([
-            'quest.name'                    => 'required',
-            'quest.publish_start'           => 'required',
-            'quest.date_start'              => 'required',
-            // 'quest.description'             => 'required',
-            'quest.image'                   => 'required',
-            'detail.*.name'                 => 'required',
-            // 'detail.*.short_description'    => 'required',
-            'detail.*.logo_badge'           => 'required'
-        ]);
 
         $upload = MyHelper::uploadPhotoStrict($post['quest']['image'], $this->saveImage, 500, 500);
         
@@ -1072,6 +1062,7 @@ class ApiQuest extends Controller
         $quest->append(['progress', 'contents']);
         $quest->makeHidden(['date_start', 'quest_contents', 'description']);
         $result = $quest->toArray();
+        $result['date_end'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
 
         $details = QuestUser::select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
 
@@ -1085,6 +1076,22 @@ class ApiQuest extends Controller
         $result = Deal::select('id_deals', 'deals_title')
             ->where('deals_end', '<=', date('Y-m-d H:i:s'))
             ->where('step_complete', '1')
+            ->get()
+            ->toArray();
+        return MyHelper::checkGet($result);
+    }
+
+    public function listProduct(Request $request)
+    {
+        $result = Product::select('id_product', 'product_name')
+            ->with(['product_variant_group' => function($relation) {
+                $relation->select(
+                        'product_variant_groups.id_product',
+                        'product_variant_groups.id_product_variant_group', 
+                        \DB::raw('GROUP_CONCAT(product_variant_name) as product_variants')
+                    )
+                    ->groupBy('id_product_variant_group');
+            }])
             ->get()
             ->toArray();
         return MyHelper::checkGet($result);
