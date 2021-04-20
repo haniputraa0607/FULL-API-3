@@ -570,9 +570,9 @@ class ApiQuest extends Controller
     public function updateQuestProgress($id_transaction)
     {
         $transaction = Transaction::with(['productTransaction' => function($q) {
-                    $q->select('transaction_products.*', 'products.*', 'brand_products.id_product_category')
+                    $q->select('transaction_products.*', 'products.*', 'brand_product.id_product_category')
                         ->join('products', 'products.id_product', 'transaction_products.id_product')
-                        ->leftJoin('brand_products', 'products.id_product', 'brand_products.id_product');
+                        ->leftJoin('brand_product', 'products.id_product', 'brand_product.id_product');
                 }, 'outlet', 'outlet.city'])->find($id_transaction);
         if (!$transaction) {
             return false;
@@ -652,7 +652,7 @@ class ApiQuest extends Controller
                                 'date' => $transaction->created_at,
                             ]);
                         } else {
-                            $questLog = QuestOutletLog::create([
+                            $questLog = QuestProductLog::create([
                                 'id_quest' => $quest->id_quest,
                                 'id_quest_detail' => $quest->id_quest_detail,
                                 'id_user' => $transaction->id_user,
@@ -704,7 +704,7 @@ class ApiQuest extends Controller
                         'date' => $transaction->created_at,
                     ]);
                 } else {
-                    $questLog = QuestOutletLog::create([
+                    $questLog = QuestTransactionLog::create([
                         'id_quest' => $quest->id_quest,
                         'id_quest_detail' => $quest->id_quest_detail,
                         'id_user' => $transaction->id_user,
