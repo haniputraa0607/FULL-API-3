@@ -17,12 +17,10 @@ class StoreRequest extends FormRequest
             'quest.name'                       => 'required|string',
             'quest.publish_start'              => 'required|date',
             'quest.date_start'                 => 'required|date',
-            'quest.description'          => 'required|string',
             'quest.short_description'    => 'required|string',
             'quest.image'                => 'required|string',
             'detail.*.name'              => 'required|string',
             'detail.*.short_description' => 'required|string',
-            'detail.*.logo_badge'        => 'required|string',
         ];
     }
 
