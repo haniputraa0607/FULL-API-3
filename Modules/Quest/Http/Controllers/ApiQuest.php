@@ -616,9 +616,33 @@ class ApiQuest extends Controller
                 continue;
             }
 
+            $quest_rule = $quest->quest_rule;
+            if (!$quest_rule) {
+                if ($quest->different_outlet) {
+                    $quest_rule = 'total_outlet';
+                } elseif ($quest->different_province) {
+                    $quest_rule = 'total_province';
+                } elseif ($quest->trx_total) {
+                    $quest_rule = 'total_transaction';
+                } elseif ($quest->id_product && $quest->product_total) {
+                    $quest_rule = 'total_product';
+                } else {
+                    $quest_rule = 'nominal_transaction';
+                }
+            }
+
             \DB::beginTransaction();
             // outlet 
             try {
+                // check absolute rule
+                if (
+                    ($quest_rule !== 'nominal_transaction' && $transaction->transaction_grandtotal < ($quest->trx_nominal ?: 0)) ||
+                    ($quest_rule !== 'total_product' && $transaction->productTransaction->count() < ($quest->product_total ?: 0))
+                ) {
+                    \DB::rollBack();
+                    continue;
+                }
+
                 if ($quest->id_outlet || $quest->different_outlet) {
                     $questLog = QuestOutletLog::where([
                         'id_quest' => $quest->id_quest,
@@ -712,7 +736,7 @@ class ApiQuest extends Controller
                 }
 
                 // transaction
-                if ($quest->id_trx_nominal || $quest->trx_total) {
+                if ($quest->trx_nominal || $quest->trx_total) {
                     $questLog = QuestTransactionLog::where([
                         'id_quest' => $quest->id_quest,
                         'id_quest_detail' => $quest->id_quest_detail,
