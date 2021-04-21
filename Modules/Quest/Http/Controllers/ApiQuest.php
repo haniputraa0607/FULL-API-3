@@ -1012,9 +1012,24 @@ class ApiQuest extends Controller
      * @param int $id
      * @return Response
      */
-    public function destroy($id)
+    public function destroy(Request $request)
     {
-        //
+        if ($request->id_quest_detail) {
+            $quest = QuestDetail::where(['id_quest_detail' => $request->id_quest_detail])->join('quests', 'quest_details.id_quest', 'quests.id_quest')->first();
+        } else {
+            $quest = Quest::find($request->id_quest);
+        }
+        if (!$quest) {
+            return MyHelper::checkGet($quest);
+        }
+        if ($quest->is_complete) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Quest cannot be deleted']
+            ];
+        }
+        $delete = $quest->delete();
+        return MyHelper::checkDelete($delete);
     }
 
     public function list(Request $request)
