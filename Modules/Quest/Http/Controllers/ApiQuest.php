@@ -1193,7 +1193,7 @@ class ApiQuest extends Controller
         $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
         $result['time_server'] = date('Y-m-d H:i:s');
 
-        $details = QuestUser::select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
+        $details = QuestUser::where(['quest_users.id_quest' => $quest->id_quest])->select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
 
         $result['details'] = $details;
 
