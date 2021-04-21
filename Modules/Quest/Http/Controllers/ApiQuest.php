@@ -937,7 +937,22 @@ class ApiQuest extends Controller
 
         DB::beginTransaction();
         try {
-            QuestDetail::where('id_quest_detail', $post['id_quest_detail'])->update($post);
+            QuestDetail::where('id_quest_detail', $post['id_quest_detail'])->update([
+                'name' => $post['name'] ?? '',
+                'short_description' => $post['short_description'] ?? '',
+                'quest_rule' => $post['quest_rule'] ?? null,
+                'id_product' => $post['id_product'] ?? null,
+                'id_product_variant_group' => $post['id_product_variant_group'] ?? null,
+                'product_total' => $post['product_total'] ?? null,
+                'trx_nominal' => $post['trx_nominal'] ?? null,
+                'trx_total' => $post['trx_total'] ?? null,
+                'id_product_category' => $post['id_product_category'] ?? null,
+                'id_outlet' => $post['id_outlet'] ?? null,
+                'id_province' => $post['id_province'] ?? null,
+                'different_category_product' => $post['different_product_category'] ?? null,
+                'different_outlet' => $post['different_outlet'] ?? null,
+                'different_province' => $post['different_province'] ?? null
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
