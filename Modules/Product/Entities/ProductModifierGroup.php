@@ -10,6 +10,7 @@ class ProductModifierGroup extends Model
     public $primaryKey = 'id_product_modifier_group';
     protected $fillable = [
         'product_modifier_group_name',
+        'product_modifier_group_order',
         'created_at',
         'updated_at'
     ];

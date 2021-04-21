@@ -27,7 +27,11 @@ class ApiProductModifierGroupController extends Controller
     public function index(Request $request)
     {
         $post   = $request->json()->all();
-        $modifier_group = ProductModifierGroup::with(['product_modifier_group_pivots', 'product_modifier']);
+        $modifier_group = ProductModifierGroup::orderBy('product_modifier_group_order', 'asc');
+
+        if(!isset($post['order_position'])){
+            $modifier_group = $modifier_group->with(['product_modifier_group_pivots', 'product_modifier']);
+        }
 
         if(isset($post['id_product_modifier_group']) && !empty($post['id_product_modifier_group'])){
             $modifier_group = $modifier_group->where('id_product_modifier_group', $post['id_product_modifier_group'])->first();
@@ -744,5 +748,22 @@ class ApiProductModifierGroupController extends Controller
         }
         $response = array_merge($response,$result['more_msg_extended']);
         return MyHelper::checkGet($response);
+    }
+
+    public function positionAssign(Request $request){
+        $post = $request->json()->all();
+
+        if (!isset($post['modifier_group_ids'])) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Product modifier group id is required']
+            ];
+        }
+        // update position
+        foreach ($post['modifier_group_ids'] as $key => $id) {
+            $update = ProductModifierGroup::find($id)->update(['product_modifier_group_order'=>$key+1]);
+        }
+
+        return ['status' => 'success'];
     }
 }
