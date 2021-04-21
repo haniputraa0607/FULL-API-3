@@ -794,25 +794,27 @@ class ApiQuest extends Controller
         return true;
     }
 
-    public function checkQuestCompleted($quest, $id_user, $auto = false)
+    public function checkQuestCompleted($quest, $id_user, $auto = false, &$errors = [])
     {
         if (is_numeric($quest)) {
             $quest = Quest::where('id_quest', $quest)->first();
         }
 
         if (!$quest) {
+            $errors[] = 'Quest tidak';
             return false;
         }
 
         $questIncomplete = QuestUser::where(['is_done' => 0, 'id_quest' => $quest->id_quest, 'id_user' => $id_user])->exists();
         if ($questIncomplete) {
+            $errors[] = 'Quest belum selesai';
             return false;
         }
 
         $redemption = QuestUserRedemption::where(['id_quest' => $quest->id_quest, 'id_user' => $id_user, 'redemption_status' => 1])->first();
         if ($redemption) {
-            // sudah mendapat benefit
-            return true;
+            $errors[] = 'Hadiah sudah di klaim';
+            return false;
         }
 
         $benefit =  QuestBenefit::where(['id_quest' => $quest->id_quest])->first();
@@ -1059,14 +1061,14 @@ class ApiQuest extends Controller
 
     public function claimBenefit(Request $request)
     {
-        $claim = $this->checkQuestCompleted($request->id_quest, $request->user()->id);
+        $claim = $this->checkQuestCompleted($request->id_quest, $request->user()->id, false, $errors);
 
         if ($claim) {
             return ['status' => 'success'];
         }
         return [
             'status' => 'fail',
-            'messages' => [
+            'messages' => $errors ?? [
                 'Failed claim benefit'
             ],
         ];
@@ -1075,7 +1077,7 @@ class ApiQuest extends Controller
     public function me(Request $request)
     {
         $id_user = $request->user()->id;
-        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'date_start', 'date_end')
+        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'date_start', 'date_end', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
             ->where('is_complete', 1)
             ->where('publish_start', '<=', date('Y-m-d H:i:s'))
             ->where('publish_end', '>=', date('Y-m-d H:i:s'))
@@ -1083,6 +1085,10 @@ class ApiQuest extends Controller
             ->join('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
+            })
+            ->leftJoin('quest_user_redemptions', function($join) {
+                $join->on('quest_user_redemptions.id_quest', 'quest_users.id_quest')
+                    ->whereColumn('quest_user_redemptions.id_user', 'quest_users.id_user');
             });
 
         if ($request->page) {
@@ -1106,10 +1112,14 @@ class ApiQuest extends Controller
     public function detail(Request $request)
     {
         $id_user = $request->user()->id;
-        $quest = Quest::select('quests.id_quest', 'name', 'image as image_url', 'description', 'short_description', 'date_start', 'date_end')
+        $quest = Quest::select('quests.id_quest', 'name', 'image as image_url', 'description', 'short_description', 'date_start', 'date_end', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
             ->join('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
+            })
+            ->leftJoin('quest_user_redemptions', function($join) {
+                $join->on('quest_user_redemptions.id_quest', 'quest_users.id_quest')
+                    ->whereColumn('quest_user_redemptions.id_user', 'quest_users.id_user');
             })
             ->where('quests.id_quest', $request['id_quest'] ?? $request->id_quest)
             ->first();
@@ -1263,18 +1273,18 @@ class ApiQuest extends Controller
 
     public function status(Request $request)
     {
-        $myQuest = QuestUser::where([
-                'quest_users.id_user' => $request->user()->id
-            ])
-            ->leftJoin('quest_user_redemptions', function($join) {
-                $join->on('quest_user_redemptions.id_quest', 'quest_users.id_quest')
-                    ->whereColumn('quest_user_redemptions.id_user', 'quest_users.id_user');
+        $id_user = $request->user()->id;
+        $myQuest = Quest::leftJoin('quest_user_redemptions', function($join) use ($id_user) {
+                $join->on('quest_user_redemptions.id_quest', 'quests.id_quest')
+                    ->where('quest_user_redemptions.id_user', $id_user);
             })
+            ->where('is_complete', 1)
             ->where(function($query) {
                 $query->where('redemption_status', '<>', 1)
                     ->orWhereNull('redemption_status');
             })
-            ->groupBy('quest_users.id_quest')
+            ->where('publish_start', '<=', date('Y-m-d H:i:s'))
+            ->where('publish_end', '>=', date('Y-m-d H:i:s'))
             ->count();
         if ($myQuest) {
             return [
