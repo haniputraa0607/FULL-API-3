@@ -790,7 +790,7 @@ class ApiQuest extends Controller
             }
         }
 
-        QuestUser::where(['id_quest_user' => $questDetail->id_quest_user])->update(['done' => 1, 'date' => date('Y-m-d H:i:s')]);
+        QuestUser::where(['id_quest_user' => $questDetail->id_quest_user])->update(['is_done' => 1, 'date' => date('Y-m-d H:i:s')]);
         return true;
     }
 
