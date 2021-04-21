@@ -173,6 +173,24 @@ class ApiQuest extends Controller
             ]);
         }
     }
+
+    public function storeQuestDetail(Request $request)
+    {
+        $quest = Quest::find($request->id_quest);
+        if (!$quest) {
+            return MyHelper::checkGet($quest);
+        }
+
+        if ($quest->is_complete) {
+            return MyHelper::checkGet($quest, ['Quest not editable']);
+        }
+        foreach ($request->detail as $detail) {
+            $detail['id_quest'] = $quest->id_quest;
+            $create = QuestDetail::create($detail);
+        }
+        return MyHelper::checkCreate($create);
+    }
+
     public function checkQuest($quest, $idUser, $detailQuest)
     {
         $questPassed = 0;
