@@ -618,125 +618,137 @@ class ApiQuest extends Controller
 
             \DB::beginTransaction();
             // outlet 
-            if ($quest->id_outlet || $quest->different_outlet) {
-                $questLog = QuestOutletLog::where([
-                    'id_quest' => $quest->id_quest,
-                    'id_quest_detail' => $quest->id_quest_detail,
-                    'id_user' => $transaction->id_user,
-                    'id_outlet' => $transaction->id_outlet,
-                ])->first();
-                if ($questLog) {
-                    if ($transaction->created_at <= $questLog->date) {
-                        \DB::rollBack();
-                        continue;
-                    }
-                    $questLog->update([
-                        'count' => $questLog->count+1,
-                        'date' => $transaction->created_at,
-                    ]);
-                } else {
-                    $questLog = QuestOutletLog::create([
+            try {
+                if ($quest->id_outlet || $quest->different_outlet) {
+                    $questLog = QuestOutletLog::where([
                         'id_quest' => $quest->id_quest,
                         'id_quest_detail' => $quest->id_quest_detail,
                         'id_user' => $transaction->id_user,
                         'id_outlet' => $transaction->id_outlet,
-                        'count' => 1,
-                        'date' => $transaction->created_at,
-                    ]);
-                }
-            }
-
-            // product
-            if ($quest->id_product_category || $quest->different_product_category || $quest->id_product || $quest->product_total) {
-                $transaction->load(['productTransaction' => function($q) {
-                    $q->join('products', 'products.id_product', 'transaction_products.id_product');
-                }]);
-                foreach ($transaction->productTransaction as $transaction_product) {
-                    if (($quest->id_product == $transaction_product->id_product && (!$quest->id_product_variant_group || $quest->id_product_variant_group == $transaction_product->id_product_variant_group)) || $quest->id_product_category == $transaction_product->id_product_category || $quest->different_product_category || $quest->product_total) {
-                        $questLog = QuestProductLog::where([
+                    ])->first();
+                    if ($questLog) {
+                        if ($transaction->created_at <= $questLog->date) {
+                            \DB::rollBack();
+                            continue;
+                        }
+                        $questLog->update([
+                            'count' => $questLog->count+1,
+                            'date' => $transaction->created_at,
+                        ]);
+                    } else {
+                        $questLog = QuestOutletLog::create([
                             'id_quest' => $quest->id_quest,
                             'id_quest_detail' => $quest->id_quest_detail,
                             'id_user' => $transaction->id_user,
-                            'id_transaction' => $transaction->id_transaction,
-                            'id_product' => $transaction_product->id_product,
-                            'id_product_category' => $transaction_product->id_product_category,
-                        ])->first();
-                        if ($questLog) {
-                            if ($transaction->created_at <= $questLog->date) {
-                                \DB::rollBack();
-                                continue;
-                            }
-                            $questLog->update([
-                                'product_total' => $questLog->product_total + $transaction_product->transaction_product_qty,
-                                'product_nominal' => $questLog->product_total + ($transaction_product->transaction_product_subtotal - $transaction_product->transaction_product_discount_all),
-                                'date' => $transaction->created_at,
-                            ]);
-                        } else {
-                            $questLog = QuestProductLog::create([
+                            'id_outlet' => $transaction->id_outlet,
+                            'count' => 1,
+                            'date' => $transaction->created_at,
+                        ]);
+                    }
+                }
+
+                // product
+                if ($quest->id_product_category || $quest->different_product_category || $quest->id_product || $quest->product_total) {
+                    $transaction->load(['productTransaction' => function($q) {
+                        $q->join('products', 'products.id_product', 'transaction_products.id_product');
+                    }]);
+                    $has_product = 0;
+                    foreach ($transaction->productTransaction as $transaction_product) {
+                        if (($quest->id_product == $transaction_product->id_product && (!$quest->id_product_variant_group || $quest->id_product_variant_group == $transaction_product->id_product_variant_group)) || $quest->id_product_category == $transaction_product->id_product_category || $quest->different_product_category || $quest->product_total) {
+                            $questLog = QuestProductLog::where([
                                 'id_quest' => $quest->id_quest,
                                 'id_quest_detail' => $quest->id_quest_detail,
                                 'id_user' => $transaction->id_user,
                                 'id_transaction' => $transaction->id_transaction,
                                 'id_product' => $transaction_product->id_product,
+                                'id_product_variant_group' => $transaction_product->id_product_variant_group,
                                 'id_product_category' => $transaction_product->id_product_category,
-                                'product_total' => $transaction_product->transaction_product_qty,
-                                'product_nominal' => ($transaction_product->transaction_product_subtotal - $transaction_product->transaction_product_discount_all),
-                                'date' => $transaction->created_at,
-                            ]);
+                            ])->first();
+                            if ($questLog) {
+                                if ($transaction->created_at <= $questLog->date) {
+                                    continue;
+                                }
+                                $questLog->update([
+                                    'product_total' => $questLog->product_total + $transaction_product->transaction_product_qty,
+                                    'product_nominal' => $questLog->product_total + ($transaction_product->transaction_product_subtotal - $transaction_product->transaction_product_discount_all),
+                                    'date' => $transaction->created_at,
+                                ]);
+                            } else {
+                                $questLog = QuestProductLog::create([
+                                    'id_quest' => $quest->id_quest,
+                                    'id_quest_detail' => $quest->id_quest_detail,
+                                    'id_user' => $transaction->id_user,
+                                    'id_transaction' => $transaction->id_transaction,
+                                    'id_product' => $transaction_product->id_product,
+                                    'id_product_variant_group' => $transaction_product->id_product_variant_group,
+                                    'id_product_category' => $transaction_product->id_product_category,
+                                    'product_total' => $transaction_product->transaction_product_qty,
+                                    'product_nominal' => ($transaction_product->transaction_product_subtotal - $transaction_product->transaction_product_discount_all),
+                                    'date' => $transaction->created_at,
+                                ]);
+                            }
+                            $has_product = 1;
                         }
                     }
-                }
-            }
-
-            // province
-            if ($quest->id_province || $quest->different_province) {
-                $transaction->load('outlet');
-                if ($quest->id_province == $transaction->outlet->id_province || $quest->different_province) {
-                    $questLog = QuestProvinceLog::updateOrCreate([
-                        'id_quest' => $quest->id_quest,
-                        'id_quest_detail' => $quest->id_quest_detail,
-                        'id_user' => $transaction->id_user,
-                        'id_transaction' => $transaction->id_transaction,
-                        'id_province' => $transaction->outlet->id_province,
-                    ],[
-                        'date' => $transaction->created_at,
-                    ]);
-                }
-            }
-
-            // transaction
-            if ($quest->id_trx_nominal || $quest->trx_total) {
-                $questLog = QuestTransactionLog::where([
-                    'id_quest' => $quest->id_quest,
-                    'id_quest_detail' => $quest->id_quest_detail,
-                    'id_user' => $transaction->id_user,
-                    'id_transaction' => $transaction->id_transaction,
-                    'id_outlet' => $transaction->id_outlet,
-                ])->first();
-                if ($questLog) {
-                    if ($transaction->created_at <= $questLog->date) {
+                    if (!$has_product) {
                         \DB::rollBack();
-                        continue;
                     }
-                    $questLog->update([
-                        'transaction_total' => $questLog->transaction_total + 1,
-                        'transaction_nominal' => $questLog->transaction_nominal + $transaction->transaction_grandtotal,
-                        'date' => $transaction->created_at,
-                    ]);
-                } else {
-                    $questLog = QuestTransactionLog::create([
+                }
+
+                // province
+                if ($quest->id_province || $quest->different_province) {
+                    $transaction->load('outlet');
+                    if ($quest->id_province == $transaction->outlet->id_province || $quest->different_province) {
+                        $questLog = QuestProvinceLog::updateOrCreate([
+                            'id_quest' => $quest->id_quest,
+                            'id_quest_detail' => $quest->id_quest_detail,
+                            'id_user' => $transaction->id_user,
+                            'id_transaction' => $transaction->id_transaction,
+                            'id_province' => $transaction->outlet->id_province,
+                        ],[
+                            'date' => $transaction->created_at,
+                        ]);
+                    }
+                }
+
+                // transaction
+                if ($quest->id_trx_nominal || $quest->trx_total) {
+                    $questLog = QuestTransactionLog::where([
                         'id_quest' => $quest->id_quest,
                         'id_quest_detail' => $quest->id_quest_detail,
                         'id_user' => $transaction->id_user,
                         'id_transaction' => $transaction->id_transaction,
-                        'transaction_total' => 1,
-                        'transaction_nominal' => $transaction->transaction_grandtotal,
-                        'date' => $transaction->created_at,
-                    ]);
+                        'id_outlet' => $transaction->id_outlet,
+                    ])->first();
+                    if ($questLog) {
+                        if ($transaction->created_at <= $questLog->date) {
+                            \DB::rollBack();
+                            continue;
+                        }
+                        $questLog->update([
+                            'transaction_total' => $questLog->transaction_total + 1,
+                            'transaction_nominal' => $questLog->transaction_nominal + $transaction->transaction_grandtotal,
+                            'date' => $transaction->created_at,
+                        ]);
+                    } else {
+                        $questLog = QuestTransactionLog::create([
+                            'id_quest' => $quest->id_quest,
+                            'id_quest_detail' => $quest->id_quest_detail,
+                            'id_user' => $transaction->id_user,
+                            'id_transaction' => $transaction->id_transaction,
+                            'transaction_total' => 1,
+                            'transaction_nominal' => $transaction->transaction_grandtotal,
+                            'date' => $transaction->created_at,
+                            'id_outlet' => $transaction->id_outlet,
+                        ]);
+                    }
                 }
+                $this->checkQuestDetailCompleted($quest);
+                \DB::commit();
+            } catch (\Exception $e) {
+                \DB::rollBack();
+                throw $e;
             }
-            $this->checkQuestDetailCompleted($quest);
-            \DB::commit();
         }
 
         $quest_masters = Quest::whereIn('quests.id_quest', $quests->pluck('id_quest'))
