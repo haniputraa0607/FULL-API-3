@@ -862,7 +862,7 @@ class ApiBundlingController extends Controller
                 $getExtraModifier = ProductModifierGroup::join('product_modifier_group_pivots', 'product_modifier_groups.id_product_modifier_group', 'product_modifier_group_pivots.id_product_modifier_group')
                                     ->join('product_modifiers', 'product_modifiers.id_product_modifier_group', 'product_modifier_groups.id_product_modifier_group')
                                     ->where('id_product', $p['id_product'])->orWhereIn('id_product_variant', $idVariant)
-                                    ->orderBy('product_modifiers.id_product_modifier_group', 'asc')
+                                    ->orderBy('product_modifier_groups.product_modifier_group_order', 'asc')
                                     ->orderBy('product_modifier_order', 'asc')
                                     ->select('id_product_modifier', 'text_detail_trx', 'product_modifiers.id_product_modifier_group')->get()->toArray();
 
