@@ -1062,6 +1062,7 @@ class ApiQuest extends Controller
         $quests->each(function($item) use ($time_server) {
             $item->append(['progress']);
             $item->makeHidden(['date_start']);
+            $item->date_end_format = MyHelper::indonesian_date_v2($item['date_end'], 'd F Y');
             $item->time_server = $time_server;
         });
 
@@ -1085,7 +1086,7 @@ class ApiQuest extends Controller
         $quest->append(['progress', 'contents']);
         $quest->makeHidden(['date_start', 'quest_contents', 'description']);
         $result = $quest->toArray();
-        $result['date_end'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
+        $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
 
         $details = QuestUser::select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
 
