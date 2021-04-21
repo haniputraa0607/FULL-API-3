@@ -56,11 +56,15 @@ class ApiOutletFranchiseController extends Controller
 	{
 		$post = $request->json()->all();
 		$data = Outlet::where('id_outlet', $request->id_outlet)
-			->with(['user_outlets','city','today', 'outlet_schedules'])
+			->with(['user_outlets','city.province','today', 'outlet_schedules'])
 			->first();
 
 		if ($data) {
 			$data['bank_account'] = BankAccountOutlet::join('bank_accounts', 'bank_account_outlets.id_bank_account','=','bank_accounts.id_bank_account')->where('id_outlet', $data['id_outlet'])->first();
+			//get timezone from province
+			if(isset($data['city']['province']['time_zone_utc'])){
+				$data['time_zone_utc'] = $data['city']['province']['time_zone_utc'];
+			}
 			foreach ($data['outlet_schedules'] as $key => &$value) {
 				$value['open'] 	= app($this->outlet)->getOneTimezone($value['open'], $data['time_zone_utc']);
 				$value['close'] = app($this->outlet)->getOneTimezone($value['close'], $data['time_zone_utc']);
@@ -160,7 +164,9 @@ class ApiOutletFranchiseController extends Controller
 		$post = $request->json()->all();
 		DB::beginTransaction();
 		$date_time = date('Y-m-d H:i:s');
-		$outlet = Outlet::where('id_outlet', $request->id_outlet)->first();
+		$outlet = Outlet::where('id_outlet', $request->id_outlet)
+						->with(['city.province'])
+						->first();
 
 		if (!$outlet) {
 			$result = [
@@ -171,6 +177,10 @@ class ApiOutletFranchiseController extends Controller
 		}
 
 		foreach ($request->data ?? [] as $key => $value) {
+			//get timezone from province
+			if(isset($outlet['city']['province']['time_zone_utc'])){
+				$outlet->time_zone_utc = $outlet['city']['province']['time_zone_utc'];
+			}
 			$value['open'] = app($this->outlet)->setOneTimezone($value['open'], $outlet->time_zone_utc);
 			$value['close'] = app($this->outlet)->setOneTimezone($value['close'], $outlet->time_zone_utc);
 			$is_closed = isset($value['is_closed']) ? 1 : 0;
