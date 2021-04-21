@@ -616,127 +616,163 @@ class ApiQuest extends Controller
                 continue;
             }
 
+            $quest_rule = $quest->quest_rule;
+            if (!$quest_rule) {
+                if ($quest->different_outlet) {
+                    $quest_rule = 'total_outlet';
+                } elseif ($quest->different_province) {
+                    $quest_rule = 'total_province';
+                } elseif ($quest->trx_total) {
+                    $quest_rule = 'total_transaction';
+                } elseif ($quest->id_product && $quest->product_total) {
+                    $quest_rule = 'total_product';
+                } else {
+                    $quest_rule = 'nominal_transaction';
+                }
+            }
+
             \DB::beginTransaction();
             // outlet 
-            if ($quest->id_outlet || $quest->different_outlet) {
-                $questLog = QuestOutletLog::where([
-                    'id_quest' => $quest->id_quest,
-                    'id_quest_detail' => $quest->id_quest_detail,
-                    'id_user' => $transaction->id_user,
-                    'id_outlet' => $transaction->id_outlet,
-                ])->first();
-                if ($questLog) {
-                    if ($transaction->created_at <= $questLog->date) {
-                        \DB::rollBack();
-                        continue;
-                    }
-                    $questLog->update([
-                        'count' => $questLog->count+1,
-                        'date' => $transaction->created_at,
-                    ]);
-                } else {
-                    $questLog = QuestOutletLog::create([
+            try {
+                // check absolute rule
+                if (
+                    ($quest_rule !== 'nominal_transaction' && $transaction->transaction_grandtotal < ($quest->trx_nominal ?: 0)) ||
+                    ($quest_rule !== 'total_product' && $transaction->productTransaction->count() < ($quest->product_total ?: 0))
+                ) {
+                    \DB::rollBack();
+                    continue;
+                }
+
+                if ($quest->id_outlet || $quest->different_outlet) {
+                    $questLog = QuestOutletLog::where([
                         'id_quest' => $quest->id_quest,
                         'id_quest_detail' => $quest->id_quest_detail,
                         'id_user' => $transaction->id_user,
                         'id_outlet' => $transaction->id_outlet,
-                        'count' => 1,
-                        'date' => $transaction->created_at,
-                    ]);
-                }
-            }
-
-            // product
-            if ($quest->id_product_category || $quest->different_product_category || $quest->id_product || $quest->product_total) {
-                $transaction->load(['productTransaction' => function($q) {
-                    $q->join('products', 'products.id_product', 'transaction_products.id_product');
-                }]);
-                foreach ($transaction->productTransaction as $transaction_product) {
-                    if (($quest->id_product == $transaction_product->id_product && (!$quest->id_product_variant_group || $quest->id_product_variant_group == $transaction_product->id_product_variant_group)) || $quest->id_product_category == $transaction_product->id_product_category || $quest->different_product_category || $quest->product_total) {
-                        $questLog = QuestProductLog::where([
+                    ])->first();
+                    if ($questLog) {
+                        if ($transaction->created_at <= $questLog->date) {
+                            \DB::rollBack();
+                            continue;
+                        }
+                        $questLog->update([
+                            'count' => $questLog->count+1,
+                            'date' => $transaction->created_at,
+                        ]);
+                    } else {
+                        $questLog = QuestOutletLog::create([
                             'id_quest' => $quest->id_quest,
                             'id_quest_detail' => $quest->id_quest_detail,
                             'id_user' => $transaction->id_user,
-                            'id_transaction' => $transaction->id_transaction,
-                            'id_product' => $transaction_product->id_product,
-                            'id_product_category' => $transaction_product->id_product_category,
-                        ])->first();
-                        if ($questLog) {
-                            if ($transaction->created_at <= $questLog->date) {
-                                \DB::rollBack();
-                                continue;
-                            }
-                            $questLog->update([
-                                'product_total' => $questLog->product_total + $transaction_product->transaction_product_qty,
-                                'product_nominal' => $questLog->product_total + ($transaction_product->transaction_product_subtotal - $transaction_product->transaction_product_discount_all),
-                                'date' => $transaction->created_at,
-                            ]);
-                        } else {
-                            $questLog = QuestProductLog::create([
+                            'id_outlet' => $transaction->id_outlet,
+                            'count' => 1,
+                            'date' => $transaction->created_at,
+                        ]);
+                    }
+                }
+
+                // product
+                if ($quest->id_product_category || $quest->different_product_category || $quest->id_product || $quest->product_total) {
+                    $transaction->load(['productTransaction' => function($q) {
+                        $q->join('products', 'products.id_product', 'transaction_products.id_product');
+                    }]);
+                    $has_product = 0;
+                    foreach ($transaction->productTransaction as $transaction_product) {
+                        if (($quest->id_product == $transaction_product->id_product && (!$quest->id_product_variant_group || $quest->id_product_variant_group == $transaction_product->id_product_variant_group)) || $quest->id_product_category == $transaction_product->id_product_category || $quest->different_product_category || $quest->product_total) {
+                            $questLog = QuestProductLog::where([
                                 'id_quest' => $quest->id_quest,
                                 'id_quest_detail' => $quest->id_quest_detail,
                                 'id_user' => $transaction->id_user,
                                 'id_transaction' => $transaction->id_transaction,
                                 'id_product' => $transaction_product->id_product,
+                                'id_product_variant_group' => $transaction_product->id_product_variant_group,
                                 'id_product_category' => $transaction_product->id_product_category,
-                                'product_total' => $transaction_product->transaction_product_qty,
-                                'product_nominal' => ($transaction_product->transaction_product_subtotal - $transaction_product->transaction_product_discount_all),
-                                'date' => $transaction->created_at,
-                            ]);
+                            ])->first();
+                            if ($questLog) {
+                                if ($transaction->created_at <= $questLog->date) {
+                                    continue;
+                                }
+                                $questLog->update([
+                                    'product_total' => $questLog->product_total + $transaction_product->transaction_product_qty,
+                                    'product_nominal' => $questLog->product_total + ($transaction_product->transaction_product_subtotal - $transaction_product->transaction_product_discount_all),
+                                    'date' => $transaction->created_at,
+                                ]);
+                            } else {
+                                $questLog = QuestProductLog::create([
+                                    'id_quest' => $quest->id_quest,
+                                    'id_quest_detail' => $quest->id_quest_detail,
+                                    'id_user' => $transaction->id_user,
+                                    'id_transaction' => $transaction->id_transaction,
+                                    'id_product' => $transaction_product->id_product,
+                                    'id_product_variant_group' => $transaction_product->id_product_variant_group,
+                                    'id_product_category' => $transaction_product->id_product_category,
+                                    'product_total' => $transaction_product->transaction_product_qty,
+                                    'product_nominal' => ($transaction_product->transaction_product_subtotal - $transaction_product->transaction_product_discount_all),
+                                    'date' => $transaction->created_at,
+                                ]);
+                            }
+                            $has_product = 1;
                         }
                     }
-                }
-            }
-
-            // province
-            if ($quest->id_province || $quest->different_province) {
-                $transaction->load('outlet');
-                if ($quest->id_province == $transaction->outlet->id_province || $quest->different_province) {
-                    $questLog = QuestProvinceLog::updateOrCreate([
-                        'id_quest' => $quest->id_quest,
-                        'id_quest_detail' => $quest->id_quest_detail,
-                        'id_user' => $transaction->id_user,
-                        'id_transaction' => $transaction->id_transaction,
-                        'id_province' => $transaction->outlet->id_province,
-                    ],[
-                        'date' => $transaction->created_at,
-                    ]);
-                }
-            }
-
-            // transaction
-            if ($quest->id_trx_nominal || $quest->trx_total) {
-                $questLog = QuestTransactionLog::where([
-                    'id_quest' => $quest->id_quest,
-                    'id_quest_detail' => $quest->id_quest_detail,
-                    'id_user' => $transaction->id_user,
-                    'id_transaction' => $transaction->id_transaction,
-                    'id_outlet' => $transaction->id_outlet,
-                ])->first();
-                if ($questLog) {
-                    if ($transaction->created_at <= $questLog->date) {
+                    if (!$has_product) {
                         \DB::rollBack();
-                        continue;
                     }
-                    $questLog->update([
-                        'transaction_total' => $questLog->transaction_total + 1,
-                        'transaction_nominal' => $questLog->transaction_nominal + $transaction->transaction_grandtotal,
-                        'date' => $transaction->created_at,
-                    ]);
-                } else {
-                    $questLog = QuestTransactionLog::create([
+                }
+
+                // province
+                if ($quest->id_province || $quest->different_province) {
+                    $transaction->load('outlet');
+                    if ($quest->id_province == $transaction->outlet->id_province || $quest->different_province) {
+                        $questLog = QuestProvinceLog::updateOrCreate([
+                            'id_quest' => $quest->id_quest,
+                            'id_quest_detail' => $quest->id_quest_detail,
+                            'id_user' => $transaction->id_user,
+                            'id_transaction' => $transaction->id_transaction,
+                            'id_province' => $transaction->outlet->id_province,
+                        ],[
+                            'date' => $transaction->created_at,
+                        ]);
+                    }
+                }
+
+                // transaction
+                if ($quest->trx_nominal || $quest->trx_total) {
+                    $questLog = QuestTransactionLog::where([
                         'id_quest' => $quest->id_quest,
                         'id_quest_detail' => $quest->id_quest_detail,
                         'id_user' => $transaction->id_user,
                         'id_transaction' => $transaction->id_transaction,
-                        'transaction_total' => 1,
-                        'transaction_nominal' => $transaction->transaction_grandtotal,
-                        'date' => $transaction->created_at,
-                    ]);
+                        'id_outlet' => $transaction->id_outlet,
+                    ])->first();
+                    if ($questLog) {
+                        if ($transaction->created_at <= $questLog->date) {
+                            \DB::rollBack();
+                            continue;
+                        }
+                        $questLog->update([
+                            'transaction_total' => $questLog->transaction_total + 1,
+                            'transaction_nominal' => $questLog->transaction_nominal + $transaction->transaction_grandtotal,
+                            'date' => $transaction->created_at,
+                        ]);
+                    } else {
+                        $questLog = QuestTransactionLog::create([
+                            'id_quest' => $quest->id_quest,
+                            'id_quest_detail' => $quest->id_quest_detail,
+                            'id_user' => $transaction->id_user,
+                            'id_transaction' => $transaction->id_transaction,
+                            'transaction_total' => 1,
+                            'transaction_nominal' => $transaction->transaction_grandtotal,
+                            'date' => $transaction->created_at,
+                            'id_outlet' => $transaction->id_outlet,
+                        ]);
+                    }
                 }
+                $this->checkQuestDetailCompleted($quest);
+                \DB::commit();
+            } catch (\Exception $e) {
+                \DB::rollBack();
+                throw $e;
             }
-            $this->checkQuestDetailCompleted($quest);
-            \DB::commit();
         }
 
         $quest_masters = Quest::whereIn('quests.id_quest', $quests->pluck('id_quest'))
@@ -794,31 +830,34 @@ class ApiQuest extends Controller
         return true;
     }
 
-    public function checkQuestCompleted($quest, $id_user, $auto = false)
+    public function checkQuestCompleted($quest, $id_user, $auto = false, &$errors = [], &$benefit = null)
     {
         if (is_numeric($quest)) {
             $quest = Quest::where('id_quest', $quest)->first();
         }
 
         if (!$quest) {
+            $errors[] = 'Quest tidak';
             return false;
         }
 
         $questIncomplete = QuestUser::where(['is_done' => 0, 'id_quest' => $quest->id_quest, 'id_user' => $id_user])->exists();
         if ($questIncomplete) {
+            $errors[] = 'Quest belum selesai';
             return false;
+        }
+
+        $benefit =  QuestBenefit::with('deals')->where(['id_quest' => $quest->id_quest])->first();
+        if (!$benefit) {
+            goto flag;
         }
 
         $redemption = QuestUserRedemption::where(['id_quest' => $quest->id_quest, 'id_user' => $id_user, 'redemption_status' => 1])->first();
         if ($redemption) {
-            // sudah mendapat benefit
-            return true;
+            $errors[] = 'Hadiah sudah di klaim';
+            return false;
         }
 
-        $benefit =  QuestBenefit::where(['id_quest' => $quest->id_quest])->first();
-        if (!$benefit) {
-            goto flag;
-        }
 
         if (!$benefit->autoclaim_benefit && $auto) {
             // not autoclaim
@@ -937,7 +976,22 @@ class ApiQuest extends Controller
 
         DB::beginTransaction();
         try {
-            QuestDetail::where('id_quest_detail', $post['id_quest_detail'])->update($post);
+            QuestDetail::where('id_quest_detail', $post['id_quest_detail'])->update([
+                'name' => $post['name'] ?? '',
+                'short_description' => $post['short_description'] ?? '',
+                'quest_rule' => $post['quest_rule'] ?? null,
+                'id_product' => $post['id_product'] ?? null,
+                'id_product_variant_group' => $post['id_product_variant_group'] ?? null,
+                'product_total' => $post['product_total'] ?? null,
+                'trx_nominal' => $post['trx_nominal'] ?? null,
+                'trx_total' => $post['trx_total'] ?? null,
+                'id_product_category' => $post['id_product_category'] ?? null,
+                'id_outlet' => $post['id_outlet'] ?? null,
+                'id_province' => $post['id_province'] ?? null,
+                'different_category_product' => $post['different_product_category'] ?? null,
+                'different_outlet' => $post['different_outlet'] ?? null,
+                'different_province' => $post['different_province'] ?? null
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -1044,23 +1098,32 @@ class ApiQuest extends Controller
 
     public function claimBenefit(Request $request)
     {
-        $claim = $this->checkQuestCompleted($request->id_quest, $request->user()->id);
+        $claim = $this->checkQuestCompleted($request->id_quest, $request->user()->id, false, $errors, $quest_benefit);
 
+        $benefit = [
+            'type' => $quest_benefit->benefit_type
+        ];
+        if ($quest_benefit->benefit_type == 'voucher') {
+            $benefit['text'] = $quest_benefit->deals->deals_title;
+        } else {
+            $benefit['text'] = MyHelper::requestNumber($quest_benefit->value, '_POINT').' Poin';
+        }
         if ($claim) {
-            return ['status' => 'success'];
+            return ['status' => 'success', 'result' => ['benefit' => $benefit]];
         }
         return [
             'status' => 'fail',
-            'messages' => [
+            'messages' => $errors ?? [
                 'Failed claim benefit'
             ],
+            'result' => ['benefit' => $benefit]
         ];
     }
 
     public function me(Request $request)
     {
         $id_user = $request->user()->id;
-        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'date_start', 'date_end')
+        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'date_start', 'date_end', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
             ->where('is_complete', 1)
             ->where('publish_start', '<=', date('Y-m-d H:i:s'))
             ->where('publish_end', '>=', date('Y-m-d H:i:s'))
@@ -1068,6 +1131,10 @@ class ApiQuest extends Controller
             ->join('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
+            })
+            ->leftJoin('quest_user_redemptions', function($join) {
+                $join->on('quest_user_redemptions.id_quest', 'quest_users.id_quest')
+                    ->whereColumn('quest_user_redemptions.id_user', 'quest_users.id_user');
             });
 
         if ($request->page) {
@@ -1091,10 +1158,14 @@ class ApiQuest extends Controller
     public function detail(Request $request)
     {
         $id_user = $request->user()->id;
-        $quest = Quest::select('quests.id_quest', 'name', 'image as image_url', 'description', 'short_description', 'date_start', 'date_end')
+        $quest = Quest::select('quests.id_quest', 'name', 'image as image_url', 'description', 'short_description', 'date_start', 'date_end', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
             ->join('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
+            })
+            ->leftJoin('quest_user_redemptions', function($join) {
+                $join->on('quest_user_redemptions.id_quest', 'quest_users.id_quest')
+                    ->whereColumn('quest_user_redemptions.id_user', 'quest_users.id_user');
             })
             ->where('quests.id_quest', $request['id_quest'] ?? $request->id_quest)
             ->first();
@@ -1105,6 +1176,7 @@ class ApiQuest extends Controller
         $quest->makeHidden(['date_start', 'quest_contents', 'description']);
         $result = $quest->toArray();
         $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
+        $result['time_server'] = date('Y-m-d H:i:s');
 
         $details = QuestUser::select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
 
@@ -1247,18 +1319,18 @@ class ApiQuest extends Controller
 
     public function status(Request $request)
     {
-        $myQuest = QuestUser::where([
-                'quest_users.id_user' => $request->user()->id
-            ])
-            ->leftJoin('quest_user_redemptions', function($join) {
-                $join->on('quest_user_redemptions.id_quest', 'quest_users.id_quest')
-                    ->whereColumn('quest_user_redemptions.id_user', 'quest_users.id_user');
+        $id_user = $request->user()->id;
+        $myQuest = Quest::leftJoin('quest_user_redemptions', function($join) use ($id_user) {
+                $join->on('quest_user_redemptions.id_quest', 'quests.id_quest')
+                    ->where('quest_user_redemptions.id_user', $id_user);
             })
+            ->where('is_complete', 1)
             ->where(function($query) {
                 $query->where('redemption_status', '<>', 1)
                     ->orWhereNull('redemption_status');
             })
-            ->groupBy('quest_users.id_quest')
+            ->where('publish_start', '<=', date('Y-m-d H:i:s'))
+            ->where('publish_end', '>=', date('Y-m-d H:i:s'))
             ->count();
         if ($myQuest) {
             return [

@@ -14,6 +14,7 @@ class QuestDetail extends Model
         'id_quest',
         'name',
         'short_description',
+        'quest_rule',
         'id_product',
         'id_product_variant_group',
         'product_total',
