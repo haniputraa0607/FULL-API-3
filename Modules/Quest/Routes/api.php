@@ -22,6 +22,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::any('update-benefit', 'ApiQuest@updateBenefit');
     Route::any('category', 'ApiQuest@category');
     Route::any('create', 'ApiQuest@store');
+    Route::any('create-detail', 'ApiQuest@storeQuestDetail');
     Route::any('detail', 'ApiQuest@show');
     Route::any('detail/update', 'ApiQuest@update');
     Route::any('destroy', 'ApiQuest@destroy');
