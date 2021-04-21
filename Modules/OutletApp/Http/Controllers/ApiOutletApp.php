@@ -10,6 +10,7 @@ use App\Http\Models\Outlet;
 use App\Http\Models\OutletHoliday;
 use App\Http\Models\OutletSchedule;
 use App\Http\Models\OutletToken;
+use App\Http\Models\City;
 use App\Http\Models\Product;
 use App\Http\Models\ProductCategory;
 use App\Http\Models\ProductModifier;
@@ -2275,8 +2276,14 @@ class ApiOutletApp extends Controller
     public function listSchedule(Request $request)
     {
         $schedules = $request->user()->outlet_schedules()->get();
+        $timezone = $request->user()->time_zone_utc;
+        $city = City::where('id_city', $request->user()->id_city)->with('province')->first();
+        //get timezone from province
+        if(isset($city['province']['time_zone_utc'])){
+            $timezone = $city['province']['time_zone_utc'];
+        }
         foreach ($schedules as $key => $value) {
-        	$schedules[$key] = app($this->outlet)->getTimezone($value, $request->user()->time_zone_utc);
+        	$schedules[$key] = app($this->outlet)->getTimezone($value, $timezone);
         }
         return MyHelper::checkGet($schedules);
     }
@@ -2290,8 +2297,13 @@ class ApiOutletApp extends Controller
         $otp         = $request->outlet_app_otps;
         $date_time   = date('Y-m-d H:i:s');
         foreach ($post['schedule'] as $value) {
-
-        	$value = $this->setTimezone($value, $request->user()->time_zone_utc);
+            $timezone = $request->user()->time_zone_utc;
+            $city = City::where('id_city', $request->user()->id_city)->with('province')->first();
+            //get timezone from province
+            if(isset($city['province']['time_zone_utc'])){
+                $timezone = $city['province']['time_zone_utc'];
+            }
+        	$value = $this->setTimezone($value, $timezone);
 
             $old      = OutletSchedule::select('id_outlet_schedule', 'id_outlet', 'day', 'open', 'close', 'is_closed')->where(['id_outlet' => $id_outlet, 'day' => $value['day']])->first();
             $old_data = $old ? $old->toArray() : [];
