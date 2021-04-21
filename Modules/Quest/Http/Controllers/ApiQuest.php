@@ -173,6 +173,24 @@ class ApiQuest extends Controller
             ]);
         }
     }
+
+    public function storeQuestDetail(Request $request)
+    {
+        $quest = Quest::find($request->id_quest);
+        if (!$quest) {
+            return MyHelper::checkGet($quest);
+        }
+
+        if ($quest->is_complete) {
+            return MyHelper::checkGet($quest, ['Quest not editable']);
+        }
+        foreach ($request->detail as $detail) {
+            $detail['id_quest'] = $quest->id_quest;
+            $create = QuestDetail::create($detail);
+        }
+        return MyHelper::checkCreate($create);
+    }
+
     public function checkQuest($quest, $idUser, $detailQuest)
     {
         $questPassed = 0;
@@ -772,7 +790,7 @@ class ApiQuest extends Controller
             }
         }
 
-        QuestUser::where(['id_quest_user' => $questDetail->id_quest_user])->update(['done' => 1, 'date' => date('Y-m-d H:i:s')]);
+        QuestUser::where(['id_quest_user' => $questDetail->id_quest_user])->update(['is_done' => 1, 'date' => date('Y-m-d H:i:s')]);
         return true;
     }
 
@@ -1062,6 +1080,7 @@ class ApiQuest extends Controller
         $quests->each(function($item) use ($time_server) {
             $item->append(['progress']);
             $item->makeHidden(['date_start']);
+            $item->date_end_format = MyHelper::indonesian_date_v2($item['date_end'], 'd F Y');
             $item->time_server = $time_server;
         });
 
@@ -1085,7 +1104,7 @@ class ApiQuest extends Controller
         $quest->append(['progress', 'contents']);
         $quest->makeHidden(['date_start', 'quest_contents', 'description']);
         $result = $quest->toArray();
-        $result['date_end'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
+        $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
 
         $details = QuestUser::select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
 
