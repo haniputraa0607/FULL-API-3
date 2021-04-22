@@ -166,7 +166,13 @@ class ApiUserFranchiseController extends Controller
 
             $create = UserFranchise::create($dataCreate);
             if($create){
+                $outletCode = null;
+                $outletName = null;
+
                 if($post['level'] == 'User Franchise'){
+                    $getOutlet = Outlet::where('id_outlet',$post['id_outlet'])->first();
+                    $outletCode = $getOutlet['outlet_code']??null;
+                    $outletName = $getOutlet['outlet_name']??null;
                     UserFranchiseOultet::where('id_user_franchise' , $create['id_user_franchise'])->delete();
                     $createUserOutlet = UserFranchiseOultet::create(['id_user_franchise' => $create['id_user_franchise'], 'id_outlet' => $post['id_outlet']]);
                 }
@@ -175,10 +181,12 @@ class ApiUserFranchiseController extends Controller
                     'New User Franchise',
                     $post['username'],
                     [
-                        'pin_franchise' => $pin,
+                        'password' => $pin,
                         'username' => $post['username'],
                         'name' => $post['name'],
-                        'url' => env('URL_PORTAL_MITRA')
+                        'url' => env('URL_PORTAL_MITRA'),
+                        'outlet_code' => $outletCode,
+                        'outlet_name' => $outletName
                     ], null, false, false, 'franchise', 1
                 );
             }
@@ -234,8 +242,14 @@ class ApiUserFranchiseController extends Controller
 
             $update = UserFranchise::where('id_user_franchise', $post['id_user_franchise'])->update($dataUpdate);
             if($update){
+                $outletCode = null;
+                $outletName = null;
+
                 UserFranchiseOultet::where('id_user_franchise' , $post['id_user_franchise'])->delete();
                 if($post['level'] == 'User Franchise'){
+                    $getOutlet = Outlet::where('id_outlet',$post['id_outlet'])->first();
+                    $outletCode = $getOutlet['outlet_code']??null;
+                    $outletName = $getOutlet['outlet_name']??null;
                     $createUserOutlet = UserFranchiseOultet::create(['id_user_franchise' => $post['id_user_franchise'], 'id_outlet' => $post['id_outlet']]);
                 }
 
@@ -244,10 +258,12 @@ class ApiUserFranchiseController extends Controller
                         'Reset Password User Franchise',
                         $post['username'],
                         [
-                            'pin_franchise' => $pin,
+                            'password' => $pin,
                             'username' => $post['username'],
                             'name' => $post['name'],
-                            'url' => env('URL_PORTAL_MITRA')
+                            'url' => env('URL_PORTAL_MITRA'),
+                            'outlet_code' => $outletCode,
+                            'outlet_name' => $outletName
                         ], null, false, false, 'franchise', 1
                     );
                 }
@@ -291,7 +307,11 @@ class ApiUserFranchiseController extends Controller
         }
 
         if(!empty($data)){
-            $data['id_outlet'] = UserFranchiseOultet::where('id_user_franchise' , $data['id_user_franchise'])->first()['id_outlet']??NULL;
+            $franchiseOutlet = UserFranchiseOultet::join('outlets', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
+                                ->where('id_user_franchise' , $data['id_user_franchise'])->first();
+            $data['id_outlet'] = $franchiseOutlet['id_outlet']??null;
+            $data['outlet_name'] = $franchiseOutlet['outlet_name']??null;
+            $data['outlet_code'] = $franchiseOutlet['outlet_code']??null;
         }
 
         return response()->json(MyHelper::checkGet($data));
@@ -474,14 +494,20 @@ class ApiUserFranchiseController extends Controller
             $update = UserFranchise::where('id_user_franchise', $user['id_user_franchise'])->update($dataUpdate);
 
             if($update){
+                $getOutlet = UserFranchiseOultet::join('outlets', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
+                                ->where('id_user_franchise', $user['id_user_franchise'])->first();
+                $outletCode = $getOutlet['outlet_code']??null;
+                $outletName = $getOutlet['outlet_name']??null;
                 $autocrm = app($this->autocrm)->SendAutoCRM(
                     'Reset Password User Franchise',
                     $post['username'],
                     [
-                        'pin_franchise' => $pin,
+                        'password' => $pin,
                         'username' => $user['username'],
                         'name' => $user['name'],
-                        'url' => env('URL_PORTAL_MITRA')
+                        'url' => env('URL_PORTAL_MITRA'),
+                        'outlet_code' => $outletCode,
+                        'outlet_name' => $outletName
                     ], null, false, false, 'franchise', 1
                 );
             }

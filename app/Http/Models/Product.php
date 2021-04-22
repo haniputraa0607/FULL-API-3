@@ -239,7 +239,7 @@ class Product extends Model
      * @param  boolean $with_index      result should use id_product_variant as index or not
      * @return array                    array of product variant [tree]
      */
-    public static function getVariantTree($id_product, $outlet, $with_index = false)
+    public static function getVariantTree($id_product, $outlet, $with_index = false, $product_price = 0, $product_variant_status = 1)
     {
         // $cache_name = self::getCacheName($id_product, $outlet, $with_index);
         // // retrieve from cache if available
@@ -247,6 +247,11 @@ class Product extends Model
         //     return Cache::get($cache_name);
         // }
         // get list variants available in products
+        if (!$product_variant_status) {
+            $list_variants = [];
+            $variants = [];
+            goto modifier_group_logic;
+        }
         $list_variants = ProductVariant::select('product_variants.id_product_variant')
             ->join('product_variant_pivot', 'product_variant_pivot.id_product_variant', '=', 'product_variants.id_product_variant')
             ->join('product_variant_groups', 'product_variant_groups.id_product_variant_group', '=', 'product_variant_pivot.id_product_variant_group')
@@ -258,7 +263,7 @@ class Product extends Model
 
         // return empty array if no variants found
         if (!$variants) {
-            return $variants;
+            goto modifier_group_logic;
         }
 
         // get all product variant groups assigned to this product
@@ -299,8 +304,9 @@ class Product extends Model
         // merge product variant tree and product's product variant group
         self::recursiveCheck($variants, $variant_groups, [], $with_index);
 
+        modifier_group_logic:
         // get list modifiers group order by name where id_product or id_variant
-        $modifier_groups_raw = ProductModifierGroup::select('product_modifier_groups.id_product_modifier_group', 'product_modifier_group_name', \DB::raw('GROUP_CONCAT(id_product) as id_products, GROUP_CONCAT(id_product_variant) as id_product_variants'))->join('product_modifier_group_pivots', 'product_modifier_groups.id_product_modifier_group', 'product_modifier_group_pivots.id_product_modifier_group')->where('id_product', $id_product)->orWhereIn('id_product_variant', $list_variants)->groupBy('product_modifier_groups.id_product_modifier_group')->orderBy('product_modifier_group_name')->get()->toArray();
+        $modifier_groups_raw = ProductModifierGroup::select('product_modifier_groups.id_product_modifier_group', 'product_modifier_group_name', \DB::raw('GROUP_CONCAT(id_product) as id_products, GROUP_CONCAT(id_product_variant) as id_product_variants'))->join('product_modifier_group_pivots', 'product_modifier_groups.id_product_modifier_group', 'product_modifier_group_pivots.id_product_modifier_group')->where('id_product', $id_product)->orWhereIn('id_product_variant', $list_variants)->groupBy('product_modifier_groups.id_product_modifier_group')->orderBy('product_modifier_group_order', 'asc')->get()->toArray();
         // ambil modifier + harga + yang visible dll berdasarkan modifier group
         $modifier_groups = [];
         foreach ($modifier_groups_raw as $key => &$modifier_group) {
@@ -348,11 +354,38 @@ class Product extends Model
                 }
             }
         }
+
+        $noVariant = false;
+        if (!$variants && $modifier_groups) {
+            $noVariant = true;
+            $variants = [
+                'childs' => [
+                    [
+                        'id_product_variant' => 0,
+                        'id_product_variant_group' => 0,
+                        'product_variant_group_price' => $product_price,
+                        'extra_modifiers' => [],
+                        'variant' => null,
+                    ]
+                ]
+            ];
+        } elseif (!$variants) {
+            return $variants;
+        }
+
         // masukan ke dalam vaiants
-        // \Log::debug($variants);
         self::mergeModifierGroup($variants, $modifier_groups);
+
+        if ($noVariant) {
+            $variants = $variants['childs'][0]['variant'];
+        }
+
+        if (!$variants) {
+            return $variants;
+        }
+
         // get base price and unset from array [for nice array structure]
-        $base_price = $variants['product_variant_group_price'];
+        $base_price = $variants['product_variant_group_price'] ?? $product_price;
         unset($variants['product_variant_group_price']);
         unset($variants['product_variant_stock_status']);
 
@@ -649,7 +682,7 @@ class Product extends Model
      * @param  boolean $with_index      result should use id_product_variant as index or not
      * @return array                    array of product variant [tree]
      */
-    public static function getSingleVariantTree($id_product, $id_product_variant_group, $outlet, $with_index = false)
+    public static function getSingleVariantTree($id_product, $id_product_variant_group, $outlet, $with_index = false, $product_price = 0, $product_variant_status = 1)
     {
         // $cache_name = self::getCacheName($id_product, $outlet, $with_index);
         // // retrieve from cache if available
@@ -657,6 +690,11 @@ class Product extends Model
         //     return Cache::get($cache_name);
         // }
         // get list variants available in products
+        if (!$product_variant_status) {
+            $list_variants = [];
+            $variants = [];
+            goto modifier_group_logic;
+        }
         $list_variants = ProductVariant::select('product_variants.id_product_variant')
             ->join('product_variant_pivot', 'product_variant_pivot.id_product_variant', '=', 'product_variants.id_product_variant')
             ->join('product_variant_groups', 'product_variant_groups.id_product_variant_group', '=', 'product_variant_pivot.id_product_variant_group')
@@ -669,7 +707,7 @@ class Product extends Model
 
         // return empty array if no variants found
         if (!$variants) {
-            return $variants;
+            goto modifier_group_logic;
         }
 
         // get all product variant groups assigned to this product
@@ -710,8 +748,9 @@ class Product extends Model
         // merge product variant tree and product's product variant group
         self::recursiveCheck($variants, $variant_groups, [], $with_index, 1);
 
+        modifier_group_logic:
         // get list modifiers group order by name where id_product or id_variant
-        $modifier_groups_raw = ProductModifierGroup::select('product_modifier_groups.id_product_modifier_group', 'product_modifier_group_name', \DB::raw('GROUP_CONCAT(id_product) as id_products, GROUP_CONCAT(id_product_variant) as id_product_variants'))->join('product_modifier_group_pivots', 'product_modifier_groups.id_product_modifier_group', 'product_modifier_group_pivots.id_product_modifier_group')->where('id_product', $id_product)->orWhereIn('id_product_variant', $list_variants)->groupBy('product_modifier_groups.id_product_modifier_group')->orderBy('product_modifier_group_name')->get()->toArray();
+        $modifier_groups_raw = ProductModifierGroup::select('product_modifier_groups.id_product_modifier_group', 'product_modifier_group_name', \DB::raw('GROUP_CONCAT(id_product) as id_products, GROUP_CONCAT(id_product_variant) as id_product_variants'))->join('product_modifier_group_pivots', 'product_modifier_groups.id_product_modifier_group', 'product_modifier_group_pivots.id_product_modifier_group')->where('id_product', $id_product)->orWhereIn('id_product_variant', $list_variants)->groupBy('product_modifier_groups.id_product_modifier_group')->orderBy('product_modifier_group_order', 'asc')->get()->toArray();
         // ambil modifier + harga + yang visible dll berdasarkan modifier group
         $modifier_groups = [];
         foreach ($modifier_groups_raw as $key => &$modifier_group) {
@@ -759,11 +798,38 @@ class Product extends Model
                 }
             }
         }
+
+        $noVariant = false;
+        if (!$variants && $modifier_groups) {
+            $noVariant = true;
+            $variants = [
+                'childs' => [
+                    [
+                        'id_product_variant' => 0,
+                        'id_product_variant_group' => 0,
+                        'product_variant_group_price' => $product_price,
+                        'extra_modifiers' => [],
+                        'variant' => null,
+                    ]
+                ]
+            ];
+        } elseif (!$variants) {
+            return $variants;
+        }
+
         // masukan ke dalam vaiants
-        // \Log::debug($variants);
         self::mergeModifierGroup($variants, $modifier_groups);
+
+        if ($noVariant) {
+            $variants = $variants['childs'][0]['variant'];
+        }
+
+        if (!$variants) {
+            return $variants;
+        }
+
         // get base price and unset from array [for nice array structure]
-        $base_price = $variants['product_variant_group_price'];
+        $base_price = $variants['product_variant_group_price'] ?? $product_price;
         unset($variants['product_variant_group_price']);
         unset($variants['product_variant_stock_status']);
 

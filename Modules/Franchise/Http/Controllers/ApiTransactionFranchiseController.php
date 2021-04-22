@@ -1356,6 +1356,7 @@ class ApiTransactionFranchiseController extends Controller
             $dataDisburse = $dataDisburse->get()->toArray();
 
             if(!empty($generateTrx['list'])){
+            	$generateTrx['show_reject_reason'] = 1;
                 $excelFile = 'Transaction_['.$start.'_'.$end.']['.$getOutlet['outlet_code'].']_'.mt_rand(0, 1000).time().'.xlsx';
                 $directory = 'franchise/report/transaction/'.$excelFile;
 
@@ -1585,6 +1586,23 @@ class ApiTransactionFranchiseController extends Controller
 	                        }
 	                    }
 
+	                    if ($con['subject'] == 'reject_reason') {
+	                        $var = 'transaction_pickups.reject_reason';
+	                        if ($filter['rule'] == 'and') {
+	                            if ($con['operator'] == 'like' || $con['operator'] == 'not like') {
+	                                $query = $query->where($var, $con['operator'], '%'.$con['parameter'].'%');
+	                            } else {
+	                                $query = $query->where($var, $con['operator'], $con['parameter']);
+	                            }
+	                        } else {
+	                            if ($con['operator'] == 'like' || $con['operator'] == 'not like') {
+	                                $query = $query->orWhere($var, $con['operator'], '%'.$con['parameter'].'%');
+	                            } else {
+	                                $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+	                            }
+	                        }
+	                    }
+
 	                    if ($con['subject'] == 'grand_total' || $con['subject'] == 'product_tax') {
 	                        if ($con['subject'] == 'grand_total') {
 	                            $var = 'transactions.transaction_grandtotal';
@@ -1688,15 +1706,25 @@ class ApiTransactionFranchiseController extends Controller
 						                                })->whereNull('transaction_pickups.reject_at');
 				                            }
 				                            elseif($con['parameter'] == 'receive_at'){
-				                                $query = $query->where(function($q) use ($query_pending){
-						                                	$query_pending($q, 'orWhere');
-						                                })->whereNull('transaction_pickups.reject_at');
+				                                $query = $query->where(function($q) {
+							                                $q->whereNull('transaction_pickups.receive_at')
+						                            			->whereNull('transaction_pickups.ready_at')
+						                            			->whereNull('transaction_pickups.taken_at')
+						                            			->whereNull('transaction_pickups.taken_by_system_at');
+						                                });
 				                            }
 				                            elseif($con['parameter'] == 'ready_at'){
 				                                $query = $query->where(function($q) use ($query_receive_at, $query_pending){
 						                                	$query_receive_at($q, 'orWhere');
 						                                	$query_pending($q, 'orWhere');
 						                                })->whereNull('transaction_pickups.reject_at');
+				                            }
+				                            elseif($con['parameter'] == 'manual_reject'){
+				                                $query = $query->whereNull('transaction_pickups.receive_at')
+				                                    	->where('transaction_pickups.reject_reason', 'not like', '%auto reject order by system%');
+				                            }
+				                            elseif($con['parameter'] == 'auto_reject'){
+				                                $query = $query->where('transaction_pickups.reject_reason', 'like', 'auto reject order by system');
 				                            }
 				                            else{
 				                                $query = $query->whereNull('transaction_pickups.'.$con['parameter']);
@@ -1759,6 +1787,13 @@ class ApiTransactionFranchiseController extends Controller
 				                            elseif($con['parameter'] == 'ready_at'){
 				                                $query = $query->whereNotNull('transaction_pickups.ready_at')
 				                                    	->whereNull('transaction_pickups.taken_at');
+				                            }
+				                            elseif($con['parameter'] == 'manual_reject'){
+				                                $query = $query->whereNull('transaction_pickups.receive_at')
+				                                    	->where('transaction_pickups.reject_reason', 'not like', '%auto reject order by system%');
+				                            }
+				                            elseif($con['parameter'] == 'auto_reject'){
+				                                $query = $query->where('transaction_pickups.reject_reason', 'like', 'auto reject order by system');
 				                            }
 				                            else{
 				                                $query = $query->whereNotNull('transaction_pickups.'.$con['parameter']);
@@ -1998,6 +2033,7 @@ class ApiTransactionFranchiseController extends Controller
                     $sameData .= '<td>'.$val['city_name'].'</td>';
                     $sameData .= '<td>'.$val['transaction_receipt_number'].'</td>';
                     $sameData .= '<td>'.$status.'</td>';
+                    $sameData .= '<td>'.$val['reject_reason'].'</td>';
                     $sameData .= '<td>'.date('d M Y', strtotime($val['transaction_date'])).'</td>';
                     $sameData .= '<td>'.date('H:i:s', strtotime($val['transaction_date'])).'</td>';
 

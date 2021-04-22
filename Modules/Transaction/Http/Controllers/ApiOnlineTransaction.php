@@ -2606,6 +2606,8 @@ class ApiOnlineTransaction extends Controller
             if ($product['id_product_variant_group']) {
                 $product['product_price'] = $item['transaction_product_price'];
                 $product['selected_variant'] = Product::getVariantParentId($item['id_product_variant_group'], Product::getVariantTree($item['id_product'], $outlet)['variants_tree'], array_column($product['extra_modifiers']??[], 'id_product_variant'));
+            } elseif ($product['extra_modifiers']??[]) {
+                $product['selected_variant'] = array_column($product['extra_modifiers']??[], 'id_product_variant');
             } else {
                 $product['selected_variant'] = [];
             }

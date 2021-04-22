@@ -51,7 +51,7 @@ return [
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_shopee_pay.png',
         'text'            => 'ShopeePay',
         'available_time'    => [
-            'start' => '06:00',
+            'start' => '03:00',
             'end'   => '23:45',
         ]
     ],

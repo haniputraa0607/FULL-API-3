@@ -11,6 +11,10 @@ use App\Lib\MyHelper;
 
 class ApiOutletWebview extends Controller
 {
+    function __construct() {
+        $this->outlet = "Modules\Outlet\Http\Controllers\ApiOutletController";
+    }
+
     public function detailWebview(Request $request, $id)
     {
     	$bearer = $request->header('Authorization');
@@ -41,7 +45,7 @@ class ApiOutletWebview extends Controller
         // ], $bearer);
 
         
-        $outlet = Outlet::with(['today', 'outlet_schedules'])
+        $outlet = Outlet::with(['today', 'city.province', 'outlet_schedules'])
         ->where('id_outlet', $request->id_outlet)->get()->toArray()[0];
 
         $outlet['distance']=number_format((float)$this->distance($request->latitude, $request->longitude, $outlet['outlet_latitude'], $outlet['outlet_longitude'], "K"), 2, '.', '').' km';
@@ -70,6 +74,12 @@ class ApiOutletWebview extends Controller
                     $day = 'Sat';
                     break;
             }
+            //get timezone from province
+            if(isset($outlet['city']['province']['time_zone_utc'])){
+                $outlet['time_zone_utc'] = $outlet['city']['province']['time_zone_utc'];
+            }
+            $value['open'] 	= app($this->outlet)->getOneTimezone($value['open'], $outlet['time_zone_utc']);
+            $value['close'] 	= app($this->outlet)->getOneTimezone($value['close'], $outlet['time_zone_utc']);
             if (date('D') == $day) {
                 $outlet['outlet_schedules'][$key] = [
                     'is_today'  => 1,

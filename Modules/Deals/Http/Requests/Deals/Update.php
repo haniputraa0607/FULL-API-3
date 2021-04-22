@@ -70,4 +70,14 @@ class Update extends FormRequest
     {
         return $this->json()->all();
     }
+
+    public function attributes()
+	{
+		$attributes = [
+            'deals_voucher_expired'		=> 'Voucher Expiry',
+            'deals_voucher_start'		=> 'Voucher Start Date'
+        ];
+
+	    return $attributes;
+	}
 }

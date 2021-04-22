@@ -139,7 +139,7 @@ class ApiFavoriteController extends Controller
                         if ($variant_tree['base_price'] ?? false) {
                             $total_price += $variant_tree['base_price'] - $val['product']['price'];
                             $variant_price = Product::getVariantPrice($val['id_product_variant_group'], $variant_tree['variants_tree']??[]);
-                            $total_price += array_sum($variant_price);
+                            $total_price += array_sum($variant_price ?: []);
                         }
                         $val['selected_variant'] = Product::getVariantParentId($val['id_product_variant_group'], $variant_tree['variants_tree']??[], $val['extra_modifiers']);
                     } else {
@@ -252,7 +252,7 @@ class ApiFavoriteController extends Controller
         $data = Favorite::where([
             ['id_outlet',$request->json('id_outlet')],
             ['id_product',$request->json('id_product')],
-            ['id_product_variant_group',$request->json('id_product_variant_group')],
+            ['id_product_variant_group',$request->json('id_product_variant_group') ?: null],
             ['id_brand',$request->json('id_brand')],
             ['id_user',$id_user],
             ['notes',$request->json('notes')??'']
@@ -282,7 +282,7 @@ class ApiFavoriteController extends Controller
                 'id_outlet' => $request->json('id_outlet'),
                 'id_brand' => $request->json('id_brand'),
                 'id_product' => $request->json('id_product'),
-                'id_product_variant_group' => $request->json('id_product_variant_group'),
+                'id_product_variant_group' => $request->json('id_product_variant_group') ?: null,
                 'id_user' => $id_user,
                 'notes' => $request->json('notes')?:''];
 

@@ -303,8 +303,8 @@ class ApiOutletController extends Controller
     }
 
     function updateStatus(UpdateStatus $request) {
-        $post = $this->checkInputOutlet($request->json()->all());
-        $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update($post);
+        $post = $request->json()->all();
+        $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update(['outlet_status' => $post['outlet_status']??'Inactive']);
         // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
 
         return response()->json(MyHelper::checkUpdate($save));
@@ -552,7 +552,7 @@ class ApiOutletController extends Controller
         }elseif(isset($post['admin']) && isset($post['type']) && $post['type'] == 'export'){
             $outlet = Outlet::with(['user_outlets','city','today','product_prices','product_prices.product'])->select('*');
         }elseif(isset($post['admin'])){
-            $outlet = Outlet::with(['user_outlets','city','today', 'outlet_schedules'])->select('*');
+            $outlet = Outlet::with(['user_outlets','city.province','today', 'outlet_schedules'])->select('*');
             if(isset($post['id_product'])){
                 $outlet = $outlet->with(['product_detail'=> function($q) use ($post){
                     $q->where('id_product', $post['id_product']);
@@ -671,6 +671,10 @@ class ApiOutletController extends Controller
         }
         $loopdata = array_map(function($var) use ($post){
             $var['url']=config('url.api_url').'api/outlet/webview/'.$var['id_outlet'];
+            //get timezone from province
+            if(isset($var['city']['province']['time_zone_utc'])){
+                $var['time_zone_utc'] = $var['city']['province']['time_zone_utc'];
+            }
             if(isset($var['outlet_schedules'])){
                 foreach($var['outlet_schedules'] as $index => $sch){
                     $var['outlet_schedules'][$index] = $this->getTimezone($var['outlet_schedules'][$index], $var['time_zone_utc']);
@@ -799,7 +803,7 @@ class ApiOutletController extends Controller
         }
 
         // outlet
-        $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude','time_zone_utc')->with(['today','brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude','time_zone_utc')->with(['today','city.province','brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where(function($query) use ($request) {
                 $query->where('outlet_name', 'LIKE', '%'.$request->json('search').'%')
@@ -824,6 +828,10 @@ class ApiOutletController extends Controller
                 $outlet[$key]['distance'] = number_format($jaraknya, 2, '.', ',')." km";
                 $outlet[$key]['dist']     = (float) $jaraknya;
 
+                //get timezone from province
+                if(isset($outlet[$key]['city']['province']['time_zone_utc'])){
+                    $outlet[$key]['time_zone_utc'] = $outlet[$key]['city']['province']['time_zone_utc'];
+                }
                 $outlet[$key]['today'] = $this->getTimezone($outlet[$key]['today'], $outlet[$key]['time_zone_utc']);
 
                 // $outlet[$key] = $this->setAvailableOutlet($outlet[$key], $processing);
@@ -884,7 +892,7 @@ class ApiOutletController extends Controller
         }
 
         // outlet
-        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->orderBy('outlet_name','asc')->where('outlet_status', 'Active')->whereNotNull('id_city');
+        $outlet = Outlet::with(['today', 'city.province', 'outlet_photos'])->orderBy('outlet_name','asc')->where('outlet_status', 'Active')->whereNotNull('id_city');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
@@ -1108,7 +1116,7 @@ class ApiOutletController extends Controller
         $grabfood = $request->json('grabfood');  
 
         $product = Product::with(['global_price', 'product_special_price'])->where('product_visibility', 'Visible')->select('id_product','product_name', 'product_code', 'id_product_category','product_description','product_video','product_allow_sync', 'position');
-        $outlet = Outlet::with(['today'])->distinct('outlets.id_outlet')->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude','outlets.delivery_order')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::with(['today', 'city.province'])->distinct('outlets.id_outlet')->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude','outlets.delivery_order')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         $outlet->whereHas('brands',function($query){
             $query->where('brand_active','1');
         });
@@ -1313,7 +1321,7 @@ class ApiOutletController extends Controller
         $grabfood = $request->json('grabfood');
 
         // outlet
-        $outlet = Outlet::with(['today'])->distinct('outlets.id_outlet')->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude','time_zone_utc','delivery_order')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::with(['today', 'city.province'])->distinct('outlets.id_outlet')->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude','time_zone_utc','delivery_order')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
 
         $outlet->whereHas('brands',function($query){
             $query->where('brand_active','1');
@@ -1396,7 +1404,10 @@ class ApiOutletController extends Controller
                     unset($outlet[$key]);
                     continue;
                 }
-
+                //get timezone from province
+                if(isset($outlet[$key]['city']['province']['time_zone_utc'])){
+                    $outlet[$key]['time_zone_utc'] = $outlet[$key]['city']['province']['time_zone_utc'];
+                }
                 $outlet[$key]['today'] = $this->getTimezone($outlet[$key]['today'], $outlet[$key]['time_zone_utc']);
 
                 // $outlet[$key] = $this->setAvailableOutlet($outlet[$key], $processing);;
@@ -1490,7 +1501,7 @@ class ApiOutletController extends Controller
         $sort = $request->json('sort');
 
         // outlet
-        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::with(['today', 'city.province', 'outlet_photos'])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
@@ -1601,7 +1612,6 @@ class ApiOutletController extends Controller
     function setAvailableOutlet($outlet, $processing){
         $outlet['today']['status'] = 'open';
         $outlet['today']['status_detail'] = '';
-
         if($outlet['today']['open'] == null || $outlet['today']['close'] == null){
             $outlet['today']['status'] = 'closed';
         }else{
@@ -1613,7 +1623,7 @@ class ApiOutletController extends Controller
 	            $found = 0;
 	            foreach ($new_days as $key => $value) {
 	            	if ($value['is_closed'] != 1) {
-	            		$outlet['today']['day'] 	= $value['day'];
+                        $outlet['today']['day'] 	= $value['day'];
 	            		$outlet['today']['open'] 	= $this->getOneTimezone($value['open'], $outlet['time_zone_utc']);
 			           	$outlet['today']['close'] 	= $this->getOneTimezone($value['close'], $outlet['time_zone_utc']);
 	            		$found = 1;
@@ -1636,7 +1646,7 @@ class ApiOutletController extends Controller
 
             	if (date('H:i', strtotime($outlet['today']['close'])) >= date('H:i', strtotime($outlet['today']['open']))) {
 		            if($outlet['today']['open'] && $now < date('H:i', strtotime($outlet['today']['open']))){
-		                $outlet['today']['status'] = 'closed';
+                        $outlet['today']['status'] = 'closed';
 		                $outlet['today']['status_detail'] = 'Hari ini buka pada '.$outlet['today']['open'];
                     // }elseif($outlet['today']['close'] && $now > date('H:i', strtotime('-'.$processing.' minutes', strtotime($outlet['today']['close'])))){
 		            }elseif($outlet['today']['close'] && $now > date('H:i', strtotime($outlet['today']['close']))){
@@ -2389,6 +2399,11 @@ class ApiOutletController extends Controller
         $outlet = Outlet::where('id_outlet', $post['id_outlet'])->first();
 
         foreach ($post['day'] as $key => $value) {
+            //get timezone from province
+            $city = City::where('id_city', $outlet->id_city)->with('province')->first();
+            if(isset($city['province']['time_zone_utc'])){
+                $outlet->time_zone_utc = $city['province']['time_zone_utc'];
+            }
         	$post['open'][$key] = $this->setOneTimezone($post['open'][$key], $outlet->time_zone_utc);
         	$post['close'][$key] = $this->setOneTimezone($post['close'][$key], $outlet->time_zone_utc);
             $data = [
@@ -2517,10 +2532,10 @@ class ApiOutletController extends Controller
     }
 
     public function detailTransaction(Request $request) {
-        $outlet = Outlet::with(['today','brands'=>function($query){
+        $outlet = Outlet::with(['today','city.province','brands'=>function($query){
                     $query->where([['brand_active',1],['brand_visibility',1]]);
                     $query->select('brands.id_brand','name_brand');
-                }])->select('id_outlet','outlet_code','outlet_name','outlet_address','outlet_latitude','outlet_longitude','outlet_phone','outlet_status','delivery_order','time_zone_utc')->find($request->json('id_outlet'));
+                }])->select('id_outlet','outlet_code','outlet_name','outlet_address','outlet_latitude','outlet_longitude','outlet_phone','outlet_status','delivery_order','time_zone_utc', 'id_city')->find($request->json('id_outlet'));
         if(!$outlet){
             return MyHelper::checkGet([]);
         }
@@ -2536,7 +2551,10 @@ class ApiOutletController extends Controller
         if ($check_holiday['status'] && in_array($outlet['id_outlet'], $check_holiday['list_outlet'])) {
         	$outlet['today']['is_closed'] = 1;
         }
-
+        //get timezone from province
+        if(isset($outlet['city']['province']['time_zone_utc'])){
+            $outlet['time_zone_utc'] = $outlet['city']['province']['time_zone_utc'];
+        }
         $outlet['today'] = $this->getTimezone($outlet['today'], $outlet['time_zone_utc']);
         $outlet = $this->setAvailableOutlet($outlet, $processing);
 

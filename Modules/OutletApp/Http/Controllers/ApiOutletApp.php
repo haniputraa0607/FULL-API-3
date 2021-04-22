@@ -10,6 +10,7 @@ use App\Http\Models\Outlet;
 use App\Http\Models\OutletHoliday;
 use App\Http\Models\OutletSchedule;
 use App\Http\Models\OutletToken;
+use App\Http\Models\City;
 use App\Http\Models\Product;
 use App\Http\Models\ProductCategory;
 use App\Http\Models\ProductModifier;
@@ -740,21 +741,23 @@ class ApiOutletApp extends Controller
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['receive_at' => date('Y-m-d H:i:s')]);
 
         if ($pickup) {
-            //send notif to customer
-            $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], [
-                "outlet_name"      => $outlet['outlet_name'],
-                'id_transaction'   => $order->id_transaction,
-                "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
-                "transaction_date" => $order->transaction_date,
-                'order_id'         => $order->order_id,
-                'receipt_number'   => $order->transaction_receipt_number,
-            ]);
-            if ($send != true) {
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['Failed Send notification to customer'],
+           //send notif to customer only for pickup
+            if ($order->pickup_by == 'Customer') {
+                $user = User::find($order->id_user);
+                $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], [
+                    "outlet_name"      => $outlet['outlet_name'],
+                    'id_transaction'   => $order->id_transaction,
+                    "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
+                    "transaction_date" => $order->transaction_date,
+                    'order_id'         => $order->order_id,
+                    'receipt_number'   => $order->transaction_receipt_number,
                 ]);
+                if ($send != true) {
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Failed Send notification to customer'],
+                    ]);
+                }
             }
             $result = ['status' => 'success'];
 
@@ -773,7 +776,7 @@ class ApiOutletApp extends Controller
         return response()->json(MyHelper::checkUpdate($pickup));
     }
 
-    public function SetReady(DetailOrder $request)
+    public function SetReady(DetailOrder $request, $autoready = false)
     {
         $post   = $request->json()->all();
         $outlet = $request->user();
@@ -830,7 +833,7 @@ class ApiOutletApp extends Controller
         }
 
         DB::beginTransaction();
-        $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['ready_at' => date('Y-m-d H:i:s')]);
+        $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['ready_at' => date('Y-m-d H:i:s'), 'is_autoready' => $autoready ? 1 : 0]);
 
         // sendPoint delivery after status delivered only
         if ($pickup && $order->pickup_by == 'Customer' && $order->cashback_insert_status != 1) {
@@ -988,6 +991,7 @@ class ApiOutletApp extends Controller
     {
         $outlet                    = $request->user();
         $profile['outlet_name']    = $outlet['outlet_name'];
+        $profile['outlet_status']   = $outlet['outlet_status'];
         $profile['outlet_code']    = $outlet['outlet_code'];
         $profile['outlet_address'] = $outlet['outlet_address'];
         $profile['outlet_phone']   = $outlet['outlet_phone'];
@@ -1404,7 +1408,22 @@ class ApiOutletApp extends Controller
         usort($result, function ($a, $b) {
             return $a['order_brand'] <=> $b['order_brand'];
         });
-        $modifiers = ProductModifier::select(\DB::raw('0 as id_brand, min(product_modifiers.id_product_modifier) as id_product_category, type as product_category_name, count(distinct(product_modifiers.id_product_modifier)) as total_product, 0 as total_sold_out'));
+        $modifiers = ProductModifier::select(\DB::raw('0 as id_brand, min(product_modifiers.id_product_modifier) as id_product_category, type as product_category_name, count(distinct(product_modifiers.id_product_modifier)) as total_product, 0 as total_sold_out'))
+            ->where('modifier_type', '<>', 'Modifier Group')
+            ->leftJoin('product_modifier_details', function($join) use ($outlet) {
+                $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+                    ->where('product_modifier_details.id_outlet', $outlet['id_outlet']);
+            })
+            ->where(function($q){
+                $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+            })
+            ->where(function($query){
+                $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
+                        ->orWhere(function($q){
+                            $q->whereNull('product_modifier_details.product_modifier_visibility')
+                            ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                        });
+            });
 
         if ($outlet['outlet_different_price']) {
             $modifiers->join('product_modifier_prices', function($join) use ($outlet) {
@@ -1542,6 +1561,7 @@ class ApiOutletApp extends Controller
             ->where(function($q){
                 $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
             })
+            ->where('modifier_type','<>','Modifier Group')
             ->where(function($query){
                 $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
                         ->orWhere(function($q){
@@ -2255,8 +2275,14 @@ class ApiOutletApp extends Controller
     public function listSchedule(Request $request)
     {
         $schedules = $request->user()->outlet_schedules()->get();
+        $timezone = $request->user()->time_zone_utc;
+        $city = City::where('id_city', $request->user()->id_city)->with('province')->first();
+        //get timezone from province
+        if(isset($city['province']['time_zone_utc'])){
+            $timezone = $city['province']['time_zone_utc'];
+        }
         foreach ($schedules as $key => $value) {
-        	$schedules[$key] = app($this->outlet)->getTimezone($value, $request->user()->time_zone_utc);
+        	$schedules[$key] = app($this->outlet)->getTimezone($value, $timezone);
         }
         return MyHelper::checkGet($schedules);
     }
@@ -2270,8 +2296,13 @@ class ApiOutletApp extends Controller
         $otp         = $request->outlet_app_otps;
         $date_time   = date('Y-m-d H:i:s');
         foreach ($post['schedule'] as $value) {
-
-        	$value = $this->setTimezone($value, $request->user()->time_zone_utc);
+            $timezone = $request->user()->time_zone_utc;
+            $city = City::where('id_city', $request->user()->id_city)->with('province')->first();
+            //get timezone from province
+            if(isset($city['province']['time_zone_utc'])){
+                $timezone = $city['province']['time_zone_utc'];
+            }
+        	$value = $this->setTimezone($value, $timezone);
 
             $old      = OutletSchedule::select('id_outlet_schedule', 'id_outlet', 'day', 'open', 'close', 'is_closed')->where(['id_outlet' => $id_outlet, 'day' => $value['day']])->first();
             $old_data = $old ? $old->toArray() : [];
@@ -2364,6 +2395,7 @@ class ApiOutletApp extends Controller
 
         if ($trx_status == 'taken') {
             $data->where('transaction_payment_status', 'Completed')
+                ->whereNull('reject_at')
                 ->where(function ($query) {
                     $query->whereNotNull('taken_at')
                         ->orWhereNotNull('taken_by_system_at');
@@ -4688,9 +4720,10 @@ class ApiOutletApp extends Controller
     {
         $outlet  = $request->user();
         $holiday = OutletHoliday::distinct()
-            ->select(DB::raw('outlet_holidays.id_holiday,date_holidays.id_date_holiday,holiday_name,yearly,date_holidays.date,GROUP_CONCAT(date_edit.date order by date_edit.date) as date_edit'))
-            ->where('id_outlet', $outlet->id_outlet)
+            ->select(DB::raw('outlet_holidays.id_holiday,date_holidays.id_date_holiday,holiday_name,yearly,date_holidays.date,GROUP_CONCAT(date_edit.date order by date_edit.date) as date_edit,(CASE WHEN COUNT(distinct(oh.id_outlet)) > 1 THEN 1 ELSE 0 END) as read_only'))
+            ->where('outlet_holidays.id_outlet', $outlet->id_outlet)
             ->join('holidays', 'holidays.id_holiday', '=', 'outlet_holidays.id_holiday')
+            ->join('outlet_holidays as oh', 'oh.id_holiday', '=', 'outlet_holidays.id_holiday')
             ->join('date_holidays', 'date_holidays.id_holiday', '=', 'holidays.id_holiday')
             ->join('date_holidays as date_edit', 'date_edit.id_holiday', '=', 'holidays.id_holiday')
             ->where(function ($q) {
@@ -4805,9 +4838,12 @@ class ApiOutletApp extends Controller
         ];
 
         DB::beginTransaction();
-        $insertHoliday = Holiday::find($id_holiday);
+        $insertHoliday = Holiday::select(\DB::raw('holidays.*,(CASE WHEN COUNT(distinct(oh.id_outlet)) > 1 THEN 1 ELSE 0 END) as read_only'))->join('outlet_holidays as oh', 'oh.id_holiday', '=', 'holidays.id_holiday')->groupBy('holidays.id_holiday')->find($id_holiday);
         if (!$insertHoliday) {
             return MyHelper::checkGet([], 'Holiday not found');
+        }
+        if ($insertHoliday->read_only) {
+            return MyHelper::checkGet([], 'This holiday cannot be changed');
         }
         $insertHoliday->update($holiday);
         DateHoliday::where('id_holiday', $id_holiday)->delete();
@@ -4873,7 +4909,12 @@ class ApiOutletApp extends Controller
         $id_date_holiday = $request->id_date_holiday;
         $id_holiday      = $request->id_holiday;
         if ($id_date_holiday) {
-            $date_holiday = DateHoliday::where('id_date_holiday', $id_date_holiday)->first();
+            $date_holiday = DateHoliday::where('id_date_holiday', $id_date_holiday)->with(['holiday' => function ($q) {
+                $q->select(\DB::raw('holidays.*,(CASE WHEN COUNT(distinct(oh.id_outlet)) > 1 THEN 1 ELSE 0 END) as read_only'))->join('outlet_holidays as oh', 'oh.id_holiday', '=', 'holidays.id_holiday')->groupBy('holidays.id_holiday');
+            }])->first();
+            if ($date_holiday->holiday->read_only) {
+                return MyHelper::checkGet([], 'This holiday cannot be deleted');
+            };
             if (!$date_holiday) {
                 return MyHelper::checkDelete(false);
             }
@@ -4884,6 +4925,11 @@ class ApiOutletApp extends Controller
             } else {
                 $id_holiday = $date_holiday->id_holiday;
             }
+        } elseif ($id_holiday) {
+            $holiday = Holiday::select(\DB::raw('holidays.*,(CASE WHEN COUNT(distinct(oh.id_outlet)) > 1 THEN 1 ELSE 0 END) as read_only'))->join('outlet_holidays as oh', 'oh.id_holiday', '=', 'holidays.id_holiday')->groupBy('holidays.id_holiday')->find($id_holiday);
+            if ($holiday->read_only) {
+                return MyHelper::checkGet([], 'This holiday cannot be deleted');
+            };
         }
         if ($id_holiday) {
             $delete = Holiday::where(['holidays.id_holiday' => $id_holiday, 'id_outlet' => $request->user()->id_outlet])->join('outlet_holidays', 'outlet_holidays.id_holiday', '=', 'holidays.id_holiday')->delete();
