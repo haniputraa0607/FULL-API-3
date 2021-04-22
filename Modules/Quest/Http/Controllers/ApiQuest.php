@@ -1012,9 +1012,24 @@ class ApiQuest extends Controller
      * @param int $id
      * @return Response
      */
-    public function destroy($id)
+    public function destroy(Request $request)
     {
-        //
+        if ($request->id_quest_detail) {
+            $quest = QuestDetail::where(['id_quest_detail' => $request->id_quest_detail])->join('quests', 'quest_details.id_quest', 'quests.id_quest')->first();
+        } else {
+            $quest = Quest::find($request->id_quest);
+        }
+        if (!$quest) {
+            return MyHelper::checkGet($quest);
+        }
+        if ($quest->is_complete) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Quest cannot be deleted']
+            ];
+        }
+        $delete = $quest->delete();
+        return MyHelper::checkDelete($delete);
     }
 
     public function list(Request $request)
@@ -1178,7 +1193,7 @@ class ApiQuest extends Controller
         $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
         $result['time_server'] = date('Y-m-d H:i:s');
 
-        $details = QuestUser::select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
+        $details = QuestUser::where(['quest_users.id_quest' => $quest->id_quest])->select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
 
         $result['details'] = $details;
 
