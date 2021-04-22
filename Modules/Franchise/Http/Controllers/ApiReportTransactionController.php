@@ -9,7 +9,6 @@ use Modules\Franchise\Entities\DailyReportTrxMenu;
 use Modules\Franchise\Entities\DailyReportTrxModifier;
 use Modules\Franchise\Entities\ProductCategory;
 use Modules\Franchise\Entities\Product;
-use Modules\Franchise\Entities\TransactionProduct;
 use Modules\Franchise\Entities\ProductVariantGroup;
 use Modules\Franchise\Entities\ProductVariant;
 use Modules\Franchise\Entities\Brand;

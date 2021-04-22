@@ -5,7 +5,6 @@ namespace Modules\Franchise\Http\Controllers;
 use Modules\Franchise\Entities\DailyReportTrx;
 use Modules\Franchise\Entities\Transaction;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
 use DB;

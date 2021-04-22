@@ -2,8 +2,6 @@
 
 namespace Modules\Franchise\Http\Controllers;
 
-use App\Http\Models\Autocrm;
-use App\Http\Models\Outlet;
 use Modules\Franchise\Entities\Transaction;
 use Modules\Franchise\Entities\TransactionVoucher;
 use Modules\Franchise\Entities\TransactionProduct;
@@ -13,9 +11,6 @@ use Modules\Franchise\Entities\PromoCampaign;
 
 use Modules\Franchise\Entities\Subscription;
 
-use Modules\Franchise\Entities\UserFranchise;
-use Modules\Franchise\Entities\UserFranchiseOultet;
-
 use Modules\Franchise\Entities\Bundling;
 
 use Modules\Franchise\Entities\SubscriptionUserVoucher;
@@ -23,12 +18,10 @@ use Modules\Franchise\Entities\SubscriptionUserVoucher;
 use Modules\Franchise\Entities\TransactionBundlingProduct;
 
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
 use DB;
-use DateTime;
 use Modules\PromoCampaign\Lib\PromoCampaignTools;
 
 class ApiReportPromoController extends Controller

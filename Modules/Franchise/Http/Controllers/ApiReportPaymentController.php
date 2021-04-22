@@ -2,17 +2,11 @@
 
 namespace Modules\Franchise\Http\Controllers;
 
-use App\Http\Models\Autocrm;
-use App\Http\Models\Outlet;
 use Modules\Franchise\Entities\Transaction;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-use Modules\Franchise\Entities\UserFranchise;
 use App\Lib\MyHelper;
-use Modules\Franchise\Entities\UserFranchiseOultet;
 use Modules\Franchise\Entities\UserFranchiseOultetConnection3;
-use Modules\Franchise\Http\Requests\users_create;
 use Modules\Franchise\Entities\DailyReportPayment;
 use DB;
 use DateTime;

@@ -4,34 +4,13 @@ namespace Modules\Franchise\Http\Controllers;
 
 use Modules\Franchise\Entities\OutletConnection3;
 use App\Http\Models\Outlet;
-use Modules\Franchise\Entities\OutletDoctor;
-use Modules\Franchise\Entities\OutletDoctorSchedule;
-use Modules\Franchise\Entities\OutletHoliday;
-use Modules\Franchise\Entities\UserOutletApp;
-use Modules\Franchise\Entities\Holiday;
-use Modules\Franchise\Entities\DateHoliday;
-use Modules\Franchise\Entities\OutletPhoto;
-use Modules\Franchise\Entities\City;
-use Modules\Franchise\Entities\User;
-use Modules\Franchise\Entities\UserOutlet;
-use Modules\Franchise\Entities\Configs;
 use App\Http\Models\OutletSchedule;
-use Modules\Franchise\Entities\Setting;
-use Modules\Franchise\Entities\OauthAccessToken;
-use Modules\Franchise\Entities\Product;
-use Modules\Franchise\Entities\ProductPrice;
-use Modules\Franchise\Entities\ProductDetail;
-use Modules\Franchise\Entities\ProductGlobalPrice;
-use Modules\Franchise\Entities\ProductSpecialPrice;
-use Modules\Franchise\Entities\UserFranchise;
-use Modules\Franchise\Entities\UserFranchiseOultet;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
 use Modules\Disburse\Entities\BankAccountOutlet;
 use Modules\Disburse\Entities\BankAccount;
 use Modules\Franchise\Entities\BankName;
 
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use Modules\Franchise\Http\Requests\SendRequestAdmin;
