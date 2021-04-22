@@ -15,7 +15,7 @@ use Modules\Franchise\Entities\TransactionPaymentBalance;
 use Modules\Franchise\Entities\MDR;
 use Modules\Franchise\Entities\TransactionPaymentIpay88;
 use Modules\Franchise\Entities\TransactionMultiplePayment;
-use Modules\Franchise\Entities\Outlet;
+use Modules\Franchise\Entities\OutletConnection3;
 use Modules\Franchise\Entities\LogBalance;
 use Modules\Franchise\Entities\TransactionShipment;
 use Modules\Franchise\Entities\TransactionPickup;
@@ -1254,7 +1254,7 @@ class ApiTransactionFranchiseController extends Controller
         $start = date('Y-m-d', strtotime($post['date_start']));
         $end = date('Y-m-d', strtotime($post['date_end']));
         
-        $getOutlet = Outlet::where('id_outlet', $queue['id_outlet'])->first();
+        $getOutlet = OutletConnection3::where('id_outlet', $queue['id_outlet'])->first();
 
         if($getOutlet && !empty($getOutlet['outlet_email'])){
             $filter['date_start'] = $start;

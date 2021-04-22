@@ -6,7 +6,7 @@ use Modules\Franchise\Entities\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\Franchise\Entities\BankName;
-use Modules\Disburse\Entities\Disburse;
+use Modules\Franchise\Entities\Disburse;
 use App\Lib\MyHelper;
 use DB;
 use DateTime;
