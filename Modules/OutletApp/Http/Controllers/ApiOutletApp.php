@@ -848,6 +848,7 @@ class ApiOutletApp extends Controller
             MyHelper::updateFlagTransactionOnline($newTrx, 'success', $newTrx->user);
 
             \App\Jobs\UpdateQuestProgressJob::dispatch($order->id_transaction)->onConnection('quest');
+            AchievementCheck::dispatch(['id_transaction' => $order->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
             if (!in_array('Balance', $column) || $use_referral) {
 
                 $promo_source = null;
@@ -977,9 +978,6 @@ class ApiOutletApp extends Controller
                     'messages' => ['Failed Send notification to customer'],
                 ]);
             }
-
-            AchievementCheck::dispatch(['id_transaction' => $order->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
-
 
             DB::commit();
         }
