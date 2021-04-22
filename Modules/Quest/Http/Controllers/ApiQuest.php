@@ -870,7 +870,8 @@ class ApiQuest extends Controller
         }
 
         if ($benefit->benefit_type == 'point') {
-            app($this->balance)->addLogBalance( $id_user, $benefit->value, $quest->id_quest, 'Quest Benefit', 0);
+            $log_balance = app($this->balance)->addLogBalance( $id_user, $benefit->value, $quest->id_quest, 'Quest Benefit', 0);
+            $benefit->log_balance = $log_balance;
             // addLogBalance
             $autocrm = app($this->autocrm)->SendAutoCRM('Receive Quest Point', $user->phone,
                 [
@@ -893,9 +894,10 @@ class ApiQuest extends Controller
             for($i=0;$i<$total_benefit;$i++){
                 if ($total_voucher > $total_claimed || $total_voucher === 0) {
                     $generateVoucher = app($this->hidden_deals)->autoClaimedAssign($deals, [$id_user]);
+                    $benefit->deals->deals_voucher = $generateVoucher;
                     $count++;
                     app($this->deals_claim)->updateDeals($deals);
-                    $deals = Deal::where('id_deals', $deals->id_user)->first();
+                    $deals = Deal::where('id_deals', $deals->id_deals)->first();
                     $total_claimed = $deals['deals_total_claimed'];
                 } else {
                     break;
@@ -1115,23 +1117,24 @@ class ApiQuest extends Controller
     {
         $claim = $this->checkQuestCompleted($request->id_quest, $request->user()->id, false, $errors, $quest_benefit);
 
-        $benefit = [
-            'type' => $quest_benefit->benefit_type
-        ];
-        if ($quest_benefit->benefit_type == 'voucher') {
-            $benefit['text'] = $quest_benefit->deals->deals_title;
-        } else {
-            $benefit['text'] = MyHelper::requestNumber($quest_benefit->value, '_POINT').' Poin';
-        }
         if ($claim) {
+            $benefit = [
+                'type' => $quest_benefit->benefit_type
+            ];
+            if ($quest_benefit->benefit_type == 'voucher') {
+                $benefit['text'] = $quest_benefit->deals->deals_title;
+                $benefit['id'] = $quest_benefit->deals->deals_voucher->id_deals_user;
+            } else {
+                $benefit['text'] = MyHelper::requestNumber($quest_benefit->value, '_POINT').' Poin';
+                $benefit['id'] = $quest_benefit->log_balance->id_log_balance;
+            }
             return ['status' => 'success', 'result' => ['benefit' => $benefit]];
         }
         return [
             'status' => 'fail',
             'messages' => $errors ?? [
                 'Failed claim benefit'
-            ],
-            'result' => ['benefit' => $benefit]
+            ]
         ];
     }
 
@@ -1174,6 +1177,7 @@ class ApiQuest extends Controller
     {
         $id_user = $request->user()->id;
         $quest = Quest::select('quests.id_quest', 'name', 'image as image_url', 'description', 'short_description', 'date_start', 'date_end', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
+            ->with(['quest_benefit', 'quest_benefit.deals'])
             ->join('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
@@ -1187,11 +1191,22 @@ class ApiQuest extends Controller
         if (!$quest) {
             return MyHelper::checkGet([], "Quest tidak ditemukan");
         }
+
+        $benefit = [
+            'type' => $quest->quest_benefit->benefit_type
+        ];
+        if ($quest->quest_benefit->benefit_type == 'voucher') {
+            $benefit['text'] = $quest->quest_benefit->deals->deals_title;
+        } else {
+            $benefit['text'] = MyHelper::requestNumber($quest->quest_benefit->value, '_POINT').' Poin';
+        }
+
         $quest->append(['progress', 'contents']);
-        $quest->makeHidden(['date_start', 'quest_contents', 'description']);
+        $quest->makeHidden(['date_start', 'quest_contents', 'description', 'quest_benefit']);
         $result = $quest->toArray();
         $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
         $result['time_server'] = date('Y-m-d H:i:s');
+        $result['benefit'] = $benefit;
 
         $details = QuestUser::where(['quest_users.id_quest' => $quest->id_quest])->select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
 
