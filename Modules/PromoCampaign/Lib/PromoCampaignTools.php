@@ -17,6 +17,8 @@ use App\Http\Models\Setting;
 use App\Http\Models\Deal;
 use App\Http\Models\DealsUser;
 use App\Http\Models\Outlet;
+use App\Http\Models\ProductModifierPrice;
+use App\Http\Models\ProductModifierGlobalPrice;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\Product\Entities\ProductDetail;
@@ -1799,6 +1801,24 @@ class PromoCampaignTools{
         	$productPrice = false;
         }
 		return $productPrice;
+    }
+
+    public function getProductModifierPrice($id_outlet, $id_product_modifier)
+    {
+	    $different_price = Outlet::select('outlet_different_price')->where('id_outlet',$id_outlet)->pluck('outlet_different_price')->first();
+
+        if($different_price){
+        	$modifier_price = ProductModifierPrice::where('id_product_modifier', $id_product_modifier)->where('id_outlet', $id_outlet)->first();
+
+        }else{
+        	$modifier_price = ProductModifierGlobalPrice::where('id_product_modifier', $id_product_modifier)->first();
+        }
+
+        if (!$modifier_price->product_modifier_price) {
+        	$productPrice = false;
+        }
+
+		return $modifier_price->product_modifier_price;
     }
 
     /**
