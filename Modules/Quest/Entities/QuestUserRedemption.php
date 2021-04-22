@@ -12,6 +12,8 @@ class QuestUserRedemption extends Model
         'id_quest',
         'id_user',
         'redemption_status',
-        'redemption_date'
+        'redemption_date',
+        'id_reference',
+        'benefit_type'
     ];
 }
