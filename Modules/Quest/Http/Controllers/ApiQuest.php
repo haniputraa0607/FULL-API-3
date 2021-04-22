@@ -1208,7 +1208,7 @@ class ApiQuest extends Controller
         $result['time_server'] = date('Y-m-d H:i:s');
         $result['benefit'] = $benefit;
 
-        $details = QuestUser::where(['quest_users.id_quest' => $quest->id_quest])->select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
+        $details = QuestUser::where(['quest_users.id_quest' => $quest->id_quest, 'quest_users.id_user' => $id_user])->select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
 
         $result['details'] = $details;
 
