@@ -2,34 +2,26 @@
 
 namespace Modules\Franchise\Http\Controllers;
 
-use App\Http\Models\Autocrm;
-use App\Http\Models\Outlet;
-use App\Http\Models\Transaction;
-use App\Http\Models\TransactionVoucher;
-use App\Http\Models\TransactionProduct;
-use App\Http\Models\TransactionProductModifier;
-use App\Http\Models\Deal;
+use Modules\Franchise\Entities\Transaction;
+use Modules\Franchise\Entities\TransactionVoucher;
+use Modules\Franchise\Entities\TransactionProduct;
+use Modules\Franchise\Entities\Deal;
 
-use Modules\PromoCampaign\Entities\PromoCampaign;
+use Modules\Franchise\Entities\PromoCampaign;
 
-use Modules\Subscription\Entities\Subscription;
+use Modules\Franchise\Entities\Subscription;
 
-use Modules\Franchise\Entities\UserFranchise;
-use Modules\Franchise\Entities\UserFranchiseOultet;
+use Modules\Franchise\Entities\Bundling;
 
-use Modules\ProductBundling\Entities\Bundling;
+use Modules\Franchise\Entities\SubscriptionUserVoucher;
 
-use Modules\Subscription\Entities\SubscriptionUserVoucher;
-
-use Modules\Transaction\Entities\TransactionBundlingProduct;
+use Modules\Franchise\Entities\TransactionBundlingProduct;
 
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
 use DB;
-use DateTime;
 use Modules\PromoCampaign\Lib\PromoCampaignTools;
 
 class ApiReportPromoController extends Controller
