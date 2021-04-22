@@ -2,103 +2,55 @@
 
 namespace Modules\Franchise\Http\Controllers;
 
-use App\Http\Models\Deal;
-use App\Http\Models\TransactionProductModifier;
-use Illuminate\Pagination\Paginator;
-use App\Http\Models\Configs;
-use App\Http\Models\Transaction;
-use App\Http\Models\TransactionProduct;
-use App\Http\Models\TransactionPayment;
-use App\Http\Models\TransactionPickupGoSend;
-use App\Http\Models\Province;
-use App\Http\Models\City;
-use App\Http\Models\User;
-use App\Http\Models\Courier;
-use App\Http\Models\Product;
-use App\Http\Models\ProductPrice;
-use App\Http\Models\ProductModifierPrice;
-use App\Http\Models\ProductModifierGlobalPrice;
-use App\Http\Models\Setting;
-use App\Http\Models\StockLog;
-use App\Http\Models\UserAddress;
-use App\Http\Models\ManualPayment;
-use App\Http\Models\ManualPaymentMethod;
-use App\Http\Models\ManualPaymentTutorial;
-use App\Http\Models\TransactionPaymentManual;
-use App\Http\Models\TransactionPaymentOffline;
-use App\Http\Models\TransactionPaymentBalance;
-use Modules\Disburse\Entities\MDR;
-use Modules\IPay88\Entities\TransactionPaymentIpay88;
-use App\Http\Models\TransactionMultiplePayment;
-use App\Http\Models\Outlet;
-use App\Http\Models\LogPoint;
-use App\Http\Models\LogBalance;
-use App\Http\Models\TransactionShipment;
-use App\Http\Models\TransactionPickup;
-use App\Http\Models\TransactionPaymentMidtran;
-use Modules\ProductVariant\Entities\ProductVariant;
-use Modules\ProductVariant\Entities\TransactionProductVariant;
-use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
-use App\Http\Models\DealsUser;
-use App\Http\Models\DealsPaymentMidtran;
-use App\Http\Models\DealsPaymentManual;
-use Modules\IPay88\Entities\DealsPaymentIpay88;
-use Modules\ShopeePay\Entities\DealsPaymentShopeePay;
-use App\Http\Models\UserTrxProduct;
-use Modules\Brand\Entities\Brand;
-use Modules\Brand\Entities\BrandOutlet;
-use Modules\Brand\Entities\BrandProduct;
-use Modules\Product\Entities\ProductGlobalPrice;
-use Modules\Product\Entities\ProductSpecialPrice;
+use Modules\Franchise\Entities\Deal;
+use Modules\Franchise\Entities\TransactionProductModifier;
+use Modules\Franchise\Entities\Configs;
+use Modules\Franchise\Entities\Transaction;
+use Modules\Franchise\Entities\TransactionProduct;
+use Modules\Franchise\Entities\Product;
+use Modules\Franchise\Entities\Setting;
+use Modules\Franchise\Entities\TransactionPaymentManual;
+use Modules\Franchise\Entities\TransactionPaymentOffline;
+use Modules\Franchise\Entities\TransactionPaymentBalance;
+use Modules\Franchise\Entities\MDR;
+use Modules\Franchise\Entities\TransactionPaymentIpay88;
+use Modules\Franchise\Entities\TransactionMultiplePayment;
+use Modules\Franchise\Entities\OutletConnection3;
+use Modules\Franchise\Entities\LogBalance;
+use Modules\Franchise\Entities\TransactionShipment;
+use Modules\Franchise\Entities\TransactionPickup;
+use Modules\Franchise\Entities\TransactionPaymentMidtran;
+use Modules\Franchise\Entities\ProductVariant;
+use Modules\Franchise\Entities\TransactionProductVariant;
+use Modules\Franchise\Entities\TransactionPaymentShopeePay;
+use Modules\Franchise\Entities\DealsUser;
+use Modules\Franchise\Entities\DealsPaymentMidtran;
+use Modules\Franchise\Entities\DealsPaymentManual;
+use Modules\Franchise\Entities\DealsPaymentIpay88;
+use Modules\Franchise\Entities\DealsPaymentShopeePay;
+use Modules\Franchise\Entities\Brand;
+use Modules\Franchise\Entities\BrandOutlet;
+use Modules\Franchise\Entities\BrandProduct;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
-use Modules\Subscription\Entities\SubscriptionUserVoucher;
-use Modules\Transaction\Entities\LogInvalidTransaction;
-use Modules\Transaction\Entities\TransactionBundlingProduct;
-use Modules\Transaction\Http\Requests\RuleUpdate;
+use Modules\Franchise\Entities\SubscriptionUserVoucher;
+use Modules\Franchise\Entities\LogInvalidTransaction;
+use Modules\Franchise\Entities\TransactionBundlingProduct;
 
 use Modules\Transaction\Http\Requests\TransactionDetail;
-use Modules\Transaction\Http\Requests\TransactionHistory;
 use Modules\Transaction\Http\Requests\TransactionFilter;
-use Modules\Transaction\Http\Requests\TransactionNew;
-use Modules\Transaction\Http\Requests\TransactionShipping;
-use Modules\Transaction\Http\Requests\GetProvince;
-use Modules\Transaction\Http\Requests\GetCity;
-use Modules\Transaction\Http\Requests\GetSub;
-use Modules\Transaction\Http\Requests\GetAddress;
-use Modules\Transaction\Http\Requests\GetNearbyAddress;
-use Modules\Transaction\Http\Requests\AddAddress;
-use Modules\Transaction\Http\Requests\UpdateAddress;
-use Modules\Transaction\Http\Requests\DeleteAddress;
-use Modules\Transaction\Http\Requests\ManualPaymentCreate;
-use Modules\Transaction\Http\Requests\ManualPaymentEdit;
-use Modules\Transaction\Http\Requests\ManualPaymentUpdate;
-use Modules\Transaction\Http\Requests\ManualPaymentDetail;
-use Modules\Transaction\Http\Requests\ManualPaymentDelete;
-use Modules\Transaction\Http\Requests\MethodSave;
-use Modules\Transaction\Http\Requests\MethodDelete;
-use Modules\Transaction\Http\Requests\ManualPaymentConfirm;
-use Modules\Transaction\Http\Requests\ShippingGoSend;
 
-use Modules\ProductVariant\Entities\ProductVariantGroup;
-use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
+use Modules\Franchise\Entities\ProductVariantGroup;
 
-use Modules\Disburse\Entities\DisburseOutletTransaction;
+use Modules\Franchise\Entities\DisburseOutletTransaction;
 
 use App\Jobs\ExportFranchiseJob;
 use App\Lib\MyHelper;
-use App\Lib\GoSend;
-use Validator;
-use Hash;
 use DB;
-use Mail;
-use Image;
-use Illuminate\Support\Facades\Log;
 use App\Exports\MultipleSheetExport;
-use Rap2hpoutre\FastExcel\FastExcel;
 use Illuminate\Support\Facades\Storage;
 use File;
 
@@ -1302,7 +1254,7 @@ class ApiTransactionFranchiseController extends Controller
         $start = date('Y-m-d', strtotime($post['date_start']));
         $end = date('Y-m-d', strtotime($post['date_end']));
         
-        $getOutlet = Outlet::where('id_outlet', $queue['id_outlet'])->first();
+        $getOutlet = OutletConnection3::where('id_outlet', $queue['id_outlet'])->first();
 
         if($getOutlet && !empty($getOutlet['outlet_email'])){
             $filter['date_start'] = $start;
