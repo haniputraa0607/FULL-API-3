@@ -870,7 +870,8 @@ class ApiQuest extends Controller
         }
 
         if ($benefit->benefit_type == 'point') {
-            app($this->balance)->addLogBalance( $id_user, $benefit->value, $quest->id_quest, 'Quest Benefit', 0);
+            $log_balance = app($this->balance)->addLogBalance( $id_user, $benefit->value, $quest->id_quest, 'Quest Benefit', 0);
+            $benefit->log_balance = $log_balance;
             // addLogBalance
             $autocrm = app($this->autocrm)->SendAutoCRM('Receive Quest Point', $user->phone,
                 [
@@ -893,6 +894,7 @@ class ApiQuest extends Controller
             for($i=0;$i<$total_benefit;$i++){
                 if ($total_voucher > $total_claimed || $total_voucher === 0) {
                     $generateVoucher = app($this->hidden_deals)->autoClaimedAssign($deals, [$id_user]);
+                    $benefit->deals->deals_voucher = $generateVoucher;
                     $count++;
                     app($this->deals_claim)->updateDeals($deals);
                     $deals = Deal::where('id_deals', $deals->id_deals)->first();
@@ -1115,23 +1117,24 @@ class ApiQuest extends Controller
     {
         $claim = $this->checkQuestCompleted($request->id_quest, $request->user()->id, false, $errors, $quest_benefit);
 
-        $benefit = [
-            'type' => $quest_benefit->benefit_type
-        ];
-        if ($quest_benefit->benefit_type == 'voucher') {
-            $benefit['text'] = $quest_benefit->deals->deals_title;
-        } else {
-            $benefit['text'] = MyHelper::requestNumber($quest_benefit->value, '_POINT').' Poin';
-        }
         if ($claim) {
+            $benefit = [
+                'type' => $quest_benefit->benefit_type
+            ];
+            if ($quest_benefit->benefit_type == 'voucher') {
+                $benefit['text'] = $quest_benefit->deals->deals_title;
+                $benefit['id'] = $quest_benefit->deals->deals_voucher->id_deals_user;
+            } else {
+                $benefit['text'] = MyHelper::requestNumber($quest_benefit->value, '_POINT').' Poin';
+                $benefit['id'] = $quest_benefit->log_balance->id_log_balance;
+            }
             return ['status' => 'success', 'result' => ['benefit' => $benefit]];
         }
         return [
             'status' => 'fail',
             'messages' => $errors ?? [
                 'Failed claim benefit'
-            ],
-            'result' => ['benefit' => $benefit]
+            ]
         ];
     }
 
