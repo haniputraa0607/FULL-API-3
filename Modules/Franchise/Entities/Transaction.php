@@ -221,7 +221,7 @@ class Transaction extends Model
     public function transaction_pickup_go_send()
     {
     	// make sure you have joined transaction_pickups before using this
-		return $this->belongsTo(App\Http\Models\TransactionPickupGoSend::class, 'id_transaction_pickup', 'id_transaction_pickup');
+		return $this->belongsTo(TransactionPickupGoSend::class, 'id_transaction_pickup', 'id_transaction_pickup');
     }
 
     public function logTopup() 
