@@ -5,6 +5,7 @@ namespace Modules\Franchise\Http\Controllers;
 use Modules\Franchise\Entities\Transaction;
 use Modules\Franchise\Entities\TransactionVoucher;
 use Modules\Franchise\Entities\TransactionProduct;
+use Modules\Franchise\Entities\TransactionProductModifier;
 use Modules\Franchise\Entities\Deal;
 
 use Modules\Franchise\Entities\PromoCampaign;
