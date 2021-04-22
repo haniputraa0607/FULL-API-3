@@ -158,6 +158,7 @@ class ApiGosendController extends Controller
                         $outlet    = $trx->outlet;
                         $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
                         \App\Jobs\UpdateQuestProgressJob::dispatch($trx->id_transaction)->onConnection('quest');
+                        \Modules\OutletApp\Jobs\AchievementCheck::dispatch(['id_transaction' => $trx->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
 
                         if (!in_array('Balance', $column) || $use_referral) {
 

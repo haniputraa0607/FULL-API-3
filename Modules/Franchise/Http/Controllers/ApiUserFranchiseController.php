@@ -215,12 +215,18 @@ class ApiUserFranchiseController extends Controller
                 return response()->json(['status' => 'fail', 'message' => 'Wrong input your password']);
             }
 
+            $check = UserFranchise::where('username', $post['username'])->whereNotIn('id_user_franchise', [$post['id_user_franchise']])->first();
+            if(!empty($check)){
+                return response()->json(['status' => 'fail', 'messages' => ['Username already exist']]);
+            }
+
             $status = 'Inactive';
             if(!empty($post['user_franchise_status'])){
                 $status = 'Active';
             }
             $post['level'] = $post['level']??'User Franchise';
             $dataUpdate = [
+                'username' => $post['username'],
                 'name' => $post['name'],
                 'email' => $post['email'],
                 'level' => $post['level'],
