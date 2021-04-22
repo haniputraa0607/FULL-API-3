@@ -894,7 +894,7 @@ class ApiQuest extends Controller
                     $generateVoucher = app($this->hidden_deals)->autoClaimedAssign($deals, [$id_user]);
                     $count++;
                     app($this->deals_claim)->updateDeals($deals);
-                    $deals = Deal::where('id_deals', $deals->id_user)->first();
+                    $deals = Deal::where('id_deals', $deals->id_deals)->first();
                     $total_claimed = $deals['deals_total_claimed'];
                 } else {
                     break;
