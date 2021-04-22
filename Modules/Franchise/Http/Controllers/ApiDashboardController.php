@@ -2,8 +2,8 @@
 
 namespace Modules\Franchise\Http\Controllers;
 
-use App\Http\Models\DailyReportTrx;
-use App\Http\Models\Transaction;
+use Modules\Franchise\Entities\DailyReportTrx;
+use Modules\Franchise\Entities\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;

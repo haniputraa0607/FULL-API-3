@@ -2,32 +2,33 @@
 
 namespace Modules\Franchise\Http\Controllers;
 
+use Modules\Franchise\Entities\OutletConnection3;
 use App\Http\Models\Outlet;
-use App\Http\Models\OutletDoctor;
-use App\Http\Models\OutletDoctorSchedule;
-use App\Http\Models\OutletHoliday;
-use App\Http\Models\UserOutletApp;
-use App\Http\Models\Holiday;
-use App\Http\Models\DateHoliday;
-use App\Http\Models\OutletPhoto;
-use App\Http\Models\City;
-use App\Http\Models\User;
-use App\Http\Models\UserOutlet;
-use App\Http\Models\Configs;
+use Modules\Franchise\Entities\OutletDoctor;
+use Modules\Franchise\Entities\OutletDoctorSchedule;
+use Modules\Franchise\Entities\OutletHoliday;
+use Modules\Franchise\Entities\UserOutletApp;
+use Modules\Franchise\Entities\Holiday;
+use Modules\Franchise\Entities\DateHoliday;
+use Modules\Franchise\Entities\OutletPhoto;
+use Modules\Franchise\Entities\City;
+use Modules\Franchise\Entities\User;
+use Modules\Franchise\Entities\UserOutlet;
+use Modules\Franchise\Entities\Configs;
 use App\Http\Models\OutletSchedule;
-use App\Http\Models\Setting;
-use App\Http\Models\OauthAccessToken;
-use App\Http\Models\Product;
-use App\Http\Models\ProductPrice;
-use Modules\Product\Entities\ProductDetail;
-use Modules\Product\Entities\ProductGlobalPrice;
-use Modules\Product\Entities\ProductSpecialPrice;
+use Modules\Franchise\Entities\Setting;
+use Modules\Franchise\Entities\OauthAccessToken;
+use Modules\Franchise\Entities\Product;
+use Modules\Franchise\Entities\ProductPrice;
+use Modules\Franchise\Entities\ProductDetail;
+use Modules\Franchise\Entities\ProductGlobalPrice;
+use Modules\Franchise\Entities\ProductSpecialPrice;
 use Modules\Franchise\Entities\UserFranchise;
 use Modules\Franchise\Entities\UserFranchiseOultet;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
 use Modules\Disburse\Entities\BankAccountOutlet;
 use Modules\Disburse\Entities\BankAccount;
-use Modules\Disburse\Entities\BankName;
+use Modules\Franchise\Entities\BankName;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -55,7 +56,7 @@ class ApiOutletFranchiseController extends Controller
 	public function detail(Request $request)
 	{
 		$post = $request->json()->all();
-		$data = Outlet::where('id_outlet', $request->id_outlet)
+		$data = OutletConnection3::where('id_outlet', $request->id_outlet)
 			->with(['user_outlets','city.province','today', 'outlet_schedules'])
 			->first();
 
@@ -387,7 +388,7 @@ class ApiOutletFranchiseController extends Controller
 
 	public function requestAdmin(SendRequestAdmin $request)
 	{	
-		$outlet = Outlet::where('id_outlet', $request->id_outlet)->first();
+		$outlet = OutletConnection3::where('id_outlet', $request->id_outlet)->first();
 		if (!$outlet) {
 			$result = [
 				'status' => 'fail', 

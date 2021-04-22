@@ -4,15 +4,16 @@ namespace Modules\Franchise\Http\Controllers;
 
 use App\Http\Models\Autocrm;
 use App\Http\Models\Outlet;
-use App\Http\Models\Transaction;
+use Modules\Franchise\Entities\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Modules\Franchise\Entities\UserFranchise;
 use App\Lib\MyHelper;
 use Modules\Franchise\Entities\UserFranchiseOultet;
+use Modules\Franchise\Entities\UserFranchiseOultetConnection3;
 use Modules\Franchise\Http\Requests\users_create;
-use Modules\Report\Entities\DailyReportPayment;
+use Modules\Franchise\Entities\DailyReportPayment;
 use DB;
 use DateTime;
 
@@ -33,7 +34,7 @@ class ApiReportPaymentController extends Controller
     public function summaryPaymentMethod(Request $request){
         $post = $request->json()->all();
 
-        $id_oultet = UserFranchiseOultet::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
+        $id_oultet = UserFranchiseOultetConnection3::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
 
         if($id_oultet){
             $listPayment = DailyReportPayment::where('refund_with_point', 0)
@@ -146,7 +147,7 @@ class ApiReportPaymentController extends Controller
     public function summaryDetailPaymentMethod(Request $request){
         $post = $request->json()->all();
 
-        $id_oultet = UserFranchiseOultet::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
+        $id_oultet = UserFranchiseOultetConnection3::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
 
         if($id_oultet){
             $list = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
@@ -239,7 +240,7 @@ class ApiReportPaymentController extends Controller
     public function summaryChart(Request $request){
         $post = $request->json()->all();
 
-        $id_oultet = UserFranchiseOultet::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
+        $id_oultet = UserFranchiseOultetConnection3::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
 
         if($id_oultet && !empty($post['date_start']) && !empty($post['date_start'])) {
             $dateStart = date('Y-m-d', strtotime($post['date_start']));
@@ -291,7 +292,7 @@ class ApiReportPaymentController extends Controller
     public function listPayment(Request $request){
         $post = $request->json()->all();
 
-        $id_oultet = UserFranchiseOultet::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
+        $id_oultet = UserFranchiseOultetConnection3::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
 
         if($id_oultet){
             $list = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
