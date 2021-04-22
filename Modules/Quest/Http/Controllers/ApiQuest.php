@@ -1174,6 +1174,7 @@ class ApiQuest extends Controller
     {
         $id_user = $request->user()->id;
         $quest = Quest::select('quests.id_quest', 'name', 'image as image_url', 'description', 'short_description', 'date_start', 'date_end', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
+            ->with(['quest_benefit', 'quest_benefit.deals'])
             ->join('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
@@ -1187,11 +1188,22 @@ class ApiQuest extends Controller
         if (!$quest) {
             return MyHelper::checkGet([], "Quest tidak ditemukan");
         }
+
+        $benefit = [
+            'type' => $quest->quest_benefit->benefit_type
+        ];
+        if ($quest->quest_benefit->benefit_type == 'voucher') {
+            $benefit['text'] = $quest->quest_benefit->deals->deals_title;
+        } else {
+            $benefit['text'] = MyHelper::requestNumber($quest->quest_benefit->value, '_POINT').' Poin';
+        }
+
         $quest->append(['progress', 'contents']);
-        $quest->makeHidden(['date_start', 'quest_contents', 'description']);
+        $quest->makeHidden(['date_start', 'quest_contents', 'description', 'quest_benefit']);
         $result = $quest->toArray();
         $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
         $result['time_server'] = date('Y-m-d H:i:s');
+        $result['benefit'] = $benefit;
 
         $details = QuestUser::where(['quest_users.id_quest' => $quest->id_quest])->select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
 
