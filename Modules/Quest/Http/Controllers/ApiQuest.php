@@ -830,7 +830,7 @@ class ApiQuest extends Controller
         return true;
     }
 
-    public function checkQuestCompleted($quest, $id_user, $auto = false, &$errors = [])
+    public function checkQuestCompleted($quest, $id_user, $auto = false, &$errors = [], &$benefit = null)
     {
         if (is_numeric($quest)) {
             $quest = Quest::where('id_quest', $quest)->first();
@@ -847,16 +847,17 @@ class ApiQuest extends Controller
             return false;
         }
 
+        $benefit =  QuestBenefit::with('deals')->where(['id_quest' => $quest->id_quest])->first();
+        if (!$benefit) {
+            goto flag;
+        }
+
         $redemption = QuestUserRedemption::where(['id_quest' => $quest->id_quest, 'id_user' => $id_user, 'redemption_status' => 1])->first();
         if ($redemption) {
             $errors[] = 'Hadiah sudah di klaim';
             return false;
         }
 
-        $benefit =  QuestBenefit::where(['id_quest' => $quest->id_quest])->first();
-        if (!$benefit) {
-            goto flag;
-        }
 
         if (!$benefit->autoclaim_benefit && $auto) {
             // not autoclaim
@@ -1112,16 +1113,25 @@ class ApiQuest extends Controller
 
     public function claimBenefit(Request $request)
     {
-        $claim = $this->checkQuestCompleted($request->id_quest, $request->user()->id, false, $errors);
+        $claim = $this->checkQuestCompleted($request->id_quest, $request->user()->id, false, $errors, $quest_benefit);
 
+        $benefit = [
+            'type' => $quest_benefit->benefit_type
+        ];
+        if ($quest_benefit->benefit_type == 'voucher') {
+            $benefit['text'] = $quest_benefit->deals->deals_title;
+        } else {
+            $benefit['text'] = MyHelper::requestNumber($quest_benefit->value, '_POINT').' Poin';
+        }
         if ($claim) {
-            return ['status' => 'success'];
+            return ['status' => 'success', 'result' => ['benefit' => $benefit]];
         }
         return [
             'status' => 'fail',
             'messages' => $errors ?? [
                 'Failed claim benefit'
             ],
+            'result' => ['benefit' => $benefit]
         ];
     }
 
