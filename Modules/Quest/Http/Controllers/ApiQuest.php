@@ -1091,19 +1091,11 @@ class ApiQuest extends Controller
                 ]
             ];
         }
-        if ($quest->date_start > date('Y-m-d H:i:s')) {
-            return [
-                'status' => 'fail',
-                'messages' => [
-                    'Misi belum dimulai'
-                ]
-            ];
-        }
         if ($quest->date_end < date('Y-m-d H:i:s')) {
             return [
                 'status' => 'fail',
                 'messages' => [
-                    'Misi sudah selesai'
+                    'Misi sudah berakhir'
                 ]
             ];
         }
