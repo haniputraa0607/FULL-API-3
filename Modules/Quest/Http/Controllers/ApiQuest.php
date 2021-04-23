@@ -832,6 +832,7 @@ class ApiQuest extends Controller
 
     public function checkQuestCompleted($quest, $id_user, $auto = false, &$errors = [], &$benefit = null)
     {
+        $id_reference = null;
         if (is_numeric($quest)) {
             $quest = Quest::where('id_quest', $quest)->first();
         }
@@ -872,6 +873,7 @@ class ApiQuest extends Controller
         if ($benefit->benefit_type == 'point') {
             $log_balance = app($this->balance)->addLogBalance( $id_user, $benefit->value, $quest->id_quest, 'Quest Benefit', 0);
             $benefit->log_balance = $log_balance;
+            $id_reference = $log_balance->id_log_balance;
             // addLogBalance
             $autocrm = app($this->autocrm)->SendAutoCRM('Receive Quest Point', $user->phone,
                 [
@@ -895,6 +897,7 @@ class ApiQuest extends Controller
                 if ($total_voucher > $total_claimed || $total_voucher === 0) {
                     $generateVoucher = app($this->hidden_deals)->autoClaimedAssign($deals, [$id_user]);
                     $benefit->deals->deals_voucher = $generateVoucher;
+                    $id_reference = $generateVoucher->id_deals_user;
                     $count++;
                     app($this->deals_claim)->updateDeals($deals);
                     $deals = Deal::where('id_deals', $deals->id_deals)->first();
@@ -926,7 +929,15 @@ class ApiQuest extends Controller
         }
 
         flag:
-        QuestUserRedemption::updateOrCreate(['id_quest' => $quest->id_quest, 'id_user' => $id_user], ['redemption_status' => 1, 'redemption_date' => date('Y-m-d H:i:s')]);
+        QuestUserRedemption::updateOrCreate([
+            'id_quest' => $quest->id_quest,
+            'id_user' => $id_user
+        ], [
+            'redemption_status' => 1, 
+            'id_reference' => $id_reference, 
+            'benefit_type' => $benefit->benefit_type, 
+            'redemption_date' => date('Y-m-d H:i:s')
+        ]);
         return true;
     }
 
@@ -1208,7 +1219,7 @@ class ApiQuest extends Controller
         $result['time_server'] = date('Y-m-d H:i:s');
         $result['benefit'] = $benefit;
 
-        $details = QuestUser::where(['quest_users.id_quest' => $quest->id_quest])->select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
+        $details = QuestUser::where(['quest_users.id_quest' => $quest->id_quest, 'quest_users.id_user' => $id_user])->select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
 
         $result['details'] = $details;
 
@@ -1218,7 +1229,7 @@ class ApiQuest extends Controller
     public function listDeals(Request $request)
     {
         $result = Deal::select('id_deals', 'deals_title')
-            ->where('deals_end', '<=', date('Y-m-d H:i:s'))
+            ->where('deals_end', '>=', date('Y-m-d H:i:s'))
             ->where('step_complete', '1')
             ->get()
             ->toArray();

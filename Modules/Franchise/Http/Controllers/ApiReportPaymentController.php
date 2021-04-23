@@ -73,7 +73,7 @@ class ApiReportPaymentController extends Controller
                         $payment = $val['payment_method'];
                         $paymentAmount = $val['amount']/100;
                     }elseif(!empty($val['id_transaction_payment_shopee_pay'])){
-                        $payment = 'Shopee Pay';
+                        $payment = 'ShopeePay';
                         $paymentAmount = $val['shopee_amount']/100;
                     }
 
@@ -150,7 +150,7 @@ class ApiReportPaymentController extends Controller
                 ->where('transactions.transaction_payment_status', 'Completed')
                 ->whereNull('reject_at');
 
-            if (strtolower($post['trx_payment']) == 'shopee pay'){
+            if (strtolower($post['trx_payment']) == 'shopeepay'){
                 $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name','(transaction_payment_shopee_pays.subscription_nominal/100) as amount')
                     ->join('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction');
             }elseif (strtolower($post['trx_payment']) == 'subscription'){
@@ -321,7 +321,7 @@ class ApiReportPaymentController extends Controller
                     foreach ($post['conditions'] as $condition){
                         if(!empty($condition['subject'])){
                             if($condition['subject'] == 'payment'){
-                                if(strtolower($condition['operator']) == 'shopee pay'){
+                                if(strtolower($condition['operator']) == 'shopeepay'){
                                     $list->whereNotNull('id_transaction_payment_shopee_pay');
                                 }elseif (strtolower($condition['operator']) == 'jiwa poin'){
                                     $list->whereNotNull('balance_nominal');
@@ -346,7 +346,7 @@ class ApiReportPaymentController extends Controller
                         foreach ($post['conditions'] as $condition){
                             if(!empty($condition['subject'])){
                                 if($condition['subject'] == 'payment'){
-                                    if(strtolower($condition['operator']) == 'shopee pay'){
+                                    if(strtolower($condition['operator']) == 'shopeepay'){
                                         $q->whereNotNull('id_transaction_payment_shopee_pay');
                                     }elseif (strtolower($condition['operator']) == 'jiwa poin'){
                                         $q->whereNotNull('balance_nominal');
