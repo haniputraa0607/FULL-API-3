@@ -71,6 +71,8 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
         Route::post('list-detail', 'ApiProductModifierController@listDetail');
         Route::post('update-detail', 'ApiProductModifierController@updateDetail');
         Route::post('position-assign', 'ApiProductModifierController@positionAssign');
+        Route::get('inventory-brand', 'ApiProductModifierController@inventoryBrand');
+        Route::post('inventory-brand', 'ApiProductModifierController@inventoryBrandUpdate');
     });
 
     /* product modifier group */
