@@ -35,6 +35,7 @@ class ApiOutletFranchiseController extends Controller
 	public function detail(Request $request)
 	{
 		$post = $request->json()->all();
+
 		$data = OutletConnection3::where('id_outlet', $request->id_outlet)
 			->with(['user_outlets','city.province','today', 'outlet_schedules'])
 			->first();
