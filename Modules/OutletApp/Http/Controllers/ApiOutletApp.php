@@ -847,6 +847,8 @@ class ApiOutletApp extends Controller
             $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
             MyHelper::updateFlagTransactionOnline($newTrx, 'success', $newTrx->user);
 
+            \App\Jobs\UpdateQuestProgressJob::dispatch($order->id_transaction)->onConnection('quest');
+            AchievementCheck::dispatch(['id_transaction' => $order->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
             if (!in_array('Balance', $column) || $use_referral) {
 
                 $promo_source = null;
@@ -977,9 +979,6 @@ class ApiOutletApp extends Controller
                 ]);
             }
 
-            AchievementCheck::dispatch(['id_transaction' => $order->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
-
-
             DB::commit();
         }
 
@@ -990,9 +989,7 @@ class ApiOutletApp extends Controller
     {
         $outlet                    = $request->user();
         $profile['outlet_name']    = $outlet['outlet_name'];
-        if($outlet['outlet_status'] == 'Inactive'){
-            $profile['outlet_name'] = '[TIDAK AKTIF]'.$profile['outlet_name'];
-        }
+        $profile['outlet_status']   = $outlet['outlet_status'];
         $profile['outlet_code']    = $outlet['outlet_code'];
         $profile['outlet_address'] = $outlet['outlet_address'];
         $profile['outlet_phone']   = $outlet['outlet_phone'];

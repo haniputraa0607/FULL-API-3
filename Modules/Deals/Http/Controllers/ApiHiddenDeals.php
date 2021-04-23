@@ -77,7 +77,12 @@ class ApiHiddenDeals extends Controller
         return response()->json(MyHelper::checkCreate($save));
     }
 
-    /* AUTO CLAIMED & ASSIGN */
+    /**
+     * AUTO CLAIMED & ASSIGN
+     * @param  Deal         $deals          Deal model
+     * @param  array<int>   $to             array of id_user
+     * @return bool         true/false
+     */
     function autoClaimedAssign($deals, $to) {
         $ret=false;
         foreach ($to as $key => $user) {

@@ -2,20 +2,12 @@
 
 namespace Modules\Franchise\Http\Controllers;
 
-use App\Http\Models\Autocrm;
-use App\Http\Models\Configs;
-use App\Http\Models\Outlet;
-use App\Http\Models\Transaction;
+use Modules\Franchise\Entities\Transaction;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-use Modules\Disburse\Entities\BankName;
-use Modules\Disburse\Entities\Disburse;
-use Modules\Franchise\Entities\UserFranchise;
+use Modules\Franchise\Entities\BankName;
+use Modules\Franchise\Entities\Disburse;
 use App\Lib\MyHelper;
-use Modules\Franchise\Entities\UserFranchiseOultet;
-use Modules\Franchise\Http\Requests\users_create;
-use Modules\Report\Entities\DailyReportPayment;
 use DB;
 use DateTime;
 

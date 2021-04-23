@@ -13,7 +13,10 @@ class QuestDetail extends Model
     protected $fillable = [
         'id_quest',
         'name',
+        'short_description',
+        'quest_rule',
         'id_product',
+        'id_product_variant_group',
         'product_total',
         'trx_nominal',
         'trx_total',

@@ -2,33 +2,27 @@
 
 namespace Modules\Franchise\Http\Controllers;
 
-use App\Http\Models\Autocrm;
-use App\Http\Models\Outlet;
-use App\Http\Models\Transaction;
-use App\Http\Models\TransactionVoucher;
-use App\Http\Models\TransactionProduct;
-use App\Http\Models\Deal;
+use Modules\Franchise\Entities\Transaction;
+use Modules\Franchise\Entities\TransactionVoucher;
+use Modules\Franchise\Entities\TransactionProduct;
+use Modules\Franchise\Entities\TransactionProductModifier;
+use Modules\Franchise\Entities\Deal;
 
-use Modules\PromoCampaign\Entities\PromoCampaign;
+use Modules\Franchise\Entities\PromoCampaign;
 
-use Modules\Subscription\Entities\Subscription;
+use Modules\Franchise\Entities\Subscription;
 
-use Modules\Franchise\Entities\UserFranchise;
-use Modules\Franchise\Entities\UserFranchiseOultet;
+use Modules\Franchise\Entities\Bundling;
 
-use Modules\ProductBundling\Entities\Bundling;
+use Modules\Franchise\Entities\SubscriptionUserVoucher;
 
-use Modules\Subscription\Entities\SubscriptionUserVoucher;
-
-use Modules\Transaction\Entities\TransactionBundlingProduct;
+use Modules\Franchise\Entities\TransactionBundlingProduct;
 
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
 use DB;
-use DateTime;
 use Modules\PromoCampaign\Lib\PromoCampaignTools;
 
 class ApiReportPromoController extends Controller
@@ -61,12 +55,10 @@ class ApiReportPromoController extends Controller
 			SUM(
 				CASE WHEN transactions.transaction_discount != 0 THEN ABS(transactions.transaction_discount) ELSE 0 END
 				+ CASE WHEN transactions.transaction_discount_delivery != 0 THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
-				+ CASE WHEN transactions.transaction_discount_bill != 0 THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
 			) AS total_discount,
 			SUM(
 				CASE WHEN transactions.transaction_discount != 0 THEN ABS(transactions.transaction_discount) ELSE 0 END
 				+ CASE WHEN transactions.transaction_discount_delivery != 0 THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
-				+ CASE WHEN transactions.transaction_discount_bill != 0 THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
 			)/COUNT(transactions.id_transaction) AS average_discount
 		';
 
@@ -133,7 +125,6 @@ class ApiReportPromoController extends Controller
 									SUM(
 										CASE WHEN transactions.transaction_discount != 0 THEN ABS(transactions.transaction_discount) ELSE 0 END
 										+ CASE WHEN transactions.transaction_discount_delivery != 0 THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
-										+ CASE WHEN transactions.transaction_discount_bill != 0 THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
 									)
 								END AS total_discount,
 
@@ -447,7 +438,6 @@ class ApiReportPromoController extends Controller
     			break;
 
     		case 'bundling':
-    			
 	    		$detail->addSelect(
 		    				DB::raw('
 		    					SUM(transaction_products.transaction_product_discount_all) AS total_discount,
@@ -483,6 +473,197 @@ class ApiReportPromoController extends Controller
 				$value['price_now'] = ($pct->getProductPrice($request->id_outlet, $value['id_product'], $value['id_product_variant_group'])['product_price'] ?? null);
 				unset($value['product_variant_group']);
 
+			}
+		}
+
+		$result['data'] = $detail;
+
+		if ($data_promo['type'] == "bill discount" || $data_promo['type'] == "payment method") {
+			$data_mod = $this->detailPromoModifier($request);
+			$result['data'] = array_merge($result['data'], $data_mod['result']['data'] ?? []);
+		}
+
+		$result['data_promo'] = $data_promo;
+		$result = MyHelper::checkGet($result);
+
+		return $result;    	
+    }
+
+    public function detailPromoModifier(Request $request)
+    {
+    	$post = $request->json()->all();
+    	$promo = $request->promo;
+        if(!$request->id_outlet){
+        	return response()->json(['status' => 'fail', 'messages' => ['ID outlet can not be empty']]);
+        }
+    	$id_promo = MyHelper::decSlug($request->id_promo);
+
+    	$detail = TransactionProductModifier::join('transaction_products', 'transaction_product_modifiers.id_transaction_product', 'transaction_products.id_transaction_product')
+			    	->join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+    				->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+					->where('transaction_product_modifiers.transaction_product_modifier_price','!=',0)
+	    			->where('transactions.transaction_payment_status', 'Completed')
+	    			->whereNull('transaction_pickups.reject_at')
+			        ->where('transactions.id_outlet', $request->id_outlet)
+			        ->select(
+			        	DB::raw('
+			        		transaction_product_modifiers.id_transaction_product,
+			        		transaction_product_modifiers.id_product_modifier,
+			        		transaction_products.id_product,
+			        		transaction_products.id_brand,
+			        		transaction_product_modifiers.code as product_code,
+			        		transaction_product_modifiers.text as product_name,
+			        		transaction_products.id_product_variant_group,
+			        		CASE WHEN transaction_product_modifiers.id_product_modifier_group IS NOT NULL THEN "Variant Non SKU" 
+			        		ELSE "Topping" END as type,
+			        		SUM(transaction_products.transaction_product_qty) AS sold_qty,
+			        		SUM( (transaction_product_modifiers.transaction_product_modifier_price) * transaction_product_modifiers.qty) AS total_gross_sales
+			        	')
+			    	)
+					->groupBy('transaction_product_modifiers.id_product_modifier');
+
+		if(isset($post['filter_type']) && $post['filter_type'] == 'range_date'){
+            $dateStart = date('Y-m-d', strtotime($post['date_start']));
+            $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+            $detail = $detail->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
+        }elseif (isset($post['filter_type']) && $post['filter_type'] == 'today'){
+            $currentDate = date('Y-m-d');
+            $detail = $detail->whereDate('transactions.transaction_date', $currentDate);
+        }else{
+            $detail = $detail->whereDate('transactions.transaction_date', date('Y-m-d'));
+        }
+
+		switch ($promo) {
+    		case 'deals':
+    			$data_promo = Deal::where('id_deals', $id_promo)
+    							->select(DB::raw('
+    								deals.deals_title AS promo_title,
+			        				CASE WHEN deals.promo_type IN ("Product discount","Tier discount","Buy X Get Y") THEN "product discount"
+										WHEN deals.promo_type = "Discount bill" THEN "bill discount"
+										WHEN deals.promo_type = "Discount delivery" THEN "delivery discount"
+									ELSE NULL END AS type
+			        			'))
+    							->first();
+
+    			$detail->join('transaction_vouchers', 'transactions.id_transaction', 'transaction_vouchers.id_transaction')
+    					->join('deals_vouchers', 'deals_vouchers.id_deals_voucher', 'transaction_vouchers.id_deals_voucher')
+    					->where('deals_vouchers.id_deals', $id_promo);
+    			break;
+
+    		case 'promo-campaign':
+
+    			$data_promo = PromoCampaign::where('id_promo_campaign', $id_promo)
+    							->select(DB::raw('
+    								promo_campaigns.promo_title AS promo_title,
+			        				CASE WHEN promo_campaigns.promo_type IN ("Product discount","Tier discount","Buy X Get Y") THEN "product discount"
+										WHEN promo_campaigns.promo_type = "Discount bill" THEN "bill discount"
+										WHEN promo_campaigns.promo_type = "Discount delivery" THEN "delivery discount"
+									ELSE NULL END AS type
+			        			'))
+    							->first();
+
+    			$detail->join('promo_campaign_promo_codes', 'transactions.id_promo_campaign_promo_code', 'promo_campaign_promo_codes.id_promo_campaign_promo_code')
+		    			->where('promo_campaign_promo_codes.id_promo_campaign', $id_promo);
+    			break;
+
+    		case 'subscription':
+
+    			$data_promo = Subscription::where('id_subscription', $id_promo)
+								->select(
+				        			'subscriptions.subscription_title AS promo_title',
+				        			DB::raw('
+				        				CASE WHEN subscriptions.subscription_discount_type = "payment_method" THEN "payment method"
+											WHEN subscriptions.subscription_discount_type = "discount" THEN "bill discount"
+											WHEN subscriptions.subscription_discount_type = "discount_delivery" THEN "delivery discount"
+										ELSE NULL END AS type
+				        			')
+				        		)->first();
+
+    			$detail->join('subscription_user_vouchers', 'transactions.id_transaction', 'subscription_user_vouchers.id_transaction')
+    					->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+		    			->where('subscription_users.id_subscription', $id_promo);
+    			break;
+    		
+    		default:
+            	return [
+            		'status' => 'fail',
+            		'messages' => [
+            			'Promo tidak ditemukan'
+            		]
+            	];
+    			break;
+    	}
+
+    	if (!$data_promo) {
+    		return [
+        		'status' => 'fail',
+        		'messages' => [
+        			'Promo tidak ditemukan'
+        		]
+        	];
+    	}
+
+    	switch ($data_promo['type']) {
+
+    		case 'bill discount':
+		    	$detail->whereNotNull('transactions.transaction_discount_bill')
+		    			->where('transactions.transaction_discount_bill', '!=', 0)
+						->addSelect(
+		    				DB::raw('
+		    					transaction_products.id_transaction,
+		    					SUM( 
+		    						( (transaction_product_modifiers.transaction_product_modifier_price) * transaction_product_modifiers.qty)
+		    						/transactions.transaction_subtotal * transactions.transaction_discount_bill 
+		    					) AS total_discount,
+
+		    					SUM( 
+		    						( (transaction_product_modifiers.transaction_product_modifier_price) * transaction_product_modifiers.qty)
+		    						/transactions.transaction_subtotal * transactions.transaction_discount_bill 
+		    					)/ SUM(transaction_product_modifiers.qty) AS average_discount
+
+		    				')
+		    			);
+    			break;
+
+    		case 'payment method':
+    			$detail->join('transaction_payment_subscriptions', 'transactions.id_transaction', 'transaction_payment_subscriptions.id_transaction')
+						->addSelect(
+		    				DB::raw('
+		    					SUM( 
+		    						( (transaction_product_modifiers.transaction_product_modifier_price) * transaction_product_modifiers.qty)
+		    						/transactions.transaction_subtotal * transaction_payment_subscriptions.subscription_nominal 
+		    					) AS total_discount,
+
+		    					SUM( 
+		    						( (transaction_product_modifiers.transaction_product_modifier_price) * transaction_product_modifiers.qty)
+		    						/transactions.transaction_subtotal * transaction_payment_subscriptions.subscription_nominal 
+		    					)/ SUM(transaction_product_modifiers.qty) AS average_discount
+
+		    				')
+		    			);
+    			break;
+
+    		default:
+    			return [
+            		'status' => 'fail',
+            		'messages' => [
+            			'Promo tidak ditemukan'
+            		]
+            	];
+    			break;
+    	}
+
+		$order = $post['order'] ?? 'product_code';
+        $orderType = $post['order_type'] ?? 'asc';
+        $detail = $detail->orderBy($order, $orderType);
+
+		$detail = $detail->get()->toArray();
+
+		if ($detail) {
+			$pct = new PromoCampaignTools;
+			foreach ($detail as &$value) {
+				$value['variant_group'] = null;
+				$value['price_now'] = ($pct->getProductModifierPrice($request->id_outlet, $value['id_product_modifier']) ?? null);
 			}
 		}
 

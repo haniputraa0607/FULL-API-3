@@ -180,7 +180,7 @@ class Transaction extends Model
     	return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction')
             ->where('type', 'Product')
             ->whereNull('id_bundling_product')
-            ->orderBy('id_product');
+            ->orderBy('transaction_products.id_product');
 	}
 
     public function allProductTransaction() 

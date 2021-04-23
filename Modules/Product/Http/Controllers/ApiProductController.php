@@ -1154,18 +1154,6 @@ class ApiProductController extends Controller
     	$save = Product::where('id_product', $post['id_product'])->update($data);
 
     	if($save){
-            if($data['product_variant_status'] == 0){
-                $getGroup = ProductVariantGroup::where('id_product',$post['id_product'])->pluck('id_product_variant_group')->toArray();
-                if($getGroup){
-                    ProductVariantPivot::whereIn('id_product_variant_group',$getGroup)->delete();
-                    ProductVariantGroup::where('id_product',$post['id_product'])->delete();
-                }
-                $getAllOutlets = Outlet::get();
-                foreach ($getAllOutlets as $o){
-                    Product::refreshVariantTree($post['id_product'], $o);
-                }
-            }
-
             if(isset($post['photo'])){
                 //delete all photo
                 $delete = $this->deletePhoto($post['id_product']);
@@ -1940,6 +1928,7 @@ class ApiProductController extends Controller
                     default:
                         goto skip;
                         break;
+
                 }
                 $promoVariant = app('\Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign')->getProduct($appliedPromo->promo_type, $query->toArray(), $post['id_outlet'])['applied_product'] ?? [];
                 $productVariantIdPromo = [];
@@ -1954,6 +1943,7 @@ class ApiProductController extends Controller
                 } elseif ($promoVariant == '*') {
                     $productVariantIdPromo = ProductVariantGroup::where('id_product', $product['id_product'])->pluck('id_product_variant_group')->toArray();
                 }
+
                 if ($productVariantIdPromo) {
                     $product['variants'] = $this->addPromoFlag($product['variants'], $productVariantIdPromo);
                     unset($product['variants']['promo']);
