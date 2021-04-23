@@ -70,23 +70,28 @@ class ApiReportDisburseController extends Controller
             $result = [
                 [
                     'title' => 'Total Income',
-                    'amount' => number_format($sum['total_income']??0,2,",",".")
+                    'amount' => number_format($sum['total_income']??0,2,",","."),
+                    'tooltip' => 'Jumlah pendapatan yang akan diterima oleh outlet'
                 ],
                 [
                     'title' => 'Disburse Success',
-                    'amount' => number_format($success,2,",",".")
+                    'amount' => number_format($success,2,",","."),
+                    'tooltip' => 'Jumlah pendapatan outlet yang sudah sukses diberikan'
                 ],
                 [
                     'title' => 'Disburse Unprocessed',
-                    'amount' => number_format($unprocessed,2,",",".")
+                    'amount' => number_format($unprocessed,2,",","."),
+                    'tooltip' => 'Jumlah pendapatan outlet yang belum diberikan atau gagal diberikan'
                 ],
                 [
                     'title' => 'Total Fee Item',
-                    'amount' => number_format($sum['total_fee_item']??0,2,",",".")
+                    'amount' => number_format($sum['total_fee_item']??0,2,",","."),
+                    'tooltip' => 'Jumlah potongan fee yang dibayarkan outlet ke Jiwa Group'
                 ],
                 [
                     'title' => 'Total MDR PG',
-                    'amount' => number_format($sum['total_mdr_charged']??0,2,",",".")
+                    'amount' => number_format($sum['total_mdr_charged']??0,2,",","."),
+                    'tooltip' => 'Jumlah potongan fee untuk payment gateway'
                 ]
             ];
 
