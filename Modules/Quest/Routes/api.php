@@ -30,6 +30,8 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
 
 	Route::group(['prefix' => 'report'], function () {
     	Route::any('/', 'ApiReportQuest@list');
+    	Route::any('detail', 'ApiReportQuest@detail');
+        Route::any('list/user-quest', 'ApiReportQuest@listUser');
 	});
 });
 
