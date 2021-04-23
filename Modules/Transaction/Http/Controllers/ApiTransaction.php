@@ -91,6 +91,7 @@ use DB;
 use Mail;
 use Image;
 use Illuminate\Support\Facades\Log;
+use Modules\Quest\Entities\Quest;
 
 class ApiTransaction extends Controller
 {
@@ -3742,6 +3743,16 @@ class ApiTransaction extends Controller
                 'transaction_cashback_earned'   => MyHelper::requestNumber($data['detail']['transaction_cashback_earned'], '_POINT'),
                 'name'                          => $data['detail']['outlet']['outlet_name'],
                 'title'                         => 'Total Payment'
+            ];
+        } elseif ($data['source'] == 'Quest Benefit') {
+            $quest = Quest::find($data['id_reference']);
+            $result = [
+                'type'                          => 'quest',
+                'id_log_balance'                => $data['id_log_balance'],
+                'id_quest'                      => $data['id_reference'],
+                'transaction_date'              => date('d M Y H:i', strtotime($data['created_at'])),
+                'balance'                       => MyHelper::requestNumber($data['balance'], '_POINT'),
+                'title'                         => $quest['name'] ?? 'Misi tidak diketahui',
             ];
         } else {
             $select = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $data['id_reference'])->first();
