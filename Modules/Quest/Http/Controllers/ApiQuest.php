@@ -609,7 +609,7 @@ class ApiQuest extends Controller
         foreach ($quests as $quest) {
             if (
                 ($quest->id_outlet && $quest->id_outlet != $transaction->id_outlet) ||
-                ($quest->id_province && $quest->id_province != $transaction->outlet->city->id_province) ||
+                ($quest->id_province && $quest->id_province != ($transaction->outlet->city->id_province ?? null)) ||
                 ($quest->id_product && !$transaction->productTransaction->pluck('id_product')->contains($quest->id_product)) ||
                 ($quest->id_product_category && !$transaction->productTransaction->pluck('id_product_category')->contains($quest->id_product_category))
             ) {
@@ -721,14 +721,13 @@ class ApiQuest extends Controller
 
                 // province
                 if ($quest->id_province || $quest->different_province) {
-                    $transaction->load('outlet');
-                    if ($quest->id_province == $transaction->outlet->id_province || $quest->different_province) {
+                    if (($transaction->outlet->city->id_province ?? null) && ($quest->id_province == $transaction->outlet->city->id_province || $quest->different_province)) {
                         $questLog = QuestProvinceLog::updateOrCreate([
                             'id_quest' => $quest->id_quest,
                             'id_quest_detail' => $quest->id_quest_detail,
                             'id_user' => $transaction->id_user,
                             'id_transaction' => $transaction->id_transaction,
-                            'id_province' => $transaction->outlet->id_province,
+                            'id_province' => $transaction->outlet->city->id_province,
                         ],[
                             'date' => $transaction->created_at,
                         ]);
