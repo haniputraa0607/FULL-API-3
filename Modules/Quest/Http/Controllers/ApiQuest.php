@@ -1151,7 +1151,7 @@ class ApiQuest extends Controller
     public function me(Request $request)
     {
         $id_user = $request->user()->id;
-        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'date_start', 'date_end', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
+        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'date_start', 'date_end', 'quest_users.id_user', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
             ->where('is_complete', 1)
             ->where('publish_start', '<=', date('Y-m-d H:i:s'))
             ->where('publish_end', '>=', date('Y-m-d H:i:s'))
@@ -1174,7 +1174,7 @@ class ApiQuest extends Controller
         $time_server = date('Y-m-d H:i:s');
         $quests->each(function($item) use ($time_server) {
             $item->append(['progress']);
-            $item->makeHidden(['date_start']);
+            $item->makeHidden(['date_start', 'id_user']);
             $item->date_end_format = MyHelper::indonesian_date_v2($item['date_end'], 'd F Y');
             $item->time_server = $time_server;
         });
