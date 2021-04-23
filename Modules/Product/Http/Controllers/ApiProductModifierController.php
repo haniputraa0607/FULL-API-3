@@ -478,7 +478,7 @@ class ApiProductModifierController extends Controller
     public function inventoryBrandUpdate(Request $request)
     {
         foreach ($request->product_modifiers ?: [] as $id_product_modifier => $id_brands) {
-            ProductModifierInventoryBrand::where('id_product_modifier', $id_product_modifier);
+            ProductModifierInventoryBrand::where('id_product_modifier', $id_product_modifier)->delete();
             $toInsert = array_map(function($id_brand) use ($id_product_modifier) {
                 return ['id_brand' => $id_brand, 'id_product_modifier' => $id_product_modifier];
             }, $id_brands);
