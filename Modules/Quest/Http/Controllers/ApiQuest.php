@@ -1229,7 +1229,7 @@ class ApiQuest extends Controller
     public function listDeals(Request $request)
     {
         $result = Deal::select('id_deals', 'deals_title')
-            ->where('deals_end', '<=', date('Y-m-d H:i:s'))
+            ->where('deals_end', '>=', date('Y-m-d H:i:s'))
             ->where('step_complete', '1')
             ->get()
             ->toArray();
