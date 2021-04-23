@@ -790,37 +790,37 @@ class ApiQuest extends Controller
     public function checkQuestDetailCompleted($questDetail)
     {
         if ($questDetail->different_product_category) {
-            if (QuestProductLog::where('id_quest_detail', $questDetail->id_quest_detail)->distinct('id_product_category')->count() < $questDetail->different_product_category) {
+            if (QuestProductLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->distinct('id_product_category')->count() < $questDetail->different_product_category) {
                 return false;
             }
         }
 
         if ($questDetail->product_total) {
-            if (QuestProductLog::where('id_quest_detail', $questDetail->id_quest_detail)->select('product_total')->sum('product_total') < $questDetail->product_total) {
+            if (QuestProductLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->select('product_total')->sum('product_total') < $questDetail->product_total) {
                 return false;
             }
         }
 
         if ($questDetail->trx_total) {
-            if (QuestTransactionLog::where('id_quest_detail', $questDetail->id_quest_detail)->select('transaction_total')->sum('transaction_total') < $questDetail->trx_total) {
+            if (QuestTransactionLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->select('transaction_total')->sum('transaction_total') < $questDetail->trx_total) {
                 return false;
             }
         }
 
         if ($questDetail->trx_nominal) {
-            if (QuestTransactionLog::where('id_quest_detail', $questDetail->id_quest_detail)->select('transaction_nominal')->sum('transaction_nominal') < $questDetail->trx_nominal) {
+            if (QuestTransactionLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->select('transaction_nominal')->sum('transaction_nominal') < $questDetail->trx_nominal) {
                 return false;
             }
         }
 
         if ($questDetail->different_outlet) {
-            if (optional(QuestOutletLog::where('id_quest_detail', $questDetail->id_quest_detail)->first())->count < $questDetail->different_outlet) {
+            if (optional(QuestOutletLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->first())->count < $questDetail->different_outlet) {
                 return false;
             }
         }
 
         if ($questDetail->different_province) {
-            if (QuestProvinceLog::where('id_quest_detail', $questDetail->id_quest_detail)->distinct('id_province')->count() < $questDetail->different_province) {
+            if (QuestProvinceLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->distinct('id_province')->count() < $questDetail->different_province) {
                 return false;
             }
         }
