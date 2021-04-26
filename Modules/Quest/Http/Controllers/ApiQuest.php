@@ -1059,7 +1059,18 @@ class ApiQuest extends Controller
                     ->orWhereNull('is_done');
             })
             ->where('publish_start', '<=', date('Y-m-d H:i:s'))
-            ->where('publish_end', '>=', date('Y-m-d H:i:s'))
+            ->where(function($query) {
+                $query->where(function($query2) {
+                    $query2->where('publish_end', '>=', date('Y-m-d H:i:s'))
+                        ->whereNull('quest_users.id_user');
+                })
+                    ->orWhere(function($query2) {
+                        // claimed
+                        $query2->whereNotNull('quest_users.id_user')
+                            // not expired
+                            ->whereRaw('(CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.date_end END) >= "'.date('Y-m-d H:i:s').'"');
+                    });
+            })
             ->where('is_complete', 1);
 
         if ($request->page) {
@@ -1166,9 +1177,10 @@ class ApiQuest extends Controller
         $id_user = $request->user()->id;
         $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'quest_users.date_start', 'quest_users.date_end', 'quest_users.id_user', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
             ->where('is_complete', 1)
-            ->where('is_done', 1)
-            ->where('publish_start', '<=', date('Y-m-d H:i:s'))
-            ->where('publish_end', '>=', date('Y-m-d H:i:s'))
+            ->where(function($query) {
+                $query->where('is_done', 1);
+                $query->orWhere('quest_users.date_end', '<', date('Y-m-d H:i:s'));
+            })
             ->groupBy('quests.id_quest')
             ->join('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
@@ -1187,7 +1199,7 @@ class ApiQuest extends Controller
 
         $time_server = date('Y-m-d H:i:s');
         $quests->each(function($item) use ($time_server) {
-            $item->append(['progress']);
+            $item->append(['progress', 'text_label']);
             $item->makeHidden(['date_start', 'id_user']);
             $item->date_end_format = MyHelper::indonesian_date_v2($item['date_end'], 'd F Y');
             $item->time_server = $time_server;
