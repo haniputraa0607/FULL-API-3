@@ -1193,12 +1193,13 @@ class ApiQuest extends Controller
     public function detail(Request $request)
     {
         $id_user = $request->user()->id;
-        $quest = Quest::select('quests.id_quest', 'quest_users.id_user', 'name', 'image as image_url', 'description', 'short_description', 'date_start', 'date_end', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
+        $quest = Quest::select('quests.id_quest', 'quest_users.id_quest_user', 'name', 'image as image_url', 'description', 'short_description', 'quest_users.date_start', 'quest_users.date_end', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
             ->with(['quest_benefit', 'quest_benefit.deals'])
             ->join('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
             })
+            ->join('quest_user_details', 'quest_users.id_quest_user', 'quest_user_details.id_quest_user')
             ->leftJoin('quest_user_redemptions', function($join) {
                 $join->on('quest_user_redemptions.id_quest', 'quest_users.id_quest')
                     ->whereColumn('quest_user_redemptions.id_user', 'quest_users.id_user');
@@ -1219,13 +1220,13 @@ class ApiQuest extends Controller
         }
 
         $quest->append(['progress', 'contents']);
-        $quest->makeHidden(['date_start', 'quest_contents', 'description', 'quest_benefit', 'id_user']);
+        $quest->makeHidden(['date_start', 'quest_contents', 'description', 'quest_benefit', 'id_quest_user']);
         $result = $quest->toArray();
         $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
         $result['time_server'] = date('Y-m-d H:i:s');
         $result['benefit'] = $benefit;
 
-        $details = QuestUser::where(['quest_users.id_quest' => $quest->id_quest, 'quest_users.id_user' => $id_user])->select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
+        $details = QuestUserDetail::where(['quest_user_details.id_quest_user' => $quest->id_quest_user])->select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_user_details.id_quest_detail')->get();
 
         $result['details'] = $details;
 
