@@ -18,6 +18,7 @@ use Modules\Quest\Entities\QuestProductLog;
 use Modules\Quest\Entities\QuestProvinceLog;
 use Modules\Quest\Entities\QuestTransactionLog;
 use Modules\Quest\Entities\QuestUser;
+use Modules\Quest\Entities\QuestUserDetail;
 use Modules\Quest\Entities\QuestUserLog;
 use Modules\Quest\Entities\QuestUserRedemption;
 use App\Http\Models\Deal;
@@ -1047,7 +1048,7 @@ class ApiQuest extends Controller
     public function list(Request $request)
     {
         $id_user = $request->user()->id;
-        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'date_start', 'date_end', 'short_description', 'description')
+        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'quests.date_start', 'quests.date_end', 'short_description', 'description')
             ->leftJoin('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
@@ -1100,11 +1101,24 @@ class ApiQuest extends Controller
             ];
         }
         $questDetail = QuestDetail::where(['id_quest' => $quest->id_quest])->get();
-        $questDetail->each(function($detail) use ($id_user) {
-            QuestUser::updateOrCreate([
-                'id_quest' => $detail->id_quest,
+        $questUser = QuestUser::create([
+            'id_quest' => $quest->id_quest,
+            'id_user' => $id_user,
+            'date_start' => $quest->date_start,
+            'date_end' => $quest->date_end,
+        ]);
+        if (!$questUser) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Failed create quest user']
+            ];
+        }
+        $questDetail->each(function($detail) use ($questUser) {
+            QuestUserDetail::updateOrCreate([
+                'id_quest' => $questUser->id_quest,
+                'id_quest_user' => $questUser->id_quest_user,
                 'id_quest_detail' => $detail->id_quest_detail,
-                'id_user' => $id_user,
+                'id_user' => $questUser->id_user,
             ]);
         });
         return [
@@ -1143,7 +1157,7 @@ class ApiQuest extends Controller
     public function me(Request $request)
     {
         $id_user = $request->user()->id;
-        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'date_start', 'date_end', 'quest_users.id_user', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
+        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'quest_users.date_start', 'quest_users.date_end', 'quest_users.id_user', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
             ->where('is_complete', 1)
             ->where('publish_start', '<=', date('Y-m-d H:i:s'))
             ->where('publish_end', '>=', date('Y-m-d H:i:s'))
