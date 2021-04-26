@@ -151,7 +151,7 @@ class ApiReportPaymentController extends Controller
                 ->whereNull('reject_at');
 
             if (strtolower($post['trx_payment']) == 'shopeepay'){
-                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name','(transaction_payment_shopee_pays.subscription_nominal/100) as amount')
+                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name', DB::raw('(transaction_payment_shopee_pays.amount/100) as amount'))
                     ->join('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction');
             }elseif (strtolower($post['trx_payment']) == 'subscription'){
                 $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name','transaction_payment_subscriptions.subscription_nominal as amount')

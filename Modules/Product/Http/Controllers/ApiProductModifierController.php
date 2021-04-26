@@ -19,6 +19,7 @@ use Modules\Brand\Entities\BrandOutlet;
 use Modules\Product\Http\Requests\Modifier\CreateRequest;
 use Modules\Product\Http\Requests\Modifier\ShowRequest;
 use Modules\Product\Http\Requests\Modifier\UpdateRequest;
+use Modules\OutletApp\Entities\ProductModifierInventoryBrand;
 
 class ApiProductModifierController extends Controller
 {
@@ -465,6 +466,24 @@ class ApiProductModifierController extends Controller
             $update = ProductModifier::find($id)->update(['product_modifier_order'=>$key+1]);
         }
 
+        return ['status' => 'success'];
+    }
+
+    public function inventoryBrand(Request $request)
+    {
+        $modifier = ProductModifier::select('id_product_modifier', 'text')->where('modifier_type', '<>', 'Modifier Group')->with('inventory_brand')->get();
+        return MyHelper::checkGet($modifier);
+    }
+
+    public function inventoryBrandUpdate(Request $request)
+    {
+        foreach ($request->product_modifiers ?: [] as $id_product_modifier => $id_brands) {
+            ProductModifierInventoryBrand::where('id_product_modifier', $id_product_modifier)->delete();
+            $toInsert = array_map(function($id_brand) use ($id_product_modifier) {
+                return ['id_brand' => $id_brand, 'id_product_modifier' => $id_product_modifier];
+            }, $id_brands);
+            ProductModifierInventoryBrand::insert($toInsert);
+        }
         return ['status' => 'success'];
     }
 }
