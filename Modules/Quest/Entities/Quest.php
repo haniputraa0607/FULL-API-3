@@ -97,6 +97,10 @@ class Quest extends Model
             $questUsers = QuestUserDetail::where(['id_quest' => $this->id_quest, 'id_user' => $this->id_user])->get();
         }
 
+        if (!$questUsers->count()) {
+            return null;
+        }
+
         $result = [
             'total' => $questUsers->count(),
             'done' => $questUsers->sum('is_done'),
@@ -106,4 +110,12 @@ class Quest extends Model
         return $result;
     }
 
+    /**
+     * Get user benefit redemption status, make sure model has attribute id_user before using this method
+     * @return array
+     */
+    public function getUserRedemptionAttribute()
+    {
+        return QuestUserRedemption::where(['id_quest' => $this->id_quest, 'id_user' => $this->id_user])->first();
+    }
 }
