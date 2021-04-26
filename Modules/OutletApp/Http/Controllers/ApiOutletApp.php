@@ -1550,6 +1550,7 @@ class ApiOutletApp extends Controller
                 return MyHelper::checkGet($data);
             }
         } else {
+            $outlet->load('brand_outlets');
             // modifiers
             $modifiers = ProductModifier::select(\DB::raw('product_modifiers.id_product_modifier * 1000 as id_product, code as product_code, text as product_name, CASE WHEN product_modifier_stock_status IS NULL THEN "Available" ELSE product_modifier_stock_status END as product_stock_status'))
             ->leftJoin('product_modifier_details', function($join) use ($outlet) {
@@ -1566,7 +1567,12 @@ class ApiOutletApp extends Controller
                             $q->whereNull('product_modifier_details.product_modifier_visibility')
                             ->where('product_modifiers.product_modifier_visibility', 'Visible');
                         });
-            });
+            })
+            ->join('product_modifier_inventory_brands', function($join) use ($outlet) {
+                $join->on('product_modifier_inventory_brands.id_product_modifier', 'product_modifiers.id_product_modifier')
+                    ->whereIn('id_brand',$outlet->brand_outlets->pluck('id_brand'));
+            })
+            ->groupBy('product_modifiers.id_product_modifier');
             $modifiers = $modifiers->orderBy('text');
 
             // build response

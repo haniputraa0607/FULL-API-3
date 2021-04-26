@@ -3,6 +3,7 @@
 namespace App\Http\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Modules\OutletApp\Entities\ProductModifierInventoryBrand;
 
 class ProductModifier extends Model
 {
@@ -42,5 +43,9 @@ class ProductModifier extends Model
 	}
 	public function product_modifier_prices() {
 		return $this->hasMany(ProductModifierPrice::class,'id_product_modifier','id_product_modifier');
+	}
+	public function inventory_brand()
+	{
+		return $this->hasMany(ProductModifierInventoryBrand::class,'id_product_modifier');
 	}
 }
