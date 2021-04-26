@@ -85,9 +85,13 @@ class Quest extends Model
         }
     }
 
+    /**
+     * Get quest progress, make sure model has attribute id_user before using this method
+     * @return [type] [description]
+     */
     public function getProgressAttribute()
     {
-        $questUsers = QuestUser::where('id_quest', $this->id_quest)->get();
+        $questUsers = QuestUser::where(['id_quest' => $this->id_quest, 'id_user' => $this->id_user])->get();
 
         $result = [
             'total' => $questUsers->count(),

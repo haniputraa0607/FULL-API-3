@@ -392,11 +392,9 @@ class ApiReportTransactionController extends Controller
 
         if (is_array($orders = $request->order)) {
             $columns = [
-                'trx_date', 
                 'text', 
                 'total_qty', 
                 'total_nominal', 
-                'id_report_trx_modifier',
             ];
 
             foreach ($orders as $column) {

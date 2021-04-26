@@ -609,7 +609,7 @@ class ApiQuest extends Controller
         foreach ($quests as $quest) {
             if (
                 ($quest->id_outlet && $quest->id_outlet != $transaction->id_outlet) ||
-                ($quest->id_province && $quest->id_province != $transaction->outlet->city->id_province) ||
+                ($quest->id_province && $quest->id_province != ($transaction->outlet->city->id_province ?? null)) ||
                 ($quest->id_product && !$transaction->productTransaction->pluck('id_product')->contains($quest->id_product)) ||
                 ($quest->id_product_category && !$transaction->productTransaction->pluck('id_product_category')->contains($quest->id_product_category))
             ) {
@@ -721,14 +721,13 @@ class ApiQuest extends Controller
 
                 // province
                 if ($quest->id_province || $quest->different_province) {
-                    $transaction->load('outlet');
-                    if ($quest->id_province == $transaction->outlet->id_province || $quest->different_province) {
+                    if (($transaction->outlet->city->id_province ?? null) && ($quest->id_province == $transaction->outlet->city->id_province || $quest->different_province)) {
                         $questLog = QuestProvinceLog::updateOrCreate([
                             'id_quest' => $quest->id_quest,
                             'id_quest_detail' => $quest->id_quest_detail,
                             'id_user' => $transaction->id_user,
                             'id_transaction' => $transaction->id_transaction,
-                            'id_province' => $transaction->outlet->id_province,
+                            'id_province' => $transaction->outlet->city->id_province,
                         ],[
                             'date' => $transaction->created_at,
                         ]);
@@ -791,37 +790,37 @@ class ApiQuest extends Controller
     public function checkQuestDetailCompleted($questDetail)
     {
         if ($questDetail->different_product_category) {
-            if (QuestProductLog::where('id_quest_detail', $questDetail->id_quest_detail)->distinct('id_product_category')->count() < $questDetail->different_product_category) {
+            if (QuestProductLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->distinct('id_product_category')->count() < $questDetail->different_product_category) {
                 return false;
             }
         }
 
         if ($questDetail->product_total) {
-            if (QuestProductLog::where('id_quest_detail', $questDetail->id_quest_detail)->select('product_total')->sum('product_total') < $questDetail->product_total) {
+            if (QuestProductLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->select('product_total')->sum('product_total') < $questDetail->product_total) {
                 return false;
             }
         }
 
         if ($questDetail->trx_total) {
-            if (QuestTransactionLog::where('id_quest_detail', $questDetail->id_quest_detail)->select('transaction_total')->sum('transaction_total') < $questDetail->trx_total) {
+            if (QuestTransactionLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->select('transaction_total')->sum('transaction_total') < $questDetail->trx_total) {
                 return false;
             }
         }
 
         if ($questDetail->trx_nominal) {
-            if (QuestTransactionLog::where('id_quest_detail', $questDetail->id_quest_detail)->select('transaction_nominal')->sum('transaction_nominal') < $questDetail->trx_nominal) {
+            if (QuestTransactionLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->select('transaction_nominal')->sum('transaction_nominal') < $questDetail->trx_nominal) {
                 return false;
             }
         }
 
         if ($questDetail->different_outlet) {
-            if (optional(QuestOutletLog::where('id_quest_detail', $questDetail->id_quest_detail)->first())->count < $questDetail->different_outlet) {
+            if (optional(QuestOutletLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->first())->count < $questDetail->different_outlet) {
                 return false;
             }
         }
 
         if ($questDetail->different_province) {
-            if (QuestProvinceLog::where('id_quest_detail', $questDetail->id_quest_detail)->distinct('id_province')->count() < $questDetail->different_province) {
+            if (QuestProvinceLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->distinct('id_province')->count() < $questDetail->different_province) {
                 return false;
             }
         }
@@ -832,6 +831,7 @@ class ApiQuest extends Controller
 
     public function checkQuestCompleted($quest, $id_user, $auto = false, &$errors = [], &$benefit = null)
     {
+        $id_reference = null;
         if (is_numeric($quest)) {
             $quest = Quest::where('id_quest', $quest)->first();
         }
@@ -872,6 +872,7 @@ class ApiQuest extends Controller
         if ($benefit->benefit_type == 'point') {
             $log_balance = app($this->balance)->addLogBalance( $id_user, $benefit->value, $quest->id_quest, 'Quest Benefit', 0);
             $benefit->log_balance = $log_balance;
+            $id_reference = $log_balance->id_log_balance;
             // addLogBalance
             $autocrm = app($this->autocrm)->SendAutoCRM('Receive Quest Point', $user->phone,
                 [
@@ -895,6 +896,7 @@ class ApiQuest extends Controller
                 if ($total_voucher > $total_claimed || $total_voucher === 0) {
                     $generateVoucher = app($this->hidden_deals)->autoClaimedAssign($deals, [$id_user]);
                     $benefit->deals->deals_voucher = $generateVoucher;
+                    $id_reference = $generateVoucher->id_deals_user;
                     $count++;
                     app($this->deals_claim)->updateDeals($deals);
                     $deals = Deal::where('id_deals', $deals->id_deals)->first();
@@ -926,7 +928,15 @@ class ApiQuest extends Controller
         }
 
         flag:
-        QuestUserRedemption::updateOrCreate(['id_quest' => $quest->id_quest, 'id_user' => $id_user], ['redemption_status' => 1, 'redemption_date' => date('Y-m-d H:i:s')]);
+        QuestUserRedemption::updateOrCreate([
+            'id_quest' => $quest->id_quest,
+            'id_user' => $id_user
+        ], [
+            'redemption_status' => 1, 
+            'id_reference' => $id_reference, 
+            'benefit_type' => $benefit->benefit_type, 
+            'redemption_date' => date('Y-m-d H:i:s')
+        ]);
         return true;
     }
 
@@ -1141,7 +1151,7 @@ class ApiQuest extends Controller
     public function me(Request $request)
     {
         $id_user = $request->user()->id;
-        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'date_start', 'date_end', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
+        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'date_start', 'date_end', 'quest_users.id_user', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
             ->where('is_complete', 1)
             ->where('publish_start', '<=', date('Y-m-d H:i:s'))
             ->where('publish_end', '>=', date('Y-m-d H:i:s'))
@@ -1164,7 +1174,7 @@ class ApiQuest extends Controller
         $time_server = date('Y-m-d H:i:s');
         $quests->each(function($item) use ($time_server) {
             $item->append(['progress']);
-            $item->makeHidden(['date_start']);
+            $item->makeHidden(['date_start', 'id_user']);
             $item->date_end_format = MyHelper::indonesian_date_v2($item['date_end'], 'd F Y');
             $item->time_server = $time_server;
         });
@@ -1176,7 +1186,7 @@ class ApiQuest extends Controller
     public function detail(Request $request)
     {
         $id_user = $request->user()->id;
-        $quest = Quest::select('quests.id_quest', 'name', 'image as image_url', 'description', 'short_description', 'date_start', 'date_end', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
+        $quest = Quest::select('quests.id_quest', 'quest_users.id_user', 'name', 'image as image_url', 'description', 'short_description', 'date_start', 'date_end', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
             ->with(['quest_benefit', 'quest_benefit.deals'])
             ->join('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
@@ -1202,13 +1212,13 @@ class ApiQuest extends Controller
         }
 
         $quest->append(['progress', 'contents']);
-        $quest->makeHidden(['date_start', 'quest_contents', 'description', 'quest_benefit']);
+        $quest->makeHidden(['date_start', 'quest_contents', 'description', 'quest_benefit', 'id_user']);
         $result = $quest->toArray();
         $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
         $result['time_server'] = date('Y-m-d H:i:s');
         $result['benefit'] = $benefit;
 
-        $details = QuestUser::where(['quest_users.id_quest' => $quest->id_quest])->select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
+        $details = QuestUser::where(['quest_users.id_quest' => $quest->id_quest, 'quest_users.id_user' => $id_user])->select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
 
         $result['details'] = $details;
 
@@ -1218,7 +1228,7 @@ class ApiQuest extends Controller
     public function listDeals(Request $request)
     {
         $result = Deal::select('id_deals', 'deals_title')
-            ->where('deals_end', '<=', date('Y-m-d H:i:s'))
+            ->where('deals_end', '>=', date('Y-m-d H:i:s'))
             ->where('step_complete', '1')
             ->get()
             ->toArray();
