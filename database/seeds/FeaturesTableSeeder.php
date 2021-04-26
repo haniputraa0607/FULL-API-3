@@ -3050,7 +3050,57 @@ class FeaturesTableSeeder extends Seeder
                     'order' => 116,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
-                )
+                ),
+            305 =>
+                array(
+                    'id_feature' => 306,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Inject Voucher',
+                    'show_hide' => 1,
+                    'order' => 117,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            306 =>
+                array(
+                    'id_feature' => 307,
+                    'feature_type' => 'Detail',
+                    'feature_module' => 'Inject Voucher',
+                    'show_hide' => 1,
+                    'order' => 117,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            307 =>
+                array(
+                    'id_feature' => 308,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Inject Voucher',
+                    'show_hide' => 1,
+                    'order' => 117,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            308 =>
+                array(
+                    'id_feature' => 309,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Inject Voucher',
+                    'show_hide' => 1,
+                    'order' => 117,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            309 =>
+                array(
+                    'id_feature' => 310,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Inject Voucher',
+                    'show_hide' => 1,
+                    'order' => 117,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
         ));
     }
 }
