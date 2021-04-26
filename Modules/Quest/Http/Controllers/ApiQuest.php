@@ -599,12 +599,12 @@ class ApiQuest extends Controller
             return false;
         }
         // get all user quests
-        $quests = Quest::join('quest_details', 'quest_details.id_quest', 'quests.id_quest')
-            ->join('quest_users', 'quest_details.id_quest', 'quest_users.id_quest')
-            ->where('id_user', $transaction->id_user)
-            ->where('is_done', 0)
-            ->where('date_start', '<=', date('Y-m-d H:i:s'))
-            ->where('date_end', '>=', date('Y-m-d H:i:s'))
+        $quests = QuestUser::join('quest_user_details', 'quest_users.id_quest_user', 'quest_user_details.id_quest_user')
+            ->join('quest_details', 'quest_details.id_quest_detail', 'quest_user_details.id_quest_detail')
+            ->where('quest_users.id_user', $transaction->id_user)
+            ->where('quest_user_details.is_done', 0)
+            ->where('quest_users.date_start', '<=', date('Y-m-d H:i:s'))
+            ->where('quest_users.date_end', '>=', date('Y-m-d H:i:s'))
             ->get();
 
         foreach ($quests as $quest) {
@@ -826,7 +826,7 @@ class ApiQuest extends Controller
             }
         }
 
-        QuestUser::where(['id_quest_user' => $questDetail->id_quest_user])->update(['is_done' => 1, 'date' => date('Y-m-d H:i:s')]);
+        QuestUserDetail::where(['id_quest_user_detail' => $questDetail->id_quest_user_detail])->update(['is_done' => 1, 'date' => date('Y-m-d H:i:s')]);
         return true;
     }
 
@@ -842,11 +842,12 @@ class ApiQuest extends Controller
             return false;
         }
 
-        $questIncomplete = QuestUser::where(['is_done' => 0, 'id_quest' => $quest->id_quest, 'id_user' => $id_user])->exists();
+        $questIncomplete = QuestUserDetail::where(['is_done' => 0, 'id_quest' => $quest->id_quest, 'id_user' => $id_user])->exists();
         if ($questIncomplete) {
             $errors[] = 'Quest belum selesai';
             return false;
         }
+        QuestUser::where(['id_quest' => $quest->id_quest, 'id_user' => $id_user])->update(['is_done' => 1]);
 
         $benefit =  QuestBenefit::with('deals')->where(['id_quest' => $quest->id_quest])->first();
         if (!$benefit) {
