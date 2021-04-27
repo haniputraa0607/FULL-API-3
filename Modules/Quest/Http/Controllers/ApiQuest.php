@@ -1235,6 +1235,15 @@ class ApiQuest extends Controller
         return MyHelper::checkGet($result);
     }
 
+    public function listQuestVoucher(){
+        $result = Deal::select('id_deals', 'deals_title')
+            ->where('step_complete', '1')
+            ->where('deals_type', 'Quest')
+            ->get()
+            ->toArray();
+        return MyHelper::checkGet($result);
+    }
+
     public function listProduct(Request $request)
     {
         $result = Product::select('id_product', 'product_name')
