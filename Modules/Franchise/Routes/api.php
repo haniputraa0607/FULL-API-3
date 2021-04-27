@@ -91,7 +91,7 @@ Route::group(['prefix' => 'franchise'], function () {
 
         Route::group(['prefix' => 'report-promo'], function() {
             Route::post('detail', 'ApiReportPromoController@detailPromo');
-            Route::post('{promo}', 'ApiReportPromoController@listPromo');
+            Route::post('{promo}', 'ApiReportPromoController@listPromoV2');
         });
 
         Route::group(['prefix' => 'outlet'], function () {
@@ -125,5 +125,4 @@ Route::group(['prefix' => 'franchise'], function () {
             });
         });
     });
-
 });

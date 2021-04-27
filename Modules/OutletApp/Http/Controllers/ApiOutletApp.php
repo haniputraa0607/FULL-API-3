@@ -1346,6 +1346,7 @@ class ApiOutletApp extends Controller
     public function listCategory(Request $request)
     {
         $outlet = $request->user();
+        $outlet->load('brand_outlets');
         $sub    = BrandProduct::select('id_brand', 'id_product', 'id_product_category')->distinct();
         $data   = DB::query()->fromSub($sub, 'brand_product')->select(\DB::raw('brand_product.id_brand,brand_product.id_product_category,count(*) as total_product,sum(case product_detail_stock_status when "Sold Out" then 1 else 0 end) total_sold_out,product_category_name'))
             ->join('product_categories', 'product_categories.id_product_category', '=', 'brand_product.id_product_category')
@@ -1411,6 +1412,10 @@ class ApiOutletApp extends Controller
             ->leftJoin('product_modifier_details', function($join) use ($outlet) {
                 $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
                     ->where('product_modifier_details.id_outlet', $outlet['id_outlet']);
+            })
+            ->join('product_modifier_inventory_brands', function($join) use ($outlet) {
+                $join->on('product_modifier_inventory_brands.id_product_modifier', 'product_modifiers.id_product_modifier')
+                    ->whereIn('id_brand',$outlet->brand_outlets->pluck('id_brand'));
             })
             ->where(function($q){
                 $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
