@@ -18,6 +18,7 @@ use Modules\Quest\Entities\QuestProductLog;
 use Modules\Quest\Entities\QuestProvinceLog;
 use Modules\Quest\Entities\QuestTransactionLog;
 use Modules\Quest\Entities\QuestUser;
+use Modules\Quest\Entities\QuestUserDetail;
 use Modules\Quest\Entities\QuestUserLog;
 use Modules\Quest\Entities\QuestUserRedemption;
 use App\Http\Models\Deal;
@@ -598,12 +599,12 @@ class ApiQuest extends Controller
             return false;
         }
         // get all user quests
-        $quests = Quest::join('quest_details', 'quest_details.id_quest', 'quests.id_quest')
-            ->join('quest_users', 'quest_details.id_quest', 'quest_users.id_quest')
-            ->where('id_user', $transaction->id_user)
-            ->where('is_done', 0)
-            ->where('date_start', '<=', date('Y-m-d H:i:s'))
-            ->where('date_end', '>=', date('Y-m-d H:i:s'))
+        $quests = QuestUser::join('quest_user_details', 'quest_users.id_quest_user', 'quest_user_details.id_quest_user')
+            ->join('quest_details', 'quest_details.id_quest_detail', 'quest_user_details.id_quest_detail')
+            ->where('quest_users.id_user', $transaction->id_user)
+            ->where('quest_user_details.is_done', 0)
+            ->where('quest_users.date_start', '<=', date('Y-m-d H:i:s'))
+            ->where('quest_users.date_end', '>=', date('Y-m-d H:i:s'))
             ->get();
 
         foreach ($quests as $quest) {
@@ -825,7 +826,7 @@ class ApiQuest extends Controller
             }
         }
 
-        QuestUser::where(['id_quest_user' => $questDetail->id_quest_user])->update(['is_done' => 1, 'date' => date('Y-m-d H:i:s')]);
+        QuestUserDetail::where(['id_quest_user_detail' => $questDetail->id_quest_user_detail])->update(['is_done' => 1, 'date' => date('Y-m-d H:i:s')]);
         return true;
     }
 
@@ -841,11 +842,12 @@ class ApiQuest extends Controller
             return false;
         }
 
-        $questIncomplete = QuestUser::where(['is_done' => 0, 'id_quest' => $quest->id_quest, 'id_user' => $id_user])->exists();
+        $questIncomplete = QuestUserDetail::where(['is_done' => 0, 'id_quest' => $quest->id_quest, 'id_user' => $id_user])->exists();
         if ($questIncomplete) {
             $errors[] = 'Quest belum selesai';
             return false;
         }
+        QuestUser::where(['id_quest' => $quest->id_quest, 'id_user' => $id_user])->update(['is_done' => 1]);
 
         $benefit =  QuestBenefit::with('deals')->where(['id_quest' => $quest->id_quest])->first();
         if (!$benefit) {
@@ -1047,14 +1049,28 @@ class ApiQuest extends Controller
     public function list(Request $request)
     {
         $id_user = $request->user()->id;
-        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'date_start', 'date_end', 'short_description', 'description')
+        $quests = Quest::select('quests.id_quest', 'quest_users.id_user', 'name', 'image as image_url', 'quests.date_start', 'quests.date_end', 'short_description', 'description', \DB::raw('(CASE WHEN id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.date_end END) as date_end'))
             ->leftJoin('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
             })
-            ->whereNull('quest_users.id_quest_user')
+            ->where(function ($query) {
+                $query->where('is_done', 0)
+                    ->orWhereNull('is_done');
+            })
             ->where('publish_start', '<=', date('Y-m-d H:i:s'))
-            ->where('publish_end', '>=', date('Y-m-d H:i:s'))
+            ->where(function($query) {
+                $query->where(function($query2) {
+                    $query2->where('publish_end', '>=', date('Y-m-d H:i:s'))
+                        ->whereNull('quest_users.id_user');
+                })
+                    ->orWhere(function($query2) {
+                        // claimed
+                        $query2->whereNotNull('quest_users.id_user')
+                            // not expired
+                            ->whereRaw('(CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.date_end END) >= "'.date('Y-m-d H:i:s').'"');
+                    });
+            })
             ->where('is_complete', 1);
 
         if ($request->page) {
@@ -1063,9 +1079,12 @@ class ApiQuest extends Controller
             $quests = $quests->get();
         }
 
-        $quests->each(function($item) {
-            $item->append('contents', 'text_label');
-            $item->makeHidden(['date_start', 'date_end', 'quest_contents']);
+        $time_server = date('Y-m-d H:i:s');
+        $quests->each(function($item) use ($time_server) {
+            $item->append('contents', 'text_label', 'progress');
+            $item->makeHidden(['date_start', 'quest_contents', 'id_user', 'description']);
+            $item->date_end_format = MyHelper::indonesian_date_v2($item['date_end'], 'd F Y');
+            $item->time_server = $time_server;
         });
 
         $result = $quests->toArray();
@@ -1091,28 +1110,33 @@ class ApiQuest extends Controller
                 ]
             ];
         }
-        if ($quest->date_start > date('Y-m-d H:i:s')) {
-            return [
-                'status' => 'fail',
-                'messages' => [
-                    'Misi belum dimulai'
-                ]
-            ];
-        }
         if ($quest->date_end < date('Y-m-d H:i:s')) {
             return [
                 'status' => 'fail',
                 'messages' => [
-                    'Misi sudah selesai'
+                    'Misi sudah berakhir'
                 ]
             ];
         }
         $questDetail = QuestDetail::where(['id_quest' => $quest->id_quest])->get();
-        $questDetail->each(function($detail) use ($id_user) {
-            QuestUser::updateOrCreate([
-                'id_quest' => $detail->id_quest,
+        $questUser = QuestUser::create([
+            'id_quest' => $quest->id_quest,
+            'id_user' => $id_user,
+            'date_start' => $quest->date_start,
+            'date_end' => $quest->date_end,
+        ]);
+        if (!$questUser) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Failed create quest user']
+            ];
+        }
+        $questDetail->each(function($detail) use ($questUser) {
+            QuestUserDetail::updateOrCreate([
+                'id_quest' => $questUser->id_quest,
+                'id_quest_user' => $questUser->id_quest_user,
                 'id_quest_detail' => $detail->id_quest_detail,
-                'id_user' => $id_user,
+                'id_user' => $questUser->id_user,
             ]);
         });
         return [
@@ -1151,10 +1175,12 @@ class ApiQuest extends Controller
     public function me(Request $request)
     {
         $id_user = $request->user()->id;
-        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'date_start', 'date_end', 'quest_users.id_user', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
+        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'quest_users.date_start', 'quest_users.date_end', 'quest_users.id_user', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
             ->where('is_complete', 1)
-            ->where('publish_start', '<=', date('Y-m-d H:i:s'))
-            ->where('publish_end', '>=', date('Y-m-d H:i:s'))
+            ->where(function($query) {
+                $query->where('is_done', 1);
+                $query->orWhere('quest_users.date_end', '<', date('Y-m-d H:i:s'));
+            })
             ->groupBy('quests.id_quest')
             ->join('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
@@ -1173,7 +1199,7 @@ class ApiQuest extends Controller
 
         $time_server = date('Y-m-d H:i:s');
         $quests->each(function($item) use ($time_server) {
-            $item->append(['progress']);
+            $item->append(['progress', 'text_label']);
             $item->makeHidden(['date_start', 'id_user']);
             $item->date_end_format = MyHelper::indonesian_date_v2($item['date_end'], 'd F Y');
             $item->time_server = $time_server;
@@ -1186,16 +1212,13 @@ class ApiQuest extends Controller
     public function detail(Request $request)
     {
         $id_user = $request->user()->id;
-        $quest = Quest::select('quests.id_quest', 'quest_users.id_user', 'name', 'image as image_url', 'description', 'short_description', 'date_start', 'date_end', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
+        $quest = Quest::select('quests.id_quest', 'quest_users.id_quest_user', 'quest_users.id_user', 'name', 'image as image_url', 'description', 'short_description', \DB::raw('(CASE WHEN quest_users.id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.date_end END) as date_end'))
             ->with(['quest_benefit', 'quest_benefit.deals'])
-            ->join('quest_users', function($q) use ($id_user) {
+            ->leftJoin('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
             })
-            ->leftJoin('quest_user_redemptions', function($join) {
-                $join->on('quest_user_redemptions.id_quest', 'quest_users.id_quest')
-                    ->whereColumn('quest_user_redemptions.id_user', 'quest_users.id_user');
-            })
+            ->leftJoin('quest_user_details', 'quest_users.id_quest_user', 'quest_user_details.id_quest_user')
             ->where('quests.id_quest', $request['id_quest'] ?? $request->id_quest)
             ->first();
         if (!$quest) {
@@ -1206,19 +1229,33 @@ class ApiQuest extends Controller
             'type' => $quest->quest_benefit->benefit_type
         ];
         if ($quest->quest_benefit->benefit_type == 'voucher') {
+            $benefit['id_deals'] = $quest->quest_benefit->id_deals;
+            $benefit['total_voucher'] = $quest->quest_benefit->value;
             $benefit['text'] = $quest->quest_benefit->deals->deals_title;
         } else {
+            $benefit['point_nominal'] = $quest->quest_benefit->value;
             $benefit['text'] = MyHelper::requestNumber($quest->quest_benefit->value, '_POINT').' Poin';
         }
 
-        $quest->append(['progress', 'contents']);
-        $quest->makeHidden(['date_start', 'quest_contents', 'description', 'quest_benefit', 'id_user']);
+        $quest->append(['progress', 'contents', 'user_redemption']);
+        $quest->makeHidden(['date_start', 'quest_contents', 'description', 'quest_benefit', 'id_quest_user']);
         $result = $quest->toArray();
         $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
         $result['time_server'] = date('Y-m-d H:i:s');
         $result['benefit'] = $benefit;
+        $result['redemption_status'] = $result['user_redemption']['redemption_status'] ?? 0;
 
-        $details = QuestUser::where(['quest_users.id_quest' => $quest->id_quest, 'quest_users.id_user' => $id_user])->select('name', 'short_description', 'is_done')->join('quest_details', 'quest_details.id_quest_detail', 'quest_users.id_quest_detail')->get();
+        $result['benefit']['id_reference'] = $result['user_redemption']['id_reference'] ?? null;
+
+        $details = QuestDetail::select('name', 'short_description', 'is_done', 'quest_details.id_quest', 'quest_details.id_quest_detail', 'quest_rule', 'id_product_category', 'different_category_product', 'id_product', 'id_product_variant_group', 'product_total', 'trx_nominal', 'trx_total', 'id_outlet', 'id_province', 'different_outlet', 'different_province', 'id_quest_user_detail', 'id_quest_user', 'id_user')
+            ->where(['quest_details.id_quest' => $quest->id_quest])
+            ->leftJoin('quest_user_details', 'quest_details.id_quest_detail', 'quest_user_details.id_quest_detail')
+            ->get();
+
+        $details->each(function($item) {
+            $item->append('progress');
+            $item->makeHidden(['id_quest', 'id_quest_detail', 'quest_rule', 'id_product_category', 'different_category_product', 'id_product', 'id_product_variant_group', 'product_total', 'trx_nominal', 'trx_total', 'id_outlet', 'id_province', 'different_outlet', 'different_province', 'id_quest_user_detail', 'id_quest_user', 'id_user']);
+        });
 
         $result['details'] = $details;
 
