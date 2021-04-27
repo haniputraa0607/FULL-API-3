@@ -3055,7 +3055,7 @@ class FeaturesTableSeeder extends Seeder
                 array(
                     'id_feature' => 306,
                     'feature_type' => 'List',
-                    'feature_module' => 'Inject Voucher',
+                    'feature_module' => 'Quest Voucher',
                     'show_hide' => 1,
                     'order' => 117,
                     'created_at' => '2018-05-10 08:00:00',
@@ -3065,7 +3065,7 @@ class FeaturesTableSeeder extends Seeder
                 array(
                     'id_feature' => 307,
                     'feature_type' => 'Detail',
-                    'feature_module' => 'Inject Voucher',
+                    'feature_module' => 'Quest Voucher',
                     'show_hide' => 1,
                     'order' => 117,
                     'created_at' => '2018-05-10 08:00:00',
@@ -3075,7 +3075,7 @@ class FeaturesTableSeeder extends Seeder
                 array(
                     'id_feature' => 308,
                     'feature_type' => 'Create',
-                    'feature_module' => 'Inject Voucher',
+                    'feature_module' => 'Quest Voucher',
                     'show_hide' => 1,
                     'order' => 117,
                     'created_at' => '2018-05-10 08:00:00',
@@ -3085,7 +3085,7 @@ class FeaturesTableSeeder extends Seeder
                 array(
                     'id_feature' => 309,
                     'feature_type' => 'Update',
-                    'feature_module' => 'Inject Voucher',
+                    'feature_module' => 'Quest Voucher',
                     'show_hide' => 1,
                     'order' => 117,
                     'created_at' => '2018-05-10 08:00:00',
@@ -3095,7 +3095,7 @@ class FeaturesTableSeeder extends Seeder
                 array(
                     'id_feature' => 310,
                     'feature_type' => 'Delete',
-                    'feature_module' => 'Inject Voucher',
+                    'feature_module' => 'Quest Voucher',
                     'show_hide' => 1,
                     'order' => 117,
                     'created_at' => '2018-05-10 08:00:00',
