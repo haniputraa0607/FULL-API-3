@@ -28,6 +28,13 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::any('detail/update', 'ApiQuest@update');
     Route::any('destroy', 'ApiQuest@destroy');
     Route::post('start', 'ApiQuest@start');
+
+	Route::group(['prefix' => 'report'], function () {
+    	Route::any('/', 'ApiReportQuest@list');
+    	Route::any('detail', 'ApiReportQuest@detail');
+        Route::any('list/user-quest', 'ApiReportQuest@listUser');
+        Route::any('export', 'ApiReportQuest@exportListUser');
+	});
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'prefix' => 'quest'], function () {
