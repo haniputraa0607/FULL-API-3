@@ -20,4 +20,9 @@ class QuestUserDetail extends Model
         'json_rule_enc',
         'date'
     ];
+
+    public function user()
+	{
+		return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
+	}
 }
