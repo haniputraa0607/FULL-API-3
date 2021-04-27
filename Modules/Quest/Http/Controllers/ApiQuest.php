@@ -24,6 +24,7 @@ use Modules\Quest\Entities\QuestUserRedemption;
 use App\Http\Models\Deal;
 use App\Http\Models\Product;
 use Modules\Quest\Entities\QuestContent;
+use Modules\Quest\Jobs\AutoclaimQuest;
 
 use Modules\Quest\Http\Requests\StoreRequest;
 
@@ -172,6 +173,15 @@ class ApiQuest extends Controller
                 'message'   => 'Add Quest Success',
                 'data'      => $quest->id_quest
             ]);
+        }
+    }
+
+    public function triggerAutoclaim($quest)
+    {
+        if ($quest->autoclaim_quest) {
+            User::select('id')->where('phone_verified', 1)->whereNotNull('name')->whereNotNull('email')->chunk(2000, function($users) use ($quest) {
+                AutoclaimQuest::dispatch($quest, $users->pluck('id'))->allOnConnection('quest_autoclaim');
+            });
         }
     }
 
@@ -1094,14 +1104,25 @@ class ApiQuest extends Controller
     public function takeMission(Request $request)
     {
         $id_user = $request->user()->id;
+        return $this->doTakeMission($id_user, $request->id_quest);
+    }
+
+    public function doTakeMission($id_user, $id_quest)
+    {
         $quest = Quest::select('quests.*', 'id_quest_user')
             ->leftJoin('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
             })
-            ->where('quests.id_quest', $request['id_quest'] ?? $request->id_quest)
+            ->where('quests.id_quest', $id_quest)
             ->where('is_complete', 1)
             ->first();
+        if (!$quest) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Quest not found']
+            ];
+        }
         if ($quest['id_quest_user']) {
             return [
                 'status' => 'fail',
@@ -1390,6 +1411,7 @@ class ApiQuest extends Controller
         if ($quest->is_complete) {
             return MyHelper::checkGet([], 'Quest not editable');
         }
+        $this->triggerAutoclaim($quest);
         $update = $quest->update(['is_complete' => 1]);
         return MyHelper::checkUpdate($update);
     }
