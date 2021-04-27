@@ -225,7 +225,7 @@ class ApiReportQuest extends Controller
         	}
 
             foreach ($post['conditions'] as $row){
-                if(isset($row['subject']) ){
+                if(isset($row['subject'])){
                     if($row['subject'] == 'quest_name' && !empty($row['parameter'])){
                         if($row['operator'] == '='){
                             $subquery->$where('quests.name', $row['parameter']);
@@ -243,7 +243,7 @@ class ApiReportQuest extends Controller
                         });
                     }
 
-	                if($row['subject'] == 'rule_quest'){
+	                if($row['subject'] == 'rule_quest' && !empty($row['operator'])){
 	                    $subquery->$whereIn('quests.id_quest', function ($sub) use ($row){
 	                        $sub->select('q_detail.id_quest')->from('quest_details as q_detail');
 
@@ -275,7 +275,7 @@ class ApiReportQuest extends Controller
 	                    });
 	                }
 
-	                if($row['subject'] == 'benefit_quest'){
+	                if($row['subject'] == 'benefit_quest' && !empty($row['operator'])){
                         $subquery->$where('quest_benefits.benefit_type', $row['operator']);
                     }
                 }
