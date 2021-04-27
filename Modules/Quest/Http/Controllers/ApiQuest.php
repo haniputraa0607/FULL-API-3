@@ -834,11 +834,11 @@ class ApiQuest extends Controller
     {
         $id_reference = null;
         if (is_numeric($quest)) {
-            $quest = Quest::where('id_quest', $quest)->first();
+            $quest = Quest::where('quests.id_quest', $quest)->join('quest_users', 'quest_users.id_quest', 'quests.id_quest')->first();
         }
 
         if (!$quest) {
-            $errors[] = 'Quest tidak';
+            $errors[] = 'Quest tidak ditemukan atau belum diklaim';
             return false;
         }
 
