@@ -18,6 +18,7 @@ use Modules\Quest\Entities\QuestProductLog;
 use Modules\Quest\Entities\QuestProvinceLog;
 use Modules\Quest\Entities\QuestTransactionLog;
 use Modules\Quest\Entities\QuestUser;
+use Modules\Quest\Entities\QuestUserDetail;
 use Modules\Quest\Entities\QuestUserLog;
 use Modules\Quest\Entities\QuestUserRedemption;
 use App\Http\Models\Deal;
@@ -25,6 +26,7 @@ use App\Http\Models\Product;
 use Modules\Quest\Entities\QuestContent;
 
 use Modules\Quest\Http\Requests\StoreRequest;
+use Excel;
 
 class ApiReportQuest extends Controller
 {
@@ -48,12 +50,25 @@ class ApiReportQuest extends Controller
 					DB::raw('
 						COUNT(DISTINCT quest_users.id_user) as total_user
 					'),
-					'quests.is_complete',
+					'quests.is_complete'
 				)
-				->groupBy('quest_users.id_quest')
-				->paginate(10);
+				->groupBy('quests.id_quest');
 
-		$list = $list->toArray();
+		if(isset($request->conditions) && !empty($request->conditions)){
+			$list = $this->filterList($list, $request);
+		}		
+
+		if ($request->date_start && $request->date_end) {
+			$date_start = date('Y-m-d', strtotime($request->date_start));
+            $date_end = date('Y-m-d', strtotime($request->date_end));
+            $list->where(function($q) use ($date_start, $date_end) {
+            	$q->whereBetween('quests.date_start', [$date_start, $date_end])
+            		->orWhereBetween('quests.date_end', [$date_start, $date_end])
+            		->orWhereNull('quests.date_end');
+            });
+		}
+
+		$list = $list->paginate(10)->toArray();
 
 		foreach ($list['data'] ?? [] as $key => $value) {
 			$status = 'Not Started';
@@ -80,15 +95,15 @@ class ApiReportQuest extends Controller
 				->select(
 					'quests.*',
 					DB::raw('
-						COUNT(DISTINCT quest_users.id_user) as total_user
+						COUNT(DISTINCT quest_users.id_user) as total_user,
+						(SELECT COUNT(*) FROM quest_details where id_quest = '. $id_quest .') as total_rule
 					')
 				)
-				->groupBy('quest_users.id_quest')
+				->groupBy('quests.id_quest')
 				->with('quest_benefit', 'quest_benefit.deals')
 				->first();
 
-		$info['total_rule'] = QuestDetail::where('id_quest', $id_quest)->count();
-		$user_complete 	= QuestUser::select('id_user')
+		$user_complete 	= QuestUserDetail::select('id_user')
 						->where('id_quest', $id_quest)
 						->where('is_done', '1')
 						->groupBy(['id_user'])
@@ -99,10 +114,12 @@ class ApiReportQuest extends Controller
 		        ->count();
 
 		$rule = QuestDetail::where('quest_details.id_quest', $id_quest)
-				->leftJoin('quest_users', 'quest_users.id_quest_detail', 'quest_details.id_quest_detail')
-				->where('quest_users.is_done', '1')
+				->leftJoin('quest_user_details', 'quest_user_details.id_quest_detail', 'quest_details.id_quest_detail')
 				->groupBy('quest_details.id_quest_detail')
-				->select('quest_details.*', DB::raw('COUNT(quest_users.id_user) as user_complete'))
+				->select(
+					'quest_details.*', 
+					DB::raw('COUNT(CASE WHEN quest_user_details.is_done = 1 THEN quest_user_details.id_user END) as user_complete')
+				)
 				->with('product','outlet','province')
 				->get();
 
@@ -122,7 +139,7 @@ class ApiReportQuest extends Controller
     {
     	$id_quest = MyHelper::decSlug($request->id_quest);
 
-		$list = QuestUser::where('quest_users.id_quest', $id_quest)
+		$list = QuestUserDetail::where('quest_user_details.id_quest', $id_quest)
 				->with([
 					'user.quest_user_redemption' => function($q) use ($id_quest){
 						$q->where('id_quest', $id_quest);
@@ -132,25 +149,31 @@ class ApiReportQuest extends Controller
 					}
 				])
 				->select(
-					'quest_users.*',
+					'quest_user_details.*',
 					DB::raw('
 						MAX(date) as date_complete,
-						COUNT(quest_users.is_done) as total_rule,
+						COUNT(quest_user_details.is_done) as total_rule,
 						COUNT(
-							CASE WHEN quest_users.is_done = 1 THEN 1 END
+							CASE WHEN quest_user_details.is_done = 1 THEN 1 END
 						) as total_done,
-						CASE WHEN COUNT(quest_users.is_done) = COUNT(CASE WHEN quest_users.is_done = 1 THEN 1 END) THEN "complete" 
+						CASE WHEN COUNT(quest_user_details.is_done) = COUNT(CASE WHEN quest_user_details.is_done = 1 THEN 1 END) THEN "complete" 
 						ELSE "on going"
 						END as quest_status
 					')
 				)
-				->groupBy('quest_users.id_user')
-				->paginate($request->length ?? 10)
-				->toArray();
+				->groupBy('quest_user_details.id_user');
+
+		if ($request->export) {
+			$list = $list->get()->toArray();
+			$temp = $list;
+		}else{
+			$list = $list->paginate($request->length ?? 10)->toArray();
+			$temp = $list['data'];
+		}
 
 		if ($list) {
 			$data = [];
-			foreach ($list['data'] ?? [] as $key => $value) {
+			foreach ($temp as $key => $value) {
 
 				if ($value['user']['quest_user_redemption'][0]['redemption_status'] ?? false) {
 					$benefit_status = 'claimed';
@@ -170,9 +193,95 @@ class ApiReportQuest extends Controller
 					$value['total_done']
 				];
 			}
-			$list['data'] = $data;
+
+			if ($request->export) {
+				$list = $data;
+			}else{
+				$list['data'] = $data;
+			}
 		}
 
 		return MyHelper::checkGet($list);
+    }
+
+    public function filterList($query, $request)
+    {
+    	$post = $request->json()->all();
+
+
+        $query = $query->where(function ($subquery) use ($post){
+
+	        $rule = 'and';
+	        if(isset($post['rule'])){
+	            $rule = $post['rule'];
+	        }
+
+        	if($rule == 'and'){
+        		$where = 'where';
+        		$whereIn = 'whereIn';
+        	}else{
+        		$where = 'orWhere';
+        		$whereIn = 'orWhereIn';
+        	}
+
+            foreach ($post['conditions'] as $row){
+                if(isset($row['subject']) ){
+                    if($row['subject'] == 'quest_name' && !empty($row['parameter'])){
+                        if($row['operator'] == '='){
+                            $subquery->$where('quests.name', $row['parameter']);
+                        }else{
+                            $subquery->$where('quests.name', 'like', '%'.$row['parameter'].'%');
+                        }
+                    }
+
+                    if($row['subject'] == 'number_of_user_quest' && !empty($row['parameter'])){
+                        $subquery->$whereIn('quests.id_quest', function ($sub) use ($row){
+                            $sub->select('q_detail.id_quest')->from('quest_user_details as q_users')
+                                ->join('quest_details as q_detail', 'q_users.id_quest_detail', 'q_detail.id_quest_detail')
+                                ->groupBy('q_detail.id_quest')
+                                ->havingRaw('COUNT(DISTINCT q_users.id_user) '.$row['operator'].' '.$row['parameter']);
+                        });
+                    }
+
+	                if($row['subject'] == 'rule_quest'){
+	                    $subquery->$whereIn('quests.id_quest', function ($sub) use ($row){
+	                        $sub->select('q_detail.id_quest')->from('quest_details as q_detail');
+
+	                        if($row['operator'] == 'product'){
+	                            $sub->where(function($q){
+	                                $q->whereNotNull('id_product')->orWhereNotNull('product_total');
+	                            });
+	                        }
+
+	                        if($row['operator'] == 'outlet'){
+	                            $sub->where(function($q){
+	                                $q->whereNotNull('id_outlet')->orWhereNotNull('different_outlet');
+	                            });
+	                        }
+
+	                        if($row['operator'] == 'province'){
+	                            $sub->where(function($q){
+	                                $q->whereNotNull('id_province')->orWhereNotNull('different_province');
+	                            });
+	                        }
+
+	                        if($row['operator'] == 'trx_nominal'){
+	                            $sub->whereNotNull('trx_nominal');
+	                        }
+
+	                        if($row['operator'] == 'trx_total'){
+	                            $sub->whereNotNull('trx_total');
+	                        }
+	                    });
+	                }
+
+	                if($row['subject'] == 'benefit_quest'){
+                        $subquery->$where('quest_benefits.benefit_type', $row['operator']);
+                    }
+                }
+            }
+        });
+
+        return $query;
     }
 }

@@ -33,6 +33,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     	Route::any('/', 'ApiReportQuest@list');
     	Route::any('detail', 'ApiReportQuest@detail');
         Route::any('list/user-quest', 'ApiReportQuest@listUser');
+        Route::any('export', 'ApiReportQuest@exportListUser');
 	});
 });
 
