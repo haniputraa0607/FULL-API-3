@@ -19,7 +19,7 @@ class ListDeal extends FormRequest
             // 'deals_type'                => 'required|in:Deals,Hidden,Point,Spin,Subscription',
             
             // deals_type: custom validator from ValidatorServiceProvider
-            'deals_type'                => 'required|in:Deals,Hidden,Point,Spin,Subscription,WelcomeVoucher',
+            'deals_type'                => 'required|in:Deals,Hidden,Point,Spin,Subscription,WelcomeVoucher,Quest',
             'publish'                   => '',
             'voucher_type'              => 'nullable|in:point,paid,free',
             'price_range_start'         => 'nullable|integer',

@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'quest'], function () {
     Route::any('/', 'ApiQuest@index');
     Route::any('list-deals', 'ApiQuest@listDeals');
+    Route::any('list-quest-voucher', 'ApiQuest@listQuestVoucher');
     Route::any('list-product', 'ApiQuest@listProduct');
     Route::any('update-content', 'ApiQuest@updateContent');
     Route::any('update-quest', 'ApiQuest@updateQuest');
