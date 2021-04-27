@@ -1243,7 +1243,7 @@ class ApiQuest extends Controller
         $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
         $result['time_server'] = date('Y-m-d H:i:s');
         $result['benefit'] = $benefit;
-        $result['redemption_status'] = $result['user_redemption']['redemption_status'] ?? 0;
+        $result['claimed_status'] = $result['user_redemption']['redemption_status'] ?? 0;
 
         $result['benefit']['id_reference'] = $result['user_redemption']['id_reference'] ?? null;
 
