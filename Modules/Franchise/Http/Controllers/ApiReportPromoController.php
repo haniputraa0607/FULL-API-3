@@ -673,4 +673,202 @@ class ApiReportPromoController extends Controller
 
 		return $result;    	
     }
+
+    public function listPromoV2($promo, Request $request)
+    {
+    	$post = $request->json()->all();
+        if(!$request->id_outlet){
+        	return response()->json(['status' => 'fail', 'messages' => ['ID outlet can not be empty']]);
+        }
+
+        $select_trx = '
+			COUNT(transactions.id_transaction) AS total_transaction, 
+			SUM(transactions.transaction_gross) AS total_gross_sales, 
+			SUM(
+				CASE WHEN transactions.transaction_shipment IS NOT NULL AND transactions.transaction_shipment != 0 THEN transactions.transaction_shipment 
+					WHEN transactions.transaction_shipment_go_send IS NOT NULL AND transactions.transaction_shipment_go_send != 0 THEN transactions.transaction_shipment_go_send
+				ELSE 0 END
+			) AS total_delivery_fee,
+			COUNT(CASE WHEN transaction_pickups.pickup_by != "Customer" THEN 1 ELSE NULL END) AS total_transaction_delivery,
+			COUNT(CASE WHEN transaction_pickups.pickup_by = "Customer" THEN 1 ELSE NULL END) AS total_transaction_pickup
+		';
+
+		$total_discount_promo = '
+			SUM(
+				CASE WHEN transactions.transaction_discount != 0 THEN ABS(transactions.transaction_discount) ELSE 0 END
+				+ CASE WHEN transactions.transaction_discount_delivery != 0 THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
+			) AS total_discount,
+			SUM(
+				CASE WHEN transactions.transaction_discount != 0 THEN ABS(transactions.transaction_discount) ELSE 0 END
+				+ CASE WHEN transactions.transaction_discount_delivery != 0 THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
+			)/COUNT(transactions.id_transaction) AS average_discount
+		';
+
+    	switch ($promo) {
+    		case 'deals':
+		        $list = TransactionVoucher::join('transactions', 'transactions.id_transaction', 'transaction_vouchers.id_transaction')
+		        		->join('deals_vouchers', 'deals_vouchers.id_deals_voucher', 'transaction_vouchers.id_deals_voucher')
+		        		->join('deals', 'deals_vouchers.id_deals', 'deals.id_deals')
+		    			->groupBy('deals_vouchers.id_deals')
+		        		->select(
+		        			'deals_vouchers.id_deals AS id_promo',
+		        			'deals.deals_title AS title',
+		        			'deals.promo_type',
+		        			DB::raw('
+		        				CASE WHEN deals.promo_type IN ("Product discount","Tier discount","Buy X Get Y") THEN "product discount"
+									WHEN deals.promo_type = "Discount bill" THEN "bill discount"
+									WHEN deals.promo_type = "Discount delivery" THEN "delivery discount"
+								ELSE NULL END AS type
+		        			'),
+		        			DB::raw($select_trx),
+		        			DB::raw($total_discount_promo)
+		        		);
+    			
+    			break;
+
+    		case 'promo-campaign':
+    			$list = Transaction::join('promo_campaign_promo_codes', 'transactions.id_promo_campaign_promo_code', 'promo_campaign_promo_codes.id_promo_campaign_promo_code')
+    					->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', 'promo_campaign_promo_codes.id_promo_campaign')
+		    			->groupBy('promo_campaigns.id_promo_campaign')
+		        		->select(
+		        			'promo_campaigns.id_promo_campaign AS id_promo',
+		        			'promo_campaigns.promo_title AS title',
+		        			'promo_campaigns.promo_type',
+		        			DB::raw('
+		        				CASE WHEN promo_campaigns.promo_type IN ("Product discount","Tier discount","Buy X Get Y") THEN "product discount"
+									WHEN promo_campaigns.promo_type = "Discount bill" THEN "bill discount"
+									WHEN promo_campaigns.promo_type = "Discount delivery" THEN "delivery discount"
+								ELSE NULL END AS type
+		        			'),
+		        			DB::raw($select_trx),
+		        			DB::raw($total_discount_promo)
+		        		);
+    			break;
+
+    		case 'subscription':
+    			$list = SubscriptionUserVoucher::join('transactions', 'transactions.id_transaction', 'subscription_user_vouchers.id_transaction')
+    					->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+    					->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
+    					->leftJoin('transaction_payment_subscriptions', 'transaction_payment_subscriptions.id_transaction', 'transactions.id_transaction')
+		    			->groupBy('subscriptions.id_subscription')
+		        		->select(
+		        			'subscriptions.id_subscription AS id_promo',
+		        			'subscriptions.subscription_title AS title',
+		        			'subscriptions.subscription_discount_type',
+		        			DB::raw('
+		        				CASE WHEN subscriptions.subscription_discount_type = "payment_method" THEN "payment method"
+									WHEN subscriptions.subscription_discount_type = "discount" THEN "bill discount"
+									WHEN subscriptions.subscription_discount_type = "discount_delivery" THEN "delivery discount"
+								ELSE NULL END AS type,
+
+								CASE WHEN subscriptions.subscription_discount_type = "payment_method" THEN 
+									SUM(transaction_payment_subscriptions.subscription_nominal)
+								ELSE
+									SUM(
+										CASE WHEN transactions.transaction_discount != 0 THEN ABS(transactions.transaction_discount) ELSE 0 END
+										+ CASE WHEN transactions.transaction_discount_delivery != 0 THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
+									)
+								END AS total_discount,
+
+								CASE WHEN subscriptions.subscription_discount_type = "payment_method" THEN 
+									SUM(transaction_payment_subscriptions.subscription_nominal)
+								ELSE
+									SUM(
+										CASE WHEN transactions.transaction_discount != 0 THEN ABS(transactions.transaction_discount) ELSE 0 END
+										+ CASE WHEN transactions.transaction_discount_delivery != 0 THEN ABS(transactions.transaction_discount_delivery) ELSE 0 END
+										+ CASE WHEN transactions.transaction_discount_bill != 0 THEN ABS(transactions.transaction_discount_bill) ELSE 0 END
+									)
+								END / COUNT(transactions.id_transaction) AS average_discount
+		        			'),
+		        			DB::raw($select_trx)
+		        		);
+    			break;
+
+    		case 'bundling':
+    			$list = TransactionBundlingProduct::join('transactions', 'transactions.id_transaction', 'transaction_bundling_products.id_transaction')
+    					->join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
+		    			->groupBy('transaction_bundling_products.id_bundling')
+		        		->select(
+		        			'transaction_bundling_products.id_bundling AS id_promo',
+		        			'bundling.bundling_name AS title',
+		        			DB::raw('"product discount" AS type'),
+		        			DB::raw($select_trx),
+		        			DB::raw('
+		        				SUM(transaction_bundling_products.transaction_bundling_product_total_discount) AS total_discount,
+		        				SUM(transaction_bundling_products.transaction_bundling_product_total_discount)/COUNT(transactions.id_transaction) AS average_discount
+		        			')
+		        		);
+    			break;
+    		
+    		default:
+            	return [
+            		'status' => 'fail',
+            		'messages' => [
+            			'Promo tidak ditemukan'
+            		]
+            	];
+    			break;
+    	}
+
+    	$list = $list->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+    			->where('transactions.transaction_payment_status', 'Completed')
+    			->whereNull('transaction_pickups.reject_at')
+		        ->where('transactions.id_outlet', $request->id_outlet);
+
+        if(isset($post['filter_type']) && $post['filter_type'] == 'range_date'){
+            $dateStart = date('Y-m-d', strtotime($post['date_start']));
+            $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+            $list = $list->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
+        }elseif (isset($post['filter_type']) && $post['filter_type'] == 'today'){
+            $currentDate = date('Y-m-d');
+            $list = $list->whereDate('transactions.transaction_date', $currentDate);
+        }else{
+            $list = $list->whereDate('transactions.transaction_date', date('Y-m-d'));
+        }
+
+        $sub = $list;
+        $query = DB::table(DB::raw('('.$sub->toSql().') AS report_promo'))
+		        ->mergeBindings($sub->getQuery());
+
+		$this->filterPromoReport($query, $post);
+
+        if($request->export){
+            $query = $query->get();
+        }else{
+        	if (is_array($orders = $request->order)) {
+	            $columns = [
+	                'title',
+	                'type',
+	                'total_transaction',
+	                'total_gross_sales',
+	                'total_delivery_fee',
+	                'total_discount',
+	                'total_transaction_delivery',
+	                'total_transaction_pickup',
+	                'average_discount'
+	            ];
+	            foreach ($orders as $column) {
+	                if ($colname = ($columns[$column['column']] ?? false)) {
+	                    $query->orderBy($colname, $column['dir']);
+	                }
+	            }
+	        }
+	        
+	        $query = $query->paginate($request->length ?: 10);
+        }
+
+        if (!$query) {
+        	return response()->json(['status' => 'fail', 'messages' => ['Empty']]);
+        }
+
+        $result = $query->toArray();
+
+        if ( isset($result['data']) ) {
+        	foreach ($result['data'] as &$value) {
+        		$value->id_promo = MyHelper::encSlug($value->id_promo);
+        	}
+        }
+
+        return MyHelper::checkGet($result);
+    }
 }

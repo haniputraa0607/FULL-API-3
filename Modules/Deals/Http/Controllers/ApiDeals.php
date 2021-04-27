@@ -1663,7 +1663,7 @@ class ApiDeals extends Controller
         if ($deals) {
         	if ($post['step'] == 'all' && $deals_type != 'Promotion' && $deals_type != 'promotion-deals') {
 	        	$deals_array = $deals->toArray();
-	        	if ($deals_type == 'Deals' || $deals_type == 'Hidden' || $deals_type == 'WelcomeVoucher') {
+	        	if ($deals_type == 'Deals' || $deals_type == 'Hidden' || $deals_type == 'WelcomeVoucher' || $deals_type == 'Quest') {
 	        		$type = 'deals';
 	        	}else{
 	        		$type = $deals_type;

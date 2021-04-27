@@ -18,7 +18,7 @@ class Create extends FormRequest
         $rules = [
             'is_online'        			=> 'nullable',
             'is_offline'       			=> 'nullable',
-            'deals_type'                => 'required|in:Deals,Hidden,Point,Spin,Subscription,WelcomeVoucher,Promotion',
+            'deals_type'                => 'required|in:Deals,Hidden,Point,Spin,Subscription,WelcomeVoucher,Promotion,Quest',
             'deals_voucher_type'        => 'nullable|in:Auto generated,List Vouchers,Unlimited',
             'deals_promo_id'            => 'nullable',
             'deals_title'               => 'required',

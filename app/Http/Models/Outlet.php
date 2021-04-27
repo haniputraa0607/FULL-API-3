@@ -108,6 +108,10 @@ class Outlet extends Authenticatable
 		return $this->belongsToMany(\Modules\Brand\Entities\Brand::class, 'brand_outlet', 'id_outlet', 'id_brand');
 	}
 
+	public function brand_outlets(){
+		return $this->hasMany(\Modules\Brand\Entities\BrandOutlet::class, 'id_outlet');
+	}
+
 	public function city()
 	{
 		return $this->belongsTo(\App\Http\Models\City::class, 'id_city');
