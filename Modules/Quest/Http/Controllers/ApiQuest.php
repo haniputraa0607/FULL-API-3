@@ -24,6 +24,7 @@ use Modules\Quest\Entities\QuestUserRedemption;
 use App\Http\Models\Deal;
 use App\Http\Models\Product;
 use Modules\Quest\Entities\QuestContent;
+use Modules\Quest\Jobs\AutoclaimQuest;
 
 use Modules\Quest\Http\Requests\StoreRequest;
 
@@ -172,6 +173,15 @@ class ApiQuest extends Controller
                 'message'   => 'Add Quest Success',
                 'data'      => $quest->id_quest
             ]);
+        }
+    }
+
+    public function triggerAutoclaim($quest)
+    {
+        if ($quest->autoclaim_quest) {
+            User::select('id')->where('phone_verified', 1)->whereNotNull('name')->whereNotNull('email')->chunk(2000, function($users) use ($quest) {
+                AutoclaimQuest::dispatch($quest, $users->pluck('id'))->allOnConnection('quest_autoclaim');
+            });
         }
     }
 
@@ -834,11 +844,11 @@ class ApiQuest extends Controller
     {
         $id_reference = null;
         if (is_numeric($quest)) {
-            $quest = Quest::where('id_quest', $quest)->first();
+            $quest = Quest::where('quests.id_quest', $quest)->join('quest_users', 'quest_users.id_quest', 'quests.id_quest')->first();
         }
 
         if (!$quest) {
-            $errors[] = 'Quest tidak';
+            $errors[] = 'Quest tidak ditemukan atau belum diklaim';
             return false;
         }
 
@@ -1094,14 +1104,25 @@ class ApiQuest extends Controller
     public function takeMission(Request $request)
     {
         $id_user = $request->user()->id;
+        return $this->doTakeMission($id_user, $request->id_quest);
+    }
+
+    public function doTakeMission($id_user, $id_quest)
+    {
         $quest = Quest::select('quests.*', 'id_quest_user')
             ->leftJoin('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('id_user', $id_user);
             })
-            ->where('quests.id_quest', $request['id_quest'] ?? $request->id_quest)
+            ->where('quests.id_quest', $id_quest)
             ->where('is_complete', 1)
             ->first();
+        if (!$quest) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Quest not found']
+            ];
+        }
         if ($quest['id_quest_user']) {
             return [
                 'status' => 'fail',
@@ -1243,12 +1264,12 @@ class ApiQuest extends Controller
         $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
         $result['time_server'] = date('Y-m-d H:i:s');
         $result['benefit'] = $benefit;
-        $result['redemption_status'] = $result['user_redemption']['redemption_status'] ?? 0;
+        $result['claimed_status'] = $result['user_redemption']['redemption_status'] ?? 0;
 
         $result['benefit']['id_reference'] = $result['user_redemption']['id_reference'] ?? null;
 
         $details = QuestDetail::select('name', 'short_description', 'is_done', 'quest_details.id_quest', 'quest_details.id_quest_detail', 'quest_rule', 'id_product_category', 'different_category_product', 'id_product', 'id_product_variant_group', 'product_total', 'trx_nominal', 'trx_total', 'id_outlet', 'id_province', 'different_outlet', 'different_province', 'id_quest_user_detail', 'id_quest_user', 'id_user')
-            ->where(['quest_details.id_quest' => $quest->id_quest])
+            ->where(['quest_details.id_quest' => $quest->id_quest, 'id_user' => $id_user])
             ->leftJoin('quest_user_details', 'quest_details.id_quest_detail', 'quest_user_details.id_quest_detail')
             ->get();
 
@@ -1399,6 +1420,7 @@ class ApiQuest extends Controller
         if ($quest->is_complete) {
             return MyHelper::checkGet([], 'Quest not editable');
         }
+        $this->triggerAutoclaim($quest);
         $update = $quest->update(['is_complete' => 1]);
         return MyHelper::checkUpdate($update);
     }
