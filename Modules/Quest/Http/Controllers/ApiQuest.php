@@ -1224,9 +1224,8 @@ class ApiQuest extends Controller
         $id_user = $request->user()->id;
         $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'quest_users.date_start', 'quest_users.date_end', 'quest_users.id_user', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
             ->where('is_complete', 1)
-            ->whereNull('quests.stop_at')
             ->where(function($query) {
-                $query->where('is_done', 1);
+                $query->where('quest_user_redemptions.redemption_status', 1);
                 $query->orWhere('quest_users.date_end', '<', date('Y-m-d H:i:s'));
             })
             ->groupBy('quests.id_quest')
@@ -1237,8 +1236,15 @@ class ApiQuest extends Controller
             ->leftJoin('quest_user_redemptions', function($join) {
                 $join->on('quest_user_redemptions.id_quest', 'quest_users.id_quest')
                     ->whereColumn('quest_user_redemptions.id_user', 'quest_users.id_user');
-            })
-            ->where('quest_user_redemptions.redemption_status', '1');
+            });
+
+        if ($request->completed && $request->expired) {
+            // do nothing
+        } elseif ($request->expired) {
+            $quests->where('quest_users.date_end', '<', date('Y-m-d H:i:s'));
+        } else {
+            $quests->where('quest_user_redemptions.redemption_status', 1);
+        }
 
         if ($request->page) {
             $quests = $quests->paginate();
