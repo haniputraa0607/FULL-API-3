@@ -957,6 +957,7 @@ class ApiQuest extends Controller
             'benefit_type' => $benefit->benefit_type, 
             'redemption_date' => date('Y-m-d H:i:s')
         ]);
+        $quest->update(['benefit_claimed' => QuestUserRedemption::where('id_quest', $quest->id_quest)->where('redemption_status', 1)->count()]);
         return true;
     }
 
@@ -1144,7 +1145,8 @@ class ApiQuest extends Controller
                 ]
             ];
         }
-        if ($quest->date_end < date('Y-m-d H:i:s')) {
+
+        if ($quest->publish_end < date('Y-m-d H:i:s')) {
             return [
                 'status' => 'fail',
                 'messages' => [
@@ -1152,6 +1154,16 @@ class ApiQuest extends Controller
                 ]
             ];
         }
+
+        if ($quest->quest_limit && $quest->quest_limit <= $quest->quest_claimed) {
+            return [
+                'status' => 'fail',
+                'messages' => [
+                    'Misi sudah mencapai limit klaim'
+                ]
+            ];
+        }
+
         $questDetail = QuestDetail::where(['id_quest' => $quest->id_quest])->get();
         $questUser = QuestUser::create([
             'id_quest' => $quest->id_quest,
@@ -1173,6 +1185,7 @@ class ApiQuest extends Controller
                 'id_user' => $questUser->id_user,
             ]);
         });
+        $quest->update(['quest_claimed' => QuestUser::where('id_quest', $quest->id_quest)->count()]);
         return [
             'status' => 'success',
             'result' => [
