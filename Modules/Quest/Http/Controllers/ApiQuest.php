@@ -1293,7 +1293,7 @@ class ApiQuest extends Controller
             $benefit['text'] = MyHelper::requestNumber($quest->quest_benefit->value, '_POINT').' Poin';
         }
 
-        $quest->append(['progress', 'contents', 'user_redemption']);
+        $quest->append(['progress', 'contents', 'user_redemption', 'text_label']);
         $quest->makeHidden(['date_start', 'quest_contents', 'description', 'quest_benefit', 'id_quest_user']);
         $result = $quest->toArray();
         $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
