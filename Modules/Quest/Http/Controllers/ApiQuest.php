@@ -918,6 +918,14 @@ class ApiQuest extends Controller
                 }
             }
 
+            if ($total_voucher <= $total_claimed) {
+                // set inactive quest
+                $quest->update([
+                    'stop_at' => date('Y-m-d H:i:s'),
+                    'stop_reason' => 'voucher runs out'
+                ]);
+            }
+
             if ($count) {
                 $autocrm = app($this->autocrm)->SendAutoCRM('Receive Quest Voucher', $user->phone,
                     [
@@ -1060,6 +1068,7 @@ class ApiQuest extends Controller
     {
         $id_user = $request->user()->id;
         $quests = Quest::select('quests.id_quest', 'quest_users.id_user', 'name', 'image as image_url', 'quests.date_start', 'quests.date_end', 'short_description', 'description', \DB::raw('(CASE WHEN id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.date_end END) as date_end'))
+            ->whereNull('quests.stop_at')
             ->leftJoin('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('quest_users.id_user', $id_user);
@@ -1202,6 +1211,7 @@ class ApiQuest extends Controller
         $id_user = $request->user()->id;
         $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'quest_users.date_start', 'quest_users.date_end', 'quest_users.id_user', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
             ->where('is_complete', 1)
+            ->whereNull('quests.stop_at')
             ->where(function($query) {
                 $query->where('is_done', 1);
                 $query->orWhere('quest_users.date_end', '<', date('Y-m-d H:i:s'));
