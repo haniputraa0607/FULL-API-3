@@ -22,6 +22,12 @@ class Quest extends Model
         'description',
         'is_complete',
         'autoclaim_quest',
+        'stop_at',
+        'stop_reason',
+        'quest_limit',
+        'quest_claimed',
+        'benefit_claimed',
+        'max_complete_day',
     ];
     
     public function getImageUrlAttribute($value)
