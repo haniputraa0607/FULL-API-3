@@ -73,10 +73,10 @@ class ApiQuest extends Controller
 
         $post['quest']['publish_start']     = date('Y-m-d H:i', strtotime($post['quest']['publish_start']));
         $post['quest']['date_start']        = date('Y-m-d H:i', strtotime($post['quest']['date_start']));
-        if (!is_null($post['quest']['publish_end'])) {
+        if (!is_null($post['quest']['publish_end'] ?? null)) {
             $post['quest']['publish_end']   = date('Y-m-d H:i', strtotime($post['quest']['publish_end']));
         }
-        if (!is_null($post['quest']['date_end'])) {
+        if (!is_null($post['quest']['date_end'] ?? null)) {
             $post['quest']['date_end']      = date('Y-m-d H:i', strtotime($post['quest']['date_end']));
         }
 
@@ -1377,12 +1377,24 @@ class ApiQuest extends Controller
             unset($toUpdate['image']);
         }
 
+        if (!($toUpdate['date_end'] ?? false)) {
+            $toUpdate['date_end'] = null;
+        }
+
+        if (!($toUpdate['max_complete_day'] ?? false)) {
+            $toUpdate['max_complete_day'] = null;
+        }
+
+        if (!($toUpdate['quest_limit'] ?? false)) {
+            $toUpdate['quest_limit'] = null;
+        }
+
         $toUpdate['publish_start']     = date('Y-m-d H:i', strtotime($toUpdate['publish_start']));
         $toUpdate['date_start']        = date('Y-m-d H:i', strtotime($toUpdate['date_start']));
-        if (!is_null($toUpdate['publish_end'])) {
+        if (!is_null($toUpdate['publish_end'] ?? null)) {
             $toUpdate['publish_end']   = date('Y-m-d H:i', strtotime($toUpdate['publish_end']));
         }
-        if (!is_null($toUpdate['date_end'])) {
+        if (!is_null($toUpdate['date_end'] ?? null)) {
             $toUpdate['date_end']      = date('Y-m-d H:i', strtotime($toUpdate['date_end']));
         }
 
