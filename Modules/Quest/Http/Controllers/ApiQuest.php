@@ -1165,6 +1165,15 @@ class ApiQuest extends Controller
         }
 
         $questDetail = QuestDetail::where(['id_quest' => $quest->id_quest])->get();
+        $toCreate = [
+            'id_quest' => $quest->id_quest,
+            'id_user' => $id_user,
+            'date_start' => $quest->date_start,
+            'date_end' => $quest->date_end,
+        ];
+        if (!$toCreate['date_end']) {
+            $toCreate['date_end'] = date('Y-m-d H:i:s', strtotime("+{$quest->max_complete_day} day"));
+        }
         $questUser = QuestUser::create([
             'id_quest' => $quest->id_quest,
             'id_user' => $id_user,
