@@ -160,11 +160,6 @@ class ApiReportSalesController extends Controller
                 'amount' => number_format($report['total_complete_payment']??0,0,",","."),
                 "tooltip" => 'jumlah transaksi dengan status pembyaran sukses (mengabaikan status reject order)'
             ],
-    		'total_transaction' => [
-                'title' => 'Transaksi Sukses',
-                'amount' => number_format($report['total_transaction']??0,0,",","."),
-                "tooltip" => 'jumlah transaksi dengan status pembayaran sukses dan tidak di reject'
-            ],
             'total_transaction_pickup' => [
                 'title' => 'Pickup Order',
                 'amount' => number_format($report['total_transaction_pickup']??0,0,",","."),
@@ -174,6 +169,11 @@ class ApiReportSalesController extends Controller
                 'title' => 'Delivery Order',
                 'amount' => number_format($report['total_transaction_delivery']??0,0,",","."),
                 "tooltip" => 'jumlah transaksi sukses dengan tipe delivery'
+            ],
+    		'total_transaction' => [
+                'title' => 'Total Order',
+                'amount' => number_format($report['total_transaction']??0,0,",","."),
+                "tooltip" => 'jumlah transaksi dengan status pembayaran sukses dan tidak di reject'
             ],
             'total_response' => [
                 'title' => 'Response Order',
@@ -206,7 +206,7 @@ class ApiReportSalesController extends Controller
                 "tooltip" => 'jumlah transaksi yang tidak di response oleh outlet dan terproses auto reject oleh sistem'
             ],
             'total_reject' => [
-                'title' => 'Rejected Order',
+                'title' => 'Total Rejected Order',
                 'amount' => number_format($report['total_reject']??0,0,",","."),
                 "tooltip" => 'jumlah transaksi dengan status reject (semua kondisi reject: manual reject, auto reject karena tidak di response, auto reject karena driver tidak ditemukan dsb)'
             ],
