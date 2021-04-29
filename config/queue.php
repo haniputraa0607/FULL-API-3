@@ -55,6 +55,13 @@ return [
             'retry_after' => 90,
         ],
 
+        'quest_autoclaim' => [
+            'driver' => 'database',
+            'table' => 'questjobs',
+            'queue' => 'quest_autoclaim',
+            'retry_after' => 90,
+        ],
+
         'fraudqueue' => [
             'driver' => 'database',
             'table' => 'fraud_queue',

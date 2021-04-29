@@ -36,7 +36,7 @@ class ApiReportDisburseController extends Controller
                 ->whereNull('reject_at')->where('transactions.id_outlet', $post['id_outlet'])
                 ->where(function ($q){
                     $q->whereNull('disburse_status')
-                        ->orWhereIn('disburse_status', ['Queued', 'Hold', 'Retry From Failed', 'Retry From Failed Payouts', 'Fail', 'Failed Create Payouts']);
+                        ->orWhereIn('disburse_status', ['Queued', 'Hold']);
                 })->where(function ($q){
                     $q->where('transactions.transaction_flag_invalid', 'Valid')
                         ->orWhereNull('transactions.transaction_flag_invalid');
@@ -49,6 +49,17 @@ class ApiReportDisburseController extends Controller
                     $q->where('transactions.transaction_flag_invalid', 'Valid')
                         ->orWhereNull('transactions.transaction_flag_invalid');
                 });
+            $query4 = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->leftJoin('disburse_outlet_transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
+                ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
+                ->leftJoin('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
+                ->where('transactions.transaction_payment_status', 'Completed')
+                ->whereNull('reject_at')->where('transactions.id_outlet', $post['id_outlet'])
+                ->whereIn('disburse_status', ['Retry From Failed', 'Retry From Failed Payouts', 'Fail', 'Failed Create Payouts'])
+                ->where(function ($q){
+                    $q->where('transactions.transaction_flag_invalid', 'Valid')
+                        ->orWhereNull('transactions.transaction_flag_invalid');
+                });
 
             if(isset($post['filter_type']) && $post['filter_type'] == 'range_date'){
                 $dateStart = date('Y-m-d', strtotime($post['date_start']));
@@ -56,14 +67,17 @@ class ApiReportDisburseController extends Controller
                 $query1 = $query1->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
                 $query2 = $query2->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
                 $query3 = $query3->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
+                $query4 = $query2->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
             }elseif (isset($post['filter_type']) && $post['filter_type'] == 'today'){
                 $currentDate = date('Y-m-d');
                 $query1 = $query1->whereDate('transactions.transaction_date', $currentDate);
                 $query2 = $query2->whereDate('transactions.transaction_date', $currentDate);
                 $query3 = $query3->whereDate('transactions.transaction_date', $currentDate);
+                $query4 = $query2->whereDate('transactions.transaction_date', $currentDate);
             }
             $success = $query1->sum('disburse_outlet_transactions.income_outlet');
             $unprocessed = $query2->sum('disburse_outlet_transactions.income_outlet');
+            $fail = $query4->sum('disburse_outlet_transactions.income_outlet');
             $sum = $query3->selectRaw('SUM(disburse_outlet_transactions.fee_item) AS total_fee_item, SUM(disburse_outlet_transactions.payment_charge) AS total_mdr_charged,
                     SUM(disburse_outlet_transactions.income_outlet) AS total_income')->first();
 
@@ -81,7 +95,12 @@ class ApiReportDisburseController extends Controller
                 [
                     'title' => 'Disburse Unprocessed',
                     'amount' => number_format($unprocessed,2,",","."),
-                    'tooltip' => 'Jumlah pendapatan outlet yang belum diberikan atau gagal diberikan'
+                    'tooltip' => 'Jumlah pendapatan outlet yang belum diberikan'
+                ],
+                [
+                    'title' => 'Disburse Fail',
+                    'amount' => number_format($fail,2,",","."),
+                    'tooltip' => 'Jumlah pendapatan outlet yang gagal diberikan'
                 ],
                 [
                     'title' => 'Total Fee Item',
@@ -117,7 +136,7 @@ class ApiReportDisburseController extends Controller
             if($post['status'] == 'unprocessed'){
                 $data->where(function ($q){
                     $q->whereNull('disburse_status')
-                        ->orWhereIn('disburse_status', ['Queued', 'Hold', 'Retry From Failed', 'Retry From Failed Payouts', 'Fail', 'Failed Create Payouts']);
+                        ->orWhereIn('disburse_status', ['Queued', 'Hold']);
                 })->where(function ($q){
                     $q->where('transactions.transaction_flag_invalid', 'Valid')
                         ->orWhereNull('transactions.transaction_flag_invalid');
@@ -176,15 +195,24 @@ class ApiReportDisburseController extends Controller
         $post = $request->json()->all();
 
         if(!empty($post['id_outlet'])){
-            $data = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
-                ->join('outlets', 'outlets.id_outlet', 'disburse_outlet.id_outlet')
+            $data = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->leftJoin('disburse_outlet_transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
+                ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
+                ->leftJoin('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
                 ->leftJoin('bank_name', 'bank_name.bank_code', 'disburse.beneficiary_bank_name')
-                ->where('disburse_outlet.id_outlet', $post['id_outlet']);
+                ->join('outlets', 'outlets.id_outlet', 'disburse_outlet.id_outlet')
+                ->where('transactions.transaction_payment_status', 'Completed')
+                ->whereNull('reject_at')->where('transactions.id_outlet', $post['id_outlet'])
+                ->groupBy('disburse_outlet.id_disburse_outlet');
 
             if ($post['status'] == 'success'){
                 $data->where('disburse.disburse_status', 'Success');
             }elseif($post['status'] == 'fail'){
-                $data->whereIn('disburse_status', ['Fail', 'Failed Create Payouts']);
+                $data->where(function ($q){
+                    $q->where('transactions.transaction_flag_invalid', 'Valid')
+                        ->orWhereNull('transactions.transaction_flag_invalid');
+                })
+                ->whereIn('disburse_status', ['Fail', 'Failed Create Payouts', 'Retry From Failed', 'Retry From Failed Payouts']);
             }
 
             if(isset($post['date_start']) && !empty($post['date_start']) &&
@@ -245,11 +273,11 @@ class ApiReportDisburseController extends Controller
 
             if(isset($post['export']) && $post['export'] == 1){
                 if($post['status'] == 'success'){
-                    $data = $data->selectRaw('disburse_status as "Disburse Status", bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", disburse_outlet.disburse_nominal as "Nominal Disburse",
+                    $data = $data->selectRaw('disburse_status as "Disburse Status", bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal Disburse",
                         total_fee_item as "Total Fee Item", total_payment_charge as "Total MDR PG"')
                         ->get()->toArray();
                 }else{
-                    $data = $data->selectRaw('disburse_status as "Disburse Status", bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", disburse_outlet.disburse_nominal as "Nominal Disburse",
+                    $data = $data->selectRaw('disburse_status as "Disburse Status", bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal Disburse",
                         total_fee_item as "Total Fee Item", total_payment_charge as "Total MDR PG"')
                         ->get()->toArray();
                 }

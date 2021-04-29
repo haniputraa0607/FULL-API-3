@@ -2908,9 +2908,9 @@ class MyHelper{
 	 */
 	public static function updateOutletFile($data)
 	{
-		$filename = storage_path('data_outlet.json');
-        if (is_file($filename)) {
-            $filecontent = file_get_contents($filename);
+		$filename = 'data_outlet.json';
+        if (Storage::disk(env('STORAGE'))->exists($filename)) {
+            $filecontent = Storage::disk(env('STORAGE'))->get($filename);
             $data_outlet = json_decode($filecontent,true)?:[];
         } else {
             $data_outlet = [];
@@ -2919,7 +2919,7 @@ class MyHelper{
         	$data_outlet[$item['id_outlet']] = self::encrypt2019($item['data']);
         }
         try {
-	        file_put_contents($filename, json_encode($data_outlet));
+	        Storage::disk(env('STORAGE'))->put($filename, json_encode($data_outlet));
 	    } catch (\Exception $e) {
 	    	\Log::error("Failed to save data outlet. Please save this data manually in the $filename file", $data_outlet);
 	    }
@@ -2932,9 +2932,9 @@ class MyHelper{
 	 */
 	public static function getOutletFile($id_outlet = null)
 	{
-		$filename = storage_path('data_outlet.json');
-        if (is_file($filename)) {
-            $filecontent = file_get_contents($filename);
+		$filename = 'data_outlet.json';
+        if (Storage::disk(env('STORAGE'))->exists($filename)) {
+            $filecontent = Storage::disk(env('STORAGE'))->get($filename);
             $data_outlet = json_decode($filecontent,true)?:[];
         } else {
             $data_outlet = [];
