@@ -634,6 +634,14 @@ class ApiQuest extends Controller
                 continue;
             }
 
+            if ($quest->id_outlet_group) {
+                $outlets = array_column(app('\Modules\Outlet\Http\Controllers\ApiOutletGroupFilterController')->outletGroupFilter($quest->id_outlet_group), 'id_outlet');
+                $id_outlets = array_column($outlets, 'id_outlet');
+                if (!in_array($transaction->id_outlet, $id_outlets)) {
+                    continue;
+                }
+            }
+
             $quest_rule = $quest->quest_rule;
             if (!$quest_rule) {
                 if ($quest->different_outlet) {
@@ -649,18 +657,17 @@ class ApiQuest extends Controller
                 }
             }
 
+            // check absolute rule
+            if (
+                ($quest_rule !== 'nominal_transaction' && $transaction->transaction_grandtotal < ($quest->trx_nominal ?: 0)) ||
+                ($quest_rule !== 'total_product' && $transaction->productTransaction->count() < ($quest->product_total ?: 0))
+            ) {
+                continue;
+            }
+
             \DB::beginTransaction();
             // outlet 
             try {
-                // check absolute rule
-                if (
-                    ($quest_rule !== 'nominal_transaction' && $transaction->transaction_grandtotal < ($quest->trx_nominal ?: 0)) ||
-                    ($quest_rule !== 'total_product' && $transaction->productTransaction->count() < ($quest->product_total ?: 0))
-                ) {
-                    \DB::rollBack();
-                    continue;
-                }
-
                 if ($quest->id_outlet || $quest->different_outlet) {
                     $questLog = QuestOutletLog::where([
                         'id_quest' => $quest->id_quest,
@@ -669,10 +676,10 @@ class ApiQuest extends Controller
                         'id_outlet' => $transaction->id_outlet,
                     ])->first();
                     if ($questLog) {
-                        if ($transaction->created_at <= $questLog->date) {
-                            \DB::rollBack();
-                            continue;
-                        }
+                        // if ($transaction->created_at <= $questLog->date) {
+                        //     \DB::rollBack();
+                        //     continue;
+                        // }
                         $questLog->update([
                             'count' => $questLog->count+1,
                             'date' => $transaction->created_at,
@@ -707,9 +714,10 @@ class ApiQuest extends Controller
                                 'id_product_category' => $transaction_product->id_product_category,
                             ])->first();
                             if ($questLog) {
-                                if ($transaction->created_at <= $questLog->date) {
-                                    continue;
-                                }
+                                // if ($transaction->created_at <= $questLog->date) {
+                                //     \DB::rollBack();
+                                //     continue;
+                                // }
                                 $questLog->update([
                                     'product_total' => $questLog->product_total + $transaction_product->transaction_product_qty,
                                     'product_nominal' => $questLog->product_total + ($transaction_product->transaction_product_subtotal - $transaction_product->transaction_product_discount_all),
@@ -734,6 +742,7 @@ class ApiQuest extends Controller
                     }
                     if (!$has_product) {
                         \DB::rollBack();
+                        continue;
                     }
                 }
 
@@ -762,10 +771,10 @@ class ApiQuest extends Controller
                         'id_outlet' => $transaction->id_outlet,
                     ])->first();
                     if ($questLog) {
-                        if ($transaction->created_at <= $questLog->date) {
-                            \DB::rollBack();
-                            continue;
-                        }
+                        // if ($transaction->created_at <= $questLog->date) {
+                        //     \DB::rollBack();
+                        //     continue;
+                        // }
                         $questLog->update([
                             'transaction_total' => $questLog->transaction_total + 1,
                             'transaction_nominal' => $questLog->transaction_nominal + $transaction->transaction_grandtotal,
