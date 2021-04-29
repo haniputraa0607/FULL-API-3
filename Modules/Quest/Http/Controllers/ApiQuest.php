@@ -1246,6 +1246,13 @@ class ApiQuest extends Controller
             $quests->where('quest_user_redemptions.redemption_status', 1);
         }
 
+        if ($request->date_start) {
+            $quests->where('quest_users.date_end', '>=', $request->date_start);
+        }
+        if ($request->date_end) {
+            $quests->where('quest_users.date_start', '<=', $request->date_end);
+        }
+
         if ($request->page) {
             $quests = $quests->paginate();
         } else {
