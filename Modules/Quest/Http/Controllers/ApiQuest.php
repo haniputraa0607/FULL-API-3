@@ -145,7 +145,7 @@ class ApiQuest extends Controller
         QuestContent::insert([
             [
                 'id_quest' => $quest->id_quest,
-                'title' => 'Terms and Condition',
+                'title' => 'Syarat & Ketentuan',
                 'content' => '',
                 'order' => 1,
                 'is_active' => 0,
@@ -153,7 +153,7 @@ class ApiQuest extends Controller
             ],
             [
                 'id_quest' => $quest->id_quest,
-                'title' => 'Benefit',
+                'title' => 'Hadiah',
                 'content' => '',
                 'order' => 2,
                 'is_active' => 0,
@@ -1136,6 +1136,7 @@ class ApiQuest extends Controller
 
         $time_server = date('Y-m-d H:i:s');
         $quests->each(function($item) use ($time_server) {
+            $item->applyShortDescriptionTextReplace();
             $item->append('contents', 'text_label', 'progress');
             $item->makeHidden(['date_start', 'quest_contents', 'id_user', 'description']);
             $item->date_end_format = MyHelper::indonesian_date_v2($item['date_end'], 'd F Y');
@@ -1320,6 +1321,7 @@ class ApiQuest extends Controller
 
         $time_server = date('Y-m-d H:i:s');
         $quests->each(function($item) use ($time_server) {
+            $item->applyShortDescriptionTextReplace();
             $item->append(['progress', 'text_label']);
             $item->makeHidden(['date_start', 'id_user']);
             $item->date_end_format = MyHelper::indonesian_date_v2($item['date_end'], 'd F Y');
@@ -1352,6 +1354,8 @@ class ApiQuest extends Controller
                 'messages' => ['Data Rusak']
             ];
         }
+
+        $quest->applyShortDescriptionTextReplace();
 
         $benefit = [
             'type' => $quest->quest_benefit->benefit_type

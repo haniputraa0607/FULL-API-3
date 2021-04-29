@@ -53,21 +53,58 @@ class Quest extends Model
         return $this->hasOne(QuestBenefit::class, 'id_quest');
     }
 
+    public function applyShortDescriptionTextReplace()
+    {
+        if (!$this->quest_benefit) {
+            $this->load('quest_benefit');
+        }
+        $replacer = [
+            '%deals_title%' => '',
+            '%voucher_qty%' => '',
+            '%point_received%' => ''
+        ];
+        if ($this->quest_benefit->benefit_type == 'voucher') {
+            if (!$this->quest_benefit->deals) {
+                $this->quest_benefit->load('deals');
+            }
+            $replacer['%voucher_qty%'] = MyHelper::requestNumber($this->quest_benefit->value, '_POINT');
+            $replacer['%deals_title%'] = $this->quest_benefit->deals->deals_title;
+        } else {
+            $replacer['%point_received%'] = MyHelper::requestNumber($this->quest_benefit->value, '_POINT');
+        }
+        $this->short_description = str_replace(array_keys($replacer), array_values($replacer), $this->short_description);
+    }
+
     public function getContentsAttribute()
     {
+        if (!$this->quest_benefit) {
+            $this->load('quest_benefit');
+        }
+        $replacer = [
+            '%deals_title%' => '',
+            '%voucher_qty%' => '',
+            '%point_received%' => ''
+        ];
+        if ($this->quest_benefit->benefit_type == 'voucher') {
+            if (!$this->quest_benefit->deals) {
+                $this->quest_benefit->load('deals');
+            }
+            $replacer['%voucher_qty%'] = MyHelper::requestNumber($this->quest_benefit->value, '_POINT');
+            $replacer['%deals_title%'] = $this->quest_benefit->deals->deals_title;
+        } else {
+            $replacer['%point_received%'] = MyHelper::requestNumber($this->quest_benefit->value, '_POINT');
+        }
+
         $result = $this->quest_contents->toArray();
         $result = QuestContent::where('id_quest', $this->id_quest)
             ->select('title', 'content')
             ->where('is_active', 1)
             ->orderBy('order')
             ->get()
+            ->each(function($item) use ($replacer) {
+                $item->content = str_replace(array_keys($replacer), array_values($replacer), $item->content);
+            })
             ->toArray();
-        if ($this->description !== null) {
-            array_unshift($result, [
-                'title' => 'Overview',
-                'content' => $this->description,
-            ]);
-        }
         return $result;
     }
 
