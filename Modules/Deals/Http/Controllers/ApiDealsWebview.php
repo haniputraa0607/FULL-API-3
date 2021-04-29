@@ -151,6 +151,10 @@ class ApiDealsWebview extends Controller
             'time_server_indo'              => MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i', strtotime(date('Y-m-d H:i:s')))
         ];
 
+        if($deals['deals_type'] == 'Quest'){
+            $result['time_server'] = null;
+        }
+
         if($deals['deals_voucher_price_type']=='free'){
             //voucher free
             $deals['button_text'] = 'Get';

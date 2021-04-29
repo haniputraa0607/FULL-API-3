@@ -28,6 +28,9 @@ class Quest extends Model
         'quest_claimed',
         'benefit_claimed',
         'max_complete_day',
+        'user_rule_subject',
+        'user_rule_parameter',
+        'user_rule_operator'
     ];
     
     public function getImageUrlAttribute($value)
