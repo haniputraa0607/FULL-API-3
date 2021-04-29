@@ -119,6 +119,10 @@ class ApiQuest extends Controller
                     } else {
                         $value['id_quest']   = $quest->id_quest;
                     }
+
+                    if (!($value['id_outlet'] ?? false)) {
+                        unset($value['id_outlet']);
+                    }
     
                     $questDetail[$key] = QuestDetail::create($value);
                 }
@@ -197,6 +201,9 @@ class ApiQuest extends Controller
         }
         foreach ($request->detail as $detail) {
             $detail['id_quest'] = $quest->id_quest;
+            if (!($detail['id_outlet'] ?? false)) {
+                unset($detail['id_outlet']);
+            }
             $create = QuestDetail::create($detail);
         }
         return MyHelper::checkCreate($create);
@@ -627,6 +634,14 @@ class ApiQuest extends Controller
                 continue;
             }
 
+            if ($quest->id_outlet_group) {
+                $outlets = array_column(app('\Modules\Outlet\Http\Controllers\ApiOutletGroupFilterController')->outletGroupFilter($quest->id_outlet_group), 'id_outlet');
+                $id_outlets = array_column($outlets, 'id_outlet');
+                if (!in_array($transaction->id_outlet, $id_outlets)) {
+                    continue;
+                }
+            }
+
             $quest_rule = $quest->quest_rule;
             if (!$quest_rule) {
                 if ($quest->different_outlet) {
@@ -642,18 +657,17 @@ class ApiQuest extends Controller
                 }
             }
 
+            // check absolute rule
+            if (
+                ($quest_rule !== 'nominal_transaction' && $transaction->transaction_grandtotal < ($quest->trx_nominal ?: 0)) ||
+                ($quest_rule !== 'total_product' && $transaction->productTransaction->count() < ($quest->product_total ?: 0))
+            ) {
+                continue;
+            }
+
             \DB::beginTransaction();
             // outlet 
             try {
-                // check absolute rule
-                if (
-                    ($quest_rule !== 'nominal_transaction' && $transaction->transaction_grandtotal < ($quest->trx_nominal ?: 0)) ||
-                    ($quest_rule !== 'total_product' && $transaction->productTransaction->count() < ($quest->product_total ?: 0))
-                ) {
-                    \DB::rollBack();
-                    continue;
-                }
-
                 if ($quest->id_outlet || $quest->different_outlet) {
                     $questLog = QuestOutletLog::where([
                         'id_quest' => $quest->id_quest,
@@ -662,10 +676,10 @@ class ApiQuest extends Controller
                         'id_outlet' => $transaction->id_outlet,
                     ])->first();
                     if ($questLog) {
-                        if ($transaction->created_at <= $questLog->date) {
-                            \DB::rollBack();
-                            continue;
-                        }
+                        // if ($transaction->created_at <= $questLog->date) {
+                        //     \DB::rollBack();
+                        //     continue;
+                        // }
                         $questLog->update([
                             'count' => $questLog->count+1,
                             'date' => $transaction->created_at,
@@ -700,9 +714,10 @@ class ApiQuest extends Controller
                                 'id_product_category' => $transaction_product->id_product_category,
                             ])->first();
                             if ($questLog) {
-                                if ($transaction->created_at <= $questLog->date) {
-                                    continue;
-                                }
+                                // if ($transaction->created_at <= $questLog->date) {
+                                //     \DB::rollBack();
+                                //     continue;
+                                // }
                                 $questLog->update([
                                     'product_total' => $questLog->product_total + $transaction_product->transaction_product_qty,
                                     'product_nominal' => $questLog->product_total + ($transaction_product->transaction_product_subtotal - $transaction_product->transaction_product_discount_all),
@@ -727,6 +742,7 @@ class ApiQuest extends Controller
                     }
                     if (!$has_product) {
                         \DB::rollBack();
+                        continue;
                     }
                 }
 
@@ -755,10 +771,10 @@ class ApiQuest extends Controller
                         'id_outlet' => $transaction->id_outlet,
                     ])->first();
                     if ($questLog) {
-                        if ($transaction->created_at <= $questLog->date) {
-                            \DB::rollBack();
-                            continue;
-                        }
+                        // if ($transaction->created_at <= $questLog->date) {
+                        //     \DB::rollBack();
+                        //     continue;
+                        // }
                         $questLog->update([
                             'transaction_total' => $questLog->transaction_total + 1,
                             'transaction_nominal' => $questLog->transaction_nominal + $transaction->transaction_grandtotal,
@@ -969,7 +985,7 @@ class ApiQuest extends Controller
     public function show(Request $request)
     {
         try {
-            $data['quest']  = Quest::with('quest_detail', 'quest_detail.product', 'quest_detail.outlet', 'quest_detail.province', 'quest_contents', 'quest_benefit', 'quest_benefit.deals')->where('id_quest', $request['id_quest'])->first();
+            $data['quest']  = Quest::with('quest_detail', 'quest_detail.product', 'quest_detail.outlet', 'quest_detail.outlet_group', 'quest_detail.province', 'quest_contents', 'quest_benefit', 'quest_benefit.deals')->where('id_quest', $request['id_quest'])->first();
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -1019,7 +1035,8 @@ class ApiQuest extends Controller
                 'trx_nominal' => $post['trx_nominal'] ?? null,
                 'trx_total' => $post['trx_total'] ?? null,
                 'id_product_category' => $post['id_product_category'] ?? null,
-                'id_outlet' => $post['id_outlet'] ?? null,
+                'id_outlet' => ($post['id_outlet'] ?? false) ?: null,
+                'id_outlet_group' => $post['id_outlet_group'] ?? null,
                 'id_province' => $post['id_province'] ?? null,
                 'different_category_product' => $post['different_product_category'] ?? null,
                 'different_outlet' => $post['different_outlet'] ?? null,
@@ -1165,6 +1182,15 @@ class ApiQuest extends Controller
         }
 
         $questDetail = QuestDetail::where(['id_quest' => $quest->id_quest])->get();
+        $toCreate = [
+            'id_quest' => $quest->id_quest,
+            'id_user' => $id_user,
+            'date_start' => $quest->date_start,
+            'date_end' => $quest->date_end,
+        ];
+        if (!$toCreate['date_end']) {
+            $toCreate['date_end'] = date('Y-m-d H:i:s', strtotime("+{$quest->max_complete_day} day"));
+        }
         $questUser = QuestUser::create([
             'id_quest' => $quest->id_quest,
             'id_user' => $id_user,
@@ -1244,6 +1270,13 @@ class ApiQuest extends Controller
             $quests->where('quest_users.date_end', '<', date('Y-m-d H:i:s'));
         } else {
             $quests->where('quest_user_redemptions.redemption_status', 1);
+        }
+
+        if ($request->date_start) {
+            $quests->where('quest_users.date_end', '>=', $request->date_start);
+        }
+        if ($request->date_end) {
+            $quests->where('quest_users.date_start', '<=', $request->date_end);
         }
 
         if ($request->page) {
