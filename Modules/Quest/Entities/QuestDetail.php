@@ -25,7 +25,8 @@ class QuestDetail extends Model
         'id_province',
         'different_category_product',
         'different_outlet',
-        'different_province'
+        'different_province',
+        'id_outlet_group'
     ];
 
     public function product()
@@ -39,6 +40,10 @@ class QuestDetail extends Model
     public function outlet()
     {
         return $this->belongsTo('App\Http\Models\Outlet', 'id_outlet');
+    }
+    public function outlet_group()
+    {
+        return $this->belongsTo('Modules\Outlet\Entities\OutletGroup', 'id_outlet_group');
     }
     public function province()
     {

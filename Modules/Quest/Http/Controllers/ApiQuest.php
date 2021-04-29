@@ -119,6 +119,10 @@ class ApiQuest extends Controller
                     } else {
                         $value['id_quest']   = $quest->id_quest;
                     }
+
+                    if (!($value['id_outlet'] ?? false)) {
+                        unset($value['id_outlet']);
+                    }
     
                     $questDetail[$key] = QuestDetail::create($value);
                 }
@@ -197,6 +201,9 @@ class ApiQuest extends Controller
         }
         foreach ($request->detail as $detail) {
             $detail['id_quest'] = $quest->id_quest;
+            if (!($detail['id_outlet'] ?? false)) {
+                unset($detail['id_outlet']);
+            }
             $create = QuestDetail::create($detail);
         }
         return MyHelper::checkCreate($create);
@@ -969,7 +976,7 @@ class ApiQuest extends Controller
     public function show(Request $request)
     {
         try {
-            $data['quest']  = Quest::with('quest_detail', 'quest_detail.product', 'quest_detail.outlet', 'quest_detail.province', 'quest_contents', 'quest_benefit', 'quest_benefit.deals')->where('id_quest', $request['id_quest'])->first();
+            $data['quest']  = Quest::with('quest_detail', 'quest_detail.product', 'quest_detail.outlet', 'quest_detail.outlet_group', 'quest_detail.province', 'quest_contents', 'quest_benefit', 'quest_benefit.deals')->where('id_quest', $request['id_quest'])->first();
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -1019,7 +1026,8 @@ class ApiQuest extends Controller
                 'trx_nominal' => $post['trx_nominal'] ?? null,
                 'trx_total' => $post['trx_total'] ?? null,
                 'id_product_category' => $post['id_product_category'] ?? null,
-                'id_outlet' => $post['id_outlet'] ?? null,
+                'id_outlet' => ($post['id_outlet'] ?? false) ?: null,
+                'id_outlet_group' => $post['id_outlet_group'] ?? null,
                 'id_province' => $post['id_province'] ?? null,
                 'different_category_product' => $post['different_product_category'] ?? null,
                 'different_outlet' => $post['different_outlet'] ?? null,
