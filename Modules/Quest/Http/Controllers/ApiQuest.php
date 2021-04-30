@@ -1600,4 +1600,12 @@ class ApiQuest extends Controller
         $list = Quest::where('is_complete', 1)->get()->toArray();
         return response()->json(MyHelper::checkGet($list));
     }
+
+    public function autoclaimQuest($id_user)
+    {
+        $quests = Quest::where('autoclaim_quest', 1)->whereNull('stop_at')->where('is_complete', 1)->where('publish_end', '>=', date('Y-m-d H:i:s'))->get();
+        foreach ($quests as $quest) {
+            $this->doTakeMission($id_user, $quest->id_quest);
+        }
+    }
 }
