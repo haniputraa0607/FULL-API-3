@@ -383,6 +383,7 @@ class ApiCampaign extends Controller
                                         "campaign_rule_subject" => $val['subject'],
                                         "campaign_rule_operator" => $val['operator'],
                                         "campaign_rule_param" => $val['parameter'],
+                                        "campaign_rule_param_select" => $val['parameter_select']??NULL,
                                         "campaign_rule_param_id"=> $val['id'],
                                         "created_at" => date('Y-m-d H:i:s'),
                                         "updated_at" => date('Y-m-d H:i:s')

@@ -38,7 +38,8 @@ class InboxGlobalRule extends Model
 		'id_inbox_global_rule_parent',
 		'inbox_global_rule_subject',
 		'inbox_global_rule_operator',
-		'inbox_global_rule_param'
+		'inbox_global_rule_param',
+        'inbox_global_rule_param_select'
 	];
 
 	public function inbox_global_rule_parent()

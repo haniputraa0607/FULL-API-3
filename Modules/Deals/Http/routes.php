@@ -53,6 +53,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities','user_agent', 'scope
     Route::any('be/list', ['middleware' => 'feature_control:72', 'uses' => 'ApiDeals@listDeal']);
     Route::any('be/detail', ['middleware' => 'feature_control:72', 'uses' => 'ApiDeals@detail']);
     Route::post('list/active', 'ApiDeals@listActiveDeals');
+    Route::post('list-all', 'ApiDeals@listAllDeals');
     Route::post('create', ['middleware' => 'feature_control:74', 'uses' => 'ApiDeals@createReq']);
     Route::post('update', ['middleware' => 'feature_control:75', 'uses' => 'ApiDeals@updateReq']);
     Route::post('update-content', ['middleware' => 'feature_control:75', 'uses' => 'ApiDeals@updateContent']);

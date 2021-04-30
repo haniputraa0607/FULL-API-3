@@ -22,6 +22,7 @@ class PromotionRule extends Model
 		'promotion_rule_subject',
 		'promotion_rule_operator',
 		'promotion_rule_param',
+        'promotion_rule_param_select',
 		'created_at',
 		'updated_at',
 	];
