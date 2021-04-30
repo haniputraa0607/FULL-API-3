@@ -1396,11 +1396,10 @@ class ApiQuest extends Controller
 
         $details = QuestDetail::select('name', 'short_description', 'is_done', 'quest_details.id_quest', 'quest_details.id_quest_detail', 'quest_rule', 'id_product_category', 'different_category_product', 'id_product', 'id_product_variant_group', 'product_total', 'trx_nominal', 'trx_total', 'id_outlet', 'id_province', 'different_outlet', 'different_province', 'id_quest_user_detail', 'id_quest_user', 'id_user')
             ->where(['quest_details.id_quest' => $quest->id_quest])
-            ->where(function($query) use ($id_user) {
-                $query->where(['id_user' => $id_user])
-                    ->orWhereNull('quest_user_details.id_quest_user_detail');
+            ->leftJoin('quest_user_details', function($query) use ($id_user) {
+                $query->on('quest_details.id_quest_detail', 'quest_user_details.id_quest_detail')
+                    ->where(['id_user' => $id_user]);
             })
-            ->leftJoin('quest_user_details', 'quest_details.id_quest_detail', 'quest_user_details.id_quest_detail')
             ->get();
 
         $details->each(function($item) {
