@@ -847,7 +847,7 @@ class ApiQuest extends Controller
         }
 
         if ($questDetail->different_outlet) {
-            if (optional(QuestOutletLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->first())->count < $questDetail->different_outlet) {
+            if (QuestOutletLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->count() < $questDetail->different_outlet) {
                 return false;
             }
         }
