@@ -1155,10 +1155,10 @@ class ApiQuest extends Controller
         $notAvailableQuest = [];
 
         foreach ($userRule as $val){
-            $check = CrmUserData::where($val['user_rule_subject'], $val['user_rule_parameter'], $val['user_rule_operator'])
-                    ->where('id_user', $id_user)->count();
+            $check = CrmUserData::where($val['user_rule_subject'], $val['user_rule_operator'], $val['user_rule_parameter'])
+                    ->where('id_user', $id_user)->get()->toArray();
 
-            if($check < 0){
+            if(empty($check)){
                 $notAvailableQuest[] = $val['id_quest'];
             }
         }
@@ -1580,5 +1580,10 @@ class ApiQuest extends Controller
                 'messages' => ['Belum ada misi yang berjalan']
             ];
         }
+    }
+
+    function listAllQuest(){
+        $list = Quest::where('is_complete', 1)->get()->toArray();
+        return response()->json(MyHelper::checkGet($list));
     }
 }
