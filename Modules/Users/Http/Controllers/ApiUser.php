@@ -589,6 +589,56 @@ class ApiUser extends Controller
                             $query = $query->where($var, '=', $condition['parameter']);
                     }
 
+                    if($condition['subject'] == 'Deals'){
+                        $par = $condition['operator'];
+                        if($par == '='){
+                            $par = $condition['parameter'];
+                        }
+                        $query = $query->whereIn('users.id', function($query) use($condition,$par){
+                            $query->select('id_user')
+                                ->from('deals_users')
+                                ->join('deals_vouchers', 'deals_users.id_deals_voucher', 'deals_vouchers.id_deals_voucher')
+                                ->where('deals_vouchers.id_deals', $par)
+                                ->where('deals_users.voucher_expired_at', '>', date('Y-m-d H:i:s'));
+                        });
+                    }
+
+                    if($condition['subject'] == 'Quest'){
+                        $par = $condition['operator'];
+                        if($par == '='){
+                            $par = $condition['parameter'];
+                        }
+                        $type = $condition['parameter_select']??$condition['parameter'];
+                        if($type == 'already_claim'){
+                            $query = $query->whereIn('users.id', function($query) use($condition,$par){
+                                $query->select('id_user')
+                                    ->from('quest_users')
+                                    ->join('quests', 'quests.id_quest', 'quest_users.id_quest')
+                                    ->where('quests.id_quest', $par);
+                            });
+                        }else{
+                            $query = $query->whereNotIn('users.id', function($query) use($condition,$par){
+                                $query->select('id_user')
+                                    ->from('quest_users')
+                                    ->join('quests', 'quests.id_quest', 'quest_users.id_quest')
+                                    ->where('quests.id_quest', $par);
+                            });
+                        }
+                    }
+
+                    if($condition['subject'] == 'Subscription'){
+                        $par = $condition['operator'];
+                        if($par == '='){
+                            $par = $condition['parameter'];
+                        }
+                        $query = $query->whereIn('users.id', function($query) use($condition,$par){
+                            $query->select('id_user')
+                                ->from('subscription_users')
+                                ->where('id_subscription', $par)
+                                ->where('subscription_users.subscription_expired_at', '>', date('Y-m-d H:i:s'));
+                        });
+                    }
+
                     if ($condition['subject'] == 'gender' || $condition['subject'] == 'is_suspended' || $condition['subject'] == 'email_verified' || $condition['subject'] == 'phone_verified' || $condition['subject'] == 'email_unsubscribed' || $condition['subject'] == 'provider' || $condition['subject'] == 'city_name' || $condition['subject'] == 'city_postal_code' || $condition['subject'] == 'province_name' || $condition['subject'] == 'level') {
                         if ($condition['subject'] == 'city_name' || $condition['subject'] == 'city_postal_code') $var = "cities." . $condition['subject'];
                         else if ($condition['subject'] == 'province_name') $var = "provinces." . $condition['subject'];
@@ -749,7 +799,8 @@ class ApiUser extends Controller
                 }
                 /*====================== End IF ============================*/
 
-                /*============= All query with rule 'OR' ==================*/ else {
+                /*============= All query with rule 'OR' ==================*/
+                else {
                     if ($condition['subject'] == 'all_user') {
                         $query = $query->orWhereRaw('1');
                     }
@@ -762,6 +813,68 @@ class ApiUser extends Controller
                             $query = $query->orWhereIn($var, explode(',', $condition['parameter']));
                         else
                             $query = $query->orWhere($var, '=', $condition['parameter']);
+                    }
+
+                    if ($condition['subject'] == 'r_quartile' || $condition['subject'] == 'f_quartile' || $condition['subject'] == 'm_quartile' || $condition['subject'] == 'RFMScore') {
+                        $var = "crm_user_data." . $condition['subject'];
+
+                        if ($condition['operator'] == 'like')
+                            $query = $query->orWhere($var, 'like', '%' . $condition['parameter'] . '%');
+                        elseif (strtoupper($condition['operator']) == 'WHERE IN')
+                            $query = $query->orWhereIn($var, explode(',', $condition['parameter']));
+                        else
+                            $query = $query->orWhere($var, '=', $condition['parameter']);
+                    }
+
+
+                    if($condition['subject'] == 'Deals'){
+                        $par = $condition['operator'];
+                        if($par == '='){
+                            $par = $condition['parameter'];
+                        }
+                        $query = $query->orWhereIn('users.id', function($query) use($condition,$par){
+                            $query->select('id_user')
+                                ->from('deals_users')
+                                ->join('deals_vouchers', 'deals_users.id_deals_voucher', 'deals_vouchers.id_deals_voucher')
+                                ->where('deals_vouchers.id_deals', $par)
+                                ->where('deals_users.voucher_expired_at', '>', date('Y-m-d H:i:s'));
+                        });
+                    }
+
+                    if($condition['subject'] == 'Quest'){
+                        $par = $condition['operator'];
+                        if($par == '='){
+                            $par = $condition['parameter'];
+                        }
+                        $type = $condition['parameter_select']??$condition['parameter'];
+                        if($type == 'already_claim'){
+                            $query = $query->orWhereIn('users.id', function($query) use($condition,$par){
+                                $query->select('id_user')
+                                    ->from('quest_users')
+                                    ->join('quests', 'quests.id_quest', 'quest_users.id_quest')
+                                    ->where('quests.id_quest', $par);
+                            });
+                        }else{
+                            $query = $query->orWhereNotIn('users.id', function($query) use($condition,$par){
+                                $query->select('id_user')
+                                    ->from('quest_users')
+                                    ->join('quests', 'quests.id_quest', 'quest_users.id_quest')
+                                    ->where('quests.id_quest', $par);
+                            });
+                        }
+                    }
+
+                    if($condition['subject'] == 'Subscription'){
+                        $par = $condition['operator'];
+                        if($par == '='){
+                            $par = $condition['parameter'];
+                        }
+                        $query = $query->orWhereIn('users.id', function($query) use($condition,$par){
+                            $query->select('id_user')
+                                ->from('subscription_users')
+                                ->where('id_subscription', $par)
+                                ->where('subscription_users.subscription_expired_at', '>', date('Y-m-d H:i:s'));
+                        });
                     }
 
                     if ($condition['subject'] == 'gender' || $condition['subject'] == 'is_suspended' || $condition['subject'] == 'email_verified' || $condition['subject'] == 'phone_verified' || $condition['subject'] == 'email_unsubscribed' || $condition['subject'] == 'provider' || $condition['subject'] == 'city_name' || $condition['subject'] == 'city_postal_code' || $condition['subject'] == 'province_name' || $condition['subject'] == 'level') {
