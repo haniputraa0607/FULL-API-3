@@ -641,7 +641,7 @@ class ApiQuest extends Controller
             }
 
             if ($quest->id_outlet_group) {
-                $outlets = array_column(app('\Modules\Outlet\Http\Controllers\ApiOutletGroupFilterController')->outletGroupFilter($quest->id_outlet_group), 'id_outlet');
+                $outlets = app('\Modules\Outlet\Http\Controllers\ApiOutletGroupFilterController')->outletGroupFilter($quest->id_outlet_group);
                 $id_outlets = array_column($outlets, 'id_outlet');
                 if (!in_array($transaction->id_outlet, $id_outlets)) {
                     continue;
