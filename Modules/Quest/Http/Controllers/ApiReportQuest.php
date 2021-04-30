@@ -45,7 +45,7 @@ class ApiReportQuest extends Controller
 					'quest_benefits.benefit_type',
 					DB::raw('
 						COUNT(DISTINCT quest_users.id_user) as total_user
-					'),
+					')
 				)
 				->groupBy('quests.id_quest');
 
