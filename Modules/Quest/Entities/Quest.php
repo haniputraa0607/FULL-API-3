@@ -113,6 +113,12 @@ class Quest extends Model
         $now = date('Y-m-d H:i:s');
         $date_start = MyHelper::indonesian_date_v2($this->date_start, 'd F Y');
         $date_end = MyHelper::indonesian_date_v2($this->date_end, 'd F Y');
+        if ($this->claimed_status) {
+            return [
+                'text' => 'Selesai pada '.MyHelper::indonesian_date_v2($this['redemption_date'], 'd F Y'),
+                'code' => 2
+            ];
+        }
         if ($this->date_start > $now) {
             return [
                 'text' => 'Dimulai pada '.$date_start,
