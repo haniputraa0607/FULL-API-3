@@ -2367,4 +2367,16 @@ class ApiSubscription extends Controller
 		
 		return MyHelper::checkGet($text_replace);
     }
+
+    function listAllSubscription(Request $request){
+        $post = $request->json()->all();
+        $list = Subscription::orderBy('id_subscription', 'asc');
+
+        if(isset($post['subscription_type']) && !empty($post['subscription_type'])){
+            $list = $list->where('subscription_type', $post['subscription_type']);
+        }
+
+        $list = $list->get()->toArray();
+        return response()->json(MyHelper::checkGet($list));
+    }
 }
