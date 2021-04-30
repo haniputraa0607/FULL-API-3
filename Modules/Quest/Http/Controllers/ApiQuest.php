@@ -1157,8 +1157,8 @@ class ApiQuest extends Controller
         foreach ($userRule as $val){
             $check = CrmUserData::where($val['user_rule_subject'], $val['user_rule_operator'], $val['user_rule_parameter'])
                     ->where('id_user', $id_user)->get()->toArray();
-
-            if(empty($check)){
+            $checkClaim = QuestUser::where('id_user', $id_user)->where('id_quest', $val['id_quest'])->first();
+            if(empty($check) && empty($checkClaim)){
                 $notAvailableQuest[] = $val['id_quest'];
             }
         }
@@ -1213,6 +1213,20 @@ class ApiQuest extends Controller
                     'Misi sudah mencapai limit klaim'
                 ]
             ];
+        }
+
+        if(!empty($quest['user_rule_subject'])){
+            $check = CrmUserData::where($quest['user_rule_subject'], $quest['user_rule_operator'], $quest['user_rule_parameter'])
+                ->where('id_user', $id_user)->get()->toArray();
+
+            if(empty($check)){
+                return [
+                    'status' => 'fail',
+                    'messages' => [
+                        'Quest ini tidak berlaku untuk user Anda'
+                    ]
+                ];
+            }
         }
 
         $questDetail = QuestDetail::where(['id_quest' => $quest->id_quest])->get();
