@@ -2,6 +2,7 @@
 
 namespace Modules\Quest\Http\Controllers;
 
+use App\Http\Models\CrmUserData;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\User;
@@ -81,6 +82,11 @@ class ApiQuest extends Controller
         }
 
         try {
+            if($post['quest']['user_rule_type'] == 'all'){
+                $post['quest']['user_rule_subject'] = NULL;
+                $post['quest']['user_rule_operator'] = NULL;
+                $post['quest']['user_rule_parameter'] = NULL;
+            }
             $quest = Quest::create($post['quest']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1040,7 +1046,10 @@ class ApiQuest extends Controller
                 'id_province' => $post['id_province'] ?? null,
                 'different_category_product' => $post['different_product_category'] ?? null,
                 'different_outlet' => $post['different_outlet'] ?? null,
-                'different_province' => $post['different_province'] ?? null
+                'different_province' => $post['different_province'] ?? null,
+                'user_rule_subject' => $post['user_rule_subject'],
+                'user_rule_operator' => $post['user_rule_operator'],
+                'user_rule_parameter' => $post['user_rule_parameter']
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1085,6 +1094,8 @@ class ApiQuest extends Controller
     public function list(Request $request)
     {
         $id_user = $request->user()->id;
+        $dataNotAvailableQuest = $this->userRuleNotAvailableQuest($id_user);
+
         $quests = Quest::select('quests.id_quest', 'quest_users.id_user', 'name', 'image as image_url', 'quests.date_start', 'quests.date_end', 'short_description', 'description', \DB::raw('(CASE WHEN id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.publish_end END) as date_end'))
             ->whereNull('quests.stop_at')
             ->leftJoin('quest_users', function($q) use ($id_user) {
@@ -1114,6 +1125,9 @@ class ApiQuest extends Controller
             })
             ->where('is_complete', 1);
 
+        if(!empty($dataNotAvailableQuest)){
+            $quests = $quests->whereNotIn('quests.id_quest', $dataNotAvailableQuest);
+        }
         if ($request->page) {
             $quests = $quests->paginate();
         } else {
@@ -1131,6 +1145,25 @@ class ApiQuest extends Controller
 
         $result = $quests->toArray();
         return MyHelper::checkGet($result, "Belum ada misi saat ini.\nTunggu misi selanjutnya");
+    }
+
+    function userRuleNotAvailableQuest($id_user){
+        //get quest with rule
+        $userRule = Quest::whereNotNull('user_rule_subject')
+            ->select('id_quest', 'user_rule_subject', 'user_rule_parameter', 'user_rule_operator')
+            ->get()->toArray();
+        $notAvailableQuest = [];
+
+        foreach ($userRule as $val){
+            $check = CrmUserData::where($val['user_rule_subject'], $val['user_rule_operator'], $val['user_rule_parameter'])
+                    ->where('id_user', $id_user)->get()->toArray();
+
+            if(empty($check)){
+                $notAvailableQuest[] = $val['id_quest'];
+            }
+        }
+
+        return $notAvailableQuest;
     }
 
     public function takeMission(Request $request)
@@ -1555,5 +1588,10 @@ class ApiQuest extends Controller
                 'messages' => ['Belum ada misi yang berjalan']
             ];
         }
+    }
+
+    function listAllQuest(){
+        $list = Quest::where('is_complete', 1)->get()->toArray();
+        return response()->json(MyHelper::checkGet($list));
     }
 }

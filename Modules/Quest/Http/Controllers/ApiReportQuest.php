@@ -41,16 +41,11 @@ class ApiReportQuest extends Controller
 		$list = Quest::join('quest_benefits', 'quests.id_quest', 'quest_benefits.id_quest')
 				->leftJoin('quest_users', 'quests.id_quest', 'quest_users.id_quest')
 				->select(
-					'quests.id_quest',
-					'quests.name',
-					'quests.date_start',
-					'quests.date_end',
-					'quests.short_description',
+					'quests.*',
 					'quest_benefits.benefit_type',
 					DB::raw('
 						COUNT(DISTINCT quest_users.id_user) as total_user
-					'),
-					'quests.is_complete'
+					')
 				)
 				->groupBy('quests.id_quest');
 
@@ -68,14 +63,16 @@ class ApiReportQuest extends Controller
             });
 		}
 
-		$list = $list->paginate(10)->toArray();
+		$list = $list->orderBy('quests.id_quest', 'desc')->paginate(10)->toArray();
 
 		foreach ($list['data'] ?? [] as $key => $value) {
 			$status = 'Not Started';
-			if ($value['date_start'] < date('Y-m-d H:i:s') && $value['is_complete']){
-				$status = 'Started';
-			}elseif (!is_null($value['date_end']) && $value['date_end'] > date('Y-m-d H:i:s') && $value['is_complete']){
+			if($value['stop_at']) {
+				$status = 'Stopped';
+			} elseif (!is_null($value['publish_end']) && $value['publish_end'] < date('Y-m-d H:i:s') && $value['is_complete']) {
 				$status = 'Ended';
+			} elseif ($value['publish_start'] < date('Y-m-d H:i:s') && $value['is_complete']) {
+				$status = 'Started';
 			}
 			$list['data'][$key]['status'] = $status;
 			$list['data'][$key]['id_quest'] = MyHelper::encSlug($value['id_quest']);
@@ -138,8 +135,10 @@ class ApiReportQuest extends Controller
     public function listUser(Request $request)
     {
     	$id_quest = MyHelper::decSlug($request->id_quest);
+    	$date_now = date("Y-m-d H:i:s");
 
 		$list = QuestUserDetail::where('quest_user_details.id_quest', $id_quest)
+				->join('quest_users', 'quest_users.id_quest_user', 'quest_user_details.id_quest_user')
 				->with([
 					'user.quest_user_redemption' => function($q) use ($id_quest){
 						$q->where('id_quest', $id_quest);
@@ -150,15 +149,16 @@ class ApiReportQuest extends Controller
 				])
 				->select(
 					'quest_user_details.*',
+					'quest_users.is_done as complete_status',
 					DB::raw('
-						MAX(date) as date_complete,
+						CASE WHEN quest_users.is_done = 1 THEN quest_users.date END as date_complete,
 						COUNT(quest_user_details.is_done) as total_rule,
 						COUNT(
 							CASE WHEN quest_user_details.is_done = 1 THEN 1 END
 						) as total_done,
-						CASE WHEN COUNT(quest_user_details.is_done) = COUNT(CASE WHEN quest_user_details.is_done = 1 THEN 1 END) THEN "complete" 
-						ELSE "on going"
-						END as quest_status
+						CASE WHEN quest_users.is_done = 1 THEN "complete" 
+							 WHEN quest_users.date_end < "'. $date_now .'" THEN "expired"
+						ELSE "on going" END as quest_status
 					')
 				)
 				->groupBy('quest_user_details.id_user');
@@ -185,9 +185,9 @@ class ApiReportQuest extends Controller
 					$value['user']['name'],
 					$value['user']['phone'],
 					$value['user']['email'],
-					date('d F Y H:i', strtotime($value['created_at'])),
-					date('d F Y H:i', strtotime($value['date_complete'])),
-					date('d F Y H:i', strtotime($value['user']['quest_user_redemption'][0]['redemption_date'] ?? null)),
+					$value['created_at'] ? date('d F Y H:i', strtotime($value['created_at'])) : null,
+					$value['date_complete'] ? date('d F Y H:i', strtotime($value['date_complete'])) : null,
+					($value['user']['quest_user_redemption'][0]['redemption_date'] ?? false) ? date('d F Y H:i', strtotime($value['user']['quest_user_redemption'][0]['redemption_date'])) : null,
 					$value['quest_status'],
 					$benefit_status,
 					$value['total_done']
