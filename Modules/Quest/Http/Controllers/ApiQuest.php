@@ -1097,6 +1097,12 @@ class ApiQuest extends Controller
         $dataNotAvailableQuest = $this->userRuleNotAvailableQuest($id_user);
 
         $quests = Quest::select('quests.id_quest', 'quest_users.id_user', 'name', 'image as image_url', 'quests.date_start', 'quests.date_end', 'short_description', 'description', \DB::raw('(CASE WHEN id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.publish_end END) as date_end'))
+            ->where(function($query) {
+                $query->where('quests.quest_limit', 0)
+                    ->orWhere(function($query2) {
+                        $query2->whereColumn('quests.quest_limit', '>', 'quests.quest_claimed');
+                    });
+            })
             ->whereNull('quests.stop_at')
             ->leftJoin('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
@@ -1296,7 +1302,8 @@ class ApiQuest extends Controller
         if ($request->completed && $request->expired) {
             // do nothing
         } elseif ($request->expired) {
-            $quests->where('quest_users.date_end', '<', date('Y-m-d H:i:s'));
+            $quests->where('quest_users.date_end', '<', date('Y-m-d H:i:s'))
+                ->where('quest_user_redemptions.redemption_status', 0);
         } else {
             $quests->where('quest_user_redemptions.redemption_status', 1);
         }
