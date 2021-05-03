@@ -189,7 +189,7 @@ class ApiQuest extends Controller
     public function triggerAutoclaim($quest)
     {
         if ($quest->autoclaim_quest) {
-            User::select('id')->where('phone_verified', 1)->whereNotNull('name')->whereNotNull('email')->chunk(2000, function($users) use ($quest) {
+            User::select('id')->where('phone_verified', 1)->where('is_suspended', 0)->where('complete_profile', 1)->chunk(2000, function($users) use ($quest) {
                 AutoclaimQuest::dispatch($quest, $users->pluck('id'))->allOnConnection('quest_autoclaim');
             });
         }
@@ -1094,6 +1094,13 @@ class ApiQuest extends Controller
 
     public function list(Request $request)
     {
+        if (!$request->user()->complete_profile) {
+            return [
+                'status' => 'fail',
+                'code' => 'profile_incomplete',
+                'messages' => ['Lengkapi profil untuk mengikuti misi']
+            ];
+        }
         $id_user = $request->user()->id;
         $dataNotAvailableQuest = $this->userRuleNotAvailableQuest($id_user);
 
@@ -1175,6 +1182,13 @@ class ApiQuest extends Controller
 
     public function takeMission(Request $request)
     {
+        if (!$request->user()->complete_profile) {
+            return [
+                'status' => 'fail',
+                'code' => 'profile_incomplete',
+                'messages' => ['Lengkapi profil untuk mengikuti misi']
+            ];
+        }
         $id_user = $request->user()->id;
         return $this->doTakeMission($id_user, $request->id_quest);
     }
