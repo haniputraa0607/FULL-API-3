@@ -992,6 +992,10 @@ class ApiQuest extends Controller
     {
         try {
             $data['quest']  = Quest::with('quest_detail', 'quest_detail.product', 'quest_detail.outlet', 'quest_detail.outlet_group', 'quest_detail.province', 'quest_contents', 'quest_benefit', 'quest_benefit.deals')->where('id_quest', $request['id_quest'])->first();
+            $data['quest']['short_description_ori'] = $data['quest']['short_description'];
+            $data['quest']->applyShortDescriptionTextReplace();
+            $data['quest']['short_description_formatted'] = $data['quest']['short_description'];
+            $data['quest']['short_description'] = $data['quest']['short_description_ori'];
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
