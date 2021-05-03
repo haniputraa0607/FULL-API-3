@@ -3088,6 +3088,9 @@ class ApiPromoCampaign extends Controller
 	    			$discount_first = reset($discount_rule);
 	    			$discount_last 	= end($discount_rule);
 	    			$discount = $discount_first.' sampai '.$discount_last;
+	    			if ($discount_first == $discount_last) {
+	    				$discount = $discount_first;
+	    			}
 	    		}
 
 	    		$key = 'description_tier_discount_brand';
