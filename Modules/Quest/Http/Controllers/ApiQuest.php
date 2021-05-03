@@ -1278,7 +1278,7 @@ class ApiQuest extends Controller
                 $benefit['text'] = $quest_benefit->deals->deals_title;
                 $benefit['id'] = $quest_benefit->deals->deals_voucher->id_deals_user;
             } else {
-                $benefit['text'] = MyHelper::requestNumber($quest_benefit->value, '_POINT').' Poin';
+                $benefit['text'] = MyHelper::requestNumber($quest_benefit->value, '_POINT').' '.env('POINT_NAME', 'Points');
                 $benefit['id'] = $quest_benefit->log_balance->id_log_balance;
             }
             return ['status' => 'success', 'result' => ['benefit' => $benefit]];
@@ -1388,7 +1388,7 @@ class ApiQuest extends Controller
             $benefit['text'] = $quest->quest_benefit->deals->deals_title;
         } else {
             $benefit['point_nominal'] = $quest->quest_benefit->value;
-            $benefit['text'] = MyHelper::requestNumber($quest->quest_benefit->value, '_POINT').' Poin';
+            $benefit['text'] = MyHelper::requestNumber($quest->quest_benefit->value, '_POINT').' '.env('POINT_NAME', 'Points');
         }
 
         $quest->append(['progress', 'contents', 'user_redemption', 'text_label']);
