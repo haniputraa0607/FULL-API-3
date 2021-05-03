@@ -1303,7 +1303,10 @@ class ApiQuest extends Controller
             // do nothing
         } elseif ($request->expired) {
             $quests->where('quest_users.date_end', '<', date('Y-m-d H:i:s'))
-                ->where('quest_user_redemptions.redemption_status', 0);
+                ->where(function($query) {
+                    $query->where('quest_user_redemptions.redemption_status', 0)
+                        ->orWhereNull('quest_user_redemptions.redemption_status');
+                });
         } else {
             $quests->where('quest_user_redemptions.redemption_status', 1);
         }
