@@ -1590,18 +1590,47 @@ class ApiQuest extends Controller
     public function status(Request $request)
     {
         $id_user = $request->user()->id;
-        $myQuest = Quest::leftJoin('quest_user_redemptions', function($join) use ($id_user) {
-                $join->on('quest_user_redemptions.id_quest', 'quests.id_quest')
+        $dataNotAvailableQuest = $this->userRuleNotAvailableQuest($id_user);
+
+        $quests = Quest::select('quests.id_quest', 'quest_users.id_user', 'name', 'image as image_url', 'quests.date_start', 'quests.date_end', 'short_description', 'description', \DB::raw('(CASE WHEN id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.publish_end END) as date_end'))
+            ->where(function($query) {
+                $query->where('quests.quest_limit', 0)
+                    ->orWhere(function($query2) {
+                        $query2->whereColumn('quests.quest_limit', '>', 'quests.quest_claimed');
+                    });
+            })
+            ->whereNull('quests.stop_at')
+            ->leftJoin('quest_users', function($q) use ($id_user) {
+                $q->on('quest_users.id_quest', 'quests.id_quest')
+                    ->where('quest_users.id_user', $id_user);
+            })
+            ->leftJoin('quest_user_redemptions', function($q) use ($id_user) {
+                $q->on('quest_users.id_quest', 'quest_user_redemptions.id_quest')
                     ->where('quest_user_redemptions.id_user', $id_user);
             })
-            ->where('is_complete', 1)
-            ->where(function($query) {
-                $query->where('redemption_status', '<>', 1)
-                    ->orWhereNull('redemption_status');
+            ->where(function ($query) {
+                $query->where('quest_user_redemptions.redemption_status', '<>', 1)
+                    ->orWhereNull('quest_user_redemptions.redemption_status');
             })
             ->where('publish_start', '<=', date('Y-m-d H:i:s'))
-            ->where('publish_end', '>=', date('Y-m-d H:i:s'))
-            ->count();
+            ->where(function($query) {
+                $query->where(function($query2) {
+                    $query2->where('publish_end', '>=', date('Y-m-d H:i:s'))
+                        ->whereNull('quest_users.id_user');
+                })
+                    ->orWhere(function($query2) {
+                        // claimed
+                        $query2->whereNotNull('quest_users.id_user')
+                            // not expired
+                            ->whereRaw('(CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.date_end END) >= "'.date('Y-m-d H:i:s').'"');
+                    });
+            })
+            ->where('is_complete', 1);
+
+        if(!empty($dataNotAvailableQuest)){
+            $quests = $quests->whereNotIn('quests.id_quest', $dataNotAvailableQuest);
+        }
+        $myQuest = $quests->count();
         if ($myQuest) {
             return [
                 'status' => 'success',
