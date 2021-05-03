@@ -1317,7 +1317,10 @@ class ApiQuest extends Controller
             // do nothing
         } elseif ($request->expired) {
             $quests->where('quest_users.date_end', '<', date('Y-m-d H:i:s'))
-                ->where('quest_user_redemptions.redemption_status', 0);
+                ->where(function($query) {
+                    $query->where('quest_user_redemptions.redemption_status', 0)
+                        ->orWhereNull('quest_user_redemptions.redemption_status');
+                });
         } else {
             $quests->where('quest_user_redemptions.redemption_status', 1);
         }
@@ -1392,10 +1395,13 @@ class ApiQuest extends Controller
         }
 
         $quest->append(['progress', 'contents', 'user_redemption', 'text_label']);
-        $quest->makeHidden(['date_start', 'quest_contents', 'description', 'quest_benefit', 'id_quest_user']);
+        $quest->makeHidden(['quest_contents', 'description', 'quest_benefit', 'id_quest_user']);
         $result = $quest->toArray();
+        $result['date_start_format'] = MyHelper::indonesian_date_v2($result['date_start'], 'd F Y');
         $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
+        $result['is_count'] = strtotime($result['date_start']) <= time() ? 1 : 0;
         $result['time_server'] = date('Y-m-d H:i:s');
+        $result['time_to_end'] = strtotime($result['date_end'])-time();
         $result['benefit'] = $benefit;
         $result['claimed_status'] = $result['user_redemption']['redemption_status'] ?? 0;
 
