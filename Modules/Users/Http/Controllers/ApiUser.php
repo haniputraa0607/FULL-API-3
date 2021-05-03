@@ -2449,6 +2449,9 @@ class ApiUser extends Controller
                         $update = User::where('id', '=', $data[0]['id'])->update(['complete_profile' => '1', 'complete_profile_date' => date('Y-m-d H:i:s')]);
 
                         $checkMembership = app($this->membership)->calculateMembership($datauser[0]['phone']);
+
+                        // autoclaim quest
+                        app('Modules\Quest\Http\Controllers\ApiQuest')->autoclaimQuest($data[0]['id']);
                     }
                 }
 
@@ -2488,9 +2491,7 @@ class ApiUser extends Controller
 		            if($setting['welcome_subscription_setting'] == 1){
 		                $inject_subscription = app($this->welcome_subscription)->injectWelcomeSubscription(['id' => $data[0]['id']], $data[0]['phone']);
 		            }
-		        } else {
-                    app('Modules\Quest\Http\Controllers\ApiQuest')->autoclaimQuest($data[0]['id']);
-                }
+		        }
 
 		        DB::commit();
             } else {
