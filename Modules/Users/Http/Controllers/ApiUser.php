@@ -2489,7 +2489,7 @@ class ApiUser extends Controller
 		                $inject_subscription = app($this->welcome_subscription)->injectWelcomeSubscription(['id' => $data[0]['id']], $data[0]['phone']);
 		            }
 		        } else {
-                    app('Modules\Quest\Http\Controllers\ApiQuest')->autoclaimQuest($data['id']);
+                    app('Modules\Quest\Http\Controllers\ApiQuest')->autoclaimQuest($data[0]['id']);
                 }
 
 		        DB::commit();
