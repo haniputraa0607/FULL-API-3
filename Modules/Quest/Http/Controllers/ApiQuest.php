@@ -1387,6 +1387,7 @@ class ApiQuest extends Controller
         $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
         $result['is_count'] = strtotime($result['date_start']) <= time() ? 1 : 0;
         $result['time_server'] = date('Y-m-d H:i:s');
+        $result['time_to_end'] = strtotime($result['date_end'])-time();
         $result['benefit'] = $benefit;
         $result['claimed_status'] = $result['user_redemption']['redemption_status'] ?? 0;
 
