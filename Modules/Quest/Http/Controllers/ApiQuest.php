@@ -1047,9 +1047,6 @@ class ApiQuest extends Controller
                 'different_category_product' => $post['different_product_category'] ?? null,
                 'different_outlet' => $post['different_outlet'] ?? null,
                 'different_province' => $post['different_province'] ?? null,
-                'user_rule_subject' => $post['user_rule_subject'],
-                'user_rule_operator' => $post['user_rule_operator'],
-                'user_rule_parameter' => $post['user_rule_parameter']
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
