@@ -1378,9 +1378,11 @@ class ApiQuest extends Controller
         }
 
         $quest->append(['progress', 'contents', 'user_redemption', 'text_label']);
-        $quest->makeHidden(['date_start', 'quest_contents', 'description', 'quest_benefit', 'id_quest_user']);
+        $quest->makeHidden(['quest_contents', 'description', 'quest_benefit', 'id_quest_user']);
         $result = $quest->toArray();
+        $result['date_start_format'] = MyHelper::indonesian_date_v2($result['date_start'], 'd F Y');
         $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
+        $result['is_count'] = strtotime($result['date_start']) <= time() ? 1 : 0;
         $result['time_server'] = date('Y-m-d H:i:s');
         $result['benefit'] = $benefit;
         $result['claimed_status'] = $result['user_redemption']['redemption_status'] ?? 0;
