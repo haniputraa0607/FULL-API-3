@@ -11,7 +11,7 @@ class ListProduct extends FormRequest
     public function rules()
     {
         return [
-            'id_product_category'     => 'required|exists:product_categories,id_product_category',
+            'id_product_category'     => 'required',
             'id_brand'                => 'required',
         ];
     }
