@@ -4,6 +4,7 @@ namespace Modules\Product\Entities;
 
 use App\Http\Models\ProductModifier;
 use Illuminate\Database\Eloquent\Model;
+use Modules\OutletApp\Entities\ProductModifierGroupInventoryBrand;
 
 class ProductModifierGroup extends Model
 {
@@ -26,4 +27,9 @@ class ProductModifierGroup extends Model
     {
         return $this->hasMany(ProductModifier::class, 'id_product_modifier_group')->orderBy('product_modifier_order', 'asc');
     }
+
+    public function inventory_brand()
+	{
+		return $this->hasMany(ProductModifierGroupInventoryBrand::class,'id_product_modifier_group');
+	}
 }
