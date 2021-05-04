@@ -331,7 +331,7 @@ class ApiDealsClaimPay extends Controller
 	                DB::rollback();
 	                return response()->json([
 	                    'status' => 'fail',
-	                    'messages' => ['Voucer berlaku pada '.date('d F Y', strtotime($dataDeals->deals_start)).' sampai '.date('d F Y', strtotime($dataDeals->deals_end))]
+	                    'messages' => ['Voucer berlaku pada '.MyHelper::dateFormatInd($dataDeals->deals_start, true, false).' sampai '.MyHelper::dateFormatInd($dataDeals->deals_end, true, false)]
 	                ]);
 	            }
 	        }
