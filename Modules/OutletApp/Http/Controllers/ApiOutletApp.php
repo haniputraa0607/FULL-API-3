@@ -55,6 +55,7 @@ use Modules\Plastic\Entities\PlasticTypeOutlet;
 use Modules\Product\Entities\ProductDetail;
 use App\Http\Models\ProductModifierDetail;
 use Modules\Product\Entities\ProductStockStatusUpdate;
+use Modules\Product\Entities\ProductModifierGroup;
 use Modules\Product\Entities\ProductModifierStockStatusUpdate;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
@@ -72,6 +73,7 @@ use function foo\func;
 use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\Product\Entities\ProductGlobalPrice;
 use App\Http\Models\TransactionPickupGoSendUpdate;
+use Modules\OutletApp\Entities\ProductModifierGroupInventoryBrand;
 
 class ApiOutletApp extends Controller
 {
@@ -1446,6 +1448,47 @@ class ApiOutletApp extends Controller
             'order_brand' => 999,
             'categories' => $modifiers
         ];
+
+        $modifier_groups = ProductModifier::select(\DB::raw('0 as id_brand, 0 as id_product_category, "Variant No SKU" as product_category_name, count(distinct(product_modifiers.id_product_modifier_group)) as total_product, 0 as total_sold_out'))
+            ->where('modifier_type', '=', 'Modifier Group')
+            ->leftJoin('product_modifier_details', function($join) use ($outlet) {
+                $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+                    ->where('product_modifier_details.id_outlet', $outlet['id_outlet']);
+            })
+            ->join('product_modifier_group_inventory_brands', function($join) use ($outlet) {
+                $join->on('product_modifier_group_inventory_brands.id_product_modifier_group', 'product_modifiers.id_product_modifier_group')
+                    ->whereIn('id_brand',$outlet->brand_outlets->pluck('id_brand'));
+            })
+            ->where(function($q){
+                $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+            })
+            ->where(function($query){
+                $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
+                        ->orWhere(function($q){
+                            $q->whereNull('product_modifier_details.product_modifier_visibility')
+                            ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                        });
+            });
+
+        if ($outlet['outlet_different_price']) {
+            $modifier_groups->join('product_modifier_prices', function($join) use ($outlet) {
+                $join->on('product_modifier_prices.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
+                    ->where('product_modifier_prices.id_outlet', $outlet['id_outlet']);
+            })->whereNotNull('product_modifier_prices.product_modifier_price');
+        } else {
+            $modifier_groups->join('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier', '=', 'product_modifier_global_prices.id_product_modifier')
+                ->whereNotNull('product_modifier_global_prices.product_modifier_price');
+        }
+
+        $modifier_groups = $modifier_groups->get();
+
+        $result[] = [
+            'id_brand' => 0,
+            'name_brand' => 'Variant No SKU',
+            'order_brand' => 1000,
+            'categories' => $modifier_groups
+        ];
+
         return MyHelper::checkGet(array_values($result));
     }
     /**
