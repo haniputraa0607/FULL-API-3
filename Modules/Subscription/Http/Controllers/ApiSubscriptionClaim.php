@@ -242,7 +242,7 @@ class ApiSubscriptionClaim extends Controller
 	                DB::rollback();
 	                return response()->json([
 	                    'status' => 'fail',
-	                    'messages' => ['Subscription berlaku pada '.date('d F Y', strtotime($dataSubs->subscription_start)).' sampai '.date('d F Y', strtotime($dataSubs->subscription_end))]
+	                    'messages' => ['Subscription berlaku pada '.MyHelper::dateFormatInd($dataSubs->subscription_start, true, false).' sampai '.MyHelper::dateFormatInd($dataSubs->subscription_end, true, false)]
 	                ]);
 	            }
 	        }

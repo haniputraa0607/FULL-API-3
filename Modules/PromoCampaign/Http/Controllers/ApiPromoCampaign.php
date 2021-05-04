@@ -2529,7 +2529,7 @@ class ApiPromoCampaign extends Controller
 	        }
 
 	        if ($code['promo_campaign']['date_start'] > date('Y-m-d H:i:s')) {
-	        	$date_start = MyHelper::dateFormatInd($code['promo_campaign']['date_start'], false, false).' pukul '.date('H:i', strtotime($code['promo_campaign']['date_start']));
+	        	$date_start = MyHelper::dateFormatInd($code['promo_campaign']['date_start'], true, false).' pukul '.date('H:i', strtotime($code['promo_campaign']['date_start']));
         		return [
 	                'status'=>'fail',
 	                'messages'=>['Promo berlaku pada '.$date_start]
@@ -2615,7 +2615,7 @@ class ApiPromoCampaign extends Controller
         	}
 
         	if ($deals['voucher_active_at'] > date('Y-m-d H:i:s') && !empty($deals['voucher_active_at']) ) {
-        		$date_start = MyHelper::dateFormatInd($deals['voucher_active_at'], false, false).' pukul '.date('H:i', strtotime($deals['voucher_active_at']));
+        		$date_start = MyHelper::dateFormatInd($deals['voucher_active_at'], true, false).' pukul '.date('H:i', strtotime($deals['voucher_active_at']));
         		return [
 	                'status'=>'fail',
 	                'messages'=>['Voucer mulai berlaku pada '.$date_start]
@@ -2646,7 +2646,7 @@ class ApiPromoCampaign extends Controller
         	}
 
         	if ($subs['subscription_active_at'] > date('Y-m-d H:i:s') && !empty($subs['subscription_active_at']) ) {
-        		$date_start = MyHelper::dateFormatInd($subs['subscription_active_at'], false, false).' pukul '.date('H:i', strtotime($subs['subscription_active_at']));
+        		$date_start = MyHelper::dateFormatInd($subs['subscription_active_at'], true, false).' pukul '.date('H:i', strtotime($subs['subscription_active_at']));
         		return [
 	                'status'=>'fail',
 	                'messages'=>['Subscription berlaku pada '.$date_start]
