@@ -53,14 +53,6 @@ class PromoCampaignTools{
 	 * @return 	array/boolean     modified array of trxs if can, otherwise false
 	 */
 	public function validatePromo($request, $id_promo, $id_outlet, $trxs, &$errors, $source='promo_campaign', &$errorProduct=0, $delivery_fee=0, $subtotal_per_brand=[]){
-		/**
-		 $trxs=[
-			{
-				id_product:1,
-				qty:2
-			}
-		 ]
-		*/
 		if(!is_numeric($id_promo)){
 			$errors[]='Id promo not valid';
 			return false;
@@ -99,7 +91,6 @@ class PromoCampaignTools{
 		}
 
 		$promo_brand = $promo->{$source.'_brands'}->pluck('id_brand')->toArray();
-		// $outlet = $this->checkOutletRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet, $promo->id_brand);
 		$outlet = $this->checkOutletBrandRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet, $promo_brand, $promo->brand_rule, $promo_outlet_groups);
 
 		if(!$outlet){
@@ -120,7 +111,6 @@ class PromoCampaignTools{
 			}
 			$check_shipment = $this->checkShipmentRule($promo->is_all_shipment??0, $request->type, $promo_shipment);
 			if(!$check_shipment){
-				// $errors[]='Promo cannot be used for this shipment method';
 				$errors[]='Promo tidak dapat digunakan untuk tipe order ini';
 				return false;
 			}
@@ -132,7 +122,6 @@ class PromoCampaignTools{
 			$check_payment 	= $this->checkPaymentRule($promo->is_all_payment??0, $payment_method, $promo_payment);
 
 			if(!$check_payment){
-				// $errors[]='Promo cannot be used for this payment method';
 				$errors[]='Promo tidak dapat digunakan untuk metode pembayaran ini';
 				return false;
 			}
@@ -219,7 +208,7 @@ class PromoCampaignTools{
 
 					// promo product not available in cart?
 					if (!$check_product) {
-						$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
+						$message = $this->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.'; 
 						$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
 						$errors[]= $missing_product_messages ?? $message;
 						$errorProduct = $product_error_applied;
@@ -235,7 +224,7 @@ class PromoCampaignTools{
 
 				// product not found? buat jaga-jaga kalau sesuatu yang tidak diinginkan terjadi
 				if(!$product){
-					$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
+					$message = $this->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
 
 					$errors[] = $missing_product_messages ?? $message;
@@ -325,7 +314,7 @@ class PromoCampaignTools{
 					$discount += $this->discount_product($product[$key]['product_price'],$promo_rules,$trx, $modifier);
 				}
 				if($discount<=0){
-					$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
+					$message = $this->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>'product bertanda khusus']);
 
 					$errors[]= $missing_product_messages ?? $message;
@@ -378,7 +367,7 @@ class PromoCampaignTools{
 
 					// promo product not available in cart?
 					if (!$check_product) {
-						$message = $this->getMessage('error_tier_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
+						$message = $this->getMessage('error_tier_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b> sebanyak %minmax%.'; 
 						$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 						$errors[]= $missing_product_messages ?? $message;
 						$errorProduct = $product_error_applied;
@@ -397,7 +386,7 @@ class PromoCampaignTools{
 				// product not found? buat jaga-jaga kalau sesuatu yang tidak diinginkan terjadi
 				if(!$product){
 					$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
-					$message = $this->getMessage('error_tier_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
+					$message = $this->getMessage('error_tier_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b> sebanyak %minmax%.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
 					$errors[]= $missing_product_messages ?? $message;
@@ -497,7 +486,7 @@ class PromoCampaignTools{
 
 				if(!$promo_rule){
 					$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
-					$message = $this->getMessage('error_tier_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
+					$message = $this->getMessage('error_tier_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b> sebanyak %minmax%.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
 					$errors[]= $missing_product_messages ?? $message;
@@ -620,7 +609,7 @@ class PromoCampaignTools{
 				$promo_product->load('product');
 
 				if(!$promo_product){
-					$errors[]='Benefit product is not set correctly';
+					$errors[]='Promo tidak ditemukan';
 					return false;
 				}
 
@@ -675,7 +664,7 @@ class PromoCampaignTools{
 
 					// promo product not available in cart?
 					if (!$check_product) {
-						$message = $this->getMessage('error_buyxgety_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
+						$message = $this->getMessage('error_buyxgety_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b> sebanyak %minmax%.'; 
 						$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 						
 						$errors[]= $missing_product_messages ?? $message;
@@ -695,7 +684,7 @@ class PromoCampaignTools{
 				// product not found? buat jaga-jaga kalau sesuatu yang tidak diinginkan terjadi
 				if(!$product){
 					$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
-					$message = $this->getMessage('error_buyxgety_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
+					$message = $this->getMessage('error_buyxgety_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b> sebanyak %minmax%.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
 					$errors[]= $missing_product_messages ?? $message;
@@ -793,7 +782,7 @@ class PromoCampaignTools{
 
 				if(!$promo_rule){
 					$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
-					$message = $this->getMessage('error_buyxgety_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.'; 
+					$message = $this->getMessage('error_buyxgety_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b> sebanyak %minmax%.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
 					$errors[]= $missing_product_messages ?? $message;
@@ -805,7 +794,7 @@ class PromoCampaignTools{
 				$benefit_product = $this->getOneProductV2($id_outlet, $promo_rule->benefit_id_product, $promo_rule->id_brand, 'with_brand', $promo_rule->id_product_variant_group);
 
 				if(!$benefit_product){
-					$errors[]="Product benefit not found.";
+					$errors[]="Product benefit tidak ditemukan.";
 					return false;
 				}
 
@@ -892,9 +881,7 @@ class PromoCampaignTools{
 
 				$discount+=$this->discount_product($benefit_product_price,$rule,$benefit_item);
 
-				// return $benefit_item;
 				array_push($trxs, $benefit_item);
-				// return $trxs;
 				break;
 
 			case 'Discount global':
@@ -989,7 +976,7 @@ class PromoCampaignTools{
 
 					// promo product not available in cart?
 					if (!$check_product && empty($request['bundling_promo'])) {
-						$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
+						$message = $this->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.'; 
 						$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
 						$errors[]= $missing_product_messages ?? $message;
 						$errorProduct = $product_error_applied;
@@ -1005,7 +992,7 @@ class PromoCampaignTools{
 
 				// product not found? buat jaga-jaga kalau sesuatu yang tidak diinginkan terjadi
 				if(!$product && empty($request['bundling_promo'])){
-					$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
+					$message = $this->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name]);
 
 					$errors[] = $missing_product_messages ?? $message;
@@ -1035,7 +1022,7 @@ class PromoCampaignTools{
 					}
 				}
 				if($discount<=0){
-					$message = $this->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.'; 
+					$message = $this->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>'product bertanda khusus']);
 
 					$errors[]= $message;
