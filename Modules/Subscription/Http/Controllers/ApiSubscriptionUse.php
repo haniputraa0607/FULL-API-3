@@ -137,7 +137,7 @@ class ApiSubscriptionUse extends Controller
 							->whereDate('used_at', date('Y-m-d'))
 							->count();
 			if ( $subs_voucher_today >= $subs['subscription_user']['subscription']['daily_usage_limit'] ) {
-				$errors[] = 'Penggunaan subscription telah melampaui batas harian';
+				$errors[] = 'Subscription telah mencapai limit penggunaan harian';
     			return 0;
 			}
     	}
@@ -225,7 +225,7 @@ class ApiSubscriptionUse extends Controller
 			$product_name = $pct->getProductName($promo_product??[], $subs_obj->subscription_user->subscription->product_rule);
 
 			// $message = $pct->getMessage('error_product_discount')['value_text']??'Promo hanya akan berlaku jika anda membeli <b>%product_name%</b>.';
-			$message = 'Promo hanya akan berlaku jika anda membeli <b>%product_name%</b>.';
+			$message = 'Promo hanya berlaku jika membeli <b>%product_name%</b>.';
 			$message = MyHelper::simpleReplace($message,['product_name'=>$product_name]);
 			$errors[] = $message;
 			

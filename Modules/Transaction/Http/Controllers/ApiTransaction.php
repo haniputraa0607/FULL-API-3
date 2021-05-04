@@ -3751,7 +3751,7 @@ class ApiTransaction extends Controller
                 'id_log_balance'                => $data['id_log_balance'],
                 'id_quest'                      => $data['id_reference'],
                 'transaction_date'              => date('d M Y H:i', strtotime($data['created_at'])),
-                'balance'                       => MyHelper::requestNumber($data['balance'], '_POINT'),
+                'balance'                       => '+' . MyHelper::requestNumber($data['balance'], '_POINT'),
                 'title'                         => $quest['name'] ?? 'Misi tidak diketahui',
             ];
         } else {

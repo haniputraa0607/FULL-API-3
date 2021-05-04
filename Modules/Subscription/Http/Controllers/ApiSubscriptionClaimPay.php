@@ -280,8 +280,7 @@ class ApiSubscriptionClaimPay extends Controller
 	                                DB::rollback();
 	                                return response()->json([
 	                                    'status'   => 'fail',
-	                                    // 'messages' => ['Subscription is runs out.']
-	                                    'messages' => ['Halo Kak, Mohon Maaf Voucher Telah Habis. Yuk Gunakan Voucher Lainnya pada Page Subscriptions 😊🙏']
+	                                    'messages' => ['Voucer telah habis']
 	                                ]);
 	                            }
 
@@ -314,20 +313,19 @@ class ApiSubscriptionClaimPay extends Controller
 	                        else {
 	                        	switch ($dataSubs->new_purchase_after) {
 					        		case 'Empty':
-					        			$msg = 'telah habis digunakan';
+					        			$msg = 'Gagal mengambil Subscription karena masih ada paket yang belum digunakan';
 					        			break;
 					        		case 'Empty Expired':
-					        			$msg = 'telah habis digunakan atau telah mencapai tanggal batas pemakaian';
+					        			$msg = 'Gagal mengambil Subscription karena masih ada paket yang sedang berjalan';
 					        			break;
 					        		default:
-					        			$msg = 'telah mencapai tanggal batas pemakaian';
+					        			$msg = 'Gagal mengambil Subscription karena masih ada paket yang sedang berjalan';
 					        			break;
 					        	}
 	                            DB::rollback();
 	                            return response()->json([
 	                                'status'   => 'fail',
-	                                // 'messages' => ['You have participated, you can buy this subscription again after your previous subscription is '.$msg]
-	                                'messages' => ['Subscriptions sudah dimiliki. Subscriptions tidak bisa didapatkan sebelum Subscriptions yang dimiliki saat ini '.$msg.'.']
+	                                'messages' => [$msg]
 	                            ]);
 	                        }
 	                    }
@@ -335,8 +333,7 @@ class ApiSubscriptionClaimPay extends Controller
 	                        DB::rollback();
 	                        return response()->json([
 	                            'status'   => 'fail',
-	                            // 'messages' => ['You have reach max limit to buy this subscription.']
-	                            'messages' => ['Anda telah mencapai batas maksimal untuk mendapatkan Subscription ini.']
+	                            'messages' => ['Subscription telah mencapai limit penggunaan']
 	                        ]);
 	                    }
 
@@ -353,8 +350,7 @@ class ApiSubscriptionClaimPay extends Controller
 	                DB::rollback();
 	                return response()->json([
 	                    'status' => 'fail',
-	                    // 'messages' => ['Date valid '.date('d F Y', strtotime($dataSubs->subscription_start)).' until '.date('d F Y', strtotime($dataSubs->subscription_end))]
-	                    'messages' => ['Tanggal berlaku '.date('d F Y', strtotime($dataSubs->subscription_start)).' sampai '.date('d F Y', strtotime($dataSubs->subscription_end))]
+	                    'messages' => ['Subscription berlaku pada '.date('d F Y', strtotime($dataSubs->subscription_start)).' sampai '.date('d F Y', strtotime($dataSubs->subscription_end))]
 	                ]);
 	            }
 	        }
@@ -460,7 +456,7 @@ class ApiSubscriptionClaimPay extends Controller
         DB::rollback();
         return response()->json([
             'status' => 'fail',
-            'messages' => ['Failed to pay.']
+            'messages' => ['Pembayaran gagal. Silakan coba kembali']
         ]);
     }
 
