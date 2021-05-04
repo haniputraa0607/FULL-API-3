@@ -2106,7 +2106,10 @@ class MyHelper{
 
 				if($row['subject'] == 'all_user'){
 					$condition[$type.'_rule_operator'] = "";
-				}elseif($row['subject'] == 'trx_product' || $row['subject'] == 'trx_outlet'){
+				}elseif($row['subject'] == 'Deals' || $row['subject'] == 'Subscription' || $row['subject'] == 'Quest'){
+                    $condition[$type.'_rule_param'] = '=';
+                }
+				elseif($row['subject'] == 'trx_product' || $row['subject'] == 'trx_outlet'){
                     $condition[$type.'_rule_operator'] = $row['operatorSpecialCondition'];
                 }elseif(in_array($row['subject'], $operatorexception)){
 					$condition[$type.'_rule_operator'] = '=';
@@ -2117,7 +2120,9 @@ class MyHelper{
                 $condition[$type.'_rule_param_id'] = NULL;
 				if($row['subject'] == 'all_user'){
 					$condition[$type.'_rule_param'] = "";
-				}elseif($row['subject'] == 'trx_product' || $row['subject'] == 'trx_outlet'){
+				}elseif($row['subject'] == 'Deals' || $row['subject'] == 'Subscription' || $row['subject'] == 'Quest'){
+                    $condition[$type.'_rule_param'] = $row['operator'];
+                }elseif($row['subject'] == 'trx_product' || $row['subject'] == 'trx_outlet'){
                     $condition[$type.'_rule_param'] = $row['parameterSpecialCondition'];
                     $condition[$type.'_rule_param_id'] = $row['id'];
                 }elseif(in_array($row['subject'], $operatorexception)){
@@ -2126,6 +2131,13 @@ class MyHelper{
 					$condition[$type.'_rule_param'] = $row['parameter'];
 				}
 
+				if($type !== 'point_injection'){
+                    $condition[$type.'_rule_param_select'] = NULL;
+                }
+
+				if($row['subject'] == 'Quest'){
+                    $condition[$type.'_rule_param_select'] = $row['parameter_select'];
+                }
 				$condition['created_at'] =  date('Y-m-d H:i:s');
 				$condition['updated_at'] =  date('Y-m-d H:i:s');
 

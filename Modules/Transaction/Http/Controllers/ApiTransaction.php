@@ -3091,6 +3091,7 @@ class ApiTransaction extends Controller
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'] = [];
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'] = [];
                     $extra_modifiers = [];
+                    $extra_modifier_price = 0;
                     foreach ($valueProduct['modifiers'] as $keyMod => $valueMod) {
                         if (!$valueMod['id_product_modifier_group']) {
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_name']   = $valueMod['text'];
@@ -3101,6 +3102,7 @@ class ApiTransaction extends Controller
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']['m'.$keyMod]['id_product_variant']   = $valueMod['id_product_modifier'];
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']['m'.$keyMod]['product_variant_name']   = $valueMod['text'];
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']['m'.$keyMod]['product_variant_price']  = (int)$valueMod['transaction_product_modifier_price'];
+                            $extra_modifier_price += (int) ($valueMod['qty'] * $valueMod['transaction_product_modifier_price']);
                         }
                     }
                     $variantsPrice = 0;
@@ -3110,6 +3112,7 @@ class ApiTransaction extends Controller
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][$keyMod]['product_variant_price']  = (int)$valueMod['transaction_product_variant_price'];
                         $variantsPrice = $variantsPrice + $valueMod['transaction_product_variant_price'];
                     }
+                    $variantsPrice += $extra_modifier_price;
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'] = array_values($result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']);
                     if ($valueProduct['id_product_variant_group'] ?? false) {
                         $order = array_flip(Product::getVariantParentId($valueProduct['id_product_variant_group'], Product::getVariantTree($valueProduct['id_product'], $list['outlet'])['variants_tree'], $extra_modifiers));
@@ -3751,7 +3754,7 @@ class ApiTransaction extends Controller
                 'id_log_balance'                => $data['id_log_balance'],
                 'id_quest'                      => $data['id_reference'],
                 'transaction_date'              => date('d M Y H:i', strtotime($data['created_at'])),
-                'balance'                       => MyHelper::requestNumber($data['balance'], '_POINT'),
+                'balance'                       => '+' . MyHelper::requestNumber($data['balance'], '_POINT'),
                 'title'                         => $quest['name'] ?? 'Misi tidak diketahui',
             ];
         } else {

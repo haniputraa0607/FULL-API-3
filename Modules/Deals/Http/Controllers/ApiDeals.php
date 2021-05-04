@@ -2184,4 +2184,13 @@ class ApiDeals extends Controller
 
         return $save;
     }
+
+    function listAllDeals(Request $request){
+        $post = $request->json()->all();
+
+        $list = Deal::where('deals_type', $post['deals_type'])
+            ->select('id_deals', 'deals_title')
+            ->get()->toArray();
+        return response()->json(MyHelper::checkGet($list));
+    }
 }

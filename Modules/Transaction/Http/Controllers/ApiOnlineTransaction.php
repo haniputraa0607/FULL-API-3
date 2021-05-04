@@ -810,7 +810,7 @@ class ApiOnlineTransaction extends Controller
                 $outlet->save();
                 return [
                     'status' => 'fail',
-                    'messages' => ['Tidak dapat melakukan pengiriman dari outlet ini']
+                    'messages' => ['Outlet tidak dapat melakukan pengiriman']
                 ];
             }
             $coor_origin = [
@@ -827,7 +827,7 @@ class ApiOnlineTransaction extends Controller
             if($shippingGoSend === null){
                 return [
                     'status' => 'fail',
-                    'messages' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim']
+                    'messages' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung biaya pengantaran. Silakan coba kembali']
                 ];
             }
             //cek free delivery
@@ -2135,7 +2135,7 @@ class ApiOnlineTransaction extends Controller
                 $outlet->save();
                 return [
                     'status' => 'fail',
-                    'messages' => ['Tidak dapat melakukan pengiriman dari outlet ini']
+                    'messages' => ['Outlet tidak dapat melakukan pengiriman']
                 ];
             }
             $coor_origin = [
@@ -2150,7 +2150,7 @@ class ApiOnlineTransaction extends Controller
             $shippingGoSendx = GoSend::getPrice($coor_origin,$coor_destination);
             $shippingGoSend = $shippingGoSendx[GoSend::getShipmentMethod()]['price']['total_price']??null;
             if($shippingGoSend === null){
-                $error_msg += array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim'];
+                $error_msg += array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
             }
             //cek free delivery
             // if($post['is_free'] == 'yes'){
@@ -2513,6 +2513,7 @@ class ApiOnlineTransaction extends Controller
             $product['modifiers'] = [];
             $removed_modifier = [];
             $missing_modifier = 0;
+            $extra_modifier_price = 0;
             foreach ($item['modifiers']??[] as $key => $modifier) {
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
@@ -2567,6 +2568,7 @@ class ApiOnlineTransaction extends Controller
                         'product_variant_name' => $mod['text'],
                         'id_product_variant' => $mod['id_product_modifier']
                     ];
+                    $extra_modifier_price += $mod['qty'] * $mod['product_modifier_price'];
                 } else {
                     if ($mod['product_modifier_stock_status'] != 'Sold Out') {
                         $product['modifiers'][]=$mod;
@@ -2654,7 +2656,7 @@ class ApiOnlineTransaction extends Controller
                 $product_variant_group_price = (int) $product['product_price'];
             }
 
-            $product['product_variant_group_price'] = (int)$product_variant_group_price;
+            $product['product_variant_group_price'] = (int)($product_variant_group_price + $extra_modifier_price);
 
             $product['product_price_total'] = $item['transaction_product_subtotal'];
             $product['product_price_raw'] = (int) $product['product_price'];

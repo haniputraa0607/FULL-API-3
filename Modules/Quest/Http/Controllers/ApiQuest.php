@@ -2,6 +2,7 @@
 
 namespace Modules\Quest\Http\Controllers;
 
+use App\Http\Models\CrmUserData;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\User;
@@ -81,6 +82,11 @@ class ApiQuest extends Controller
         }
 
         try {
+            if($post['quest']['user_rule_type'] == 'all'){
+                $post['quest']['user_rule_subject'] = NULL;
+                $post['quest']['user_rule_operator'] = NULL;
+                $post['quest']['user_rule_parameter'] = NULL;
+            }
             $quest = Quest::create($post['quest']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -119,6 +125,10 @@ class ApiQuest extends Controller
                     } else {
                         $value['id_quest']   = $quest->id_quest;
                     }
+
+                    if (!($value['id_outlet'] ?? false)) {
+                        unset($value['id_outlet']);
+                    }
     
                     $questDetail[$key] = QuestDetail::create($value);
                 }
@@ -135,7 +145,7 @@ class ApiQuest extends Controller
         QuestContent::insert([
             [
                 'id_quest' => $quest->id_quest,
-                'title' => 'Terms and Condition',
+                'title' => 'Syarat & Ketentuan',
                 'content' => '',
                 'order' => 1,
                 'is_active' => 0,
@@ -143,7 +153,7 @@ class ApiQuest extends Controller
             ],
             [
                 'id_quest' => $quest->id_quest,
-                'title' => 'Benefit',
+                'title' => 'Hadiah',
                 'content' => '',
                 'order' => 2,
                 'is_active' => 0,
@@ -179,7 +189,7 @@ class ApiQuest extends Controller
     public function triggerAutoclaim($quest)
     {
         if ($quest->autoclaim_quest) {
-            User::select('id')->where('phone_verified', 1)->whereNotNull('name')->whereNotNull('email')->chunk(2000, function($users) use ($quest) {
+            User::select('id')->where('phone_verified', 1)->where('is_suspended', 0)->where('complete_profile', 1)->chunk(2000, function($users) use ($quest) {
                 AutoclaimQuest::dispatch($quest, $users->pluck('id'))->allOnConnection('quest_autoclaim');
             });
         }
@@ -197,6 +207,9 @@ class ApiQuest extends Controller
         }
         foreach ($request->detail as $detail) {
             $detail['id_quest'] = $quest->id_quest;
+            if (!($detail['id_outlet'] ?? false)) {
+                unset($detail['id_outlet']);
+            }
             $create = QuestDetail::create($detail);
         }
         return MyHelper::checkCreate($create);
@@ -627,6 +640,14 @@ class ApiQuest extends Controller
                 continue;
             }
 
+            if ($quest->id_outlet_group) {
+                $outlets = app('\Modules\Outlet\Http\Controllers\ApiOutletGroupFilterController')->outletGroupFilter($quest->id_outlet_group);
+                $id_outlets = array_column($outlets, 'id_outlet');
+                if (!in_array($transaction->id_outlet, $id_outlets)) {
+                    continue;
+                }
+            }
+
             $quest_rule = $quest->quest_rule;
             if (!$quest_rule) {
                 if ($quest->different_outlet) {
@@ -642,18 +663,17 @@ class ApiQuest extends Controller
                 }
             }
 
+            // check absolute rule
+            if (
+                ($quest_rule !== 'nominal_transaction' && $transaction->transaction_grandtotal < ($quest->trx_nominal ?: 0)) ||
+                ($quest_rule !== 'total_product' && $transaction->productTransaction->count() < ($quest->product_total ?: 0))
+            ) {
+                continue;
+            }
+
             \DB::beginTransaction();
             // outlet 
             try {
-                // check absolute rule
-                if (
-                    ($quest_rule !== 'nominal_transaction' && $transaction->transaction_grandtotal < ($quest->trx_nominal ?: 0)) ||
-                    ($quest_rule !== 'total_product' && $transaction->productTransaction->count() < ($quest->product_total ?: 0))
-                ) {
-                    \DB::rollBack();
-                    continue;
-                }
-
                 if ($quest->id_outlet || $quest->different_outlet) {
                     $questLog = QuestOutletLog::where([
                         'id_quest' => $quest->id_quest,
@@ -662,10 +682,10 @@ class ApiQuest extends Controller
                         'id_outlet' => $transaction->id_outlet,
                     ])->first();
                     if ($questLog) {
-                        if ($transaction->created_at <= $questLog->date) {
-                            \DB::rollBack();
-                            continue;
-                        }
+                        // if ($transaction->created_at <= $questLog->date) {
+                        //     \DB::rollBack();
+                        //     continue;
+                        // }
                         $questLog->update([
                             'count' => $questLog->count+1,
                             'date' => $transaction->created_at,
@@ -700,9 +720,10 @@ class ApiQuest extends Controller
                                 'id_product_category' => $transaction_product->id_product_category,
                             ])->first();
                             if ($questLog) {
-                                if ($transaction->created_at <= $questLog->date) {
-                                    continue;
-                                }
+                                // if ($transaction->created_at <= $questLog->date) {
+                                //     \DB::rollBack();
+                                //     continue;
+                                // }
                                 $questLog->update([
                                     'product_total' => $questLog->product_total + $transaction_product->transaction_product_qty,
                                     'product_nominal' => $questLog->product_total + ($transaction_product->transaction_product_subtotal - $transaction_product->transaction_product_discount_all),
@@ -727,6 +748,7 @@ class ApiQuest extends Controller
                     }
                     if (!$has_product) {
                         \DB::rollBack();
+                        continue;
                     }
                 }
 
@@ -755,10 +777,10 @@ class ApiQuest extends Controller
                         'id_outlet' => $transaction->id_outlet,
                     ])->first();
                     if ($questLog) {
-                        if ($transaction->created_at <= $questLog->date) {
-                            \DB::rollBack();
-                            continue;
-                        }
+                        // if ($transaction->created_at <= $questLog->date) {
+                        //     \DB::rollBack();
+                        //     continue;
+                        // }
                         $questLog->update([
                             'transaction_total' => $questLog->transaction_total + 1,
                             'transaction_nominal' => $questLog->transaction_nominal + $transaction->transaction_grandtotal,
@@ -825,7 +847,7 @@ class ApiQuest extends Controller
         }
 
         if ($questDetail->different_outlet) {
-            if (optional(QuestOutletLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->first())->count < $questDetail->different_outlet) {
+            if (QuestOutletLog::where(['id_quest_detail' => $questDetail->id_quest_detail, 'id_user' => $questDetail->id_user])->count() < $questDetail->different_outlet) {
                 return false;
             }
         }
@@ -969,7 +991,11 @@ class ApiQuest extends Controller
     public function show(Request $request)
     {
         try {
-            $data['quest']  = Quest::with('quest_detail', 'quest_detail.product', 'quest_detail.outlet', 'quest_detail.province', 'quest_contents', 'quest_benefit', 'quest_benefit.deals')->where('id_quest', $request['id_quest'])->first();
+            $data['quest']  = Quest::with('quest_detail', 'quest_detail.product', 'quest_detail.outlet', 'quest_detail.outlet_group', 'quest_detail.province', 'quest_contents', 'quest_benefit', 'quest_benefit.deals')->where('id_quest', $request['id_quest'])->first();
+            $data['quest']['short_description_ori'] = $data['quest']['short_description'];
+            $data['quest']->applyShortDescriptionTextReplace();
+            $data['quest']['short_description_formatted'] = $data['quest']['short_description'];
+            $data['quest']['short_description'] = $data['quest']['short_description_ori'];
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -1019,11 +1045,12 @@ class ApiQuest extends Controller
                 'trx_nominal' => $post['trx_nominal'] ?? null,
                 'trx_total' => $post['trx_total'] ?? null,
                 'id_product_category' => $post['id_product_category'] ?? null,
-                'id_outlet' => $post['id_outlet'] ?? null,
+                'id_outlet' => ($post['id_outlet'] ?? false) ?: null,
+                'id_outlet_group' => $post['id_outlet_group'] ?? null,
                 'id_province' => $post['id_province'] ?? null,
                 'different_category_product' => $post['different_product_category'] ?? null,
                 'different_outlet' => $post['different_outlet'] ?? null,
-                'different_province' => $post['different_province'] ?? null
+                'different_province' => $post['different_province'] ?? null,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1067,8 +1094,23 @@ class ApiQuest extends Controller
 
     public function list(Request $request)
     {
+        if (!$request->user()->complete_profile) {
+            return [
+                'status' => 'fail',
+                'code' => 'profile_incomplete',
+                'messages' => ['Lengkapi profil untuk mengikuti misi']
+            ];
+        }
         $id_user = $request->user()->id;
-        $quests = Quest::select('quests.id_quest', 'quest_users.id_user', 'name', 'image as image_url', 'quests.date_start', 'quests.date_end', 'short_description', 'description', \DB::raw('(CASE WHEN id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.date_end END) as date_end'))
+        $dataNotAvailableQuest = $this->userRuleNotAvailableQuest($id_user);
+
+        $quests = Quest::select('quests.id_quest', 'quest_users.id_user', 'name', 'image as image_url', 'quests.date_start', 'quests.date_end', 'short_description', 'description', \DB::raw('(CASE WHEN id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.publish_end END) as date_end'))
+            ->where(function($query) {
+                $query->where('quests.quest_limit', 0)
+                    ->orWhere(function($query2) {
+                        $query2->whereColumn('quests.quest_limit', '>', 'quests.quest_claimed');
+                    });
+            })
             ->whereNull('quests.stop_at')
             ->leftJoin('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
@@ -1097,6 +1139,9 @@ class ApiQuest extends Controller
             })
             ->where('is_complete', 1);
 
+        if(!empty($dataNotAvailableQuest)){
+            $quests = $quests->whereNotIn('quests.id_quest', $dataNotAvailableQuest);
+        }
         if ($request->page) {
             $quests = $quests->paginate();
         } else {
@@ -1105,6 +1150,7 @@ class ApiQuest extends Controller
 
         $time_server = date('Y-m-d H:i:s');
         $quests->each(function($item) use ($time_server) {
+            $item->applyShortDescriptionTextReplace();
             $item->append('contents', 'text_label', 'progress');
             $item->makeHidden(['date_start', 'quest_contents', 'id_user', 'description']);
             $item->date_end_format = MyHelper::indonesian_date_v2($item['date_end'], 'd F Y');
@@ -1115,8 +1161,34 @@ class ApiQuest extends Controller
         return MyHelper::checkGet($result, "Belum ada misi saat ini.\nTunggu misi selanjutnya");
     }
 
+    function userRuleNotAvailableQuest($id_user){
+        //get quest with rule
+        $userRule = Quest::whereNotNull('user_rule_subject')
+            ->select('id_quest', 'user_rule_subject', 'user_rule_parameter', 'user_rule_operator')
+            ->get()->toArray();
+        $notAvailableQuest = [];
+
+        foreach ($userRule as $val){
+            $check = CrmUserData::where($val['user_rule_subject'], $val['user_rule_operator'], $val['user_rule_parameter'])
+                    ->where('id_user', $id_user)->get()->toArray();
+            $checkClaim = QuestUser::where('id_user', $id_user)->where('id_quest', $val['id_quest'])->first();
+            if(empty($check) && empty($checkClaim)){
+                $notAvailableQuest[] = $val['id_quest'];
+            }
+        }
+
+        return $notAvailableQuest;
+    }
+
     public function takeMission(Request $request)
     {
+        if (!$request->user()->complete_profile) {
+            return [
+                'status' => 'fail',
+                'code' => 'profile_incomplete',
+                'messages' => ['Lengkapi profil untuk mengikuti misi']
+            ];
+        }
         $id_user = $request->user()->id;
         return $this->doTakeMission($id_user, $request->id_quest);
     }
@@ -1164,13 +1236,31 @@ class ApiQuest extends Controller
             ];
         }
 
+        if(!empty($quest['user_rule_subject'])){
+            $check = CrmUserData::where($quest['user_rule_subject'], $quest['user_rule_operator'], $quest['user_rule_parameter'])
+                ->where('id_user', $id_user)->get()->toArray();
+
+            if(empty($check)){
+                return [
+                    'status' => 'fail',
+                    'messages' => [
+                        'Quest ini tidak berlaku untuk user Anda'
+                    ]
+                ];
+            }
+        }
+
         $questDetail = QuestDetail::where(['id_quest' => $quest->id_quest])->get();
-        $questUser = QuestUser::create([
+        $toCreate = [
             'id_quest' => $quest->id_quest,
             'id_user' => $id_user,
             'date_start' => $quest->date_start,
             'date_end' => $quest->date_end,
-        ]);
+        ];
+        if (!$toCreate['date_end']) {
+            $toCreate['date_end'] = date('Y-m-d H:i:s', strtotime("+{$quest->max_complete_day} day"));
+        }
+        $questUser = QuestUser::create($toCreate);
         if (!$questUser) {
             return [
                 'status' => 'fail',
@@ -1206,7 +1296,7 @@ class ApiQuest extends Controller
                 $benefit['text'] = $quest_benefit->deals->deals_title;
                 $benefit['id'] = $quest_benefit->deals->deals_voucher->id_deals_user;
             } else {
-                $benefit['text'] = MyHelper::requestNumber($quest_benefit->value, '_POINT').' Poin';
+                $benefit['text'] = MyHelper::requestNumber($quest_benefit->value, '_POINT').' '.env('POINT_NAME', 'Points');
                 $benefit['id'] = $quest_benefit->log_balance->id_log_balance;
             }
             return ['status' => 'success', 'result' => ['benefit' => $benefit]];
@@ -1222,7 +1312,7 @@ class ApiQuest extends Controller
     public function me(Request $request)
     {
         $id_user = $request->user()->id;
-        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'quest_users.date_start', 'quest_users.date_end', 'quest_users.id_user', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
+        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'quest_users.date_start', 'quest_users.date_end', 'quest_users.id_user', 'redemption_date', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
             ->where('is_complete', 1)
             ->where(function($query) {
                 $query->where('quest_user_redemptions.redemption_status', 1);
@@ -1241,9 +1331,20 @@ class ApiQuest extends Controller
         if ($request->completed && $request->expired) {
             // do nothing
         } elseif ($request->expired) {
-            $quests->where('quest_users.date_end', '<', date('Y-m-d H:i:s'));
+            $quests->where('quest_users.date_end', '<', date('Y-m-d H:i:s'))
+                ->where(function($query) {
+                    $query->where('quest_user_redemptions.redemption_status', 0)
+                        ->orWhereNull('quest_user_redemptions.redemption_status');
+                });
         } else {
             $quests->where('quest_user_redemptions.redemption_status', 1);
+        }
+
+        if ($request->date_start) {
+            $quests->where('quest_users.date_end', '>=', $request->date_start);
+        }
+        if ($request->date_end) {
+            $quests->where('quest_users.date_start', '<=', $request->date_end);
         }
 
         if ($request->page) {
@@ -1254,10 +1355,17 @@ class ApiQuest extends Controller
 
         $time_server = date('Y-m-d H:i:s');
         $quests->each(function($item) use ($time_server) {
+            $item->applyShortDescriptionTextReplace();
             $item->append(['progress', 'text_label']);
-            $item->makeHidden(['date_start', 'id_user']);
+            $item->makeHidden(['date_start', 'id_user', 'redemption_date']);
             $item->date_end_format = MyHelper::indonesian_date_v2($item['date_end'], 'd F Y');
             $item->time_server = $time_server;
+            if ($item->claimed_status) {
+                $item->text_label = [
+                    'text' => 'Selesai pada '.MyHelper::indonesian_date_v2($item['redemption_date'], 'd F Y'),
+                    'code' => 2
+                ];
+            }
         });
 
         $result = $quests->toArray();
@@ -1267,7 +1375,7 @@ class ApiQuest extends Controller
     public function detail(Request $request)
     {
         $id_user = $request->user()->id;
-        $quest = Quest::select('quests.id_quest', 'quest_users.id_quest_user', 'quest_users.id_user', 'name', 'image as image_url', 'description', 'short_description', \DB::raw('(CASE WHEN quest_users.id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.date_end END) as date_end'))
+        $quest = Quest::select('quests.id_quest', 'quest_users.id_quest_user', 'quest_users.id_user', 'name', 'image as image_url', 'description', 'short_description', \DB::raw('(CASE WHEN quest_users.id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.publish_end END) as date_end'))
             ->with(['quest_benefit', 'quest_benefit.deals'])
             ->leftJoin('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
@@ -1287,6 +1395,8 @@ class ApiQuest extends Controller
             ];
         }
 
+        $quest->applyShortDescriptionTextReplace();
+
         $benefit = [
             'type' => $quest->quest_benefit->benefit_type
         ];
@@ -1296,26 +1406,35 @@ class ApiQuest extends Controller
             $benefit['text'] = $quest->quest_benefit->deals->deals_title;
         } else {
             $benefit['point_nominal'] = $quest->quest_benefit->value;
-            $benefit['text'] = MyHelper::requestNumber($quest->quest_benefit->value, '_POINT').' Poin';
+            $benefit['text'] = MyHelper::requestNumber($quest->quest_benefit->value, '_POINT').' '.env('POINT_NAME', 'Points');
         }
 
         $quest->append(['progress', 'contents', 'user_redemption', 'text_label']);
-        $quest->makeHidden(['date_start', 'quest_contents', 'description', 'quest_benefit', 'id_quest_user']);
+        $quest->makeHidden(['quest_contents', 'description', 'quest_benefit', 'id_quest_user']);
         $result = $quest->toArray();
+        $result['date_start_format'] = MyHelper::indonesian_date_v2($result['date_start'], 'd F Y');
         $result['date_end_format'] = MyHelper::indonesian_date_v2($result['date_end'], 'd F Y');
+        $result['is_count'] = strtotime($result['date_start']) <= time() ? 1 : 0;
         $result['time_server'] = date('Y-m-d H:i:s');
+        $result['time_to_end'] = strtotime($result['date_end'])-time();
         $result['benefit'] = $benefit;
         $result['claimed_status'] = $result['user_redemption']['redemption_status'] ?? 0;
+
+        if ($result['claimed_status']) {
+            $result['text_label'] = [
+                'text' => 'Selesai pada '.MyHelper::indonesian_date_v2($result['user_redemption']['redemption_date'], 'd F Y'),
+                'code' => 2
+            ];
+        }
 
         $result['benefit']['id_reference'] = $result['user_redemption']['id_reference'] ?? null;
 
         $details = QuestDetail::select('name', 'short_description', 'is_done', 'quest_details.id_quest', 'quest_details.id_quest_detail', 'quest_rule', 'id_product_category', 'different_category_product', 'id_product', 'id_product_variant_group', 'product_total', 'trx_nominal', 'trx_total', 'id_outlet', 'id_province', 'different_outlet', 'different_province', 'id_quest_user_detail', 'id_quest_user', 'id_user')
             ->where(['quest_details.id_quest' => $quest->id_quest])
-            ->where(function($query) use ($id_user) {
-                $query->where(['id_user' => $id_user])
-                    ->orWhereNull('quest_user_details.id_quest_user_detail');
+            ->leftJoin('quest_user_details', function($query) use ($id_user) {
+                $query->on('quest_details.id_quest_detail', 'quest_user_details.id_quest_detail')
+                    ->where(['id_user' => $id_user]);
             })
-            ->leftJoin('quest_user_details', 'quest_details.id_quest_detail', 'quest_user_details.id_quest_detail')
             ->get();
 
         $details->each(function($item) {
@@ -1485,18 +1604,47 @@ class ApiQuest extends Controller
     public function status(Request $request)
     {
         $id_user = $request->user()->id;
-        $myQuest = Quest::leftJoin('quest_user_redemptions', function($join) use ($id_user) {
-                $join->on('quest_user_redemptions.id_quest', 'quests.id_quest')
+        $dataNotAvailableQuest = $this->userRuleNotAvailableQuest($id_user);
+
+        $quests = Quest::select('quests.id_quest', 'quest_users.id_user', 'name', 'image as image_url', 'quests.date_start', 'quests.date_end', 'short_description', 'description', \DB::raw('(CASE WHEN id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.publish_end END) as date_end'))
+            ->where(function($query) {
+                $query->where('quests.quest_limit', 0)
+                    ->orWhere(function($query2) {
+                        $query2->whereColumn('quests.quest_limit', '>', 'quests.quest_claimed');
+                    });
+            })
+            ->whereNull('quests.stop_at')
+            ->leftJoin('quest_users', function($q) use ($id_user) {
+                $q->on('quest_users.id_quest', 'quests.id_quest')
+                    ->where('quest_users.id_user', $id_user);
+            })
+            ->leftJoin('quest_user_redemptions', function($q) use ($id_user) {
+                $q->on('quest_users.id_quest', 'quest_user_redemptions.id_quest')
                     ->where('quest_user_redemptions.id_user', $id_user);
             })
-            ->where('is_complete', 1)
-            ->where(function($query) {
-                $query->where('redemption_status', '<>', 1)
-                    ->orWhereNull('redemption_status');
+            ->where(function ($query) {
+                $query->where('quest_user_redemptions.redemption_status', '<>', 1)
+                    ->orWhereNull('quest_user_redemptions.redemption_status');
             })
             ->where('publish_start', '<=', date('Y-m-d H:i:s'))
-            ->where('publish_end', '>=', date('Y-m-d H:i:s'))
-            ->count();
+            ->where(function($query) {
+                $query->where(function($query2) {
+                    $query2->where('publish_end', '>=', date('Y-m-d H:i:s'))
+                        ->whereNull('quest_users.id_user');
+                })
+                    ->orWhere(function($query2) {
+                        // claimed
+                        $query2->whereNotNull('quest_users.id_user')
+                            // not expired
+                            ->whereRaw('(CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.date_end END) >= "'.date('Y-m-d H:i:s').'"');
+                    });
+            })
+            ->where('is_complete', 1);
+
+        if(!empty($dataNotAvailableQuest)){
+            $quests = $quests->whereNotIn('quests.id_quest', $dataNotAvailableQuest);
+        }
+        $myQuest = $quests->count();
         if ($myQuest) {
             return [
                 'status' => 'success',
@@ -1509,6 +1657,19 @@ class ApiQuest extends Controller
                 'status' => 'fail',
                 'messages' => ['Belum ada misi yang berjalan']
             ];
+        }
+    }
+
+    function listAllQuest(){
+        $list = Quest::where('is_complete', 1)->get()->toArray();
+        return response()->json(MyHelper::checkGet($list));
+    }
+
+    public function autoclaimQuest($id_user)
+    {
+        $quests = Quest::where('autoclaim_quest', 1)->whereNull('stop_at')->where('is_complete', 1)->where('publish_end', '>=', date('Y-m-d H:i:s'))->get();
+        foreach ($quests as $quest) {
+            $this->doTakeMission($id_user, $quest->id_quest);
         }
     }
 }

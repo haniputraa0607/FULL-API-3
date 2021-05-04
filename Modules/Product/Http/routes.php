@@ -88,6 +88,8 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
         Route::get('export-price', 'ApiProductModifierGroupController@exportPrice');
         Route::post('import-price', 'ApiProductModifierGroupController@importPrice');
         Route::post('position-assign', 'ApiProductModifierGroupController@positionAssign');
+        Route::get('inventory-brand', 'ApiProductModifierGroupController@inventoryBrand');
+        Route::post('inventory-brand', 'ApiProductModifierGroupController@inventoryBrandUpdate');
     });
 
     Route::group(['prefix' => 'category'], function() {
