@@ -2575,7 +2575,7 @@ class ApiOutletApp extends Controller
             ];
         }
 
-        $modifier_raws = ProductModifierStockStatusUpdate::distinct()->select(\DB::raw('id_product_modifier_stock_status_update,CONCAT(COALESCE(user_type,""),",",COALESCE(id_user,""),",",COALESCE(user_name,"")) as user,DATE_FORMAT(date_time, "%H:%i") as time,text as product_name,new_status as old_status,new_status,new_status as to_available'))
+        $modifier_raws = ProductModifierStockStatusUpdate::distinct()->select(\DB::raw('id_product_modifier_stock_status_update,CONCAT(COALESCE(user_type,""),",",COALESCE(id_user,""),",",COALESCE(user_name,"")) as user,DATE_FORMAT(date_time, "%H:%i") as time, CASE WHEN id_product_modifier_group IS NOT NULL THEN text_detail_trx ELSE text END as product_name,new_status as old_status,new_status,new_status as to_available'))
             ->join('product_modifiers', 'product_modifiers.id_product_modifier', '=', 'product_modifier_stock_status_updates.id_product_modifier')
             ->where('id_outlet', $outlet->id_outlet)
             ->whereDate('date_time', $date)
