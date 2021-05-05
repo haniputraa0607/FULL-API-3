@@ -315,7 +315,7 @@ class PromoCampaignTools{
 				}
 				if($discount<=0){
 					$message = $this->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.'; 
-					$message = MyHelper::simpleReplace($message,['product'=>'product bertanda khusus']);
+					$message = MyHelper::simpleReplace($message,['product'=>'produk bertanda khusus']);
 
 					$errors[]= $missing_product_messages ?? $message;
 					$errorProduct = $product_error_applied;
@@ -346,7 +346,7 @@ class PromoCampaignTools{
 					}
 				}
 
-				$minmax = $min_qty != $max_qty ? "$min_qty - $max_qty" : $min_qty;
+				$minmax = ($min_qty != $max_qty ? "$min_qty sampai $max_qty" : $min_qty)." item";
 				$promo_product_array = $promo_product->toArray();
 				$promo_product_id = array_column($promo_product_array, 'id_product');
 				$promo_product_count = count($promo_product);
@@ -385,7 +385,7 @@ class PromoCampaignTools{
 
 				// product not found? buat jaga-jaga kalau sesuatu yang tidak diinginkan terjadi
 				if(!$product){
-					$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
+					$minmax = ($min_qty!=$max_qty?"$min_qty sampai $max_qty":$min_qty)." item";
 					$message = $this->getMessage('error_tier_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b> sebanyak %minmax%.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
@@ -485,7 +485,7 @@ class PromoCampaignTools{
 				}
 
 				if(!$promo_rule){
-					$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
+					$minmax = ($min_qty!=$max_qty?"$min_qty sampai $max_qty":$min_qty)." item";
 					$message = $this->getMessage('error_tier_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b> sebanyak %minmax%.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
@@ -644,7 +644,7 @@ class PromoCampaignTools{
 				}
 
 				// promo product not available in cart?
-				$minmax = $min_qty != $max_qty ? "$min_qty - $max_qty" : $min_qty;
+				$minmax = ($min_qty != $max_qty ? "$min_qty sampai $max_qty" : $min_qty)." item";
 				$promo_product_array = $promo_product->toArray();
 				$promo_product_id = array_column($promo_product_array, 'id_product');
 
@@ -683,7 +683,7 @@ class PromoCampaignTools{
 
 				// product not found? buat jaga-jaga kalau sesuatu yang tidak diinginkan terjadi
 				if(!$product){
-					$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
+					$minmax = ($min_qty!=$max_qty?"$min_qty sampai $max_qty":$min_qty)." item";
 					$message = $this->getMessage('error_buyxgety_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b> sebanyak %minmax%.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
@@ -781,7 +781,7 @@ class PromoCampaignTools{
 				}
 
 				if(!$promo_rule){
-					$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
+					$minmax = ($min_qty!=$max_qty?"$min_qty sampai $max_qty":$min_qty)." item";
 					$message = $this->getMessage('error_buyxgety_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b> sebanyak %minmax%.'; 
 					$message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
 
@@ -1023,7 +1023,7 @@ class PromoCampaignTools{
 				}
 				if($discount<=0){
 					$message = $this->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.'; 
-					$message = MyHelper::simpleReplace($message,['product'=>'product bertanda khusus']);
+					$message = MyHelper::simpleReplace($message,['product'=>'produk bertanda khusus']);
 
 					$errors[]= $message;
 					$errorProduct = 'all';
@@ -2584,9 +2584,9 @@ class PromoCampaignTools{
 
     	if (empty($product_name)) {
 	    	if ($product_rule === 'and') {
-				$product_name = 'semua product bertanda khusus';
+				$product_name = 'semua produk bertanda khusus';
 			}else {
-				$product_name = 'product bertanda khusus';
+				$product_name = 'produk bertanda khusus';
 			}
     	}
 
