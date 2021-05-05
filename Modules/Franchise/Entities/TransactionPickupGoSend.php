@@ -3,6 +3,7 @@
 namespace Modules\Franchise\Entities;
 
 use Illuminate\Database\Eloquent\Model;
+use Modules\Franchise\Entities\TransactionPickupGoSendUpdate;
 
 class TransactionPickupGoSend extends Model
 {
