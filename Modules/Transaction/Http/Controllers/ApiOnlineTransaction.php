@@ -825,10 +825,15 @@ class ApiOnlineTransaction extends Controller
             $shippingGoSendx = GoSend::getPrice($coor_origin,$coor_destination);
             $shippingGoSend = $shippingGoSendx[GoSend::getShipmentMethod()]['price']['total_price']??null;
             if($shippingGoSend === null){
-                return [
-                    'status' => 'fail',
-                    'messages' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung biaya pengantaran. Silakan coba kembali']
-                ];
+                $errorGosend = array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message');
+                if(isset($errorGosend[0])){
+                    if($errorGosend[0] == 'Booking distance exceeds 40 kilometres'){
+                        $errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
+                    }elseif('Origin and destination cannot be same'){
+                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
+                    }
+                }
+                $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
             }
             //cek free delivery
             // if($post['is_free'] == 'yes'){
@@ -2150,7 +2155,15 @@ class ApiOnlineTransaction extends Controller
             $shippingGoSendx = GoSend::getPrice($coor_origin,$coor_destination);
             $shippingGoSend = $shippingGoSendx[GoSend::getShipmentMethod()]['price']['total_price']??null;
             if($shippingGoSend === null){
-                $error_msg += array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
+                $errorGosend = array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message');
+                if(isset($errorGosend[0])){
+                    if($errorGosend[0] == 'Booking distance exceeds 40 kilometres'){
+                        $errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
+                    }elseif('Origin and destination cannot be same'){
+                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
+                    }
+                }
+                $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
             }
             //cek free delivery
             // if($post['is_free'] == 'yes'){
