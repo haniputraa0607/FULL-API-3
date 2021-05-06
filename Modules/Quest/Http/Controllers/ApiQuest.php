@@ -1558,6 +1558,13 @@ class ApiQuest extends Controller
 
         if (!($toUpdate['date_end'] ?? false)) {
             $toUpdate['date_end'] = null;
+        } else {
+            if (strtotime($toUpdate['date_end']) < strtotime($toUpdate['publish_end'])) {
+                return [
+                    'status'   => 'fail',
+                    'messages' => ['Quest date end should be after or equal publish end']
+                ];
+            }
         }
 
         if (!($toUpdate['max_complete_day'] ?? false)) {
