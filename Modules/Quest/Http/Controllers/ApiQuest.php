@@ -78,6 +78,12 @@ class ApiQuest extends Controller
             $post['quest']['publish_end']   = date('Y-m-d H:i', strtotime($post['quest']['publish_end']));
         }
         if (!is_null($post['quest']['date_end'] ?? null)) {
+            if (strtotime($post['quest']['date_end']) < strtotime($post['quest']['publish_end'])) {
+                return [
+                    'status'   => 'fail',
+                    'messages' => ['Quest date end should be after or equal publish end']
+                ];
+            }
             $post['quest']['date_end']      = date('Y-m-d H:i', strtotime($post['quest']['date_end']));
         }
 
