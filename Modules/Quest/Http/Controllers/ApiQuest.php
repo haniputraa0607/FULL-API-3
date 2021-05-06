@@ -1258,7 +1258,11 @@ class ApiQuest extends Controller
             'date_end' => $quest->date_end,
         ];
         if (!$toCreate['date_end']) {
-            $toCreate['date_end'] = date('Y-m-d H:i:s', strtotime("+{$quest->max_complete_day} day"));
+            if (strtotime($toCreate['date_start']) > time()) {
+                $toCreate['date_end'] = date('Y-m-d H:i:s', strtotime($toCreate['date_start']) + (86400 * $quest->max_complete_day));
+            } else {
+                $toCreate['date_end'] = date('Y-m-d H:i:s', time() + (86400 * $quest->max_complete_day));
+            }
         }
         $questUser = QuestUser::create($toCreate);
         if (!$questUser) {
