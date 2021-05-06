@@ -325,6 +325,9 @@ class Product extends Model
                     });
                 })
                 ->where(function($q){
+                    $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                })
+                ->where(function($q){
                     $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
                 })
                 ->groupBy('product_modifiers.id_product_modifier');
