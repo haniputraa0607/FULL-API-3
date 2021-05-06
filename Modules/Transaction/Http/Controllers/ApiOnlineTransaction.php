@@ -1279,7 +1279,7 @@ class ApiOnlineTransaction extends Controller
                         THEN product_modifiers.text_detail_trx
                         ELSE product_modifiers.text
                     END) as text'),
-                        'product_modifier_stock_status',\DB::raw('coalesce(product_modifier_price, 0) as product_modifier_price'), 'id_product_modifier_group', 'modifier_type')
+                        'product_modifier_stock_status','modifier_type',\DB::raw('coalesce(product_modifier_price, 0) as product_modifier_price'), 'id_product_modifier_group', 'modifier_type')
                         // product visible
                         ->leftJoin('product_modifier_details', function($join) use ($post) {
                             $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
@@ -1292,11 +1292,11 @@ class ApiOnlineTransaction extends Controller
                                 ->where('product_modifiers.product_modifier_visibility', 'Visible');
                             });
                         })
-                        ->where(function($q) {
-                            $q->where(function($q){
-                                $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
-                            });
-                        })
+                        // ->where(function($q) {
+                        //     $q->where(function($q){
+                        //         $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                        //     });
+                        // })
                         ->where(function($q){
                             $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
                         })
@@ -1315,8 +1315,22 @@ class ApiOnlineTransaction extends Controller
                     if(!$mod){
                         return [
                             'status' => 'fail',
-                            'messages' => ['Modifier not found']
+                            'messages' => ['Topping tidak ditemukan']
                         ];
+                    }
+                    if($mod->product_modifier_stock_status == 'Sold Out'){
+                        if ($mod->modifier_type == 'Modifier Group') {
+                            return [
+                                'status' => 'fail',
+                                'product_sold_out_status' => true,
+                                'messages' => ['Detail variant yang dipilih untuk produk '.$checkProduct['product_name'].' tidak tersedia.']
+                            ];
+                        } else {
+                            return [
+                                'status' => 'fail',
+                                'messages' => ['Topping '.$mod->text.' yang dipilih untuk produk '.$checkProduct['product_name'].' tidak tersedia.']
+                            ];
+                        }
                     }
                     $mod = $mod->toArray();
                     $insert_modifier[] = [
