@@ -1295,7 +1295,7 @@ class ApiOnlineTransaction extends Controller
                         ->where(function($q) {
                             $q->where(function($q){
                                 $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
-                            })->orWhere('product_modifiers.modifier_type', '=', 'Modifier Group');
+                            });
                         })
                         ->where(function($q){
                             $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
