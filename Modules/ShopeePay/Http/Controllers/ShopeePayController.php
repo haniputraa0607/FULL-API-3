@@ -344,7 +344,7 @@ class ShopeePayController extends Controller
                     if (($status['response']['transaction_list'][0]['amount'] ?? false) != $singleTrx->amount) {
                         // void transaction
                         $void_reference_id = null;
-                        $void              = $this->void($singleTrx, 'trx', $errors, $void_reference_id);
+                        $void              = $this->refund($singleTrx, 'trx', $errors, $void_reference_id);
                         if (!$void) {
                             \Log::error('Failed void transaction ' . $singleTrx->transaction_receipt_number . ': ', $errors??[]);
                             continue;
@@ -508,7 +508,7 @@ class ShopeePayController extends Controller
                     if (($status['response']['transaction_list'][0]['amount'] ?? false) != $singleTrx->amount) {
                         // void transaction
                         $void_reference_id = null;
-                        $void              = $this->void($singleTrx, 'deals', $errors, $void_reference_id);
+                        $void              = $this->refund($singleTrx, 'deals', $errors, $void_reference_id);
                         if (!$void) {
                             \Log::error('Failed void transaction ' . $singleTrx->id_deals_user . ': ', $errors);
                             continue;
@@ -648,7 +648,7 @@ class ShopeePayController extends Controller
                     if (($status['response']['transaction_list'][0]['amount'] ?? false) != $singleTrx->amount) {
                         // void transaction
                         $void_reference_id = null;
-                        $void              = $this->void($singleTrx, 'subscription', $errors, $void_reference_id);
+                        $void              = $this->refund($singleTrx, 'subscription', $errors, $void_reference_id);
                         if (!$void) {
                             \Log::error('Failed void transaction ' . $singleTrx->id_subscription_user . ': ', $errors);
                             continue;
@@ -962,7 +962,7 @@ class ShopeePayController extends Controller
      * @param  string $type type of transaction ('trx'/'deals')
      * @return Array       array formdata
      */
-    public function generateDataRefund($reference, $type = 'trx', &$errors = null, &$refund_reference_id = null)
+    public function generateDataRefund($reference, $type = 'trx', &$errors = null, &$refund_reference_id = null, &$payment_builder = null)
     {
         $refund_reference_id = $refund_reference_id ?: time() . rand(10, 99);
         $data                = [
@@ -972,6 +972,7 @@ class ShopeePayController extends Controller
             'merchant_ext_id'      => $this->merchant_ext_id,
             'store_ext_id'         => $this->store_ext_id,
         ];
+        $minimal_refund_time = '03:00';
         switch ($type) {
             case 'trx':
                 if (is_numeric($reference)) {
@@ -985,6 +986,11 @@ class ShopeePayController extends Controller
                         $errors = ['Invalid reference'];
                         return false;
                     }
+                }
+                $payment_builder = TransactionPaymentShopeePay::where('id_transaction', $reference['id_transaction']);
+                if (time() <= strtotime($minimal_refund_time)) {
+                    TransactionPaymentShopeePay::where('id_transaction', $reference['id_transaction'])->update(['manual_refund' => '1']);
+                    return true;
                 }
                 $data['payment_reference_id'] = $reference['transaction_receipt_number'];
                 break;
@@ -1002,6 +1008,11 @@ class ShopeePayController extends Controller
                         return false;
                     }
                 }
+                $payment_builder = DealsPaymentShopeePay::where('order_id', $reference['order_id']);
+                if (time() <= strtotime($minimal_refund_time)) {
+                    DealsPaymentShopeePay::where('order_id', $reference['order_id'])->update(['manual_refund' => '1']);
+                    return true;
+                }
                 $data['payment_reference_id'] = $reference['order_id'];
                 break;
 
@@ -1017,6 +1028,11 @@ class ShopeePayController extends Controller
                         $errors = ['Invalid reference'];
                         return false;
                     }
+                }
+                $payment_builder = SubscriptionPaymentShopeePay::where('order_id', $reference['order_id']);
+                if (time() <= strtotime($minimal_refund_time)) {
+                    SubscriptionPaymentShopeePay::where('order_id', $reference['order_id'])->update(['manual_refund' => '1']);
+                    return true;
                 }
                 $data['payment_reference_id'] = $reference['order_id'];
                 break;
@@ -1036,11 +1052,18 @@ class ShopeePayController extends Controller
     public function refund($reference, $type = 'trx', &$errors = null, &$refund_reference_id = null)
     {
         $url      = $this->base_url . 'v3/merchant-host/transaction/refund/create';
-        $postData = $this->generateDataRefund($reference, $type, $errors, $refund_reference_id);
-        if (!$postData) {
+        $postData = $this->generateDataRefund($reference, $type, $errors, $refund_reference_id, $payment_builder);
+        if (!is_array($postData)) {
             return $postData;
         }
         $response = $this->send($url, $postData, ['type' => 'refund', 'id_reference' => $postData['payment_reference_id']]);
+        if (($response['response']['errcode']?? 0) == 601 && $payment_builder) {
+            $payment_builder->update(['manual_refund' => '1']);
+            return true;
+        }
+        if ($errcode = ($response['response']['errcode'] ?? -3)) {
+            $errors[] = $this->errcode[$errcode] ?? 'Something went wrong';
+        }
         /**
          * $response
          * {

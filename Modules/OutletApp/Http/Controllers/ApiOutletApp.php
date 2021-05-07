@@ -2024,7 +2024,7 @@ class ApiOutletApp extends Controller
                         if ($payShopeepay) {
                             $doRefundPayment = MyHelper::setting('refund_shopeepay');
                             if($doRefundPayment){
-                                $refund = app($this->shopeepay)->void($payShopeepay['id_transaction'], 'trx', $errors);
+                                $refund = app($this->shopeepay)->refund($payShopeepay['id_transaction'], 'trx', $errors);
                                 TransactionPickup::where('id_transaction', $order['id_transaction'])->update([
                                     'reject_type'   => 'refund',
                                 ]);
