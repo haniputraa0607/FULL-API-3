@@ -829,7 +829,7 @@ class ApiOnlineTransaction extends Controller
                 if(isset($errorGosend[0])){
                     if($errorGosend[0] == 'Booking distance exceeds 40 kilometres'){
                         $errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
-                    }elseif('Origin and destination cannot be same'){
+                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
                         $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
                     }
                 }
@@ -2173,7 +2173,7 @@ class ApiOnlineTransaction extends Controller
                 if(isset($errorGosend[0])){
                     if($errorGosend[0] == 'Booking distance exceeds 40 kilometres'){
                         $errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
-                    }elseif('Origin and destination cannot be same'){
+                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
                         $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
                     }
                 }
