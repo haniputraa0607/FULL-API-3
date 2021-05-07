@@ -42,7 +42,7 @@ class Create extends FormRequest
             'id_outlet'                 => 'sometimes|array'
         ];
 
-        if( $this->deals_voucher_start && in_array($this->rules, ['WelcomeVoucher', 'Deals']) ){
+        if( $this->deals_voucher_start && in_array($this->deals_type, ['WelcomeVoucher', 'Deals']) ){
         	$rules['deals_voucher_start']	= 'nullable|date|date_format:"Y-m-d H:i:s"|after:deals_start';
         	$rules['deals_voucher_expired']	= 'nullable|date|date_format:"Y-m-d H:i:s"|after:deals_voucher_start';
         }else{
