@@ -78,6 +78,12 @@ class ApiQuest extends Controller
             $post['quest']['publish_end']   = date('Y-m-d H:i', strtotime($post['quest']['publish_end']));
         }
         if (!is_null($post['quest']['date_end'] ?? null)) {
+            if (strtotime($post['quest']['date_end']) < strtotime($post['quest']['publish_end'])) {
+                return [
+                    'status'   => 'fail',
+                    'messages' => ['Quest date end should be after or equal publish end']
+                ];
+            }
             $post['quest']['date_end']      = date('Y-m-d H:i', strtotime($post['quest']['date_end']));
         }
 
@@ -1258,7 +1264,11 @@ class ApiQuest extends Controller
             'date_end' => $quest->date_end,
         ];
         if (!$toCreate['date_end']) {
-            $toCreate['date_end'] = date('Y-m-d H:i:s', strtotime("+{$quest->max_complete_day} day"));
+            if (strtotime($toCreate['date_start']) > time()) {
+                $toCreate['date_end'] = date('Y-m-d H:i:s', strtotime($toCreate['date_start']) + (86400 * $quest->max_complete_day));
+            } else {
+                $toCreate['date_end'] = date('Y-m-d H:i:s', time() + (86400 * $quest->max_complete_day));
+            }
         }
         $questUser = QuestUser::create($toCreate);
         if (!$questUser) {
@@ -1548,6 +1558,13 @@ class ApiQuest extends Controller
 
         if (!($toUpdate['date_end'] ?? false)) {
             $toUpdate['date_end'] = null;
+        } else {
+            if (strtotime($toUpdate['date_end']) < strtotime($toUpdate['publish_end'])) {
+                return [
+                    'status'   => 'fail',
+                    'messages' => ['Quest date end should be after or equal publish end']
+                ];
+            }
         }
 
         if (!($toUpdate['max_complete_day'] ?? false)) {

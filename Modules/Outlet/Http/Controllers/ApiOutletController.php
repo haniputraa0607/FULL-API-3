@@ -230,6 +230,9 @@ class ApiOutletController extends Controller
             $opens = $request->json('open');
             $closes = $request->json('close');
             $is_closed = $request->json('is_closed');
+            if(!isset($post['time_zone_utc'])){
+                $post['time_zone_utc'] = '7';
+            }
             foreach($days as $key => $value){
             	$opens[$key] = $this->setOneTimezone($opens[$key], $post['time_zone_utc']);
             	$closes[$key] = $this->setOneTimezone($closes[$key], $post['time_zone_utc']);
