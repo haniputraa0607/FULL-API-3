@@ -829,7 +829,7 @@ class ApiOnlineTransaction extends Controller
                 if(isset($errorGosend[0])){
                     if($errorGosend[0] == 'Booking distance exceeds 40 kilometres'){
                         $errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
-                    }elseif('Origin and destination cannot be same'){
+                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
                         $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
                     }
                 }
@@ -2173,7 +2173,7 @@ class ApiOnlineTransaction extends Controller
                 if(isset($errorGosend[0])){
                     if($errorGosend[0] == 'Booking distance exceeds 40 kilometres'){
                         $errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
-                    }elseif('Origin and destination cannot be same'){
+                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
                         $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
                     }
                 }
@@ -2591,6 +2591,15 @@ class ApiOnlineTransaction extends Controller
                 $mod['qty'] = $qty_product_modifier;
                 $mod['product_modifier_price'] = (int) $mod['product_modifier_price'];
                 if ($scope == 'Modifier Group') {
+                    if ($mod['product_modifier_stock_status'] == 'Sold Out') {
+                        $error_msg[] = MyHelper::simpleReplace(
+                            'Detail variant yang dipilih untuk produk %product_name% tidak tersedia',
+                            [
+                                'product_name' => $product['product_name']
+                            ]
+                        );
+                        continue 2;
+                    }
                     $product['extra_modifiers'][]=[
                         'product_variant_name' => $mod['text'],
                         'id_product_variant' => $mod['id_product_modifier']

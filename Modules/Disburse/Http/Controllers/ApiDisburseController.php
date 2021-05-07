@@ -966,6 +966,7 @@ class ApiDisburseController extends Controller
                     ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
                     ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
                     ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
+                    ->leftJoin('rule_promo_payment_gateway','rule_promo_payment_gateway.id_rule_promo_payment_gateway','=','dot.id_rule_promo_payment_gateway')
                     ->where('transaction_payment_status', 'Completed')
                     ->whereNull('reject_at')
                     ->where('transactions.id_outlet', $getOutlet['id_outlet'])
@@ -976,7 +977,7 @@ class ApiDisburseController extends Controller
                             ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                             ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
                     }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
-                    ->select('transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
+                    ->select('rule_promo_payment_gateway.name as promo_payment_gateway_name', 'transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
                         'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
                         'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
                         'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code')
@@ -1319,6 +1320,7 @@ class ApiDisburseController extends Controller
                         SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
                         SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
                         SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription, SUM(bundling_product_fee_central) total_income_bundling_product,
+                        SUM(fee_promo_payment_gateway_central) total_income_promo_payment_gateway, SUM(fee_promo_payment_gateway_outlet) total_promo_payment_gateway,
                         SUM(transactions.transaction_discount_delivery) total_discount_delivery');
 
         if($id_outlet){
@@ -1448,6 +1450,7 @@ class ApiDisburseController extends Controller
                             ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
                             ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
                             ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
+                            ->leftJoin('rule_promo_payment_gateway','rule_promo_payment_gateway.id_rule_promo_payment_gateway','=','dot.id_rule_promo_payment_gateway')
                             ->where('transaction_payment_status', 'Completed')
                             ->whereNull('reject_at')
                             ->where('transactions.id_outlet', $outlet['id_outlet'])
@@ -1457,7 +1460,7 @@ class ApiDisburseController extends Controller
                                     ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                                     ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
                             }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
-                            ->select('transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
+                            ->select('rule_promo_payment_gateway.name as promo_payment_gateway_name', 'transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
                                 'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
                                 'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
                                 'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code')
@@ -1565,6 +1568,7 @@ class ApiDisburseController extends Controller
                         SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
                         SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
                         SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription, SUM(bundling_product_fee_central) total_income_bundling_product,
+                        SUM(fee_promo_payment_gateway_central) total_income_promo_payment_gateway, SUM(fee_promo_payment_gateway_outlet) total_promo_payment_gateway,
                         SUM(transactions.transaction_discount_delivery) total_discount_delivery');
 
         if($id_outlet){
@@ -1798,6 +1802,7 @@ class ApiDisburseController extends Controller
                 ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
                 ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
                 ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
+                ->leftJoin('rule_promo_payment_gateway','rule_promo_payment_gateway.id_rule_promo_payment_gateway','=','dot.id_rule_promo_payment_gateway')
                 ->where('transaction_payment_status', 'Completed')
                 ->whereNull('reject_at')
                 ->whereDate('transactions.transaction_date', $yesterday)
@@ -1806,7 +1811,7 @@ class ApiDisburseController extends Controller
                         ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                         ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
                 }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
-                ->select('transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
+                ->select('rule_promo_payment_gateway.name as promo_payment_gateway_name', 'transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
                     'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
                     'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
                     'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code')

@@ -3101,6 +3101,56 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => '2018-05-10 08:00:00',
                     'updated_at' => '2018-05-10 08:00:00',
                 ),
+            310 =>
+                array(
+                    'id_feature' => 311,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Rule Promo Payment Gateway',
+                    'show_hide' => 1,
+                    'order' => 118,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            311 =>
+                array(
+                    'id_feature' => 312,
+                    'feature_type' => 'Detail',
+                    'feature_module' => 'Rule Promo Payment Gateway',
+                    'show_hide' => 1,
+                    'order' => 118,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            312 =>
+                array(
+                    'id_feature' => 313,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Rule Promo Payment Gateway',
+                    'show_hide' => 1,
+                    'order' => 118,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            313 =>
+                array(
+                    'id_feature' => 314,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Rule Promo Payment Gateway',
+                    'show_hide' => 1,
+                    'order' => 118,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            314 =>
+                array(
+                    'id_feature' => 315,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Rule Promo Payment Gateway',
+                    'show_hide' => 1,
+                    'order' => 118,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
         ));
     }
 }
