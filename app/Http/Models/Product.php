@@ -563,7 +563,7 @@ class Product extends Model
                     return $result;
                 }
             } else {
-                if ($child['id_product_variant_group'] == $product_variant_group->id_product_variant_group) {
+                if (($child['id_product_variant_group']?? false) == $product_variant_group->id_product_variant_group) {
                     if (!($child['is_modifier']??false)) {
                         $variants[$child['id_product_variant']] = $last_price + $child['product_variant_price'];
                     }
@@ -610,7 +610,7 @@ class Product extends Model
                 if (($child['is_modifier']??false) && !in_array($child['id_product_variant'], $extra_modifiers)) {
                     continue;
                 }
-                if ($child['id_product_variant_group'] == $product_variant_group->id_product_variant_group) {
+                if (($child['id_product_variant_group'] ?? '') == $product_variant_group->id_product_variant_group) {
                     $variants[] = $child['id_product_variant'];
                     return $variants;
                 }
