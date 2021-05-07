@@ -3121,6 +3121,9 @@ class ApiTransaction extends Controller
                         });
                     }
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product_variant_group_price'] = (int)($valueProduct['transaction_product_price'] + $variantsPrice);
+
+                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'] = array_values($result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers']);
+                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'] = array_values($result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']);
                 }
                 $keynya++;
             }
@@ -3559,6 +3562,7 @@ class ApiTransaction extends Controller
                     unset($pt['modifiers'][$key]);
                 }
             }
+            $pt['modifiers'] = array_values($pt['modifiers']);
             if ($pt['id_product_variant_group']) {
                 if ($pt['outlet_different_price']) {
                     $product_price = ProductVariantGroupSpecialPrice::select('product_variant_group_price')->where('id_product_variant_group', $pt['id_product_variant_group'])->first();
