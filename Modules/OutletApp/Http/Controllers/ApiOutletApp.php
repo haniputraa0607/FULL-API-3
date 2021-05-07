@@ -2024,7 +2024,7 @@ class ApiOutletApp extends Controller
                         if ($payShopeepay) {
                             $doRefundPayment = MyHelper::setting('refund_shopeepay');
                             if($doRefundPayment){
-                                $refund = app($this->shopeepay)->void($payShopeepay['id_transaction'], 'trx', $errors);
+                                $refund = app($this->shopeepay)->refund($payShopeepay['id_transaction'], 'trx', $errors);
                                 TransactionPickup::where('id_transaction', $order['id_transaction'])->update([
                                     'reject_type'   => 'refund',
                                 ]);
@@ -4419,6 +4419,7 @@ class ApiOutletApp extends Controller
             $result['product_transaction'][$keynya]['brand'] = $keyTrx;
             $forProdBrand = [];
             foreach ($valueTrx as $keyProduct => $valueProduct) {
+                $extra_modifier_price = 0;
                 $quantity                                                                                        = $quantity + $valueProduct['transaction_product_qty'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_qty']       = $valueProduct['transaction_product_qty'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_subtotal']  = MyHelper::requestNumber($valueProduct['transaction_product_subtotal'], '_CURRENCY');
@@ -4445,6 +4446,7 @@ class ApiOutletApp extends Controller
                             'product_variant_price' => 0,
                             'is_modifier' => 1
                         ];
+                        $extra_modifier_price += (int) ($valueMod['qty'] * $valueMod['transaction_product_modifier_price']);
                     }else{
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][] = [
                             'product_modifier_name' => $valueMod['text'],
@@ -4453,6 +4455,7 @@ class ApiOutletApp extends Controller
                         ];
                     }
                 }
+                $variantsPrice += $extra_modifier_price;
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_sub_item']      = '@'.MyHelper::requestNumber($valueProduct['transaction_product_price']+$variantsPrice, '_CURRENCY');
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product_variant_group_price'] = (int)($valueProduct['transaction_product_price'] + $variantsPrice);
 
