@@ -4717,7 +4717,7 @@ class ApiOutletApp extends Controller
             }
             $result['detail']['detail_status'][] = [
                 'text' => 'Your order awaits confirmation ',
-                'date' => MyHelper::dateFormatInd($list['transaction_date'])
+                'date' => MyHelper::dateFormatInd($list['completed_at'] ?: $list['transaction_date'])
             ];
         }
 

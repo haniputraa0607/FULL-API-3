@@ -3393,7 +3393,7 @@ class ApiTransaction extends Controller
                     }
                     $statusOrder[] = [
                         'text'  => 'Pesanan masuk. Menunggu jilid untuk menerima order',
-                        'date'  => $list['transaction_date']
+                        'date'  => $list['completed_at'] ?: $list['transaction_date']
                     ];
                 }
 
