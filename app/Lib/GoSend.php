@@ -286,16 +286,16 @@ class GoSend
 
             $replacer = [
                 'confirmed'             => 'Pesanan Diterima!',
-                'out_for_pickup'        => 'Driver-mu sedang menuju ke outlet',
-                'out_for_delivery'      => 'Pesanan sedang diantar ke tempatmu!',
+                'out_for_pickup'        => 'Mohon menunggu ya!',
+                'out_for_delivery'      => 'Sudah siap menikmati pesananmu?',
                 'cancelled'             => 'Pesananmu tidak dapat diambil oleh driver',
                 'delivered'             => 'Terima kasih sudah pesan di JIWA+!',
                 'no_driver'             => 'Driver belum berhasil ditemukan',
             ];
             $replacer_content = [
                 'confirmed'             => 'Mohon tunggu, pesanan sedang dipersiapkan',
-                'out_for_pickup'        => '',
-                'out_for_delivery'      => '',
+                'out_for_pickup'        => 'Driver-mu sedang menuju ke outlet',
+                'out_for_delivery'      => 'Driver sedang menuju ke tempatmu',
                 'cancelled'             => 'Mohon tunggu konfirmasi dari outlet',
                 'delivered'             => 'Selamat menikmati Kak %name%',
                 'no_driver'             => 'Mohon tunggu konfirmasi dari outlet',
