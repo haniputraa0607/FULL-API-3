@@ -1663,18 +1663,28 @@ class ApiQuest extends Controller
         }
         $myQuest = $quests->count();
         if ($myQuest) {
-            return [
+            $result = [
                 'status' => 'success',
                 'result' => [
                     'total_quest' => $myQuest,
                 ]
             ];
         } else {
-            return [
+            $result = [
                 'status' => 'fail',
                 'messages' => ['Belum ada misi yang berjalan']
             ];
         }
+        $complete_profile = $request->user()->complete_profile;
+        if (!$complete_profile) {
+            $result['code'] = 'profile_incomplete';
+            if ($myQuest) {
+                $result['messages'] = ['Silahkan lengkapi profil untuk mengikuti misi'];
+            } else {
+                $result['messages'][] = ['Silahkan lengkapi profil untuk mengikuti misi'];
+            }
+        }
+        return $result;
     }
 
     function listAllQuest(){
