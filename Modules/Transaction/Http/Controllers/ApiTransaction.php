@@ -3306,8 +3306,9 @@ class ApiTransaction extends Controller
                         ];
                     }
                     if ($list['detail']['ready_at'] != null && empty($list['transaction_shipment_go_send'])) {
+                        $is_admin = $request->user()->tokenCan('be');
                         $statusOrder[] = [
-                            'text'  => 'Pesanan sudah siap diambil',
+                            'text'  => 'Pesanan sudah siap diambil'. ($list['detail']['is_autoready'] && $is_admin ? ' (auto ready by system)' : ''),
                             'date'  => $list['detail']['ready_at']
                         ];
                     }
@@ -3393,7 +3394,7 @@ class ApiTransaction extends Controller
                     }
                     $statusOrder[] = [
                         'text'  => 'Pesanan masuk. Menunggu jilid untuk menerima order',
-                        'date'  => $list['transaction_date']
+                        'date'  => $list['completed_at'] ?: $list['transaction_date']
                     ];
                 }
 
