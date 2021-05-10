@@ -2988,7 +2988,7 @@ class ApiTransaction extends Controller
                     $result['transaction_status'] = 5;
                     $result['transaction_status_text'] = 'PESANAN MASUK. MENUNGGU JILID UNTUK MENERIMA ORDER';
                 }
-                if ($list['detail']['ready_at'] != null && $list['transaction_pickup_go_send'] && !$list['detail']['reject_at']) {
+                if ($list['transaction_pickup_go_send'] && !$list['detail']['reject_at']) {
                     // $result['transaction_status'] = 5;
                     $result['delivery_info'] = [
                         'driver' => null,
