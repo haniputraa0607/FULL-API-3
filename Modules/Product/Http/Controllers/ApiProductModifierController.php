@@ -36,7 +36,7 @@ class ApiProductModifierController extends Controller
             $promod->orderBy('product_modifier_order', 'asc');
         }
         if ($post['rule'] ?? false) {
-            $filter = $this->filterList($promod, $post['rule'], $post['operator'] ?? 'and');
+            $filter = $this->filterListV2($promod, $post['rule'], $post['operator'] ?? 'and');
         } else {
             $filter = [];
         }
@@ -485,5 +485,57 @@ class ApiProductModifierController extends Controller
             ProductModifierInventoryBrand::insert($toInsert);
         }
         return ['status' => 'success'];
+    }
+
+    public function filterListV2($query, $rules, $operator = 'and')
+    {
+        $newRule = [];
+        $total   = $query->count();
+
+        $query->where(function($query) use ($rules, $operator) {
+        	$where = $operator == 'and' ? 'where' : 'orWhere';
+        	$whereHas = $operator == 'and' ? 'whereHas' : 'orWhereHas';
+	        foreach ($rules as $var) {
+	        	$subject = $var['subject'];
+	            $operator = $var['operator'] ?? '=';
+	            $parameter = $var['parameter'] ?? '';
+
+	            if ($operator == 'like') {
+	                $parameter = '%' . $parameter . '%';
+	            }
+
+	        	$main_subjects = ['code', 'text', 'type', 'visibility', 'product_modifier_visibility'];
+	            if (in_array($subject, $main_subjects)) {
+	                $query->$where($subject, $operator, $parameter);
+	            }
+
+	            $extra_subjects = ['modifier_type'];
+	            if (in_array($subject, $extra_subjects)) {
+	            	$extra_operators = ['id_brand', 'id_product', 'id_product_category'];
+	            	if (in_array($operator, $extra_operators)) {
+		            	$extra_rules = [
+		            		'id_brand' => ['brands', 'product_modifier_brands.id_brand'],
+		            		'id_product' => ['products', 'product_modifier_products.id_product'],
+		            		'id_product_category' => ['product_categories', 'product_modifier_product_categories.id_product_category']
+		            	];
+
+		            	$table = $extra_rules[$operator][0];
+		            	$foreign = $extra_rules[$operator][1];
+
+		            	$query->$where(function($q) use ($subject, $parameter, $table, $foreign) {
+	        				$q->where($subject, 'Specific')
+				    			->whereHas($table, function($q2) use ($foreign, $parameter){
+				    				$q2->where($foreign, $parameter);
+				    			});
+		            	});
+	            	}else{
+	                	$query->$where($subject, '=', $operator);
+	            	}
+	            }
+	        }
+        });
+        
+        $filtered = $query->count();
+        return ['total' => $total, 'filtered' => $filtered];
     }
 }
