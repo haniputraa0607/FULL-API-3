@@ -27,6 +27,7 @@ use App\Http\Models\News;
 use App\Http\Models\OauthAccessToken;
 use Modules\RedirectComplex\Entities\RedirectComplexReference;
 
+use App\Http\Models\PromotionSent;
 //use Modules\Campaign\Http\Requests\campaign_list;
 //use Modules\Campaign\Http\Requests\campaign_create;
 //use Modules\Campaign\Http\Requests\campaign_update;
@@ -932,5 +933,21 @@ class ApiCampaign extends Controller
         }else{
             return response()->json(['status'  => 'fail','messages'  => ['Incompleted data']]);
         }
+    }
+
+    public function updatePushClickCount(Request $request)
+    {
+    	$now = date("Y-m-d H:i:s");
+    	switch ($request->source) {
+    		case 'campaign':
+    			$update = CampaignPushSent::where('id_campaign_push_sent', $request->id_notif)->whereNull('click_at')->update(['click_at' => $now]);
+    			break;
+    		
+    		default:
+    			# code...
+    			break;
+    	}
+
+    	return ['status' => 'success'];
     }
 }

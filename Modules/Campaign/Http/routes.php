@@ -20,7 +20,7 @@ Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scope
     Route::post('delete', ['middleware' => 'feature_control:102', 'uses' =>'ApiCampaign@destroy']);
 });
 
-Route::group(['prefix' => 'api/campaign', 'namespace' => 'Modules\Campaign\Http\Controllers'], function()
+Route::group(['prefix' => 'api/campaign', 'middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'namespace' => 'Modules\Campaign\Http\Controllers'], function()
 {
-    Route::post('send2', ['uses' =>'ApiCampaign@SendCampaign']);
+    Route::post('push-click', ['uses' =>'ApiCampaign@updatePushClickCount']);
 });
