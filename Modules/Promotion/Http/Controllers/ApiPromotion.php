@@ -222,6 +222,10 @@ class ApiPromotion extends Controller
 					}
 				}
 				$promotion = Promotion::where('id_promotion','=',$post['id_promotion'])->with(['user', 'promotion_rule_parents', 'promotion_rule_parents.rules', 'schedules', 'contents', 'contents.deals','contents.deals.outlets','contents.deals.deals_vouchers', 'contents.whatsapp_content'])->first();
+
+				foreach ($promotion['contents'] as $key => $value) {
+					$promotion['contents'][$key]['count_push_click_at'] = PromotionSent::where('id_promotion_content', $value['id_promotion_content'])->whereNotNull('push_click_at')->count();
+				}
 			}
 			// for display user in step 2
 			else{
