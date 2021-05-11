@@ -64,6 +64,10 @@ class ApiCampaign extends Controller
 			$query = $query->where('campaign_title','like','%'.$post['campaign_title'].'%');
 		}
 
+		$query->withCount(['campaign_push_sents' => function($q) {
+			$q->whereNotNull('click_at');
+		}]);
+
         $query = $query->paginate(15);
         return response()->json(MyHelper::checkGet($query));
 	}
