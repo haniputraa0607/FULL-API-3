@@ -34,6 +34,7 @@ use Modules\Disburse\Entities\LogIRIS;
 use Modules\Disburse\Entities\LogTopupIris;
 use Modules\Disburse\Entities\MDR;
 use Modules\Disburse\Entities\PromoPaymentGatewayTransaction;
+use Modules\Disburse\Entities\RulePromoPaymentGateway;
 use  Modules\UserFranchise\Entities\UserFranchisee;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
@@ -189,6 +190,13 @@ class ApiIrisController extends Controller
                                 $arrTmp = [];
                                 $arrTmpDisburse = [];
                                 foreach ($getData as $data){
+                                    //check promo payment gateway
+                                    if(!empty($data['id_rule_promo_payment_gateway'])){
+                                        $rulePromoPG = RulePromoPaymentGateway::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])->first();
+                                        if(date('Y-m-d') < $rulePromoPG['end_date'] || $data['status_validation_promo_payment_gateway'] == 0){
+                                            continue;
+                                        }
+                                    }
 
                                     if(!is_null($data['beneficiary_account'])){
                                         $amount = $data['income_outlet'];
@@ -522,7 +530,7 @@ class ApiIrisController extends Controller
     /* !!!!============= ATTENTION =============!!!! */
     /* !!!! please add new condition in "process calculation payment gateway" if you added new payment gateway !!!! */
     /* !!!! after update function please restart queue !!!! */
-    public function calculationTransaction($id_transaction=746,$additionalDataPromoPayment = []){
+    public function calculationTransaction($id_transaction,$additionalDataPromoPayment = []){
         $data = Transaction::where('id_transaction', $id_transaction)
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
             ->with(['transaction_multiple_payment', 'vouchers', 'promo_campaign', 'transaction_payment_subscription'])
@@ -645,6 +653,7 @@ class ApiIrisController extends Controller
                     if(strtolower($payments['type']) == 'midtrans'){
                         $midtrans = TransactionPaymentMidtran::where('id_transaction', $data['id_transaction'])->first();
                         $payment = $midtrans['payment_type'];
+                        $originalAmountPG = $midtrans['gross_amount'];
                         if($statusSplitPayment == 1){
                             $amountMDR = $grandTotal - $nominalSubscription;
                         }else{
@@ -698,6 +707,7 @@ class ApiIrisController extends Controller
                         }
                     }elseif(strtolower($payments['type']) == 'ipay88'){
                         $ipay88 = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first();
+                        $originalAmountPG = $ipay88['amount']/100;
                         if($statusSplitPayment == 1){
                             $amountMDR = $grandTotal - $nominalSubscription;
                         }else{
@@ -718,7 +728,7 @@ class ApiIrisController extends Controller
                         }
                     }elseif (strtolower($payments['type']) == 'ovo'){
                         $ovo = TransactionPaymentOvo::where('id_transaction', $data['id_transaction'])->first();
-
+                        $originalAmountPG = $ovo['amount']/100;
                         if($statusSplitPayment == 1){
                             $amountMDR = $grandTotal - $nominalSubscription;
                         }else{
@@ -737,6 +747,7 @@ class ApiIrisController extends Controller
                         }
                     }elseif (strtolower($payments['type']) == 'shopeepay'){
                         $shopeepay = TransactionPaymentShopeePay::where('id_transaction', $data['id_transaction'])->first();
+                        $originalAmountPG = $shopeepay['amount']/100;
                         if($statusSplitPayment == 1){
                             $amountMDR = $grandTotal - $nominalSubscription;
                         }else{
@@ -949,6 +960,7 @@ class ApiIrisController extends Controller
                             'payment_gateway_user' => $promoPaymentGateway['payment_gateway_user']??NULL,
                             'id_user' => $promoPaymentGateway['id_user']??NULL,
                             'id_transaction' => $data['id_transaction'],
+                            'amount' => $originalAmountPG??0,
                             'total_received_cashback' => $promoPaymentGatewayCashback
                         ]
                     );
@@ -1099,6 +1111,7 @@ class ApiIrisController extends Controller
 
                         if(strtolower($payments['type']) == 'midtrans'){
                             $midtrans = TransactionPaymentMidtran::where('id_transaction', $data['id_transaction'])->first();
+                            $originalAmountPG = $midtrans['gross_amount'];
                             $payment = $midtrans['payment_type'];
                             if($statusSplitPayment == 1){
                                 $amountMDR = $grandTotal - $nominalSubscription;
@@ -1145,6 +1158,7 @@ class ApiIrisController extends Controller
                             }
                         }elseif(strtolower($payments['type']) == 'ipay88'){
                             $ipay88 = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first();
+                            $originalAmountPG = $ipay88['amount']/100;
                             if($statusSplitPayment == 1){
                                 $amountMDR = $grandTotal - $nominalSubscription;
                             }else{
@@ -1161,7 +1175,7 @@ class ApiIrisController extends Controller
                             }
                         }elseif (strtolower($payments['type']) == 'ovo'){
                             $ovo = TransactionPaymentOvo::where('id_transaction', $data['id_transaction'])->first();
-
+                            $originalAmountPG = $ovo['amount']/100;
                             if($statusSplitPayment == 1){
                                 $amountMDR = $grandTotal - $nominalSubscription;
                             }else{
@@ -1177,6 +1191,7 @@ class ApiIrisController extends Controller
                             }
                         }elseif (strtolower($payments['type']) == 'shopeepay'){
                             $shopeepay = TransactionPaymentShopeePay::where('id_transaction', $data['id_transaction'])->first();
+                            $originalAmountPG = $shopeepay['amount']/100;
                             if($statusSplitPayment == 1){
                                 $amountMDR = $grandTotal - $nominalSubscription;
                             }else{
@@ -1386,6 +1401,7 @@ class ApiIrisController extends Controller
                                 'payment_gateway_user' => $promoPaymentGateway['payment_gateway_user']??NULL,
                                 'id_user' => $promoPaymentGateway['id_user']??NULL,
                                 'id_transaction' => $data['id_transaction'],
+                                'amount' => $originalAmountPG??0,
                                 'total_received_cashback' => $promoPaymentGatewayCashback
                             ]
                         );
