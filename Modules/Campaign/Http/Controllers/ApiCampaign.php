@@ -836,7 +836,7 @@ class ApiCampaign extends Controller
 
 		$query = CampaignPushSent::join('campaigns','campaigns.id_campaign','=','campaign_push_sents.id_campaign')
 									->orderBy('id_campaign_push_sent', 'Desc');
-		$count = CampaignPushSent::join('campaigns','campaigns.id_campaign','=','campaign_push_sents.id_campaign')->get();
+		$count = CampaignPushSent::join('campaigns','campaigns.id_campaign','=','campaign_push_sents.id_campaign');
 
 		if(isset($post['push_sent_subject']) && $post['push_sent_subject'] != ""){
 			$query = $query->where('push_sent_subject','like','%'.$post['push_sent_subject'].'%');
