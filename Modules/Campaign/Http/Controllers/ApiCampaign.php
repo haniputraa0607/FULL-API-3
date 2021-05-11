@@ -943,6 +943,10 @@ class ApiCampaign extends Controller
     			$update = CampaignPushSent::where('id_campaign_push_sent', $request->id_notif)->whereNull('click_at')->update(['click_at' => $now]);
     			break;
     		
+    		case 'promotion':
+    			$update = PromotionSent::where('id_promotion_sent', $request->id_notif)->whereNull('push_click_at')->update(['push_click_at' => $now]);
+    			break;
+    		
     		default:
     			# code...
     			break;
