@@ -958,4 +958,29 @@ class ApiCampaign extends Controller
 
     	return ['status' => 'success'];
     }
+
+    public function campaignPushOutboxListV2(Request $request){
+		$post = $request->json()->all();
+
+		$query = CampaignPushSent::join('campaigns','campaigns.id_campaign','=','campaign_push_sents.id_campaign')->orderBy('id_campaign_push_sent', 'Desc');
+
+		if(isset($post['push_sent_subject']) && $post['push_sent_subject'] != ""){
+			$query = $query->where('push_sent_subject','like','%'.$post['push_sent_subject'].'%');
+		}
+
+		$query = $query->paginate(15)->toArray();
+
+		if(isset($query) && !empty($query)) {
+			$result = [
+					'status'  => 'success',
+					'result'  => $query
+				];
+		} else {
+			$result = [
+					'status'  => 'fail',
+					'messages'  => ['No Campaign Push Notification Outbox']
+				];
+		}
+		return response()->json($result);
+	}
 }

@@ -13,7 +13,7 @@ Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scope
     Route::post('email/outbox/detail', ['middleware' => 'feature_control:103', 'uses' =>'ApiCampaign@campaignEmailOutboxDetail']);
 	Route::post('sms/outbox/list', ['middleware' => 'feature_control:105', 'uses' =>'ApiCampaign@campaignSmsOutboxList']);
 	Route::post('sms/outbox/detail', ['middleware' => 'feature_control:105', 'uses' =>'ApiCampaign@campaignSmsOutboxDetail']);
-	Route::post('push/outbox/list', ['middleware' => 'feature_control:107', 'uses' =>'ApiCampaign@campaignPushOutboxList']);
+	Route::post('push/outbox/list', ['middleware' => 'feature_control:107', 'uses' =>'ApiCampaign@campaignPushOutboxListV2']);
 	Route::post('push/outbox/detail', ['middleware' => 'feature_control:107', 'uses' =>'ApiCampaign@campaignPushOutboxDetail']);
     Route::post('whatsapp/outbox/list', 'ApiCampaign@campaignWhatsappOutboxList');
     Route::post('step2', ['middleware' => 'feature_control:99', 'uses' =>'ApiCampaign@ShowCampaignStep2']);
