@@ -125,7 +125,15 @@ class ApiBrandController extends Controller
     {
         $post = $request->json()->all();
 
-        $getBrand = Brand::with(['brand_outlet.outlets', 'brand_product.products'])->where('id_brand', $post['id_brand'])->get()->first();
+        $getBrand = Brand::with([
+        	'brand_outlet.outlets', 
+        	'brand_product' => function($q) {
+        		$q->whereHas('products');
+        	},
+        	'brand_product.products',
+        ])
+        ->where('id_brand', $post['id_brand'])->get()->first();
+
         $getBrand['brand_deal'] = Deal::where('id_brand', $post['id_brand'])->get()->toArray();
 
         return response()->json(['status'  => 'success', 'result' => $getBrand]);
