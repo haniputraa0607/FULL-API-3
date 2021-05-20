@@ -31,6 +31,8 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('/setting', 'ApiSettingTransaction@settingTrx');
     Route::any('be/filter', 'ApiTransaction@transactionFilter');
 
+    Route::post('retry-void-payment/retry', 'ApiTransaction@retry');
+
     Route::group(['prefix' => 'manualpayment'], function () {
         Route::get('/bank', ['middleware' => 'feature_control:64', 'uses' => 'ApiTransactionPaymentManual@bankList']);
         Route::post('/bank/delete', ['middleware' => 'feature_control:68', 'uses' => 'ApiTransactionPaymentManual@bankDelete']);

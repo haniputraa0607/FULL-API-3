@@ -1113,8 +1113,7 @@ class ShopeePayController extends Controller
          *     }
          * }
          */
-        $status = $this->checkStatus($reference, $type);
-        return (($status['response']['payment_status'] ?? false) == '3');
+        return (($status['response']['transaction_list'][0]['status']??false) == '3' && ($status['response']['transaction_list'][0]['transaction_type']??false) == '15');
     }
 
     /**
@@ -1262,8 +1261,7 @@ class ShopeePayController extends Controller
          */
         
         // check status after void
-        $status = $this->checkStatus($reference, $type);
-        return (($status['response']['payment_status']??false) == '4');
+        return (($status['response']['transaction_list'][0]['status']??false) == '3' && ($status['response']['transaction_list'][0]['transaction_type']??false) == '26');
     }
 
     /**
