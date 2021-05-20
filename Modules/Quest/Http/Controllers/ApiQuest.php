@@ -1326,11 +1326,12 @@ class ApiQuest extends Controller
     public function me(Request $request)
     {
         $id_user = $request->user()->id;
-        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'quest_users.date_start', 'quest_users.date_end', 'quest_users.id_user', 'redemption_date', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
+        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'quest_users.date_start', 'quest_users.id_user', 'redemption_date', \DB::raw('COALESCE(redemption_status, 0) as claimed_status, (CASE WHEN quest_user_redemptions.redemption_status = 1 THEN quest_user_redemptions.redemption_date WHEN quests.stop_at is not null and quests.stop_at < quest_users.date_end THEN quests.stop_at ELSE quest_users.date_end END) as date_end'))
             ->where('is_complete', 1)
             ->where(function($query) {
                 $query->where('quest_user_redemptions.redemption_status', 1);
                 $query->orWhere('quest_users.date_end', '<', date('Y-m-d H:i:s'));
+                $query->orWhereNotNull('quests.stop_at', '<', 'quest_users.date_end');
             })
             ->groupBy('quests.id_quest')
             ->join('quest_users', function($q) use ($id_user) {
@@ -1355,11 +1356,13 @@ class ApiQuest extends Controller
         }
 
         if ($request->date_start) {
-            $quests->where('quest_users.date_end', '>=', $request->date_start);
+            $quests->where(\DB::raw('(CASE WHEN quest_user_redemptions.redemption_status = 1 THEN quest_user_redemptions.redemption_date WHEN quests.stop_at is not null and quests.stop_at < quest_users.date_end THEN quests.stop_at ELSE quest_users.date_end END)'), '>=', $request->date_start);
         }
         if ($request->date_end) {
-            $quests->where('quest_users.date_start', '<=', $request->date_end);
+            $quests->where(\DB::raw('(CASE WHEN quest_user_redemptions.redemption_status = 1 THEN quest_user_redemptions.redemption_date WHEN quests.stop_at is not null and quests.stop_at < quest_users.date_end THEN quests.stop_at ELSE quest_users.date_end END)'), '<=', $request->date_end);
         }
+
+        $quests->orderBy('date_end', 'desc');
 
         if ($request->page) {
             $quests = $quests->paginate();
