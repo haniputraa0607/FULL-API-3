@@ -27,6 +27,7 @@ use App\Http\Models\News;
 use App\Http\Models\OauthAccessToken;
 use Modules\RedirectComplex\Entities\RedirectComplexReference;
 
+use App\Http\Models\PromotionSent;
 //use Modules\Campaign\Http\Requests\campaign_list;
 //use Modules\Campaign\Http\Requests\campaign_create;
 //use Modules\Campaign\Http\Requests\campaign_update;
@@ -62,6 +63,10 @@ class ApiCampaign extends Controller
 		if(isset($post['campaign_title']) && $post['campaign_title'] != ""){
 			$query = $query->where('campaign_title','like','%'.$post['campaign_title'].'%');
 		}
+
+		$query->withCount(['campaign_push_sents' => function($q) {
+			$q->whereNotNull('click_at');
+		}]);
 
         $query = $query->paginate(15);
         return response()->json(MyHelper::checkGet($query));
@@ -835,7 +840,7 @@ class ApiCampaign extends Controller
 
 		$query = CampaignPushSent::join('campaigns','campaigns.id_campaign','=','campaign_push_sents.id_campaign')
 									->orderBy('id_campaign_push_sent', 'Desc');
-		$count = CampaignPushSent::join('campaigns','campaigns.id_campaign','=','campaign_push_sents.id_campaign')->get();
+		$count = CampaignPushSent::join('campaigns','campaigns.id_campaign','=','campaign_push_sents.id_campaign');
 
 		if(isset($post['push_sent_subject']) && $post['push_sent_subject'] != ""){
 			$query = $query->where('push_sent_subject','like','%'.$post['push_sent_subject'].'%');
@@ -933,4 +938,49 @@ class ApiCampaign extends Controller
             return response()->json(['status'  => 'fail','messages'  => ['Incompleted data']]);
         }
     }
+
+    public function updatePushClickCount(Request $request)
+    {
+    	$now = date("Y-m-d H:i:s");
+    	switch ($request->source) {
+    		case 'campaign':
+    			$update = CampaignPushSent::where('id_campaign_push_sent', $request->id_notif)->whereNull('click_at')->update(['click_at' => $now]);
+    			break;
+    		
+    		case 'promotion':
+    			$update = PromotionSent::where('id_promotion_sent', $request->id_notif)->whereNull('push_click_at')->update(['push_click_at' => $now]);
+    			break;
+    		
+    		default:
+    			# code...
+    			break;
+    	}
+
+    	return ['status' => 'success'];
+    }
+
+    public function campaignPushOutboxListV2(Request $request){
+		$post = $request->json()->all();
+
+		$query = CampaignPushSent::join('campaigns','campaigns.id_campaign','=','campaign_push_sents.id_campaign')->orderBy('id_campaign_push_sent', 'Desc');
+
+		if(isset($post['push_sent_subject']) && $post['push_sent_subject'] != ""){
+			$query = $query->where('push_sent_subject','like','%'.$post['push_sent_subject'].'%');
+		}
+
+		$query = $query->paginate(15)->toArray();
+
+		if(isset($query) && !empty($query)) {
+			$result = [
+					'status'  => 'success',
+					'result'  => $query
+				];
+		} else {
+			$result = [
+					'status'  => 'fail',
+					'messages'  => ['No Campaign Push Notification Outbox']
+				];
+		}
+		return response()->json($result);
+	}
 }

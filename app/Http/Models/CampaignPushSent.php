@@ -42,7 +42,8 @@ class CampaignPushSent extends Model
 		'push_sent_to',
 		'push_sent_subject',
 		'push_sent_content',
-		'push_sent_send_at'
+		'push_sent_send_at',
+		'click_at'
 	];
 
 	public function campaign()

@@ -30,6 +30,7 @@ class PromotionSent extends Model
 		'channel_push',
 		'channel_inbox',
 		'email_read',
+		'push_click_at',
 		'id_deals_voucher',
 		'created_at',
 		'updated_at',
