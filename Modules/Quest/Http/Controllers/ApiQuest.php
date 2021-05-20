@@ -885,6 +885,18 @@ class ApiQuest extends Controller
             $errors[] = 'Quest belum selesai';
             return false;
         }
+
+        // first check done send notif
+        if (!(QuestUser::where(['id_quest' => $quest->id_quest, 'id_user' => $id_user])->pluck('is_done')->first())) {
+            $autocrm = app($this->autocrm)->SendAutoCRM('Quest Completed', $user->phone,
+                [
+                    'id_quest'           => $quest->id_quest,
+                    'quest_name'         => $quest->name,
+                ]
+            );
+        }
+
+        // update is_done status
         QuestUser::where(['id_quest' => $quest->id_quest, 'id_user' => $id_user])->update(['is_done' => 1]);
 
         $benefit =  QuestBenefit::with('deals')->where(['id_quest' => $quest->id_quest])->first();
