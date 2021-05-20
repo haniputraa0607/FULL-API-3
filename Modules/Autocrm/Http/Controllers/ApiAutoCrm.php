@@ -573,6 +573,12 @@ class ApiAutoCrm extends Controller
                             }else{
                                 $dataOptional['id_reference'] = 0;
                             }
+                        }elseif ($crm['autocrm_push_clickto'] == 'Quest') {
+                            if (isset($variables['id_quest'])) {
+                                $dataOptional['id_reference'] = $variables['id_quest'];
+                            } else {
+                                $dataOptional['id_reference'] = 0;
+                            }
                         }elseif ($crm['autocrm_push_clickto'] == 'Home') {
                             $dataOptional['id_reference'] = 0;
                         }elseif ($crm['autocrm_push_clickto'] == 'Logout') {
@@ -689,6 +695,12 @@ class ApiAutoCrm extends Controller
                     }elseif ($crm['autocrm_inbox_clickto'] == 'Subscription') {
                         if (isset($variables['id_subscription'])) {
                             $inbox['inboxes_id_reference'] = $variables['id_subscription'];
+                        }else{
+                            $inbox['inboxes_id_reference'] = 0;
+                        }
+                    }elseif ($crm['autocrm_inbox_clickto'] == 'Quest') {
+                        if (isset($variables['id_quest'])) {
+                            $inbox['inboxes_id_reference'] = $variables['id_quest'];
                         }else{
                             $inbox['inboxes_id_reference'] = 0;
                         }

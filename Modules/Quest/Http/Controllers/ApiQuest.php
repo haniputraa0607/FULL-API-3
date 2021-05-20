@@ -916,6 +916,8 @@ class ApiQuest extends Controller
             // addLogBalance
             $autocrm = app($this->autocrm)->SendAutoCRM('Receive Quest Point', $user->phone,
                 [
+                    'id_quest'           => $quest->id_quest,
+                    'id_log_balance'     => $id_reference,
                     'quest_name'         => $quest->name,
                     'point_received'     => MyHelper::requestNumber($benefit->value, '_POINT'),
                 ]
@@ -957,6 +959,8 @@ class ApiQuest extends Controller
             if ($count) {
                 $autocrm = app($this->autocrm)->SendAutoCRM('Receive Quest Voucher', $user->phone,
                     [
+                        'id_quest'           => $quest->id_quest,
+                        'id_deals_user'      => $id_reference,
                         'count_voucher'      => (string) $count,
                         'deals_title'        => $deals->deals_title,
                         'quest_name'         => $quest->name,
