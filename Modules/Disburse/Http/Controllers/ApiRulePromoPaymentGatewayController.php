@@ -4,6 +4,8 @@ namespace Modules\Disburse\Http\Controllers;
 
 use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
+use App\Http\Models\TransactionPaymentMidtran;
+use App\Jobs\ValidationPromoPaymentGatewayJob;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -22,10 +24,13 @@ use Modules\Disburse\Entities\PromoPaymentGatewayValidation;
 use Modules\Disburse\Entities\PromoPaymentGatewayValidationTransaction;
 use Modules\Disburse\Entities\RulePromoPaymentGateway;
 use App\Http\Models\Transaction;
+use Modules\IPay88\Entities\TransactionPaymentIpay88;
+use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use Rap2hpoutre\FastExcel\FastExcel;
 use File;
 use Storage;
 use Excel;
+use DateTime;
 
 class ApiRulePromoPaymentGatewayController extends Controller
 {
@@ -36,6 +41,45 @@ class ApiRulePromoPaymentGatewayController extends Controller
     public function index(Request $request){
         $post = $request->json()->all();
         $list = RulePromoPaymentGateway::orderBy('created_at', 'desc');
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'promo_payment_gateway_code' || $row['subject'] == 'name'){
+                            if($row['operator'] == '='){
+                                $list->where($row['subject'], $row['parameter']);
+                            }else{
+                                $list->where($row['subject'], 'like', '%'.$row['parameter'].'%');
+                            }
+                        }else{
+                            $list->where($row['subject'], $row['operator']);
+                        }
+                    }
+                }
+            }else{
+                $list->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'promo_payment_gateway_code' || $row['subject'] == 'name'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere($row['subject'], $row['parameter']);
+                                }else{
+                                    $subquery->orWhere($row['subject'], 'like', '%'.$row['parameter'].'%');
+                                }
+                            }else{
+                                $subquery->orWhere($row['subject'], $row['operator']);
+                            }
+                        }
+                    }
+                });
+            }
+        }
 
         if(isset($post['all_data']) && $post['all_data'] == 1){
             $list = $list->get()->toArray();
@@ -73,9 +117,14 @@ class ApiRulePromoPaymentGatewayController extends Controller
             'payment_gateway' => $post['payment_gateway'],
             'start_date' => $dateStart,
             'end_date' => $dateEnd,
-            'limit_promo_total' => $post['limit_promo_total'],
+            'limit_promo_total' => $post['limit_promo_total']??NULL,
+            'limit_promo_additional_day' => $post['limit_promo_additional_day']??NULL,
+            'limit_promo_additional_week' => $post['limit_promo_additional_week']??NULL,
+            'limit_promo_additional_month' => $post['limit_promo_additional_month']??NULL,
+            'limit_promo_additional_account' => $post['limit_promo_additional_account']??NULL,
+            'limit_promo_additional_account_type' => $post['limit_promo_additional_account_type']??NULL,
             'cashback_type' => $post['cashback_type'],
-            'cashback' => $post['cashback'],
+            'cashback' => ($post['cashback_type'] == 'Nominal' ? str_replace('.', '', $post['cashback']):$post['cashback']),
             'maximum_cashback' => str_replace('.', '', $post['maximum_cashback']),
             'minimum_transaction' => str_replace('.', '', $post['minimum_transaction']),
             'charged_type' => $post['charged_type'],
@@ -86,14 +135,8 @@ class ApiRulePromoPaymentGatewayController extends Controller
             'mdr_setting' => $post['mdr_setting']
         ];
 
-        if($post['limit_promo_additional_type'] !== 'account'){
-            $post['limit_promo_additional_account_type'] = NULL;
-        }
-
-        if(!empty($post['limit_promo_additional'])){
-            $dataCreate['limit_promo_additional'] = $post['limit_promo_additional'];
-            $dataCreate['limit_promo_additional_type'] = $post['limit_promo_additional_type'];
-            $dataCreate['limit_promo_additional_account_type'] = $post['limit_promo_additional_account_type'];
+        if(empty($post['limit_promo_additional_account'])){
+            $dataCreate['limit_promo_additional_account_type'] = NULL;
         }
 
         $create = RulePromoPaymentGateway::create($dataCreate);
@@ -142,8 +185,13 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 'start_date' => $dateStart,
                 'end_date' => $dateEnd,
                 'limit_promo_total' => $post['limit_promo_total'],
+                'limit_promo_additional_day' => $post['limit_promo_additional_day']??NULL,
+                'limit_promo_additional_week' => $post['limit_promo_additional_week']??NULL,
+                'limit_promo_additional_month' => $post['limit_promo_additional_month']??NULL,
+                'limit_promo_additional_account' => $post['limit_promo_additional_account']??NULL,
+                'limit_promo_additional_account_type' => $post['limit_promo_additional_account_type']??NULL,
                 'cashback_type' => $post['cashback_type'],
-                'cashback' => $post['cashback'],
+                'cashback' => ($post['cashback_type'] == 'Nominal' ? str_replace('.', '', $post['cashback']):$post['cashback']),
                 'maximum_cashback' => str_replace('.', '', $post['maximum_cashback']),
                 'minimum_transaction' => str_replace('.', '', $post['minimum_transaction']),
                 'charged_type' => $post['charged_type'],
@@ -155,18 +203,8 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 'last_updated_by' => $idAdmin
             ];
 
-            $dataUpdate['limit_promo_additional'] = NULL;
-            $dataUpdate['limit_promo_additional_type'] = NULL;
-            $dataUpdate['limit_promo_additional_account_type'] = NULL;
-
-            if($post['limit_promo_additional_type'] !== 'account'){
-                $post['limit_promo_additional_account_type'] = NULL;
-            }
-
-            if(!empty($post['limit_promo_additional'])){
-                $dataUpdate['limit_promo_additional'] = $post['limit_promo_additional'];
-                $dataUpdate['limit_promo_additional_type'] = $post['limit_promo_additional_type'];
-                $dataUpdate['limit_promo_additional_account_type'] = $post['limit_promo_additional_account_type'];
+            if(empty($post['limit_promo_additional_account'])){
+                $dataUpdate['limit_promo_additional_account_type'] = NULL;
             }
 
             $update = RulePromoPaymentGateway::where('id_rule_promo_payment_gateway', $post['id_rule_promo_payment_gateway'])->update($dataUpdate);
@@ -221,6 +259,24 @@ class ApiRulePromoPaymentGatewayController extends Controller
         }
     }
 
+    public function markAsValid(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['id_rule_promo_payment_gateway']) && !empty($post['id_rule_promo_payment_gateway'])){
+            $idAdmin = auth()->user()->id;
+            $update = DisburseOutletTransaction::where('id_rule_promo_payment_gateway', $post['id_rule_promo_payment_gateway'])->update(['status_validation_promo_payment_gateway' => 1]);
+
+            if($update){
+                $update = RulePromoPaymentGateway::where('id_rule_promo_payment_gateway', $post['id_rule_promo_payment_gateway'])
+                    ->update(['validation_status' => 1, 'last_updated_by' => $idAdmin]);
+            }
+
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
+        }
+    }
+
     public function getAvailablePromo($id_transaction, $additionalData = []){
         $currentDate = date('Y-m-d');
         $detailTrx = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
@@ -233,7 +289,6 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 'transaction_payment_ipay88s.user_contact', 'transaction_payment_ipay88s.amount as ipay88_amount',
                 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay',
                 'transaction_payment_shopee_pays.amount as shopee_amount')
-            ->whereNull('transaction_pickups.reject_at')
             ->where('transactions.transaction_payment_status', 'Completed')
             ->where('transactions.id_transaction', $id_transaction)->first();
 
@@ -316,17 +371,23 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 $data['fee_central'] = round($chargedCentral,2);
                 $data['fee_outlet'] = round($chargedOutlet,2);
 
-                $dataAlreadyUsePromo = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])->count();
+                $dataAlreadyUsePromo = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])->where('status_active', 1)->count();
                 if($dataAlreadyUsePromo >= $data['limit_promo_total']){
                     continue;
                 }
                 $data['id_user'] = $detailTrx['id_user'];
-                if(empty($data['limit_promo_additional'])){
-                    return $data;
-                }elseif ($data['limit_promo_additional_type'] == 'day'){
-                    $dataAlreadyUsePromoAdditional = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])
+
+                if(!empty($data['limit_promo_additional_day'])){
+                    $dataAlreadyUsePromoAdditionalDay = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])
+                        ->where('status_active', 1)
                         ->whereDate('created_at', $currentDate)->count();
-                }elseif ($data['limit_promo_additional_type'] == 'week'){
+
+                    if($dataAlreadyUsePromoAdditionalDay >= $data['limit_promo_additional_day']){
+                        continue;
+                    }
+                }
+
+                if(!empty($data['limit_promo_additional_week'])){
                     $currentWeekNumber = date('W', strtotime($currentDate));
                     $currentYear = date('Y', strtotime($currentDate));
                     $dto = new DateTime();
@@ -335,33 +396,45 @@ class ApiRulePromoPaymentGatewayController extends Controller
                     $dto->modify('+6 days');
                     $end = $dto->format('Y-m-d');
 
-                    $dataAlreadyUsePromoAdditional = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])
+                    $dataAlreadyUsePromoAdditionalWeek = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])
                         ->where('status_active', 1)
                         ->whereDate('created_at', '>=',$start)->whereDate('created_at', '<=',$end)->count();
-                }elseif ($data['limit_promo_additional_type'] == 'month'){
+
+                    if($dataAlreadyUsePromoAdditionalWeek >= $data['limit_promo_additional_week']){
+                        continue;
+                    }
+                }
+
+                if(!empty($data['limit_promo_additional_month'])){
                     $month = date('m', strtotime($currentDate));
-                    $dataAlreadyUsePromoAdditional = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])
+                    $dataAlreadyUsePromoAdditionalMonth = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])
                         ->where('status_active', 1)
                         ->whereMonth('created_at', '=',$month)->count();
-                }elseif ($data['limit_promo_additional_type'] == 'account'){
+
+                    if($dataAlreadyUsePromoAdditionalMonth >= $data['limit_promo_additional_month']){
+                        continue;
+                    }
+                }
+
+                if(!empty($data['limit_promo_additional_account'])){
                     if($data['limit_promo_additional_account_type'] == 'Jiwa+' || is_null($userPaymentGateway)){
-                        $dataAlreadyUsePromoAdditional = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])
+                        $dataAlreadyUsePromoAdditionalAccount = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])
                             ->where('status_active', 1)
                             ->where('id_user', $detailTrx['id_user'])->count();
                     }else{
                         $data['id_user'] = NULL;
                         $data['payment_gateway_user'] = $userPaymentGateway;
-                        $dataAlreadyUsePromoAdditional = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])
+                        $dataAlreadyUsePromoAdditionalAccount = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])
                             ->where('status_active', 1)
                             ->where('payment_gateway_user', $userPaymentGateway)->count();
                     }
+
+                    if($dataAlreadyUsePromoAdditionalAccount >= $data['limit_promo_additional_account']){
+                        continue;
+                    }
                 }
 
-                if(isset($dataAlreadyUsePromoAdditional) && $dataAlreadyUsePromoAdditional < $data['limit_promo_additional']){
-                    return $data;
-                }else{
-                    continue;
-                }
+                return $data;
             }
 
             return [];
@@ -371,22 +444,76 @@ class ApiRulePromoPaymentGatewayController extends Controller
     public function reportListTransaction(Request $request){
         $post = $request->json()->all();
 
-        if(isset($post['id_rule_promo_payment_gateway']) && !empty($post['id_rule_promo_payment_gateway'])){
-            $report = PromoPaymentGatewayTransaction::join('transactions', 'promo_payment_gateway_transactions.id_transaction', 'transactions.id_transaction')
-                ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-                ->leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
-                ->leftJoin('users', 'users.id', 'promo_payment_gateway_transactions.id_user')
-                ->where('promo_payment_gateway_transactions.id_rule_promo_payment_gateway', $post['id_rule_promo_payment_gateway'])
-                ->select('users.name as customer_name', 'users.phone as customer_phone', 'outlets.outlet_code', 'outlets.outlet_name', 'transactions.transaction_receipt_number',
-                    'promo_payment_gateway_transactions.*');
+        $report = PromoPaymentGatewayTransaction::join('rule_promo_payment_gateway', 'rule_promo_payment_gateway.id_rule_promo_payment_gateway', 'promo_payment_gateway_transactions.id_rule_promo_payment_gateway')
+            ->join('transactions', 'promo_payment_gateway_transactions.id_transaction', 'transactions.id_transaction')
+            ->leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
+            ->leftJoin('users', 'users.id', 'promo_payment_gateway_transactions.id_user')
+            ->where('status_active', 1)
+            ->select('users.name as customer_name', 'users.phone as customer_phone', 'transactions.transaction_receipt_number',
+                'promo_payment_gateway_transactions.*', 'rule_promo_payment_gateway.name');
 
-            if($post['export'] == 1){
-                $report = $report->get()->toArray();
-            }else{
-                $report = $report->paginate(50);
+        if(isset($post['id_rule_promo_payment_gateway']) && !empty($post['id_rule_promo_payment_gateway'])){
+            $report = $report->where('promo_payment_gateway_transactions.id_rule_promo_payment_gateway', $post['id_rule_promo_payment_gateway']);
+        }
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
             }
 
-            return response()->json(MyHelper::checkGet($report));
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'id_rule_promo_payment_gateway'){
+                            $report->where('rule_promo_payment_gateway.id_rule_promo_payment_gateway', $row['operator']);
+                        }else{
+                            if($row['operator'] == '='){
+                                $report->where($row['subject'], $row['parameter']);
+                            }else{
+                                $report->where($row['subject'], 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+                    }
+                }
+            }else{
+                $report->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'id_rule_promo_payment_gateway'){
+                                $subquery->orWhere('promo_payment_gateway_validation.id_rule_promo_payment_gateway', $row['operator']);
+                            }else{
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere($row['subject'], $row['parameter']);
+                                }else{
+                                    $subquery->orWhere($row['subject'], 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        if(isset($post['export']) && $post['export'] == 1){
+            $report = $report->get()->toArray();
+        }else{
+            $report = $report->paginate(50);
+        }
+
+        return response()->json(MyHelper::checkGet($report));
+    }
+
+    public function summaryListTransaction(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['id_rule_promo_payment_gateway']) && !empty($post['id_rule_promo_payment_gateway'])){
+            $summary = PromoPaymentGatewayTransaction::where('promo_payment_gateway_transactions.id_rule_promo_payment_gateway', $post['id_rule_promo_payment_gateway'])
+                ->where('status_active', 1)
+                ->selectRaw('SUM(amount) as total_amount, SUM(total_received_cashback) as total_cashback, COUNT(id_transaction) as total_transaction')
+                ->first();
+
+            return response()->json(MyHelper::checkGet($summary));
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
@@ -420,183 +547,48 @@ class ApiRulePromoPaymentGatewayController extends Controller
     public function validationImport(Request $request){
         $post = $request->json()->all();
         if(isset($post['id_rule_promo_payment_gateway']) && !empty($post['id_rule_promo_payment_gateway'])) {
-            $rule = RulePromoPaymentGateway::where('id_rule_promo_payment_gateway', $post['id_rule_promo_payment_gateway'])->first();
-
-            if(empty($rule)){
-                return response()->json(['status' => 'fail', 'messages' => ['rule promo not found']]);
-            }
-
-            $id_correct_get_promo = [];
-            $id_must_get_promo = [];
-            $id_not_get_promo = [];
-
-            $result = [
-                'correct_get_promo' => [],
-                'must_get_promo' => [],
-                'not_get_promo' => [],
-                'wrong_cashback' => [],
-                'invalid' => 0,
-                'more_msg' => []
-            ];
             $data = $post['data'][0]??[];
 
-            foreach ($data as $key => $value) {
-                if(empty($value['id'])){
-                    $result['invalid']++;
-                    continue;
-                }
+            if(empty($data)){
+                return response()->json(['status' => 'fail', 'messages' => ['data can not be empty']]);
+            }
 
-                if($value['id'] != $rule['promo_payment_gateway_code']){
-                    $result['more_msg'][] = $value['id'].' tidak terdaftar pada promo '.$rule['name'];
-                    continue;
-                }
+            if(!File::exists(public_path().'/promo_payment_gateway_validation')){
+                File::makeDirectory(public_path().'/promo_payment_gateway_validation');
+            }
 
-                $getIdTransaction = Transaction::join('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
-                            ->where('transaction_receipt_number', $value['transaction_receipt_number'])->first();
-                if(empty($getIdTransaction)){
-                    $result['more_msg'][] = $value['transaction_receipt_number'].' tidak ditemukan';
-                    continue;
-                }
+            $directory = 'promo_payment_gateway_validation'.'/'.mt_rand(0, 1000).''.time().''.'.xlsx';
+            $store = (new FastExcel($data))->export(public_path().'/'.$directory);
 
-                if(!empty($getIdTransaction['id_disburse_outlet'])){
-                    $result['more_msg'][] = $value['transaction_receipt_number'].' sudah di disburse';
-                    continue;
-                }
-
-                $getPromoTrx = PromoPaymentGatewayTransaction::where('id_transaction', $getIdTransaction['id_transaction'])->first();
-
-                // cek cashback
-                if(!empty($getPromoTrx) && strtolower($value['status_get_promo_getnot']) == 'get'){
-                    $chasbackTrx = number_format($getPromoTrx['total_received_cashback'],2, '.', '');
-                    $valueCashback = number_format($value['total_cashback'],2, '.', '');
-
-                    $new_cashback = 0;
-                    $old_cashback = 0;
-                    if($chasbackTrx != $valueCashback){
-                        app($this->calculation)->calculationTransaction($getIdTransaction['id_transaction'], ['id_rule_promo_payment_gateway' => $rule['id_rule_promo_payment_gateway'], 'cashback' => $valueCashback]);
-                        $result['wrong_cashback'][] = $value['transaction_receipt_number'];
-                        $new_cashback = $valueCashback;
-                        $old_cashback = $chasbackTrx;
-                    }
-
-                    $id_correct_get_promo[] = [
-                        'id_transaction' => $getIdTransaction['id_transaction'],
-                        'validation_status' => 'correct_get_promo',
-                        'new_cashback' => $new_cashback,
-                        'old_cashback' => $old_cashback
-                    ];
-                    $result['correct_get_promo'][] = $value['transaction_receipt_number'];
-                    $promoUpdate['status_active'] = 1;
-                    $promoUpdate['total_received_cashback'] = $valueCashback;
-                }elseif(!empty($getPromoTrx) && strtolower($value['status_get_promo_getnot']) == 'not'){
-                    $update = [
-                        'income_outlet'=> $getIdTransaction['income_outlet'],
-                        'income_outlet_old' => 0,
-                        'income_central'=> $getIdTransaction['income_central'],
-                        'income_central_old' => 0,
-                        'expense_central'=> $getIdTransaction['expense_central'],
-                        'expense_central_old' => 0,
-                        'payment_charge' => $getIdTransaction['payment_charge'],
-                        'payment_charge_old' => 0,
-                        'id_rule_promo_payment_gateway' => null,
-                        'fee_promo_payment_gateway_type' => NULL,
-                        'fee_promo_payment_gateway' => 0,
-                        'fee_promo_payment_gateway_central' => 0,
-                        'fee_promo_payment_gateway_outlet' => 0,
-                        'charged_promo_payment_gateway' => 0,
-                        'charged_promo_payment_gateway_central' => 0,
-                        'charged_promo_payment_gateway_outlet' => 0,
-                    ];
-                    DisburseOutletTransaction::where('id_transaction', $getIdTransaction['id_transaction'])->update($update);
-
-                    $result['not_get_promo'][] = $value['transaction_receipt_number'];
-                    $id_not_get_promo[] = [
-                        'id_transaction' => $getIdTransaction['id_transaction'],
-                        'validation_status' => 'not_get_promo',
-                        'new_cashback' => 0,
-                        'old_cashback' => 0
-                    ];
-                    $promoUpdate['status_active'] = 0;
-                }elseif(empty($getPromoTrx) && strtolower($value['status_get_promo_getnot']) == 'get'){
-                    $valueCashback = number_format($value['total_cashback'],2, '.', '');
-                    app($this->calculation)->calculationTransaction($getIdTransaction['id_transaction'], ['id_rule_promo_payment_gateway' => $rule['id_rule_promo_payment_gateway'], 'cashback' => $valueCashback]);
-                    $result['must_get_promo'][] = $value['transaction_receipt_number'];
-                    $id_must_get_promo[] = [
-                        'id_transaction' => $getIdTransaction['id_transaction'],
-                        'validation_status' => 'must_get_promo',
-                        'new_cashback' => 0,
-                        'old_cashback' => 0
-                    ];
+            if(config('configs.STORAGE') != 'local'){
+                $contents = File::get(public_path().'/'.$directory);
+                $store = Storage::disk(config('configs.STORAGE'))->put($directory,$contents, 'public');
+                if($store){
+                    File::delete(public_path().'/'.$directory);
                 }
             }
 
-            if(!empty($promoUpdate)){
-                PromoPaymentGatewayTransaction::where('id_promo_payment_gateway_transaction', $getPromoTrx['id_promo_payment_gateway_transaction'])->update($promoUpdate);
+            $createValidation = PromoPaymentGatewayValidation::create([
+                'id_user' => auth()->user()->id,
+                'id_rule_promo_payment_gateway' => $post['id_rule_promo_payment_gateway'],
+                'reference_by' => $post['reference_by'],
+                'start_date_periode' => (!empty($post['start_date_periode']) ? date('Y-m-d', strtotime($post['start_date_periode'])) : NULL),
+                'end_date_periode' => (!empty($post['end_date_periode']) ? date('Y-m-d', strtotime($post['end_date_periode'])) : NULL),
+                'file' => ($store ? $directory : NULL),
+                'processing_status' => 'In Progress'
+            ]);
+
+            if($createValidation){
+                ValidationPromoPaymentGatewayJob::dispatch([
+                    'data' => $data,
+                    'id_promo_payment_gateway_validation' => $createValidation['id_promo_payment_gateway_validation'],
+                    'id_rule_promo_payment_gateway' => $post['id_rule_promo_payment_gateway'],
+                    'reference_by' => $post['reference_by'],
+                    'start_date_periode' => $post['start_date_periode'],
+                    'end_date_periode' => $post['end_date_periode'],
+                ])->onConnection('validationpromopgqueue');
             }
-
-            $arrValidationMerge = array_merge($id_correct_get_promo,$id_must_get_promo,$id_must_get_promo);
-            if(!empty($arrValidationMerge)){
-                if(!File::exists(public_path().'/promo_payment_gateway_validation')){
-                    File::makeDirectory(public_path().'/promo_payment_gateway_validation');
-                }
-
-                $directory = 'promo_payment_gateway_validation'.'/'.mt_rand(0, 1000).''.time().''.'.xlsx';
-                $store = (new FastExcel($data))->export(public_path().'/'.$directory);
-
-                if(config('configs.STORAGE') != 'local'){
-                    $contents = File::get(public_path().'/'.$directory);
-                    $store = Storage::disk(config('configs.STORAGE'))->put($directory,$contents, 'public');
-                    if($store){
-                        File::delete(public_path().'/'.$directory);
-                    }
-                }
-
-                $createValidation = PromoPaymentGatewayValidation::create([
-                    'id_user' => auth()->user()->id,
-                    'id_rule_promo_payment_gateway' => $rule['id_rule_promo_payment_gateway'],
-                    'start_date_periode' => (!empty($post['start_date_periode']) ? date('Y-m-d', strtotime($post['start_date_periode'])) : NULL),
-                    'end_date_periode' => (!empty($post['end_date_periode']) ? date('Y-m-d', strtotime($post['end_date_periode'])) : NULL),
-                    'correct_get_promo' => count($result['correct_get_promo']),
-                    'must_get_promo' => count($result['must_get_promo']),
-                    'not_get_promo' => count($result['not_get_promo']),
-                    'wrong_cashback' => count($result['wrong_cashback']),
-                    'file' => ($store ? $directory : NULL)
-                ]);
-
-                if($createValidation){
-                    $inserValidation = [];
-
-                    foreach ($arrValidationMerge as $val){
-                        $inserValidation[] = [
-                            'id_promo_payment_gateway_validation' => $createValidation['id_promo_payment_gateway_validation'],
-                            'id_transaction' => $val['id_transaction'],
-                            'validation_status' => $val['validation_status'],
-                            'new_cashback' => $val['new_cashback'],
-                            'old_cashback' => $val['old_cashback']
-                        ];
-                    }
-
-                    PromoPaymentGatewayValidationTransaction::insert($inserValidation);
-                }
-            }
-
-            if($result['invalid']){
-                $response[] = 'Invalid '.$result['invalid'].' data';
-            }
-            if($result['correct_get_promo']){
-                $response[] = count($result['correct_get_promo']).' correct data';
-            }
-            if($result['must_get_promo']){
-                $response[] = implode(',', $result['must_get_promo']).' must get promo';
-            }
-            if($result['not_get_promo']){
-                $response[] = implode(',', $result['not_get_promo']).' not get promo';
-            }
-            if($result['wrong_cashback']){
-                $response[] = implode(',', $result['wrong_cashback']).' wrong cashback';
-            }
-            $response = array_merge($response,$result['more_msg']);
-            return response()->json(MyHelper::checkGet($response));
+            return response()->json(MyHelper::checkCreate($createValidation));
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
@@ -608,6 +600,60 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 ->leftJoin('users', 'promo_payment_gateway_validation.id_user', 'users.id')
                 ->select('promo_payment_gateway_validation.*', 'users.name as admin_name', 'rule_promo_payment_gateway.*')
                 ->orderBy('promo_payment_gateway_validation.created_at', 'desc');
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'name'){
+                            if($row['operator'] == '='){
+                                $list->where('users.name', $row['parameter']);
+                            }else{
+                                $list->where('users.name', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'id_rule_promo_payment_gateway'){
+                            $list->where('promo_payment_gateway_validation.id_rule_promo_payment_gateway', $row['operator']);
+                        }
+
+                        if($row['subject'] == 'correct_get_promo' || $row['subject'] == 'not_get_promo' ||
+                            $row['subject'] == 'must_get_promo' || $row['subject'] == 'wrong_cashback'){
+                            $list->where($row['subject'], $row['operator'], $row['parameter']);
+                        }
+                    }
+                }
+            }else{
+                $list->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'name'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('users.name', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('users.name', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'id_rule_promo_payment_gateway'){
+                                $subquery->orWhere('promo_payment_gateway_validation.id_rule_promo_payment_gateway', $row['operator']);
+                            }
+
+                            if($row['subject'] == 'correct_get_promo' || $row['subject'] == 'not_get_promo' ||
+                                $row['subject'] == 'must_get_promo' || $row['subject'] == 'wrong_cashback'){
+                                $subquery->orWhere($row['subject'], $row['operator'], $row['parameter']);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
         $list = $list->paginate(30);
         return response()->json(MyHelper::checkGet($list));
     }
@@ -616,11 +662,13 @@ class ApiRulePromoPaymentGatewayController extends Controller
         $post = $request->json()->all();
         if(isset($post['id_promo_payment_gateway_validation']) && !empty($post['id_promo_payment_gateway_validation'])){
             $detail = PromoPaymentGatewayValidation::join('rule_promo_payment_gateway', 'rule_promo_payment_gateway.id_rule_promo_payment_gateway', 'promo_payment_gateway_validation.id_rule_promo_payment_gateway')
-                ->select('promo_payment_gateway_validation.*', 'rule_promo_payment_gateway.*')
+                ->leftJoin('users', 'users.id', 'promo_payment_gateway_validation.id_user')
+                ->select('promo_payment_gateway_validation.*', 'rule_promo_payment_gateway.*', 'users.name as admin_name')
                 ->where('id_promo_payment_gateway_validation', $post['id_promo_payment_gateway_validation'])
                 ->first();
 
             if($detail){
+                $detail['file'] = config('url.storage_url_api').$detail['file'];
                 $detail['list_detail'] = PromoPaymentGatewayValidationTransaction::join('transactions', 'transactions.id_transaction', 'promo_payment_gateway_validation_transactions.id_transaction')
                                 ->where('id_promo_payment_gateway_validation', $post['id_promo_payment_gateway_validation'])
                                 ->select('promo_payment_gateway_validation_transactions.*', 'transactions.transaction_receipt_number')

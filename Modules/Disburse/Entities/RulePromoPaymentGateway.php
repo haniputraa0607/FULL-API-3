@@ -16,8 +16,10 @@ class RulePromoPaymentGateway extends Model
 		'start_date',
         'end_date',
         'limit_promo_total',
-        'limit_promo_additional',
-        'limit_promo_additional_type',
+        'limit_promo_additional_day',
+        'limit_promo_additional_week',
+        'limit_promo_additional_month',
+        'limit_promo_additional_account',
         'limit_promo_additional_account_type',
         'cashback_type',
         'cashback',
@@ -30,6 +32,7 @@ class RulePromoPaymentGateway extends Model
         'charged_outlet',
         'mdr_setting',
         'start_status',
+        'validation_status',
         'last_updated_by'
 	];
 }

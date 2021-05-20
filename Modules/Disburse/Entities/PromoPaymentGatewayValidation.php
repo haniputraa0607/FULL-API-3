@@ -12,6 +12,8 @@ class PromoPaymentGatewayValidation extends Model
 	protected $fillable = [
 	    'id_user',
 	    'id_rule_promo_payment_gateway',
+        'processing_status',
+        'reference_by',
         'start_date_periode',
         'end_date_periode',
         'correct_get_promo',
