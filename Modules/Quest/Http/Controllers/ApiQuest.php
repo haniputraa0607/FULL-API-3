@@ -45,10 +45,55 @@ class ApiQuest extends Controller
      * Display a listing of the resource.
      * @return Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        $quests = Quest::paginate();
-        return MyHelper::checkGet($quests);
+        $result = Quest::join('quest_benefits', 'quest_benefits.id_quest', 'quests.id_quest');
+        $countTotal = null;
+
+        if ($request->rule) {
+            $countTotal = $result->count();
+            // $this->filterList($result, $request->rule, $request->operator ?: 'and');
+        }
+
+        if (is_array($orders = $request->order)) {
+            $columns = [
+                'name', 
+                'status', 
+                'publish_start', 
+                'publish_end', 
+                'date_start',
+                'benefit_type',
+                'id_quest',
+            ];
+
+            foreach ($orders as $column) {
+                if ($colname = ($columns[$column['column']] ?? false)) {
+                    $result->orderBy($colname, $column['dir']);
+                }
+            }
+        }
+        $result->orderBy('quests.id_quest', $column['dir'] ?? 'DESC');
+
+        if ($request->page) {
+            $result = $result->paginate($request->length ?: 15);
+            $time_server = date('Y-m-d H:i:s');
+            $result->each(function($item) use ($time_server) {
+                $item->images = array_map(function($item) {
+                    return config('url.storage_url_api').$item;
+                }, json_decode($item->images) ?? []);
+                $item->time_server = $time_server;
+            });
+            $result = $result->toArray();
+            if (is_null($countTotal)) {
+                $countTotal = $result['total'];
+            }
+            // needed by datatables
+            $result['recordsTotal'] = $countTotal;
+            $result['recordsFiltered'] = $result['total'];
+        } else {
+            $result = $result->get();
+        }
+        return MyHelper::checkGet($result);
     }
 
     /**
