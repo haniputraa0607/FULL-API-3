@@ -355,19 +355,28 @@ class SendCampaignJob implements ShouldQueue
                     if (!empty($deviceToken)) {
                         if (isset($deviceToken['token']) && !empty($deviceToken['token'])) {
                             try{
+                            	DB::beginTransaction();
+                                $push = [];
+                                $push['id_campaign'] = $campaign['id_campaign'];
+                                $push['push_sent_to'] = $receipient;
+                                $push['push_sent_subject'] = $subject;
+                                $push['push_sent_content'] = $content;
+                                $push['push_sent_send_at'] = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
+
+                                $logs = CampaignPushSent::create($push);
+
+                                $dataOptional['id_notif'] = $logs->id_campaign_push_sent;
+                                $dataOptional['source'] = 'campaign';
+
                                 $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptional);
 
                                 if (isset($push['success']) && $push['success'] > 0) {
-                                    $push = [];
-                                    $push['id_campaign'] = $campaign['id_campaign'];
-                                    $push['push_sent_to'] = $receipient;
-                                    $push['push_sent_subject'] = $subject;
-                                    $push['push_sent_content'] = $content;
-                                    $push['push_sent_send_at'] = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
-
-                                    $logs = CampaignPushSent::create($push);
+                                	DB::commit();
                                     $countPush++;
+                                }else{
+                                	DB::rollback();
                                 }
+
                             }catch(\Exception $e){
                                 \Log::error($e);
                             }

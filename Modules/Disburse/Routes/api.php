@@ -87,7 +87,9 @@ Route::group(['prefix' => 'disburse'], function () {
             Route::post('update', 'ApiRulePromoPaymentGatewayController@update');
             Route::post('delete', 'ApiRulePromoPaymentGatewayController@delete');
             Route::post('start', 'ApiRulePromoPaymentGatewayController@start');
+            Route::post('mark-as-valid', 'ApiRulePromoPaymentGatewayController@markAsValid');
             Route::post('report', 'ApiRulePromoPaymentGatewayController@reportListTransaction');
+            Route::post('summary', 'ApiRulePromoPaymentGatewayController@summaryListTransaction');
             Route::post('validation/export', 'ApiRulePromoPaymentGatewayController@validationExport');
             Route::post('validation/import', 'ApiRulePromoPaymentGatewayController@validationImport');
             Route::any('validation/report', 'ApiRulePromoPaymentGatewayController@validationReport');

@@ -14,6 +14,7 @@ class PromoPaymentGatewayTransaction extends Model
 	    'payment_gateway_user',
 	    'id_user',
 		'id_transaction',
+        'amount',
         'total_received_cashback',
         'status_active'
 	];

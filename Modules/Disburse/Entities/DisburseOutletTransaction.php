@@ -42,6 +42,7 @@ class DisburseOutletTransaction extends Model
         'charged_subscription_central',
         'charged_subscription_outlet',
         'id_rule_promo_payment_gateway',
+        'status_validation_promo_payment_gateway',
         'fee_promo_payment_gateway_type',
         'fee_promo_payment_gateway',
         'fee_promo_payment_gateway_central',
