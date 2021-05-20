@@ -1063,6 +1063,7 @@ class ApiQuest extends Controller
             $data['quest']->applyShortDescriptionTextReplace();
             $data['quest']['short_description_formatted'] = $data['quest']['short_description'];
             $data['quest']['short_description'] = $data['quest']['short_description_ori'];
+            $data['quest']['id_quest_encripted'] = MyHelper::encSlug($data['quest']['id_quest']);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
