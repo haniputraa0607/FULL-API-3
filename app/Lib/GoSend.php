@@ -10,6 +10,8 @@ use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\TransactionPickupGoSendUpdate;
 use App\Http\Models\User;
+use Modules\Autocrm\Entities\AutoresponseCodeList;
+use App\Http\Models\Autocrm;
 
 class GoSend
 {
@@ -301,20 +303,66 @@ class GoSend
                 'no_driver'             => 'Mohon tunggu konfirmasi dari outlet',
             ];
             if($replacer[$delivery_status] ?? false) {
-                $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
-                    [
-                        'id_reference'              => $trx->id_transaction,
-                        'id_transaction'            => $trx->id_transaction,
-                        'receipt_number'            => $trx->transaction_receipt_number,
-                        'outlet_code'               => $outlet->outlet_code,
-                        'outlet_name'               => $outlet->outlet_name,
-                        'delivery_status_title'     => $replacer[$delivery_status] ?? $delivery_status,
-                        'delivery_status_content'   => $replacer_content[$delivery_status] ?? $delivery_status,
-                        'order_id'                  => $trx_pickup->order_id,
-                        'name'                      => ucwords($userName)
-                    ]
-                );                
+
+                if($delivery_status == 'delivered'){
+                    $getAvailableCodeCrm = Autocrm::where('autocrm_title', 'Order Taken With Code')->first();
+                    $code = NULL;
+                    $idCode = NULL;
+
+                    if(!empty($getAvailableCodeCrm) &&
+                        ($getAvailableCodeCrm['autocrm_email_toogle'] == 1 || $getAvailableCodeCrm['autocrm_sms_toogle'] == 1 ||
+                            $getAvailableCodeCrm['autocrm_push_toogle'] == 1 || $getAvailableCodeCrm['autocrm_inbox_toogle'] == 1)){
+
+                        $getAvailableCode = app('Modules\Autocrm\Http\Controllers\ApiAutoresponseWithCode')->getAvailableCode($trx->id_transaction);
+                        $code = $getAvailableCode['autoresponse_code']??null;
+                        $idCode = $getAvailableCode['id_autoresponse_code_list']??null;
+                    }
+
+                    if(!empty($code)) {
+                        $send = app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Order Taken Delivery With Code', $phone, [
+                            'id_reference'    => $trx->id_transaction,
+                            'id_transaction'    => $trx->id_transaction,
+                            'receipt_number'  => $trx->transaction_receipt_number,
+                            'outlet_code'     => $outlet->outlet_code,
+                            'outlet_name'     => $outlet->outlet_name,
+                            'delivery_status' => $replacer[$delivery_status] ?? $delivery_status,
+                            'order_id'        => $trx_pickup->order_id,
+                            'code'            => $code
+                        ]);
+
+                        AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $trx->id_user]);
+                    }else{
+                        $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
+                            [
+                                'id_reference'              => $trx->id_transaction,
+                                'id_transaction'            => $trx->id_transaction,
+                                'receipt_number'            => $trx->transaction_receipt_number,
+                                'outlet_code'               => $outlet->outlet_code,
+                                'outlet_name'               => $outlet->outlet_name,
+                                'delivery_status_title'     => $replacer[$delivery_status] ?? $delivery_status,
+                                'delivery_status_content'   => $replacer_content[$delivery_status] ?? $delivery_status,
+                                'order_id'                  => $trx_pickup->order_id,
+                                'name'                      => ucwords($userName)
+                            ]
+                        );
+                    }
+                }else{
+                    $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
+                        [
+                            'id_reference'              => $trx->id_transaction,
+                            'id_transaction'            => $trx->id_transaction,
+                            'receipt_number'            => $trx->transaction_receipt_number,
+                            'outlet_code'               => $outlet->outlet_code,
+                            'outlet_name'               => $outlet->outlet_name,
+                            'delivery_status_title'     => $replacer[$delivery_status] ?? $delivery_status,
+                            'delivery_status_content'   => $replacer_content[$delivery_status] ?? $delivery_status,
+                            'order_id'                  => $trx_pickup->order_id,
+                            'name'                      => ucwords($userName)
+                        ]
+                    );
+                }
             }
+
             TransactionPickupGoSendUpdate::create($dataUpdate);
         }
     }
