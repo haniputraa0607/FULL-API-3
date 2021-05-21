@@ -142,8 +142,8 @@ class ApiAutoresponseWithCode extends Controller
 		    //check another periode
             $checPeriod = AutoresponseCode::leftJoin('autoresponse_code_list', 'autoresponse_code_list.id_autoresponse_code', 'autoresponse_codes.id_autoresponse_code')
                             ->whereRaw(
-                                "(autoresponse_code_periode_start BETWEEN '".$dateStart."' AND '".$dateEnd."' OR 
-                                    autoresponse_code_periode_end BETWEEN '".$dateStart."' AND '".$dateEnd."')"
+                                "(autoresponse_code_periode_start BETWEEN '".$dateStart."' AND '".$dateEnd."' 
+                                    OR '".$dateStart."' BETWEEN autoresponse_code_periode_start AND autoresponse_code_periode_end)"
                             )
                             ->whereNull('id_user')
                             ->groupBy('autoresponse_codes.id_autoresponse_code')
@@ -268,8 +268,8 @@ class ApiAutoresponseWithCode extends Controller
             //check another periode
             $checPeriod = AutoresponseCode::leftJoin('autoresponse_code_list', 'autoresponse_code_list.id_autoresponse_code', 'autoresponse_codes.id_autoresponse_code')
                 ->whereRaw(
-                    "(autoresponse_code_periode_start BETWEEN '".$dateStart."' AND '".$dateEnd."' OR 
-                        autoresponse_code_periode_end BETWEEN '".$dateStart."' AND '".$dateEnd."')"
+                    "(autoresponse_code_periode_start BETWEEN '".$dateStart."' AND '".$dateEnd."' 
+                                    OR '".$dateStart."' BETWEEN autoresponse_code_periode_start AND autoresponse_code_periode_end)"
                 )
                 ->whereNotIn('autoresponse_codes.id_autoresponse_code', [$post['id_autoresponse_code']])
                 ->whereNull('id_user')

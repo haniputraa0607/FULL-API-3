@@ -75,6 +75,7 @@ use Modules\Product\Entities\ProductGlobalPrice;
 use App\Http\Models\TransactionPickupGoSendUpdate;
 use Modules\OutletApp\Entities\ProductModifierGroupInventoryBrand;
 use App\Http\Models\Autocrm;
+use Modules\Autocrm\Entities\AutoresponseCodeList;
 
 class ApiOutletApp extends Controller
 {
