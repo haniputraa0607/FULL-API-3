@@ -549,6 +549,18 @@ class ApiAutoCrm extends Controller
                             } else{
                                 $dataOptional['id_reference'] = 0;
                             }
+                        }elseif ($crm['autocrm_push_clickto'] == 'History Point Quest') {
+                            if (isset($variables['id_log_balance'])) {
+                                $dataOptional['id_reference'] = $variables['id_log_balance'];
+                            } else {
+                                $dataOptional['id_reference'] = 0;
+                            }
+                        }elseif ($crm['autocrm_push_clickto'] == 'Voucher Quest') {
+                            if (isset($variables['id_deals_user'])) {
+                                $dataOptional['id_reference'] = $variables['id_deals_user'];
+                            } else{
+                                $dataOptional['id_reference'] = 0;
+                            }
                         }elseif ($crm['autocrm_push_clickto'] == 'Deals') {
                             if (isset($variables['id_deals'])) {
                                 $dataOptional['id_reference'] = $variables['id_deals'];
