@@ -34,6 +34,8 @@ use Modules\POS\Http\Requests\Order\ProductSoldOut;
 use App\Lib\Midtrans;
 use App\Lib\MyHelper;
 use DB;
+use App\Http\Models\Autocrm;
+use Modules\Autocrm\Entities\AutoresponseCodeList;
 
 class ApiOrder extends Controller
 {
