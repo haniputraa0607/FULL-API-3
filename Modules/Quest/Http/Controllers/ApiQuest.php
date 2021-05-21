@@ -45,10 +45,55 @@ class ApiQuest extends Controller
      * Display a listing of the resource.
      * @return Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        $quests = Quest::paginate();
-        return MyHelper::checkGet($quests);
+        $result = Quest::join('quest_benefits', 'quest_benefits.id_quest', 'quests.id_quest');
+        $countTotal = null;
+
+        if ($request->rule) {
+            $countTotal = $result->count();
+            // $this->filterList($result, $request->rule, $request->operator ?: 'and');
+        }
+
+        if (is_array($orders = $request->order)) {
+            $columns = [
+                'name', 
+                'status', 
+                'publish_start', 
+                'publish_end', 
+                'date_start',
+                'benefit_type',
+                'id_quest',
+            ];
+
+            foreach ($orders as $column) {
+                if ($colname = ($columns[$column['column']] ?? false)) {
+                    $result->orderBy($colname, $column['dir']);
+                }
+            }
+        }
+        $result->orderBy('quests.id_quest', $column['dir'] ?? 'DESC');
+
+        if ($request->page) {
+            $result = $result->paginate($request->length ?: 15);
+            $time_server = date('Y-m-d H:i:s');
+            $result->each(function($item) use ($time_server) {
+                $item->images = array_map(function($item) {
+                    return config('url.storage_url_api').$item;
+                }, json_decode($item->images) ?? []);
+                $item->time_server = $time_server;
+            });
+            $result = $result->toArray();
+            if (is_null($countTotal)) {
+                $countTotal = $result['total'];
+            }
+            // needed by datatables
+            $result['recordsTotal'] = $countTotal;
+            $result['recordsFiltered'] = $result['total'];
+        } else {
+            $result = $result->get();
+        }
+        return MyHelper::checkGet($result);
     }
 
     /**
@@ -885,6 +930,18 @@ class ApiQuest extends Controller
             $errors[] = 'Quest belum selesai';
             return false;
         }
+
+        // first check done send notif
+        if (!(QuestUser::where(['id_quest' => $quest->id_quest, 'id_user' => $id_user])->pluck('is_done')->first())) {
+            $autocrm = app($this->autocrm)->SendAutoCRM('Quest Completed', $user->phone,
+                [
+                    'id_quest'           => $quest->id_quest,
+                    'quest_name'         => $quest->name,
+                ]
+            );
+        }
+
+        // update is_done status
         QuestUser::where(['id_quest' => $quest->id_quest, 'id_user' => $id_user])->update(['is_done' => 1]);
 
         $benefit =  QuestBenefit::with('deals')->where(['id_quest' => $quest->id_quest])->first();
@@ -916,6 +973,8 @@ class ApiQuest extends Controller
             // addLogBalance
             $autocrm = app($this->autocrm)->SendAutoCRM('Receive Quest Point', $user->phone,
                 [
+                    'id_quest'           => $quest->id_quest,
+                    'id_log_balance'     => $id_reference,
                     'quest_name'         => $quest->name,
                     'point_received'     => MyHelper::requestNumber($benefit->value, '_POINT'),
                 ]
@@ -957,6 +1016,8 @@ class ApiQuest extends Controller
             if ($count) {
                 $autocrm = app($this->autocrm)->SendAutoCRM('Receive Quest Voucher', $user->phone,
                     [
+                        'id_quest'           => $quest->id_quest,
+                        'id_deals_user'      => $id_reference,
                         'count_voucher'      => (string) $count,
                         'deals_title'        => $deals->deals_title,
                         'quest_name'         => $quest->name,
@@ -1002,6 +1063,7 @@ class ApiQuest extends Controller
             $data['quest']->applyShortDescriptionTextReplace();
             $data['quest']['short_description_formatted'] = $data['quest']['short_description'];
             $data['quest']['short_description'] = $data['quest']['short_description_ori'];
+            $data['quest']['id_quest_encripted'] = MyHelper::encSlug($data['quest']['id_quest']);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -1322,11 +1384,12 @@ class ApiQuest extends Controller
     public function me(Request $request)
     {
         $id_user = $request->user()->id;
-        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'quest_users.date_start', 'quest_users.date_end', 'quest_users.id_user', 'redemption_date', \DB::raw('COALESCE(redemption_status, 0) as claimed_status'))
+        $quests = Quest::select('quests.id_quest', 'name', 'image as image_url', 'short_description', 'quest_users.date_start', 'quest_users.id_user', 'redemption_date', \DB::raw('COALESCE(redemption_status, 0) as claimed_status, (CASE WHEN quest_user_redemptions.redemption_status = 1 THEN quest_user_redemptions.redemption_date WHEN quests.stop_at is not null and quests.stop_at < quest_users.date_end THEN quests.stop_at ELSE quest_users.date_end END) as date_end'))
             ->where('is_complete', 1)
             ->where(function($query) {
                 $query->where('quest_user_redemptions.redemption_status', 1);
                 $query->orWhere('quest_users.date_end', '<', date('Y-m-d H:i:s'));
+                $query->orWhereNotNull('quests.stop_at', '<', 'quest_users.date_end');
             })
             ->groupBy('quests.id_quest')
             ->join('quest_users', function($q) use ($id_user) {
@@ -1351,11 +1414,13 @@ class ApiQuest extends Controller
         }
 
         if ($request->date_start) {
-            $quests->where('quest_users.date_end', '>=', $request->date_start);
+            $quests->where(\DB::raw('(CASE WHEN quest_user_redemptions.redemption_status = 1 THEN quest_user_redemptions.redemption_date WHEN quests.stop_at is not null and quests.stop_at < quest_users.date_end THEN quests.stop_at ELSE quest_users.date_end END)'), '>=', $request->date_start);
         }
         if ($request->date_end) {
-            $quests->where('quest_users.date_start', '<=', $request->date_end);
+            $quests->where(\DB::raw('(CASE WHEN quest_user_redemptions.redemption_status = 1 THEN quest_user_redemptions.redemption_date WHEN quests.stop_at is not null and quests.stop_at < quest_users.date_end THEN quests.stop_at ELSE quest_users.date_end END)'), '<=', $request->date_end);
         }
+
+        $quests->orderBy('date_end', 'desc');
 
         if ($request->page) {
             $quests = $quests->paginate();
