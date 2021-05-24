@@ -97,6 +97,13 @@ return [
             'retry_after' => 90,
         ],
 
+        'validationpromopgqueue' => [
+            'driver' => 'database',
+            'table' => 'validation_promo_pg_queue',
+            'queue' => 'validationpromopgqueue',
+            'retry_after' => 90,
+        ],
+
         'export_franchise_queue' => [
             'driver' => 'database',
             'table' => 'export_franchise_jobs',

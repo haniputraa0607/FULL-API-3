@@ -74,6 +74,8 @@ use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\Product\Entities\ProductGlobalPrice;
 use App\Http\Models\TransactionPickupGoSendUpdate;
 use Modules\OutletApp\Entities\ProductModifierGroupInventoryBrand;
+use App\Http\Models\Autocrm;
+use Modules\Autocrm\Entities\AutoresponseCodeList;
 
 class ApiOutletApp extends Controller
 {
@@ -91,6 +93,7 @@ class ApiOutletApp extends Controller
         $this->endPoint  = config('url.storage_url_api');
         $this->shopeepay      = "Modules\ShopeePay\Http\Controllers\ShopeePayController";
         $this->outlet      		= "Modules\Outlet\Http\Controllers\ApiOutletController";
+        $this->autoresponse_code = "Modules\Autocrm\Http\Controllers\ApiAutoresponseWithCode";
     }
 
     public function deleteToken(DeleteToken $request)
@@ -965,14 +968,42 @@ class ApiOutletApp extends Controller
         if ($pickup) {
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM($order->pickup_by == 'Customer'?'Order Taken':'Order Taken By Driver', $user['phone'], [
-                "outlet_name"      => $outlet['outlet_name'],
-                'id_transaction'   => $order->id_transaction,
-                "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
-                "transaction_date" => $order->transaction_date,
-                'order_id'         => $order->order_id,
-                'receipt_number'   => $order->transaction_receipt_number
-            ]);
+            $getAvailableCodeCrm = Autocrm::where('autocrm_title', 'Order Taken With Code')->first();
+            $code = NULL;
+            $idCode = NULL;
+
+            if($order->pickup_by == 'Customer' && !empty($getAvailableCodeCrm) &&
+                ($getAvailableCodeCrm['autocrm_email_toogle'] == 1 || $getAvailableCodeCrm['autocrm_sms_toogle'] == 1 ||
+                    $getAvailableCodeCrm['autocrm_push_toogle'] == 1 || $getAvailableCodeCrm['autocrm_inbox_toogle'] == 1)){
+
+                $getAvailableCode = app($this->autoresponse_code)->getAvailableCode($order->id_transaction);
+                $code = $getAvailableCode['autoresponse_code']??null;
+                $idCode = $getAvailableCode['id_autoresponse_code_list']??null;
+            }
+
+            if(!empty($code)){
+                $send = app($this->autocrm)->SendAutoCRM('Order Taken With Code', $user['phone'], [
+                    "outlet_name"      => $outlet['outlet_name'],
+                    'id_transaction'   => $order->id_transaction,
+                    "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
+                    "transaction_date" => $order->transaction_date,
+                    'order_id'         => $order->order_id,
+                    'receipt_number'   => $order->transaction_receipt_number,
+                    'code'             => $code
+                ]);
+
+                AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $user['id']]);
+            }else{
+                $send = app($this->autocrm)->SendAutoCRM($order->pickup_by == 'Customer'?'Order Taken':'Order Taken By Driver', $user['phone'], [
+                    "outlet_name"      => $outlet['outlet_name'],
+                    'id_transaction'   => $order->id_transaction,
+                    "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
+                    "transaction_date" => $order->transaction_date,
+                    'order_id'         => $order->order_id,
+                    'receipt_number'   => $order->transaction_receipt_number
+                ]);
+            }
+
             if ($send != true) {
                 DB::rollback();
                 return response()->json([
@@ -2879,6 +2910,8 @@ class ApiOutletApp extends Controller
                             $column    = array_column($checkType, 'type');
                             
                             $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
+                            \App\Jobs\UpdateQuestProgressJob::dispatch($trx->id_transaction)->onConnection('quest');
+                            \Modules\OutletApp\Jobs\AchievementCheck::dispatch(['id_transaction' => $trx->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
 
                             if (!in_array('Balance', $column) || $use_referral) {
 
@@ -4715,7 +4748,7 @@ class ApiOutletApp extends Controller
             }
             $result['detail']['detail_status'][] = [
                 'text' => 'Your order awaits confirmation ',
-                'date' => MyHelper::dateFormatInd($list['transaction_date'])
+                'date' => MyHelper::dateFormatInd($list['completed_at'] ?: $list['transaction_date'])
             ];
         }
 

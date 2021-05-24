@@ -165,6 +165,14 @@ class LogActivitiesMiddleware
                 if(stristr($url, 'pos/product')) $subject = 'POS Order Product';
                 if(stristr($url, 'pos/product/sold-out')) $subject = 'POS Order Sold-out';
 
+                if(stristr($url, 'quest')) $subject = 'Quest';
+                if(stristr($url, 'quest/list')) $subject = 'Quest List';
+                if(stristr($url, 'quest/me')) $subject = 'My Quest';
+                if(stristr($url, 'quest/take')) $subject = 'Claim Quest';
+                if(stristr($url, 'quest/status')) $subject = 'Quest Status';
+                if(stristr($url, 'quest/detail-apps')) $subject = 'Detail Quest';
+                if(stristr($url, 'quest/claim-benefit')) $subject = 'Claim Quest Benefit';
+
                 //CRUD
                 if(stristr($url, 'create') || (stristr($url, 'new') && !stristr($url, 'news') ) ) {
                     if($subject){
