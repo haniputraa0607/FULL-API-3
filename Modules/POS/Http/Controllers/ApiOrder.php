@@ -631,7 +631,7 @@ class ApiOrder extends Controller
                     'code'             => $code
                 ]);
 
-                AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $user['id']]);
+                AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $user['id'], 'id_transaction' => $order->id_transaction]);
             }else{
                 $send = app($this->autocrm)->SendAutoCRM($order->pickup_by == 'Customer'?'Order Taken':'Order Taken By Driver', $user['phone'], [
                     "outlet_name" => $outlet['outlet_name'],
