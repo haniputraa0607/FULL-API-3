@@ -2,17 +2,12 @@
 
 namespace Modules\Franchise\Http\Controllers;
 
-use App\Http\Models\Autocrm;
-use App\Http\Models\Outlet;
-use App\Http\Models\Transaction;
+use Modules\Franchise\Entities\Transaction;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-use Modules\Franchise\Entities\UserFranchise;
 use App\Lib\MyHelper;
-use Modules\Franchise\Entities\UserFranchiseOultet;
-use Modules\Franchise\Http\Requests\users_create;
-use Modules\Report\Entities\DailyReportPayment;
+use Modules\Franchise\Entities\UserFranchiseOultetConnection3;
+use Modules\Franchise\Entities\DailyReportPayment;
 use DB;
 use DateTime;
 
@@ -33,7 +28,7 @@ class ApiReportPaymentController extends Controller
     public function summaryPaymentMethod(Request $request){
         $post = $request->json()->all();
 
-        $id_oultet = UserFranchiseOultet::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
+        $id_oultet = UserFranchiseOultetConnection3::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
 
         if($id_oultet){
             $listPayment = DailyReportPayment::where('refund_with_point', 0)
@@ -78,7 +73,7 @@ class ApiReportPaymentController extends Controller
                         $payment = $val['payment_method'];
                         $paymentAmount = $val['amount']/100;
                     }elseif(!empty($val['id_transaction_payment_shopee_pay'])){
-                        $payment = 'Shopee Pay';
+                        $payment = 'ShopeePay';
                         $paymentAmount = $val['shopee_amount']/100;
                     }
 
@@ -146,7 +141,7 @@ class ApiReportPaymentController extends Controller
     public function summaryDetailPaymentMethod(Request $request){
         $post = $request->json()->all();
 
-        $id_oultet = UserFranchiseOultet::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
+        $id_oultet = UserFranchiseOultetConnection3::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
 
         if($id_oultet){
             $list = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
@@ -155,8 +150,8 @@ class ApiReportPaymentController extends Controller
                 ->where('transactions.transaction_payment_status', 'Completed')
                 ->whereNull('reject_at');
 
-            if (strtolower($post['trx_payment']) == 'shopee pay'){
-                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name','(transaction_payment_shopee_pays.subscription_nominal/100) as amount')
+            if (strtolower($post['trx_payment']) == 'shopeepay'){
+                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name', DB::raw('(transaction_payment_shopee_pays.amount/100) as amount'))
                     ->join('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction');
             }elseif (strtolower($post['trx_payment']) == 'subscription'){
                 $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name','transaction_payment_subscriptions.subscription_nominal as amount')
@@ -239,7 +234,7 @@ class ApiReportPaymentController extends Controller
     public function summaryChart(Request $request){
         $post = $request->json()->all();
 
-        $id_oultet = UserFranchiseOultet::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
+        $id_oultet = UserFranchiseOultetConnection3::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
 
         if($id_oultet && !empty($post['date_start']) && !empty($post['date_start'])) {
             $dateStart = date('Y-m-d', strtotime($post['date_start']));
@@ -291,7 +286,7 @@ class ApiReportPaymentController extends Controller
     public function listPayment(Request $request){
         $post = $request->json()->all();
 
-        $id_oultet = UserFranchiseOultet::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
+        $id_oultet = UserFranchiseOultetConnection3::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
 
         if($id_oultet){
             $list = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
@@ -326,7 +321,7 @@ class ApiReportPaymentController extends Controller
                     foreach ($post['conditions'] as $condition){
                         if(!empty($condition['subject'])){
                             if($condition['subject'] == 'payment'){
-                                if(strtolower($condition['operator']) == 'shopee pay'){
+                                if(strtolower($condition['operator']) == 'shopeepay'){
                                     $list->whereNotNull('id_transaction_payment_shopee_pay');
                                 }elseif (strtolower($condition['operator']) == 'jiwa poin'){
                                     $list->whereNotNull('balance_nominal');
@@ -351,7 +346,7 @@ class ApiReportPaymentController extends Controller
                         foreach ($post['conditions'] as $condition){
                             if(!empty($condition['subject'])){
                                 if($condition['subject'] == 'payment'){
-                                    if(strtolower($condition['operator']) == 'shopee pay'){
+                                    if(strtolower($condition['operator']) == 'shopeepay'){
                                         $q->whereNotNull('id_transaction_payment_shopee_pay');
                                     }elseif (strtolower($condition['operator']) == 'jiwa poin'){
                                         $q->whereNotNull('balance_nominal');

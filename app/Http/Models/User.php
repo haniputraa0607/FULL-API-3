@@ -231,4 +231,8 @@ class User extends Authenticatable
     	$password = md5($this->password);
     	return $password.'15F1AB77951B5JAO';
     }
+
+    public function quest_user_redemption() {
+    	return $this->hasMany(\Modules\Quest\Entities\QuestUserRedemption::class, 'id_user', 'id');
+    }
 }

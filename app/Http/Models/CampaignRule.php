@@ -36,7 +36,8 @@ class CampaignRule extends Model
 		'id_campaign_rule_parent',
 		'campaign_rule_subject',
 		'campaign_rule_operator',
-		'campaign_rule_param'
+		'campaign_rule_param',
+        'campaign_rule_param_select'
 	];
 
 	public function campaign_rule_parent()

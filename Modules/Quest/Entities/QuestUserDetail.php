@@ -12,10 +12,17 @@ class QuestUserDetail extends Model
 
     protected $fillable = [
         'id_quest',
+        'id_quest_user',
         'id_quest_detail',
         'id_user',
+        'is_done',
         'json_rule',
         'json_rule_enc',
         'date'
     ];
+
+    public function user()
+	{
+		return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
+	}
 }

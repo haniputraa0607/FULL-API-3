@@ -1151,6 +1151,12 @@ class ApiHistoryController extends Controller
                 $dataList['date']    = date('d M Y H:i', strtotime($value['created_at']));
                 $dataList['outlet'] = 'Referral Bonus';
                 $dataList['amount'] = MyHelper::requestNumber($value['balance'], '_POINT');
+            } elseif ($value['source'] == 'Quest Benefit') {
+                $dataList['type']   = 'quest';
+                $dataList['id']      = $value['id_log_balance'];
+                $dataList['date']    = date('d M Y H:i', strtotime($value['created_at']));
+                $dataList['outlet'] = 'Hadiah Misi';
+                $dataList['amount'] = '+ ' . MyHelper::requestNumber($value['balance'], '_POINT');
             } else {
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];

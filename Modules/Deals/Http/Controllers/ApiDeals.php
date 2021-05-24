@@ -1663,7 +1663,7 @@ class ApiDeals extends Controller
         if ($deals) {
         	if ($post['step'] == 'all' && $deals_type != 'Promotion' && $deals_type != 'promotion-deals') {
 	        	$deals_array = $deals->toArray();
-	        	if ($deals_type == 'Deals' || $deals_type == 'Hidden' || $deals_type == 'WelcomeVoucher') {
+	        	if ($deals_type == 'Deals' || $deals_type == 'Hidden' || $deals_type == 'WelcomeVoucher' || $deals_type == 'Quest') {
 	        		$type = 'deals';
 	        	}else{
 	        		$type = $deals_type;
@@ -2183,5 +2183,14 @@ class ApiDeals extends Controller
         // $save = Deal::where('id_deals','=',$post['id_deals'])->update($data_subs);
 
         return $save;
+    }
+
+    function listAllDeals(Request $request){
+        $post = $request->json()->all();
+
+        $list = Deal::where('deals_type', $post['deals_type'])
+            ->select('id_deals', 'deals_title')
+            ->get()->toArray();
+        return response()->json(MyHelper::checkGet($list));
     }
 }

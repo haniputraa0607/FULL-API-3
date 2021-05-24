@@ -325,6 +325,9 @@ class Product extends Model
                     });
                 })
                 ->where(function($q){
+                    $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                })
+                ->where(function($q){
                     $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
                 })
                 ->groupBy('product_modifiers.id_product_modifier');
@@ -560,7 +563,7 @@ class Product extends Model
                     return $result;
                 }
             } else {
-                if ($child['id_product_variant_group'] == $product_variant_group->id_product_variant_group) {
+                if (($child['id_product_variant_group']?? false) == $product_variant_group->id_product_variant_group) {
                     if (!($child['is_modifier']??false)) {
                         $variants[$child['id_product_variant']] = $last_price + $child['product_variant_price'];
                     }
@@ -607,7 +610,7 @@ class Product extends Model
                 if (($child['is_modifier']??false) && !in_array($child['id_product_variant'], $extra_modifiers)) {
                     continue;
                 }
-                if ($child['id_product_variant_group'] == $product_variant_group->id_product_variant_group) {
+                if (($child['id_product_variant_group'] ?? '') == $product_variant_group->id_product_variant_group) {
                     $variants[] = $child['id_product_variant'];
                     return $variants;
                 }

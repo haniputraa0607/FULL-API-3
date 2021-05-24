@@ -2529,17 +2529,17 @@ class ApiPromoCampaign extends Controller
 	        }
 
 	        if ($code['promo_campaign']['date_start'] > date('Y-m-d H:i:s')) {
-	        	$date_start = MyHelper::dateFormatInd($code['promo_campaign']['date_start'], false, false).' pukul '.date('H:i', strtotime($code['promo_campaign']['date_start']));
+	        	$date_start = MyHelper::dateFormatInd($code['promo_campaign']['date_start'], true, false).' pukul '.date('H:i', strtotime($code['promo_campaign']['date_start']));
         		return [
 	                'status'=>'fail',
-	                'messages'=>['Promo dapat diklaim mulai tanggal '.$date_start]
+	                'messages'=>['Promo berlaku pada '.$date_start]
 	            ];
         	}
 
 	        if ($code['promo_campaign']['date_end'] < date('Y-m-d H:i:s')) {
         		return [
 	                'status'=>'fail',
-	                'messages'=>['Mohon maaf, Promo sudah berakhir']
+	                'messages'=>['Promo telah berakhir']
 	            ];
         	}
 
@@ -2610,15 +2610,15 @@ class ApiPromoCampaign extends Controller
 	        if ($deals['voucher_expired_at'] < date('Y-m-d H:i:s')) {
         		return [
 	                'status'=>'fail',
-	                'messages'=>['Batas waktu penggunaan voucher sudah berakhir']
+	                'messages'=>['Batas waktu penggunaan voucer sudah berakhir']
 	            ];
         	}
 
         	if ($deals['voucher_active_at'] > date('Y-m-d H:i:s') && !empty($deals['voucher_active_at']) ) {
-        		$date_start = MyHelper::dateFormatInd($deals['voucher_active_at'], false, false).' pukul '.date('H:i', strtotime($deals['voucher_active_at']));
+        		$date_start = MyHelper::dateFormatInd($deals['voucher_active_at'], true, false).' pukul '.date('H:i', strtotime($deals['voucher_active_at']));
         		return [
 	                'status'=>'fail',
-	                'messages'=>['Voucher dapat digunakan mulai tanggal '.$date_start]
+	                'messages'=>['Voucer mulai berlaku pada '.$date_start]
 	            ];
         	}
 
@@ -2641,15 +2641,15 @@ class ApiPromoCampaign extends Controller
 	        if ($subs['subscription_expired_at'] < date('Y-m-d H:i:s')) {
         		return [
 	                'status'=>'fail',
-	                'messages'=>['Batas waktu penggunaan subscription sudah berakhir']
+	                'messages'=>['Batas waktu penggunaan Subscription telah berakhir']
 	            ];
         	}
 
         	if ($subs['subscription_active_at'] > date('Y-m-d H:i:s') && !empty($subs['subscription_active_at']) ) {
-        		$date_start = MyHelper::dateFormatInd($subs['subscription_active_at'], false, false).' pukul '.date('H:i', strtotime($subs['subscription_active_at']));
+        		$date_start = MyHelper::dateFormatInd($subs['subscription_active_at'], true, false).' pukul '.date('H:i', strtotime($subs['subscription_active_at']));
         		return [
 	                'status'=>'fail',
-	                'messages'=>['Promo dapat digunakan mulai tanggal '.$date_start]
+	                'messages'=>['Subscription berlaku pada '.$date_start]
 	            ];
         	}
 
@@ -2660,7 +2660,7 @@ class ApiPromoCampaign extends Controller
 				if ( $subs_voucher_today >= $subs->subscription_user->subscription->daily_usage_limit ) {
 					return [
 		                'status'=>'fail',
-		                'messages'=>['Penggunaan subscription telah melampaui batas harian']
+		                'messages'=>['Subscription telah mencapai limit penggunaan harian']
 		            ];
 				}
 	    	}
@@ -2774,7 +2774,7 @@ class ApiPromoCampaign extends Controller
 
     public function getProduct($source, $query, $id_outlet=null)
     {
-    	$default_product = $query['product_rule'] === 'and' ? 'semua product bertanda khusus' : 'product bertanda khusus';
+    	$default_product = $query['product_rule'] === 'and' ? 'semua produk bertanda khusus' : 'produk bertanda khusus';
 
     	if ($source == 'subscription') 
     	{
@@ -3088,6 +3088,9 @@ class ApiPromoCampaign extends Controller
 	    			$discount_first = reset($discount_rule);
 	    			$discount_last 	= end($discount_rule);
 	    			$discount = $discount_first.' sampai '.$discount_last;
+	    			if ($discount_first == $discount_last) {
+	    				$discount = $discount_first;
+	    			}
 	    		}
 
 	    		$key = 'description_tier_discount_brand';

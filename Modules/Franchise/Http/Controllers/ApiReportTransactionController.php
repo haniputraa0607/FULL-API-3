@@ -5,16 +5,15 @@ namespace Modules\Franchise\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-use App\Http\Models\DailyReportTrxMenu;
-use Modules\Report\Entities\DailyReportTrxModifier;
-use App\Http\Models\ProductCategory;
-use App\Http\Models\Product;
-use App\Http\Models\TransactionProduct;
-use Modules\ProductVariant\Entities\ProductVariantGroup;
-use Modules\ProductVariant\Entities\ProductVariant;
-use Modules\Brand\Entities\Brand;
+use Modules\Franchise\Entities\DailyReportTrxMenu;
+use Modules\Franchise\Entities\DailyReportTrxModifier;
+use Modules\Franchise\Entities\ProductCategory;
+use Modules\Franchise\Entities\Product;
+use Modules\Franchise\Entities\ProductVariantGroup;
+use Modules\Franchise\Entities\ProductVariant;
+use Modules\Franchise\Entities\Brand;
 use App\Lib\MyHelper;
-use App\Http\Models\ProductModifier;
+use Modules\Franchise\Entities\ProductModifier;
 use Modules\Franchise\Entities\ExportFranchiseQueue;
 use App\Jobs\ExportFranchiseJob;
 use App\Exports\FilterResultExport;
@@ -144,9 +143,9 @@ class ApiReportTransactionController extends Controller
                         AND DATE(transaction_date) = '$date'
                 GROUP BY DATE(transaction_date) , transaction_products.id_product , transaction_products.id_product_variant_group) as daily_report_trx_menu
             "))
-                ->select('product_name', \DB::raw('SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(product_variants.product_variant_name) as variant_name, name_brand, product_category_name'));
+                ->select('product_name', \DB::raw('COUNT(DISTINCT product_variants.product_variant_name) as total_variant, SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(DISTINCT(product_variants.product_variant_name)) as variant_name, name_brand, product_category_name'));
         } else {
-            $result = DailyReportTrxMenu::select('product_name', \DB::raw('SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(product_variants.product_variant_name) as variant_name, name_brand, product_category_name'));
+            $result = DailyReportTrxMenu::select('product_name', \DB::raw('COUNT(DISTINCT product_variants.product_variant_name) as total_variant, SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(DISTINCT(product_variants.product_variant_name)) as variant_name, name_brand, product_category_name'));
         }
         $result->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
             ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
@@ -187,7 +186,15 @@ class ApiReportTransactionController extends Controller
         }
 
         if ($request->page) {
-            $result = $result->paginate($request->length ?: 15)->toArray();
+            // to support return all rows
+            $request_length = $request->length ?: 15;
+            if ($request_length == -1) {
+                $results = $result->get();
+                $result = (new \Illuminate\Pagination\LengthAwarePaginator($results, $results->count(), -1))->toArray();
+            } else {
+                $result = $result->paginate($request_length)->toArray();
+            }
+
             if (is_null($countTotal)) {
                 $countTotal = $result['total'];
             }
@@ -385,11 +392,9 @@ class ApiReportTransactionController extends Controller
 
         if (is_array($orders = $request->order)) {
             $columns = [
-                'trx_date', 
                 'text', 
                 'total_qty', 
                 'total_nominal', 
-                'id_report_trx_modifier',
             ];
 
             foreach ($orders as $column) {
@@ -407,7 +412,15 @@ class ApiReportTransactionController extends Controller
         }
 
         if ($request->page) {
-            $result = $result->paginate($request->length ?: 15)->toArray();
+            // to support return all rows
+            $request_length = $request->length ?: 15;
+            if ($request_length == -1) {
+                $results = $result->get();
+                $result = (new \Illuminate\Pagination\LengthAwarePaginator($results, $results->count(), -1))->toArray();
+            } else {
+                $result = $result->paginate($request_length)->toArray();
+            }
+
             if (is_null($countTotal)) {
                 $countTotal = $result['total'];
             }

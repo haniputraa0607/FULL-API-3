@@ -2,20 +2,11 @@
 
 namespace Modules\Franchise\Http\Controllers;
 
-use App\Http\Models\Autocrm;
-use App\Http\Models\Outlet;
-use App\Http\Models\Transaction;
-use App\Http\Models\DailyReportTrx;
+use Modules\Franchise\Entities\Transaction;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-use Modules\Franchise\Entities\UserFranchise;
 use App\Lib\MyHelper;
-use Modules\Franchise\Entities\UserFranchiseOultet;
-use Modules\Franchise\Http\Requests\users_create;
-use Modules\Report\Entities\DailyReportPayment;
 use DB;
-use DateTime;
 
 class ApiReportSalesController extends Controller
 {
@@ -169,53 +160,53 @@ class ApiReportSalesController extends Controller
                 'amount' => number_format($report['total_complete_payment']??0,0,",","."),
                 "tooltip" => 'jumlah transaksi dengan status pembyaran sukses (mengabaikan status reject order)'
             ],
-    		'total_transaction' => [
-                'title' => 'Transaksi Sukses',
-                'amount' => number_format($report['total_transaction']??0,0,",","."),
-                "tooltip" => 'jumlah transaksi dengan status pembayaran sukses dan tidak di reject'
-            ],
             'total_transaction_pickup' => [
-                'title' => 'Pickup',
+                'title' => 'Pickup Order',
                 'amount' => number_format($report['total_transaction_pickup']??0,0,",","."),
                 "tooltip" => 'jumlah transaksi sukses dengan tipe pickup'
             ],
             'total_transaction_delivery' => [
-                'title' => 'Delivery',
+                'title' => 'Delivery Order',
                 'amount' => number_format($report['total_transaction_delivery']??0,0,",","."),
                 "tooltip" => 'jumlah transaksi sukses dengan tipe delivery'
+            ],
+    		'total_transaction' => [
+                'title' => 'Total Order',
+                'amount' => number_format($report['total_transaction']??0,0,",","."),
+                "tooltip" => 'jumlah transaksi dengan status pembayaran sukses dan tidak di reject'
             ],
             'total_response' => [
                 'title' => 'Response Order',
                 'amount' => number_format($report['total_response']??0,0,",","."),
                 "tooltip" => 'jumlah transaksi yang di response oleh outlet (diterima atau di manual reject)'
             ],
-            'total_auto_reject' => [
-                'title' => 'Auto Reject Response',
-                'amount' => number_format($report['total_auto_reject']??0,0,",","."),
-                "tooltip" => 'jumlah transaksi yang tidak di response oleh outlet dan terproses auto reject oleh sistem'
-            ],
-            'total_accept' => [
-                'title' => 'Accept',
-                'amount' => number_format($report['total_accept']??0,0,",","."),
-                "tooltip" => 'jumlah transaksi yang diterima oleh outlet'
-            ],
-            'total_manual_reject' => [
-                'title' => 'Manual Reject Response',
-                'amount' => number_format($report['total_manual_reject']??0,0,",","."),
-                "tooltip" => 'jumlah transaksi yang di reject oleh outlet saat transaksi masuk ke jilid+	'
-            ],
             'response_rate' => [
                 'title' => 'Response Rate Order',
                 'amount' => number_format($report['response_rate']??0,0,",",".")."%",
                 "tooltip" => 'persentase jumlah order yang di response oleh outlet dibandingkan dengan jumlah transaksi dengan status pembayaran suskes (transaksi yang masuk)'
+            ],
+            'total_accept' => [
+                'title' => 'Accepted Order',
+                'amount' => number_format($report['total_accept']??0,0,",","."),
+                "tooltip" => 'jumlah transaksi yang diterima oleh outlet'
             ],
             'acceptance_rate' => [
                 'title' => 'Acceptance Rate Order',
                 'amount' => number_format($report['acceptance_rate']??0,0,",",".")."%",
                 "tooltip" => 'persentase jumlah transaksi yang diterima oleh outlet dibandingkan dengan jumlah transaksi dengan status pembayaran suskes (transaksi yang masuk)'
             ],
+            'total_manual_reject' => [
+                'title' => 'Manual Rejected Order',
+                'amount' => number_format($report['total_manual_reject']??0,0,",","."),
+                "tooltip" => 'jumlah transaksi yang di reject oleh outlet saat transaksi masuk ke jilid+	'
+            ],
+            'total_auto_reject' => [
+                'title' => 'Auto Rejected Order',
+                'amount' => number_format($report['total_auto_reject']??0,0,",","."),
+                "tooltip" => 'jumlah transaksi yang tidak di response oleh outlet dan terproses auto reject oleh sistem'
+            ],
             'total_reject' => [
-                'title' => 'Reject',
+                'title' => 'Total Rejected Order',
                 'amount' => number_format($report['total_reject']??0,0,",","."),
                 "tooltip" => 'jumlah transaksi dengan status reject (semua kondisi reject: manual reject, auto reject karena tidak di response, auto reject karena driver tidak ditemukan dsb)'
             ],

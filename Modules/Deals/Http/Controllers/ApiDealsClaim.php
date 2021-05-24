@@ -143,7 +143,7 @@ class ApiDealsClaim extends Controller
 		                                DB::rollback();
 		                                return response()->json([
 		                                    'status'   => 'fail',
-		                                    'messages' => ['Halo Kak, Mohon Maaf Voucher Telah Habis. Yuk Gunakan Voucher Lainnya pada Page Deals 😊🙏']
+		                                    'messages' => ['Voucer telah habis']
 		                                ]);
 		                            }
 		                        }
@@ -157,7 +157,7 @@ class ApiDealsClaim extends Controller
 		                                    DB::rollback();
 		                                    return response()->json([
 		                                        'status'   => 'fail',
-		                                        'messages' => ['Halo Kak, Mohon Maaf Voucher Telah Habis. Yuk Gunakan Voucher Lainnya pada Page Deals 😊🙏']
+		                                        'messages' => ['Voucer telah habis']
 		                                    ]);
 		                                }
 		                            }
@@ -169,7 +169,7 @@ class ApiDealsClaim extends Controller
 		                                    DB::rollback();
 		                                    return response()->json([
 		                                        'status'   => 'fail',
-		                                        'messages' => ['Halo Kak, Mohon Maaf Voucher Telah Habis. Yuk Gunakan Voucher Lainnya pada Page Deals 😊🙏']
+		                                        'messages' => ['Voucer telah habis']
 		                                    ]);
 		                                }
 		                            }
@@ -223,7 +223,7 @@ class ApiDealsClaim extends Controller
 	                            DB::rollback();
 	                            return response()->json([
 	                                'status'   => 'fail',
-	                                'messages' => ['You have participated.']
+	                                'messages' => ['Pengambilan voucer telah mencapai limit pengguna']
 	                            ]);
 	                        }
 	                    }
@@ -240,7 +240,7 @@ class ApiDealsClaim extends Controller
 	                DB::rollback();
 	                return response()->json([
 	                    'status' => 'fail',
-	                    'messages' => ['Date valid '.date('d F Y', strtotime($dataDeals->deals_start)).' until '.date('d F Y', strtotime($dataDeals->deals_end))]
+	                    'messages' => ['Voucer berlaku pada '.MyHelper::dateFormatInd($dataDeals->deals_start, true, false).' sampai '.MyHelper::dateFormatInd($dataDeals->deals_end, true, false)]
 	                ]);
 	            }
 	        }

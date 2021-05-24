@@ -3050,6 +3050,146 @@ class FeaturesTableSeeder extends Seeder
                     'order' => 116,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
+                ),
+            305 =>
+                array(
+                    'id_feature' => 306,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Quest Voucher',
+                    'show_hide' => 1,
+                    'order' => 117,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            306 =>
+                array(
+                    'id_feature' => 307,
+                    'feature_type' => 'Detail',
+                    'feature_module' => 'Quest Voucher',
+                    'show_hide' => 1,
+                    'order' => 117,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            307 =>
+                array(
+                    'id_feature' => 308,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Quest Voucher',
+                    'show_hide' => 1,
+                    'order' => 117,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            308 =>
+                array(
+                    'id_feature' => 309,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Quest Voucher',
+                    'show_hide' => 1,
+                    'order' => 117,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            309 =>
+                array(
+                    'id_feature' => 310,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Quest Voucher',
+                    'show_hide' => 1,
+                    'order' => 117,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            310 =>
+                array(
+                    'id_feature' => 311,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Rule Promo Payment Gateway',
+                    'show_hide' => 1,
+                    'order' => 118,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            311 =>
+                array(
+                    'id_feature' => 312,
+                    'feature_type' => 'Detail',
+                    'feature_module' => 'Rule Promo Payment Gateway',
+                    'show_hide' => 1,
+                    'order' => 118,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            312 =>
+                array(
+                    'id_feature' => 313,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Rule Promo Payment Gateway',
+                    'show_hide' => 1,
+                    'order' => 118,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            313 =>
+                array(
+                    'id_feature' => 314,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Rule Promo Payment Gateway',
+                    'show_hide' => 1,
+                    'order' => 118,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            314 =>
+                array(
+                    'id_feature' => 315,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Rule Promo Payment Gateway',
+                    'show_hide' => 1,
+                    'order' => 118,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            315 =>
+                array(
+                    'id_feature' => 316,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Auto Response With Code',
+                    'show_hide' => 1,
+                    'order' => 117,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            316 =>
+                array(
+                    'id_feature' => 317,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Auto Response With Code',
+                    'show_hide' => 1,
+                    'order' => 117,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            317 =>
+                array(
+                    'id_feature' => 318,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Auto Response With Code',
+                    'show_hide' => 1,
+                    'order' => 117,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            318 =>
+                array(
+                    'id_feature' => 319,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Auto Response With Code',
+                    'show_hide' => 1,
+                    'order' => 117,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
                 )
         ));
     }

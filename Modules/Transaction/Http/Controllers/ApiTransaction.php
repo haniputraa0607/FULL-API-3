@@ -85,12 +85,14 @@ use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 
 use App\Lib\MyHelper;
 use App\Lib\GoSend;
+use App\Lib\Midtrans;
 use Validator;
 use Hash;
 use DB;
 use Mail;
 use Image;
 use Illuminate\Support\Facades\Log;
+use Modules\Quest\Entities\Quest;
 
 class ApiTransaction extends Controller
 {
@@ -98,6 +100,7 @@ class ApiTransaction extends Controller
 
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
+        $this->shopeepay      = 'Modules\ShopeePay\Http\Controllers\ShopeePayController';
     }
 
     public function transactionRule() {
@@ -2954,7 +2957,7 @@ class ApiTransaction extends Controller
                     $result['transaction_status'] = 5;
                     $result['transaction_status_text'] = 'PESANAN MASUK. MENUNGGU JILID UNTUK MENERIMA ORDER';
                 }
-                if ($list['detail']['ready_at'] != null && $list['transaction_pickup_go_send'] && !$list['detail']['reject_at']) {
+                if ($list['transaction_pickup_go_send'] && !$list['detail']['reject_at']) {
                     // $result['transaction_status'] = 5;
                     $result['delivery_info'] = [
                         'driver' => null,
@@ -3090,6 +3093,7 @@ class ApiTransaction extends Controller
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'] = [];
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'] = [];
                     $extra_modifiers = [];
+                    $extra_modifier_price = 0;
                     foreach ($valueProduct['modifiers'] as $keyMod => $valueMod) {
                         if (!$valueMod['id_product_modifier_group']) {
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_name']   = $valueMod['text'];
@@ -3100,6 +3104,7 @@ class ApiTransaction extends Controller
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']['m'.$keyMod]['id_product_variant']   = $valueMod['id_product_modifier'];
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']['m'.$keyMod]['product_variant_name']   = $valueMod['text'];
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']['m'.$keyMod]['product_variant_price']  = (int)$valueMod['transaction_product_modifier_price'];
+                            $extra_modifier_price += (int) ($valueMod['qty'] * $valueMod['transaction_product_modifier_price']);
                         }
                     }
                     $variantsPrice = 0;
@@ -3109,6 +3114,7 @@ class ApiTransaction extends Controller
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][$keyMod]['product_variant_price']  = (int)$valueMod['transaction_product_variant_price'];
                         $variantsPrice = $variantsPrice + $valueMod['transaction_product_variant_price'];
                     }
+                    $variantsPrice += $extra_modifier_price;
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'] = array_values($result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']);
                     if ($valueProduct['id_product_variant_group'] ?? false) {
                         $order = array_flip(Product::getVariantParentId($valueProduct['id_product_variant_group'], Product::getVariantTree($valueProduct['id_product'], $list['outlet'])['variants_tree'], $extra_modifiers));
@@ -3117,6 +3123,9 @@ class ApiTransaction extends Controller
                         });
                     }
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product_variant_group_price'] = (int)($valueProduct['transaction_product_price'] + $variantsPrice);
+
+                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'] = array_values($result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers']);
+                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'] = array_values($result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']);
                 }
                 $keynya++;
             }
@@ -3556,6 +3565,7 @@ class ApiTransaction extends Controller
                     unset($pt['modifiers'][$key]);
                 }
             }
+            $pt['modifiers'] = array_values($pt['modifiers']);
             if ($pt['id_product_variant_group']) {
                 if ($pt['outlet_different_price']) {
                     $product_price = ProductVariantGroupSpecialPrice::select('product_variant_group_price')->where('id_product_variant_group', $pt['id_product_variant_group'])->first();
@@ -3743,6 +3753,16 @@ class ApiTransaction extends Controller
                 'transaction_cashback_earned'   => MyHelper::requestNumber($data['detail']['transaction_cashback_earned'], '_POINT'),
                 'name'                          => $data['detail']['outlet']['outlet_name'],
                 'title'                         => 'Total Payment'
+            ];
+        } elseif ($data['source'] == 'Quest Benefit') {
+            $quest = Quest::find($data['id_reference']);
+            $result = [
+                'type'                          => 'quest',
+                'id_log_balance'                => $data['id_log_balance'],
+                'id_quest'                      => $data['id_reference'],
+                'transaction_date'              => date('d M Y H:i', strtotime($data['created_at'])),
+                'balance'                       => '+' . MyHelper::requestNumber($data['balance'], '_POINT'),
+                'title'                         => $quest['name'] ?? 'Misi tidak diketahui',
             ];
         } else {
             $select = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $data['id_reference'])->first();
@@ -4679,5 +4699,69 @@ class ApiTransaction extends Controller
             ->get()->toArray();
 
         return MyHelper::checkGet($list);
+    }
+
+    public function retryRefund($id_transaction, &$errors = [], $manualRetry = false)
+    {
+        $trx = Transaction::where('transactions.id_transaction', $id_transaction)->join('transaction_multiple_payments', function($join) {
+            $join->on('transaction_multiple_payments.id_transaction', 'transactions.id_transaction')
+                ->whereIn('type', ['Midtrans', 'Shopeepay']);
+        })->first();
+        if (!$trx) {
+            $errors[] = 'Transaction Not Found';
+            return false;
+        }
+        $result = true;
+        switch ($trx->type) {
+            case 'Midtrans':
+                $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $id_transaction)->first();
+                if (!$payMidtrans) {
+                    $errors[] = 'Model TransactionPaymentMidtran not found';
+                    return false;
+                }
+                $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => 'refund transaksi']);
+                if ($refund['status'] != 'success') {
+                    Transaction::where('id_transaction', $id_transaction)->update(['failed_void_reason' => implode(', ', $refund['messages'] ?? [])]);
+                    $errors = $refund['messages'] ?? [];
+                    $result = false;
+                } else {
+                    Transaction::where('id_transaction', $id_transaction)->update(['need_manual_void' => 0]);
+                }
+                break;
+            case 'Shopeepay':
+                $payShopeepay = TransactionPaymentShopeePay::where('id_transaction', $id_transaction)->first();
+                if (!$payShopeepay) {
+                    $errors[] = 'Model TransactionPaymentShopeePay not found';
+                    return false;
+                }
+                $refund = app($this->shopeepay)->refund($id_transaction, 'trx', $errors2);
+                if (!$refund) {
+                    Transaction::where('id_transaction', $id_transaction)->update(['failed_void_reason' => implode(', ', $errors2 ?: [])]);
+                    $errors = $errors2;
+                    $result = false;
+                } else {
+                    Transaction::where('id_transaction', $id_transaction)->update(['need_manual_void' => 0]);
+                }
+                break;
+            default:
+                $errors[] = 'Unkown payment type '.$trx->type;
+                return false;
+        }
+        return $result;
+    }
+
+    public function retry(Request $request)
+    {
+        $retry = $this->retryRefund($request->id_transaction, $errors);
+        if ($retry) {
+            return [
+                'status' => 'success'
+            ];
+        } else {
+            return [
+                'status' => 'fail',
+                'messages' => $errors ?? ['Something went wrong']
+            ];
+        }
     }
 }

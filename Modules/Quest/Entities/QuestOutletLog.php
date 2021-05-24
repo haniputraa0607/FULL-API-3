@@ -15,6 +15,7 @@ class QuestOutletLog extends Model
         'id_quest_detail',
         'id_user',
         'id_outlet',
+        'id_transactions',
         'count',
         'date',
         'enc'

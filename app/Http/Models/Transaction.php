@@ -180,7 +180,7 @@ class Transaction extends Model
     	return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction')
             ->where('type', 'Product')
             ->whereNull('id_bundling_product')
-            ->orderBy('id_product');
+            ->orderBy('transaction_products.id_product');
 	}
 
     public function allProductTransaction() 
@@ -277,4 +277,10 @@ class Transaction extends Model
 	{
 		return $this->belongsTo(\Modules\Subscription\Entities\SubscriptionUserVoucher::class, 'id_subscription_user_voucher');
 	}
+
+    public function outlet_city()
+    {
+        return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet')
+            ->join('cities','cities.id_city','outlets.id_city');
+    }
 }

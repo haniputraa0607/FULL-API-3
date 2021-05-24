@@ -48,6 +48,20 @@ return [
             'retry_after' => 90,
         ],
 
+        'quest' => [
+            'driver' => 'database',
+            'table' => 'questjobs',
+            'queue' => 'default',
+            'retry_after' => 90,
+        ],
+
+        'quest_autoclaim' => [
+            'driver' => 'database',
+            'table' => 'questjobs',
+            'queue' => 'quest_autoclaim',
+            'retry_after' => 90,
+        ],
+
         'fraudqueue' => [
             'driver' => 'database',
             'table' => 'fraud_queue',
@@ -80,6 +94,13 @@ return [
             'driver' => 'database',
             'table' => 'deals_queue',
             'queue' => 'dealsqueue',
+            'retry_after' => 90,
+        ],
+
+        'validationpromopgqueue' => [
+            'driver' => 'database',
+            'table' => 'validation_promo_pg_queue',
+            'queue' => 'validationpromopgqueue',
             'retry_after' => 90,
         ],
 

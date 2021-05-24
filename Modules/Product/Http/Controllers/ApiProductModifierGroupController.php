@@ -17,6 +17,7 @@ use Modules\Product\Entities\ProductModifierGroup;
 use Modules\Product\Entities\ProductModifierGroupPivot;
 use Modules\ProductVariant\Entities\ProductVariant;
 use App\Http\Models\Product;
+use Modules\OutletApp\Entities\ProductModifierGroupInventoryBrand;
 
 class ApiProductModifierGroupController extends Controller
 {
@@ -764,6 +765,27 @@ class ApiProductModifierGroupController extends Controller
             $update = ProductModifierGroup::find($id)->update(['product_modifier_group_order'=>$key+1]);
         }
 
+        return ['status' => 'success'];
+    }
+
+    public function inventoryBrand(Request $request)
+    {
+        $modifier_group = ProductModifierGroup::select('id_product_modifier_group', 'product_modifier_group_name as name')
+        			->with('inventory_brand')
+        			->get();
+
+        return MyHelper::checkGet($modifier_group);
+    }
+
+    public function inventoryBrandUpdate(Request $request)
+    {
+        foreach ($request->product_modifier_groups ?: [] as $id_product_modifier_group => $id_brands) {
+            ProductModifierGroupInventoryBrand::where('id_product_modifier_group', $id_product_modifier_group)->delete();
+            $toInsert = array_map(function($id_brand) use ($id_product_modifier_group) {
+                return ['id_brand' => $id_brand, 'id_product_modifier_group' => $id_product_modifier_group];
+            }, $id_brands);
+            ProductModifierGroupInventoryBrand::insert($toInsert);
+        }
         return ['status' => 'success'];
     }
 }
