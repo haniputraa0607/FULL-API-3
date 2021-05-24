@@ -52,7 +52,7 @@ class ApiQuest extends Controller
 
         if ($request->rule) {
             $countTotal = $result->count();
-            // $this->filterList($result, $request->rule, $request->operator ?: 'and');
+            $this->filterList($result, $request->rule, $request->operator ?: 'and');
         }
 
         if (is_array($orders = $request->order)) {
@@ -94,6 +94,110 @@ class ApiQuest extends Controller
             $result = $result->get();
         }
         return MyHelper::checkGet($result);
+    }
+
+    public function filterList($query,$rules,$operator='and'){
+        $newRule=[];
+        foreach ($rules as $var) {
+            $rule=[$var['operator']??'=',$var['parameter']];
+            if($rule[0]=='like'){
+                $rule[1]='%'.$rule[1].'%';
+            }
+            $newRule[$var['subject']][]=$rule;
+        }
+
+        $where=$operator=='and'?'where':'orWhere';
+        $subjects=['name', 'benefit_type', 'date_start'];
+        foreach ($subjects as $subject) {
+            if($rules2=$newRule[$subject]??false){
+                foreach ($rules2 as $rule) {
+                    $query->$where($subject,$rule[0],$rule[1]);
+                }
+            }
+        }
+        if($rules2=$newRule['publish_date']??false){
+            foreach ($rules2 as $rule) {
+                if (in_array($rule[0], ['<', '<='])) {
+                    $query->$where('publish_start',$rule[0],$rule[1]);
+                } elseif (in_array($rule[0], ['>', '>='])) {
+                    $query->$where('publish_end',$rule[0],$rule[1]);
+                } else {
+                    $query->$where(function($query2) use ($rule) {
+                        $query2->where('publish_start','<=',$rule[1]);
+                        $query2->where('publish_end','>=',$rule[1]);
+                    });
+                }
+            }
+        }
+
+        if($rules2=$newRule['status']??false){
+            foreach ($rules2 as $rule) {
+                $query->$where(function ($query1) use ($rule) {
+                    foreach ($rule[1]??[] as $rule1) {
+                        switch ($rule1) {
+                            case 'pending':
+                                $query1->orWhere(function ($query2) {
+                                    $query2->whereNull('stop_at')
+                                        ->where('is_complete', 0);
+                                });
+                                break;
+
+                            case 'not_started':
+                                $query1->orWhere(function ($query2) {
+                                    $query2->whereNull('stop_at')
+                                        ->where('is_complete', 1)
+                                        ->where('date_start', '>', date('Y-m-d H:i:s'));
+                                });
+                                break;
+
+                            case 'on_going':
+                                $query1->orWhere(function ($query2) {
+                                    $query2->whereNull('stop_at')
+                                        ->where('is_complete', 1)
+                                        ->where('date_start', '<=', date('Y-m-d H:i:s'))
+                                        ->where('publish_end', '>=', date('Y-m-d H:i:s'));
+                                });
+                                break;
+
+                            case 'end':
+                                $query1->orWhere(function ($query2) {
+                                    $query2->whereNull('stop_at')
+                                        ->where('is_complete', 1)
+                                        ->where('date_start', '<=', date('Y-m-d H:i:s'))
+                                        ->where('publish_end', '<', date('Y-m-d H:i:s'));
+                                });
+                                break;
+
+                            case 'stop':
+                                $query1->orWhereNotNull('stop_at');
+                                break;
+                        }
+                    }
+                });
+            }
+        }
+        if($rules2=$newRule['benefit_deals']??false){
+            foreach ($rules2 as $rule) {
+                $query->{$where.'In'}('quest_benefits.id_deals',$rule[1]);
+            }
+        }
+        if($rules2=$newRule['benefit_point']??false){
+            foreach ($rules2 as $rule) {
+                $query->$where(function($query2) use ($rule){
+                    $query2->where('quest_benefits.benefit_type','point');
+                    $query2->where('quest_benefits.value',$rule[0],$rule[1]);
+                });
+            }
+        }
+        if($rules2=$newRule['user_type']??false){
+            foreach ($rules2 as $rule) {
+                if ($rule[1] == 'with_filter'){
+                    $query->{$where.'NotNull'}('user_rule_subject');
+                } else {
+                    $query->{$where.'Null'}('user_rule_subject');
+                }
+            }
+        }
     }
 
     /**
