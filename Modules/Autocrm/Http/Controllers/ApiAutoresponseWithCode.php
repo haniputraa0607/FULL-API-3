@@ -132,10 +132,6 @@ class ApiAutoresponseWithCode extends Controller
             isset($post['autoresponse_code_periode_start']) && !empty($post['autoresponse_code_periode_start']) &&
             isset($post['autoresponse_code_periode_end']) && !empty($post['autoresponse_code_periode_end'])){
 
-		    if(empty($post['codes'])){
-                return response()->json(['status' => 'fail', 'messages' => ['List code can not be empty']]);
-            }
-
 		    $dateStart = date('Y-m-d', strtotime($post['autoresponse_code_periode_start']));
 		    $dateEnd = date('Y-m-d', strtotime($post['autoresponse_code_periode_end']));
 
@@ -215,9 +211,23 @@ class ApiAutoresponseWithCode extends Controller
                 }
             }
 
-		    $codes = explode(',', str_replace("\r\n", ',', $post['codes']));
-		    $arrCode = [];
-		    foreach ($codes as $value){
+            if(empty($post['codes']) && empty($post['data_import'][0])){
+                DB::rollback();
+                return response()->json(['status' => 'fail', 'messages' => ['List code and import code can not be empty. Please fill in one of the data. ']]);
+            }
+
+            $list_codes = [];
+            if(!empty($post['codes'])){
+                $list_codes = explode(',', str_replace("\r\n", ',', $post['codes']));
+            }
+
+            $import_codes = [];
+            if(!empty($post['data_import'][0])){
+                $import_codes = array_column($post['data_import'][0], 'list_codes');
+            }
+            $codes = array_unique(array_merge($list_codes,$import_codes));
+            $arrCode = [];
+            foreach ($codes as $value){
                 $arrCode[] = [
                     'id_autoresponse_code' => $create['id_autoresponse_code'],
                     'autoresponse_code' => $value,
@@ -226,10 +236,12 @@ class ApiAutoresponseWithCode extends Controller
                 ];
             }
 
-		    $insert = AutoresponseCodeList::insert($arrCode);
-            if(!$insert){
-                DB::rollback();
-                return response()->json(['status' => 'fail', 'messages' => ['Failed insert list code']]);
+            if(!empty($arrCode)){
+                $insert = AutoresponseCodeList::insert($arrCode);
+                if(!$insert){
+                    DB::rollback();
+                    return response()->json(['status' => 'fail', 'messages' => ['Failed insert list code']]);
+                }
             }
 
             DB::commit();
@@ -249,8 +261,9 @@ class ApiAutoresponseWithCode extends Controller
 
             if(!empty($detail)){
                 $detail['code_list'] = AutoresponseCodeList::leftJoin('users', 'users.id', 'autoresponse_code_list.id_user')
+                                    ->leftJoin('transactions', 'transactions.id_transaction', 'autoresponse_code_list.id_transaction')
                                     ->where('autoresponse_code_list.id_autoresponse_code', $post['id_autoresponse_code'])
-                                    ->select('autoresponse_code_list.*', 'users.name', 'users.phone')->get()->toArray();
+                                    ->select('autoresponse_code_list.*', 'users.name', 'users.phone', 'transactions.transaction_receipt_number')->get()->toArray();
             }
             return response()->json(MyHelper::checkGet($detail));
         }else{
@@ -346,18 +359,40 @@ class ApiAutoresponseWithCode extends Controller
                 }
             }
 
+            if(empty($post['codes']) && empty($post['data_import'][0])){
+                DB::rollback();
+                return response()->json(['status' => 'fail', 'messages' => ['List code and import code can not be empty. Please fill in one of the data. ']]);
+            }
+
+            $list_codes = [];
             if(!empty($post['codes'])){
-                $codes = explode(',', str_replace("\r\n", ',', $post['codes']));
-                $arrCode = [];
-                foreach ($codes as $value){
+                $list_codes = explode(',', str_replace("\r\n", ',', $post['codes']));
+            }
+
+            $getCurrentCode = AutoresponseCodeList::where('id_autoresponse_code', $post['id_autoresponse_code'])->pluck('autoresponse_code')->toArray();
+
+            $import_codes = [];
+            if(!empty($post['data_import'][0])){
+                $import_codes = array_column($post['data_import'][0], 'list_codes');
+            }
+            $codes = array_unique(array_merge($list_codes,$import_codes));
+            $arrCode = [];
+            $duplicate = [];
+            foreach ($codes as $value){
+                $check = array_search($value,$getCurrentCode);
+                if($check === false){
                     $arrCode[] = [
                         'id_autoresponse_code' => $post['id_autoresponse_code'],
                         'autoresponse_code' => $value,
                         'created_at' => date('Y-m-d H:i:s'),
                         'updated_at' => date('Y-m-d H:i:s')
                     ];
+                }else{
+                    $duplicate[] = $value;
                 }
+            }
 
+            if(!empty($arrCode)){
                 $insert = AutoresponseCodeList::insert($arrCode);
                 if(!$insert){
                     DB::rollback();
@@ -366,7 +401,12 @@ class ApiAutoresponseWithCode extends Controller
             }
 
             DB::commit();
-            return response()->json(['status' => 'success']);
+
+            if(!empty($duplicate)){
+                return response()->json(['status' => 'fail', 'messages' => ['Duplicate code :'.implode(',',$duplicate)]]);
+            }else{
+                return response()->json(['status' => 'success']);
+            }
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
