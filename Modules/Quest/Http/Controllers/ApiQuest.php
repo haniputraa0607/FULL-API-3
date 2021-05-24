@@ -58,7 +58,7 @@ class ApiQuest extends Controller
         if (is_array($orders = $request->order)) {
             $columns = [
                 'name', 
-                'status', 
+                null, 
                 'publish_start', 
                 'publish_end', 
                 'date_start',
@@ -931,7 +931,12 @@ class ApiQuest extends Controller
             return false;
         }
 
-        // first check done send notif
+        $user = User::find($id_user);
+        if (!$user) {
+            goto flag;
+        }
+
+        // first check? done? send notif
         if (!(QuestUser::where(['id_quest' => $quest->id_quest, 'id_user' => $id_user])->pluck('is_done')->first())) {
             $autocrm = app($this->autocrm)->SendAutoCRM('Quest Completed', $user->phone,
                 [
@@ -959,11 +964,6 @@ class ApiQuest extends Controller
         if (!$benefit->autoclaim_benefit && $auto) {
             // not autoclaim
             return false;
-        }
-
-        $user = User::find($id_user);
-        if (!$user) {
-            goto flag;
         }
 
         if ($benefit->benefit_type == 'point') {

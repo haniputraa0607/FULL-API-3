@@ -34,6 +34,8 @@ use Modules\POS\Http\Requests\Order\ProductSoldOut;
 use App\Lib\Midtrans;
 use App\Lib\MyHelper;
 use DB;
+use App\Http\Models\Autocrm;
+use Modules\Autocrm\Entities\AutoresponseCodeList;
 
 class ApiOrder extends Controller
 {
@@ -629,7 +631,7 @@ class ApiOrder extends Controller
                     'code'             => $code
                 ]);
 
-                AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $user['id']]);
+                AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $user['id'], 'id_transaction' => $order->id_transaction]);
             }else{
                 $send = app($this->autocrm)->SendAutoCRM($order->pickup_by == 'Customer'?'Order Taken':'Order Taken By Driver', $user['phone'], [
                     "outlet_name" => $outlet['outlet_name'],

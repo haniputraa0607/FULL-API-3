@@ -831,6 +831,12 @@ class ApiOnlineTransaction extends Controller
                         $errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
                     }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
                         $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
+                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
+                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
+                    }elseif($errorGosend[0] == 'The service is not yet available in this region'){
+                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
+                    }elseif($errorGosend[0] == "Sender's location is not serviceable"){
+                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
                     }
                 }
                 $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
@@ -2175,6 +2181,12 @@ class ApiOnlineTransaction extends Controller
                         $errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
                     }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
                         $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
+                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
+                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
+                    }elseif($errorGosend[0] == 'The service is not yet available in this region'){
+                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
+                    }elseif($errorGosend[0] == "Sender's location is not serviceable"){
+                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
                     }
                 }
                 $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];

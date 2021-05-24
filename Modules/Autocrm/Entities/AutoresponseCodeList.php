@@ -11,6 +11,7 @@ class AutoresponseCodeList extends Model
 
 	protected $fillable = [
 	    'autoresponse_code',
-        'id_user'
+        'id_user',
+        'id_transaction'
 	];
 }
