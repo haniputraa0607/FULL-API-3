@@ -314,15 +314,28 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 return [];
             }
 
-            $promos['cashback_customer'] = $additionalData['cashback'];
+            if(isset($additionalData['cashback'])){
+                $promos['cashback_customer'] = $additionalData['cashback'];
+            }else{
+                if($promos['cashback_type'] == 'Nominal'){
+                    $cashBackCutomer = $promos['cashback'];
+                }else{
+                    $cashBackCutomer = round($amount*($promos['cashback']/100), 2);
+                    if($cashBackCutomer > $promos['maximum_cashback']){
+                        $cashBackCutomer = $promos['maximum_cashback'];
+                    }
+                }
+                $promos['cashback_customer'] = $cashBackCutomer;
+            }
+
             if($promos['charged_type'] == 'Nominal'){
                 $chargedPG = $promos['charged_payment_gateway'];
                 $chargedJiwaGroup = $promos['charged_jiwa_group'];
                 $chargedCentral = $promos['charged_central'];
                 $chargedOutlet = $promos['charged_outlet'];
             }else{
-                $chargedPG = $additionalData['cashback']*($promos['charged_payment_gateway']/100);
-                $chargedJiwaGroup = $additionalData['cashback']*($promos['charged_jiwa_group']/100);
+                $chargedPG = $promos['cashback_customer']*($promos['charged_payment_gateway']/100);
+                $chargedJiwaGroup = $promos['cashback_customer']*($promos['charged_jiwa_group']/100);
                 $chargedCentral = $chargedJiwaGroup*($promos['charged_central']/100);
                 $chargedOutlet = $chargedJiwaGroup*($promos['charged_outlet']/100);
             }
@@ -572,6 +585,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 'id_user' => auth()->user()->id,
                 'id_rule_promo_payment_gateway' => $post['id_rule_promo_payment_gateway'],
                 'reference_by' => $post['reference_by'],
+                'validation_cashback_type' => $post['validation_cashback_type'],
                 'start_date_periode' => (!empty($post['start_date_periode']) ? date('Y-m-d', strtotime($post['start_date_periode'])) : NULL),
                 'end_date_periode' => (!empty($post['end_date_periode']) ? date('Y-m-d', strtotime($post['end_date_periode'])) : NULL),
                 'file' => ($store ? $directory : NULL),
@@ -584,6 +598,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
                     'id_promo_payment_gateway_validation' => $createValidation['id_promo_payment_gateway_validation'],
                     'id_rule_promo_payment_gateway' => $post['id_rule_promo_payment_gateway'],
                     'reference_by' => $post['reference_by'],
+                    'validation_cashback_type' => $post['validation_cashback_type'],
                     'start_date_periode' => $post['start_date_periode'],
                     'end_date_periode' => $post['end_date_periode'],
                 ])->onConnection('validationpromopgqueue');
