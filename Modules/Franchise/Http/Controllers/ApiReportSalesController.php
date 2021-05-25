@@ -136,24 +136,28 @@ class ApiReportSalesController extends Controller
 
     	$result = [
             'total_subtotal' => [
-                'title' => 'Sub Total',
+                'title' => 'Penjualan Kotor',
                 'amount' => 'Rp. '.number_format($report['total_subtotal']??0,0,",","."),
-                "tooltip" => 'total transaksi sebelum di potong diskon dan ditambahkan delivery'
+                "tooltip" => 'Total transaksi sebelum dipotong diskon dan ditambah biaya pengiriman',
+                "show" => 1
             ],
             'total_discount' => [
-                'title' => 'Diskon',
+                'title' => 'Total Diskon',
                 'amount' => 'Rp. '.number_format($report['total_discount']??0,0,",","."),
-                "tooltip" => 'total diskon transaksi (diskon produk, diskon biaya delivery dan diskon bill)'
+                "tooltip" => 'Total diskon transaksi (diskon produk, diskon biaya pengiriman dan diskon bill)',
+                "show" => 1
             ],
             'total_delivery' => [
-                'title' => 'Delivery Fee',
+                'title' => 'Biaya Pengiriman',
                 'amount' => 'Rp. '.number_format($report['total_delivery']??0,0,",","."),
-                "tooltip" => 'total biaya delivery'
+                "tooltip" => 'Total biaya pengiriman',
+                "show" => 1
             ],
             'total_grandtotal' => [
-                'title' => 'Grand Total',
+                'title' => 'Penjualan Bersih',
                 'amount' => 'Rp. '.number_format($report['total_grandtotal']??0,0,",","."),
-                "tooltip" => 'total nominal transaksi setelah di potong diskon dan ditambahkan biaya delivery'
+                "tooltip" => 'Total nominal transaksi setelah dipotong diskon dan ditambah biaya pengiriman',
+                "show" => 1
             ],
             'total_complete_payment' => [
                 'title' => 'Pembayaran Sukses',
@@ -173,12 +177,14 @@ class ApiReportSalesController extends Controller
     		'total_transaction' => [
                 'title' => 'Total Order',
                 'amount' => number_format($report['total_transaction']??0,0,",","."),
-                "tooltip" => 'jumlah transaksi dengan status pembayaran sukses dan tidak di reject'
+                "tooltip" => 'Jumlah order sukses dan order ditolak',
+                "show" => 1
             ],
             'total_response' => [
-                'title' => 'Response Order',
+                'title' => 'Order Direspons',
                 'amount' => number_format($report['total_response']??0,0,",","."),
-                "tooltip" => 'jumlah transaksi yang di response oleh outlet (diterima atau di manual reject)'
+                "tooltip" => 'Jumlah transaksi yang di respons oleh outlet (diterima atau ditolak)',
+                "show" => 1
             ],
             'response_rate' => [
                 'title' => 'Response Rate Order',
@@ -186,9 +192,10 @@ class ApiReportSalesController extends Controller
                 "tooltip" => 'persentase jumlah order yang di response oleh outlet dibandingkan dengan jumlah transaksi dengan status pembayaran suskes (transaksi yang masuk)'
             ],
             'total_accept' => [
-                'title' => 'Accepted Order',
+                'title' => 'Order Diterima',
                 'amount' => number_format($report['total_accept']??0,0,",","."),
-                "tooltip" => 'jumlah transaksi yang diterima oleh outlet'
+                "tooltip" => 'Jumlah transaksi yang diterima oleh outlet',
+                "show" => 1
             ],
             'acceptance_rate' => [
                 'title' => 'Acceptance Rate Order',
@@ -206,9 +213,10 @@ class ApiReportSalesController extends Controller
                 "tooltip" => 'jumlah transaksi yang tidak di response oleh outlet dan terproses auto reject oleh sistem'
             ],
             'total_reject' => [
-                'title' => 'Total Rejected Order',
+                'title' => 'Total Order Ditolak',
                 'amount' => number_format($report['total_reject']??0,0,",","."),
-                "tooltip" => 'jumlah transaksi dengan status reject (semua kondisi reject: manual reject, auto reject karena tidak di response, auto reject karena driver tidak ditemukan dsb)'
+                "tooltip" => 'Jumlah transaksi ditolak (secara manual maupun otomatis oleh sistem)',
+                "show" => 1
             ],
     	];
 
