@@ -786,6 +786,11 @@ class ApiPromoCampaign extends Controller
                 	return response()->json($result);
             	}
             }
+
+            $post['limitation_usage'] = 0;
+        }else{
+        	$post['user_limit'] = 0;
+        	$post['code_limit'] = 0;
         }
 
         DB::beginTransaction();
@@ -2483,8 +2488,8 @@ class ApiPromoCampaign extends Controller
 		            	$q->where(function($q2) {
 		            		$q2->where('code_type', 'Multiple')
 			            		->where(function($q3) {
-					            	$q3->whereColumn('usage','<','limitation_usage')
-					            		->orWhere('limitation_usage',0);
+					            	$q3->whereColumn('usage','<','code_limit')
+					            		->orWhere('code_limit',0);
 			            		});
 
 		            	}) 
@@ -2520,7 +2525,6 @@ class ApiPromoCampaign extends Controller
 						'promo_campaign.promo_campaign_shipment_method'
 					])
 	                ->first();
-
 	        if(!$code){
 	            return [
 	                'status'=>'fail',
@@ -3277,8 +3281,8 @@ class ApiPromoCampaign extends Controller
 		            	$q->where(function($q2) {
 		            		$q2->where('code_type', 'Multiple')
 			            		->where(function($q3) {
-					            	$q3->whereColumn('usage','<','limitation_usage')
-					            		->orWhere('limitation_usage',0);
+					            	$q3->whereColumn('usage','<','code_limit')
+					            		->orWhere('code_limit',0);
 			            		});
 
 		            	}) 
