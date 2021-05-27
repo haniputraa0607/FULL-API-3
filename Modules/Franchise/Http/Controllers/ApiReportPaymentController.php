@@ -37,8 +37,8 @@ class ApiReportPaymentController extends Controller
                 ->get()->toArray();
 
             if(isset($post['filter_type']) && $post['filter_type'] == 'range_date'){
-                $dateStart = date('Y-m-d', strtotime($post['date_start']));
-                $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+                $dateStart = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+                $dateEnd = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
                 $payments = DailyReportPayment::where('trx_date', '>=', $dateStart)
                     ->where('trx_date', '<=', $dateEnd)
                     ->where('id_outlet', $id_oultet)
@@ -199,8 +199,8 @@ class ApiReportPaymentController extends Controller
             }
 
             if(isset($post['filter_type']) && $post['filter_type'] == 'range_date'){
-                $dateStart = date('Y-m-d', strtotime($post['date_start']));
-                $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+                $dateStart = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+                $dateEnd = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
                 $list = $list->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
             }else{
                 $currentDate = date('Y-m-d');
@@ -265,8 +265,8 @@ class ApiReportPaymentController extends Controller
         $id_oultet = UserFranchiseOultetConnection3::where('id_user_franchise' , auth()->user()->id_user_franchise)->first()['id_outlet']??NULL;
 
         if($id_oultet && !empty($post['date_start']) && !empty($post['date_start'])) {
-            $dateStart = date('Y-m-d', strtotime($post['date_start']));
-            $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+            $dateStart = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+            $dateEnd = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
             $payments = DailyReportPayment::where('refund_with_point', 0)
                 ->groupBy('trx_payment')
                 ->select('trx_payment')
@@ -334,8 +334,8 @@ class ApiReportPaymentController extends Controller
                 ->whereNull('reject_at');
 
             if(isset($post['filter_type']) && $post['filter_type'] == 'range_date'){
-                $dateStart = date('Y-m-d', strtotime($post['date_start']));
-                $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+                $dateStart = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+                $dateEnd = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
                 $list = $list->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
             }else{
                 $currentDate = date('Y-m-d');
