@@ -575,11 +575,11 @@ class ApiPromoCampaign extends Controller
         return ['filter' => $return, 'filter_operator' => $request->json('operator')];
     }
 
-    public function Coupon(Request $request)
+    public function coupon(Request $request)
     {
         $post = $request->json()->all();
 
-        $query = PromoCampaignPromoCode::select('promo_campaign_promo_codes.*', 'promo_campaigns.limitation_usage')
+        $query = PromoCampaignPromoCode::select('promo_campaign_promo_codes.*', 'promo_campaigns.code_limit')
                 ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
                 ->where('promo_campaign_promo_codes.id_promo_campaign', $post['id_promo_campaign']);
 
@@ -596,7 +596,7 @@ class ApiPromoCampaign extends Controller
             $this->filterCoupon($query,$request,$foreign);
             $this->filterCoupon($count,$request,$foreign2);
         }
-        $column = ['promo_code','status','usage','available','limitation_usage'];
+        $column = ['promo_code','status','usage','available','code_limit'];
         if($post['start']){
             $query->skip($post['start']);
         }
@@ -610,8 +610,8 @@ class ApiPromoCampaign extends Controller
                 $query->orderBy('usage',$value['dir']);
                 break;
                 
-                case 'limitation_usage':
-                $query->orderBy('limitation_usage',$value['dir']);
+                case 'code_limit':
+                $query->orderBy('code_limit',$value['dir']);
                 break;
                 
                 default:
@@ -683,11 +683,11 @@ class ApiPromoCampaign extends Controller
                     }
                     elseif( $value['parameter'] == 'Used' )
                     {
-                        $queryx->$where('usage', '=', 'limitation_usage');
+                        $queryx->$where('usage', '=', 'code_limit');
                     }
                     else
                     {
-                        $queryx->$where('usage', '!=', 0)->$where('usage', '!=', 'limitation_usage');
+                        $queryx->$where('usage', '!=', 0)->$where('usage', '!=', 'code_limit');
                     }
 
                     break;
@@ -697,11 +697,11 @@ class ApiPromoCampaign extends Controller
                     break;
 
                     case 'available':
-                    $queryx->$whereRaw('limitation_usage - promo_campaign_promo_codes.usage '.$value['operator'].' '.$value['parameter']);
+                    $queryx->$whereRaw('code_limit - promo_campaign_promo_codes.usage '.$value['operator'].' '.$value['parameter']);
                     break;
 
                     case 'max_used':
-                    $queryx->$where('limitation_usage', $value['operator'], $value['parameter']);
+                    $queryx->$where('code_limit', $value['operator'], $value['parameter']);
                     break;
 
                     default:
