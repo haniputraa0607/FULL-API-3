@@ -757,6 +757,10 @@ class ApiReportTransactionController extends Controller
                 $result = array_values($result);
                 break;
 
+            case 'product_variants_raw':
+                $result = ProductVariant::select('id_product_variant', 'product_variant_name')->get();
+                break;
+            
             case 'modifiers':
                 $result = ProductModifier::select('id_product_modifier', 'text')->where('modifier_type', '<>', 'Modifier Group')->get();
                 break;
