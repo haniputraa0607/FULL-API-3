@@ -62,8 +62,8 @@ class ApiReportDisburseController extends Controller
                 });
 
             if(isset($post['filter_type']) && $post['filter_type'] == 'range_date'){
-                $dateStart = date('Y-m-d', strtotime($post['date_start']));
-                $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+                $dateStart = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+                $dateEnd = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
                 $query1 = $query1->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
                 $query2 = $query2->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
                 $query3 = $query3->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
@@ -147,8 +147,8 @@ class ApiReportDisburseController extends Controller
 
             if(isset($post['date_start']) && !empty($post['date_start']) &&
                 isset($post['date_end']) && !empty($post['date_end'])){
-                $start_date = date('Y-m-d', strtotime($post['date_start']));
-                $end_date = date('Y-m-d', strtotime($post['date_end']));
+                $start_date = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+                $end_date = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
 
                 $data->whereDate('transactions.transaction_date', '>=', $start_date)
                     ->whereDate('transactions.transaction_date', '<=', $end_date);
@@ -217,8 +217,8 @@ class ApiReportDisburseController extends Controller
 
             if(isset($post['date_start']) && !empty($post['date_start']) &&
                 isset($post['date_end']) && !empty($post['date_end'])){
-                $start_date = date('Y-m-d', strtotime($post['date_start']));
-                $end_date = date('Y-m-d', strtotime($post['date_end']));
+                $start_date = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+                $end_date = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
 
                 $data->whereDate('disburse.created_at', '>=', $start_date)
                     ->whereDate('disburse.created_at', '<=', $end_date);

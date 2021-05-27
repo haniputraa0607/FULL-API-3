@@ -31,8 +31,8 @@ class ApiDashboardController extends Controller
                     ');
 
             if(isset($post['filter_type']) && $post['filter_type'] == 'range_date') {
-                $dateStart = date('Y-m-d', strtotime($post['date_start']));
-                $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+                $dateStart = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+                $dateEnd = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
                 $trx = $trx->whereDate('transaction_date', '>=', $dateStart)->whereDate('transaction_date', '<=', $dateEnd);
             }else{
                 $trx = $trx->whereDate('transaction_date',  date('Y-m-d'));
@@ -139,8 +139,8 @@ class ApiDashboardController extends Controller
                 ->orderBy('sum_qty', 'desc');
 
             if(isset($post['filter_type']) && $post['filter_type'] == 'range_date') {
-                $dateStart = date('Y-m-d', strtotime($post['date_start']));
-                $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+                $dateStart = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+                $dateEnd = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
                 $topTen = $topTen->whereDate('transaction_date', '>=', $dateStart)->whereDate('transaction_date', '<=', $dateEnd);
             }else{
                 $topTen = $topTen->whereDate('transaction_date',  date('Y-m-d'));
@@ -155,8 +155,8 @@ class ApiDashboardController extends Controller
     function summarySales(Request $request){
         $post = $request->json()->all();
         if(!empty($post['id_outlet'])) {
-            $dateStart = date('Y-m-d', strtotime($post['date_start']));
-            $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+            $dateStart = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+            $dateEnd = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
             $begin = new DateTime($dateStart);
             $end   = new DateTime($dateEnd);
             $get = DailyReportTrx::where('id_outlet', $post['id_outlet'])
