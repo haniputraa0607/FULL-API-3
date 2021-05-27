@@ -156,27 +156,36 @@ class ApiReportPaymentController extends Controller
                 ->whereNull('reject_at');
 
             if (strtolower($post['trx_payment']) == 'shopeepay'){
-                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name', DB::raw('(transaction_payment_shopee_pays.amount/100) as amount'), 'transaction_payment_balances.balance_nominal as balance_amount',
+                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name', DB::raw('(transaction_payment_shopee_pays.amount/100) as amount'), 'transaction_payment_balances.balance_nominal as balance_amount', 'transaction_payment_subscriptions.subscription_nominal',
                     '"ShopeePay" as payment_name')->whereNotNull('transaction_payment_shopee_pays.id_transaction_payment_shopee_pay');
             }elseif (strtolower($post['trx_payment']) == 'subscription'){
-                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name','transaction_payment_subscriptions.subscription_nominal as amount', 'transaction_payment_balances.balance_nominal as balance_amount',
-                    '"Subscription" as payment_name')->whereNotNull('transaction_payment_subscriptions.id_transaction_payment_subscription');
-            }elseif (strtolower($post['trx_payment']) == 'jiwa poin'){
-                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name','transaction_payment_balances.balance_nominal as balance_amount',
+                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name', 'transaction_payment_subscriptions.subscription_nominal', 'transaction_payment_balances.balance_nominal as balance_amount',
                     DB::raw('(CASE 
                         WHEN transaction_payment_midtrans.gross_amount IS NOT NULL THEN transaction_payment_midtrans.gross_amount
                         WHEN transaction_payment_ipay88s.amount IS NOT NULL THEN transaction_payment_ipay88s.amount/100
                         WHEN transaction_payment_shopee_pays.amount IS NOT NULL THEN transaction_payment_shopee_pays.amount/100
-                        WHEN transaction_payment_subscriptions.subscription_nominal IS NOT NULL THEN transaction_payment_subscriptions.subscription_nominal
                         ELSE NULL END) as amount'),
                     DB::raw('(CASE 
                         WHEN transaction_payment_midtrans.gross_amount IS NOT NULL THEN transaction_payment_midtrans.payment_type
                         WHEN transaction_payment_ipay88s.amount IS NOT NULL THEN transaction_payment_ipay88s.payment_method
                         WHEN transaction_payment_shopee_pays.amount IS NOT NULL THEN "ShopeePay"
-                        WHEN transaction_payment_subscriptions.subscription_nominal IS NOT NULL THEN "Subscription"
-                        ELSE NULL END) as payment_name'))->whereNotNull('transaction_payment_balances.id_transaction_payment_balance');
+                        ELSE NULL END) as payment_name'))
+                    ->whereNotNull('transaction_payment_subscriptions.id_transaction_payment_subscription');
+            }elseif (strtolower($post['trx_payment']) == 'jiwa poin'){
+                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name','transaction_payment_balances.balance_nominal as balance_amount', 'transaction_payment_subscriptions.subscription_nominal',
+                    DB::raw('(CASE 
+                        WHEN transaction_payment_midtrans.gross_amount IS NOT NULL THEN transaction_payment_midtrans.gross_amount
+                        WHEN transaction_payment_ipay88s.amount IS NOT NULL THEN transaction_payment_ipay88s.amount/100
+                        WHEN transaction_payment_shopee_pays.amount IS NOT NULL THEN transaction_payment_shopee_pays.amount/100
+                        ELSE NULL END) as amount'),
+                    DB::raw('(CASE 
+                        WHEN transaction_payment_midtrans.gross_amount IS NOT NULL THEN transaction_payment_midtrans.payment_type
+                        WHEN transaction_payment_ipay88s.amount IS NOT NULL THEN transaction_payment_ipay88s.payment_method
+                        WHEN transaction_payment_shopee_pays.amount IS NOT NULL THEN "ShopeePay"
+                        ELSE NULL END) as payment_name'))->whereNotNull('transaction_payment_balances.id_transaction_payment_balance')
+                    ->whereNotNull('transaction_payment_balances.id_transaction_payment_balance');
             }else{
-                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name', 'transaction_payment_balances.balance_nominal as balance_amount',
+                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name', 'transaction_payment_balances.balance_nominal as balance_amount', 'transaction_payment_subscriptions.subscription_nominal',
                     DB::raw('(CASE WHEN transaction_payment_midtrans.gross_amount IS NULL THEN transaction_payment_ipay88s.amount/100
                         ELSE transaction_payment_midtrans.gross_amount END) as amount'),
                     DB::raw('(CASE WHEN transaction_payment_midtrans.gross_amount IS NOT NULL THEN transaction_payment_midtrans.payment_type
