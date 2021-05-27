@@ -43,7 +43,7 @@ class ApiDashboardController extends Controller
                 [
                     'title' => 'Penjualan Kotor',
                     'amount' => 'Rp '.number_format($trx['sub_total']??0,0,",","."),
-                    'tooltip' => "Total nominal transaksi sebelum di potong diskon dan ditambah biaya pengiriman"
+                    'tooltip' => "Total nominal transaksi sebelum dipotong diskon dan ditambah biaya pengiriman"
                 ],
                 [
                     'title' => 'Total Diskon',
@@ -58,7 +58,7 @@ class ApiDashboardController extends Controller
                 [
                     'title' => 'Penjualan Bersih',
                     'amount' => 'Rp '.number_format($trx['grand_total']??0,0,",","."),
-                    'tooltip' => "Total nominal transaksi setelah di potong diskon dan ditambahkan biaya pengiriman"
+                    'tooltip' => "Total nominal transaksi setelah dipotong diskon dan ditambahkan biaya pengiriman"
                 ],
                 [
                     'title' => 'Total Penjualan',
@@ -71,33 +71,33 @@ class ApiDashboardController extends Controller
                 $result[] =  [
                     'title' => 'Rata-Rata Penjualan',
                     'amount' => number_format($trx['total_sales']/$trx['count_date'],0,",","."),
-                    'tooltip' => "Rata - rata jumlah transaksi dengan status pembayaran sukses per hari"
+                    'tooltip' => "Rata-rata jumlah transaksi dengan status pembayaran sukses per hari"
                 ];
                 $result[] =  [
                     'title' => 'Rata-Rata Penjualan Kotor',
                     'amount' => 'Rp '.number_format($trx['sub_total']/$trx['total_sales'],0,",","."),
-                    'tooltip' => "Rata - rata nominal transaksi sebelum di potong diskon dan ditambah biaya pengiriman per hari"
+                    'tooltip' => "Rata-rata nominal transaksi sebelum dipotong diskon dan ditambah biaya pengiriman per hari"
                 ];
                 $result[] =  [
                     'title' => 'Rata-Rata Penjualan Bersih',
                     'amount' => 'Rp '.number_format($trx['grand_total']/$trx['total_sales'],0,",","."),
-                    'tooltip' => "Rata - rata nominal transaksi setelah di potong diskon dan ditambah biaya pengiriman per hari"
+                    'tooltip' => "Rata-rata nominal transaksi setelah dipotong diskon dan ditambah biaya pengiriman per hari"
                 ];
             }else{
                 $result[] =  [
                     'title' => 'Rata-Rata Penjualan',
                     'amount' => number_format(0,0,",","."),
-                    'tooltip' => "Rata - rata jumlah transaksi dengan status pembayaran sukses per hari"
+                    'tooltip' => "Rata-rata jumlah transaksi dengan status pembayaran sukses per hari"
                 ];
                 $result[] =  [
                     'title' => 'Rata-Rata Penjualan Kotor',
                     'amount' => 'Rp '.number_format(0,0,",","."),
-                    'tooltip' => "Rata - rata nominal transaksi sebelum di potong diskon dan ditambah biaya pengiriman per hari"
+                    'tooltip' => "Rata-rata nominal transaksi sebelum dipotong diskon dan ditambah biaya pengiriman per hari"
                 ];
                 $result[] =  [
                     'title' => 'Rata-Rata Penjualan Bersih',
                     'amount' => 'Rp '.number_format(0,0,",","."),
-                    'tooltip' => "Rata - rata nominal transaksi setelah di potong diskon dan ditambah biaya pengiriman per hari"
+                    'tooltip' => "Rata-rata nominal transaksi setelah dipotong diskon dan ditambah biaya pengiriman per hari"
                 ];
             }
 
