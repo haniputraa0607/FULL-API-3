@@ -14,6 +14,7 @@ class PromoPaymentGatewayValidation extends Model
 	    'id_rule_promo_payment_gateway',
         'processing_status',
         'reference_by',
+        'validation_cashback_type',
         'start_date_periode',
         'end_date_periode',
         'correct_get_promo',
