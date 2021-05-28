@@ -64,16 +64,16 @@ class ApiReportDisburseController extends Controller
             if(isset($post['filter_type']) && $post['filter_type'] == 'range_date'){
                 $dateStart = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
                 $dateEnd = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
-                $query1 = $query1->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
+                $query1 = $query1->whereDate('disburse.created_at', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
                 $query2 = $query2->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
                 $query3 = $query3->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
-                $query4 = $query4->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
+                $query4 = $query4->whereDate('disburse.created_at', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
             }elseif (isset($post['filter_type']) && $post['filter_type'] == 'today'){
                 $currentDate = date('Y-m-d');
-                $query1 = $query1->whereDate('transactions.transaction_date', $currentDate);
+                $query1 = $query1->whereDate('disburse.created_at', $currentDate);
                 $query2 = $query2->whereDate('transactions.transaction_date', $currentDate);
                 $query3 = $query3->whereDate('transactions.transaction_date', $currentDate);
-                $query4 = $query4->whereDate('transactions.transaction_date', $currentDate);
+                $query4 = $query4->whereDate('disburse.created_at', $currentDate);
             }
             $success = $query1->sum('disburse_outlet_transactions.income_outlet');
             $unprocessed = $query2->sum('disburse_outlet_transactions.income_outlet');
@@ -84,7 +84,7 @@ class ApiReportDisburseController extends Controller
             $result = [
                 [
                     'title' => 'Total Pendapatan',
-                    'amount' => number_format($sum['total_income']??0,2,",","."),
+                    'amount' => number_format($success+$fail+$unprocessed,2,",","."),
                     'tooltip' => 'Jumlah pendapatan yang akan diterima oleh outlet'
                 ],
                 [
@@ -273,12 +273,12 @@ class ApiReportDisburseController extends Controller
 
             if(isset($post['export']) && $post['export'] == 1){
                 if($post['status'] == 'success'){
-                    $data = $data->selectRaw('disburse_status as "Status", bank_name.bank_name as "Nama Bank", CONCAT(" ",disburse.beneficiary_account_number) as "No Rekening", disburse.beneficiary_name as "No Referensi", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Tanggal", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal",
+                    $data = $data->selectRaw('disburse_status as "Status", bank_name.bank_name as "Nama Bank", CONCAT(" ",disburse.beneficiary_account_number) as "No Rekening", disburse.beneficiary_name as "Nama Penerima", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Tanggal Disburse", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal",
                         total_fee_item as "Total Biaya Jasa", total_payment_charge as "Total MDR"')
                         ->get()->toArray();
                 }else{
-                    $data = $data->selectRaw('disburse_status as "Disburse Status", bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal Disburse",
-                        total_fee_item as "Total Fee Item", total_payment_charge as "Total MDR PG"')
+                    $data = $data->selectRaw('disburse_status as "Status", bank_name.bank_name as "Nama Bank", CONCAT(" ",disburse.beneficiary_account_number) as "No Rekening", disburse.beneficiary_name as "Nama Penerima", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Tanggal Disburse", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal",
+                        total_fee_item as "Total Biaya Jasa", total_payment_charge as "Total MDR"')
                         ->get()->toArray();
                 }
             }else{
