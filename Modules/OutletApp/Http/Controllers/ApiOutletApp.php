@@ -1516,13 +1516,15 @@ class ApiOutletApp extends Controller
         }
 
         $modifier_groups = $modifier_groups->get();
-
-        $result[] = [
-            'id_brand' => 0,
-            'name_brand' => 'Variant No SKU',
-            'order_brand' => 1000,
-            'categories' => $modifier_groups
-        ];
+		
+		if ( !empty($modifier_groups[0]['total_product']) ) {
+	        $result[] = [
+	            'id_brand' => 0,
+	            'name_brand' => 'Variant No SKU',
+	            'order_brand' => 1000,
+	            'categories' => $modifier_groups
+	        ];
+		}
 
         return MyHelper::checkGet(array_values($result));
     }
