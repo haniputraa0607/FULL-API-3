@@ -64,16 +64,16 @@ class ApiReportDisburseController extends Controller
             if(isset($post['filter_type']) && $post['filter_type'] == 'range_date'){
                 $dateStart = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
                 $dateEnd = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
-                $query1 = $query1->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
+                $query1 = $query1->whereDate('disburse.created_at', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
                 $query2 = $query2->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
                 $query3 = $query3->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
-                $query4 = $query4->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
+                $query4 = $query4->whereDate('disburse.created_at', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
             }elseif (isset($post['filter_type']) && $post['filter_type'] == 'today'){
                 $currentDate = date('Y-m-d');
-                $query1 = $query1->whereDate('transactions.transaction_date', $currentDate);
+                $query1 = $query1->whereDate('disburse.created_at', $currentDate);
                 $query2 = $query2->whereDate('transactions.transaction_date', $currentDate);
                 $query3 = $query3->whereDate('transactions.transaction_date', $currentDate);
-                $query4 = $query4->whereDate('transactions.transaction_date', $currentDate);
+                $query4 = $query4->whereDate('disburse.created_at', $currentDate);
             }
             $success = $query1->sum('disburse_outlet_transactions.income_outlet');
             $unprocessed = $query2->sum('disburse_outlet_transactions.income_outlet');
@@ -84,7 +84,7 @@ class ApiReportDisburseController extends Controller
             $result = [
                 [
                     'title' => 'Total Pendapatan',
-                    'amount' => number_format($sum['total_income']??0,2,",","."),
+                    'amount' => number_format($success+$fail+$unprocessed,2,",","."),
                     'tooltip' => 'Jumlah pendapatan yang akan diterima oleh outlet'
                 ],
                 [
