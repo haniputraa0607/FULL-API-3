@@ -33,6 +33,8 @@ use Modules\Disburse\Entities\DisburseTransaction;
 use Modules\Disburse\Entities\LogIRIS;
 use Modules\Disburse\Entities\LogTopupIris;
 use Modules\Disburse\Entities\MDR;
+use Modules\Disburse\Entities\PromoPaymentGatewayTransaction;
+use Modules\Disburse\Entities\RulePromoPaymentGateway;
 use  Modules\UserFranchise\Entities\UserFranchisee;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
@@ -45,6 +47,10 @@ use Modules\Transaction\Entities\TransactionBundlingProduct;
 
 class ApiIrisController extends Controller
 {
+    function __construct() {
+        $this->promo_payment_gateway="Modules\Disburse\Http\Controllers\ApiRulePromoPaymentGatewayController";
+    }
+
     public function notification(Request $request){
         $post = $request->json()->all();
         $status = $post['status'];
@@ -184,6 +190,13 @@ class ApiIrisController extends Controller
                                 $arrTmp = [];
                                 $arrTmpDisburse = [];
                                 foreach ($getData as $data){
+                                    //check promo payment gateway
+                                    if(!empty($data['id_rule_promo_payment_gateway'])){
+                                        $rulePromoPG = RulePromoPaymentGateway::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])->first();
+                                        if(date('Y-m-d') < $rulePromoPG['end_date'] || $data['status_validation_promo_payment_gateway'] == 0){
+                                            continue;
+                                        }
+                                    }
 
                                     if(!is_null($data['beneficiary_account'])){
                                         $amount = $data['income_outlet'];
@@ -517,7 +530,7 @@ class ApiIrisController extends Controller
     /* !!!!============= ATTENTION =============!!!! */
     /* !!!! please add new condition in "process calculation payment gateway" if you added new payment gateway !!!! */
     /* !!!! after update function please restart queue !!!! */
-    public function calculationTransaction($id_transaction){
+    public function calculationTransaction($id_transaction,$additionalDataPromoPayment = []){
         $data = Transaction::where('id_transaction', $id_transaction)
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
             ->with(['transaction_multiple_payment', 'vouchers', 'promo_campaign', 'transaction_payment_subscription'])
@@ -547,6 +560,18 @@ class ApiIrisController extends Controller
             $amount = 0;
             $amountMDR = 0 ;
             $transactionShipment = 0;
+
+            //variable promo payment gateway
+            $idRulePromoPaymentGateway = null;
+            $feePromoPaymentGateway = 0;
+            $feePromoPaymentGatewayJiwaGroup = 0;
+            $feePromoPaymentGatewayCentral = 0;
+            $feePromoPaymentGatewayOutlet = 0;
+            $chargedPromoPaymentGateway = 0;
+            $chargedPromoPaymentGatewayJiwaGroup = 0;
+            $chargedPromoPaymentGatewayCentral = 0;
+            $chargedPromoPaymentGatewayOutlet = 0;
+
             $discountDelivery = abs($data['transaction_discount_delivery']??0);
             if(!empty($data['transaction_shipment_go_send'])){
                 $transactionShipment = $data['transaction_shipment_go_send'];
@@ -601,6 +626,22 @@ class ApiIrisController extends Controller
                     }
                 }
 
+                //check promo payment gateway
+                $promoPaymentGateway = app($this->promo_payment_gateway)->getAvailablePromo($data['id_transaction'], $additionalDataPromoPayment);
+                if(!empty($promoPaymentGateway)){
+                    $promoPaymentGatewayCashback = $promoPaymentGateway['cashback_customer'];
+                    $idRulePromoPaymentGateway = $promoPaymentGateway['id_rule_promo_payment_gateway'];
+                    $chargedPromoPaymentGateway = $promoPaymentGateway['charged_payment_gateway'];
+                    $chargedPromoPaymentGatewayCentral = $promoPaymentGateway['charged_central'];
+                    $chargedPromoPaymentGatewayOutlet = $promoPaymentGateway['charged_outlet'];
+                    $mdrSettingOverride = $promoPaymentGateway['mdr_setting'];
+                    $feePromoPaymentGatewayType = $promoPaymentGateway['charged_type'];
+                    $feePromoPaymentGateway = $promoPaymentGateway['fee_payment_gateway'];
+                    $feePromoPaymentGatewayJiwaGroup = $promoPaymentGateway['fee_jiwa_group'];
+                    $feePromoPaymentGatewayCentral = $promoPaymentGateway['fee_central'];
+                    $feePromoPaymentGatewayOutlet = $promoPaymentGateway['fee_outlet'];
+                }
+
                 $statusSplitPayment = 0;//for flag if transaction user split payment with balance (point)
                 if(count($data['transaction_multiple_payment']) > 1){
                     $statusSplitPayment = 1;
@@ -612,6 +653,7 @@ class ApiIrisController extends Controller
                     if(strtolower($payments['type']) == 'midtrans'){
                         $midtrans = TransactionPaymentMidtran::where('id_transaction', $data['id_transaction'])->first();
                         $payment = $midtrans['payment_type'];
+                        $originalAmountPG = $midtrans['gross_amount'];
                         if($statusSplitPayment == 1){
                             $amountMDR = $grandTotal - $nominalSubscription;
                         }else{
@@ -665,6 +707,7 @@ class ApiIrisController extends Controller
                         }
                     }elseif(strtolower($payments['type']) == 'ipay88'){
                         $ipay88 = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first();
+                        $originalAmountPG = $ipay88['amount']/100;
                         if($statusSplitPayment == 1){
                             $amountMDR = $grandTotal - $nominalSubscription;
                         }else{
@@ -685,7 +728,7 @@ class ApiIrisController extends Controller
                         }
                     }elseif (strtolower($payments['type']) == 'ovo'){
                         $ovo = TransactionPaymentOvo::where('id_transaction', $data['id_transaction'])->first();
-
+                        $originalAmountPG = $ovo['amount']/100;
                         if($statusSplitPayment == 1){
                             $amountMDR = $grandTotal - $nominalSubscription;
                         }else{
@@ -704,6 +747,7 @@ class ApiIrisController extends Controller
                         }
                     }elseif (strtolower($payments['type']) == 'shopeepay'){
                         $shopeepay = TransactionPaymentShopeePay::where('id_transaction', $data['id_transaction'])->first();
+                        $originalAmountPG = $shopeepay['amount']/100;
                         if($statusSplitPayment == 1){
                             $amountMDR = $grandTotal - $nominalSubscription;
                         }else{
@@ -801,6 +845,29 @@ class ApiIrisController extends Controller
                     $totalFeeForCentral = $feePGCentral;//MDR for central
                 }
 
+                if(!empty($idRulePromoPaymentGateway)){
+                    switch ($mdrSettingOverride) {
+                        case 'Total Amount PG - Cashback Jiwa Group':
+                            $amountMDRPromoPG = $amountMDR-$feePromoPaymentGatewayJiwaGroup;
+                            break;
+                        case 'Total Amount PG - Total Cashback Customer':
+                            $amountMDRPromoPG = $amountMDR-$promoPaymentGatewayCashback;
+                            break;
+                        default:
+                            $amountMDRPromoPG = $amountMDR;
+                            break;
+                    }
+
+                    //fee pg with promo payment gateway
+                    if($feePGType == 'Percent'){
+                        $totalFeePromoPG = $amountMDRPromoPG * (($feePGCentral + $feePG) / 100);//MDR
+                        $totalFeeForCentralPromoPG = $amountMDRPromoPG * ($feePGCentral/100);//MDR for central
+                    }else{
+                        $totalFeePromoPG = $feePGCentral + $feePG;//MDR
+                        $totalFeeForCentralPromoPG = $feePGCentral;//MDR for central
+                    }
+                }
+
                 $percentFee = 0;
                 if($data['outlet_special_status'] == 1){
                     $percentFee = $data['outlet_special_fee'];
@@ -824,16 +891,36 @@ class ApiIrisController extends Controller
                 $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet - $bundlingProductFeeOutlet, 2);//income outlet
                 $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentral, 2);//income central
                 $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral + $bundlingProductFeeCentral, 2);//expense central
+                $amountOld = 0;
+                $incomeCentralOld = 0;
+                $expenseCentralOld = 0;
+                $totalFeeOld = 0;
+
+                if(!empty($idRulePromoPaymentGateway)){
+                    $amountOld = $amount;
+                    $incomeCentralOld = $incomeCentral;
+                    $expenseCentralOld = $expenseCentral;
+                    $totalFeeOld = $totalFee;
+
+                    $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFeePromoPG - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet - $bundlingProductFeeOutlet - $feePromoPaymentGatewayOutlet, 2);//income outlet
+                    $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentralPromoPG, 2);//income central
+                    $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral + $bundlingProductFeeCentral + $feePromoPaymentGatewayCentral, 2);//expense central
+                    $totalFee = $totalFeePromoPG;
+                }
 
                 $dataInsert = [
                     'id_transaction' => $data['id_transaction'],
                     'income_outlet'=> $amount,
+                    'income_outlet_old' => $amountOld,
                     'income_central'=> $incomeCentral,
+                    'income_central_old' => $incomeCentralOld,
                     'expense_central'=> $expenseCentral,
+                    'expense_central_old' => $expenseCentralOld,
                     'fee_item' => $feeItemForCentral,
                     'discount' => $totalChargedPromo,
                     'discount_central' => $totalChargedPromoCentral,
                     'payment_charge' => $totalFee,
+                    'payment_charge_old' => $totalFeeOld,
                     'point_use_expense' => $nominalBalance,
                     'subscription' => $totalChargedSubcriptionOutlet,
                     'subscription_central' => $totalChargedSubcriptionCentral,
@@ -852,10 +939,32 @@ class ApiIrisController extends Controller
                     'charged_promo_outlet' => $feePromoOutlet,
                     'charged_subscription_central' => $feeSubcriptionCentral,
                     'charged_subscription_outlet' => $feeSubcriptionOutlet,
+                    'id_rule_promo_payment_gateway' => $idRulePromoPaymentGateway,
+                    'fee_promo_payment_gateway_type' => $feePromoPaymentGatewayType??NULL,
+                    'fee_promo_payment_gateway' => $feePromoPaymentGateway,
+                    'fee_promo_payment_gateway_central' => $feePromoPaymentGatewayCentral,
+                    'fee_promo_payment_gateway_outlet' => $feePromoPaymentGatewayOutlet,
+                    'charged_promo_payment_gateway' => $chargedPromoPaymentGateway,
+                    'charged_promo_payment_gateway_central' => $chargedPromoPaymentGatewayCentral,
+                    'charged_promo_payment_gateway_outlet' => $chargedPromoPaymentGatewayOutlet,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
                 $insert = DisburseOutletTransaction::updateOrCreate(['id_transaction' => $data['id_transaction']], $dataInsert);
+
+                if($insert && !empty(!empty($idRulePromoPaymentGateway))){
+                    $addToPromoTransaction = PromoPaymentGatewayTransaction::updateOrCreate(
+                        ['id_transaction' => $data['id_transaction']],
+                        [
+                            'id_rule_promo_payment_gateway' => $promoPaymentGateway['id_rule_promo_payment_gateway'],
+                            'payment_gateway_user' => $promoPaymentGateway['payment_gateway_user']??NULL,
+                            'id_user' => $promoPaymentGateway['id_user']??NULL,
+                            'id_transaction' => $data['id_transaction'],
+                            'amount' => $originalAmountPG??0,
+                            'total_received_cashback' => $promoPaymentGatewayCashback
+                        ]
+                    );
+                }
                 return $insert;
             }else{
                 return false;
@@ -892,6 +1001,7 @@ class ApiIrisController extends Controller
                 $settingMDRAll = MDR::get()->toArray();
                 $subTotal = $data['transaction_subtotal'];
                 $grandTotal = $data['transaction_grandtotal'];
+                $nominalFeeToCentral = $subTotal;
                 $feePGCentral = 0;
                 $feePG = 0;
                 $feePGType = 'Percent';
@@ -908,6 +1018,18 @@ class ApiIrisController extends Controller
                 $amount = 0;
                 $amountMDR = 0 ;
                 $transactionShipment = 0;
+
+                //variable promo payment gateway
+                $idRulePromoPaymentGateway = null;
+                $feePromoPaymentGateway = 0;
+                $feePromoPaymentGatewayJiwaGroup = 0;
+                $feePromoPaymentGatewayCentral = 0;
+                $feePromoPaymentGatewayOutlet = 0;
+                $chargedPromoPaymentGateway = 0;
+                $chargedPromoPaymentGatewayJiwaGroup = 0;
+                $chargedPromoPaymentGatewayCentral = 0;
+                $chargedPromoPaymentGatewayOutlet = 0;
+
                 $discountDelivery = abs($data['transaction_discount_delivery']??0);
                 if(!empty($data['transaction_shipment_go_send'])){
                     $transactionShipment = $data['transaction_shipment_go_send'];
@@ -963,6 +1085,22 @@ class ApiIrisController extends Controller
                         }
                     }
 
+                    //check promo payment gateway
+                    $promoPaymentGateway = app($this->promo_payment_gateway)->getAvailablePromo($data['id_transaction']);
+                    if(!empty($promoPaymentGateway)){
+                        $promoPaymentGatewayCashback = $promoPaymentGateway['cashback_customer'];
+                        $idRulePromoPaymentGateway = $promoPaymentGateway['id_rule_promo_payment_gateway'];
+                        $chargedPromoPaymentGateway = $promoPaymentGateway['charged_payment_gateway'];
+                        $chargedPromoPaymentGatewayCentral = $promoPaymentGateway['charged_central'];
+                        $chargedPromoPaymentGatewayOutlet = $promoPaymentGateway['charged_outlet'];
+                        $mdrSettingOverride = $promoPaymentGateway['mdr_setting'];
+                        $feePromoPaymentGatewayType = $promoPaymentGateway['charged_type'];
+                        $feePromoPaymentGateway = $promoPaymentGateway['fee_payment_gateway'];
+                        $feePromoPaymentGatewayJiwaGroup = $promoPaymentGateway['fee_jiwa_group'];
+                        $feePromoPaymentGatewayCentral = $promoPaymentGateway['fee_central'];
+                        $feePromoPaymentGatewayOutlet = $promoPaymentGateway['fee_outlet'];
+                    }
+
                     $statusSplitPayment = 0;//for flag if transaction user split payment with balance (point)
                     if(count($data['transaction_multiple_payment']) > 1){
                         $statusSplitPayment = 1;
@@ -973,6 +1111,7 @@ class ApiIrisController extends Controller
 
                         if(strtolower($payments['type']) == 'midtrans'){
                             $midtrans = TransactionPaymentMidtran::where('id_transaction', $data['id_transaction'])->first();
+                            $originalAmountPG = $midtrans['gross_amount'];
                             $payment = $midtrans['payment_type'];
                             if($statusSplitPayment == 1){
                                 $amountMDR = $grandTotal - $nominalSubscription;
@@ -1019,6 +1158,7 @@ class ApiIrisController extends Controller
                             }
                         }elseif(strtolower($payments['type']) == 'ipay88'){
                             $ipay88 = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first();
+                            $originalAmountPG = $ipay88['amount']/100;
                             if($statusSplitPayment == 1){
                                 $amountMDR = $grandTotal - $nominalSubscription;
                             }else{
@@ -1035,7 +1175,7 @@ class ApiIrisController extends Controller
                             }
                         }elseif (strtolower($payments['type']) == 'ovo'){
                             $ovo = TransactionPaymentOvo::where('id_transaction', $data['id_transaction'])->first();
-
+                            $originalAmountPG = $ovo['amount']/100;
                             if($statusSplitPayment == 1){
                                 $amountMDR = $grandTotal - $nominalSubscription;
                             }else{
@@ -1051,6 +1191,7 @@ class ApiIrisController extends Controller
                             }
                         }elseif (strtolower($payments['type']) == 'shopeepay'){
                             $shopeepay = TransactionPaymentShopeePay::where('id_transaction', $data['id_transaction'])->first();
+                            $originalAmountPG = $shopeepay['amount']/100;
                             if($statusSplitPayment == 1){
                                 $amountMDR = $grandTotal - $nominalSubscription;
                             }else{
@@ -1145,6 +1286,29 @@ class ApiIrisController extends Controller
                         $totalFeeForCentral = $feePGCentral;//MDR for central
                     }
 
+                    if(!empty($idRulePromoPaymentGateway)){
+                        switch ($mdrSettingOverride) {
+                            case 'Total Amount PG - Cashback Jiwa Group':
+                                $amountMDRPromoPG = $amountMDR-$feePromoPaymentGatewayJiwaGroup;
+                                break;
+                            case 'Total Amount PG - Total Cashback Customer':
+                                $amountMDRPromoPG = $amountMDR-$promoPaymentGatewayCashback;
+                                break;
+                            default:
+                                $amountMDRPromoPG = $amountMDR;
+                                break;
+                        }
+
+                        //fee pg with promo payment gateway
+                        if($feePGType == 'Percent'){
+                            $totalFeePromoPG = $amountMDRPromoPG * (($feePGCentral + $feePG) / 100);//MDR
+                            $totalFeeForCentralPromoPG = $amountMDRPromoPG * ($feePGCentral/100);//MDR for central
+                        }else{
+                            $totalFeePromoPG = $feePGCentral + $feePG;//MDR
+                            $totalFeeForCentralPromoPG = $feePGCentral;//MDR for central
+                        }
+                    }
+
                     $percentFee = 0;
                     if($data['outlet_special_status'] == 1){
                         $percentFee = $data['outlet_special_fee'];
@@ -1168,16 +1332,36 @@ class ApiIrisController extends Controller
                     $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet - $bundlingProductFeeOutlet, 2);//income outlet
                     $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentral, 2);//income central
                     $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral + $bundlingProductFeeCentral, 2);//expense central
+                    $amountOld = 0;
+                    $incomeCentralOld = 0;
+                    $expenseCentralOld = 0;
+                    $totalFeeOld = 0;
+
+                    if(!empty($idRulePromoPaymentGateway)){
+                        $amountOld = $amount;
+                        $incomeCentralOld = $incomeCentral;
+                        $expenseCentralOld = $expenseCentral;
+                        $totalFeeOld = $totalFee;
+
+                        $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFeePromoPG - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet - $bundlingProductFeeOutlet - $feePromoPaymentGatewayOutlet, 2);//income outlet
+                        $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentralPromoPG, 2);//income central
+                        $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral + $bundlingProductFeeCentral + $feePromoPaymentGatewayCentral, 2);//expense central
+                        $totalFee = $totalFeePromoPG;
+                    }
 
                     $dataInsert = [
                         'id_transaction' => $data['id_transaction'],
                         'income_outlet'=> $amount,
+                        'income_outlet_old' => $amountOld,
                         'income_central'=> $incomeCentral,
+                        'income_central_old' => $incomeCentralOld,
                         'expense_central'=> $expenseCentral,
+                        'expense_central_old' => $expenseCentralOld,
                         'fee_item' => $feeItemForCentral,
                         'discount' => $totalChargedPromo,
                         'discount_central' => $totalChargedPromoCentral,
                         'payment_charge' => $totalFee,
+                        'payment_charge_old' => $totalFeeOld,
                         'point_use_expense' => $nominalBalance,
                         'subscription' => $totalChargedSubcriptionOutlet,
                         'subscription_central' => $totalChargedSubcriptionCentral,
@@ -1196,16 +1380,38 @@ class ApiIrisController extends Controller
                         'charged_promo_outlet' => $feePromoOutlet,
                         'charged_subscription_central' => $feeSubcriptionCentral,
                         'charged_subscription_outlet' => $feeSubcriptionOutlet,
+                        'id_rule_promo_payment_gateway' => $idRulePromoPaymentGateway,
+                        'fee_promo_payment_gateway_type' => $feePromoPaymentGatewayType??NULL,
+                        'fee_promo_payment_gateway' => $feePromoPaymentGateway,
+                        'fee_promo_payment_gateway_central' => $feePromoPaymentGatewayCentral,
+                        'fee_promo_payment_gateway_outlet' => $feePromoPaymentGatewayOutlet,
+                        'charged_promo_payment_gateway' => $chargedPromoPaymentGateway,
+                        'charged_promo_payment_gateway_central' => $chargedPromoPaymentGatewayCentral,
+                        'charged_promo_payment_gateway_outlet' => $chargedPromoPaymentGatewayOutlet,
                         'created_at' => date('Y-m-d H:i:s'),
                         'updated_at' => date('Y-m-d H:i:s')
                     ];
+                    $insert = DisburseOutletTransaction::updateOrCreate(['id_transaction' => $data['id_transaction']], $dataInsert);
+
+                    if($insert && !empty(!empty($idRulePromoPaymentGateway))){
+                        $addToPromoTransaction = PromoPaymentGatewayTransaction::updateOrCreate(
+                            ['id_transaction' => $data['id_transaction']],
+                            [
+                                'id_rule_promo_payment_gateway' => $promoPaymentGateway['id_rule_promo_payment_gateway'],
+                                'payment_gateway_user' => $promoPaymentGateway['payment_gateway_user']??NULL,
+                                'id_user' => $promoPaymentGateway['id_user']??NULL,
+                                'id_transaction' => $data['id_transaction'],
+                                'amount' => $originalAmountPG??0,
+                                'total_received_cashback' => $promoPaymentGatewayCashback
+                            ]
+                        );
+                    }
 
                     if(!empty($data['id_disburse_transaction'])){
                         $insert = DisburseOutletTransaction::where('id_disburse_transaction', $data['id_disburse_transaction'])->update($dataInsert);
                     }else{
                         $insert = DisburseOutletTransaction::create($dataInsert);
                     }
-
                 }
             }
         }

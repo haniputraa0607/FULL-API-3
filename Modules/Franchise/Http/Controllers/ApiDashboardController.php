@@ -31,8 +31,8 @@ class ApiDashboardController extends Controller
                     ');
 
             if(isset($post['filter_type']) && $post['filter_type'] == 'range_date') {
-                $dateStart = date('Y-m-d', strtotime($post['date_start']));
-                $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+                $dateStart = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+                $dateEnd = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
                 $trx = $trx->whereDate('transaction_date', '>=', $dateStart)->whereDate('transaction_date', '<=', $dateEnd);
             }else{
                 $trx = $trx->whereDate('transaction_date',  date('Y-m-d'));
@@ -41,73 +41,73 @@ class ApiDashboardController extends Controller
             $trx = $trx->first();
             $result = [
                 [
-                    'title' => 'Sub Total',
+                    'title' => 'Penjualan Kotor',
                     'amount' => 'Rp '.number_format($trx['sub_total']??0,0,",","."),
-                    'tooltip' => "Total nominal transaksi sebelum di potong diskon dan ditambahkan delivery"
+                    'tooltip' => "Total nominal transaksi sebelum dipotong diskon dan ditambah biaya pengiriman"
                 ],
                 [
-                    'title' => 'Discount',
+                    'title' => 'Total Diskon',
                     'amount' => 'Rp '.number_format($trx['total_dicount']??0,0,",","."),
-                    'tooltip' => "Total diskon transaksi (diskon produk, diskon biaya delivery dan diskon bill)"
+                    'tooltip' => "Total diskon transaksi (diskon produk, diskon biaya pengiriman dan diskon bill)"
                 ],
                 [
-                    'title' => 'Delivery Fee',
+                    'title' => 'Biaya Pengiriman',
                     'amount' => 'Rp '.number_format($trx['total_delivery']??0,0,",","."),
-                    'tooltip' => "Total biaya delivery"
+                    'tooltip' => "Total biaya pengiriman"
                 ],
                 [
-                    'title' => 'Grand Total',
+                    'title' => 'Penjualan Bersih',
                     'amount' => 'Rp '.number_format($trx['grand_total']??0,0,",","."),
-                    'tooltip' => "Total nominal transaksi setelah di potong diskon dan ditambahkan biaya delivery"
+                    'tooltip' => "Total nominal transaksi setelah dipotong diskon dan ditambahkan biaya pengiriman"
                 ],
                 [
-                    'title' => 'Total Sales',
+                    'title' => 'Total Penjualan',
                     'amount' => number_format($trx['total_sales']??0,0,",","."),
-                    'tooltip' => "Jumlah transaksi dengan status pembayaran sukses dan tidak di reject"
+                    'tooltip' => "Jumlah transaksi dengan status pembayaran sukses"
                 ],
             ];
 
             if(!empty($trx) && $trx['total_sales'] != 0){
                 $result[] =  [
-                    'title' => 'Average Sales',
+                    'title' => 'Rata-Rata Penjualan',
                     'amount' => number_format($trx['total_sales']/$trx['count_date'],0,",","."),
-                    'tooltip' => "Rata - rata jumlah transaksi dengan status pembayaran sukses dan tidak di reject per hari"
+                    'tooltip' => "Rata-rata jumlah transaksi dengan status pembayaran sukses per hari"
                 ];
                 $result[] =  [
-                    'title' => 'Average Sub Total',
+                    'title' => 'Rata-Rata Penjualan Kotor',
                     'amount' => 'Rp '.number_format($trx['sub_total']/$trx['total_sales'],0,",","."),
-                    'tooltip' => "Rata - rata nominal transaksi sebelum di potong diskon dan ditambahkan delivery per hari"
+                    'tooltip' => "Rata-rata nominal transaksi sebelum dipotong diskon dan ditambah biaya pengiriman per hari"
                 ];
                 $result[] =  [
-                    'title' => 'Average Grand Total',
+                    'title' => 'Rata-Rata Penjualan Bersih',
                     'amount' => 'Rp '.number_format($trx['grand_total']/$trx['total_sales'],0,",","."),
-                    'tooltip' => "Rata - rata nominal transaksi setelah di potong diskon dan ditambahkan biaya delivery per hari"
+                    'tooltip' => "Rata-rata nominal transaksi setelah dipotong diskon dan ditambah biaya pengiriman per hari"
                 ];
             }else{
                 $result[] =  [
-                    'title' => 'Average Sales',
+                    'title' => 'Rata-Rata Penjualan',
                     'amount' => number_format(0,0,",","."),
-                    'tooltip' => "Rata - rata jumlah transaksi dengan status pembayaran sukses dan tidak di reject per hari"
+                    'tooltip' => "Rata-rata jumlah transaksi dengan status pembayaran sukses per hari"
                 ];
                 $result[] =  [
-                    'title' => 'Average Sub Total',
+                    'title' => 'Rata-Rata Penjualan Kotor',
                     'amount' => 'Rp '.number_format(0,0,",","."),
-                    'tooltip' => "Rata - rata nominal transaksi sebelum di potong diskon dan ditambahkan delivery per hari"
+                    'tooltip' => "Rata-rata nominal transaksi sebelum dipotong diskon dan ditambah biaya pengiriman per hari"
                 ];
                 $result[] =  [
-                    'title' => 'Average Grand Total',
+                    'title' => 'Rata-Rata Penjualan Bersih',
                     'amount' => 'Rp '.number_format(0,0,",","."),
-                    'tooltip' => "Rata - rata nominal transaksi setelah di potong diskon dan ditambahkan biaya delivery per hari"
+                    'tooltip' => "Rata-rata nominal transaksi setelah dipotong diskon dan ditambah biaya pengiriman per hari"
                 ];
             }
 
             $result[] = [
-                'title' => 'Income Outlet',
+                'title' => 'Pendapatan Outlet',
                 'amount' => 'Rp '.number_format($trx['incomes_outlet']??0,0,",","."),
                 'tooltip' => "Total nominal yang akan didapatkan outlet"
             ];
             $result[] = [
-                'title' => 'Disburse Success',
+                'title' => 'Settlement Berhasil',
                 'amount' => 'Rp '.number_format($trx['disburse_success']??0,2,",","."),
                 'tooltip' => "Total nominal pendapatan outlet yang sudah sukses di proses disburse"
             ];
@@ -139,8 +139,8 @@ class ApiDashboardController extends Controller
                 ->orderBy('sum_qty', 'desc');
 
             if(isset($post['filter_type']) && $post['filter_type'] == 'range_date') {
-                $dateStart = date('Y-m-d', strtotime($post['date_start']));
-                $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+                $dateStart = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+                $dateEnd = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
                 $topTen = $topTen->whereDate('transaction_date', '>=', $dateStart)->whereDate('transaction_date', '<=', $dateEnd);
             }else{
                 $topTen = $topTen->whereDate('transaction_date',  date('Y-m-d'));
@@ -155,8 +155,8 @@ class ApiDashboardController extends Controller
     function summarySales(Request $request){
         $post = $request->json()->all();
         if(!empty($post['id_outlet'])) {
-            $dateStart = date('Y-m-d', strtotime($post['date_start']));
-            $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+            $dateStart = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+            $dateEnd = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
             $begin = new DateTime($dateStart);
             $end   = new DateTime($dateEnd);
             $get = DailyReportTrx::where('id_outlet', $post['id_outlet'])

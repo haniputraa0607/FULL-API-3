@@ -62,8 +62,8 @@ class ApiReportDisburseController extends Controller
                 });
 
             if(isset($post['filter_type']) && $post['filter_type'] == 'range_date'){
-                $dateStart = date('Y-m-d', strtotime($post['date_start']));
-                $dateEnd = date('Y-m-d', strtotime($post['date_end']));
+                $dateStart = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+                $dateEnd = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
                 $query1 = $query1->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
                 $query2 = $query2->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
                 $query3 = $query3->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
@@ -83,32 +83,32 @@ class ApiReportDisburseController extends Controller
 
             $result = [
                 [
-                    'title' => 'Total Income',
+                    'title' => 'Total Pendapatan',
                     'amount' => number_format($sum['total_income']??0,2,",","."),
                     'tooltip' => 'Jumlah pendapatan yang akan diterima oleh outlet'
                 ],
                 [
-                    'title' => 'Disburse Success',
+                    'title' => 'Settlement Berhasil',
                     'amount' => number_format($success,2,",","."),
                     'tooltip' => 'Jumlah pendapatan outlet yang sudah sukses diberikan'
                 ],
                 [
-                    'title' => 'Disburse Unprocessed',
+                    'title' => 'Settlement Berikutnya',
                     'amount' => number_format($unprocessed,2,",","."),
                     'tooltip' => 'Jumlah pendapatan outlet yang belum diberikan'
                 ],
                 [
-                    'title' => 'Disburse Fail',
+                    'title' => 'Settlement Gagal',
                     'amount' => number_format($fail,2,",","."),
                     'tooltip' => 'Jumlah pendapatan outlet yang gagal diberikan'
                 ],
                 [
-                    'title' => 'Total Fee Item',
+                    'title' => 'Total Biaya Jasa',
                     'amount' => number_format($sum['total_fee_item']??0,2,",","."),
                     'tooltip' => 'Jumlah potongan fee yang dibayarkan outlet ke Jiwa Group'
                 ],
                 [
-                    'title' => 'Total MDR PG',
+                    'title' => 'Total MDR',
                     'amount' => number_format($sum['total_mdr_charged']??0,2,",","."),
                     'tooltip' => 'Jumlah potongan fee untuk payment gateway'
                 ]
@@ -147,8 +147,8 @@ class ApiReportDisburseController extends Controller
 
             if(isset($post['date_start']) && !empty($post['date_start']) &&
                 isset($post['date_end']) && !empty($post['date_end'])){
-                $start_date = date('Y-m-d', strtotime($post['date_start']));
-                $end_date = date('Y-m-d', strtotime($post['date_end']));
+                $start_date = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+                $end_date = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
 
                 $data->whereDate('transactions.transaction_date', '>=', $start_date)
                     ->whereDate('transactions.transaction_date', '<=', $end_date);
@@ -217,8 +217,8 @@ class ApiReportDisburseController extends Controller
 
             if(isset($post['date_start']) && !empty($post['date_start']) &&
                 isset($post['date_end']) && !empty($post['date_end'])){
-                $start_date = date('Y-m-d', strtotime($post['date_start']));
-                $end_date = date('Y-m-d', strtotime($post['date_end']));
+                $start_date = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
+                $end_date = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
 
                 $data->whereDate('disburse.created_at', '>=', $start_date)
                     ->whereDate('disburse.created_at', '<=', $end_date);
@@ -273,8 +273,8 @@ class ApiReportDisburseController extends Controller
 
             if(isset($post['export']) && $post['export'] == 1){
                 if($post['status'] == 'success'){
-                    $data = $data->selectRaw('disburse_status as "Disburse Status", bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal Disburse",
-                        total_fee_item as "Total Fee Item", total_payment_charge as "Total MDR PG"')
+                    $data = $data->selectRaw('disburse_status as "Status", bank_name.bank_name as "Nama Bank", CONCAT(" ",disburse.beneficiary_account_number) as "No Rekening", disburse.beneficiary_name as "No Referensi", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Tanggal", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal",
+                        total_fee_item as "Total Biaya Jasa", total_payment_charge as "Total MDR"')
                         ->get()->toArray();
                 }else{
                     $data = $data->selectRaw('disburse_status as "Disburse Status", bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal Disburse",

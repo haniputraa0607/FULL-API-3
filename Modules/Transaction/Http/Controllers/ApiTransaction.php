@@ -1606,12 +1606,15 @@ class ApiTransaction extends Controller
                 ->join('provinces', 'cities.id_province', 'provinces.id_province')
                 ->leftJoin('transaction_bundling_products','transaction_products.id_transaction_bundling_product','=','transaction_bundling_products.id_transaction_bundling_product')
                 ->leftJoin('bundling','bundling.id_bundling','=','transaction_bundling_products.id_bundling')
+                ->leftJoin('rule_promo_payment_gateway','rule_promo_payment_gateway.id_rule_promo_payment_gateway','=','disburse_outlet_transactions.id_rule_promo_payment_gateway')
                 ->with(['transaction_payment_subscription', 'vouchers', 'promo_campaign', 'point_refund', 'point_use', 'subscription_user_voucher.subscription_user.subscription'])
                 ->orderBy('transaction_products.id_transaction_bundling_product', 'asc')
-                ->addSelect('transaction_bundling_products.transaction_bundling_product_base_price', 'transaction_bundling_products.transaction_bundling_product_qty', 'transaction_bundling_products.transaction_bundling_product_total_discount', 'transaction_bundling_products.transaction_bundling_product_subtotal', 'bundling.bundling_name', 'disburse_outlet_transactions.bundling_product_fee_central', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
+                ->addSelect('rule_promo_payment_gateway.name as promo_payment_gateway_name',
+                    'transaction_bundling_products.transaction_bundling_product_base_price', 'transaction_bundling_products.transaction_bundling_product_qty', 'transaction_bundling_products.transaction_bundling_product_total_discount', 'transaction_bundling_products.transaction_bundling_product_subtotal', 'bundling.bundling_name', 'disburse_outlet_transactions.bundling_product_fee_central', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
                     'brands.name_brand', 'cities.city_name', 'c.city_name as user_city', 'provinces.province_name',
                     'disburse_outlet_transactions.fee_item', 'disburse_outlet_transactions.payment_charge', 'disburse_outlet_transactions.discount', 'disburse_outlet_transactions.subscription',
                     'disburse_outlet_transactions.point_use_expense',
+                    'disburse_outlet_transactions.fee_promo_payment_gateway_outlet', 'disburse_outlet_transactions.fee_promo_payment_gateway_central',
                     'disburse_outlet_transactions.income_outlet', 'disburse_outlet_transactions.discount_central', 'disburse_outlet_transactions.subscription_central');
         }
 
@@ -2131,8 +2134,8 @@ class ApiTransaction extends Controller
                     if($key == ($count-1) || (isset($get[$key+1]['transaction_receipt_number']) && $val['transaction_receipt_number'] != $get[$key+1]['transaction_receipt_number'])){
                         //for product plastic
                         $productPlastics = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
-                                            ->where('id_transaction', $val['id_transaction'])->where('type', 'Plastic')
-                                            ->get()->toArray();
+                            ->where('id_transaction', $val['id_transaction'])->where('type', 'Plastic')
+                            ->get()->toArray();
 
                         foreach ($productPlastics as $plastic){
                             for($j=0;$j<$plastic['transaction_product_qty'];$j++){
@@ -2253,6 +2256,35 @@ class ApiTransaction extends Controller
                             $html .= '</tr>';
                         }
 
+                        $promoNamePaymentGateway = (empty($val['promo_payment_gateway_name']) ? "": $val['promo_payment_gateway_name']);
+                        $nominalPromoPaymentGateway = (empty($val['fee_promo_payment_gateway_outlet']) ? 0: $val['fee_promo_payment_gateway_outlet']);
+                        if(!empty($promoNamePaymentGateway)) {
+                            $html .= '<tr>';
+                            $html .= $sameData;
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= $addAdditionalColumn;
+                            $html .= '<td>'.htmlspecialchars($promoNamePaymentGateway).'(Promo Payment Gateway)</td>';
+                            $html .= $addAdditionalColumnVariant;
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td>'.$nominalPromoPaymentGateway.'</td>';
+                            $html .= '<td>'.(-$nominalPromoPaymentGateway).'</td>';
+                            $html .= '<td></td><td></td><td></td>';
+                            if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                $html .= '<td></td><td></td><td></td>';
+                            }
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '</tr>';
+                        }
+
                         $html .= '<tr>';
                         $html .= $sameData;
                         $html .= '<td></td>';
@@ -2262,13 +2294,14 @@ class ApiTransaction extends Controller
                         $html .= $addAdditionalColumnVariant;
                         $html .= '<td></td>';
                         $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                        $html .= '<td>'.($val['transaction_grandtotal']-$sub).'</td>';
+                        $html .= '<td>'.($val['transaction_grandtotal']-$sub-$nominalPromoPaymentGateway).'</td>';
                         $html .= '<td>'.(float)$val['fee_item'].'</td>';
                         $html .= '<td>'.(float)$paymentCharge.'</td>';
                         if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
                             $html .= '<td>' . (float)$val['discount_central'] . '</td>';
                             $html .= '<td>' . (float)$val['subscription_central'] . '</td>';
                             $html .= '<td>' . (float)$val['bundling_product_fee_central'] . '</td>';
+                            $html .= '<td>' . (float)$val['fee_promo_payment_gateway_central'] . '</td>';
                         }
                         $html .= '<td>'.(float)$val['income_outlet'].'</td>';
                         $html .= '<td>'.$payment.'</td>';
