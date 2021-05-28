@@ -273,12 +273,12 @@ class ApiReportDisburseController extends Controller
 
             if(isset($post['export']) && $post['export'] == 1){
                 if($post['status'] == 'success'){
-                    $data = $data->selectRaw('disburse_status as "Status", bank_name.bank_name as "Nama Bank", CONCAT(" ",disburse.beneficiary_account_number) as "No Rekening", disburse.beneficiary_name as "No Referensi", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Tanggal", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal",
+                    $data = $data->selectRaw('disburse_status as "Status", bank_name.bank_name as "Nama Bank", CONCAT(" ",disburse.beneficiary_account_number) as "No Rekening", disburse.beneficiary_name as "Nama Penerima", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Tanggal Disburse", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal",
                         total_fee_item as "Total Biaya Jasa", total_payment_charge as "Total MDR"')
                         ->get()->toArray();
                 }else{
-                    $data = $data->selectRaw('disburse_status as "Disburse Status", bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal Disburse",
-                        total_fee_item as "Total Fee Item", total_payment_charge as "Total MDR PG"')
+                    $data = $data->selectRaw('disburse_status as "Status", bank_name.bank_name as "Nama Bank", CONCAT(" ",disburse.beneficiary_account_number) as "No Rekening", disburse.beneficiary_name as "Nama Penerima", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Tanggal Disburse", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal",
+                        total_fee_item as "Total Biaya Jasa", total_payment_charge as "Total MDR"')
                         ->get()->toArray();
                 }
             }else{
