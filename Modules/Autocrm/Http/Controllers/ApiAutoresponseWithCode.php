@@ -225,7 +225,7 @@ class ApiAutoresponseWithCode extends Controller
             if(!empty($post['data_import'][0])){
                 $import_codes = array_column($post['data_import'][0], 'list_codes');
             }
-            $codes = array_unique(array_merge($list_codes,$import_codes));
+            $codes = array_merge($list_codes,$import_codes);
             $arrCode = [];
             foreach ($codes as $value){
                 $arrCode[] = [
@@ -375,21 +375,15 @@ class ApiAutoresponseWithCode extends Controller
             if(!empty($post['data_import'][0])){
                 $import_codes = array_column($post['data_import'][0], 'list_codes');
             }
-            $codes = array_unique(array_merge($list_codes,$import_codes));
+            $codes = array_merge($list_codes,$import_codes);
             $arrCode = [];
-            $duplicate = [];
             foreach ($codes as $value){
-                $check = array_search($value,$getCurrentCode);
-                if($check === false){
-                    $arrCode[] = [
-                        'id_autoresponse_code' => $post['id_autoresponse_code'],
-                        'autoresponse_code' => $value,
-                        'created_at' => date('Y-m-d H:i:s'),
-                        'updated_at' => date('Y-m-d H:i:s')
-                    ];
-                }else{
-                    $duplicate[] = $value;
-                }
+                $arrCode[] = [
+                    'id_autoresponse_code' => $post['id_autoresponse_code'],
+                    'autoresponse_code' => $value,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                ];
             }
 
             if(!empty($arrCode)){
@@ -402,11 +396,7 @@ class ApiAutoresponseWithCode extends Controller
 
             DB::commit();
 
-            if(!empty($duplicate)){
-                return response()->json(['status' => 'fail', 'messages' => ['Duplicate code :'.implode(',',$duplicate)]]);
-            }else{
-                return response()->json(['status' => 'success']);
-            }
+            return response()->json(['status' => 'success']);
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
