@@ -41,14 +41,6 @@ class ApiReportDisburseController extends Controller
                     $q->where('transactions.transaction_flag_invalid', 'Valid')
                         ->orWhereNull('transactions.transaction_flag_invalid');
                 });
-            $query3 = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-                ->leftJoin('disburse_outlet_transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
-                ->where('transactions.transaction_payment_status', 'Completed')
-                ->whereNull('reject_at')->where('transactions.id_outlet', $post['id_outlet'])
-                ->where(function ($q){
-                    $q->where('transactions.transaction_flag_invalid', 'Valid')
-                        ->orWhereNull('transactions.transaction_flag_invalid');
-                });
             $query4 = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
                 ->leftJoin('disburse_outlet_transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
                 ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
@@ -64,52 +56,63 @@ class ApiReportDisburseController extends Controller
             if(isset($post['filter_type']) && $post['filter_type'] == 'range_date'){
                 $dateStart = date('Y-m-d', strtotime(str_replace("/","-",$post['date_start'])));
                 $dateEnd = date('Y-m-d', strtotime(str_replace("/","-",$post['date_end'])));
-                $query1 = $query1->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
+                $query1 = $query1->whereDate('disburse.created_at', '>=', $dateStart)->whereDate('disburse.created_at', '<=', $dateEnd);
                 $query2 = $query2->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
-                $query3 = $query3->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
-                $query4 = $query4->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
+                $query4 = $query4->whereDate('disburse.created_at', '>=', $dateStart)->whereDate('disburse.created_at', '<=', $dateEnd);
             }elseif (isset($post['filter_type']) && $post['filter_type'] == 'today'){
                 $currentDate = date('Y-m-d');
-                $query1 = $query1->whereDate('transactions.transaction_date', $currentDate);
+                $query1 = $query1->whereDate('disburse.created_at', $currentDate);
                 $query2 = $query2->whereDate('transactions.transaction_date', $currentDate);
-                $query3 = $query3->whereDate('transactions.transaction_date', $currentDate);
-                $query4 = $query4->whereDate('transactions.transaction_date', $currentDate);
+                $query4 = $query4->whereDate('disburse.created_at', $currentDate);
             }
-            $success = $query1->sum('disburse_outlet_transactions.income_outlet');
-            $unprocessed = $query2->sum('disburse_outlet_transactions.income_outlet');
-            $fail = $query4->sum('disburse_outlet_transactions.income_outlet');
-            $sum = $query3->selectRaw('SUM(disburse_outlet_transactions.fee_item) AS total_fee_item, SUM(disburse_outlet_transactions.payment_charge) AS total_mdr_charged,
+            $success = $query1->selectRaw('SUM(disburse_outlet_transactions.fee_item) AS total_fee_item, SUM(disburse_outlet_transactions.payment_charge) AS total_mdr_charged,
                     SUM(disburse_outlet_transactions.income_outlet) AS total_income')->first();
+            $unprocessed = $query2->selectRaw('SUM(disburse_outlet_transactions.fee_item) AS total_fee_item, SUM(disburse_outlet_transactions.payment_charge) AS total_mdr_charged,
+                    SUM(disburse_outlet_transactions.income_outlet) AS total_income')->first();
+            $fail = $query4->selectRaw('SUM(disburse_outlet_transactions.fee_item) AS total_fee_item, SUM(disburse_outlet_transactions.payment_charge) AS total_mdr_charged,
+                    SUM(disburse_outlet_transactions.income_outlet) AS total_income')->first();
+
+            $resSucc = $success['total_income']??0;
+            $resUn = $unprocessed['total_income']??0;
+            $resFail = $fail['total_income']??0;
+
+            $resMDRSucc = $success['total_mdr_charged']??0;
+            $resMDRUn = $unprocessed['total_mdr_charged']??0;
+            $resMDRFail = $fail['total_mdr_charged']??0;
+
+            $resFeeSucc = $success['total_fee_item']??0;
+            $resFeeUn = $unprocessed['total_fee_item']??0;
+            $resFeeFail = $fail['total_fee_item']??0;
 
             $result = [
                 [
                     'title' => 'Total Pendapatan',
-                    'amount' => number_format($sum['total_income']??0,2,",","."),
+                    'amount' => number_format($resSucc+$resUn+$resFail,2,",","."),
                     'tooltip' => 'Jumlah pendapatan yang akan diterima oleh outlet'
                 ],
                 [
                     'title' => 'Settlement Berhasil',
-                    'amount' => number_format($success,2,",","."),
+                    'amount' => number_format($resSucc,2,",","."),
                     'tooltip' => 'Jumlah pendapatan outlet yang sudah sukses diberikan'
                 ],
                 [
                     'title' => 'Settlement Berikutnya',
-                    'amount' => number_format($unprocessed,2,",","."),
+                    'amount' => number_format($resUn,2,",","."),
                     'tooltip' => 'Jumlah pendapatan outlet yang belum diberikan'
                 ],
                 [
                     'title' => 'Settlement Gagal',
-                    'amount' => number_format($fail,2,",","."),
+                    'amount' => number_format($resFail,2,",","."),
                     'tooltip' => 'Jumlah pendapatan outlet yang gagal diberikan'
                 ],
                 [
                     'title' => 'Total Biaya Jasa',
-                    'amount' => number_format($sum['total_fee_item']??0,2,",","."),
+                    'amount' => number_format($resFeeUn+$resFeeFail+$resFeeSucc,2,",","."),
                     'tooltip' => 'Jumlah potongan fee yang dibayarkan outlet ke Jiwa Group'
                 ],
                 [
                     'title' => 'Total MDR',
-                    'amount' => number_format($sum['total_mdr_charged']??0,2,",","."),
+                    'amount' => number_format($resMDRUn+$resMDRSucc+$resMDRFail,2,",","."),
                     'tooltip' => 'Jumlah potongan fee untuk payment gateway'
                 ]
             ];
@@ -273,12 +276,12 @@ class ApiReportDisburseController extends Controller
 
             if(isset($post['export']) && $post['export'] == 1){
                 if($post['status'] == 'success'){
-                    $data = $data->selectRaw('disburse_status as "Status", bank_name.bank_name as "Nama Bank", CONCAT(" ",disburse.beneficiary_account_number) as "No Rekening", disburse.beneficiary_name as "No Referensi", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Tanggal", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal",
-                        total_fee_item as "Total Biaya Jasa", total_payment_charge as "Total MDR"')
+                    $data = $data->selectRaw('disburse_status as "Status", bank_name.bank_name as "Nama Bank", CONCAT(" ",disburse.beneficiary_account_number) as "No Rekening", disburse.beneficiary_name as "Nama Penerima", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Tanggal Disburse", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal",
+                        total_fee_item as "Total Biaya Jasa", SUM(disburse_outlet_transactions.payment_charge) as "Total MDR"')
                         ->get()->toArray();
                 }else{
-                    $data = $data->selectRaw('disburse_status as "Disburse Status", bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal Disburse",
-                        total_fee_item as "Total Fee Item", total_payment_charge as "Total MDR PG"')
+                    $data = $data->selectRaw('disburse_status as "Status", bank_name.bank_name as "Nama Bank", CONCAT(" ",disburse.beneficiary_account_number) as "No Rekening", disburse.beneficiary_name as "Nama Penerima", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Tanggal Disburse", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", SUM(disburse_outlet_transactions.income_outlet) as "Nominal",
+                        total_fee_item as "Total Biaya Jasa", SUM(disburse_outlet_transactions.payment_charge) as "Total MDR"')
                         ->get()->toArray();
                 }
             }else{
