@@ -67,13 +67,13 @@ class ApiReportDisburseController extends Controller
                 $query1 = $query1->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
                 $query2 = $query2->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
                 $query3 = $query3->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
-                $query4 = $query2->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
+                $query4 = $query4->whereDate('transactions.transaction_date', '>=', $dateStart)->whereDate('transactions.transaction_date', '<=', $dateEnd);
             }elseif (isset($post['filter_type']) && $post['filter_type'] == 'today'){
                 $currentDate = date('Y-m-d');
                 $query1 = $query1->whereDate('transactions.transaction_date', $currentDate);
                 $query2 = $query2->whereDate('transactions.transaction_date', $currentDate);
                 $query3 = $query3->whereDate('transactions.transaction_date', $currentDate);
-                $query4 = $query2->whereDate('transactions.transaction_date', $currentDate);
+                $query4 = $query4->whereDate('transactions.transaction_date', $currentDate);
             }
             $success = $query1->sum('disburse_outlet_transactions.income_outlet');
             $unprocessed = $query2->sum('disburse_outlet_transactions.income_outlet');
