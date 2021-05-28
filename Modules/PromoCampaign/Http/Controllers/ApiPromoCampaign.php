@@ -504,7 +504,7 @@ class ApiPromoCampaign extends Controller
 
     protected function filterReport($query, $request,&$foreign='')
     {
-        $query->groupBy('promo_campaign_reports.id_promo_campaign_report');
+        // $query->groupBy('promo_campaign_reports.id_promo_campaign_report');
         $allowed = array(
             'operator' => ['=', 'like', '<', '>', '<=', '>='],
             'subject' => ['promo_code','user_phone','created_at','receipt_number','id_outlet','device_type','outlet_count','user_count'],
@@ -648,7 +648,7 @@ class ApiPromoCampaign extends Controller
 
     protected function filterCoupon($query, $request,&$foreign='')
     {
-        $query->groupBy('promo_campaign_promo_codes.id_promo_campaign_promo_code');
+        // $query->groupBy('promo_campaign_promo_codes.id_promo_campaign_promo_code');
         $allowed = array(
             'operator' => ['=', 'like', '<', '>', '<=', '>='],
             'subject' => ['coupon_code','status','used','available','max_used'],
