@@ -4,7 +4,7 @@
         <?php
         
         // hide this column
-        if(in_array($key, ['step_complete','used_code','url_deals_warning_image','id_deals','id_product','deals_total_claimed','deals_total_redeemed','deals_total_used','deals_tos','claim_allowed','total_voucher_subscription','url_image','url_deals_image', 'deals_status', 'deals_voucher_price_type', 'deals_voucher_price_pretty', 'url_webview', 'url_deals_warning_image','deals_description','deals_short_description'])){
+        if(in_array($key, ['step_complete','used_code','url_deals_warning_image','id_deals','id_product','deals_total_claimed','deals_total_redeemed','deals_total_used','deals_tos','claim_allowed','total_voucher_subscription','url_image','url_deals_image', 'deals_status', 'deals_voucher_price_type', 'deals_voucher_price_pretty', 'url_webview', 'url_deals_warning_image','deals_description','deals_short_description', 'is_online', 'is_offline', 'deals_promo_id', 'deals_promo_id_type','deals_shipment_text', 'deals_payment_text', 'deals_outlet_text', 'outlets', 'deals_payment_method', 'deals_shipment_method', 'id_brand', 'deals_brands', 'brand_rule_text', 'brands', 'outlet_groups'])){
             continue;
         }
 
@@ -21,11 +21,6 @@
         }
 
         switch($key) {
-            case 'id_brand':
-                $key = 'brand';
-                $value = $value?(\Modules\Brand\Entities\Brand::select('name_brand')->where('id_brand',$value)->pluck('name_brand')->first()?:$value):'Unknown';
-                break;
-
             case 'deals_voucher_duration':
                 $value = $value?number_format($value,0,',','.'):'';
                 break;
@@ -46,12 +41,23 @@
                 $value = $value?number_format($value,0,',','.'):'Unlimited';
                 break;
 
-            case 'is_online':
-                $value = $value?'Yes':'No';
+            case 'is_all_outlet':
+                $key = 'Outlet';
+                $value = $detail['deals_outlet_text'];
                 break;
 
-            case 'is_offline':
-                $value = $value?'Yes':'No';
+            case 'is_all_shipment':
+                $key = 'Shipment';
+                $value = $detail['deals_shipment_text'];
+                break;
+
+            case 'is_all_payment':
+                $key = 'Payment';
+                $value = $detail['deals_payment_text'];
+                break;
+
+            case 'brand_rule':
+                $value = $detail['brand_rule_text'];
                 break;
 
             case 'created_by':
