@@ -376,56 +376,57 @@ class SendCampaignJob implements ShouldQueue
                         }
                     }
                 }else{
-                    foreach($recipient as $key => $receipient){
-                        $dataOptional          = [];
-                        $image = null;
-                        if (isset($campaign['campaign_push_image']) && $campaign['campaign_push_image'] != null) {
-                            $dataOptional['image'] = config('url.storage_url_api').$campaign['campaign_push_image'];
-                            $image = config('url.storage_url_api').$campaign['campaign_push_image'];
-                        }
+                    $dataOptional          = [];
+                    $image = null;
+                    if (isset($campaign['campaign_push_image']) && $campaign['campaign_push_image'] != null) {
+                        $dataOptional['image'] = config('url.storage_url_api').$campaign['campaign_push_image'];
+                        $image = config('url.storage_url_api').$campaign['campaign_push_image'];
+                    }
 
-                        if (isset($campaign['campaign_push_clickto']) && $campaign['campaign_push_clickto'] != null) {
-                            $dataOptional['type'] = $campaign['campaign_push_clickto'];
-                        } else {
-                            $dataOptional['type'] = 'Home';
-                        }
+                    if (isset($campaign['campaign_push_clickto']) && $campaign['campaign_push_clickto'] != null) {
+                        $dataOptional['type'] = $campaign['campaign_push_clickto'];
+                    } else {
+                        $dataOptional['type'] = 'Home';
+                    }
 
-                        if (isset($campaign['campaign_push_link']) && $campaign['campaign_push_link'] != null) {
-                            if($dataOptional['type'] == 'Link')
-                                $dataOptional['link'] = $campaign['campaign_push_link'];
-                            else
-                                $dataOptional['link'] = null;
-                        } else {
+                    if (isset($campaign['campaign_push_link']) && $campaign['campaign_push_link'] != null) {
+                        if($dataOptional['type'] == 'Link')
+                            $dataOptional['link'] = $campaign['campaign_push_link'];
+                        else
                             $dataOptional['link'] = null;
-                        }
+                    } else {
+                        $dataOptional['link'] = null;
+                    }
 
-                        if (isset($campaign['campaign_push_id_reference']) && $campaign['campaign_push_id_reference'] != null) {
-                            $dataOptional['id_reference'] = (int)$campaign['campaign_push_id_reference'];
-                        } else{
-                            $dataOptional['id_reference'] = 0;
-                        }
+                    if (isset($campaign['campaign_push_id_reference']) && $campaign['campaign_push_id_reference'] != null) {
+                        $dataOptional['id_reference'] = (int)$campaign['campaign_push_id_reference'];
+                    } else{
+                        $dataOptional['id_reference'] = 0;
+                    }
 
-                        if($campaign['campaign_push_clickto'] == 'News' && $campaign['campaign_push_id_reference'] != null){
-                            $news = News::find($campaign['campaign_push_id_reference']);
-                            if($news){
-                                $dataOptional['news_title'] = $news->news_title;
-                                $dataOptional['title'] = $news->news_title;
-                            }
-                            $dataOptional['url'] = config('url.app_url').'news/webview/'.$campaign['campaign_push_id_reference'];
+                    if($campaign['campaign_push_clickto'] == 'News' && $campaign['campaign_push_id_reference'] != null){
+                        $news = News::find($campaign['campaign_push_id_reference']);
+                        if($news){
+                            $dataOptional['news_title'] = $news->news_title;
+                            $dataOptional['title'] = $news->news_title;
                         }
-                        elseif($campaign['campaign_push_clickto'] == 'Order' && $campaign['campaign_push_id_reference'] != null){
-                            $outlet = Outlet::find($campaign['campaign_push_id_reference']);
-                            if($outlet){
-                                $dataOptional['title'] = $outlet->outlet_name;
-                            }
+                        $dataOptional['url'] = config('url.app_url').'news/webview/'.$campaign['campaign_push_id_reference'];
+                    }
+                    elseif($campaign['campaign_push_clickto'] == 'Order' && $campaign['campaign_push_id_reference'] != null){
+                        $outlet = Outlet::find($campaign['campaign_push_id_reference']);
+                        if($outlet){
+                            $dataOptional['title'] = $outlet->outlet_name;
                         }
-                        elseif($campaign['campaign_push_clickto'] == 'Deals' && $campaign['campaign_push_id_reference'] != null){
-                            $deals = Deal::find($campaign['campaign_push_id_reference']);
-                            if($deals){
-                                $dataOptional['title'] = $deals->deals_title;
-                            }
+                    }
+                    elseif($campaign['campaign_push_clickto'] == 'Deals' && $campaign['campaign_push_id_reference'] != null){
+                        $deals = Deal::find($campaign['campaign_push_id_reference']);
+                        if($deals){
+                            $dataOptional['title'] = $deals->deals_title;
                         }
+                    }
 
+                    foreach($recipient as $key => $receipient){
+                        $dataOptionalInsert = $dataOptional;
                         //push notif logout
                         if($campaign['campaign_push_clickto'] == 'Logout'){
                             $user = User::where('phone', $receipient)->first();
@@ -455,10 +456,10 @@ class SendCampaignJob implements ShouldQueue
 
                                     $logs = CampaignPushSent::create($push);
 
-                                    $dataOptional['id_notif'] = $logs->id_campaign_push_sent;
-                                    $dataOptional['source'] = 'campaign';
+                                    $dataOptionalInsert['id_notif'] = $logs->id_campaign_push_sent;
+                                    $dataOptionalInsert['source'] = 'campaign';
 
-                                    $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptional);
+                                    $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptionalInsert);
 
                                     if (isset($push['success']) && $push['success'] > 0) {
                                         DB::commit();
