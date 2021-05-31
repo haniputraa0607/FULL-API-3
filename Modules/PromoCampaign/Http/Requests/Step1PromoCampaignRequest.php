@@ -27,7 +27,7 @@ class Step1PromoCampaignRequest extends FormRequest
             // 'promo_code'            => 'sometimes|required_if:code_type,==,single|max:15|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u',
             // 'prefix_code'           => 'sometimes|required_if:code_type,==,multiple|max:15|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u',
             // 'number_last_code'      => 'sometimes|required_if:code_type,==,multiple|max:2',
-            'limitation_usage'      => 'required_unless:used_code_update,1',
+            // 'limitation_usage'      => 'required_unless:used_code_update,1',
             'total_coupon'          => 'required_unless:used_code_update,1',
             'used_code_update'		=> 'nullable'
         ];

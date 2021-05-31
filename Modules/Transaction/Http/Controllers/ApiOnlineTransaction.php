@@ -350,8 +350,8 @@ class ApiOnlineTransaction extends Controller
 	            	$q->where(function($q2) {
 	            		$q2->where('code_type', 'Multiple')
 		            		->where(function($q3) {
-				            	$q3->whereColumn('usage','<','limitation_usage')
-				            		->orWhere('limitation_usage',0);
+				            	$q3->whereColumn('usage','<','code_limit')
+				            		->orWhere('code_limit',0);
 		            		});
 
 	            	}) 

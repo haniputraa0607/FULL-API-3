@@ -138,7 +138,7 @@ class ApiReportSalesController extends Controller
             'total_subtotal' => [
                 'title' => 'Penjualan Kotor',
                 'amount' => 'Rp. '.number_format($report['total_subtotal']??0,0,",","."),
-                "tooltip" => 'Total transaksi sebelum dipotong diskon dan ditambah biaya pengiriman',
+                "tooltip" => 'Total nominal transaksi sebelum dipotong diskon dan ditambah biaya pengiriman',
                 "show" => 1
             ],
             'total_discount' => [
