@@ -1087,6 +1087,7 @@ class ApiOrder extends Controller
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
                 'receipt_number'   => $order->transaction_receipt_number,
+                'reject_reason'    => $post['reason'] ?? ''
             ]);
             if($send != true){
                 DB::rollback();
