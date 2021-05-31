@@ -97,9 +97,19 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
             if($checkExistPromo === false){
                 if($datas['validation_cashback_type'] == 'Check Cashback'){
                     $valueCashback = number_format($value['cashback'],2, '.', '');
-                    app('Modules\Disburse\Http\Controllers\ApiIrisController')->calculationTransaction($idTransaction, ['id_rule_promo_payment_gateway' => $rule['id_rule_promo_payment_gateway'], 'cashback' => $valueCashback]);
+                    app('Modules\Disburse\Http\Controllers\ApiIrisController')->calculationTransaction($idTransaction, [
+                        'id_rule_promo_payment_gateway' => $rule['id_rule_promo_payment_gateway'],
+                        'cashback' => $valueCashback,
+                        'override_mdr_status' => $datas['override_mdr_status'],
+                        'override_mdr_percent_type' => $datas['override_mdr_percent_type'],
+                        'mdr' => $value['mdr']??NULL]);
                 }else{
-                    app('Modules\Disburse\Http\Controllers\ApiIrisController')->calculationTransaction($idTransaction, ['id_rule_promo_payment_gateway' => $rule['id_rule_promo_payment_gateway']]);
+                    app('Modules\Disburse\Http\Controllers\ApiIrisController')->calculationTransaction($idTransaction, [
+                        'id_rule_promo_payment_gateway' => $rule['id_rule_promo_payment_gateway'],
+                        'override_mdr_status' => $datas['override_mdr_status'],
+                        'override_mdr_percent_type' => $datas['override_mdr_percent_type'],
+                        'mdr' => $value['mdr']??NULL
+                        ]);
                 }
 
                 $result['must_get_promo'][] = $value['id_reference'];
@@ -118,12 +128,24 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
                     $chasbackTrx = number_format($getPromoTrx['total_received_cashback'],2, '.', '');
                     $valueCashback = number_format($value['cashback'],2, '.', '');
                     if($chasbackTrx != $valueCashback){
-                        app('Modules\Disburse\Http\Controllers\ApiIrisController')->calculationTransaction($idTransaction, ['id_rule_promo_payment_gateway' => $rule['id_rule_promo_payment_gateway'], 'cashback' => $valueCashback]);
+                        app('Modules\Disburse\Http\Controllers\ApiIrisController')->calculationTransaction($idTransaction, [
+                            'id_rule_promo_payment_gateway' => $rule['id_rule_promo_payment_gateway'],
+                            'cashback' => $valueCashback,
+                            'override_mdr_status' => $datas['override_mdr_status'],
+                            'override_mdr_percent_type' => $datas['override_mdr_percent_type'],
+                            'mdr' => $value['mdr']??NULL]);
                         $result['wrong_cashback'][] = $value['id_reference'];
                         $new_cashback = $valueCashback;
                         $old_cashback = $chasbackTrx;
                         $promoUpdate['total_received_cashback'] = $valueCashback;
                     }
+                }else{
+                    app('Modules\Disburse\Http\Controllers\ApiIrisController')->calculationTransaction($idTransaction, [
+                        'id_rule_promo_payment_gateway' => $rule['id_rule_promo_payment_gateway'],
+                        'override_mdr_status' => $datas['override_mdr_status'],
+                        'override_mdr_percent_type' => $datas['override_mdr_percent_type'],
+                        'mdr' => $value['mdr']??NULL
+                    ]);
                 }
 
                 $id_correct_get_promo[] = [

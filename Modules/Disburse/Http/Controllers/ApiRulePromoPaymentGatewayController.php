@@ -581,11 +581,16 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 }
             }
 
+            if(empty($post['override_mdr_status'])){
+                $post['override_mdr_percent_type'] = NULL;
+            }
             $createValidation = PromoPaymentGatewayValidation::create([
                 'id_user' => auth()->user()->id,
                 'id_rule_promo_payment_gateway' => $post['id_rule_promo_payment_gateway'],
                 'reference_by' => $post['reference_by'],
                 'validation_cashback_type' => $post['validation_cashback_type'],
+                'override_mdr_status' => $post['override_mdr_status'],
+                'override_mdr_percent_type' => $post['override_mdr_percent_type'],
                 'start_date_periode' => (!empty($post['start_date_periode']) ? date('Y-m-d', strtotime($post['start_date_periode'])) : NULL),
                 'end_date_periode' => (!empty($post['end_date_periode']) ? date('Y-m-d', strtotime($post['end_date_periode'])) : NULL),
                 'file' => ($store ? $directory : NULL),
@@ -599,6 +604,8 @@ class ApiRulePromoPaymentGatewayController extends Controller
                     'id_rule_promo_payment_gateway' => $post['id_rule_promo_payment_gateway'],
                     'reference_by' => $post['reference_by'],
                     'validation_cashback_type' => $post['validation_cashback_type'],
+                    'override_mdr_status' => $post['override_mdr_status'],
+                    'override_mdr_percent_type' => $post['override_mdr_percent_type'],
                     'start_date_periode' => $post['start_date_periode'],
                     'end_date_periode' => $post['end_date_periode'],
                 ])->onConnection('validationpromopgqueue');

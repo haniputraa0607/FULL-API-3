@@ -15,6 +15,8 @@ class PromoPaymentGatewayValidation extends Model
         'processing_status',
         'reference_by',
         'validation_cashback_type',
+        'override_mdr_status',
+        'override_mdr_percent_type',
         'start_date_periode',
         'end_date_periode',
         'correct_get_promo',
