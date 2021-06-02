@@ -836,21 +836,12 @@ class ApiIrisController extends Controller
                     }
                 }
 
-                //fee payment gateway
-                if(isset($additionalDataPromoPayment['override_mdr_status']) && $additionalDataPromoPayment['override_mdr_status'] == 1){
-                    if($additionalDataPromoPayment['override_mdr_percent_type'] == 'Percent' && !empty($additionalDataPromoPayment['mdr'])){
-                        $totalFee = $amountMDR * ($additionalDataPromoPayment['mdr']/100);//MDR
-                    }elseif($additionalDataPromoPayment['override_mdr_percent_type'] == 'Nominal'){
-                        $totalFee = $additionalDataPromoPayment['mdr'];//MDR
-                    }
+                if($feePGType == 'Percent'){
+                    $totalFee = $amountMDR * (($feePGCentral + $feePG) / 100);//MDR
+                    $totalFeeForCentral = $amountMDR * ($feePGCentral/100);//MDR for central
                 }else{
-                    if($feePGType == 'Percent'){
-                        $totalFee = $amountMDR * (($feePGCentral + $feePG) / 100);//MDR
-                        $totalFeeForCentral = $amountMDR * ($feePGCentral/100);//MDR for central
-                    }else{
-                        $totalFee = $feePGCentral + $feePG;//MDR
-                        $totalFeeForCentral = $feePGCentral;//MDR for central
-                    }
+                    $totalFee = $feePGCentral + $feePG;//MDR
+                    $totalFeeForCentral = $feePGCentral;//MDR for central
                 }
 
                 if(!empty($idRulePromoPaymentGateway)){
@@ -873,6 +864,16 @@ class ApiIrisController extends Controller
                     }else{
                         $totalFeePromoPG = $feePGCentral + $feePG;//MDR
                         $totalFeeForCentralPromoPG = $feePGCentral;//MDR for central
+                    }
+
+                    //fee payment gateway
+                    if(isset($additionalDataPromoPayment['override_mdr_status']) && $additionalDataPromoPayment['override_mdr_status'] == 1){
+                        $totalFeeForCentralPromoPG = 0;
+                        if($additionalDataPromoPayment['override_mdr_percent_type'] == 'Percent' && !empty($additionalDataPromoPayment['mdr'])){
+                            $totalFeePromoPG = $amountMDR * ($additionalDataPromoPayment['mdr']/100);//MDR
+                        }elseif($additionalDataPromoPayment['override_mdr_percent_type'] == 'Nominal'){
+                            $totalFeePromoPG = $additionalDataPromoPayment['mdr'];//MDR
+                        }
                     }
                 }
 

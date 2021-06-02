@@ -13,6 +13,7 @@ class RulePromoPaymentGateway extends Model
 	    'promo_payment_gateway_code',
 	    'name',
 	    'payment_gateway',
+        'operator_brand',
 		'start_date',
         'end_date',
         'limit_promo_total',

@@ -23,6 +23,7 @@ class PromoPaymentGatewayValidation extends Model
         'not_get_promo',
         'must_get_promo',
         'wrong_cashback',
+        'invalid_data',
         'file'
 	];
 }
