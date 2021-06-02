@@ -2988,7 +2988,7 @@ class ApiTransaction extends Controller
                     $result['transaction_status_text'] = 'PESANAN DITERIMA. ORDER SEDANG DIPERSIAPKAN';
                 } else {
                     $result['transaction_status'] = 5;
-                    $result['transaction_status_text'] = 'PESANAN MASUK. MENUNGGU JILID UNTUK MENERIMA ORDER';
+                    $result['transaction_status_text'] = 'PESANAN MASUK. MENUNGGU OUTLET UNTUK MENERIMA ORDER';
                 }
                 if ($list['transaction_pickup_go_send'] && !$list['detail']['reject_at']) {
                     // $result['transaction_status'] = 5;
@@ -3395,7 +3395,7 @@ class ApiTransaction extends Controller
                         ];
                     }
                     $statusOrder[] = [
-                        'text'  => 'Pesanan masuk. Menunggu jilid untuk menerima order',
+                        'text'  => 'Pesanan masuk. Menunggu outlet untuk menerima order',
                         'date'  => $list['completed_at'] ?: $list['transaction_date']
                     ];
                 }
