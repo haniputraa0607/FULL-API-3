@@ -504,6 +504,7 @@ class ApiCampaign extends Controller
         if($campaign['campaign_media_push'] == "Yes"){
             $receipient_push = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_push_receipient'])));
 
+            unset($campaign['campaign_push_receipient']);
             $data['campaign'] = $campaign;
             $data['type'] = 'push';
             if(strpos($campaign['campaign_push_subject'],"%") === false && strpos($campaign['campaign_push_content'],"%") === false){
@@ -521,6 +522,7 @@ class ApiCampaign extends Controller
 
         if($campaign['campaign_media_email'] == "Yes"){
             $receipient_email = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_email_receipient'])));
+            unset($campaign['campaign_email_receipient']);
             $data['campaign'] = $campaign;
             $data['type'] = 'email';
             foreach (array_chunk($receipient_email,300) as $recipients) {
@@ -532,6 +534,7 @@ class ApiCampaign extends Controller
         if($campaign['campaign_media_sms'] == "Yes"){
             $receipient_sms = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_sms_receipient'])));
 
+            unset($campaign['campaign_sms_receipient']);
             $data['campaign'] = $campaign;
             $data['type'] = 'sms';
             foreach (array_chunk($receipient_sms,300) as $recipients) {
@@ -542,7 +545,7 @@ class ApiCampaign extends Controller
 
         if($campaign['campaign_media_inbox'] == "Yes"){
             $receipient_inbox = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_inbox_receipient'])));
-
+            unset($campaign['campaign_inbox_receipient']);
             $data['campaign'] = $campaign;
             $data['type'] = 'inbox';
             foreach (array_chunk($receipient_inbox,300) as $recipients) {
@@ -555,7 +558,7 @@ class ApiCampaign extends Controller
             $sendAt = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
 
             $receipient_whatsapp = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_whatsapp_receipient'])));
-
+            unset($campaign['campaign_whatsapp_receipient']);
             $data['campaign'] = $campaign;
             $data['type'] = 'whatsapp';
             foreach (array_chunk($receipient_whatsapp,300) as $recipients) {
