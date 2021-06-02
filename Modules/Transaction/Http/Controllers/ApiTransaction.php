@@ -3329,7 +3329,7 @@ class ApiTransaction extends Controller
                                     $flagStatus['confirmed'] = 1;
                                     if($list['detail']['ready_at'] != null){
                                         $statusOrder[] = [
-                                            'text'  => 'Pesanan sudah siap dan menunggu pick up',
+                                            'text'  => 'Pesanan sudah siap dan menunggu diambil Driver',
                                             'date'  => $list['detail']['ready_at']
                                         ];
                                     }
@@ -3344,20 +3344,20 @@ class ApiTransaction extends Controller
                                 // case 'enroute pickup':
                                 case 'out_for_pickup':
                                     $statusOrder[] = [
-                                        'text'  => 'Driver dalam perjalanan menuju Outlet',
+                                        'text'  => 'Driver mengambil pesanan di outlet',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
-                                case 'picked':
-                                    $statusOrder[] = [
-                                        'text'  => 'Driver mengambil pesanan di Outlet',
-                                        'date'  => $valueGosend['created_at']
-                                    ];
-                                    break;
+                                // case 'picked':
+                                //     $statusOrder[] = [
+                                //         'text'  => 'Driver mengambil pesanan di Outlet',
+                                //         'date'  => $valueGosend['created_at']
+                                //     ];
+                                //     break;
                                 case 'enroute drop':
                                 case 'out_for_delivery':
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan sudah di pick up oleh driver dan sedang menuju lokasi #temansejiwa',
+                                        'text'  => 'Pesanan sudah diambil dan sedang menuju lokasi #temansejiwa',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
@@ -3389,13 +3389,20 @@ class ApiTransaction extends Controller
                         }
                     }
                     if ($list['detail']['receive_at'] != null) {
-                        $statusOrder[] = [
-                            'text'  => 'Pesanan diterima. Order sedang dipersiapkan',
-                            'date'  => $list['detail']['receive_at']
-                        ];
+                        if ($list['transaction_pickup_go_send']) {
+                            $statusOrder[] = [
+                                'text'  => 'Pesanan diterima. Order sedang dipersiapkan',
+                                'date'  => $list['detail']['receive_at']
+                            ];
+                        } else {
+                            $statusOrder[] = [
+                                'text'  => 'Pesanan diterima dan sedang dipersiapkan',
+                                'date'  => $list['detail']['receive_at']
+                            ];
+                        }
                     }
                     $statusOrder[] = [
-                        'text'  => 'Pesanan masuk. Menunggu outlet untuk menerima order',
+                        'text'  => 'Pesanan masuk. Menunggu outlet menerima order',
                         'date'  => $list['completed_at'] ?: $list['transaction_date']
                     ];
                 }
