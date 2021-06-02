@@ -2328,6 +2328,7 @@ class ApiOutletApp extends Controller
                 'id_transaction'   => $order->id_transaction,
                 'order_id'         => $order->order_id,
                 'receipt_number'   => $order->transaction_receipt_number,
+                'reject_reason'    => $post['reason'] ?? ''
             ]);
             if ($send != true) {
                 DB::rollback();
