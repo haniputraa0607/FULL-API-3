@@ -293,6 +293,60 @@ class Deal extends Model
         return $this->hasMany(\Modules\Deals\Entities\DealsPaymentMethod::class, 'id_deals', 'id_deals');
     }
 
+    public function getDealsShipmentTextAttribute()
+    {
+    	if ($this->is_all_shipment) {
+    		return 'All shipment';
+    	}
+    	if (!$this->deals_shipment_method) {
+    		$this->load('deals_shipment_method');
+    	}
+        return $this->deals_shipment_method->pluck('shipment_method')->join(', ');
+    }
+
+    public function getDealsPaymentTextAttribute()
+    {
+    	if ($this->is_all_payment) {
+    		return 'All payment';
+    	}
+    	if (!$this->deals_payment_method) {
+    		$this->load('deals_payment_method');
+    	}
+        return $this->deals_payment_method->pluck('payment_method')->join(', ');
+    }
+
+    public function getDealsOutletTextAttribute()
+    {
+    	if ($this->is_all_outlet) {
+    		return 'All outlet';
+    	}
+    	if (!$this->outlets) {
+    		$this->load('outlets');
+    	}
+    	if (!$this->outlet_groups) {
+    		$this->load('outlet_groups');
+    	}
+    	$result = '';
+    	if ($this->outlet_groups->count()) {
+    		$result .= '<b>Outlet Group Filter:</b>' . $this->outlet_groups->pluck('outlet_group_name')->join(', ');
+    	}
+    	if ($this->outlets->count()) {
+    		$result .= ($this->outlet_groups->count() ? '<br/><b>More Outlet:</b>' : '') . $this->outlets->pluck('outlet_name')->join(', ');
+    	}
+        return $result;
+    }
+
+    public function getBrandRuleTextAttribute()
+    {
+    	if ($this->id_brand) {
+    		return \Modules\Brand\Entities\Brand::select('name_brand')->where('id_brand',$this->id_brand)->pluck('name_brand')->first();
+    	}
+    	if (!$this->brands) {
+    		$this->load('brands');
+    	}
+        return $this->brands->pluck('name_brand')->join(' ' . $this->brand_rule . ' ');
+    }
+
     public function brands(){
 		return $this->belongsToMany(\Modules\Brand\Entities\Brand::class,'deals_brands','id_deals','id_brand');
 	}

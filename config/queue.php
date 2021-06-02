@@ -104,6 +104,13 @@ return [
             'retry_after' => 90,
         ],
 
+        'campaignqueue' => [
+            'driver' => 'database',
+            'table' => 'campaign_queue',
+            'queue' => 'campaignqueue',
+            'retry_after' => 90,
+        ],
+
         'export_franchise_queue' => [
             'driver' => 'database',
             'table' => 'export_franchise_jobs',

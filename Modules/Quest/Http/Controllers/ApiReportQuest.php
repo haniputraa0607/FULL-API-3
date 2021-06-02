@@ -87,6 +87,10 @@ class ApiReportQuest extends Controller
     {
     	$id_quest = MyHelper::decSlug($request->id_quest);
 
+    	if (!$id_quest) {
+            return MyHelper::checkGet([], "Quest tidak ditemukan");
+        }
+
     	$info = Quest::where('quests.id_quest', $id_quest)
 				->leftJoin('quest_users', 'quests.id_quest', 'quest_users.id_quest')
 				->select(
@@ -99,6 +103,12 @@ class ApiReportQuest extends Controller
 				->groupBy('quests.id_quest')
 				->with('quest_benefit', 'quest_benefit.deals')
 				->first();
+
+		if (!$info) {
+            return MyHelper::checkGet([], "Quest tidak ditemukan");
+        }
+
+		$info->applyShortDescriptionTextReplace();
 
 		$user_complete 	= QuestUserDetail::select('id_user')
 						->where('id_quest', $id_quest)

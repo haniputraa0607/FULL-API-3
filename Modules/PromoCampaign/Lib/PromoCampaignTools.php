@@ -1312,7 +1312,7 @@ class PromoCampaignTools{
         }
 
         // use promo code?
-        if($promo->limitation_usage){
+        if($promo->limitation_usage) {
         	// limit usage user?
         	if(PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('id_user',$id_user)->count()>=$promo->limitation_usage){
 	        	$errors[]='Kuota anda untuk penggunaan kode promo ini telah habis';
@@ -1320,9 +1320,35 @@ class PromoCampaignTools{
         	}
 
         	// limit usage device
-        	if(PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('device_id',$device_id)->count()>=$promo->limitation_usage){
+        	/*if(PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('device_id',$device_id)->count()>=$promo->limitation_usage){
 	        	$errors[]='Kuota device anda untuk penggunaan kode promo ini telah habis';
 	    		return false;
+        	}*/
+        } else {
+       		$used_by_other_user = PromoCampaignReport::where('id_promo_campaign',$id_promo)
+       							->where('id_user', '!=', $id_user)
+       							->where('id_promo_campaign_promo_code',$id_code)
+       							->first();
+       		if ($used_by_other_user) {
+       			$errors[]='Promo tidak tersedia';
+	    		return false;
+       		}
+
+	       	$used_code = PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('id_user',$id_user)->where('id_promo_campaign_promo_code',$id_code)->count();
+
+        	if ($code_limit = $promo->code_limit) {
+        		if ($used_code >= $code_limit) {
+        			$errors[]='Kuota anda untuk penggunaan kode promo ini telah habis';
+	    			return false;
+        		}
+        	}
+
+        	if ($promo->user_limit && !$used_code) {
+        		$used_diff_code = PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('id_user',$id_user)->distinct()->count('id_promo_campaign_promo_code');
+        		if ($used_diff_code >= $promo->user_limit) {
+        			$errors[]='Kuota anda untuk penggunaan promo ini telah habis';
+	    			return false;
+        		}
         	}
         }
         return true;
