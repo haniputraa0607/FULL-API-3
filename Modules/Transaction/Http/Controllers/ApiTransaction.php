@@ -3330,7 +3330,7 @@ class ApiTransaction extends Controller
                                     if($list['detail']['ready_at'] != null){
                                         $statusOrder[] = [
                                             'text'  => 'Pesanan sudah siap dan menunggu pick up',
-                                            'date'  => $valueGosend['created_at']
+                                            'date'  => $list['detail']['ready_at']
                                         ];
                                     }
                                     break;
