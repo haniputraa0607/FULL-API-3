@@ -108,7 +108,7 @@ return [
             'driver' => 'database',
             'table' => 'campaign_queue',
             'queue' => 'campaignqueue',
-            'retry_after' => 90,
+            'retry_after' => 9000,
         ],
 
         'export_franchise_queue' => [
