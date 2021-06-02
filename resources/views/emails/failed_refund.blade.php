@@ -3,13 +3,13 @@
 		<tr>
 			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Transaction Date</th>
 			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Receipt Number</th>
-			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Customer Name</th>
-			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Customer Phone</th>
 			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Payment Method</th>
 			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Payment Reference Number</th>
 			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Grandtotal</th>
 			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Manual Refund</th>
 			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Failed Void Reason</th>
+			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Customer Name</th>
+			<th style="border:1px solid #C0C0C0;padding:5px;background:#F0F0F0;">Customer Phone</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -22,12 +22,6 @@
 				{{ $transaction['transaction_receipt_number'] }}
 			</td>
 			<td style="border:1px solid #C0C0C0;padding:5px;">
-				{{ $transaction['name'] }}
-			</td>
-			<td style="border:1px solid #C0C0C0;padding:5px;">
-				{{ $transaction['phone'] }}
-			</td>
-			<td style="border:1px solid #C0C0C0;padding:5px;">
 				{{ $transaction->payment_method }}{{ $transaction->payment_detail ? "($transaction->payment_detail)" : '' }}
 			</td>
 			<td style="border:1px solid #C0C0C0;padding:5px;">
@@ -41,6 +35,12 @@
 			</td>
 			<td style="border:1px solid #C0C0C0;padding:5px;">
 				{{ $transaction->failed_void_reason }}
+			</td>
+			<td style="border:1px solid #C0C0C0;padding:5px;">
+				{{ $transaction['name'] }}
+			</td>
+			<td style="border:1px solid #C0C0C0;padding:5px;">
+				{{ $transaction['phone'] }}
 			</td>
 		</tr>
 		@endif
@@ -53,12 +53,6 @@
 				{{ $transaction['transaction_receipt_number'] }}
 			</td>
 			<td style="border:1px solid #C0C0C0;padding:5px;">
-				{{ $transaction['name'] }}
-			</td>
-			<td style="border:1px solid #C0C0C0;padding:5px;">
-				{{ $transaction['phone'] }}
-			</td>
-			<td style="border:1px solid #C0C0C0;padding:5px;">
 				{{ $transaction->payment_method }}{{ $transaction->payment_detail ? "($transaction->payment_detail)" : '' }}
 			</td>
 			<td style="border:1px solid #C0C0C0;padding:5px;">
@@ -72,6 +66,12 @@
 			</td>
 			<td style="border:1px solid #C0C0C0;padding:5px;">
 				{{ $transaction->failed_void_reason }}
+			</td>
+			<td style="border:1px solid #C0C0C0;padding:5px;">
+				{{ $transaction['name'] }}
+			</td>
+			<td style="border:1px solid #C0C0C0;padding:5px;">
+				{{ $transaction['phone'] }}
 			</td>
 		</tr>
 		@endforeach

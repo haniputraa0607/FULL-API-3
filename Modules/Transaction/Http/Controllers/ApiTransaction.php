@@ -1606,12 +1606,15 @@ class ApiTransaction extends Controller
                 ->join('provinces', 'cities.id_province', 'provinces.id_province')
                 ->leftJoin('transaction_bundling_products','transaction_products.id_transaction_bundling_product','=','transaction_bundling_products.id_transaction_bundling_product')
                 ->leftJoin('bundling','bundling.id_bundling','=','transaction_bundling_products.id_bundling')
+                ->leftJoin('rule_promo_payment_gateway','rule_promo_payment_gateway.id_rule_promo_payment_gateway','=','disburse_outlet_transactions.id_rule_promo_payment_gateway')
                 ->with(['transaction_payment_subscription', 'vouchers', 'promo_campaign', 'point_refund', 'point_use', 'subscription_user_voucher.subscription_user.subscription'])
                 ->orderBy('transaction_products.id_transaction_bundling_product', 'asc')
-                ->addSelect('transaction_bundling_products.transaction_bundling_product_base_price', 'transaction_bundling_products.transaction_bundling_product_qty', 'transaction_bundling_products.transaction_bundling_product_total_discount', 'transaction_bundling_products.transaction_bundling_product_subtotal', 'bundling.bundling_name', 'disburse_outlet_transactions.bundling_product_fee_central', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
+                ->addSelect('rule_promo_payment_gateway.name as promo_payment_gateway_name',
+                    'transaction_bundling_products.transaction_bundling_product_base_price', 'transaction_bundling_products.transaction_bundling_product_qty', 'transaction_bundling_products.transaction_bundling_product_total_discount', 'transaction_bundling_products.transaction_bundling_product_subtotal', 'bundling.bundling_name', 'disburse_outlet_transactions.bundling_product_fee_central', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
                     'brands.name_brand', 'cities.city_name', 'c.city_name as user_city', 'provinces.province_name',
                     'disburse_outlet_transactions.fee_item', 'disburse_outlet_transactions.payment_charge', 'disburse_outlet_transactions.discount', 'disburse_outlet_transactions.subscription',
                     'disburse_outlet_transactions.point_use_expense',
+                    'disburse_outlet_transactions.fee_promo_payment_gateway_outlet', 'disburse_outlet_transactions.fee_promo_payment_gateway_central',
                     'disburse_outlet_transactions.income_outlet', 'disburse_outlet_transactions.discount_central', 'disburse_outlet_transactions.subscription_central');
         }
 
@@ -2131,8 +2134,8 @@ class ApiTransaction extends Controller
                     if($key == ($count-1) || (isset($get[$key+1]['transaction_receipt_number']) && $val['transaction_receipt_number'] != $get[$key+1]['transaction_receipt_number'])){
                         //for product plastic
                         $productPlastics = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
-                                            ->where('id_transaction', $val['id_transaction'])->where('type', 'Plastic')
-                                            ->get()->toArray();
+                            ->where('id_transaction', $val['id_transaction'])->where('type', 'Plastic')
+                            ->get()->toArray();
 
                         foreach ($productPlastics as $plastic){
                             for($j=0;$j<$plastic['transaction_product_qty'];$j++){
@@ -2253,6 +2256,35 @@ class ApiTransaction extends Controller
                             $html .= '</tr>';
                         }
 
+                        $promoNamePaymentGateway = (empty($val['promo_payment_gateway_name']) ? "": $val['promo_payment_gateway_name']);
+                        $nominalPromoPaymentGateway = (empty($val['fee_promo_payment_gateway_outlet']) ? 0: $val['fee_promo_payment_gateway_outlet']);
+                        if(!empty($promoNamePaymentGateway)) {
+                            $html .= '<tr>';
+                            $html .= $sameData;
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= $addAdditionalColumn;
+                            $html .= '<td>'.htmlspecialchars($promoNamePaymentGateway).'(Promo Payment Gateway)</td>';
+                            $html .= $addAdditionalColumnVariant;
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td>'.$nominalPromoPaymentGateway.'</td>';
+                            $html .= '<td>'.(-$nominalPromoPaymentGateway).'</td>';
+                            $html .= '<td></td><td></td><td></td>';
+                            if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                $html .= '<td></td><td></td><td></td>';
+                            }
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '</tr>';
+                        }
+
                         $html .= '<tr>';
                         $html .= $sameData;
                         $html .= '<td></td>';
@@ -2262,13 +2294,14 @@ class ApiTransaction extends Controller
                         $html .= $addAdditionalColumnVariant;
                         $html .= '<td></td>';
                         $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                        $html .= '<td>'.($val['transaction_grandtotal']-$sub).'</td>';
+                        $html .= '<td>'.($val['transaction_grandtotal']-$sub-$nominalPromoPaymentGateway).'</td>';
                         $html .= '<td>'.(float)$val['fee_item'].'</td>';
                         $html .= '<td>'.(float)$paymentCharge.'</td>';
                         if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
                             $html .= '<td>' . (float)$val['discount_central'] . '</td>';
                             $html .= '<td>' . (float)$val['subscription_central'] . '</td>';
                             $html .= '<td>' . (float)$val['bundling_product_fee_central'] . '</td>';
+                            $html .= '<td>' . (float)$val['fee_promo_payment_gateway_central'] . '</td>';
                         }
                         $html .= '<td>'.(float)$val['income_outlet'].'</td>';
                         $html .= '<td>'.$payment.'</td>';
@@ -2955,7 +2988,7 @@ class ApiTransaction extends Controller
                     $result['transaction_status_text'] = 'PESANAN DITERIMA. ORDER SEDANG DIPERSIAPKAN';
                 } else {
                     $result['transaction_status'] = 5;
-                    $result['transaction_status_text'] = 'PESANAN MASUK. MENUNGGU JILID UNTUK MENERIMA ORDER';
+                    $result['transaction_status_text'] = 'PESANAN MASUK. MENUNGGU OUTLET UNTUK MENERIMA ORDER';
                 }
                 if ($list['transaction_pickup_go_send'] && !$list['detail']['reject_at']) {
                     // $result['transaction_status'] = 5;
@@ -3280,27 +3313,34 @@ class ApiTransaction extends Controller
                             'text'  => 'Pesanan sudah siap diambil'. ($list['detail']['is_autoready'] && $is_admin ? ' (auto ready by system)' : ''),
                             'date'  => $list['detail']['ready_at']
                         ];
+                    } elseif ($list['detail']['ready_at'] != null) {
+                        $is_admin = $request->user()->tokenCan('be');
+                        $statusOrder[] = [
+                            'text'  => 'Pesanan sudah siap dan menunggu diambil Driver'. ($list['detail']['is_autoready'] && $is_admin ? ' (auto ready by system)' : ''),
+                            'date'  => $list['detail']['ready_at']
+                        ];
                     }
                     if ($list['transaction_pickup_go_send']) {
                         $flagStatus = [
                             'confirmed' => 0,
                             'no_driver' => 0,
                         ];
+                        $hasPicked = false;
                         foreach ($list['transaction_pickup_go_send']['transaction_pickup_update'] as $valueGosend) {
                             switch (strtolower($valueGosend['status'])) {
-                                case 'finding driver':
-                                case 'confirmed':
-                                    if ($flagStatus['confirmed']) {
-                                        break;
-                                    }
-                                    $flagStatus['confirmed'] = 1;
-                                    if($list['detail']['ready_at'] != null){
-                                        $statusOrder[] = [
-                                            'text'  => 'Pesanan sudah siap dan menunggu pick up',
-                                            'date'  => $valueGosend['created_at']
-                                        ];
-                                    }
-                                    break;
+                                // case 'finding driver':
+                                // case 'confirmed':
+                                //     if ($flagStatus['confirmed']) {
+                                //         break;
+                                //     }
+                                //     $flagStatus['confirmed'] = 1;
+                                //     if($list['detail']['ready_at'] != null){
+                                //         $statusOrder[] = [
+                                //             'text'  => 'Pesanan sudah siap dan menunggu diambil Driver',
+                                //             'date'  => $list['detail']['ready_at']
+                                //         ];
+                                //     }
+                                //     break;
                                 // case 'driver allocated':
                                 // case 'allocated':
                                 //     $statusOrder[] = [
@@ -3311,22 +3351,29 @@ class ApiTransaction extends Controller
                                 // case 'enroute pickup':
                                 case 'out_for_pickup':
                                     $statusOrder[] = [
-                                        'text'  => 'Driver dalam perjalanan menuju Outlet',
+                                        'text'  => 'Driver dalam perjalanan menuju outlet',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
                                 case 'picked':
+                                    $hasPicked = true;
                                     $statusOrder[] = [
-                                        'text'  => 'Driver mengambil pesanan di Outlet',
+                                        'text'  => 'Driver mengambil pesanan di outlet',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
                                 case 'enroute drop':
                                 case 'out_for_delivery':
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan sudah di pick up oleh driver dan sedang menuju lokasi #temansejiwa',
+                                        'text'  => 'Pesanan sudah diambil dan sedang menuju lokasi #temansejiwa',
                                         'date'  => $valueGosend['created_at']
                                     ];
+                                    if (!$hasPicked) {
+                                        $statusOrder[] = [
+                                            'text'  => 'Driver mengambil pesanan di outlet',
+                                            'date'  => $valueGosend['created_at']
+                                        ];
+                                    }
                                     break;
                                 case 'completed':
                                 case 'delivered':
@@ -3356,13 +3403,20 @@ class ApiTransaction extends Controller
                         }
                     }
                     if ($list['detail']['receive_at'] != null) {
-                        $statusOrder[] = [
-                            'text'  => 'Pesanan diterima. Order sedang dipersiapkan',
-                            'date'  => $list['detail']['receive_at']
-                        ];
+                        if ($list['transaction_pickup_go_send']) {
+                            $statusOrder[] = [
+                                'text'  => 'Pesanan diterima. Order sedang dipersiapkan',
+                                'date'  => $list['detail']['receive_at']
+                            ];
+                        } else {
+                            $statusOrder[] = [
+                                'text'  => 'Pesanan diterima dan sedang dipersiapkan',
+                                'date'  => $list['detail']['receive_at']
+                            ];
+                        }
                     }
                     $statusOrder[] = [
-                        'text'  => 'Pesanan masuk. Menunggu jilid untuk menerima order',
+                        'text'  => 'Pesanan masuk. Menunggu outlet menerima order',
                         'date'  => $list['completed_at'] ?: $list['transaction_date']
                     ];
                 }

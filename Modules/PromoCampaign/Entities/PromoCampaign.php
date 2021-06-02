@@ -90,7 +90,10 @@ class PromoCampaign extends Eloquent
         'product_rule',
         'brand_rule',
         'product_type',
-        'promo_description'
+        'promo_description',
+        'user_limit',
+        'code_limit',
+        'device_limit'
 	];
 
 	public function user()

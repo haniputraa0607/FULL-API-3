@@ -146,6 +146,8 @@ class ApiTransactionFranchiseController extends Controller
                     $query->orderBy($colname, $column['dir']);
                 }
             }
+        }else{
+            $query->orderBy('transactions.id_transaction', 'DESC');
         }
         
         $akhir = $query->paginate($request->length ?: 10);

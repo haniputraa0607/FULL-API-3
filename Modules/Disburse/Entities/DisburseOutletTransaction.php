@@ -13,12 +13,16 @@ class DisburseOutletTransaction extends Model
 	    'id_disburse_outlet',
         'id_transaction',
         'income_central',
+        'income_central_old',
         'income_outlet',
+        'income_outlet_old',
         'expense_central',//total expenses for central
+        'expense_central_old',
         'fee_item',//charged for outlet
         'discount',//charged for outlet
         'discount_central',
         'payment_charge',//charged for outlet
+        'payment_charge_old',
         'point_use_expense',//charged for outlet
         'subscription',//charged for outlet
         'subscription_central',
@@ -36,6 +40,15 @@ class DisburseOutletTransaction extends Model
         'charged_promo_central',
         'charged_promo_outlet',
         'charged_subscription_central',
-        'charged_subscription_outlet'
+        'charged_subscription_outlet',
+        'id_rule_promo_payment_gateway',
+        'status_validation_promo_payment_gateway',
+        'fee_promo_payment_gateway_type',
+        'fee_promo_payment_gateway',
+        'fee_promo_payment_gateway_central',
+        'fee_promo_payment_gateway_outlet',
+        'charged_promo_payment_gateway',
+        'charged_promo_payment_gateway_central',
+        'charged_promo_payment_gateway_outlet'
 	];
 }

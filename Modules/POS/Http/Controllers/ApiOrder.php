@@ -631,7 +631,7 @@ class ApiOrder extends Controller
                     'code'             => $code
                 ]);
 
-                AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $user['id']]);
+                AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $user['id'], 'id_transaction' => $order->id_transaction]);
             }else{
                 $send = app($this->autocrm)->SendAutoCRM($order->pickup_by == 'Customer'?'Order Taken':'Order Taken By Driver', $user['phone'], [
                     "outlet_name" => $outlet['outlet_name'],
@@ -1087,6 +1087,7 @@ class ApiOrder extends Controller
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
                 'receipt_number'   => $order->transaction_receipt_number,
+                'reject_reason'    => $post['reason'] ?? ''
             ]);
             if($send != true){
                 DB::rollback();

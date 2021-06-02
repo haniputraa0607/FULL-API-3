@@ -78,6 +78,23 @@ Route::group(['prefix' => 'disburse'], function () {
         Route::any('setting/send-email-to', 'ApiDisburseSettingController@settingSendEmailTo');
 
         Route::any('update-status', 'ApiDisburseController@updateStatusDisburse');
+
+        //rule promo payment gateway
+        Route::group(['prefix' => 'rule-promo-payment-gateway'], function () {
+            Route::any('/', 'ApiRulePromoPaymentGatewayController@index');
+            Route::post('store', 'ApiRulePromoPaymentGatewayController@store');
+            Route::post('detail', 'ApiRulePromoPaymentGatewayController@detail');
+            Route::post('update', 'ApiRulePromoPaymentGatewayController@update');
+            Route::post('delete', 'ApiRulePromoPaymentGatewayController@delete');
+            Route::post('start', 'ApiRulePromoPaymentGatewayController@start');
+            Route::post('mark-as-valid', 'ApiRulePromoPaymentGatewayController@markAsValid');
+            Route::post('report', 'ApiRulePromoPaymentGatewayController@reportListTransaction');
+            Route::post('summary', 'ApiRulePromoPaymentGatewayController@summaryListTransaction');
+            Route::post('validation/export', 'ApiRulePromoPaymentGatewayController@validationExport');
+            Route::post('validation/import', 'ApiRulePromoPaymentGatewayController@validationImport');
+            Route::any('validation/report', 'ApiRulePromoPaymentGatewayController@validationReport');
+            Route::post('validation/report/detail', 'ApiRulePromoPaymentGatewayController@validationReportDetail');
+        });
     });
 
     Route::group(['middleware' => ['auth:user-franchise', 'scopes:be']], function () {

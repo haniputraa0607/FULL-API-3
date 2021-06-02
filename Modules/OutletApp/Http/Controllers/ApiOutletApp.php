@@ -992,7 +992,7 @@ class ApiOutletApp extends Controller
                     'code'             => $code
                 ]);
 
-                AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $user['id']]);
+                AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $user['id'], 'id_transaction' => $order->id_transaction]);
             }else{
                 $send = app($this->autocrm)->SendAutoCRM($order->pickup_by == 'Customer'?'Order Taken':'Order Taken By Driver', $user['phone'], [
                     "outlet_name"      => $outlet['outlet_name'],
@@ -1516,13 +1516,15 @@ class ApiOutletApp extends Controller
         }
 
         $modifier_groups = $modifier_groups->get();
-
-        $result[] = [
-            'id_brand' => 0,
-            'name_brand' => 'Variant No SKU',
-            'order_brand' => 1000,
-            'categories' => $modifier_groups
-        ];
+		
+		if ( !empty($modifier_groups[0]['total_product']) ) {
+	        $result[] = [
+	            'id_brand' => 0,
+	            'name_brand' => 'Variant No SKU',
+	            'order_brand' => 1000,
+	            'categories' => $modifier_groups
+	        ];
+		}
 
         return MyHelper::checkGet(array_values($result));
     }
@@ -2326,6 +2328,7 @@ class ApiOutletApp extends Controller
                 'id_transaction'   => $order->id_transaction,
                 'order_id'         => $order->order_id,
                 'receipt_number'   => $order->transaction_receipt_number,
+                'reject_reason'    => $post['reason'] ?? ''
             ]);
             if ($send != true) {
                 DB::rollback();
