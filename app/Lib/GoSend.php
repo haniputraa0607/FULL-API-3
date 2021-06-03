@@ -362,6 +362,19 @@ class GoSend
                     );
                 }
             }
+            if ($delivery_status == 'rejected') {
+                $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Rejected', $phone,
+                    [
+                        'id_reference'              => $trx->id_transaction,
+                        'id_transaction'            => $trx->id_transaction,
+                        'receipt_number'            => $trx->transaction_receipt_number,
+                        'outlet_code'               => $outlet->outlet_code,
+                        'outlet_name'               => $outlet->outlet_name,
+                        'order_id'                  => $trx_pickup->order_id,
+                        'name'                      => ucwords($userName)
+                    ]
+                );
+            }
 
             TransactionPickupGoSendUpdate::create($dataUpdate);
         }
