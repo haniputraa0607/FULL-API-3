@@ -34,6 +34,8 @@ use Modules\POS\Http\Requests\Order\ProductSoldOut;
 use App\Lib\Midtrans;
 use App\Lib\MyHelper;
 use DB;
+use App\Http\Models\Autocrm;
+use Modules\Autocrm\Entities\AutoresponseCodeList;
 
 class ApiOrder extends Controller
 {
@@ -45,6 +47,7 @@ class ApiOrder extends Controller
         $this->membership    = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->pos    = "Modules\POS\Http\Controllers\ApiPOS";
         $this->trx    = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
+        $this->autoresponse_code = "Modules\Autocrm\Http\Controllers\ApiAutoresponseWithCode";
     }
     
     public function listOrder(listOrder $request){
@@ -604,13 +607,41 @@ class ApiOrder extends Controller
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM($order->pickup_by == 'Customer'?'Order Taken':'Order Taken By Driver', $user['phone'], [
-                "outlet_name" => $outlet['outlet_name'], 
-                "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, 
-                'id_transaction' => $order->id_transaction, 
-                "transaction_date" => $order->transaction_date,
-                'order_id'         => $order->order_id,
-            ]);
+            $getAvailableCodeCrm = Autocrm::where('autocrm_title', 'Order Taken With Code')->first();
+            $code = NULL;
+            $idCode = NULL;
+
+            if($order->pickup_by == 'Customer' && !empty($getAvailableCodeCrm) &&
+                ($getAvailableCodeCrm['autocrm_email_toogle'] == 1 || $getAvailableCodeCrm['autocrm_sms_toogle'] == 1 ||
+                    $getAvailableCodeCrm['autocrm_push_toogle'] == 1 || $getAvailableCodeCrm['autocrm_inbox_toogle'] == 1)){
+
+                $getAvailableCode = app($this->autoresponse_code)->getAvailableCode($order->id_transaction);
+                $code = $getAvailableCode['autoresponse_code']??null;
+                $idCode = $getAvailableCode['id_autoresponse_code_list']??null;
+            }
+
+            if(!empty($code)){
+                $send = app($this->autocrm)->SendAutoCRM('Order Taken With Code', $user['phone'], [
+                    "outlet_name"      => $outlet['outlet_name'],
+                    'id_transaction'   => $order->id_transaction,
+                    "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
+                    "transaction_date" => $order->transaction_date,
+                    'order_id'         => $order->order_id,
+                    'receipt_number'   => $order->transaction_receipt_number,
+                    'code'             => $code
+                ]);
+
+                AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $user['id'], 'id_transaction' => $order->id_transaction]);
+            }else{
+                $send = app($this->autocrm)->SendAutoCRM($order->pickup_by == 'Customer'?'Order Taken':'Order Taken By Driver', $user['phone'], [
+                    "outlet_name" => $outlet['outlet_name'],
+                    "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet,
+                    'id_transaction' => $order->id_transaction,
+                    "transaction_date" => $order->transaction_date,
+                    'order_id'         => $order->order_id,
+                ]);
+            }
+
             if($send != true){
                 DB::rollback();
                 return response()->json([
@@ -1056,6 +1087,7 @@ class ApiOrder extends Controller
                 "transaction_date" => $order->transaction_date,
                 'order_id'         => $order->order_id,
                 'receipt_number'   => $order->transaction_receipt_number,
+                'reject_reason'    => $post['reason'] ?? ''
             ]);
             if($send != true){
                 DB::rollback();

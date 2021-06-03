@@ -230,6 +230,9 @@ class ApiOutletController extends Controller
             $opens = $request->json('open');
             $closes = $request->json('close');
             $is_closed = $request->json('is_closed');
+            if(!isset($post['time_zone_utc'])){
+                $post['time_zone_utc'] = '7';
+            }
             foreach($days as $key => $value){
             	$opens[$key] = $this->setOneTimezone($opens[$key], $post['time_zone_utc']);
             	$closes[$key] = $this->setOneTimezone($closes[$key], $post['time_zone_utc']);
@@ -246,7 +249,7 @@ class ApiOutletController extends Controller
         }
 
         DB::commit();
-        SyncronPlasticTypeOutlet::dispatch([])->allOnConnection('database');
+        SyncronPlasticTypeOutlet::dispatch([])->onQueue('high')->allOnConnection('database');
         // sent pin to outlet
         if (isset($request->outlet_email)) {
         	$variable = $save->toArray();
@@ -295,7 +298,7 @@ class ApiOutletController extends Controller
         // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
         if($save){
             DB::commit();
-            SyncronPlasticTypeOutlet::dispatch([])->allOnConnection('database');
+            SyncronPlasticTypeOutlet::dispatch([])->onQueue('high')->allOnConnection('database');
         }else{
             DB::rollBack();
         }
@@ -1426,7 +1429,7 @@ class ApiOutletController extends Controller
         } else {
             if($countAll){
                 if($request->json('search')){
-                    return response()->json(['status' => 'fail', 'messages' => ['Data tidak ditemukan']]);
+                    return response()->json(['status' => 'fail', 'messages' => ['Outlet tidak ditemukan']]);
                 }
                 return response()->json(['status' => 'fail', 'messages' => ['empty']]);
             }else{
@@ -2224,7 +2227,7 @@ class ApiOutletController extends Controller
             	SendOutletJob::dispatch($queue_data)->allOnConnection('outletqueue');
             }
             DB::commit();
-            SyncronPlasticTypeOutlet::dispatch([])->allOnConnection('database');
+            SyncronPlasticTypeOutlet::dispatch([])->onQueue('high')->allOnConnection('database');
 
             if(count($failedImport) > 0){
                 return ['status' => 'fail','messages' => [$failedImport]];

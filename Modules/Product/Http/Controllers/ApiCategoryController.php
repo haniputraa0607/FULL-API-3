@@ -624,7 +624,7 @@ class ApiCategoryController extends Controller
         }
 
         $resultsFinal = $this->getBundlingSearch($post, $outlet, array_values($result));
-        return MyHelper::checkGet($resultsFinal);
+        return MyHelper::checkGet($resultsFinal, 'Menu tidak ditemukan');
     }
 
     function getBundling($post, $brands, $outlet, $resProduct){

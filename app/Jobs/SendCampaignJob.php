@@ -286,7 +286,7 @@ class SendCampaignJob implements ShouldQueue
                 break;
 
             case 'push':
-                foreach($recipient as $key => $receipient){
+                if(strpos($campaign['campaign_push_subject'],"%") === false && strpos($campaign['campaign_push_content'],"%") === false){
                     $dataOptional          = [];
                     $image = null;
                     if (isset($campaign['campaign_push_image']) && $campaign['campaign_push_image'] != null) {
@@ -338,26 +338,117 @@ class SendCampaignJob implements ShouldQueue
 
                     //push notif logout
                     if($campaign['campaign_push_clickto'] == 'Logout'){
-                        $user = User::where('phone', $receipient)->first();
+                        $user = User::whereIn('phone', $recipient)->pluck('id')->toArray();
                         if($user){
                             //delete token
                             $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
-                                    ->where('oauth_access_tokens.user_id', $user['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
+                                ->where('oauth_access_tokens.user_id', $user)->where('oauth_access_token_providers.provider', 'users')->delete();
 
                         }
 
                     }
 
-                    $subject = app($autocrm)->TextReplace($campaign['campaign_push_subject'], $receipient);
-                    $content = app($autocrm)->TextReplace($campaign['campaign_push_content'], $receipient);
-                    $deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);
-
+                    $subject = app($autocrm)->TextReplace($campaign['campaign_push_subject'], $recipient[0]);
+                    $content = app($autocrm)->TextReplace($campaign['campaign_push_content'], $recipient[0]);
+                    $deviceToken = PushNotificationHelper::searchDeviceToken("phone", $recipient);
                     if (!empty($deviceToken)) {
                         if (isset($deviceToken['token']) && !empty($deviceToken['token'])) {
                             try{
+                                $dataOptional['source'] = 'campaign';
                                 $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptional);
 
                                 if (isset($push['success']) && $push['success'] > 0) {
+                                    $pushInsert = [];
+                                    foreach($recipient as $key => $receipient){
+                                        $pushInsert[] = [
+                                            'id_campaign' => $campaign['id_campaign'],
+                                            'push_sent_to' => $receipient,
+                                            'push_sent_subject' => $subject,
+                                            'push_sent_content' => $content,
+                                            'push_sent_send_at' => date('Y-m-d H:i:s', strtotime("+ 5 minutes"))
+                                        ];
+                                    }
+                                    CampaignPushSent::insert($pushInsert);
+                                    $countPush = $push['success'];
+                                }
+
+                            }catch(\Exception $e){
+                                \Log::error($e);
+                            }
+                        }
+                    }
+                }else{
+                    $dataOptional          = [];
+                    $image = null;
+                    if (isset($campaign['campaign_push_image']) && $campaign['campaign_push_image'] != null) {
+                        $dataOptional['image'] = config('url.storage_url_api').$campaign['campaign_push_image'];
+                        $image = config('url.storage_url_api').$campaign['campaign_push_image'];
+                    }
+
+                    if (isset($campaign['campaign_push_clickto']) && $campaign['campaign_push_clickto'] != null) {
+                        $dataOptional['type'] = $campaign['campaign_push_clickto'];
+                    } else {
+                        $dataOptional['type'] = 'Home';
+                    }
+
+                    if (isset($campaign['campaign_push_link']) && $campaign['campaign_push_link'] != null) {
+                        if($dataOptional['type'] == 'Link')
+                            $dataOptional['link'] = $campaign['campaign_push_link'];
+                        else
+                            $dataOptional['link'] = null;
+                    } else {
+                        $dataOptional['link'] = null;
+                    }
+
+                    if (isset($campaign['campaign_push_id_reference']) && $campaign['campaign_push_id_reference'] != null) {
+                        $dataOptional['id_reference'] = (int)$campaign['campaign_push_id_reference'];
+                    } else{
+                        $dataOptional['id_reference'] = 0;
+                    }
+
+                    if($campaign['campaign_push_clickto'] == 'News' && $campaign['campaign_push_id_reference'] != null){
+                        $news = News::find($campaign['campaign_push_id_reference']);
+                        if($news){
+                            $dataOptional['news_title'] = $news->news_title;
+                            $dataOptional['title'] = $news->news_title;
+                        }
+                        $dataOptional['url'] = config('url.app_url').'news/webview/'.$campaign['campaign_push_id_reference'];
+                    }
+                    elseif($campaign['campaign_push_clickto'] == 'Order' && $campaign['campaign_push_id_reference'] != null){
+                        $outlet = Outlet::find($campaign['campaign_push_id_reference']);
+                        if($outlet){
+                            $dataOptional['title'] = $outlet->outlet_name;
+                        }
+                    }
+                    elseif($campaign['campaign_push_clickto'] == 'Deals' && $campaign['campaign_push_id_reference'] != null){
+                        $deals = Deal::find($campaign['campaign_push_id_reference']);
+                        if($deals){
+                            $dataOptional['title'] = $deals->deals_title;
+                        }
+                    }
+
+                    foreach($recipient as $key => $receipient){
+                        $dataOptionalInsert = $dataOptional;
+                        //push notif logout
+                        if($campaign['campaign_push_clickto'] == 'Logout'){
+                            $user = User::where('phone', $receipient)->first();
+                            if($user){
+                                //delete token
+                                $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+                                    ->where('oauth_access_tokens.user_id', $user['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
+
+                            }
+
+                        }
+
+                        $subject = app($autocrm)->TextReplace($campaign['campaign_push_subject'], $receipient);
+                        $content = app($autocrm)->TextReplace($campaign['campaign_push_content'], $receipient);
+                        $deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);
+
+                        if (!empty($deviceToken)) {
+                            if (isset($deviceToken['token']) && !empty($deviceToken['token'])) {
+                                try{
+                                    DB::beginTransaction();
                                     $push = [];
                                     $push['id_campaign'] = $campaign['id_campaign'];
                                     $push['push_sent_to'] = $receipient;
@@ -366,50 +457,63 @@ class SendCampaignJob implements ShouldQueue
                                     $push['push_sent_send_at'] = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
 
                                     $logs = CampaignPushSent::create($push);
-                                    $countPush++;
+
+                                    $dataOptionalInsert['id_notif'] = $logs->id_campaign_push_sent;
+                                    $dataOptionalInsert['source'] = 'campaign';
+
+                                    $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptionalInsert);
+
+                                    if (isset($push['success']) && $push['success'] > 0) {
+                                        DB::commit();
+                                        $countPush++;
+                                    }else{
+                                        DB::rollback();
+                                    }
+
+                                }catch(\Exception $e){
+                                    \Log::error($e);
                                 }
-                            }catch(\Exception $e){
-                                \Log::error($e);
                             }
                         }
                     }
                 }
+
                 break;
 
             case 'inbox':
                 $user = User::whereIn('phone',$recipient)->get()->toArray();
+                $inbox = [];
                 foreach($user as $key => $receipient){
-                    $inbox = [];
-                    $inbox['id_campaign'] = $campaign['id_campaign'];
-                    $inbox['id_user']     = $receipient['id'];
-                    $inbox['inboxes_subject'] = app($autocrm)->TextReplace($campaign['campaign_inbox_subject'], $receipient['id'], null, 'id');
-                    $inbox['inboxes_clickto'] = $campaign['campaign_inbox_clickto'];
+                    $inboxInsert['id_campaign'] = $campaign['id_campaign'];
+                    $inboxInsert['id_user']     = $receipient['id'];
+                    $inboxInsert['inboxes_subject'] = app($autocrm)->TextReplace($campaign['campaign_inbox_subject'], $receipient['id'], null, 'id');
+                    $inboxInsert['inboxes_clickto'] = $campaign['campaign_inbox_clickto'];
 
                     if($campaign['campaign_inbox_clickto'] == 'Content'){
-                        $inbox['inboxes_content'] = app($autocrm)->TextReplace($campaign['campaign_inbox_content'], $receipient['id'], null, 'id');
+                        $inboxInsert['inboxes_content'] = app($autocrm)->TextReplace($campaign['campaign_inbox_content'], $receipient['id'], null, 'id');
                     }
 
                     if($campaign['campaign_inbox_clickto'] == 'Link'){
-                        $inbox['inboxes_link'] = $campaign['campaign_inbox_link'];
+                        $inboxInsert['inboxes_link'] = $campaign['campaign_inbox_link'];
                     }
 
                     if(!empty($campaign['campaign_inbox_id_reference'])){
-                        $inbox['inboxes_id_reference'] = $campaign['campaign_inbox_id_reference'];
+                        $inboxInsert['inboxes_id_reference'] = $campaign['campaign_inbox_id_reference'];
                     }else{
-                        $inbox['inboxes_id_reference'] = 0;
+                        $inboxInsert['inboxes_id_reference'] = 0;
                     }
 
                     if($campaign['campaign_inbox_clickto'] == 'No Action' || empty($campaign['campaign_inbox_clickto'])){
-                        $inbox['inboxes_clickto'] = 'Default';
+                        $inboxInsert['inboxes_clickto'] = 'Default';
                     }
 
-                    $inbox['inboxes_send_at'] = date("Y-m-d H:i:s");
-                    $inbox['created_at'] = date("Y-m-d H:i:s");
-                    $inbox['updated_at'] = date("Y-m-d H:i:s");
-
-                    $inboxQuery = UserInbox::insert($inbox);
+                    $inboxInsert['inboxes_send_at'] = date("Y-m-d H:i:s");
+                    $inboxInsert['created_at'] = date("Y-m-d H:i:s");
+                    $inboxInsert['updated_at'] = date("Y-m-d H:i:s");
+                    $inbox[] = $inboxInsert;
                     $countInbox++;
                 }
+                $inboxQuery = UserInbox::insert($inbox);
                 break;
 
             case 'whatsapp':

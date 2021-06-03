@@ -85,6 +85,7 @@ use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 
 use App\Lib\MyHelper;
 use App\Lib\GoSend;
+use App\Lib\Midtrans;
 use Validator;
 use Hash;
 use DB;
@@ -99,6 +100,7 @@ class ApiTransaction extends Controller
 
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
+        $this->shopeepay      = 'Modules\ShopeePay\Http\Controllers\ShopeePayController';
     }
 
     public function transactionRule() {
@@ -1604,12 +1606,15 @@ class ApiTransaction extends Controller
                 ->join('provinces', 'cities.id_province', 'provinces.id_province')
                 ->leftJoin('transaction_bundling_products','transaction_products.id_transaction_bundling_product','=','transaction_bundling_products.id_transaction_bundling_product')
                 ->leftJoin('bundling','bundling.id_bundling','=','transaction_bundling_products.id_bundling')
+                ->leftJoin('rule_promo_payment_gateway','rule_promo_payment_gateway.id_rule_promo_payment_gateway','=','disburse_outlet_transactions.id_rule_promo_payment_gateway')
                 ->with(['transaction_payment_subscription', 'vouchers', 'promo_campaign', 'point_refund', 'point_use', 'subscription_user_voucher.subscription_user.subscription'])
                 ->orderBy('transaction_products.id_transaction_bundling_product', 'asc')
-                ->addSelect('transaction_bundling_products.transaction_bundling_product_base_price', 'transaction_bundling_products.transaction_bundling_product_qty', 'transaction_bundling_products.transaction_bundling_product_total_discount', 'transaction_bundling_products.transaction_bundling_product_subtotal', 'bundling.bundling_name', 'disburse_outlet_transactions.bundling_product_fee_central', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
+                ->addSelect('rule_promo_payment_gateway.name as promo_payment_gateway_name',
+                    'transaction_bundling_products.transaction_bundling_product_base_price', 'transaction_bundling_products.transaction_bundling_product_qty', 'transaction_bundling_products.transaction_bundling_product_total_discount', 'transaction_bundling_products.transaction_bundling_product_subtotal', 'bundling.bundling_name', 'disburse_outlet_transactions.bundling_product_fee_central', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
                     'brands.name_brand', 'cities.city_name', 'c.city_name as user_city', 'provinces.province_name',
                     'disburse_outlet_transactions.fee_item', 'disburse_outlet_transactions.payment_charge', 'disburse_outlet_transactions.discount', 'disburse_outlet_transactions.subscription',
                     'disburse_outlet_transactions.point_use_expense',
+                    'disburse_outlet_transactions.fee_promo_payment_gateway_outlet', 'disburse_outlet_transactions.fee_promo_payment_gateway_central',
                     'disburse_outlet_transactions.income_outlet', 'disburse_outlet_transactions.discount_central', 'disburse_outlet_transactions.subscription_central');
         }
 
@@ -2129,8 +2134,8 @@ class ApiTransaction extends Controller
                     if($key == ($count-1) || (isset($get[$key+1]['transaction_receipt_number']) && $val['transaction_receipt_number'] != $get[$key+1]['transaction_receipt_number'])){
                         //for product plastic
                         $productPlastics = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
-                                            ->where('id_transaction', $val['id_transaction'])->where('type', 'Plastic')
-                                            ->get()->toArray();
+                            ->where('id_transaction', $val['id_transaction'])->where('type', 'Plastic')
+                            ->get()->toArray();
 
                         foreach ($productPlastics as $plastic){
                             for($j=0;$j<$plastic['transaction_product_qty'];$j++){
@@ -2251,6 +2256,35 @@ class ApiTransaction extends Controller
                             $html .= '</tr>';
                         }
 
+                        $promoNamePaymentGateway = (empty($val['promo_payment_gateway_name']) ? "": $val['promo_payment_gateway_name']);
+                        $nominalPromoPaymentGateway = (empty($val['fee_promo_payment_gateway_outlet']) ? 0: $val['fee_promo_payment_gateway_outlet']);
+                        if(!empty($promoNamePaymentGateway)) {
+                            $html .= '<tr>';
+                            $html .= $sameData;
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= $addAdditionalColumn;
+                            $html .= '<td>'.htmlspecialchars($promoNamePaymentGateway).'(Promo Payment Gateway)</td>';
+                            $html .= $addAdditionalColumnVariant;
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td>'.$nominalPromoPaymentGateway.'</td>';
+                            $html .= '<td>'.(-$nominalPromoPaymentGateway).'</td>';
+                            $html .= '<td></td><td></td><td></td>';
+                            if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                $html .= '<td></td><td></td><td></td>';
+                            }
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '</tr>';
+                        }
+
                         $html .= '<tr>';
                         $html .= $sameData;
                         $html .= '<td></td>';
@@ -2260,13 +2294,14 @@ class ApiTransaction extends Controller
                         $html .= $addAdditionalColumnVariant;
                         $html .= '<td></td>';
                         $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                        $html .= '<td>'.($val['transaction_grandtotal']-$sub).'</td>';
+                        $html .= '<td>'.($val['transaction_grandtotal']-$sub-$nominalPromoPaymentGateway).'</td>';
                         $html .= '<td>'.(float)$val['fee_item'].'</td>';
                         $html .= '<td>'.(float)$paymentCharge.'</td>';
                         if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
                             $html .= '<td>' . (float)$val['discount_central'] . '</td>';
                             $html .= '<td>' . (float)$val['subscription_central'] . '</td>';
                             $html .= '<td>' . (float)$val['bundling_product_fee_central'] . '</td>';
+                            $html .= '<td>' . (float)$val['fee_promo_payment_gateway_central'] . '</td>';
                         }
                         $html .= '<td>'.(float)$val['income_outlet'].'</td>';
                         $html .= '<td>'.$payment.'</td>';
@@ -2953,9 +2988,9 @@ class ApiTransaction extends Controller
                     $result['transaction_status_text'] = 'PESANAN DITERIMA. ORDER SEDANG DIPERSIAPKAN';
                 } else {
                     $result['transaction_status'] = 5;
-                    $result['transaction_status_text'] = 'PESANAN MASUK. MENUNGGU JILID UNTUK MENERIMA ORDER';
+                    $result['transaction_status_text'] = 'PESANAN MASUK. MENUNGGU OUTLET UNTUK MENERIMA ORDER';
                 }
-                if ($list['detail']['ready_at'] != null && $list['transaction_pickup_go_send'] && !$list['detail']['reject_at']) {
+                if ($list['transaction_pickup_go_send'] && !$list['detail']['reject_at']) {
                     // $result['transaction_status'] = 5;
                     $result['delivery_info'] = [
                         'driver' => null,
@@ -3052,6 +3087,27 @@ class ApiTransaction extends Controller
                             $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
                             $result['delivery_info']['cancelable']     = 0;
                             break;
+                        case 'rejected':
+                            $result['transaction_status'] = 0;
+                            $result['delivery_info']['booking_status'] = 0;
+                            $result['transaction_status_text']         = 'PENGANTARAN PESANAN TELAH DIBATALKAN';
+                            $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
+                            $result['delivery_info']['cancelable']     = 0;
+                            break;
+                        case 'on_hold':
+                            $result['delivery_info']['delivery_status'] = 'Pengiriman sedang ditahan';
+                            $result['transaction_status_text']          = 'PENGIRIMAN SEDANG DITAHAN';
+                            $result['transaction_status']               = 5;
+                            $result['delivery_info']['driver']          = [
+                                'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
+                                'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
+                                'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                                'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                            ];
+                            $result['delivery_info']['cancelable'] = 0;
+                            break;
                         case 'driver not found':
                         case 'no_driver':
                             $result['delivery_info']['booking_status']  = 0;
@@ -3091,6 +3147,7 @@ class ApiTransaction extends Controller
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'] = [];
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'] = [];
                     $extra_modifiers = [];
+                    $extra_modifier_price = 0;
                     foreach ($valueProduct['modifiers'] as $keyMod => $valueMod) {
                         if (!$valueMod['id_product_modifier_group']) {
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_name']   = $valueMod['text'];
@@ -3101,6 +3158,7 @@ class ApiTransaction extends Controller
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']['m'.$keyMod]['id_product_variant']   = $valueMod['id_product_modifier'];
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']['m'.$keyMod]['product_variant_name']   = $valueMod['text'];
                             $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']['m'.$keyMod]['product_variant_price']  = (int)$valueMod['transaction_product_modifier_price'];
+                            $extra_modifier_price += (int) ($valueMod['qty'] * $valueMod['transaction_product_modifier_price']);
                         }
                     }
                     $variantsPrice = 0;
@@ -3110,6 +3168,7 @@ class ApiTransaction extends Controller
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][$keyMod]['product_variant_price']  = (int)$valueMod['transaction_product_variant_price'];
                         $variantsPrice = $variantsPrice + $valueMod['transaction_product_variant_price'];
                     }
+                    $variantsPrice += $extra_modifier_price;
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'] = array_values($result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']);
                     if ($valueProduct['id_product_variant_group'] ?? false) {
                         $order = array_flip(Product::getVariantParentId($valueProduct['id_product_variant_group'], Product::getVariantTree($valueProduct['id_product'], $list['outlet'])['variants_tree'], $extra_modifiers));
@@ -3118,6 +3177,9 @@ class ApiTransaction extends Controller
                         });
                     }
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product_variant_group_price'] = (int)($valueProduct['transaction_product_price'] + $variantsPrice);
+
+                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'] = array_values($result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers']);
+                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'] = array_values($result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants']);
                 }
                 $keynya++;
             }
@@ -3267,8 +3329,15 @@ class ApiTransaction extends Controller
                         ];
                     }
                     if ($list['detail']['ready_at'] != null && empty($list['transaction_shipment_go_send'])) {
+                        $is_admin = $request->user()->tokenCan('be');
                         $statusOrder[] = [
-                            'text'  => 'Pesanan sudah siap diambil',
+                            'text'  => 'Pesanan sudah siap diambil'. ($list['detail']['is_autoready'] && $is_admin ? ' (auto ready by system)' : ''),
+                            'date'  => $list['detail']['ready_at']
+                        ];
+                    } elseif ($list['detail']['ready_at'] != null) {
+                        $is_admin = $request->user()->tokenCan('be');
+                        $statusOrder[] = [
+                            'text'  => 'Pesanan sudah siap dan menunggu diambil Driver'. ($list['detail']['is_autoready'] && $is_admin ? ' (auto ready by system)' : ''),
                             'date'  => $list['detail']['ready_at']
                         ];
                     }
@@ -3277,21 +3346,22 @@ class ApiTransaction extends Controller
                             'confirmed' => 0,
                             'no_driver' => 0,
                         ];
+                        $hasPicked = false;
                         foreach ($list['transaction_pickup_go_send']['transaction_pickup_update'] as $valueGosend) {
                             switch (strtolower($valueGosend['status'])) {
-                                case 'finding driver':
-                                case 'confirmed':
-                                    if ($flagStatus['confirmed']) {
-                                        break;
-                                    }
-                                    $flagStatus['confirmed'] = 1;
-                                    if($list['detail']['ready_at'] != null){
-                                        $statusOrder[] = [
-                                            'text'  => 'Pesanan sudah siap dan menunggu pick up',
-                                            'date'  => $valueGosend['created_at']
-                                        ];
-                                    }
-                                    break;
+                                // case 'finding driver':
+                                // case 'confirmed':
+                                //     if ($flagStatus['confirmed']) {
+                                //         break;
+                                //     }
+                                //     $flagStatus['confirmed'] = 1;
+                                //     if($list['detail']['ready_at'] != null){
+                                //         $statusOrder[] = [
+                                //             'text'  => 'Pesanan sudah siap dan menunggu diambil Driver',
+                                //             'date'  => $list['detail']['ready_at']
+                                //         ];
+                                //     }
+                                //     break;
                                 // case 'driver allocated':
                                 // case 'allocated':
                                 //     $statusOrder[] = [
@@ -3302,22 +3372,29 @@ class ApiTransaction extends Controller
                                 // case 'enroute pickup':
                                 case 'out_for_pickup':
                                     $statusOrder[] = [
-                                        'text'  => 'Driver dalam perjalanan menuju Outlet',
+                                        'text'  => 'Driver dalam perjalanan menuju outlet',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
                                 case 'picked':
+                                    $hasPicked = true;
                                     $statusOrder[] = [
-                                        'text'  => 'Driver mengambil pesanan di Outlet',
+                                        'text'  => 'Driver mengambil pesanan di outlet',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
                                 case 'enroute drop':
                                 case 'out_for_delivery':
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan sudah di pick up oleh driver dan sedang menuju lokasi #temansejiwa',
+                                        'text'  => 'Pesanan sudah diambil dan sedang menuju lokasi #temansejiwa',
                                         'date'  => $valueGosend['created_at']
                                     ];
+                                    if (!$hasPicked) {
+                                        $statusOrder[] = [
+                                            'text'  => 'Driver mengambil pesanan di outlet',
+                                            'date'  => $valueGosend['created_at']
+                                        ];
+                                    }
                                     break;
                                 case 'completed':
                                 case 'delivered':
@@ -3331,6 +3408,21 @@ class ApiTransaction extends Controller
                                         'text'  => 'Pengantaran pesanan telah dibatalkan',
                                         'date'  => $valueGosend['created_at']
                                     ];
+                                    break;
+                                case 'rejected':
+                                    $statusOrder[] = [
+                                        'text'  => 'Pesanan telah dibatalkan karena driver tidak dapat mencapai lokasi #temansejiwa',
+                                        'date'  => $valueGosend['created_at']
+                                    ];
+                                    break;
+                                case 'on_hold':
+                                    $has_rejected = in_array('rejected', array_column($list['transaction_pickup_go_send']['transaction_pickup_update'], 'status'));
+                                    if (!$has_rejected) {
+                                        $statusOrder[] = [
+                                            'text'  => 'Pengiriman sedang ditahan karena driver tidak dapat mencapai lokasi #temansejiwa',
+                                            'date'  => $valueGosend['created_at']
+                                        ];
+                                    }
                                     break;
                                 case 'driver not found':
                                 case 'no_driver':
@@ -3347,14 +3439,21 @@ class ApiTransaction extends Controller
                         }
                     }
                     if ($list['detail']['receive_at'] != null) {
-                        $statusOrder[] = [
-                            'text'  => 'Pesanan diterima. Order sedang dipersiapkan',
-                            'date'  => $list['detail']['receive_at']
-                        ];
+                        if ($list['transaction_pickup_go_send']) {
+                            $statusOrder[] = [
+                                'text'  => 'Pesanan diterima. Order sedang dipersiapkan',
+                                'date'  => $list['detail']['receive_at']
+                            ];
+                        } else {
+                            $statusOrder[] = [
+                                'text'  => 'Pesanan diterima dan sedang dipersiapkan',
+                                'date'  => $list['detail']['receive_at']
+                            ];
+                        }
                     }
                     $statusOrder[] = [
-                        'text'  => 'Pesanan masuk. Menunggu jilid untuk menerima order',
-                        'date'  => $list['transaction_date']
+                        'text'  => 'Pesanan masuk. Menunggu outlet menerima order',
+                        'date'  => $list['completed_at'] ?: $list['transaction_date']
                     ];
                 }
 
@@ -3556,6 +3655,7 @@ class ApiTransaction extends Controller
                     unset($pt['modifiers'][$key]);
                 }
             }
+            $pt['modifiers'] = array_values($pt['modifiers']);
             if ($pt['id_product_variant_group']) {
                 if ($pt['outlet_different_price']) {
                     $product_price = ProductVariantGroupSpecialPrice::select('product_variant_group_price')->where('id_product_variant_group', $pt['id_product_variant_group'])->first();
@@ -3751,7 +3851,7 @@ class ApiTransaction extends Controller
                 'id_log_balance'                => $data['id_log_balance'],
                 'id_quest'                      => $data['id_reference'],
                 'transaction_date'              => date('d M Y H:i', strtotime($data['created_at'])),
-                'balance'                       => MyHelper::requestNumber($data['balance'], '_POINT'),
+                'balance'                       => '+' . MyHelper::requestNumber($data['balance'], '_POINT'),
                 'title'                         => $quest['name'] ?? 'Misi tidak diketahui',
             ];
         } else {
@@ -4689,5 +4789,69 @@ class ApiTransaction extends Controller
             ->get()->toArray();
 
         return MyHelper::checkGet($list);
+    }
+
+    public function retryRefund($id_transaction, &$errors = [], $manualRetry = false)
+    {
+        $trx = Transaction::where('transactions.id_transaction', $id_transaction)->join('transaction_multiple_payments', function($join) {
+            $join->on('transaction_multiple_payments.id_transaction', 'transactions.id_transaction')
+                ->whereIn('type', ['Midtrans', 'Shopeepay']);
+        })->first();
+        if (!$trx) {
+            $errors[] = 'Transaction Not Found';
+            return false;
+        }
+        $result = true;
+        switch ($trx->type) {
+            case 'Midtrans':
+                $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $id_transaction)->first();
+                if (!$payMidtrans) {
+                    $errors[] = 'Model TransactionPaymentMidtran not found';
+                    return false;
+                }
+                $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => 'refund transaksi']);
+                if ($refund['status'] != 'success') {
+                    Transaction::where('id_transaction', $id_transaction)->update(['failed_void_reason' => implode(', ', $refund['messages'] ?? [])]);
+                    $errors = $refund['messages'] ?? [];
+                    $result = false;
+                } else {
+                    Transaction::where('id_transaction', $id_transaction)->update(['need_manual_void' => 0]);
+                }
+                break;
+            case 'Shopeepay':
+                $payShopeepay = TransactionPaymentShopeePay::where('id_transaction', $id_transaction)->first();
+                if (!$payShopeepay) {
+                    $errors[] = 'Model TransactionPaymentShopeePay not found';
+                    return false;
+                }
+                $refund = app($this->shopeepay)->refund($id_transaction, 'trx', $errors2);
+                if (!$refund) {
+                    Transaction::where('id_transaction', $id_transaction)->update(['failed_void_reason' => implode(', ', $errors2 ?: [])]);
+                    $errors = $errors2;
+                    $result = false;
+                } else {
+                    Transaction::where('id_transaction', $id_transaction)->update(['need_manual_void' => 0]);
+                }
+                break;
+            default:
+                $errors[] = 'Unkown payment type '.$trx->type;
+                return false;
+        }
+        return $result;
+    }
+
+    public function retry(Request $request)
+    {
+        $retry = $this->retryRefund($request->id_transaction, $errors);
+        if ($retry) {
+            return [
+                'status' => 'success'
+            ];
+        } else {
+            return [
+                'status' => 'fail',
+                'messages' => $errors ?? ['Something went wrong']
+            ];
+        }
     }
 }

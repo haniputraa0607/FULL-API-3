@@ -114,7 +114,6 @@ class SendPromotionJob implements ShouldQueue
 		}
 
 		if($dataQueue['content']['promotion_channel_push'] == '1'){
-			$sendPush = $this->sendPush($dataQueue['content']['id_promotion_content'],$dataQueue['user']);
 			$channelPush = '1';
 		}else{
 			$channelPush = '0';
@@ -158,7 +157,11 @@ class SendPromotionJob implements ShouldQueue
 		$dataPromotionSent[] = $sent;
 
 		$deleteQueue = PromotionQueue::where('id_promotion_queue', $dataQueue['id_promotion_queue'])->delete();
-		$insertPromotionSent = PromotionSent::insert($dataPromotionSent);
+		$insertPromotionSent = PromotionSent::create($sent);
+
+		if($dataQueue['content']['promotion_channel_push'] == '1'){
+			$sendPush = $this->sendPush($dataQueue['content']['id_promotion_content'],$dataQueue['user'], $insertPromotionSent);
+		}
 
         return true;
     }
@@ -333,7 +336,7 @@ class SendPromotionJob implements ShouldQueue
 		}
 	}
 
-	function sendPush($id_promotion_content, $user){
+	function sendPush($id_promotion_content, $user, $data_promotion_sent){
 		$promotionContent = PromotionContent::find($id_promotion_content);
 		if(!$promotionContent){
 			return response()->json([
@@ -345,7 +348,7 @@ class SendPromotionJob implements ShouldQueue
 
 		if(!empty($user['phone'])){
 			try {
-				$dataOptional          = [];
+				$dataOptional = [];
 				$image = null;
 
 				if (isset($promotionContent['promotion_push_clickto']) && $promotionContent['promotion_push_clickto'] != null) {
@@ -401,6 +404,9 @@ class SendPromotionJob implements ShouldQueue
 				$subject = app($this->autocrm)->TextReplace($promotionContent['promotion_push_subject'], $user['id'], null, 'id');
 				$content = app($this->autocrm)->TextReplace($promotionContent['promotion_push_content'], $user['id'], null, 'id');
 				$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $user['phone']);
+
+				$dataOptional['id_notif'] = $data_promotion_sent->id_promotion_sent;
+				$dataOptional['source'] = 'promotion';
 
 				if (!empty($deviceToken)) {
 					if (isset($deviceToken['token']) && !empty($deviceToken['token'])) {

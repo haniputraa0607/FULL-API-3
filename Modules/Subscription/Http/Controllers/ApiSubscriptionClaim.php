@@ -158,8 +158,7 @@ class ApiSubscriptionClaim extends Controller
 	                                    DB::rollback();
 	                                    return response()->json([
 	                                        'status'   => 'fail',
-	                                        // 'messages' => ['Voucher is runs out.']
-	                                        'messages' => ['Halo Kak, Mohon Maaf Voucher Telah Habis. Yuk Gunakan Voucher Lainnya pada Page Subscriptions 😊🙏']
+	                                        'messages' => ['Voucer telah habis']
 	                                    ]);
 	                                }
 
@@ -169,7 +168,7 @@ class ApiSubscriptionClaim extends Controller
 	                                    DB::rollback();
 	                                    return response()->json([
 	                                        'status'   => 'fail',
-	                                        'messages' => ['Proses pembelian subscription gagal, silakan mencoba kembali']
+	                                        'messages' => ['Proses pengambilan Subscription gagal. Silakan coba kembali']
 	                                    ]);
 	                                }*/
 
@@ -205,20 +204,19 @@ class ApiSubscriptionClaim extends Controller
 	                            else {
 	                            	switch ($dataSubs->new_purchase_after) {
 						        		case 'Empty':
-						        			$msg = 'telah habis digunakan';
+						        			$msg = 'Gagal mengambil Subscription karena masih ada paket yang belum digunakan';
 						        			break;
 						        		case 'Empty Expired':
-						        			$msg = 'telah habis digunakan atau telah mencapai tanggal batas pemakaian';
+						        			$msg = 'Gagal mengambil Subscription karena masih ada paket yang sedang berjalan';
 						        			break;
 						        		default:
-						        			$msg = 'telah mencapai tanggal batas pemakaian';
+						        			$msg = 'Gagal mengambil Subscription karena masih ada paket yang sedang berjalan';
 						        			break;
 						        	}
 	                                DB::rollback();
 	                                return response()->json([
 	                                    'status'   => 'fail',
-	                                    // 'messages' => ['You have participated, you can buy this subscription again after your previous subscription is '.$msg]
-		                                'messages' => ['Subscriptions sudah dimiliki. Subscriptions tidak bisa didapatkan sebelum Subscriptions yang dimiliki saat ini '.$msg.'.']
+		                                'messages' => [$msg]
 	                                ]);
 	                            }
 	                        }
@@ -226,8 +224,7 @@ class ApiSubscriptionClaim extends Controller
 	                            DB::rollback();
 	                            return response()->json([
 	                                'status'   => 'fail',
-	                                // 'messages' => ['You have reach max limit to buy this subscription.']
-	                                'messages' => ['Anda telah mencapai batas maksimal untuk mendapatkan Subscription ini.']
+	                                'messages' => ['Subscription telah mencapai limit penggunaan']
 	                            ]);
 	                        }
 	                    }
@@ -245,7 +242,7 @@ class ApiSubscriptionClaim extends Controller
 	                DB::rollback();
 	                return response()->json([
 	                    'status' => 'fail',
-	                    'messages' => ['Date valid '.date('d F Y', strtotime($dataSubs->subscription_start)).' until '.date('d F Y', strtotime($dataSubs->subscription_end))]
+	                    'messages' => ['Subscription berlaku pada '.MyHelper::dateFormatInd($dataSubs->subscription_start, true, false).' sampai '.MyHelper::dateFormatInd($dataSubs->subscription_end, true, false)]
 	                ]);
 	            }
 	        }
@@ -253,7 +250,7 @@ class ApiSubscriptionClaim extends Controller
     		\Log::error($e);
     		return response()->json([
 	            'status'   => 'fail',
-	            'messages' => ['Proses pembelian subscription gagal, silakan mencoba kembali']
+	            'messages' => ['Proses pengambilan Subscription gagal. Silakan coba kembali']
 	        ]);
     	}
     }

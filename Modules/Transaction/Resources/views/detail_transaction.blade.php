@@ -43,6 +43,7 @@
         <th style="background-color: #dcdcdc;" width="10"> Income Promo </th>
         <th style="background-color: #dcdcdc;" width="10"> Income Subscription </th>
         <th style="background-color: #dcdcdc;" width="10"> Income Bundling Product </th>
+        <th style="background-color: #dcdcdc;" width="10"> Income Promo Payment Gateway </th>
         @endif
         <th style="background-color: #dcdcdc;" width="10"> Income Outlet </th>
         <th style="background-color: #dcdcdc;" width="10"> Payment </th>

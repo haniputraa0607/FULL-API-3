@@ -21,6 +21,7 @@
         <th style="background-color: #dcdcdc;" width="20"> Income Promo </th>
         <th style="background-color: #dcdcdc;" width="20"> Income Subscription </th>
         <th style="background-color: #dcdcdc;" width="20"> Income Bundling Product </th>
+        <th style="background-color: #dcdcdc;" width="20"> Income Promo Payment Gateway </th>
         @endif
         <th style="background-color: #dcdcdc;" width="20"> Income Outlet </th>
     </tr>
@@ -63,15 +64,21 @@
                         $promoName = 'Unknown Promo';
                     }
 
+                    if(!empty($val['promo_payment_gateway_name']) && !empty($promoName)){
+                        $promoName = $promoName.','.$val['promo_payment_gateway_name'];
+                    }elseif(!empty($val['promo_payment_gateway_name']) && empty($promoName)){
+                        $promoName = $val['promo_payment_gateway_name'];
+                    }
+
                     echo htmlspecialchars($promoName);
                     ?>
                 </td>
                 <td style="text-align: left">
                     <?php
                         if(!empty(abs($val['transaction_discount_delivery']))){
-                            echo (float)abs($val['transaction_discount_delivery']);
+                            echo (float)abs($val['transaction_discount_delivery'])+$val['fee_promo_payment_gateway_outlet'];
                         }else{
-                            echo (float)$discount;
+                            echo (float)$discount+$val['fee_promo_payment_gateway_outlet'];
                         }
                     ?>
                 </td>
@@ -96,6 +103,7 @@
                 <td style="text-align: left">{{(float)$val['discount_central']}}</td>
                 <td style="text-align: left">{{(float)$val['subscription_central']}}</td>
                 <td style="text-align: left">{{(float)$val['bundling_product_fee_central']}}</td>
+                <td style="text-align: left">{{(float)$val['fee_promo_payment_gateway_central']}}</td>
                 @endif
                 <td style="text-align: left">{{(float)$val['income_outlet']}}</td>
             </tr>

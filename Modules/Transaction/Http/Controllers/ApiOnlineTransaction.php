@@ -350,8 +350,8 @@ class ApiOnlineTransaction extends Controller
 	            	$q->where(function($q2) {
 	            		$q2->where('code_type', 'Multiple')
 		            		->where(function($q3) {
-				            	$q3->whereColumn('usage','<','limitation_usage')
-				            		->orWhere('limitation_usage',0);
+				            	$q3->whereColumn('usage','<','code_limit')
+				            		->orWhere('code_limit',0);
 		            		});
 
 	            	}) 
@@ -810,7 +810,7 @@ class ApiOnlineTransaction extends Controller
                 $outlet->save();
                 return [
                     'status' => 'fail',
-                    'messages' => ['Tidak dapat melakukan pengiriman dari outlet ini']
+                    'messages' => ['Outlet tidak dapat melakukan pengiriman']
                 ];
             }
             $coor_origin = [
@@ -825,10 +825,21 @@ class ApiOnlineTransaction extends Controller
             $shippingGoSendx = GoSend::getPrice($coor_origin,$coor_destination);
             $shippingGoSend = $shippingGoSendx[GoSend::getShipmentMethod()]['price']['total_price']??null;
             if($shippingGoSend === null){
-                return [
-                    'status' => 'fail',
-                    'messages' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim']
-                ];
+                $errorGosend = array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message');
+                if(isset($errorGosend[0])){
+                    if($errorGosend[0] == 'Booking distance exceeds 40 kilometres'){
+                        $errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
+                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
+                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
+                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
+                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
+                    }elseif($errorGosend[0] == 'The service is not yet available in this region'){
+                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
+                    }elseif($errorGosend[0] == "Sender's location is not serviceable"){
+                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
+                    }
+                }
+                $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
             }
             //cek free delivery
             // if($post['is_free'] == 'yes'){
@@ -1279,7 +1290,7 @@ class ApiOnlineTransaction extends Controller
                         THEN product_modifiers.text_detail_trx
                         ELSE product_modifiers.text
                     END) as text'),
-                        'product_modifier_stock_status',\DB::raw('coalesce(product_modifier_price, 0) as product_modifier_price'), 'id_product_modifier_group', 'modifier_type')
+                        'product_modifier_stock_status','modifier_type',\DB::raw('coalesce(product_modifier_price, 0) as product_modifier_price'), 'id_product_modifier_group', 'modifier_type')
                         // product visible
                         ->leftJoin('product_modifier_details', function($join) use ($post) {
                             $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
@@ -1292,11 +1303,11 @@ class ApiOnlineTransaction extends Controller
                                 ->where('product_modifiers.product_modifier_visibility', 'Visible');
                             });
                         })
-                        ->where(function($q) {
-                            $q->where(function($q){
-                                $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
-                            })->orWhere('product_modifiers.modifier_type', '=', 'Modifier Group');
-                        })
+                        // ->where(function($q) {
+                        //     $q->where(function($q){
+                        //         $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                        //     });
+                        // })
                         ->where(function($q){
                             $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
                         })
@@ -1315,8 +1326,22 @@ class ApiOnlineTransaction extends Controller
                     if(!$mod){
                         return [
                             'status' => 'fail',
-                            'messages' => ['Modifier not found']
+                            'messages' => ['Topping tidak ditemukan']
                         ];
+                    }
+                    if($mod->product_modifier_stock_status == 'Sold Out'){
+                        if ($mod->modifier_type == 'Modifier Group') {
+                            return [
+                                'status' => 'fail',
+                                'product_sold_out_status' => true,
+                                'messages' => ['Detail variant yang dipilih untuk produk '.$checkProduct['product_name'].' tidak tersedia.']
+                            ];
+                        } else {
+                            return [
+                                'status' => 'fail',
+                                'messages' => ['Topping '.$mod->text.' yang dipilih untuk produk '.$checkProduct['product_name'].' tidak tersedia.']
+                            ];
+                        }
                     }
                     $mod = $mod->toArray();
                     $insert_modifier[] = [
@@ -2135,7 +2160,7 @@ class ApiOnlineTransaction extends Controller
                 $outlet->save();
                 return [
                     'status' => 'fail',
-                    'messages' => ['Tidak dapat melakukan pengiriman dari outlet ini']
+                    'messages' => ['Outlet tidak dapat melakukan pengiriman']
                 ];
             }
             $coor_origin = [
@@ -2150,7 +2175,21 @@ class ApiOnlineTransaction extends Controller
             $shippingGoSendx = GoSend::getPrice($coor_origin,$coor_destination);
             $shippingGoSend = $shippingGoSendx[GoSend::getShipmentMethod()]['price']['total_price']??null;
             if($shippingGoSend === null){
-                $error_msg += array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim'];
+                $errorGosend = array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message');
+                if(isset($errorGosend[0])){
+                    if($errorGosend[0] == 'Booking distance exceeds 40 kilometres'){
+                        $errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
+                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
+                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
+                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
+                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
+                    }elseif($errorGosend[0] == 'The service is not yet available in this region'){
+                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
+                    }elseif($errorGosend[0] == "Sender's location is not serviceable"){
+                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
+                    }
+                }
+                $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
             }
             //cek free delivery
             // if($post['is_free'] == 'yes'){
@@ -2513,6 +2552,7 @@ class ApiOnlineTransaction extends Controller
             $product['modifiers'] = [];
             $removed_modifier = [];
             $missing_modifier = 0;
+            $extra_modifier_price = 0;
             foreach ($item['modifiers']??[] as $key => $modifier) {
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
@@ -2563,10 +2603,20 @@ class ApiOnlineTransaction extends Controller
                 $mod['qty'] = $qty_product_modifier;
                 $mod['product_modifier_price'] = (int) $mod['product_modifier_price'];
                 if ($scope == 'Modifier Group') {
+                    if ($mod['product_modifier_stock_status'] == 'Sold Out') {
+                        $error_msg[] = MyHelper::simpleReplace(
+                            'Detail variant yang dipilih untuk produk %product_name% tidak tersedia',
+                            [
+                                'product_name' => $product['product_name']
+                            ]
+                        );
+                        continue 2;
+                    }
                     $product['extra_modifiers'][]=[
                         'product_variant_name' => $mod['text'],
                         'id_product_variant' => $mod['id_product_modifier']
                     ];
+                    $extra_modifier_price += $mod['qty'] * $mod['product_modifier_price'];
                 } else {
                     if ($mod['product_modifier_stock_status'] != 'Sold Out') {
                         $product['modifiers'][]=$mod;
@@ -2654,7 +2704,7 @@ class ApiOnlineTransaction extends Controller
                 $product_variant_group_price = (int) $product['product_price'];
             }
 
-            $product['product_variant_group_price'] = (int)$product_variant_group_price;
+            $product['product_variant_group_price'] = (int)($product_variant_group_price + $extra_modifier_price);
 
             $product['product_price_total'] = $item['transaction_product_subtotal'];
             $product['product_price_raw'] = (int) $product['product_price'];

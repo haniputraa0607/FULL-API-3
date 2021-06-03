@@ -403,13 +403,19 @@ class ApiDeals extends Controller
                 case 'WelcomeVoucher':
                     $dt = 'Welcome Voucher';
                     break;
+                case 'Quest':
+                    $dt = 'Quest Voucher';
+                    break;
             }
+            $save->setAppends(['deals_shipment_text', 'deals_payment_text', 'deals_outlet_text', 'brand_rule_text']);
             $deals = $save->toArray();
             $send = app($this->autocrm)->SendAutoCRM('Create '.$dt, $request->user()->phone, [
                 'voucher_type' => $deals['deals_voucher_type']??'',
                 'promo_id_type' => $deals['deals_promo_id_type']??'',
                 'promo_id' => $deals['deals_promo_id']??'',
-                'detail' => view('deals::emails.detail',['detail'=>$deals])->render()
+                'detail' => view('deals::emails.detail',['detail'=>$deals])->render(),
+                'created_at' => $deals['created_at'] ? date('d F Y H:i', strtotime($deals['created_at'])) : '',
+                'updated_at' => $deals['updated_at'] ? date('d F Y H:i', strtotime($deals['updated_at'])) : '',
             ]+$deals,null,true);
         } else {
             DB::rollBack();
@@ -1236,13 +1242,23 @@ class ApiDeals extends Controller
 	                case 'welcomevoucher':
 	                    $dt = 'Welcome Voucher';
 	                    break;
+                    case 'quest':
+                        $dt = 'Quest Voucher';
+                        break;
 	            }
-	            $deals = Deal::where('id_deals',$request->json('id_deals'))->first()->toArray();
+
+	            $deals = Deal::where('id_deals',$request->json('id_deals'))
+                    ->first();
+                $deals->setAppends(['deals_shipment_text', 'deals_payment_text', 'deals_outlet_text', 'brand_rule_text']);
+                $deals = $deals->toArray();
+
 	            $send = app($this->autocrm)->SendAutoCRM('Update '.$dt, $request->user()->phone, [
 	                'voucher_type' => $deals['deals_voucher_type']?:'',
 	                'promo_id_type' => $deals['deals_promo_id_type']?:'',
 	                'promo_id' => $deals['deals_promo_id']?:'',
-	                'detail' => view('deals::emails.detail',['detail'=>$deals])->render()
+	                'detail' => view('deals::emails.detail',['detail'=>$deals])->render(),
+                    'created_at' => $deals['created_at'] ? date('d F Y H:i', strtotime($deals['created_at'])) : '-',
+                    'updated_at' => $deals['updated_at'] ? date('d F Y H:i', strtotime($deals['updated_at'])) : '-',
 	            ]+$deals,null,true);
 		        return response()->json(MyHelper::checkUpdate($save));
 	        } else {
