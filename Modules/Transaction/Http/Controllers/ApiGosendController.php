@@ -213,7 +213,8 @@ class ApiGosendController extends Controller
                         'id_transaction'                => $id_transaction,
                         'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],
                         'status'                        => $post['status'],
-                        'go_send_order_no'              => $post['booking_id']
+                        'go_send_order_no'              => $post['booking_id'],
+                        'description'                   => $post['cancellation_reason'] ?? null
                     ];
                     GoSend::saveUpdate($dataSave);
                     app($this->outlet_app)->bookGoSend($trx, true);
