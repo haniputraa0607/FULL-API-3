@@ -119,7 +119,7 @@ class PushNotificationHelper{
         return $device;
     }
 
-    public static function sendPush ($tokens, $subject, $messages, $image=null, $dataOptional=[]) {
+    public static function sendPush ($tokens, $subject, $messages, $image=null, $dataOptional=[], $return_error = 0) {
 
         $optionBuiler = new OptionsBuilder();
         $optionBuiler->setTimeToLive(60*200);
@@ -164,6 +164,10 @@ class PushNotificationHelper{
             'fail'    => $fail
         ];        
 
+
+        if($return_error ==  1){
+            $result['error_token'] = $downstreamResponse->tokensToDelete();
+        }
         return $result;
     }
 
