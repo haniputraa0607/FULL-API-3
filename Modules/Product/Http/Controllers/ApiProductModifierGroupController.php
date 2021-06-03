@@ -771,7 +771,7 @@ class ApiProductModifierGroupController extends Controller
     public function inventoryBrand(Request $request)
     {
         $modifier_group = ProductModifierGroup::select('id_product_modifier_group', 'product_modifier_group_name as name')
-        			->with('inventory_brand')
+        			->with('inventory_brand', 'product_modifier')
         			->get();
 
         return MyHelper::checkGet($modifier_group);
