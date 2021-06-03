@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
@@ -13,6 +14,7 @@ use Modules\Disburse\Entities\DisburseOutlet;
 use DB;
 use App\Lib\SendMail as Mail;
 use Modules\Franchise\Entities\UserFranchise;
+use Modules\Franchise\Entities\UserFranchiseOultet;
 use Rap2hpoutre\FastExcel\FastExcel;
 use File;
 use Storage;
@@ -43,16 +45,22 @@ class SendEmailUserFranchiseJob implements ShouldQueue
             $pin = MyHelper::createRandomPIN(6, 'angka');
             $user = UserFranchise::where('id_user_franchise', $data)->first();
             $updatePin = UserFranchise::where('id_user_franchise', $data)->update(['password' => bcrypt($pin)]);
+            $franchiseOutlet = UserFranchiseOultet::join('outlets', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
+                ->where('id_user_franchise' , $data)->first();
+            $outletCode = $franchiseOutlet['outlet_name']??null;
+            $outletName = $franchiseOutlet['outlet_code']??null;
 
             if($updatePin){
                 $autocrm = app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM(
                     'New User Franchise',
                     $user['username'],
                     [
-                        'pin_franchise' => $pin,
+                        'password' => $pin,
                         'username' => $user['username'],
                         'name' => $user['name'],
-                        'url' => env('URL_PORTAL_MITRA')
+                        'url' => env('URL_PORTAL_MITRA'),
+                        'outlet_code' => $outletCode,
+                        'outlet_name' => $outletName
                     ], null, false, false, 'franchise', 1
                 );
             }
