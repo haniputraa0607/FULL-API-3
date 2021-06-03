@@ -144,7 +144,7 @@ class ApiUserFranchiseController extends Controller
 
         if(!$check){
             if(isset($post['auto_generate_pin'])){
-                $pin = MyHelper::createRandomPIN(6, 'angka');
+                $pin = MyHelper::createrandom(6);;
             }else{
                 $pin = $post['pin'];
             }
@@ -235,7 +235,7 @@ class ApiUserFranchiseController extends Controller
 
             $sendCrm = 0;
             if(isset($post['reset_pin'])){
-                $pin = MyHelper::createRandomPIN(6, 'angka');
+                $pin = MyHelper::createrandom(6);
                 $dataUpdate['password'] = bcrypt($pin);
                 $dataUpdate['first_update_password'] =0;
                 $sendCrm = 1;
@@ -437,6 +437,10 @@ class ApiUserFranchiseController extends Controller
 
                 UserFranchiseOultet::where('id_user_franchise' , $check['id_user_franchise'])->delete();
                 UserFranchiseOultet::create(['id_user_franchise' => $check['id_user_franchise'], 'id_outlet' => $outlet]);
+
+                if(empty($check['password'])){
+                    $arrId[] = $check['id_user_franchise'];
+                }
             }else{
                 $dataCreate = [
                     'username' => $value['username'],
@@ -463,7 +467,9 @@ class ApiUserFranchiseController extends Controller
 
         if(!empty($arrId)){
             $arr_chunk = array_chunk($arrId, 20);
-            SendEmailUserFranchiseJob::dispatch($arr_chunk)->allOnConnection('database');
+            foreach ($arr_chunk as $datas){
+                SendEmailUserFranchiseJob::dispatch($datas)->allOnConnection('database');
+            }
         }
 
         $response = [];
@@ -494,7 +500,7 @@ class ApiUserFranchiseController extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
             }
 
-            $pin = MyHelper::createRandomPIN(6, 'angka');
+            $pin = MyHelper::createrandom(6);
             $dataUpdate['password'] = bcrypt($pin);
             $dataUpdate['first_update_password'] =0;
             $update = UserFranchise::where('id_user_franchise', $user['id_user_franchise'])->update($dataUpdate);
