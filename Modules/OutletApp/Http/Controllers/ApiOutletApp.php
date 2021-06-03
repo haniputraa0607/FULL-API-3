@@ -4454,6 +4454,19 @@ class ApiOutletApp extends Controller
                         $result['rejectable']                       = 0;
                         $result['transaction_status']               = 0;
                         break;
+                    case 'on_hold':
+                        $result['delivery_info']['delivery_status'] = 'Pengiriman sedang ditahan';
+                        $result['transaction_status_text']          = 'PENGIRIMAN SEDANG DITAHAN';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 0;
+                        break;
                     case 'driver not found':
                     case 'no_driver':
                         $result['delivery_info']['booking_status']  = 0;
