@@ -144,7 +144,7 @@ class ApiUserFranchiseController extends Controller
 
         if(!$check){
             if(isset($post['auto_generate_pin'])){
-                $pin = MyHelper::createRandomPIN(6, 'angka');
+                $pin = MyHelper::createrandom(6);;
             }else{
                 $pin = $post['pin'];
             }
@@ -235,7 +235,7 @@ class ApiUserFranchiseController extends Controller
 
             $sendCrm = 0;
             if(isset($post['reset_pin'])){
-                $pin = MyHelper::createRandomPIN(6, 'angka');
+                $pin = MyHelper::createrandom(6);
                 $dataUpdate['password'] = bcrypt($pin);
                 $dataUpdate['first_update_password'] =0;
                 $sendCrm = 1;
@@ -500,7 +500,7 @@ class ApiUserFranchiseController extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
             }
 
-            $pin = MyHelper::createRandomPIN(6, 'angka');
+            $pin = MyHelper::createrandom(6);
             $dataUpdate['password'] = bcrypt($pin);
             $dataUpdate['first_update_password'] =0;
             $update = UserFranchise::where('id_user_franchise', $user['id_user_franchise'])->update($dataUpdate);
