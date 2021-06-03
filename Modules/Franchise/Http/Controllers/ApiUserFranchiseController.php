@@ -437,6 +437,10 @@ class ApiUserFranchiseController extends Controller
 
                 UserFranchiseOultet::where('id_user_franchise' , $check['id_user_franchise'])->delete();
                 UserFranchiseOultet::create(['id_user_franchise' => $check['id_user_franchise'], 'id_outlet' => $outlet]);
+
+                if(empty($check['password'])){
+                    $arrId[] = $check['id_user_franchise'];
+                }
             }else{
                 $dataCreate = [
                     'username' => $value['username'],
@@ -463,7 +467,9 @@ class ApiUserFranchiseController extends Controller
 
         if(!empty($arrId)){
             $arr_chunk = array_chunk($arrId, 20);
-            SendEmailUserFranchiseJob::dispatch($arr_chunk)->allOnConnection('database');
+            foreach ($arr_chunk as $datas){
+                SendEmailUserFranchiseJob::dispatch($datas)->allOnConnection('database');
+            }
         }
 
         $response = [];
