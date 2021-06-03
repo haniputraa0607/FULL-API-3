@@ -1312,7 +1312,7 @@ class PromoCampaignTools{
         }
 
         // use promo code?
-        if($promo->limitation_usage) {
+        if($promo->code_type == 'single') {
         	// limit usage user?
         	if(PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('id_user',$id_user)->count()>=$promo->limitation_usage){
 	        	$errors[]='Kuota anda untuk penggunaan kode promo ini telah habis';
