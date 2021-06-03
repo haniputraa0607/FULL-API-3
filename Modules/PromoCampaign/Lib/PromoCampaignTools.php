@@ -1312,11 +1312,13 @@ class PromoCampaignTools{
         }
 
         // use promo code?
-        if($promo->code_type == 'single') {
-        	// limit usage user?
-        	if(PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('id_user',$id_user)->count()>=$promo->limitation_usage){
-	        	$errors[]='Kuota anda untuk penggunaan kode promo ini telah habis';
-	    		return false;
+        if($promo->code_type == 'Single') {
+        	if ($promo->limitation_usage) {
+        		// limit usage user?
+	        	if(PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('id_user',$id_user)->count()>=$promo->limitation_usage){
+		        	$errors[]='Kuota anda untuk penggunaan kode promo ini telah habis';
+		    		return false;
+	        	}
         	}
 
         	// limit usage device
