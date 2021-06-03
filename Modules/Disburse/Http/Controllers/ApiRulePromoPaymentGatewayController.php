@@ -516,10 +516,12 @@ class ApiRulePromoPaymentGatewayController extends Controller
         $report = PromoPaymentGatewayTransaction::join('rule_promo_payment_gateway', 'rule_promo_payment_gateway.id_rule_promo_payment_gateway', 'promo_payment_gateway_transactions.id_rule_promo_payment_gateway')
             ->join('transactions', 'promo_payment_gateway_transactions.id_transaction', 'transactions.id_transaction')
             ->leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
-            ->leftJoin('users', 'users.id', 'promo_payment_gateway_transactions.id_user')
+            ->leftJoin('users', 'users.id', 'transactions.id_user')
+            ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
+            ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
             ->where('status_active', 1)
             ->select('users.name as customer_name', 'users.phone as customer_phone', 'transactions.transaction_receipt_number',
-                'promo_payment_gateway_transactions.*', 'rule_promo_payment_gateway.name');
+                'promo_payment_gateway_transactions.*', 'rule_promo_payment_gateway.name', 'transaction_payment_ipay88s.user_contact', 'transaction_payment_shopee_pays.user_id_hash');
 
         if(isset($post['id_rule_promo_payment_gateway']) && !empty($post['id_rule_promo_payment_gateway'])){
             $report = $report->where('promo_payment_gateway_transactions.id_rule_promo_payment_gateway', $post['id_rule_promo_payment_gateway']);
@@ -645,6 +647,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 'id_rule_promo_payment_gateway' => $post['id_rule_promo_payment_gateway'],
                 'reference_by' => $post['reference_by'],
                 'validation_cashback_type' => $post['validation_cashback_type'],
+                'validation_payment_type' => $post['validation_payment_type'],
                 'override_mdr_status' => $post['override_mdr_status'],
                 'override_mdr_percent_type' => $post['override_mdr_percent_type'],
                 'start_date_periode' => (!empty($post['start_date_periode']) ? date('Y-m-d', strtotime($post['start_date_periode'])) : NULL),
@@ -660,6 +663,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
                     'id_rule_promo_payment_gateway' => $post['id_rule_promo_payment_gateway'],
                     'reference_by' => $post['reference_by'],
                     'validation_cashback_type' => $post['validation_cashback_type'],
+                    'validation_payment_type' => $post['validation_payment_type'],
                     'override_mdr_status' => $post['override_mdr_status'],
                     'override_mdr_percent_type' => $post['override_mdr_percent_type'],
                     'start_date_periode' => $post['start_date_periode'],
@@ -747,7 +751,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
 
             if($detail){
                 $detail['file'] = config('url.storage_url_api').$detail['file'];
-                $detail['list_detail'] = PromoPaymentGatewayValidationTransaction::join('transactions', 'transactions.id_transaction', 'promo_payment_gateway_validation_transactions.id_transaction')
+                $detail['list_detail'] = PromoPaymentGatewayValidationTransaction::leftJoin('transactions', 'transactions.id_transaction', 'promo_payment_gateway_validation_transactions.id_transaction')
                                 ->where('id_promo_payment_gateway_validation', $post['id_promo_payment_gateway_validation'])
                                 ->select('promo_payment_gateway_validation_transactions.*', 'transactions.transaction_receipt_number')
                                 ->get()->toArray();

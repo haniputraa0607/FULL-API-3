@@ -15,6 +15,7 @@ class AddInvalidDataToPromoPaymentGatewayValidation extends Migration
     {
         Schema::table('promo_payment_gateway_validation', function (Blueprint $table) {
             $table->integer('invalid_data')->default(0)->after('end_date_periode');
+            $table->enum('validation_payment_type', ['Check', 'Not Check'])->default('Not Check')->after('validation_cashback_type');
         });
     }
 
@@ -27,6 +28,7 @@ class AddInvalidDataToPromoPaymentGatewayValidation extends Migration
     {
         Schema::table('promo_payment_gateway_validation', function (Blueprint $table) {
             $table->dropColumn('invalid_data');
+            $table->dropColumn('validation_payment_type');
         });
     }
 }
