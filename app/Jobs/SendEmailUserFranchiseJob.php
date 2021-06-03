@@ -42,7 +42,7 @@ class SendEmailUserFranchiseJob implements ShouldQueue
     public function handle()
     {
         foreach ($this->data as $data){
-            $pin = MyHelper::createRandomPIN(6, 'angka');
+            $pin = MyHelper::createrandom(6);
             $user = UserFranchise::where('id_user_franchise', $data)->first();
             $updatePin = UserFranchise::where('id_user_franchise', $data)->update(['password' => bcrypt($pin)]);
             $franchiseOutlet = UserFranchiseOultet::join('outlets', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
