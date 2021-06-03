@@ -3087,6 +3087,13 @@ class ApiTransaction extends Controller
                             $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
                             $result['delivery_info']['cancelable']     = 0;
                             break;
+                        case 'rejected':
+                            $result['transaction_status'] = 0;
+                            $result['delivery_info']['booking_status'] = 0;
+                            $result['transaction_status_text']         = 'PENGANTARAN PESANAN TELAH DIBATALKAN';
+                            $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
+                            $result['delivery_info']['cancelable']     = 0;
+                            break;
                         case 'driver not found':
                         case 'no_driver':
                             $result['delivery_info']['booking_status']  = 0;
@@ -3385,6 +3392,12 @@ class ApiTransaction extends Controller
                                 case 'cancelled':
                                     $statusOrder[] = [
                                         'text'  => 'Pengantaran pesanan telah dibatalkan',
+                                        'date'  => $valueGosend['created_at']
+                                    ];
+                                    break;
+                                case 'rejected':
+                                    $statusOrder[] = [
+                                        'text'  => 'Pesanan telah dibatalkan karena driver tidak dapat mencapai lokasi tujuan',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;

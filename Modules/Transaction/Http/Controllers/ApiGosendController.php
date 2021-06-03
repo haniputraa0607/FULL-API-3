@@ -199,7 +199,7 @@ class ApiGosendController extends Controller
                         'go_send_order_no'              => $post['booking_id']
                     ];
                     GoSend::saveUpdate($dataSave);
-                } elseif (in_array(strtolower($post['status']), ['cancelled', 'rejected', 'no_driver'])) {
+                } elseif (in_array(strtolower($post['status']), ['cancelled', 'no_driver'])) {
                     $tpg->update([
                         'live_tracking_url' => null,
                         'driver_id' => null,
@@ -218,7 +218,17 @@ class ApiGosendController extends Controller
                     ];
                     GoSend::saveUpdate($dataSave);
                     app($this->outlet_app)->bookGoSend($trx, true);
-                }else{
+                } elseif (in_array(strtolower($post['status']), ['rejected'])) {
+                    $tpg->update(['stop_booking_at' => date('Y-m-d H:i:s')]);
+                    $dataSave       = [
+                        'id_transaction'                => $id_transaction,
+                        'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],
+                        'status'                        => $post['status'],
+                        'go_send_order_no'              => $post['booking_id'],
+                        'description'                   => $post['cancellation_reason'] ?? null
+                    ];
+                    GoSend::saveUpdate($dataSave);
+                } else {
                     $dataSave       = [
                         'id_transaction'                => $id_transaction,
                         'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],

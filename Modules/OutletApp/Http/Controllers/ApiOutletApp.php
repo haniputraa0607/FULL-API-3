@@ -1841,7 +1841,7 @@ class ApiOutletApp extends Controller
                 ]);
             } else {
                 $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-                if($pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
+                if($pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'cancelled'])) {
                     return response()->json([
                         'status'   => 'fail',
                         'messages' => ['Driver has been booked'],
@@ -2954,7 +2954,7 @@ class ApiOutletApp extends Controller
                             'go_send_order_no'              => $status['orderNo'] ?? ''
                         ];
                         GoSend::saveUpdate($dataSave);
-                    } elseif (in_array(strtolower($status['status']), ['cancelled', 'rejected', 'no_driver'])) {
+                    } elseif (in_array(strtolower($status['status']), ['cancelled', 'no_driver'])) {
                         $trxGoSend->update([
                             'live_tracking_url' => null,
                             'driver_id' => null,
@@ -2973,6 +2973,16 @@ class ApiOutletApp extends Controller
                         ];
                         GoSend::saveUpdate($dataSave);
                         $this->bookGoSend($trx, true);
+                    } elseif (in_array(strtolower($status['status']), ['rejected'])) {
+                        $trxGoSend->update(['stop_booking_at' => date('Y-m-d H:i:s')]);
+                        $dataSave = [
+                            'id_transaction'                => $trx['id_transaction'],
+                            'id_transaction_pickup_go_send' => $trxGoSend['id_transaction_pickup_go_send'],
+                            'status'                        => $status['status'] ?? 'on_going',
+                            'go_send_order_no'              => $status['orderNo'] ?? '',
+                            'description'                   => $status['cancelDescription'] ?? null
+                        ];
+                        GoSend::saveUpdate($dataSave);
                     } else {
                         $dataSave = [
                             'id_transaction'                => $trx['id_transaction'],
@@ -4436,6 +4446,14 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['cancelable']     = 0;
                         $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
+                    case 'rejected':
+                        $result['delivery_info']['booking_status']  = 0;
+                        $result['transaction_status_text']          = "PENGANTARAN DIBATALKAN\ndriver tidak dapat mencapai lokasi tujuan";
+                        $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
+                        $result['delivery_info']['cancelable']      = 0;
+                        $result['rejectable']                       = 0;
+                        $result['transaction_status']               = 0;
+                        break;
                     case 'driver not found':
                     case 'no_driver':
                         $result['delivery_info']['booking_status']  = 0;
@@ -5435,6 +5453,7 @@ class ApiOutletApp extends Controller
                 ->whereNull('transaction_pickups.reject_at')
                 ->whereDate('transaction_date', date('Y-m-d'))
                 ->whereNotNull('stop_booking_at')
+                ->where('latest_status', '<>', 'rejected')
                 ->where([
                     'transaction_payment_status' => 'Completed',
                 ])
