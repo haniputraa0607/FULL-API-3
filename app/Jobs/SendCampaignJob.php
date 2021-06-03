@@ -358,16 +358,18 @@ class SendCampaignJob implements ShouldQueue
                                 $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptional);
 
                                 if (isset($push['success']) && $push['success'] > 0) {
-                                    $push = [];
+                                    $pushInsert = [];
                                     foreach($recipient as $key => $receipient){
-                                        $push['id_campaign'] = $campaign['id_campaign'];
-                                        $push['push_sent_to'] = $receipient;
-                                        $push['push_sent_subject'] = $subject;
-                                        $push['push_sent_content'] = $content;
-                                        $push['push_sent_send_at'] = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
+                                        $pushInsert[] = [
+                                            'id_campaign' => $campaign['id_campaign'],
+                                            'push_sent_to' => $receipient,
+                                            'push_sent_subject' => $subject,
+                                            'push_sent_content' => $content,
+                                            'push_sent_send_at' => date('Y-m-d H:i:s', strtotime("+ 5 minutes"))
+                                        ];
                                     }
-                                    CampaignPushSent::insert($push);
-                                    $countPush = count($recipient);
+                                    CampaignPushSent::insert($pushInsert);
+                                    $countPush = $push['success'];
                                 }
 
                             }catch(\Exception $e){
