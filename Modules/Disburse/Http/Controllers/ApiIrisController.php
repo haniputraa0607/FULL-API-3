@@ -275,9 +275,6 @@ class ApiIrisController extends Controller
                                 foreach ($arrTmpDisburse as $value){
                                     $amount = $value['total_amount']-$feeDisburse;
                                     if($amount > 10000){
-                                        if($value['beneficiary_account'] == '1785008989'){
-                                            $amount = $amount-111400;
-                                        }
                                         $toSend = [
                                             'beneficiary_name' => $value['beneficiary_name'],
                                             'beneficiary_account' => $value['beneficiary_account'],
