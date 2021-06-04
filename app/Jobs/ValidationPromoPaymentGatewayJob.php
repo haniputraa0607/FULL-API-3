@@ -90,13 +90,21 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
                     'reference_id' => $value['id_reference'],
                     'validation_status' => 'invalid_data',
                     'new_cashback' => 0,
-                    'old_cashback' => 0
+                    'old_cashback' => 0,
+                    'notes' => 'data not found'
                 ];
                 continue;
             }
 
             $disburseTrx = DisburseOutletTransaction::where('id_transaction', $idTransaction)->first();
             if(!empty($disburseTrx['id_disburse_outlet'])){
+                $id_invalid_data[] = [
+                    'reference_id' => $value['id_reference'],
+                    'validation_status' => 'invalid_data',
+                    'new_cashback' => 0,
+                    'old_cashback' => 0,
+                    'notes' => 'already processed disburse'
+                ];
                 continue;
             }
 
@@ -115,7 +123,8 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
                         'id_transaction' => $idTransaction,
                         'validation_status' => 'invalid_data',
                         'new_cashback' => 0,
-                        'old_cashback' => 0
+                        'old_cashback' => 0,
+                        'notes' => 'wrong payment'
                     ];
                     unset($allPromoTrx[$checkExistPromo]);
                     continue;
@@ -124,7 +133,8 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
                         'id_transaction' => $idTransaction,
                         'validation_status' => 'invalid_data',
                         'new_cashback' => 0,
-                        'old_cashback' => 0
+                        'old_cashback' => 0,
+                        'notes' => 'wrong payment'
                     ];
                     unset($allPromoTrx[$checkExistPromo]);
                     continue;
@@ -133,7 +143,8 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
                         'id_transaction' => $idTransaction,
                         'validation_status' => 'invalid_data',
                         'new_cashback' => 0,
-                        'old_cashback' => 0
+                        'old_cashback' => 0,
+                        'notes' => 'wrong payment'
                     ];
                     unset($allPromoTrx[$checkExistPromo]);
                     continue;
@@ -142,7 +153,8 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
                         'id_transaction' => $idTransaction,
                         'validation_status' => 'invalid_data',
                         'new_cashback' => 0,
-                        'old_cashback' => 0
+                        'old_cashback' => 0,
+                        'notes' => 'wrong payment'
                     ];
                     unset($allPromoTrx[$checkExistPromo]);
                 }elseif(strtolower($rule['payment_gateway']) == 'credit card' && (empty($checkPayment['payment_type']) || strtolower($checkPayment['payment_type']) != 'credit card')){
@@ -150,7 +162,8 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
                         'id_transaction' => $idTransaction,
                         'validation_status' => 'invalid_data',
                         'new_cashback' => 0,
-                        'old_cashback' => 0
+                        'old_cashback' => 0,
+                        'notes' => 'wrong payment'
                     ];
                     unset($allPromoTrx[$checkExistPromo]);
                     continue;
@@ -178,7 +191,7 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
                 $result['must_get_promo'][] = $value['id_reference'];
                 $getPromoTrxAlreadyInsert = PromoPaymentGatewayTransaction::where('id_transaction', $idTransaction)->first();
                 $chasbackTrx = $getPromoTrxAlreadyInsert['total_received_cashback']??0;
-                $id_invalid_data[] = [
+                $id_must_get_promo[] = [
                     'id_transaction' => $idTransaction,
                     'validation_status' => 'must_get_promo',
                     'new_cashback' => 0,
@@ -283,7 +296,8 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
                     'reference_id' => $val['reference_id']??NULL,
                     'validation_status' => $val['validation_status'],
                     'new_cashback' => $val['new_cashback'],
-                    'old_cashback' => $val['old_cashback']
+                    'old_cashback' => $val['old_cashback'],
+                    'notes' => $val['notes']??NULL
                 ];
             }
 

@@ -84,7 +84,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
         }
 
         if(isset($post['all_data']) && $post['all_data'] == 1){
-            $list = $list->get()->toArray();
+            $list = $list->where('validation_status', 0)->get()->toArray();
         }else{
             $list = $list->paginate(30);
         }
@@ -624,6 +624,13 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['data can not be empty']]);
             }
 
+            //check status
+            $checStatus = RulePromoPaymentGateway::where('id_rule_promo_payment_gateway', $post['id_rule_promo_payment_gateway'])->first();
+
+            if($checStatus['validation_status'] == 1){
+                return response()->json(['status' => 'fail', 'messages' => ['This promo completed validation']]);
+            }
+
             if(!File::exists(public_path().'/promo_payment_gateway_validation')){
                 File::makeDirectory(public_path().'/promo_payment_gateway_validation');
             }
@@ -647,7 +654,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 'id_rule_promo_payment_gateway' => $post['id_rule_promo_payment_gateway'],
                 'reference_by' => $post['reference_by'],
                 'validation_cashback_type' => $post['validation_cashback_type'],
-                'validation_payment_type' => $post['validation_payment_type'],
+                'validation_payment_type' => 'Check',
                 'override_mdr_status' => $post['override_mdr_status'],
                 'override_mdr_percent_type' => $post['override_mdr_percent_type'],
                 'start_date_periode' => (!empty($post['start_date_periode']) ? date('Y-m-d', strtotime($post['start_date_periode'])) : NULL),
@@ -663,7 +670,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
                     'id_rule_promo_payment_gateway' => $post['id_rule_promo_payment_gateway'],
                     'reference_by' => $post['reference_by'],
                     'validation_cashback_type' => $post['validation_cashback_type'],
-                    'validation_payment_type' => $post['validation_payment_type'],
+                    'validation_payment_type' => 'Check',
                     'override_mdr_status' => $post['override_mdr_status'],
                     'override_mdr_percent_type' => $post['override_mdr_percent_type'],
                     'start_date_periode' => $post['start_date_periode'],
@@ -680,7 +687,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
         $post = $request->json()->all();
         $list = PromoPaymentGatewayValidation::join('rule_promo_payment_gateway', 'rule_promo_payment_gateway.id_rule_promo_payment_gateway', 'promo_payment_gateway_validation.id_rule_promo_payment_gateway')
                 ->leftJoin('users', 'promo_payment_gateway_validation.id_user', 'users.id')
-                ->select('promo_payment_gateway_validation.*', 'users.name as admin_name', 'rule_promo_payment_gateway.*')
+                ->select('promo_payment_gateway_validation.*', 'users.name as admin_name', 'rule_promo_payment_gateway.*', 'promo_payment_gateway_validation.created_at as date_validation')
                 ->orderBy('promo_payment_gateway_validation.created_at', 'desc');
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
@@ -745,7 +752,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
         if(isset($post['id_promo_payment_gateway_validation']) && !empty($post['id_promo_payment_gateway_validation'])){
             $detail = PromoPaymentGatewayValidation::join('rule_promo_payment_gateway', 'rule_promo_payment_gateway.id_rule_promo_payment_gateway', 'promo_payment_gateway_validation.id_rule_promo_payment_gateway')
                 ->leftJoin('users', 'users.id', 'promo_payment_gateway_validation.id_user')
-                ->select('promo_payment_gateway_validation.*', 'rule_promo_payment_gateway.*', 'users.name as admin_name')
+                ->select('promo_payment_gateway_validation.*', 'rule_promo_payment_gateway.*', 'users.name as admin_name', 'promo_payment_gateway_validation.created_at as date_validation')
                 ->where('id_promo_payment_gateway_validation', $post['id_promo_payment_gateway_validation'])
                 ->first();
 
