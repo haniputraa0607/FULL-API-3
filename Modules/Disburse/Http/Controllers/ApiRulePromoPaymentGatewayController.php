@@ -24,6 +24,8 @@ use Modules\Disburse\Entities\PromoPaymentGatewayValidation;
 use Modules\Disburse\Entities\PromoPaymentGatewayValidationTransaction;
 use Modules\Disburse\Entities\RulePromoPaymentGateway;
 use App\Http\Models\Transaction;
+use Modules\Disburse\Entities\RulePromoPaymentGatewayBrand;
+use Modules\Franchise\Entities\TransactionProduct;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use Rap2hpoutre\FastExcel\FastExcel;
@@ -111,10 +113,15 @@ class ApiRulePromoPaymentGatewayController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['ID already use']]);
         }
 
+        if(empty($post['brands'])){
+            $post['operator_brand'] = NULL;
+        }
+
         $dataCreate = [
             'promo_payment_gateway_code' => $post['promo_payment_gateway_code'],
             'name' => $post['name'],
             'payment_gateway' => $post['payment_gateway'],
+            'operator_brand' => $post['operator_brand'],
             'start_date' => $dateStart,
             'end_date' => $dateEnd,
             'limit_promo_total' => $post['limit_promo_total']??NULL,
@@ -125,7 +132,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
             'limit_promo_additional_account_type' => $post['limit_promo_additional_account_type']??NULL,
             'cashback_type' => $post['cashback_type'],
             'cashback' => ($post['cashback_type'] == 'Nominal' ? str_replace('.', '', $post['cashback']):$post['cashback']),
-            'maximum_cashback' => str_replace('.', '', $post['maximum_cashback']),
+            'maximum_cashback' => str_replace('.', '', $post['maximum_cashback']??0),
             'minimum_transaction' => str_replace('.', '', $post['minimum_transaction']),
             'charged_type' => $post['charged_type'],
             'charged_payment_gateway' => $post['charged_payment_gateway'],
@@ -140,6 +147,20 @@ class ApiRulePromoPaymentGatewayController extends Controller
         }
 
         $create = RulePromoPaymentGateway::create($dataCreate);
+
+        if($create && !empty($post['brands'])){
+            $insertBrand = [];
+            foreach ($post['brands'] as $id_brand){
+                $insertBrand[] = [
+                    'id_rule_promo_payment_gateway' => $create['id_rule_promo_payment_gateway'],
+                    'id_brand' => $id_brand,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                 ];
+            }
+
+            RulePromoPaymentGatewayBrand::insert($insertBrand);
+        }
         return response()->json(MyHelper::checkCreate($create));
     }
 
@@ -178,10 +199,15 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 $post['maximum_cashback'] = 0;
             }
 
+            if(empty($post['brands'])){
+                $post['operator_brand'] = NULL;
+            }
+
             $dataUpdate = [
                 'promo_payment_gateway_code' => $post['promo_payment_gateway_code'],
                 'name' => $post['name'],
                 'payment_gateway' => $post['payment_gateway'],
+                'operator_brand' => $post['operator_brand'],
                 'start_date' => $dateStart,
                 'end_date' => $dateEnd,
                 'limit_promo_total' => $post['limit_promo_total'],
@@ -192,7 +218,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 'limit_promo_additional_account_type' => $post['limit_promo_additional_account_type']??NULL,
                 'cashback_type' => $post['cashback_type'],
                 'cashback' => ($post['cashback_type'] == 'Nominal' ? str_replace('.', '', $post['cashback']):$post['cashback']),
-                'maximum_cashback' => str_replace('.', '', $post['maximum_cashback']),
+                'maximum_cashback' => str_replace('.', '', $post['maximum_cashback']??0),
                 'minimum_transaction' => str_replace('.', '', $post['minimum_transaction']),
                 'charged_type' => $post['charged_type'],
                 'charged_payment_gateway' => $post['charged_payment_gateway'],
@@ -208,6 +234,20 @@ class ApiRulePromoPaymentGatewayController extends Controller
             }
 
             $update = RulePromoPaymentGateway::where('id_rule_promo_payment_gateway', $post['id_rule_promo_payment_gateway'])->update($dataUpdate);
+            RulePromoPaymentGatewayBrand::where('id_rule_promo_payment_gateway', $post['id_rule_promo_payment_gateway'])->delete();
+            if($update && !empty($post['brands'])){
+                $insertBrand = [];
+                foreach ($post['brands'] as $id_brand){
+                    $insertBrand[] = [
+                        'id_rule_promo_payment_gateway' => $post['id_rule_promo_payment_gateway'],
+                        'id_brand' => $id_brand,
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+                }
+
+                RulePromoPaymentGatewayBrand::insert($insertBrand);
+            }
             return response()->json(MyHelper::checkUpdate($update));
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
@@ -223,6 +263,10 @@ class ApiRulePromoPaymentGatewayController extends Controller
             if(empty($detail)){
                 return response()->json(['status' => 'fail', 'messages' => ['Data not found']]);
             }
+            $detail['current_brand'] = RulePromoPaymentGatewayBrand::join('brands', 'brands.id_brand', 'rule_promo_payment_gateway_brand.id_brand')
+                                        ->where('id_rule_promo_payment_gateway', $post['id_rule_promo_payment_gateway'])
+                                        ->select('rule_promo_payment_gateway_brand.*', 'name_brand')
+                                        ->get()->toArray();
             return response()->json(MyHelper::checkGet($detail));
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
@@ -359,6 +403,18 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 ->get()->toArray();
             //check limitation
             foreach ($promos as $data){
+                $getRuleBrand = RulePromoPaymentGatewayBrand::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])->pluck('id_brand')->toArray();
+                if(!empty($getRuleBrand)){
+                    $productBrand = TransactionProduct::where('id_transaction', $id_transaction)
+                                    ->whereIn('id_brand', $getRuleBrand)
+                                    ->pluck('id_brand')->toArray();
+                    if($data['operator_brand'] == 'or' && empty($productBrand)){
+                        continue;
+                    }elseif($data['operator_brand'] == 'and' && count($getRuleBrand) != count($productBrand)){
+                        continue;
+                    }
+                }
+
                 if($data['cashback_type'] == 'Nominal'){
                     $cashBackCutomer = $data['cashback'];
                 }else{
@@ -460,10 +516,12 @@ class ApiRulePromoPaymentGatewayController extends Controller
         $report = PromoPaymentGatewayTransaction::join('rule_promo_payment_gateway', 'rule_promo_payment_gateway.id_rule_promo_payment_gateway', 'promo_payment_gateway_transactions.id_rule_promo_payment_gateway')
             ->join('transactions', 'promo_payment_gateway_transactions.id_transaction', 'transactions.id_transaction')
             ->leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
-            ->leftJoin('users', 'users.id', 'promo_payment_gateway_transactions.id_user')
+            ->leftJoin('users', 'users.id', 'transactions.id_user')
+            ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
+            ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
             ->where('status_active', 1)
             ->select('users.name as customer_name', 'users.phone as customer_phone', 'transactions.transaction_receipt_number',
-                'promo_payment_gateway_transactions.*', 'rule_promo_payment_gateway.name');
+                'promo_payment_gateway_transactions.*', 'rule_promo_payment_gateway.name', 'transaction_payment_ipay88s.user_contact', 'transaction_payment_shopee_pays.user_id_hash');
 
         if(isset($post['id_rule_promo_payment_gateway']) && !empty($post['id_rule_promo_payment_gateway'])){
             $report = $report->where('promo_payment_gateway_transactions.id_rule_promo_payment_gateway', $post['id_rule_promo_payment_gateway']);
@@ -581,11 +639,17 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 }
             }
 
+            if(empty($post['override_mdr_status'])){
+                $post['override_mdr_percent_type'] = NULL;
+            }
             $createValidation = PromoPaymentGatewayValidation::create([
                 'id_user' => auth()->user()->id,
                 'id_rule_promo_payment_gateway' => $post['id_rule_promo_payment_gateway'],
                 'reference_by' => $post['reference_by'],
                 'validation_cashback_type' => $post['validation_cashback_type'],
+                'validation_payment_type' => $post['validation_payment_type'],
+                'override_mdr_status' => $post['override_mdr_status'],
+                'override_mdr_percent_type' => $post['override_mdr_percent_type'],
                 'start_date_periode' => (!empty($post['start_date_periode']) ? date('Y-m-d', strtotime($post['start_date_periode'])) : NULL),
                 'end_date_periode' => (!empty($post['end_date_periode']) ? date('Y-m-d', strtotime($post['end_date_periode'])) : NULL),
                 'file' => ($store ? $directory : NULL),
@@ -599,6 +663,9 @@ class ApiRulePromoPaymentGatewayController extends Controller
                     'id_rule_promo_payment_gateway' => $post['id_rule_promo_payment_gateway'],
                     'reference_by' => $post['reference_by'],
                     'validation_cashback_type' => $post['validation_cashback_type'],
+                    'validation_payment_type' => $post['validation_payment_type'],
+                    'override_mdr_status' => $post['override_mdr_status'],
+                    'override_mdr_percent_type' => $post['override_mdr_percent_type'],
                     'start_date_periode' => $post['start_date_periode'],
                     'end_date_periode' => $post['end_date_periode'],
                 ])->onConnection('validationpromopgqueue');
@@ -684,7 +751,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
 
             if($detail){
                 $detail['file'] = config('url.storage_url_api').$detail['file'];
-                $detail['list_detail'] = PromoPaymentGatewayValidationTransaction::join('transactions', 'transactions.id_transaction', 'promo_payment_gateway_validation_transactions.id_transaction')
+                $detail['list_detail'] = PromoPaymentGatewayValidationTransaction::leftJoin('transactions', 'transactions.id_transaction', 'promo_payment_gateway_validation_transactions.id_transaction')
                                 ->where('id_promo_payment_gateway_validation', $post['id_promo_payment_gateway_validation'])
                                 ->select('promo_payment_gateway_validation_transactions.*', 'transactions.transaction_receipt_number')
                                 ->get()->toArray();
