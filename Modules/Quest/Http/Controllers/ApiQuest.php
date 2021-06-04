@@ -1341,11 +1341,13 @@ class ApiQuest extends Controller
         $notAvailableQuest = [];
 
         foreach ($userRule as $val){
-            $check = CrmUserData::where($val['user_rule_subject'], $val['user_rule_operator'], $val['user_rule_parameter'])
+            if(!empty($val['user_rule_subject']) && !empty($val['user_rule_operator']) && !empty($val['user_rule_parameter'])){
+                $check = CrmUserData::where($val['user_rule_subject'], $val['user_rule_operator'], $val['user_rule_parameter'])
                     ->where('id_user', $id_user)->get()->toArray();
-            $checkClaim = QuestUser::where('id_user', $id_user)->where('id_quest', $val['id_quest'])->first();
-            if(empty($check) && empty($checkClaim)){
-                $notAvailableQuest[] = $val['id_quest'];
+                $checkClaim = QuestUser::where('id_user', $id_user)->where('id_quest', $val['id_quest'])->first();
+                if(empty($check) && empty($checkClaim)){
+                    $notAvailableQuest[] = $val['id_quest'];
+                }
             }
         }
 
@@ -1647,7 +1649,7 @@ class ApiQuest extends Controller
     }
 
     public function listQuestVoucher(){
-        $result = Deal::select('id_deals', 'deals_title')
+        $result = Deal::select('id_deals', 'deals_title', 'deals_voucher_type', 'deals_total_voucher', 'deals_total_claimed')
             ->where('step_complete', '1')
             ->where('deals_type', 'Quest')
             ->get()
