@@ -1470,6 +1470,12 @@ class ApiQuest extends Controller
             ];
             if ($quest_benefit->benefit_type == 'voucher') {
                 $benefit['text'] = $quest_benefit->deals->deals_title;
+                if (!$quest_benefit->deals->deals_voucher) {
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Voucher habis']
+                    ];
+                }
                 $benefit['id'] = $quest_benefit->deals->deals_voucher->id_deals_user;
             } else {
                 $benefit['text'] = MyHelper::requestNumber($quest_benefit->value, '_POINT').' '.env('POINT_NAME', 'Points');
@@ -1554,7 +1560,7 @@ class ApiQuest extends Controller
     public function detail(Request $request)
     {
         $id_user = $request->user()->id;
-        $quest = Quest::select('quests.id_quest', 'quest_users.id_quest_user', 'quest_users.id_user', 'name', 'image as image_url', 'description', 'short_description', \DB::raw('(CASE WHEN quest_users.id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.publish_end END) as date_end'))
+        $quest = Quest::select('quests.id_quest', 'quest_users.id_quest_user', 'quest_users.id_user', 'name', 'image as image_url', 'description', 'short_description', \DB::raw('(CASE WHEN quest_users.id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quests.stop_at IS NOT NULL THEN quests.stop_at WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.publish_end END) as date_end'))
             ->with(['quest_benefit', 'quest_benefit.deals'])
             ->leftJoin('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
@@ -1604,6 +1610,10 @@ class ApiQuest extends Controller
                 'text' => 'Selesai pada '.MyHelper::indonesian_date_v2($result['user_redemption']['redemption_date'], 'd F Y'),
                 'code' => 2
             ];
+        }
+
+        if ($result['text_label']['code'] == -1) {
+            $result['progress']['complete'] = 0;
         }
 
         $result['benefit']['id_reference'] = $result['user_redemption']['id_reference'] ?? null;

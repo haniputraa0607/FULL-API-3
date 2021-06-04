@@ -839,7 +839,6 @@ class ApiIrisController extends Controller
                     }
                 }
 
-                //fee payment gateway
                 if($feePGType == 'Percent'){
                     $totalFee = $amountMDR * (($feePGCentral + $feePG) / 100);//MDR
                     $totalFeeForCentral = $amountMDR * ($feePGCentral/100);//MDR for central
@@ -868,6 +867,16 @@ class ApiIrisController extends Controller
                     }else{
                         $totalFeePromoPG = $feePGCentral + $feePG;//MDR
                         $totalFeeForCentralPromoPG = $feePGCentral;//MDR for central
+                    }
+
+                    //fee payment gateway
+                    if(isset($additionalDataPromoPayment['override_mdr_status']) && $additionalDataPromoPayment['override_mdr_status'] == 1){
+                        $totalFeeForCentralPromoPG = 0;
+                        if($additionalDataPromoPayment['override_mdr_percent_type'] == 'Percent' && !empty($additionalDataPromoPayment['mdr'])){
+                            $totalFeePromoPG = $amountMDR * ($additionalDataPromoPayment['mdr']/100);//MDR
+                        }elseif($additionalDataPromoPayment['override_mdr_percent_type'] == 'Nominal'){
+                            $totalFeePromoPG = $additionalDataPromoPayment['mdr'];//MDR
+                        }
                     }
                 }
 

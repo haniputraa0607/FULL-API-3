@@ -355,21 +355,20 @@ class SendCampaignJob implements ShouldQueue
                         if (isset($deviceToken['token']) && !empty($deviceToken['token'])) {
                             try{
                                 $dataOptional['source'] = 'campaign';
-                                $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptional);
+                                $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptional, 1);
 
                                 if (isset($push['success']) && $push['success'] > 0) {
-                                    $pushInsert = [];
-                                    foreach($recipient as $key => $receipient){
-                                        $pushInsert[] = [
-                                            'id_campaign' => $campaign['id_campaign'],
-                                            'push_sent_to' => $receipient,
-                                            'push_sent_subject' => $subject,
-                                            'push_sent_content' => $content,
-                                            'push_sent_send_at' => date('Y-m-d H:i:s', strtotime("+ 5 minutes"))
-                                        ];
-                                    }
-                                    CampaignPushSent::insert($pushInsert);
-                                    $countPush = $push['success'];
+                                    $calculationSuccess = [
+                                        'error_token' => $push['error_token']??[],
+                                        'all_token' => $deviceToken['token'],
+                                        'recipient' => $recipient,
+                                        'date_send' => date('Y-m-d H:i:s', strtotime("+ 5 minutes")),
+                                        'subject' => $subject,
+                                        'content' => $content,
+                                        'id_campaign' => $campaign['id_campaign']
+                                    ];
+
+                                    SendCampaignCalculationSuccessJob::dispatch($calculationSuccess)->allOnConnection('database');
                                 }
 
                             }catch(\Exception $e){
