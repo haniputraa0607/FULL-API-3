@@ -1341,11 +1341,13 @@ class ApiQuest extends Controller
         $notAvailableQuest = [];
 
         foreach ($userRule as $val){
-            $check = CrmUserData::where($val['user_rule_subject'], $val['user_rule_operator'], $val['user_rule_parameter'])
+            if(!empty($val['user_rule_subject']) && !empty($val['user_rule_operator']) && !empty($val['user_rule_parameter'])){
+                $check = CrmUserData::where($val['user_rule_subject'], $val['user_rule_operator'], $val['user_rule_parameter'])
                     ->where('id_user', $id_user)->get()->toArray();
-            $checkClaim = QuestUser::where('id_user', $id_user)->where('id_quest', $val['id_quest'])->first();
-            if(empty($check) && empty($checkClaim)){
-                $notAvailableQuest[] = $val['id_quest'];
+                $checkClaim = QuestUser::where('id_user', $id_user)->where('id_quest', $val['id_quest'])->first();
+                if(empty($check) && empty($checkClaim)){
+                    $notAvailableQuest[] = $val['id_quest'];
+                }
             }
         }
 
@@ -1470,6 +1472,12 @@ class ApiQuest extends Controller
             ];
             if ($quest_benefit->benefit_type == 'voucher') {
                 $benefit['text'] = $quest_benefit->deals->deals_title;
+                if (!$quest_benefit->deals->deals_voucher) {
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Voucher habis']
+                    ];
+                }
                 $benefit['id'] = $quest_benefit->deals->deals_voucher->id_deals_user;
             } else {
                 $benefit['text'] = MyHelper::requestNumber($quest_benefit->value, '_POINT').' '.env('POINT_NAME', 'Points');
@@ -1554,7 +1562,7 @@ class ApiQuest extends Controller
     public function detail(Request $request)
     {
         $id_user = $request->user()->id;
-        $quest = Quest::select('quests.id_quest', 'quest_users.id_quest_user', 'quest_users.id_user', 'name', 'image as image_url', 'description', 'short_description', \DB::raw('(CASE WHEN quest_users.id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.publish_end END) as date_end'))
+        $quest = Quest::select('quests.id_quest', 'quest_users.id_quest_user', 'quest_users.id_user', 'name', 'image as image_url', 'description', 'short_description', \DB::raw('(CASE WHEN quest_users.id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quests.stop_at IS NOT NULL THEN quests.stop_at WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.publish_end END) as date_end'))
             ->with(['quest_benefit', 'quest_benefit.deals'])
             ->leftJoin('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
@@ -1606,6 +1614,10 @@ class ApiQuest extends Controller
             ];
         }
 
+        if ($result['text_label']['code'] == -1) {
+            $result['progress']['complete'] = 0;
+        }
+
         $result['benefit']['id_reference'] = $result['user_redemption']['id_reference'] ?? null;
 
         $details = QuestDetail::select('name', 'short_description', 'is_done', 'quest_details.id_quest', 'quest_details.id_quest_detail', 'quest_rule', 'id_product_category', 'different_category_product', 'id_product', 'id_product_variant_group', 'product_total', 'trx_nominal', 'trx_total', 'id_outlet', 'id_province', 'different_outlet', 'different_province', 'id_quest_user_detail', 'id_quest_user', 'id_user')
@@ -1637,7 +1649,7 @@ class ApiQuest extends Controller
     }
 
     public function listQuestVoucher(){
-        $result = Deal::select('id_deals', 'deals_title')
+        $result = Deal::select('id_deals', 'deals_title', 'deals_voucher_type', 'deals_total_voucher', 'deals_total_claimed')
             ->where('step_complete', '1')
             ->where('deals_type', 'Quest')
             ->get()

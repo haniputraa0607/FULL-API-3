@@ -1024,8 +1024,8 @@ class ApiOutletApp extends Controller
         $profile['outlet_name']    = $outlet['outlet_name'];
         $profile['outlet_status']   = $outlet['outlet_status'];
         $profile['outlet_code']    = $outlet['outlet_code'];
-        $profile['outlet_address'] = $outlet['outlet_address'];
-        $profile['outlet_phone']   = $outlet['outlet_phone'];
+        $profile['outlet_address'] = $outlet['outlet_address']??'';
+        $profile['outlet_phone']   = $outlet['outlet_phone']??'';
         $profile['status']         = 'success';
 
         //save token outlet

@@ -12,6 +12,7 @@ class PromoPaymentGatewayValidationTransaction extends Model
 	protected $fillable = [
 	    'id_promo_payment_gateway_validation',
 	    'id_transaction',
+        'reference_id',
         'validation_status',
         'new_cashback',
         'old_cashback'
