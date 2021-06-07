@@ -15,6 +15,7 @@ class PromoPaymentGatewayValidationTransaction extends Model
         'reference_id',
         'validation_status',
         'new_cashback',
-        'old_cashback'
+        'old_cashback',
+        'notes'
 	];
 }
