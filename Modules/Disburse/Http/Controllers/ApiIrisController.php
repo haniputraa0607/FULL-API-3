@@ -684,7 +684,7 @@ class ApiIrisController extends Controller
                                 $feePGType = $settingMDRAll[$balanceMdr]['percent_type'];
                                 $charged = $settingMDRAll[$balanceMdr]['charged'];
 
-                                $feePointOutlet = (float)$settingMDRAll[$balanceMdr]['mdr'];
+                                $feePointOutlet = (float)$settingMDRAll[$balanceMdr]['mdr']+(float)$settingMDRAll[$balanceMdr]['mdr_central'];
                                 $feePointCentral = 100 - $feePointOutlet;
 
                                 if((int)$feePointOutlet === 0){
@@ -928,8 +928,8 @@ class ApiIrisController extends Controller
                     'fee_item' => $feeItemForCentral,
                     'discount' => $totalChargedPromo,
                     'discount_central' => $totalChargedPromoCentral,
-                    'payment_charge' => $totalFee,
-                    'payment_charge_old' => $totalFeeOld,
+                    'payment_charge' => $totalFee+$nominalBalance,
+                    'payment_charge_old' => $totalFeeOld+$nominalBalance,
                     'point_use_expense' => $nominalBalance,
                     'subscription' => $totalChargedSubcriptionOutlet,
                     'subscription_central' => $totalChargedSubcriptionCentral,
@@ -1147,7 +1147,7 @@ class ApiIrisController extends Controller
                                     $feePGType = $settingMDRAll[$balanceMdr]['percent_type'];
                                     $charged = $settingMDRAll[$balanceMdr]['charged'];
 
-                                    $feePointOutlet = (float)$settingMDRAll[$balanceMdr]['mdr'];
+                                    $feePointOutlet = (float)$settingMDRAll[$balanceMdr]['mdr']+(float)$settingMDRAll[$balanceMdr]['mdr_central'];
                                     $feePointCentral = 100 - $feePointOutlet;
 
                                     if((int)$feePointOutlet === 0){
@@ -1369,8 +1369,8 @@ class ApiIrisController extends Controller
                         'fee_item' => $feeItemForCentral,
                         'discount' => $totalChargedPromo,
                         'discount_central' => $totalChargedPromoCentral,
-                        'payment_charge' => $totalFee,
-                        'payment_charge_old' => $totalFeeOld,
+                        'payment_charge' => $totalFee+$nominalBalance,
+                        'payment_charge_old' => $totalFeeOld+$nominalBalance,
                         'point_use_expense' => $nominalBalance,
                         'subscription' => $totalChargedSubcriptionOutlet,
                         'subscription_central' => $totalChargedSubcriptionCentral,
