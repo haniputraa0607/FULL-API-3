@@ -95,7 +95,7 @@ class ApiPromotion extends Controller
 		if(isset($post['promotion_series']))
 		$data['promotion_series'] 	= $post['promotion_series'];
 
-		$data['promotion_series'] = ( $post['promotion_type'] == 'Campaign Series' ) ? 1 : 0;
+		$data['promotion_series'] = ( $post['promotion_type'] == 'Campaign Series' ) ? ($post['promotion_series'] ?? 1) : 0;
 
 		if(isset($post['id_promotion'])) {
 			$queryPromotion = Promotion::where('id_promotion','=',$post['id_promotion'])->update($data);
