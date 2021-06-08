@@ -1837,9 +1837,11 @@ class ApiTransaction extends Controller
                     $productCode = $getProductVariantGroup['product_variant_group_code']??'';
                 }
 
-                $modifier = TransactionProductModifier::where('id_transaction_product', $val['id_transaction_product'])
+                $modifierGroup = TransactionProductModifier::where('id_transaction_product', $val['id_transaction_product'])
                     ->whereNotNull('transaction_product_modifiers.id_product_modifier_group')
-                    ->pluck('text')->toArray();
+                    ->select('text', 'transaction_product_modifier_price')->get()->toArray();
+                $modifierGroupText = array_column($modifierGroup, 'text');
+                $modifierGroupPrice = array_sum(array_column($modifierGroup, 'transaction_product_modifier_price'));
 
                 if(isset($post['detail']) && $post['detail'] == 1){
 
@@ -1961,7 +1963,7 @@ class ApiTransaction extends Controller
                             }
                             $totalModPrice = $totalModPrice + $priceMod;
                             $htmlBundling .= '<td></td>';
-                            $htmlBundling .= '<td>'.implode(",",$modifier).'</td>';
+                            $htmlBundling .= '<td>'.implode(",",$modifierGroupText).'</td>';
                             $htmlBundling .= '<td>'.$textMod.'</td>';
                             $htmlBundling .= '<td>0</td>';
                             $htmlBundling .= '<td>'.$priceMod.'</td>';
@@ -2071,9 +2073,9 @@ class ApiTransaction extends Controller
                                     $html .= '<td></td>';
                                 }
                             }
-                            $priceProd = $val['transaction_product_price']+(float)$val['transaction_variant_subtotal'];
+                            $priceProd = $val['transaction_product_price']+(float)$val['transaction_variant_subtotal']+$modifierGroupPrice;
                             $html .= '<td></td>';
-                            $html .= '<td>'.implode(",",$modifier).'</td>';
+                            $html .= '<td>'.implode(",",$modifierGroupText).'</td>';
                             $html .= '<td>'.$textMod.'</td>';
                             $html .= '<td>'.$priceProd.'</td>';
                             $html .= '<td>'.$priceMod.'</td>';
