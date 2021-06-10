@@ -308,6 +308,16 @@ class ApiRulePromoPaymentGatewayController extends Controller
 
         if(isset($post['id_rule_promo_payment_gateway']) && !empty($post['id_rule_promo_payment_gateway'])){
             $idAdmin = auth()->user()->id;
+            $check = RulePromoPaymentGateway::where('id_rule_promo_payment_gateway', $post['id_rule_promo_payment_gateway'])->first();
+
+            if($check['validation_status'] == 1){
+                return response()->json(['status' => 'fail', 'messages' => ['This promo completed validation']]);
+            }
+
+            if($check['end_date'] >= date('Y-m-d')){
+                return response()->json(['status' => 'fail', 'messages' => ['Can not validation this promo because this promo on going']]);
+            }
+
             $update = DisburseOutletTransaction::where('id_rule_promo_payment_gateway', $post['id_rule_promo_payment_gateway'])->update(['status_validation_promo_payment_gateway' => 1]);
 
             if($update){
@@ -345,7 +355,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
             $userPaymentGateway = $detailTrx['user_id_hash'];
             $amount = $detailTrx['shopee_amount']/100;
         }elseif (!empty($detailTrx['payment_method'])){
-            $paymentGateway = $detailTrx['payment_type'];
+            $paymentGateway = $detailTrx['payment_method'];
             $userPaymentGateway = $detailTrx['user_contact'];
             $amount = $detailTrx['ipay88_amount']/100;
         }else{
@@ -407,6 +417,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 if(!empty($getRuleBrand)){
                     $productBrand = TransactionProduct::where('id_transaction', $id_transaction)
                                     ->whereIn('id_brand', $getRuleBrand)
+                                    ->groupBy('id_brand')
                                     ->pluck('id_brand')->toArray();
                     if($data['operator_brand'] == 'or' && empty($productBrand)){
                         continue;
