@@ -2961,19 +2961,19 @@ class ApiTransaction extends Controller
                 if (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Cancelled') {
                     unset($result['detail']['order_id_qrcode']);
                     unset($result['detail']['order_id']);
-                    unset($result['detail']['pickup_time']);
+                    // unset($result['detail']['pickup_time']);
                     $result['transaction_status'] = 0;
                     $result['transaction_status_text'] = 'PESANAN TELAH DIBATALKAN';
                 } elseif (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Pending') {
                     unset($result['detail']['order_id_qrcode']);
                     unset($result['detail']['order_id']);
-                    unset($result['detail']['pickup_time']);
+                    // unset($result['detail']['pickup_time']);
                     $result['transaction_status'] = 6;
                     $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
                 } elseif($list['detail']['reject_at'] != null) {
                     unset($result['detail']['order_id_qrcode']);
                     unset($result['detail']['order_id']);
-                    unset($result['detail']['pickup_time']);
+                    // unset($result['detail']['pickup_time']);
                     $result['transaction_status'] = 0;
                     $result['transaction_status_text'] = 'PESANAN DITOLAK';
                 } elseif($list['detail']['taken_by_system_at'] != null) {

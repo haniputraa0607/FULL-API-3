@@ -141,6 +141,15 @@ class ApiAutoresponseWithCode extends Controller
                                 "(autoresponse_code_periode_start BETWEEN '".$dateStart."' AND '".$dateEnd."' 
                                     OR '".$dateStart."' BETWEEN autoresponse_code_periode_start AND autoresponse_code_periode_end)"
                             )
+                            ->where(function ($q) use($post){
+                                $q->where('is_all_payment_method', 1)
+                                    ->orwhereIn('autoresponse_codes.id_autoresponse_code', function($sub) use($post){
+                                        $sub->select('id_autoresponse_code')
+                                            ->from('autoresponse_code_payment_methods')
+                                            ->whereIn('autoresponse_code_payment_method', $post['autoresponse_code_payment_method']);
+                                    });
+                            })
+                            ->where('autoresponse_codes.is_stop', 0)
                             ->whereNull('id_user')
                             ->groupBy('autoresponse_codes.id_autoresponse_code')
                             ->pluck('autoresponse_code_name')->toArray();
@@ -278,23 +287,6 @@ class ApiAutoresponseWithCode extends Controller
             $dateStart = date('Y-m-d', strtotime($post['autoresponse_code_periode_start']));
             $dateEnd = date('Y-m-d', strtotime($post['autoresponse_code_periode_end']));
 
-            //check another periode
-            $checPeriod = AutoresponseCode::leftJoin('autoresponse_code_list', 'autoresponse_code_list.id_autoresponse_code', 'autoresponse_codes.id_autoresponse_code')
-                ->whereRaw(
-                    "(autoresponse_code_periode_start BETWEEN '".$dateStart."' AND '".$dateEnd."' 
-                                    OR '".$dateStart."' BETWEEN autoresponse_code_periode_start AND autoresponse_code_periode_end)"
-                )
-                ->whereNotIn('autoresponse_codes.id_autoresponse_code', [$post['id_autoresponse_code']])
-                ->whereNull('id_user')
-                ->groupBy('autoresponse_codes.id_autoresponse_code')
-                ->pluck('autoresponse_code_name')->toArray();
-
-            if(!empty($checPeriod)){
-                return response()->json(['status' => 'fail', 'messages' => ['Same period with : '.implode(',', $checPeriod)]]);
-            }
-
-            DB::beginTransaction();
-
             $isAllTransactionType = 0;
             $isAllPaymentMethod = 0;
 
@@ -305,6 +297,48 @@ class ApiAutoresponseWithCode extends Controller
             if(in_array('All', $post['autoresponse_code_payment_method'])){
                 $isAllPaymentMethod = 1;
             }
+
+            if($isAllPaymentMethod == 1){
+                $checPeriod = AutoresponseCode::leftJoin('autoresponse_code_list', 'autoresponse_code_list.id_autoresponse_code', 'autoresponse_codes.id_autoresponse_code')
+                    ->whereRaw(
+                        "(autoresponse_code_periode_start BETWEEN '".$dateStart."' AND '".$dateEnd."' 
+                                    OR '".$dateStart."' BETWEEN autoresponse_code_periode_start AND autoresponse_code_periode_end)"
+                    )
+                    ->where('autoresponse_codes.is_stop', 0)
+                    ->whereNotIn('autoresponse_codes.id_autoresponse_code', [$post['id_autoresponse_code']])
+                    ->whereNull('id_user')
+                    ->groupBy('autoresponse_codes.id_autoresponse_code')
+                    ->pluck('autoresponse_code_name')->toArray();
+
+                if(!empty($checPeriod)){
+                    return response()->json(['status' => 'fail', 'messages' => ['Same period with : '.implode(',', $checPeriod)]]);
+                }
+            }
+            //check another periode
+            $checPeriod = AutoresponseCode::leftJoin('autoresponse_code_list', 'autoresponse_code_list.id_autoresponse_code', 'autoresponse_codes.id_autoresponse_code')
+                ->whereRaw(
+                    "(autoresponse_code_periode_start BETWEEN '".$dateStart."' AND '".$dateEnd."' 
+                                    OR '".$dateStart."' BETWEEN autoresponse_code_periode_start AND autoresponse_code_periode_end)"
+                )
+                ->where(function ($q) use($post){
+                    $q->where('is_all_payment_method', 1)
+                        ->orwhereIn('autoresponse_codes.id_autoresponse_code', function($sub) use($post){
+                            $sub->select('id_autoresponse_code')
+                                ->from('autoresponse_code_payment_methods')
+                                ->whereIn('autoresponse_code_payment_method', $post['autoresponse_code_payment_method']);
+                        });
+                })
+                ->where('autoresponse_codes.is_stop', 0)
+                ->whereNotIn('autoresponse_codes.id_autoresponse_code', [$post['id_autoresponse_code']])
+                ->whereNull('id_user')
+                ->groupBy('autoresponse_codes.id_autoresponse_code')
+                ->pluck('autoresponse_code_name')->toArray();
+
+            if(!empty($checPeriod)){
+                return response()->json(['status' => 'fail', 'messages' => ['Same period with : '.implode(',', $checPeriod)]]);
+            }
+
+            DB::beginTransaction();
 
             $dataMain = [
                 'autoresponse_code_name' => $post['autoresponse_code_name'],
@@ -359,11 +393,6 @@ class ApiAutoresponseWithCode extends Controller
                 }
             }
 
-            if(empty($post['codes']) && empty($post['data_import'][0])){
-                DB::rollback();
-                return response()->json(['status' => 'fail', 'messages' => ['List code and import code can not be empty. Please fill in one of the data. ']]);
-            }
-
             $list_codes = [];
             if(!empty($post['codes'])){
                 $list_codes = explode(',', str_replace("\r\n", ',', $post['codes']));
@@ -387,6 +416,7 @@ class ApiAutoresponseWithCode extends Controller
             }
 
             if(!empty($arrCode)){
+                AutoresponseCode::where('id_autoresponse_code', $post['id_autoresponse_code'])->update(['is_stop' => 0]);
                 $insert = AutoresponseCodeList::insert($arrCode);
                 if(!$insert){
                     DB::rollback();
@@ -452,8 +482,17 @@ class ApiAutoresponseWithCode extends Controller
             ->where('transactions.id_transaction', $id_transaction)->first();
 
         $transactionType = ($detailTrx['pickup_by'] == 'Customer' ? 'Pickup Order' : 'Delivery');
-        $paymentMethod = (empty($detailTrx['payment_type']) ? $detailTrx['payment_method']:$detailTrx['payment_type']);
+        $paymentMethod = '';
+        if(!empty($detailTrx['payment_type'])){
+            $paymentMethod = $detailTrx['payment_type'];
+        }elseif(!empty($detailTrx['payment_method'])){
+            $paymentMethod = $detailTrx['payment_method'];
+        }elseif (!empty($detailTrx['id_transaction_payment_shopee_pay'])){
+            $paymentMethod = 'Shopeepay';
+        }
+
         $getCode = AutoresponseCode::leftJoin('autoresponse_code_list', 'autoresponse_code_list.id_autoresponse_code', 'autoresponse_codes.id_autoresponse_code')
+                    ->where('autoresponse_codes.is_stop', 0)
                     ->whereNull('autoresponse_code_list.id_user')
                     ->whereDate('autoresponse_code_periode_start', '<=', $currentDate)
                     ->whereDate('autoresponse_code_periode_end', '>=', $currentDate)
@@ -504,5 +543,16 @@ class ApiAutoresponseWithCode extends Controller
         }
 
         return $getCode;
+    }
+
+    public function stopAutoresponse($id_autoresponse_code){
+        $checkAvailableCode = AutoresponseCodeList::where('id_autoresponse_code', $id_autoresponse_code)
+            ->whereNull('autoresponse_code_list.id_user')->pluck('id_autoresponse_code_list')->toArray();
+
+        if(empty($checkAvailableCode)){
+            AutoresponseCode::where('id_autoresponse_code', $id_autoresponse_code)->update(['is_stop' => 1]);
+        }
+
+        return true;
     }
 }
