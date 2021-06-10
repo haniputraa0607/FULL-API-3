@@ -345,7 +345,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
             $userPaymentGateway = $detailTrx['user_id_hash'];
             $amount = $detailTrx['shopee_amount']/100;
         }elseif (!empty($detailTrx['payment_method'])){
-            $paymentGateway = $detailTrx['payment_type'];
+            $paymentGateway = $detailTrx['payment_method'];
             $userPaymentGateway = $detailTrx['user_contact'];
             $amount = $detailTrx['ipay88_amount']/100;
         }else{
@@ -407,6 +407,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 if(!empty($getRuleBrand)){
                     $productBrand = TransactionProduct::where('id_transaction', $id_transaction)
                                     ->whereIn('id_brand', $getRuleBrand)
+                                    ->groupBy('id_brand')
                                     ->pluck('id_brand')->toArray();
                     if($data['operator_brand'] == 'or' && empty($productBrand)){
                         continue;
