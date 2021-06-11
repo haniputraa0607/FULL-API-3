@@ -452,7 +452,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 $data['fee_outlet'] = round($chargedOutlet,2);
 
                 $dataAlreadyUsePromo = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])->where('status_active', 1)->count();
-                if($dataAlreadyUsePromo >= $data['limit_promo_total']){
+                if($dataAlreadyUsePromo >= $data['limit_promo_total'] && $data['limit_promo_total'] != 0){
                     continue;
                 }
                 $data['id_user'] = $detailTrx['id_user'];
