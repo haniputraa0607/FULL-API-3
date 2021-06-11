@@ -909,6 +909,139 @@ class ApiDisburseController extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
+    public function dashboardV2(Request $request)
+    {
+        $pending 	= $this->getDisburseDashboardData($request, 'pending');
+        $processed 	= $this->getDisburseDashboardData($request, 'processed');
+
+        $result	= [
+            'pending'	=> $pending,
+            'processed'	=> $processed
+        ];
+
+        return MyHelper::checkGet($result);
+    }
+
+    public function getDisburseDashboardData($request, $status){
+        $post = $request->json()->all();
+
+        if ($status == 'pending') {
+            $operator = '!=';
+        }
+        else{
+            $operator = '=';
+        }
+
+        $nominal = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse');
+        $income_central = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse');
+
+        if ($status == 'processed') {
+            $nominal = $nominal->whereIn('disburse.disburse_status', ['Success']);
+            $income_central = $income_central->whereIn('disburse.disburse_status', ['Success']);
+
+            $nominal_fail = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->whereIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts']);
+        }
+
+        if ($status == 'pending') {
+            $nominal = $nominal->whereNotIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts', 'Success']);
+            $income_central = $income_central->whereNotIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts', 'Success']);
+
+            $total_disburse = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
+                ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->where(function ($q){
+                    $q->whereNotNull('transaction_pickups.taken_at')
+                        ->orWhereNotNull('transaction_pickups.taken_by_system_at');
+                })
+                ->where(function ($q){
+                    $q->orWhereNull('id_disburse_outlet')
+                        ->orWhereIn('id_disburse_outlet', function($query){
+                            $query->select('id_disburse_outlet')
+                                ->from('disburse')
+                                ->join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
+                                ->where('disburse.disburse_status', 'Queued');
+                        });
+                });
+        }
+
+        if(isset($post['id_outlet']) && !empty($post['id_outlet']) && $post['id_outlet'] != 'all'){
+            $nominal->where('disburse_outlet.id_outlet', $post['id_outlet']);
+            $income_central->where('disburse_outlet.id_outlet', $post['id_outlet']);
+            if ($status == 'processed') {
+                $nominal_fail->where('disburse_outlet.id_outlet', $post['id_outlet']);
+            }
+            if ($status == 'pending') {
+                $total_disburse->where('transactions.id_outlet', $post['id_outlet']);
+            }
+        }
+
+        if(isset($post['fitler_date']) && $post['fitler_date'] == 'today'){
+
+            $nominal->whereDate('disburse.created_at', date('Y-m-d'));
+            $income_central->where('disburse.created_at', date('Y-m-d'));
+            if ($status == 'processed') {
+                $nominal_fail->whereDate('disburse.created_at', date('Y-m-d'));
+            }
+            if ($status == 'pending') {
+                $total_disburse->where('transactions.transaction_date', date('Y-m-d'));
+            }
+
+        }elseif(isset($post['fitler_date']) && $post['fitler_date'] == 'specific_date'){
+            if(isset($post['start_date']) && !empty($post['start_date']) &&
+                isset($post['end_date']) && !empty($post['end_date'])){
+                $start_date = date('Y-m-d', strtotime($post['start_date']));
+                $end_date = date('Y-m-d', strtotime($post['end_date']));
+
+                $nominal->whereDate('disburse.created_at', '>=', $start_date)
+                    ->whereDate('disburse.created_at', '<=', $end_date);
+                $income_central->whereDate('disburse.created_at', '>=', $start_date)
+                    ->whereDate('disburse.created_at', '<=', $end_date);
+                if ($status == 'processed') {
+                    $nominal_fail->whereDate('disburse.created_at', '>=', $start_date)
+                        ->whereDate('disburse.created_at', '<=', $end_date);
+                }
+                if ($status == 'pending') {
+                    $total_disburse->whereDate('transactions.transaction_date', '>=', $start_date)
+                        ->whereDate('transactions.transaction_date', '<=', $end_date);
+                }
+            }
+        }
+
+        if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
+            $nominal->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
+                ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
+
+            if ($status == 'processed') {
+                $nominal_fail->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
+                    ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
+            }
+        }
+
+        $nominal = $nominal->selectRaw(
+            'SUM(disburse_outlet.disburse_nominal-(disburse.disburse_fee / disburse.total_outlet)) as "nom_success", 
+        	SUM(disburse_outlet.total_fee_item) as "nom_item", 
+        	SUM(disburse_outlet.total_omset) as "nom_grandtotal", 
+        	SUM(disburse_outlet.total_expense_central) as "nom_expense_central", 
+        	SUM(disburse_outlet.total_delivery_price) as "nom_delivery"'
+        )->first();
+
+        $income_central = $income_central->sum('total_income_central');
+        if ($status == 'processed') {
+            $nominal_fail = $nominal_fail->selectRaw('SUM(disburse_outlet.disburse_nominal-(disburse.disburse_fee / disburse.total_outlet)) as "disburse_nominal"')->first();
+        }
+        if ($status == 'pending') {
+            $total_disburse = $total_disburse->sum('disburse_outlet_transactions.income_outlet');
+        }
+
+        $result = [
+            'nominal' => $nominal,
+            'nominal_fail' => $nominal_fail??0,
+            'income_central' => $income_central,
+            'total_disburse' => $total_disburse??0
+        ];
+        return $result;
+        // return response()->json($result);
+    }
+
     public function sendRecapTransactionEachOultet(Request $request){
         $post = $request->json()->all();
         SendRecapManualy::dispatch(['data' => $post, 'type' => 'recap_transaction_each_outlet'])->onConnection('disbursequeue');
@@ -957,31 +1090,9 @@ class ApiDisburseController extends Controller
                     ]
                 ];
 
-                $summary = $this->summaryCalculationFeeWithRangeDate($start, $end, $getOutlet['id_outlet']);
+                $summary = $this->summaryCalculationFee(null, $start, $end, $getOutlet['id_outlet'], 1);
                 $generateTrx = app($this->trx)->exportTransaction($filter, 1);
-                $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-                    ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-                    ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
-                    ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
-                    ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
-                    ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
-                    ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
-                    ->leftJoin('rule_promo_payment_gateway','rule_promo_payment_gateway.id_rule_promo_payment_gateway','=','dot.id_rule_promo_payment_gateway')
-                    ->where('transaction_payment_status', 'Completed')
-                    ->whereNull('reject_at')
-                    ->where('transactions.id_outlet', $getOutlet['id_outlet'])
-                    ->whereDate('transactions.transaction_date', '>=',$start)
-                    ->whereDate('transactions.transaction_date', '<=',$end)
-                    ->with(['transaction_payment_subscription'=> function($q){
-                        $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
-                            ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
-                            ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
-                    }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
-                    ->select('rule_promo_payment_gateway.name as promo_payment_gateway_name', 'transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
-                        'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
-                        'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
-                        'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code')
-                    ->get()->toArray();
+                $dataDisburse = $this->summaryDisburse(null, $start, $end, $getOutlet['id_outlet'], 1);
 
                 if(!empty($generateTrx['list'])){
                     $excelFile = 'Transaction_['.$start.'_'.$end.']['.$getOutlet['outlet_code'].'].xlsx';
@@ -1304,98 +1415,13 @@ class ApiDisburseController extends Controller
         }
     }
 
-    function summaryCalculationFeeWithRangeDate($date_start, $date_end, $id_outlet = null){
-        $summaryFee = [];
-        $summaryFee = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
-            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-            ->leftJoin('transaction_payment_subscriptions as tps', 'tps.id_transaction', 'transactions.id_transaction')
-            ->whereDate('transactions.transaction_date', '>=',$date_start)
-            ->whereDate('transactions.transaction_date', '<=',$date_end)
-            ->where('transactions.transaction_payment_status', 'Completed')
-            ->whereNull('transaction_pickups.reject_at')
-            ->selectRaw('COUNT(transactions.id_transaction) total_trx, SUM(transactions.transaction_grandtotal) as total_gross_sales,
-                        SUM(tps.subscription_nominal) as total_subscription, 
-                        SUM(bundling_product_total_discount) as total_discount_bundling,
-                        SUM(transactions.transaction_subtotal) as total_sub_total, 
-                        SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
-                        SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
-                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription, SUM(bundling_product_fee_central) total_income_bundling_product,
-                        SUM(fee_promo_payment_gateway_central) total_income_promo_payment_gateway, SUM(fee_promo_payment_gateway_outlet+fee_promo_payment_gateway_central) total_promo_payment_gateway,
-                        SUM(transactions.transaction_discount_delivery) total_discount_delivery');
-
-        if($id_outlet){
-            $summaryFee = $summaryFee->where('id_outlet', $id_outlet);
-        }
-
-        $summaryFee = $summaryFee->first()->toArray();
-
-        $config = Configs::where('config_name', 'show or hide info calculation disburse')->first();
-
-        $summaryProduct = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
-            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-            ->join('products as p', 'p.id_product', 'transaction_products.id_product')
-            ->where('transaction_payment_status', 'Completed')
-            ->whereNull('reject_at')
-            ->whereDate('transaction_date', '>=',$date_start)
-            ->whereDate('transaction_date', '<=',$date_end)
-            ->where('transactions.id_outlet', $id_outlet)
-            ->where('p.product_type', 'product')
-            ->groupBy('transaction_products.id_product_variant_group')
-            ->groupBy('transaction_products.id_product')
-            ->selectRaw("p.product_name as name, SUM(transaction_products.transaction_product_qty) as total_qty,
-                        p.product_type as type,
-                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
-                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
-                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
-                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants")->get()->toArray();
-
-        $summaryProductPlastic = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
-            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-            ->join('products as p', 'p.id_product', 'transaction_products.id_product')
-            ->where('transaction_payment_status', 'Completed')
-            ->whereNull('reject_at')
-            ->whereDate('transaction_date', '>=',$date_start)
-            ->whereDate('transaction_date', '<=',$date_end)
-            ->where('transactions.id_outlet', $id_outlet)
-            ->where('p.product_type', 'plastic')
-            ->groupBy('transaction_products.id_product_variant_group')
-            ->groupBy('transaction_products.id_product')
-            ->selectRaw("p.product_name as name, SUM(transaction_products.transaction_product_qty) as total_qty,
-                        p.product_type as type,
-                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
-                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
-                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
-                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants")->get()->toArray();
-
-        $summaryModifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'transaction_product_modifiers.id_transaction')
-            ->join('transaction_products as tp', 'tp.id_transaction_product', 'transaction_product_modifiers.id_transaction_product')
-            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-            ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
-            ->where('transaction_payment_status', 'Completed')
-            ->whereNull('reject_at')
-            ->whereNull('transaction_product_modifiers.id_product_modifier_group')
-            ->whereDate('transaction_date', '>=',$date_start)
-            ->whereDate('transaction_date', '<=',$date_end)
-            ->where('transactions.id_outlet', $id_outlet)
-            ->groupBy('transaction_product_modifiers.id_product_modifier')
-            ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty,
-                        NULL as variants")->get()->toArray();
-
-        $summary = array_merge($summaryProduct,$summaryModifier,$summaryProductPlastic);
-        return [
-            'summary_product' => $summary,
-            'summary_fee' => $summaryFee,
-            'config' => $config
-        ];
-    }
-
     function sendRecapTransactionOultet(Request $request){
         $post = $request->json()->all();
         SendRecapManualy::dispatch(['date' => $post['date'], 'type' => 'recap_transaction_to_outlet'])->onConnection('disbursequeue');
         return 'Success';
     }
 
-    public function cronSendEmailDisburse($date = null){
+    public function cronSendEmailDisburse($date = '2021-04-13'){
         $log = MyHelper::logCron('Send Email Recap To Outlet');
         try {
             $currentDate = date('Y-m-d');
@@ -1441,30 +1467,9 @@ class ApiDisburseController extends Controller
                             ]
                         ];
 
-                        $summary = $this->summaryCalculationFee($yesterday, $outlet['id_outlet']);
+                        $summary = $this->summaryCalculationFee($yesterday, null, null, $outlet['id_outlet'], 1);
                         $generateTrx = app($this->trx)->exportTransaction($filter, 1);
-                        $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-                            ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-                            ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
-                            ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
-                            ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
-                            ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
-                            ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
-                            ->leftJoin('rule_promo_payment_gateway','rule_promo_payment_gateway.id_rule_promo_payment_gateway','=','dot.id_rule_promo_payment_gateway')
-                            ->where('transaction_payment_status', 'Completed')
-                            ->whereNull('reject_at')
-                            ->where('transactions.id_outlet', $outlet['id_outlet'])
-                            ->whereDate('transactions.transaction_date', $yesterday)
-                            ->with(['transaction_payment_subscription'=> function($q){
-                                $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
-                                    ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
-                                    ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
-                            }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
-                            ->select('rule_promo_payment_gateway.name as promo_payment_gateway_name', 'transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
-                                'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
-                                'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
-                                'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code')
-                            ->get()->toArray();
+                        $dataDisburse = $this->summaryDisburse($yesterday, null, null, $outlet['id_outlet'], 1);
 
                         if(!empty($generateTrx['list'])){
                             $excelFile = 'Transaction_['.$yesterday.']_['.$outlet['outlet_code'].'].xlsx';
@@ -1553,216 +1558,6 @@ class ApiDisburseController extends Controller
         };
     }
 
-    function summaryCalculationFee($date, $id_outlet = null){
-        $summaryFee = [];
-        $summaryFee = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
-            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-            ->leftJoin('transaction_payment_subscriptions as tps', 'tps.id_transaction', 'transactions.id_transaction')
-            ->whereDate('transactions.transaction_date', $date)
-            ->where('transactions.transaction_payment_status', 'Completed')
-            ->whereNull('transaction_pickups.reject_at')
-            ->selectRaw('COUNT(transactions.id_transaction) total_trx, SUM(transactions.transaction_grandtotal) as total_gross_sales,
-                        SUM(tps.subscription_nominal) as total_subscription,
-                        SUM(bundling_product_total_discount) as total_discount_bundling, 
-                        SUM(transactions.transaction_subtotal) as total_sub_total, 
-                        SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
-                        SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
-                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription, SUM(bundling_product_fee_central) total_income_bundling_product,
-                        SUM(fee_promo_payment_gateway_central) total_income_promo_payment_gateway, SUM(fee_promo_payment_gateway_outlet+fee_promo_payment_gateway_central) total_promo_payment_gateway,
-                        SUM(transactions.transaction_discount_delivery) total_discount_delivery');
-
-        if($id_outlet){
-            $summaryFee = $summaryFee->where('id_outlet', $id_outlet);
-        }
-
-        $summaryFee = $summaryFee->first()->toArray();
-
-        $config = Configs::where('config_name', 'show or hide info calculation disburse')->first();
-
-        $summaryProduct = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
-            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-            ->join('products as p', 'p.id_product', 'transaction_products.id_product')
-            ->where('transaction_payment_status', 'Completed')
-            ->whereNull('reject_at')
-            ->whereDate('transaction_date', $date)
-            ->where('p.product_type', 'product')
-            ->where('transactions.id_outlet', $id_outlet)
-            ->groupBy('transaction_products.id_product_variant_group')
-            ->groupBy('transaction_products.id_product')
-            ->selectRaw("p.product_name as name, p.product_type as type, SUM(transaction_products.transaction_product_qty) as total_qty,
-                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
-                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
-                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
-                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants")->get()->toArray();
-        $summaryModifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'transaction_product_modifiers.id_transaction')
-            ->join('transaction_products as tp', 'tp.id_transaction_product', 'transaction_product_modifiers.id_transaction_product')
-            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-            ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
-            ->where('transaction_payment_status', 'Completed')
-            ->whereNull('transaction_product_modifiers.id_product_modifier_group')
-            ->whereNull('reject_at')
-            ->whereDate('transaction_date', $date)
-            ->where('transactions.id_outlet', $id_outlet)
-            ->groupBy('transaction_product_modifiers.id_product_modifier')
-            ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty,
-                        NULL as variants")->get()->toArray();
-        $summaryProductPlastic = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
-            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-            ->join('products as p', 'p.id_product', 'transaction_products.id_product')
-            ->where('transaction_payment_status', 'Completed')
-            ->whereNull('reject_at')
-            ->whereDate('transaction_date', $date)
-            ->where('transactions.id_outlet', $id_outlet)
-            ->where('p.product_type', 'plastic')
-            ->groupBy('transaction_products.id_product_variant_group')
-            ->groupBy('transaction_products.id_product')
-            ->selectRaw("p.product_name as name, p.product_type as type, SUM(transaction_products.transaction_product_qty) as total_qty,
-                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
-                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
-                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
-                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants")->get()->toArray();
-
-        $summary = array_merge($summaryProduct, $summaryModifier,$summaryProductPlastic);
-        return [
-            'summary_product' => $summary,
-            'summary_fee' => $summaryFee,
-            'config' => $config
-        ];
-    }
-
-    public function dashboardV2(Request $request)
-    {
-    	$pending 	= $this->getDisburseDashboardData($request, 'pending');
-    	$processed 	= $this->getDisburseDashboardData($request, 'processed');
-
-    	$result	= [
-    		'pending'	=> $pending,
-    		'processed'	=> $processed
-    	];
-
-    	return MyHelper::checkGet($result);
-    }
-
-    public function getDisburseDashboardData($request, $status){
-        $post = $request->json()->all();
-
-        if ($status == 'pending') {
-        	$operator = '!=';
-        }
-        else{
-        	$operator = '=';
-        }
-
-        $nominal = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse');
-        $income_central = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse');
-
-        if ($status == 'processed') {
-        	$nominal = $nominal->whereIn('disburse.disburse_status', ['Success']);
-	        $income_central = $income_central->whereIn('disburse.disburse_status', ['Success']);
-
-        	$nominal_fail = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->whereIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts']);
-        }
-
-        if ($status == 'pending') {
-        	$nominal = $nominal->whereNotIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts', 'Success']);
-	        $income_central = $income_central->whereNotIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts', 'Success']);
-
-	        $total_disburse = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
-	                            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-	                            ->where(function ($q){
-	                                $q->whereNotNull('transaction_pickups.taken_at')
-	                                    ->orWhereNotNull('transaction_pickups.taken_by_system_at');
-	                            })
-	                            ->where(function ($q){
-	                                $q->orWhereNull('id_disburse_outlet')
-	                                    ->orWhereIn('id_disburse_outlet', function($query){
-	                                    $query->select('id_disburse_outlet')
-	                                        ->from('disburse')
-	                                        ->join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
-	                                        ->where('disburse.disburse_status', 'Queued');
-	                                });
-	                            });
-        }
-
-        if(isset($post['id_outlet']) && !empty($post['id_outlet']) && $post['id_outlet'] != 'all'){
-            $nominal->where('disburse_outlet.id_outlet', $post['id_outlet']);
-            $income_central->where('disburse_outlet.id_outlet', $post['id_outlet']);
-            if ($status == 'processed') {
-	            $nominal_fail->where('disburse_outlet.id_outlet', $post['id_outlet']);
-	        }
-	        if ($status == 'pending') {
-	            $total_disburse->where('transactions.id_outlet', $post['id_outlet']);
-	        }
-        }
-
-        if(isset($post['fitler_date']) && $post['fitler_date'] == 'today'){
-
-            $nominal->whereDate('disburse.created_at', date('Y-m-d'));
-            $income_central->where('disburse.created_at', date('Y-m-d'));
-            if ($status == 'processed') {
-            	$nominal_fail->whereDate('disburse.created_at', date('Y-m-d'));
-            }
-            if ($status == 'pending') {
-            	$total_disburse->where('transactions.transaction_date', date('Y-m-d'));
-            }
-
-        }elseif(isset($post['fitler_date']) && $post['fitler_date'] == 'specific_date'){
-            if(isset($post['start_date']) && !empty($post['start_date']) &&
-                isset($post['end_date']) && !empty($post['end_date'])){
-                $start_date = date('Y-m-d', strtotime($post['start_date']));
-                $end_date = date('Y-m-d', strtotime($post['end_date']));
-
-                $nominal->whereDate('disburse.created_at', '>=', $start_date)
-                    ->whereDate('disburse.created_at', '<=', $end_date);
-                $income_central->whereDate('disburse.created_at', '>=', $start_date)
-                    ->whereDate('disburse.created_at', '<=', $end_date);
-                if ($status == 'processed') {
-	                $nominal_fail->whereDate('disburse.created_at', '>=', $start_date)
-	                    ->whereDate('disburse.created_at', '<=', $end_date);
-	            }
-	            if ($status == 'pending') {
-	                $total_disburse->whereDate('transactions.transaction_date', '>=', $start_date)
-	                    ->whereDate('transactions.transaction_date', '<=', $end_date);
-	            }
-            }
-        }
-
-        if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
-            $nominal->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
-                ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
-
-            if ($status == 'processed') {
-            	$nominal_fail->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
-                	->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
-            }
-        }
-
-        $nominal = $nominal->selectRaw(
-        	'SUM(disburse_outlet.disburse_nominal-(disburse.disburse_fee / disburse.total_outlet)) as "nom_success", 
-        	SUM(disburse_outlet.total_fee_item) as "nom_item", 
-        	SUM(disburse_outlet.total_omset) as "nom_grandtotal", 
-        	SUM(disburse_outlet.total_expense_central) as "nom_expense_central", 
-        	SUM(disburse_outlet.total_delivery_price) as "nom_delivery"'
-        )->first();
-
-        $income_central = $income_central->sum('total_income_central');
-        if ($status == 'processed') {
-        	$nominal_fail = $nominal_fail->selectRaw('SUM(disburse_outlet.disburse_nominal-(disburse.disburse_fee / disburse.total_outlet)) as "disburse_nominal"')->first();
-        }
-        if ($status == 'pending') {
-        	$total_disburse = $total_disburse->sum('disburse_outlet_transactions.income_outlet');
-        }
-
-        $result = [
-            'nominal' => $nominal,
-            'nominal_fail' => $nominal_fail??0,
-            'income_central' => $income_central,
-            'total_disburse' => $total_disburse??0
-        ];
-        return $result;
-        // return response()->json($result);
-    }
-
     public function sendRecap(Request $request){
         $post = $request->json()->all();
         SendRecapManualy::dispatch(['date' => $post['date'], 'type' => 'recap_to_admin'])->onConnection('disbursequeue');
@@ -1795,34 +1590,13 @@ class ApiDisburseController extends Controller
             ];
 
             $generateTrx = app($this->trx)->exportTransaction($filter, 1);
-            $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-                ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-                ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
-                ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
-                ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
-                ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
-                ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
-                ->leftJoin('rule_promo_payment_gateway','rule_promo_payment_gateway.id_rule_promo_payment_gateway','=','dot.id_rule_promo_payment_gateway')
-                ->where('transaction_payment_status', 'Completed')
-                ->whereNull('reject_at')
-                ->whereDate('transactions.transaction_date', $yesterday)
-                ->with(['transaction_payment_subscription'=> function($q){
-                    $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
-                        ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
-                        ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
-                }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
-                ->select('rule_promo_payment_gateway.name as promo_payment_gateway_name', 'transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
-                    'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
-                    'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
-                    'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code')
-                ->orderBy('outlets.outlet_code', 'asc')
-                ->get()->toArray();
+            $dataDisburse = $this->summaryDisburse($yesterday, null, null, null, 1);
 
             $getEmailTo = Setting::where('key', 'email_to_send_recap_transaction')->first();
 
             if(!empty($dataDisburse) && !empty($generateTrx['list']) && !empty($getEmailTo['value'])){
                 $excelFile = 'Transaction_['.$yesterday.'].xlsx';
-                $summary = $this->summaryCalculationFee($yesterday);
+                $summary = $this->summaryCalculationFee($yesterday,null,null,null,1);
                 $summary['show_another_income'] = 1;
                 $generateTrx['show_product_code'] = 1;
                 $generateTrx['show_another_income'] = 1;
@@ -1905,5 +1679,154 @@ class ApiDisburseController extends Controller
         }catch (\Exception $e) {
             $log->fail($e->getMessage());
         };
+    }
+
+    function summaryCalculationFee($date=null, $date_start=null, $date_end=null, $id_outlet = null, $check_reject_at = 0, $use_filter=[]){
+        $summaryFee = [];
+        $summaryFee = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->leftJoin('transaction_payment_subscriptions as tps', 'tps.id_transaction', 'transactions.id_transaction')
+            ->where('transactions.transaction_payment_status', 'Completed')
+            ->selectRaw('COUNT(transactions.id_transaction) total_trx, SUM(transactions.transaction_grandtotal) as total_gross_sales,
+                        SUM(tps.subscription_nominal) as total_subscription, 
+                        SUM(bundling_product_total_discount) as total_discount_bundling,
+                        SUM(transactions.transaction_subtotal) as total_sub_total, 
+                        SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
+                        SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
+                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription, SUM(bundling_product_fee_central) total_income_bundling_product,
+                        SUM(fee_promo_payment_gateway_central) total_income_promo_payment_gateway, SUM(fee_promo_payment_gateway_outlet+fee_promo_payment_gateway_central) total_promo_payment_gateway,
+                        SUM(transactions.transaction_discount_delivery) total_discount_delivery');
+
+        $summaryProduct = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->join('products as p', 'p.id_product', 'transaction_products.id_product')
+            ->where('transaction_payment_status', 'Completed')
+            ->where('p.product_type', 'product')
+            ->groupBy('transaction_products.id_product_variant_group')
+            ->groupBy('transaction_products.id_product')
+            ->selectRaw("p.product_name as name, SUM(transaction_products.transaction_product_qty) as total_qty,
+                        p.product_type as type,
+                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
+                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
+                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
+                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants");
+
+        $summaryModifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'transaction_product_modifiers.id_transaction')
+            ->join('transaction_products as tp', 'tp.id_transaction_product', 'transaction_product_modifiers.id_transaction_product')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+            ->where('transaction_payment_status', 'Completed')
+            ->whereNull('transaction_product_modifiers.id_product_modifier_group')
+            ->groupBy('transaction_product_modifiers.id_product_modifier')
+            ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty,
+                        NULL as variants");
+
+        $summaryProductPlastic = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->join('products as p', 'p.id_product', 'transaction_products.id_product')
+            ->where('transaction_payment_status', 'Completed')
+            ->where('p.product_type', 'plastic')
+            ->groupBy('transaction_products.id_product_variant_group')
+            ->groupBy('transaction_products.id_product')
+            ->selectRaw("p.product_name as name, SUM(transaction_products.transaction_product_qty) as total_qty,
+                        p.product_type as type,
+                        (SELECT GROUP_CONCAT(pv.`product_variant_name` SEPARATOR ',') FROM `product_variant_groups` pvg
+                        JOIN `product_variant_pivot` pvp ON pvg.`id_product_variant_group` = pvp.`id_product_variant_group`
+                        JOIN `product_variants` pv ON pv.`id_product_variant` = pvp.`id_product_variant`
+                        WHERE pvg.`id_product_variant_group` = transaction_products.id_product_variant_group) as variants");
+
+        if(!empty($date)){
+            $summaryFee = $summaryFee->whereDate('transactions.transaction_date', $date);
+            $summaryProduct = $summaryProduct->whereDate('transactions.transaction_date', $date);
+            $summaryModifier = $summaryModifier->whereDate('transactions.transaction_date', $date);
+            $summaryProductPlastic = $summaryProductPlastic->whereDate('transactions.transaction_date', $date);
+        }else{
+            $summaryFee = $summaryFee->whereDate('transaction_date', '>=',$date_start)
+                ->whereDate('transaction_date', '<=',$date_end);
+            $summaryProduct = $summaryProduct->whereDate('transactions.transaction_date', '>=',$date_start)
+                ->whereDate('transaction_date', '<=',$date_end);
+            $summaryModifier = $summaryModifier->whereDate('transaction_date', '>=',$date_start)
+                ->whereDate('transaction_date', '<=',$date_end);
+            $summaryProductPlastic = $summaryProductPlastic->whereDate('transaction_date', '>=',$date_start)
+                ->whereDate('transaction_date', '<=',$date_end);
+        }
+
+        if($id_outlet){
+            $summaryFee = $summaryFee->where('transactions.id_outlet', $id_outlet);
+            $summaryProduct = $summaryProduct->where('transactions.id_outlet', $id_outlet);
+            $summaryModifier = $summaryModifier->where('transactions.id_outlet', $id_outlet);
+            $summaryProductPlastic = $summaryProductPlastic->where('transactions.id_outlet', $id_outlet);
+        }
+
+        if($check_reject_at == 1){
+            $summaryFee = $summaryFee->whereNull('transaction_pickups.reject_at');
+            $summaryProduct = $summaryProduct->whereNull('transaction_pickups.reject_at');
+            $summaryModifier = $summaryModifier->whereNull('transaction_pickups.reject_at');
+            $summaryProductPlastic = $summaryProductPlastic->whereNull('transaction_pickups.reject_at');
+        }
+
+        if(!empty($use_filter)){
+            $summaryFee = app('Modules\Franchise\Http\Controllers\ApiTransactionFranchiseController')->filterTransaction($summaryFee, $use_filter);
+            $summaryProduct = app('Modules\Franchise\Http\Controllers\ApiTransactionFranchiseController')->filterTransaction($summaryProduct, $use_filter);
+            $summaryModifier = app('Modules\Franchise\Http\Controllers\ApiTransactionFranchiseController')->filterTransaction($summaryModifier, $use_filter);
+            $summaryProductPlastic = app('Modules\Franchise\Http\Controllers\ApiTransactionFranchiseController')->filterTransaction($summaryProductPlastic, $use_filter);
+        }
+
+        $summaryFee = $summaryFee->first()->toArray();
+        $summaryProduct = $summaryProduct->get()->toArray();
+        $summaryModifier = $summaryModifier->get()->toArray();
+        $summaryProductPlastic = $summaryProductPlastic->get()->toArray();
+
+        $summary = array_merge($summaryProduct,$summaryModifier,$summaryProductPlastic);
+        $config = Configs::where('config_name', 'show or hide info calculation disburse')->first();
+        return [
+            'summary_product' => $summary,
+            'summary_fee' => $summaryFee,
+            'config' => $config
+        ];
+    }
+
+    function summaryDisburse($date=null, $date_start=null, $date_end=null, $id_outlet = null, $check_reject_at = 0, $use_filter = []){
+        $data = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+            ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
+            ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
+            ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
+            ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
+            ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
+            ->leftJoin('rule_promo_payment_gateway','rule_promo_payment_gateway.id_rule_promo_payment_gateway','=','dot.id_rule_promo_payment_gateway')
+            ->where('transaction_payment_status', 'Completed')
+            ->with(['transaction_payment_subscription'=> function($q){
+                $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
+                    ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+                    ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
+            }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
+            ->select('rule_promo_payment_gateway.name as promo_payment_gateway_name', 'transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
+                'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
+                'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
+                'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code');
+
+        if(!empty($date)){
+            $data = $data->whereDate('transaction_date', $date);
+        }else{
+            $data = $data->whereDate('transaction_date', '>=',$date_start)
+                ->whereDate('transaction_date', '<=',$date_end);
+        }
+
+        if($id_outlet){
+            $data = $data->where('transactions.id_outlet', $id_outlet);
+        }
+
+        if($check_reject_at == 1){
+            $data = $data->whereNull('transaction_pickups.reject_at');
+        }
+
+        if(!empty($use_filter)){
+            $data = app('Modules\Franchise\Http\Controllers\ApiTransactionFranchiseController')->filterTransaction($data, $use_filter);
+        }
+
+        $data = $data->get()->toArray();
+
+        return $data;
     }
 }
