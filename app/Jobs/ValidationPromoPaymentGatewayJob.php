@@ -67,6 +67,10 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
             ->where('id_rule_promo_payment_gateway', $datas['id_rule_promo_payment_gateway'])->pluck('promo_payment_gateway_transactions.id_transaction')->toArray();
 
         foreach ($data as $key => $value) {
+            if(empty($value['id_reference'])){
+                continue;
+            }
+
             $idTransaction = NULL;
             if($datas['reference_by'] == 'transaction_receipt_number'){
                 $idTransaction = Transaction::where('transaction_receipt_number', $value['id_reference'])->first()->id_transaction??null;
