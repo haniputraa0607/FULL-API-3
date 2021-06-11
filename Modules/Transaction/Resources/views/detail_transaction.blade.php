@@ -36,6 +36,7 @@
         <th style="background-color: #dcdcdc;" width="10"> Sub Total </th>
         <th style="background-color: #dcdcdc;" width="10"> Discounts </th>
         <th style="background-color: #dcdcdc;" width="10"> Grand Total </th>
+        <th style="background-color: #dcdcdc;" width="10"> Cashback </th>
         <th style="background-color: #dcdcdc;" width="10"> Total Transaction </th>
         <th style="background-color: #dcdcdc;" width="10"> Biaya Jasa </th>
         <th style="background-color: #dcdcdc;" width="10"> MDR PG </th>
@@ -43,7 +44,7 @@
         <th style="background-color: #dcdcdc;" width="10"> Income Promo </th>
         <th style="background-color: #dcdcdc;" width="10"> Income Subscription </th>
         <th style="background-color: #dcdcdc;" width="10"> Income Bundling Product </th>
-        <th style="background-color: #dcdcdc;" width="10"> Income Promo Payment Gateway </th>
+        <th style="background-color: #dcdcdc;" width="10"> Income Promo Cashback </th>
         @endif
         <th style="background-color: #dcdcdc;" width="10"> Income Outlet </th>
         <th style="background-color: #dcdcdc;" width="10"> Payment </th>

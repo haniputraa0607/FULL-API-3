@@ -1973,9 +1973,9 @@ class ApiTransaction extends Controller
                             $htmlBundling .= '<td>'.$priceMod.'</td>';
                             $htmlBundling .= '<td>0</td>';
                             $htmlBundling .= '<td>'.($priceMod).'</td>';
-                            $htmlBundling .= '<td></td><td></td><td></td>';
+                            $htmlBundling .= '<td></td><td></td><td></td><td></td>';
                             if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                $htmlBundling .= '<td></td><td></td><td></td>';
+                                $htmlBundling .= '<td></td><td></td><td></td><td></td>';
                             }
                             $htmlBundling .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                             $htmlBundling .= '</tr>';
@@ -2002,9 +2002,9 @@ class ApiTransaction extends Controller
                                     $htmlBundling .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
                                     $htmlBundling .= '<td>0</td>';
                                     $htmlBundling .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
-                                    $htmlBundling .= '<td></td><td></td><td></td>';
+                                    $htmlBundling .= '<td></td><td></td><td></td><td></td>';
                                     if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                        $htmlBundling .= '<td></td><td></td><td></td>';
+                                        $htmlBundling .= '<td></td><td></td><td></td><td></td>';
                                     }
                                     $htmlBundling .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                                     $htmlBundling .= '</tr>';
@@ -2031,9 +2031,9 @@ class ApiTransaction extends Controller
                             $htmlBundling .= '<td>'.(int)($val['transaction_bundling_product_base_price']+$val['transaction_bundling_product_total_discount']).'</td>';
                             $htmlBundling .= '<td>'.$val['transaction_bundling_product_total_discount'].'</td>';
                             $htmlBundling .= '<td>'.(int)($val['transaction_bundling_product_base_price']+$val['transaction_bundling_product_total_discount']-$val['transaction_bundling_product_total_discount']).'</td>';
-                            $htmlBundling .= '<td></td><td></td><td></td>';
+                            $htmlBundling .= '<td></td><td></td><td></td><td></td>';
                             if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                $htmlBundling .= '<td></td><td></td><td></td>';
+                                $htmlBundling .= '<td></td><td></td><td></td><td></td>';
                             }
                             $htmlBundling .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                             $htmlBundling .= '</tr>';
@@ -2093,9 +2093,9 @@ class ApiTransaction extends Controller
                                 $html .= '<td>0</td>';
                                 $html .= '<td>'.($priceProd+$priceMod).'</td>';
                             }
-                            $html .= '<td></td><td></td><td></td>';
+                            $html .= '<td></td><td></td><td></td><td></td>';
                             if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                $html .= '<td></td><td></td><td></td>';
+                                $html .= '<td></td><td></td><td></td><td></td>';
                             }
                             $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                             $html .= '</tr>';
@@ -2121,9 +2121,9 @@ class ApiTransaction extends Controller
                                     $html .= '<td>'.($mod[$i]['transaction_product_modifier_price']??0).'</td>';
                                     $html .= '<td>0</td>';
                                     $html .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
-                                    $html .= '<td></td><td></td><td></td>';
+                                    $html .= '<td></td><td></td><td></td><td></td>';
                                     if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                        $html .= '<td></td><td></td><td></td>';
+                                        $html .= '<td></td><td></td><td></td><td></td>';
                                     }
                                     $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                                     $html .= '</tr>';
@@ -2159,9 +2159,9 @@ class ApiTransaction extends Controller
                                 $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
                                 $html .= '<td>0</td>';
                                 $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
-                                $html .= '<td></td><td></td><td></td>';
+                                $html .= '<td></td><td></td><td></td><td></td>';
                                 if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                    $html .= '<td></td><td></td><td></td>';
+                                    $html .= '<td></td><td></td><td></td><td></td>';
                                 }
                                 $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                                 $html .= '</tr>';
@@ -2194,9 +2194,9 @@ class ApiTransaction extends Controller
                                 $html .= '<td></td>';
                                 $html .= '<td>'.abs($val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
                                 $html .= '<td>'.(-$val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
-                                $html .= '<td></td><td></td><td></td>';
+                                $html .= '<td></td><td></td><td></td><td></td>';
                                 if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                    $html .= '<td></td><td></td><td></td>';
+                                    $html .= '<td></td><td></td><td></td><td></td>';
                                 }
                                 $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                                 $html .= '</tr>';
@@ -2220,9 +2220,9 @@ class ApiTransaction extends Controller
                             $html .= '<td></td>';
                             $html .= '<td>'.abs(abs($val['transaction_discount'])??0).'</td>';
                             $html .= '<td>'.(-abs($val['transaction_discount'])??0).'</td>';
-                            $html .= '<td></td><td></td><td></td>';
+                            $html .= '<td></td><td></td><td></td><td></td>';
                             if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                $html .= '<td></td><td></td><td></td>';
+                                $html .= '<td></td><td></td><td></td><td></td>';
                             }
                             $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                             $html .= '</tr>';
@@ -2251,15 +2251,16 @@ class ApiTransaction extends Controller
                             $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
                             $html .= '<td>'.$discountDelivery.'</td>';
                             $html .= '<td>'.($val['transaction_shipment_go_send']-$discountDelivery??0).'</td>';
+                            $html .= '<td></td><td></td><td></td><td></td>';
                             if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                $html .= '<td></td><td></td><td></td>';
+                                $html .= '<td></td><td></td><td></td><td></td>';
                             }
                             $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                             $html .= '</tr>';
                         }
 
                         $promoNamePaymentGateway = (empty($val['promo_payment_gateway_name']) ? "": $val['promo_payment_gateway_name']);
-                        $nominalPromoPaymentGateway = (empty($val['fee_promo_payment_gateway_outlet']) ? 0: $val['fee_promo_payment_gateway_outlet']);
+                        $nominalPromoPaymentGateway =  $val['fee_promo_payment_gateway_outlet']+$val['fee_promo_payment_gateway_central'];
                         if(!empty($promoNamePaymentGateway)) {
                             $html .= '<tr>';
                             $html .= $sameData;
@@ -2277,11 +2278,12 @@ class ApiTransaction extends Controller
                             $html .= '<td></td>';
                             $html .= '<td></td>';
                             $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
                             $html .= '<td>'.$nominalPromoPaymentGateway.'</td>';
-                            $html .= '<td>'.(-$nominalPromoPaymentGateway).'</td>';
                             $html .= '<td></td><td></td><td></td>';
                             if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                $html .= '<td></td><td></td><td></td>';
+                                $html .= '<td></td><td></td><td></td><td></td>';
                             }
                             $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                             $html .= '</tr>';
@@ -2295,8 +2297,8 @@ class ApiTransaction extends Controller
                         $html .= '<td>Fee</td>';
                         $html .= $addAdditionalColumnVariant;
                         $html .= '<td></td>';
-                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                        $html .= '<td>'.($val['transaction_grandtotal']-$sub-$nominalPromoPaymentGateway).'</td>';
+                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                        $html .= '<td>'.($val['transaction_grandtotal']-$sub).'</td>';
                         $html .= '<td>'.(float)$val['fee_item'].'</td>';
                         $html .= '<td>'.(float)$paymentCharge.'</td>';
                         if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
