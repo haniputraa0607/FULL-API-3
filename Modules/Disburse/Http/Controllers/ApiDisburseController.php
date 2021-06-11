@@ -1421,7 +1421,7 @@ class ApiDisburseController extends Controller
         return 'Success';
     }
 
-    public function cronSendEmailDisburse($date = '2021-04-13'){
+    public function cronSendEmailDisburse($date = null){
         $log = MyHelper::logCron('Send Email Recap To Outlet');
         try {
             $currentDate = date('Y-m-d');
