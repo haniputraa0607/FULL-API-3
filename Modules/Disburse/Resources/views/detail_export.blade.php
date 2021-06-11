@@ -13,7 +13,7 @@
     </tr>
     <tr>
         <td width="30"><b>Total Discount + Promo</b></td>
-        <td>: {{number_format((abs($summary_fee['total_discount'])+$summary_fee['total_subscription']+abs($summary_fee['total_discount_delivery'])+abs((float)$summary_fee['total_discount_bundling'])+($summary_fee['total_promo_payment_gateway']??0)),2,",","")}}</td>
+        <td>: {{number_format((abs($summary_fee['total_discount'])+$summary_fee['total_subscription']+abs($summary_fee['total_discount_delivery'])+abs((float)$summary_fee['total_discount_bundling'])),2,",","")}}</td>
     </tr>
     <tr>
         <td width="30"><b>Total Delivery</b></td>
@@ -21,7 +21,7 @@
     </tr>
     <tr>
         <td width="30"><b>Sub Total (Gross Sales + delivery - discount - promo)</b></td>
-        <td>: {{number_format(((float)$summary_fee['total_gross_sales']-$summary_fee['total_subscription']-($summary_fee['total_income_promo_payment_gateway']??0)),2,",","")}}</td>
+        <td>: {{number_format(((float)$summary_fee['total_gross_sales']-$summary_fee['total_subscription']),2,",","")}}</td>
     </tr>
     <tr>
         <td width="30"><b>Total Fee Item</b></td>
@@ -45,7 +45,7 @@
         <td>: {{number_format((float)$summary_fee['total_income_bundling_product']??0,2,",","")}}</td>
     </tr>
     <tr>
-        <td width="30"><b>Total Income Promo Payment Gateway</b></td>
+        <td width="30"><b>Total Income Promo Cashback</b></td>
         <td>: {{number_format((float)$summary_fee['total_income_promo_payment_gateway']??0,2,",","")}}</td>
     </tr>
     @endif
