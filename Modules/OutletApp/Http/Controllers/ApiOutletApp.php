@@ -992,7 +992,10 @@ class ApiOutletApp extends Controller
                     'code'             => $code
                 ]);
 
-                AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $user['id'], 'id_transaction' => $order->id_transaction]);
+                $updateCode = AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $user['id'], 'id_transaction' => $order->id_transaction]);
+                if($updateCode){
+                    app($this->autoresponse_code)->stopAutoresponse($idCode);
+                }
             }else{
                 $send = app($this->autocrm)->SendAutoCRM($order->pickup_by == 'Customer'?'Order Taken':'Order Taken By Driver', $user['phone'], [
                     "outlet_name"      => $outlet['outlet_name'],
@@ -1024,8 +1027,8 @@ class ApiOutletApp extends Controller
         $profile['outlet_name']    = $outlet['outlet_name'];
         $profile['outlet_status']   = $outlet['outlet_status'];
         $profile['outlet_code']    = $outlet['outlet_code'];
-        $profile['outlet_address'] = $outlet['outlet_address'];
-        $profile['outlet_phone']   = $outlet['outlet_phone'];
+        $profile['outlet_address'] = $outlet['outlet_address']??'';
+        $profile['outlet_phone']   = $outlet['outlet_phone']??'';
         $profile['status']         = 'success';
 
         //save token outlet
@@ -1140,7 +1143,7 @@ class ApiOutletApp extends Controller
                                 'id_product' => $idProd,
                                 'id_outlet'  => $outlet['id_outlet'],
                                 'product_detail_stock_status' => 'Sold Out',
-                                'product_detail_visibility' => 'Visible',
+                                'product_detail_visibility' => null,
                                 'product_detail_status' => 'Active',
                                 'created_at' => $date_time,
                                 'updated_at' => $date_time
@@ -1206,7 +1209,7 @@ class ApiOutletApp extends Controller
                                 'id_product' => $idProd,
                                 'id_outlet'  => $outlet['id_outlet'],
                                 'product_detail_stock_status' => 'Available',
-                                'product_detail_visibility' => 'Visible',
+                                'product_detail_visibility' => null,
                                 'product_detail_status' => 'Active',
                                 'created_at' => $date_time,
                                 'updated_at' => $date_time
@@ -1279,7 +1282,7 @@ class ApiOutletApp extends Controller
                                 'id_product_modifier' => $idProd,
                                 'id_outlet'  => $outlet['id_outlet'],
                                 'product_modifier_stock_status' => 'Sold Out',
-                                'product_modifier_visibility' => 'Visible',
+                                'product_modifier_visibility' => null,
                                 'product_modifier_status' => 'Active',
                                 'created_at' => $date_time,
                                 'updated_at' => $date_time
@@ -1345,7 +1348,7 @@ class ApiOutletApp extends Controller
                                 'id_product_modifier' => $idProd,
                                 'id_outlet'  => $outlet['id_outlet'],
                                 'product_modifier_stock_status' => 'Available',
-                                'product_modifier_visibility' => 'Visible',
+                                'product_modifier_visibility' => null,
                                 'product_modifier_status' => 'Active',
                                 'created_at' => $date_time,
                                 'updated_at' => $date_time
@@ -5860,7 +5863,7 @@ class ApiOutletApp extends Controller
 		                            'id_product_modifier' => $idProd,
 		                            'id_outlet'  => $outlet['id_outlet'],
 		                            'product_modifier_stock_status' => 'Available',
-		                            'product_modifier_visibility' => 'Visible',
+		                            'product_modifier_visibility' => null,
 		                            'product_modifier_status' => 'Active',
 		                            'created_at' => $date_time,
 		                            'updated_at' => $date_time
@@ -5926,7 +5929,7 @@ class ApiOutletApp extends Controller
 		                            'id_product_modifier' => $idProd,
 		                            'id_outlet'  => $outlet['id_outlet'],
 		                            'product_modifier_stock_status' => 'Sold Out',
-		                            'product_modifier_visibility' => 'Visible',
+		                            'product_modifier_visibility' => null,
 		                            'product_modifier_status' => 'Active',
 		                            'created_at' => $date_time,
 		                            'updated_at' => $date_time

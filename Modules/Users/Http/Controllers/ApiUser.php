@@ -599,7 +599,8 @@ class ApiUser extends Controller
                                 ->from('deals_users')
                                 ->join('deals_vouchers', 'deals_users.id_deals_voucher', 'deals_vouchers.id_deals_voucher')
                                 ->where('deals_vouchers.id_deals', $par)
-                                ->where('deals_users.voucher_expired_at', '>', date('Y-m-d H:i:s'));
+                                ->where('deals_users.voucher_expired_at', '>', date('Y-m-d H:i:s'))
+                                ->whereNull('deals_users.used_at');
                         });
                     }
 
@@ -634,8 +635,10 @@ class ApiUser extends Controller
                         $query = $query->whereIn('users.id', function($query) use($condition,$par){
                             $query->select('id_user')
                                 ->from('subscription_users')
+                                ->join('subscription_user_vouchers', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                                 ->where('id_subscription', $par)
-                                ->where('subscription_users.subscription_expired_at', '>', date('Y-m-d H:i:s'));
+                                ->where('subscription_users.subscription_expired_at', '>', date('Y-m-d H:i:s'))
+                                ->whereNull('subscription_user_vouchers.used_at');
                         });
                     }
 
@@ -837,7 +840,8 @@ class ApiUser extends Controller
                                 ->from('deals_users')
                                 ->join('deals_vouchers', 'deals_users.id_deals_voucher', 'deals_vouchers.id_deals_voucher')
                                 ->where('deals_vouchers.id_deals', $par)
-                                ->where('deals_users.voucher_expired_at', '>', date('Y-m-d H:i:s'));
+                                ->where('deals_users.voucher_expired_at', '>', date('Y-m-d H:i:s'))
+                                ->whereNull('deals_users.used_at');
                         });
                     }
 
@@ -872,8 +876,10 @@ class ApiUser extends Controller
                         $query = $query->orWhereIn('users.id', function($query) use($condition,$par){
                             $query->select('id_user')
                                 ->from('subscription_users')
+                                ->join('subscription_user_vouchers', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                                 ->where('id_subscription', $par)
-                                ->where('subscription_users.subscription_expired_at', '>', date('Y-m-d H:i:s'));
+                                ->where('subscription_users.subscription_expired_at', '>', date('Y-m-d H:i:s'))
+                                ->whereNull('subscription_user_vouchers.used_at');
                         });
                     }
 
