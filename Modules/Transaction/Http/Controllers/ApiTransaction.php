@@ -1607,9 +1607,10 @@ class ApiTransaction extends Controller
                 ->leftJoin('transaction_bundling_products','transaction_products.id_transaction_bundling_product','=','transaction_bundling_products.id_transaction_bundling_product')
                 ->leftJoin('bundling','bundling.id_bundling','=','transaction_bundling_products.id_bundling')
                 ->leftJoin('rule_promo_payment_gateway','rule_promo_payment_gateway.id_rule_promo_payment_gateway','=','disburse_outlet_transactions.id_rule_promo_payment_gateway')
+                ->leftJoin('promo_payment_gateway_transactions as promo_pg', 'promo_pg.id_transaction', 'transactions.id_transaction')
                 ->with(['transaction_payment_subscription', 'vouchers', 'promo_campaign', 'point_refund', 'point_use', 'subscription_user_voucher.subscription_user.subscription'])
                 ->orderBy('transaction_products.id_transaction_bundling_product', 'asc')
-                ->addSelect('rule_promo_payment_gateway.name as promo_payment_gateway_name',
+                ->addSelect('promo_pg.total_received_cashback',  'rule_promo_payment_gateway.name as promo_payment_gateway_name',
                     'transaction_bundling_products.transaction_bundling_product_base_price', 'transaction_bundling_products.transaction_bundling_product_qty', 'transaction_bundling_products.transaction_bundling_product_total_discount', 'transaction_bundling_products.transaction_bundling_product_subtotal', 'bundling.bundling_name', 'disburse_outlet_transactions.bundling_product_fee_central', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
                     'brands.name_brand', 'cities.city_name', 'c.city_name as user_city', 'provinces.province_name',
                     'disburse_outlet_transactions.fee_item', 'disburse_outlet_transactions.payment_charge', 'disburse_outlet_transactions.discount', 'disburse_outlet_transactions.subscription',
@@ -2104,7 +2105,7 @@ class ApiTransaction extends Controller
                         }
 
                         $promoNamePaymentGateway = (empty($val['promo_payment_gateway_name']) ? "": $val['promo_payment_gateway_name']);
-                        $nominalPromoPaymentGateway =  $val['fee_promo_payment_gateway_outlet']+$val['fee_promo_payment_gateway_central'];
+                        $nominalPromoPaymentGateway =  $val['total_received_cashback'];
                         if(!empty($promoNamePaymentGateway)) {
                             $html .= '<tr>';
                             $html .= $sameData;

@@ -91,7 +91,7 @@
                 <td style="text-align: left">
                     <?php
                         if(!empty($val['promo_payment_gateway_name'])){
-                            echo (float)$val['fee_promo_payment_gateway_outlet']+$val['fee_promo_payment_gateway_central'];
+                            echo (float)$val['total_received_cashback'];
                         }
                     ?>
                 </td>

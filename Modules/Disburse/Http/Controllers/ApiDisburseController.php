@@ -1790,6 +1790,7 @@ class ApiDisburseController extends Controller
         $data = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
             ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
+            ->leftJoin('promo_payment_gateway_transactions as promo_pg', 'promo_pg.id_transaction', 'transactions.id_transaction')
             ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
             ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
             ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
@@ -1801,7 +1802,7 @@ class ApiDisburseController extends Controller
                     ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                     ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
             }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
-            ->select('rule_promo_payment_gateway.name as promo_payment_gateway_name', 'transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
+            ->select('promo_pg.total_received_cashback', 'rule_promo_payment_gateway.name as promo_payment_gateway_name', 'transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
                 'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
                 'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
                 'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code');
