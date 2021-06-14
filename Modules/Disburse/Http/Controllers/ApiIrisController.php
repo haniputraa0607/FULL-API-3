@@ -600,7 +600,8 @@ class ApiIrisController extends Controller
 
                 if($settingProductPlastic == 0){
                     $subtotalPlastic = TransactionProduct::where('id_transaction', $id_transaction)->where('type', 'Plastic')->sum('transaction_product_subtotal');
-                    $nominalFeeToCentral = $subTotal - $subtotalPlastic;
+                    $subTotal = $subTotal - $subtotalPlastic;
+                    $nominalFeeToCentral = $subTotal;
                 }
 
                 // ===== Calculate Fee Subscription ====== //
@@ -870,7 +871,7 @@ class ApiIrisController extends Controller
                     if(isset($additionalDataPromoPayment['override_mdr_status']) && $additionalDataPromoPayment['override_mdr_status'] == 1){
                         $totalFeeForCentralPromoPG = 0;
                         if($additionalDataPromoPayment['override_mdr_percent_type'] == 'Percent' && !empty($additionalDataPromoPayment['mdr'])){
-                            $totalFeePromoPG = $amountMDR * ($additionalDataPromoPayment['mdr']/100);//MDR
+                            $totalFeePromoPG = $amountMDRPromoPG * ($additionalDataPromoPayment['mdr']/100);//MDR
                         }elseif($additionalDataPromoPayment['override_mdr_percent_type'] == 'Nominal'){
                             $totalFeePromoPG = $additionalDataPromoPayment['mdr'];//MDR
                         }
@@ -1068,7 +1069,8 @@ class ApiIrisController extends Controller
 
                     if($settingProductPlastic == 0){
                         $subtotalPlastic = TransactionProduct::where('id_transaction', $data['id_transaction'])->where('type', 'Plastic')->sum('transaction_product_subtotal');
-                        $nominalFeeToCentral = $subTotal - $subtotalPlastic;
+                        $subTotal = $subTotal - $subtotalPlastic;
+                        $nominalFeeToCentral = $subTotal;
                     }
 
                     // ===== Calculate Fee Subscription ====== //
