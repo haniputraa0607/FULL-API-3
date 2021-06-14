@@ -1178,10 +1178,11 @@ class ApiTransactionFranchiseController extends Controller
      * return Response
      */
     public function listExport(Request $request) {
-    	// return $request->all();
-        $result = ExportFranchiseQueue::where('report_type', 'Transaction')->where('id_user_franchise', $request->user()->id_user_franchise);
+        $result = ExportFranchiseQueue::where('report_type', 'Transaction');
         if ($request->id_outlet) {
         	$result->where('id_outlet', $request->id_outlet);
+        }else{
+        	$result->where('id_user_franchise', $request->user()->id_user_franchise);
         }
 
         if (is_array($orders = $request->order)) {
