@@ -12,6 +12,8 @@
         <th style="background-color: #dcdcdc;" width="20"> Discount </th>
         <th style="background-color: #dcdcdc;" width="20"> Nama Promo </th>
         <th style="background-color: #dcdcdc;" width="20"> Promo </th>
+        <th style="background-color: #dcdcdc;" width="20"> Promo Cashback </th>
+        <th style="background-color: #dcdcdc;" width="20"> Cashback </th>
         <th style="background-color: #dcdcdc;" width="20"> Delivery </th>
         <th style="background-color: #dcdcdc;" width="20"> Sub Total </th>
         <th style="background-color: #dcdcdc;" width="20"> Biaya Jasa </th>
@@ -21,7 +23,7 @@
         <th style="background-color: #dcdcdc;" width="20"> Income Promo </th>
         <th style="background-color: #dcdcdc;" width="20"> Income Subscription </th>
         <th style="background-color: #dcdcdc;" width="20"> Income Bundling Product </th>
-        <th style="background-color: #dcdcdc;" width="20"> Income Promo Payment Gateway </th>
+        <th style="background-color: #dcdcdc;" width="20"> Income Promo Cashback </th>
         @endif
         <th style="background-color: #dcdcdc;" width="20"> Income Outlet </th>
     </tr>
@@ -64,9 +66,22 @@
                         $promoName = 'Unknown Promo';
                     }
 
-                    if(!empty($val['promo_payment_gateway_name']) && !empty($promoName)){
-                        $promoName = $promoName.','.$val['promo_payment_gateway_name'];
-                    }elseif(!empty($val['promo_payment_gateway_name']) && empty($promoName)){
+                    echo htmlspecialchars($promoName);
+                    ?>
+                </td>
+                <td style="text-align: left">
+                    <?php
+                    if(!empty(abs($val['transaction_discount_delivery']))){
+                        echo (float)abs($val['transaction_discount_delivery']);
+                    }else{
+                        echo (float)$discount;
+                    }
+                    ?>
+                </td>
+                <td style="text-align: left">
+                    <?php
+                    $promoName = '';
+                    if(!empty($val['promo_payment_gateway_name'])){
                         $promoName = $val['promo_payment_gateway_name'];
                     }
 
@@ -75,10 +90,8 @@
                 </td>
                 <td style="text-align: left">
                     <?php
-                        if(!empty(abs($val['transaction_discount_delivery']))){
-                            echo (float)abs($val['transaction_discount_delivery'])+$val['fee_promo_payment_gateway_outlet'];
-                        }else{
-                            echo (float)$discount+$val['fee_promo_payment_gateway_outlet'];
+                        if(!empty($val['promo_payment_gateway_name'])){
+                            echo (float)$val['total_received_cashback'];
                         }
                     ?>
                 </td>

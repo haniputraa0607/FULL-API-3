@@ -1573,7 +1573,7 @@ class ApiTransaction extends Controller
         return response()->json($result);
     }
 
-    public function exportTransaction($filter, $statusReturn = null) {
+    public function exportTransaction($filter, $statusReturn = null, $filter_type='admin') {
         $post = $filter;
 
         $delivery = false;
@@ -1607,9 +1607,10 @@ class ApiTransaction extends Controller
                 ->leftJoin('transaction_bundling_products','transaction_products.id_transaction_bundling_product','=','transaction_bundling_products.id_transaction_bundling_product')
                 ->leftJoin('bundling','bundling.id_bundling','=','transaction_bundling_products.id_bundling')
                 ->leftJoin('rule_promo_payment_gateway','rule_promo_payment_gateway.id_rule_promo_payment_gateway','=','disburse_outlet_transactions.id_rule_promo_payment_gateway')
+                ->leftJoin('promo_payment_gateway_transactions as promo_pg', 'promo_pg.id_transaction', 'transactions.id_transaction')
                 ->with(['transaction_payment_subscription', 'vouchers', 'promo_campaign', 'point_refund', 'point_use', 'subscription_user_voucher.subscription_user.subscription'])
                 ->orderBy('transaction_products.id_transaction_bundling_product', 'asc')
-                ->addSelect('rule_promo_payment_gateway.name as promo_payment_gateway_name',
+                ->addSelect('promo_pg.total_received_cashback',  'rule_promo_payment_gateway.name as promo_payment_gateway_name',
                     'transaction_bundling_products.transaction_bundling_product_base_price', 'transaction_bundling_products.transaction_bundling_product_qty', 'transaction_bundling_products.transaction_bundling_product_total_discount', 'transaction_bundling_products.transaction_bundling_product_subtotal', 'bundling.bundling_name', 'disburse_outlet_transactions.bundling_product_fee_central', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
                     'brands.name_brand', 'cities.city_name', 'c.city_name as user_city', 'provinces.province_name',
                     'disburse_outlet_transactions.fee_item', 'disburse_outlet_transactions.payment_charge', 'disburse_outlet_transactions.discount', 'disburse_outlet_transactions.subscription',
@@ -1639,6 +1640,544 @@ class ApiTransaction extends Controller
             }
         }
 
+        if($filter_type == 'admin'){
+            $query = $this->filterExportTransactionForAdmin($query,$post);
+        }else{
+            $query = app('Modules\Franchise\Http\Controllers\ApiTransactionFranchiseController')->filterTransaction($query,$post);
+        }
+
+        if($statusReturn == 1){
+            $columnsVariant = '';
+            $addAdditionalColumnVariant = '';
+            $getVariant = ProductVariant::whereNull('id_parent')->get()->toArray();
+            $getAllVariant = ProductVariant::select('id_product_variant', 'id_parent')->get()->toArray();
+            foreach ($getVariant as $v){
+                $columnsVariant .= '<td style="background-color: #dcdcdc;" width="10">'.$v['product_variant_name'].'</td>';
+                $addAdditionalColumnVariant .= '<td></td>';
+            }
+            if($filter_type == 'admin') {
+                $query->whereNull('reject_at');
+            }
+
+            $dataTrxDetail = '';
+            $cek = '';
+            $get = $query->get()->toArray();
+            $count = count($get);
+            $tmpBundling = '';
+            $htmlBundling = '';
+            foreach ($get as $key=>$val) {
+                $payment = '';
+                if(!empty($val['payment_type'])){
+                    $payment = $val['payment_type'];
+                }elseif(!empty($val['payment_method'])){
+                    $payment = $val['payment_method'];
+                }elseif(!empty($val['id_transaction_payment_shopee_pay'])){
+                    $payment = 'Shopeepay';
+                }
+
+                $variant = [];
+                $productCode = $val['product_code'];
+                if(!empty($val['id_product_variant_group'])){
+                    $getProductVariantGroup = ProductVariantGroup::where('id_product_variant_group', $val['id_product_variant_group'])->first();
+                    $productCode = $getProductVariantGroup['product_variant_group_code']??'';
+                }
+
+                $modifierGroup = TransactionProductModifier::where('id_transaction_product', $val['id_transaction_product'])
+                    ->whereNotNull('transaction_product_modifiers.id_product_modifier_group')
+                    ->select('text', 'transaction_product_modifier_price')->get()->toArray();
+                $modifierGroupText = array_column($modifierGroup, 'text');
+                $modifierGroupPrice = array_sum(array_column($modifierGroup, 'transaction_product_modifier_price'));
+
+                if(isset($post['detail']) && $post['detail'] == 1){
+
+                    $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                        ->where('transaction_product_modifiers.id_transaction_product', $val['id_transaction_product'])
+                        ->whereNull('transaction_product_modifiers.id_product_modifier_group')
+                        ->select('product_modifiers.text', 'transaction_product_modifiers.transaction_product_modifier_price')->get()->toArray();
+
+                    $addAdditionalColumn = '';
+                    $promoName = '';
+                    $promoType = '';
+                    $promoCode = '';
+
+                    $promoName2 = '';
+                    $promoType2 = '';
+                    $promoCode2 = '';
+                    if(count($val['vouchers']) > 0){
+                        $getDeal = Deal::where('id_deals', $val['vouchers'][0]['id_deals'])->first();
+                        if($getDeal['promo_type'] == 'Discount bill' || $getDeal['promo_type'] == 'Discount delivery'){
+                            $promoName2 = $getDeal['deals_title'];
+                            $promoType2 = 'Deals';
+                            $promoCode2 = $val['vouchers'][0]['voucher_code'];
+                        }else{
+                            $promoName = $getDeal['deals_title'];
+                            $promoType = 'Deals';
+                            $promoCode = $val['vouchers'][0]['voucher_code'];
+                        }
+
+                    }elseif (!empty($val['promo_campaign'])){
+                        if($val['promo_campaign']['promo_type'] == 'Discount bill' || $val['promo_campaign']['promo_type'] == 'Discount delivery'){
+                            $promoName2 = $val['promo_campaign']['promo_title'];
+                            $promoType2 = 'Promo Campaign';
+                            $promoCode2 = $val['promo_campaign']['promo_code'];
+                        }else{
+                            $promoName = $val['promo_campaign']['promo_title'];
+                            $promoType = 'Promo Campaign';
+                            $promoCode = $val['promo_campaign']['promo_code'];
+                        }
+                    }elseif(isset($val['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'])){
+                        $promoName2 = htmlspecialchars($val['subscription_user_voucher']['subscription_user']['subscription']['subscription_title']);
+                        $promoType2 = 'Subscription';
+                    }
+
+                    $promoName = htmlspecialchars($promoName);
+                    $status = $val['transaction_payment_status'];
+                    if(!is_null($val['reject_at'])){
+                        $status = 'Reject';
+                    }
+
+                    $poinUse = '';
+                    if(isset($val['point_use']) && !empty($val['point_use'])){
+                        $poinUse = $val['point_use']['balance'];
+                    }
+
+                    $pointRefund = '';
+                    if(isset($val['point_refund']) && !empty($val['point_refund'])){
+                        $pointRefund = $val['point_refund']['balance'];
+                    }
+
+                    $paymentRefund = '';
+                    if($val['reject_type'] == 'payment'){
+                        $paymentRefund = $val['amount']??$val['gross_amount'];
+                    }
+
+                    $paymentCharge = 0;
+                    if((int)$val['point_use_expense'] > 0){
+                        $paymentCharge = $val['point_use_expense'];
+                    }
+
+                    if((int)$val['payment_charge'] > 0){
+                        $paymentCharge = $val['payment_charge'];
+                    }
+
+                    $html = '';
+                    $sameData = '';
+                    $sameData .= '<td>'.$val['outlet_code'].'</td>';
+                    $sameData .= '<td>'.htmlspecialchars($val['outlet_name']).'</td>';
+                    $sameData .= '<td>'.$val['province_name'].'</td>';
+                    $sameData .= '<td>'.$val['city_name'].'</td>';
+                    $sameData .= '<td>'.$val['transaction_receipt_number'].'</td>';
+                    $sameData .= '<td>'.$status.'</td>';
+                    $sameData .= '<td>'.date('d M Y', strtotime($val['transaction_date'])).'</td>';
+                    $sameData .= '<td>'.date('H:i:s', strtotime($val['transaction_date'])).'</td>';
+
+                    //for check additional column
+                    if(isset($post['show_product_code']) && $post['show_product_code'] == 1){
+                        $addAdditionalColumn = "<td></td>";
+                    }
+
+                    if(!empty($val['id_transaction_bundling_product'])){
+                        $totalModPrice = 0;
+                        for($j=0;$j<$val['transaction_product_bundling_qty'];$j++){
+                            $priceMod = 0;
+                            $textMod = '';
+                            if(!empty($mod)){
+                                $priceMod = $mod[0]['transaction_product_modifier_price'];
+                                $textMod = $mod[0]['text'];
+                            }
+                            $htmlBundling .= '<tr>';
+                            $htmlBundling .= $sameData;
+                            $htmlBundling .= '<td>'.$val['name_brand'].'</td>';
+                            $htmlBundling .= '<td>'.$val['product_category_name'].'</td>';
+                            if(isset($post['show_product_code']) && $post['show_product_code'] == 1){
+                                $htmlBundling .= '<td>'.$productCode.'</td>';
+                            }
+                            $htmlBundling .= '<td>'.$val['product_name'].'</td>';
+                            $getTransactionVariant = TransactionProductVariant::join('product_variants as pv', 'pv.id_product_variant', 'transaction_product_variants.id_product_variant')
+                                ->where('id_transaction_product', $val['id_transaction_product'])->select('pv.*')->get()->toArray();
+                            foreach ($getTransactionVariant as $k=>$gtV){
+                                $getTransactionVariant[$k]['main_parent'] = $this->getParentVariant($getAllVariant, $gtV['id_product_variant']);
+                            }
+                            foreach ($getVariant as $v){
+                                $search = array_search($v['id_product_variant'], array_column($getTransactionVariant, 'main_parent'));
+                                if($search !== false){
+                                    $htmlBundling .= '<td>'.$getTransactionVariant[$search]['product_variant_name'].'</td>';
+                                }else{
+                                    $htmlBundling .= '<td></td>';
+                                }
+                            }
+                            $totalModPrice = $totalModPrice + $priceMod;
+                            $htmlBundling .= '<td></td>';
+                            $htmlBundling .= '<td>'.implode(",",$modifierGroupText).'</td>';
+                            $htmlBundling .= '<td>'.$textMod.'</td>';
+                            $htmlBundling .= '<td>0</td>';
+                            $htmlBundling .= '<td>'.$priceMod.'</td>';
+                            $htmlBundling .= '<td>'.htmlspecialchars($val['transaction_product_note']).'</td>';
+                            $htmlBundling .= '<td></td>';
+                            $htmlBundling .= '<td></td>';
+                            $htmlBundling .= '<td>'.$priceMod.'</td>';
+                            $htmlBundling .= '<td>0</td>';
+                            $htmlBundling .= '<td>'.($priceMod).'</td>';
+                            $htmlBundling .= '<td></td><td></td><td></td><td></td>';
+                            if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                $htmlBundling .= '<td></td><td></td><td></td><td></td>';
+                            }
+                            $htmlBundling .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $htmlBundling .= '</tr>';
+
+                            $totalMod = count($mod);
+                            if($totalMod > 1){
+                                for($i=1;$i<$totalMod;$i++){
+                                    $totalModPrice = $totalModPrice + $mod[$i]['transaction_product_modifier_price']??0;
+                                    $htmlBundling .= '<tr>';
+                                    $htmlBundling .= $sameData;
+                                    $htmlBundling .= '<td></td>';
+                                    $htmlBundling .= '<td></td>';
+                                    $htmlBundling .= $addAdditionalColumn;
+                                    $htmlBundling .= '<td></td>';
+                                    $htmlBundling .= $addAdditionalColumnVariant;
+                                    $htmlBundling .= '<td></td>';
+                                    $htmlBundling .= '<td></td>';
+                                    $htmlBundling .= '<td>'.$mod[$i]['text']??''.'</td>';
+                                    $htmlBundling .= '<td></td>';
+                                    $htmlBundling .= '<td>'.$mod[$i]['transaction_product_modifier_price']??(int)'0'.'</td>';
+                                    $htmlBundling .= '<td></td>';
+                                    $htmlBundling .= '<td></td>';
+                                    $htmlBundling .= '<td></td>';
+                                    $htmlBundling .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
+                                    $htmlBundling .= '<td>0</td>';
+                                    $htmlBundling .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
+                                    $htmlBundling .= '<td></td><td></td><td></td><td></td>';
+                                    if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                        $htmlBundling .= '<td></td><td></td><td></td><td></td>';
+                                    }
+                                    $htmlBundling .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                    $htmlBundling .= '</tr>';
+                                }
+                            }
+                        }
+
+                        if($key == ($count-1) || (isset($get[$key+1]) && $val['id_transaction_bundling_product'] != $get[$key+1]['id_transaction_bundling_product'])){
+                            $htmlBundling .= '<tr>';
+                            $htmlBundling .= $sameData;
+                            $htmlBundling .= '<td>Paket</td>';
+                            $htmlBundling .= '<td></td>';
+                            $htmlBundling .= $addAdditionalColumn;
+                            $htmlBundling .= '<td></td>';
+                            $htmlBundling .= $addAdditionalColumnVariant;
+                            $htmlBundling .= '<td>'.$val['bundling_name'].'</td>';
+                            $htmlBundling .= '<td></td>';
+                            $htmlBundling .= '<td></td>';
+                            $htmlBundling .= '<td>'.(int)($val['transaction_bundling_product_base_price']+$val['transaction_bundling_product_total_discount']).'</td>';
+                            $htmlBundling .= '<td>0</td>';
+                            $htmlBundling .= '<td></td>';
+                            $htmlBundling .= '<td></td>';
+                            $htmlBundling .= '<td></td>';
+                            $htmlBundling .= '<td>'.(int)($val['transaction_bundling_product_base_price']+$val['transaction_bundling_product_total_discount']).'</td>';
+                            $htmlBundling .= '<td>'.$val['transaction_bundling_product_total_discount'].'</td>';
+                            $htmlBundling .= '<td>'.(int)($val['transaction_bundling_product_base_price']+$val['transaction_bundling_product_total_discount']-$val['transaction_bundling_product_total_discount']).'</td>';
+                            $htmlBundling .= '<td></td><td></td><td></td><td></td>';
+                            if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                $htmlBundling .= '<td></td><td></td><td></td><td></td>';
+                            }
+                            $htmlBundling .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $htmlBundling .= '</tr>';
+                            for ($bun = 1;$bun<=$val['transaction_bundling_product_qty'];$bun++){
+                                $html .= $htmlBundling;
+                            }
+                            $htmlBundling = "";
+                        }
+
+                        $tmpBundling = $val['id_transaction_bundling_product'];
+                    }else{
+                        for($j=0;$j<$val['transaction_product_qty'];$j++){
+                            $priceMod = 0;
+                            $textMod = '';
+                            if(!empty($mod)){
+                                $priceMod = $mod[0]['transaction_product_modifier_price'];
+                                $textMod = $mod[0]['text'];
+                            }
+                            $html .= '<tr>';
+                            $html .= $sameData;
+                            $html .= '<td>'.$val['name_brand'].'</td>';
+                            $html .= '<td>'.$val['product_category_name'].'</td>';
+                            if(isset($post['show_product_code']) && $post['show_product_code'] == 1){
+                                $html .= '<td>'.$productCode.'</td>';
+                            }
+                            $html .= '<td>'.$val['product_name'].'</td>';
+                            $getTransactionVariant = TransactionProductVariant::join('product_variants as pv', 'pv.id_product_variant', 'transaction_product_variants.id_product_variant')
+                                ->where('id_transaction_product', $val['id_transaction_product'])->select('pv.*')->get()->toArray();
+                            foreach ($getTransactionVariant as $k=>$gtV){
+                                $getTransactionVariant[$k]['main_parent'] = $this->getParentVariant($getAllVariant, $gtV['id_product_variant']);
+                            }
+                            foreach ($getVariant as $v){
+                                $search = array_search($v['id_product_variant'], array_column($getTransactionVariant, 'main_parent'));
+                                if($search !== false){
+                                    $html .= '<td>'.$getTransactionVariant[$search]['product_variant_name'].'</td>';
+                                }else{
+                                    $html .= '<td></td>';
+                                }
+                            }
+                            $priceProd = $val['transaction_product_price']+(float)$val['transaction_variant_subtotal']+$modifierGroupPrice;
+                            $html .= '<td></td>';
+                            $html .= '<td>'.implode(",",$modifierGroupText).'</td>';
+                            $html .= '<td>'.$textMod.'</td>';
+                            $html .= '<td>'.$priceProd.'</td>';
+                            $html .= '<td>'.$priceMod.'</td>';
+                            $html .= '<td>'.htmlspecialchars($val['transaction_product_note']).'</td>';
+                            if(!empty($val['transaction_product_qty_discount'])&& $val['transaction_product_qty_discount'] > $j){
+                                $html .= '<td>'.$promoName.'</td>';
+                                $html .= '<td>'.$promoCode.'</td>';
+                                $html .= '<td>'.($priceProd+$priceMod).'</td>';
+                                $html .= '<td>'.$val['transaction_product_base_discount'].'</td>';
+                                $html .= '<td>'.(($priceProd+$priceMod)-$val['transaction_product_base_discount']).'</td>';
+                            }else{
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td>'.($priceProd+$priceMod).'</td>';
+                                $html .= '<td>0</td>';
+                                $html .= '<td>'.($priceProd+$priceMod).'</td>';
+                            }
+                            $html .= '<td></td><td></td><td></td><td></td>';
+                            if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                $html .= '<td></td><td></td><td></td><td></td>';
+                            }
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '</tr>';
+
+                            $totalMod = count($mod);
+                            if($totalMod > 1){
+                                for($i=1;$i<$totalMod;$i++){
+                                    $html .= '<tr>';
+                                    $html .= $sameData;
+                                    $html .= '<td></td>';
+                                    $html .= '<td></td>';
+                                    $html .= $addAdditionalColumn;
+                                    $html .= '<td></td>';
+                                    $html .= $addAdditionalColumnVariant;
+                                    $html .= '<td></td>';
+                                    $html .= '<td></td>';
+                                    $html .= '<td>'.$mod[$i]['text']??''.'</td>';
+                                    $html .= '<td></td>';
+                                    $html .= '<td>'.$mod[$i]['transaction_product_modifier_price']??(int)'0'.'</td>';
+                                    $html .= '<td></td>';
+                                    $html .= '<td></td>';
+                                    $html .= '<td></td>';
+                                    $html .= '<td>'.($mod[$i]['transaction_product_modifier_price']??0).'</td>';
+                                    $html .= '<td>0</td>';
+                                    $html .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
+                                    $html .= '<td></td><td></td><td></td><td></td>';
+                                    if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                        $html .= '<td></td><td></td><td></td><td></td>';
+                                    }
+                                    $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                    $html .= '</tr>';
+                                }
+                            }
+                        }
+                    }
+
+                    $sub = 0;
+                    if($key == ($count-1) || (isset($get[$key+1]['transaction_receipt_number']) && $val['transaction_receipt_number'] != $get[$key+1]['transaction_receipt_number'])){
+                        //for product plastic
+                        $productPlastics = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
+                            ->where('id_transaction', $val['id_transaction'])->where('type', 'Plastic')
+                            ->get()->toArray();
+
+                        foreach ($productPlastics as $plastic){
+                            for($j=0;$j<$plastic['transaction_product_qty'];$j++){
+                                $html .= '<tr>';
+                                $html .= $sameData;
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= $addAdditionalColumn;
+                                $html .= '<td>'.$plastic['product_name']??''.'</td>';
+                                $html .= $addAdditionalColumnVariant;
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
+                                $html .= '<td>0</td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
+                                $html .= '<td>0</td>';
+                                $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
+                                $html .= '<td></td><td></td><td></td><td></td>';
+                                if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                    $html .= '<td></td><td></td><td></td><td></td>';
+                                }
+                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                $html .= '</tr>';
+                            }
+                        }
+
+                        if(!empty($val['transaction_payment_subscription'])) {
+                            $getSubcription = SubscriptionUserVoucher::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+                                ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
+                                ->where('subscription_user_vouchers.id_subscription_user_voucher', $val['transaction_payment_subscription']['id_subscription_user_voucher'])
+                                ->groupBy('subscriptions.id_subscription')->select('subscriptions.*', 'subscription_user_vouchers.voucher_code')->first();
+
+                            if($getSubcription){
+                                $sub  = abs($val['transaction_payment_subscription']['subscription_nominal'])??0;
+                                $html .= '<tr>';
+                                $html .= $sameData;
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= $addAdditionalColumn;
+                                $html .= '<td>'.htmlspecialchars($getSubcription['subscription_title']).'(subscription)</td>';
+                                $html .= $addAdditionalColumnVariant;
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td>'.abs($val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
+                                $html .= '<td>'.(-$val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
+                                $html .= '<td></td><td></td><td></td><td></td>';
+                                if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                    $html .= '<td></td><td></td><td></td><td></td>';
+                                }
+                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                $html .= '</tr>';
+                            }
+                        }elseif(!empty($promoName2)){
+                            $html .= '<tr>';
+                            $html .= $sameData;
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= $addAdditionalColumn;
+                            $html .= '<td>'.htmlspecialchars($promoName2).'('.$promoType2.')'.'</td>';
+                            $html .= $addAdditionalColumnVariant;
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td>'.abs(abs($val['transaction_discount'])??0).'</td>';
+                            $html .= '<td>'.(-abs($val['transaction_discount'])??0).'</td>';
+                            $html .= '<td></td><td></td><td></td><td></td>';
+                            if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                $html .= '<td></td><td></td><td></td><td></td>';
+                            }
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '</tr>';
+                        }
+
+                        if(!empty($val['transaction_shipment_go_send'])) {
+                            $discountDelivery = 0;
+                            $promoDiscountDelivery = '';
+                            if(abs($val['transaction_discount_delivery']) > 0){
+                                $promoDiscountDelivery = ' ('.(empty($promoName) ? $promoName2 : $promoName).')';
+                                $discountDelivery = abs($val['transaction_discount_delivery']);
+                            }
+
+                            if(isset($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']) && !empty($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription'])){
+                                $promoDiscountDelivery = ' ('.$val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']['subscription_title'].')';
+                            }
+                            $html .= '<tr>';
+                            $html .= $sameData;
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= $addAdditionalColumn;
+                            $html .= '<td>Delivery'.$promoDiscountDelivery.'</td>';
+                            $html .= $addAdditionalColumnVariant;
+                            $html .= '<td></td>';
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
+                            $html .= '<td>'.$discountDelivery.'</td>';
+                            $html .= '<td>'.($val['transaction_shipment_go_send']-$discountDelivery??0).'</td>';
+                            $html .= '<td></td><td></td><td></td><td></td>';
+                            if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                $html .= '<td></td><td></td><td></td><td></td>';
+                            }
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '</tr>';
+                        }
+
+                        $promoNamePaymentGateway = (empty($val['promo_payment_gateway_name']) ? "": $val['promo_payment_gateway_name']);
+                        $nominalPromoPaymentGateway =  $val['total_received_cashback'];
+                        if(!empty($promoNamePaymentGateway)) {
+                            $html .= '<tr>';
+                            $html .= $sameData;
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= $addAdditionalColumn;
+                            $html .= '<td>'.htmlspecialchars($promoNamePaymentGateway).'(Promo Payment Gateway)</td>';
+                            $html .= $addAdditionalColumnVariant;
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td>'.$nominalPromoPaymentGateway.'</td>';
+                            $html .= '<td></td><td></td><td></td>';
+                            if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                                $html .= '<td></td><td></td><td></td><td></td>';
+                            }
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '</tr>';
+                        }
+
+                        $html .= '<tr>';
+                        $html .= $sameData;
+                        $html .= '<td></td>';
+                        $html .= '<td></td>';
+                        $html .= $addAdditionalColumn;
+                        $html .= '<td>Fee</td>';
+                        $html .= $addAdditionalColumnVariant;
+                        $html .= '<td></td>';
+                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                        $html .= '<td>'.($val['transaction_grandtotal']-$sub).'</td>';
+                        $html .= '<td>'.(float)$val['fee_item'].'</td>';
+                        $html .= '<td>'.(float)$paymentCharge.'</td>';
+                        if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
+                            $html .= '<td>' . (float)$val['discount_central'] . '</td>';
+                            $html .= '<td>' . (float)$val['subscription_central'] . '</td>';
+                            $html .= '<td>' . (float)$val['bundling_product_fee_central'] . '</td>';
+                            $html .= '<td>' . (float)$val['fee_promo_payment_gateway_central'] . '</td>';
+                        }
+                        $html .= '<td>'.(float)$val['income_outlet'].'</td>';
+                        $html .= '<td>'.$payment.'</td>';
+                        $html .= '<td>'.abs($poinUse).'</td>';
+                        $html .= '<td>'.$val['transaction_cashback_earned'].'</td>';
+                        $html .= '<td>'.$pointRefund.'</td>';
+                        $html .= '<td>'.$paymentRefund.'</td>';
+                        $html .= '<td>'.(!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']).'</td>';
+                        $html .= '<td>'.($val['receive_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['receive_at']))).'</td>';
+                        $html .= '<td>'.($val['ready_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['ready_at']))).'</td>';
+                        $html .= '<td>'.($val['taken_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['taken_at']))).'</td>';
+                        $html .= '<td>'.($val['arrived_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['arrived_at']))).'</td>';
+                        $html .= '</tr>';
+                    }
+                }
+                $dataTrxDetail .= $html;
+            }
+            return [
+                'list' => $dataTrxDetail,
+                'add_column' => $columnsVariant
+            ];
+        }else{
+            return $query;
+        }
+    }
+
+    public function filterExportTransactionForAdmin($query, $post){
         if (isset($post['conditions'])) {
             foreach ($post['conditions'] as $key => $con) {
                 if(is_object($con)){
@@ -1799,533 +2338,10 @@ class ApiTransaction extends Controller
                         }
                     }
                 }
-
             }
         }
 
-        if($statusReturn == 1){
-            $columnsVariant = '';
-            $addAdditionalColumnVariant = '';
-            $getVariant = ProductVariant::whereNull('id_parent')->get()->toArray();
-            $getAllVariant = ProductVariant::select('id_product_variant', 'id_parent')->get()->toArray();
-            foreach ($getVariant as $v){
-                $columnsVariant .= '<td style="background-color: #dcdcdc;" width="10">'.$v['product_variant_name'].'</td>';
-                $addAdditionalColumnVariant .= '<td></td>';
-            }
-            $query->whereNull('reject_at');
-
-            $dataTrxDetail = '';
-            $cek = '';
-            $get = $query->get()->toArray();
-            $count = count($get);
-            $tmpBundling = '';
-            $htmlBundling = '';
-            foreach ($get as $key=>$val) {
-                $payment = '';
-                if(!empty($val['payment_type'])){
-                    $payment = $val['payment_type'];
-                }elseif(!empty($val['payment_method'])){
-                    $payment = $val['payment_method'];
-                }elseif(!empty($val['id_transaction_payment_shopee_pay'])){
-                    $payment = 'Shopeepay';
-                }
-
-                $variant = [];
-                $productCode = $val['product_code'];
-                if(!empty($val['id_product_variant_group'])){
-                    $getProductVariantGroup = ProductVariantGroup::where('id_product_variant_group', $val['id_product_variant_group'])->first();
-                    $productCode = $getProductVariantGroup['product_variant_group_code']??'';
-                }
-
-                $modifier = TransactionProductModifier::where('id_transaction_product', $val['id_transaction_product'])
-                    ->whereNotNull('transaction_product_modifiers.id_product_modifier_group')
-                    ->pluck('text')->toArray();
-
-                if(isset($post['detail']) && $post['detail'] == 1){
-
-                    $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
-                        ->where('transaction_product_modifiers.id_transaction_product', $val['id_transaction_product'])
-                        ->whereNull('transaction_product_modifiers.id_product_modifier_group')
-                        ->select('product_modifiers.text', 'transaction_product_modifiers.transaction_product_modifier_price')->get()->toArray();
-
-                    $addAdditionalColumn = '';
-                    $promoName = '';
-                    $promoType = '';
-                    $promoCode = '';
-
-                    $promoName2 = '';
-                    $promoType2 = '';
-                    $promoCode2 = '';
-                    if(count($val['vouchers']) > 0){
-                        $getDeal = Deal::where('id_deals', $val['vouchers'][0]['id_deals'])->first();
-                        if($getDeal['promo_type'] == 'Discount bill' || $getDeal['promo_type'] == 'Discount delivery'){
-                            $promoName2 = $getDeal['deals_title'];
-                            $promoType2 = 'Deals';
-                            $promoCode2 = $val['vouchers'][0]['voucher_code'];
-                        }else{
-                            $promoName = $getDeal['deals_title'];
-                            $promoType = 'Deals';
-                            $promoCode = $val['vouchers'][0]['voucher_code'];
-                        }
-
-                    }elseif (!empty($val['promo_campaign'])){
-                        if($val['promo_campaign']['promo_type'] == 'Discount bill' || $val['promo_campaign']['promo_type'] == 'Discount delivery'){
-                            $promoName2 = $val['promo_campaign']['promo_title'];
-                            $promoType2 = 'Promo Campaign';
-                            $promoCode2 = $val['promo_campaign']['promo_code'];
-                        }else{
-                            $promoName = $val['promo_campaign']['promo_title'];
-                            $promoType = 'Promo Campaign';
-                            $promoCode = $val['promo_campaign']['promo_code'];
-                        }
-                    }elseif(isset($val['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'])){
-                        $promoName2 = htmlspecialchars($val['subscription_user_voucher']['subscription_user']['subscription']['subscription_title']);
-                        $promoType2 = 'Subscription';
-                    }
-
-                    $promoName = htmlspecialchars($promoName);
-                    $status = $val['transaction_payment_status'];
-                    if(!is_null($val['reject_at'])){
-                        $status = 'Reject';
-                    }
-
-                    $poinUse = '';
-                    if(isset($val['point_use']) && !empty($val['point_use'])){
-                        $poinUse = $val['point_use']['balance'];
-                    }
-
-                    $pointRefund = '';
-                    if(isset($val['point_refund']) && !empty($val['point_refund'])){
-                        $pointRefund = $val['point_refund']['balance'];
-                    }
-
-                    $paymentRefund = '';
-                    if($val['reject_type'] == 'payment'){
-                        $paymentRefund = $val['amount']??$val['gross_amount'];
-                    }
-
-                    $paymentCharge = 0;
-                    if((int)$val['point_use_expense'] > 0){
-                        $paymentCharge = $val['point_use_expense'];
-                    }
-
-                    if((int)$val['payment_charge'] > 0){
-                        $paymentCharge = $val['payment_charge'];
-                    }
-
-                    $html = '';
-                    $sameData = '';
-                    $sameData .= '<td>'.$val['outlet_code'].'</td>';
-                    $sameData .= '<td>'.htmlspecialchars($val['outlet_name']).'</td>';
-                    $sameData .= '<td>'.$val['province_name'].'</td>';
-                    $sameData .= '<td>'.$val['city_name'].'</td>';
-                    $sameData .= '<td>'.$val['transaction_receipt_number'].'</td>';
-                    $sameData .= '<td>'.$status.'</td>';
-                    $sameData .= '<td>'.date('d M Y', strtotime($val['transaction_date'])).'</td>';
-                    $sameData .= '<td>'.date('H:i:s', strtotime($val['transaction_date'])).'</td>';
-
-                    //for check additional column
-                    if(isset($post['show_product_code']) && $post['show_product_code'] == 1){
-                        $addAdditionalColumn = "<td></td>";
-                    }
-
-                    if(!empty($val['id_transaction_bundling_product'])){
-                        $totalModPrice = 0;
-                        for($j=0;$j<$val['transaction_product_bundling_qty'];$j++){
-                            $priceMod = 0;
-                            $textMod = '';
-                            if(!empty($mod)){
-                                $priceMod = $mod[0]['transaction_product_modifier_price'];
-                                $textMod = $mod[0]['text'];
-                            }
-                            $htmlBundling .= '<tr>';
-                            $htmlBundling .= $sameData;
-                            $htmlBundling .= '<td>'.$val['name_brand'].'</td>';
-                            $htmlBundling .= '<td>'.$val['product_category_name'].'</td>';
-                            if(isset($post['show_product_code']) && $post['show_product_code'] == 1){
-                                $htmlBundling .= '<td>'.$productCode.'</td>';
-                            }
-                            $htmlBundling .= '<td>'.$val['product_name'].'</td>';
-                            $getTransactionVariant = TransactionProductVariant::join('product_variants as pv', 'pv.id_product_variant', 'transaction_product_variants.id_product_variant')
-                                ->where('id_transaction_product', $val['id_transaction_product'])->select('pv.*')->get()->toArray();
-                            foreach ($getTransactionVariant as $k=>$gtV){
-                                $getTransactionVariant[$k]['main_parent'] = $this->getParentVariant($getAllVariant, $gtV['id_product_variant']);
-                            }
-                            foreach ($getVariant as $v){
-                                $search = array_search($v['id_product_variant'], array_column($getTransactionVariant, 'main_parent'));
-                                if($search !== false){
-                                    $htmlBundling .= '<td>'.$getTransactionVariant[$search]['product_variant_name'].'</td>';
-                                }else{
-                                    $htmlBundling .= '<td></td>';
-                                }
-                            }
-                            $totalModPrice = $totalModPrice + $priceMod;
-                            $htmlBundling .= '<td></td>';
-                            $htmlBundling .= '<td>'.implode(",",$modifier).'</td>';
-                            $htmlBundling .= '<td>'.$textMod.'</td>';
-                            $htmlBundling .= '<td>0</td>';
-                            $htmlBundling .= '<td>'.$priceMod.'</td>';
-                            $htmlBundling .= '<td>'.htmlspecialchars($val['transaction_product_note']).'</td>';
-                            $htmlBundling .= '<td></td>';
-                            $htmlBundling .= '<td></td>';
-                            $htmlBundling .= '<td>'.$priceMod.'</td>';
-                            $htmlBundling .= '<td>0</td>';
-                            $htmlBundling .= '<td>'.($priceMod).'</td>';
-                            $htmlBundling .= '<td></td><td></td><td></td>';
-                            if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                $htmlBundling .= '<td></td><td></td><td></td>';
-                            }
-                            $htmlBundling .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                            $htmlBundling .= '</tr>';
-
-                            $totalMod = count($mod);
-                            if($totalMod > 1){
-                                for($i=1;$i<$totalMod;$i++){
-                                    $totalModPrice = $totalModPrice + $mod[$i]['transaction_product_modifier_price']??0;
-                                    $htmlBundling .= '<tr>';
-                                    $htmlBundling .= $sameData;
-                                    $htmlBundling .= '<td></td>';
-                                    $htmlBundling .= '<td></td>';
-                                    $htmlBundling .= $addAdditionalColumn;
-                                    $htmlBundling .= '<td></td>';
-                                    $htmlBundling .= $addAdditionalColumnVariant;
-                                    $htmlBundling .= '<td></td>';
-                                    $htmlBundling .= '<td></td>';
-                                    $htmlBundling .= '<td>'.$mod[$i]['text']??''.'</td>';
-                                    $htmlBundling .= '<td></td>';
-                                    $htmlBundling .= '<td>'.$mod[$i]['transaction_product_modifier_price']??(int)'0'.'</td>';
-                                    $htmlBundling .= '<td></td>';
-                                    $htmlBundling .= '<td></td>';
-                                    $htmlBundling .= '<td></td>';
-                                    $htmlBundling .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
-                                    $htmlBundling .= '<td>0</td>';
-                                    $htmlBundling .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
-                                    $htmlBundling .= '<td></td><td></td><td></td>';
-                                    if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                        $htmlBundling .= '<td></td><td></td><td></td>';
-                                    }
-                                    $htmlBundling .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                                    $htmlBundling .= '</tr>';
-                                }
-                            }
-                        }
-
-                        if($key == ($count-1) || (isset($get[$key+1]) && $val['id_transaction_bundling_product'] != $get[$key+1]['id_transaction_bundling_product'])){
-                            $htmlBundling .= '<tr>';
-                            $htmlBundling .= $sameData;
-                            $htmlBundling .= '<td>Paket</td>';
-                            $htmlBundling .= '<td></td>';
-                            $htmlBundling .= $addAdditionalColumn;
-                            $htmlBundling .= '<td></td>';
-                            $htmlBundling .= $addAdditionalColumnVariant;
-                            $htmlBundling .= '<td>'.$val['bundling_name'].'</td>';
-                            $htmlBundling .= '<td></td>';
-                            $htmlBundling .= '<td></td>';
-                            $htmlBundling .= '<td>'.(int)($val['transaction_bundling_product_base_price']+$val['transaction_bundling_product_total_discount']).'</td>';
-                            $htmlBundling .= '<td>0</td>';
-                            $htmlBundling .= '<td></td>';
-                            $htmlBundling .= '<td></td>';
-                            $htmlBundling .= '<td></td>';
-                            $htmlBundling .= '<td>'.(int)($val['transaction_bundling_product_base_price']+$val['transaction_bundling_product_total_discount']).'</td>';
-                            $htmlBundling .= '<td>'.$val['transaction_bundling_product_total_discount'].'</td>';
-                            $htmlBundling .= '<td>'.(int)($val['transaction_bundling_product_base_price']+$val['transaction_bundling_product_total_discount']-$val['transaction_bundling_product_total_discount']).'</td>';
-                            $htmlBundling .= '<td></td><td></td><td></td>';
-                            if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                $htmlBundling .= '<td></td><td></td><td></td>';
-                            }
-                            $htmlBundling .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                            $htmlBundling .= '</tr>';
-                            for ($bun = 1;$bun<=$val['transaction_bundling_product_qty'];$bun++){
-                                $html .= $htmlBundling;
-                            }
-                            $htmlBundling = "";
-                        }
-
-                        $tmpBundling = $val['id_transaction_bundling_product'];
-                    }else{
-                        for($j=0;$j<$val['transaction_product_qty'];$j++){
-                            $priceMod = 0;
-                            $textMod = '';
-                            if(!empty($mod)){
-                                $priceMod = $mod[0]['transaction_product_modifier_price'];
-                                $textMod = $mod[0]['text'];
-                            }
-                            $html .= '<tr>';
-                            $html .= $sameData;
-                            $html .= '<td>'.$val['name_brand'].'</td>';
-                            $html .= '<td>'.$val['product_category_name'].'</td>';
-                            if(isset($post['show_product_code']) && $post['show_product_code'] == 1){
-                                $html .= '<td>'.$productCode.'</td>';
-                            }
-                            $html .= '<td>'.$val['product_name'].'</td>';
-                            $getTransactionVariant = TransactionProductVariant::join('product_variants as pv', 'pv.id_product_variant', 'transaction_product_variants.id_product_variant')
-                                ->where('id_transaction_product', $val['id_transaction_product'])->select('pv.*')->get()->toArray();
-                            foreach ($getTransactionVariant as $k=>$gtV){
-                                $getTransactionVariant[$k]['main_parent'] = $this->getParentVariant($getAllVariant, $gtV['id_product_variant']);
-                            }
-                            foreach ($getVariant as $v){
-                                $search = array_search($v['id_product_variant'], array_column($getTransactionVariant, 'main_parent'));
-                                if($search !== false){
-                                    $html .= '<td>'.$getTransactionVariant[$search]['product_variant_name'].'</td>';
-                                }else{
-                                    $html .= '<td></td>';
-                                }
-                            }
-                            $priceProd = $val['transaction_product_price']+(float)$val['transaction_variant_subtotal'];
-                            $html .= '<td></td>';
-                            $html .= '<td>'.implode(",",$modifier).'</td>';
-                            $html .= '<td>'.$textMod.'</td>';
-                            $html .= '<td>'.$priceProd.'</td>';
-                            $html .= '<td>'.$priceMod.'</td>';
-                            $html .= '<td>'.htmlspecialchars($val['transaction_product_note']).'</td>';
-                            if(!empty($val['transaction_product_qty_discount'])&& $val['transaction_product_qty_discount'] > $j){
-                                $html .= '<td>'.$promoName.'</td>';
-                                $html .= '<td>'.$promoCode.'</td>';
-                                $html .= '<td>'.($priceProd+$priceMod).'</td>';
-                                $html .= '<td>'.$val['transaction_product_base_discount'].'</td>';
-                                $html .= '<td>'.(($priceProd+$priceMod)-$val['transaction_product_base_discount']).'</td>';
-                            }else{
-                                $html .= '<td></td>';
-                                $html .= '<td></td>';
-                                $html .= '<td>'.($priceProd+$priceMod).'</td>';
-                                $html .= '<td>0</td>';
-                                $html .= '<td>'.($priceProd+$priceMod).'</td>';
-                            }
-                            $html .= '<td></td><td></td><td></td>';
-                            if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                $html .= '<td></td><td></td><td></td>';
-                            }
-                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                            $html .= '</tr>';
-
-                            $totalMod = count($mod);
-                            if($totalMod > 1){
-                                for($i=1;$i<$totalMod;$i++){
-                                    $html .= '<tr>';
-                                    $html .= $sameData;
-                                    $html .= '<td></td>';
-                                    $html .= '<td></td>';
-                                    $html .= $addAdditionalColumn;
-                                    $html .= '<td></td>';
-                                    $html .= $addAdditionalColumnVariant;
-                                    $html .= '<td></td>';
-                                    $html .= '<td></td>';
-                                    $html .= '<td>'.$mod[$i]['text']??''.'</td>';
-                                    $html .= '<td></td>';
-                                    $html .= '<td>'.$mod[$i]['transaction_product_modifier_price']??(int)'0'.'</td>';
-                                    $html .= '<td></td>';
-                                    $html .= '<td></td>';
-                                    $html .= '<td></td>';
-                                    $html .= '<td>'.($mod[$i]['transaction_product_modifier_price']??0).'</td>';
-                                    $html .= '<td>0</td>';
-                                    $html .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
-                                    $html .= '<td></td><td></td><td></td>';
-                                    if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                        $html .= '<td></td><td></td><td></td>';
-                                    }
-                                    $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                                    $html .= '</tr>';
-                                }
-                            }
-                        }
-                    }
-
-                    $sub = 0;
-                    if($key == ($count-1) || (isset($get[$key+1]['transaction_receipt_number']) && $val['transaction_receipt_number'] != $get[$key+1]['transaction_receipt_number'])){
-                        //for product plastic
-                        $productPlastics = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
-                            ->where('id_transaction', $val['id_transaction'])->where('type', 'Plastic')
-                            ->get()->toArray();
-
-                        foreach ($productPlastics as $plastic){
-                            for($j=0;$j<$plastic['transaction_product_qty'];$j++){
-                                $html .= '<tr>';
-                                $html .= $sameData;
-                                $html .= '<td></td>';
-                                $html .= '<td></td>';
-                                $html .= $addAdditionalColumn;
-                                $html .= '<td>'.$plastic['product_name']??''.'</td>';
-                                $html .= $addAdditionalColumnVariant;
-                                $html .= '<td></td>';
-                                $html .= '<td></td>';
-                                $html .= '<td></td>';
-                                $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
-                                $html .= '<td>0</td>';
-                                $html .= '<td></td>';
-                                $html .= '<td></td>';
-                                $html .= '<td></td>';
-                                $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
-                                $html .= '<td>0</td>';
-                                $html .= '<td>'.$plastic['transaction_product_price']??(int)'0'.'</td>';
-                                $html .= '<td></td><td></td><td></td>';
-                                if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                    $html .= '<td></td><td></td><td></td>';
-                                }
-                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                                $html .= '</tr>';
-                            }
-                        }
-
-                        if(!empty($val['transaction_payment_subscription'])) {
-                            $getSubcription = SubscriptionUserVoucher::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
-                                ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
-                                ->where('subscription_user_vouchers.id_subscription_user_voucher', $val['transaction_payment_subscription']['id_subscription_user_voucher'])
-                                ->groupBy('subscriptions.id_subscription')->select('subscriptions.*', 'subscription_user_vouchers.voucher_code')->first();
-
-                            if($getSubcription){
-                                $sub  = abs($val['transaction_payment_subscription']['subscription_nominal'])??0;
-                                $html .= '<tr>';
-                                $html .= $sameData;
-                                $html .= '<td></td>';
-                                $html .= '<td></td>';
-                                $html .= $addAdditionalColumn;
-                                $html .= '<td>'.htmlspecialchars($getSubcription['subscription_title']).'(subscription)</td>';
-                                $html .= $addAdditionalColumnVariant;
-                                $html .= '<td></td>';
-                                $html .= '<td></td>';
-                                $html .= '<td></td>';
-                                $html .= '<td></td>';
-                                $html .= '<td></td>';
-                                $html .= '<td></td>';
-                                $html .= '<td></td>';
-                                $html .= '<td></td>';
-                                $html .= '<td></td>';
-                                $html .= '<td>'.abs($val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
-                                $html .= '<td>'.(-$val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
-                                $html .= '<td></td><td></td><td></td>';
-                                if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                    $html .= '<td></td><td></td><td></td>';
-                                }
-                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                                $html .= '</tr>';
-                            }
-                        }elseif(!empty($promoName2)){
-                            $html .= '<tr>';
-                            $html .= $sameData;
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= $addAdditionalColumn;
-                            $html .= '<td>'.htmlspecialchars($promoName2).'('.$promoType2.')'.'</td>';
-                            $html .= $addAdditionalColumnVariant;
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td>'.abs(abs($val['transaction_discount'])??0).'</td>';
-                            $html .= '<td>'.(-abs($val['transaction_discount'])??0).'</td>';
-                            $html .= '<td></td><td></td><td></td>';
-                            if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                $html .= '<td></td><td></td><td></td>';
-                            }
-                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                            $html .= '</tr>';
-                        }
-
-                        if(!empty($val['transaction_shipment_go_send'])) {
-                            $discountDelivery = 0;
-                            $promoDiscountDelivery = '';
-                            if(abs($val['transaction_discount_delivery']) > 0){
-                                $promoDiscountDelivery = ' ('.(empty($promoName) ? $promoName2 : $promoName).')';
-                                $discountDelivery = abs($val['transaction_discount_delivery']);
-                            }
-
-                            if(isset($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']) && !empty($val['subscription_user_voucher'][0]['subscription_user'][0]['subscription'])){
-                                $promoDiscountDelivery = ' ('.$val['subscription_user_voucher'][0]['subscription_user'][0]['subscription']['subscription_title'].')';
-                            }
-                            $html .= '<tr>';
-                            $html .= $sameData;
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= $addAdditionalColumn;
-                            $html .= '<td>Delivery'.$promoDiscountDelivery.'</td>';
-                            $html .= $addAdditionalColumnVariant;
-                            $html .= '<td></td>';
-                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                            $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
-                            $html .= '<td>'.$discountDelivery.'</td>';
-                            $html .= '<td>'.($val['transaction_shipment_go_send']-$discountDelivery??0).'</td>';
-                            if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                $html .= '<td></td><td></td><td></td>';
-                            }
-                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                            $html .= '</tr>';
-                        }
-
-                        $promoNamePaymentGateway = (empty($val['promo_payment_gateway_name']) ? "": $val['promo_payment_gateway_name']);
-                        $nominalPromoPaymentGateway = (empty($val['fee_promo_payment_gateway_outlet']) ? 0: $val['fee_promo_payment_gateway_outlet']);
-                        if(!empty($promoNamePaymentGateway)) {
-                            $html .= '<tr>';
-                            $html .= $sameData;
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= $addAdditionalColumn;
-                            $html .= '<td>'.htmlspecialchars($promoNamePaymentGateway).'(Promo Payment Gateway)</td>';
-                            $html .= $addAdditionalColumnVariant;
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td></td>';
-                            $html .= '<td>'.$nominalPromoPaymentGateway.'</td>';
-                            $html .= '<td>'.(-$nominalPromoPaymentGateway).'</td>';
-                            $html .= '<td></td><td></td><td></td>';
-                            if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                                $html .= '<td></td><td></td><td></td>';
-                            }
-                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                            $html .= '</tr>';
-                        }
-
-                        $html .= '<tr>';
-                        $html .= $sameData;
-                        $html .= '<td></td>';
-                        $html .= '<td></td>';
-                        $html .= $addAdditionalColumn;
-                        $html .= '<td>Fee</td>';
-                        $html .= $addAdditionalColumnVariant;
-                        $html .= '<td></td>';
-                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                        $html .= '<td>'.($val['transaction_grandtotal']-$sub-$nominalPromoPaymentGateway).'</td>';
-                        $html .= '<td>'.(float)$val['fee_item'].'</td>';
-                        $html .= '<td>'.(float)$paymentCharge.'</td>';
-                        if(isset($post['show_another_income']) && $post['show_another_income'] == 1) {
-                            $html .= '<td>' . (float)$val['discount_central'] . '</td>';
-                            $html .= '<td>' . (float)$val['subscription_central'] . '</td>';
-                            $html .= '<td>' . (float)$val['bundling_product_fee_central'] . '</td>';
-                            $html .= '<td>' . (float)$val['fee_promo_payment_gateway_central'] . '</td>';
-                        }
-                        $html .= '<td>'.(float)$val['income_outlet'].'</td>';
-                        $html .= '<td>'.$payment.'</td>';
-                        $html .= '<td>'.abs($poinUse).'</td>';
-                        $html .= '<td>'.$val['transaction_cashback_earned'].'</td>';
-                        $html .= '<td>'.$pointRefund.'</td>';
-                        $html .= '<td>'.$paymentRefund.'</td>';
-                        $html .= '<td>'.(!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']).'</td>';
-                        $html .= '<td>'.($val['receive_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['receive_at']))).'</td>';
-                        $html .= '<td>'.($val['ready_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['ready_at']))).'</td>';
-                        $html .= '<td>'.($val['taken_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['taken_at']))).'</td>';
-                        $html .= '<td>'.($val['arrived_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['arrived_at']))).'</td>';
-                        $html .= '</tr>';
-                    }
-                }
-                $dataTrxDetail .= $html;
-            }
-            return [
-                'list' => $dataTrxDetail,
-                'add_column' => $columnsVariant
-            ];
-        }else{
-            return $query;
-        }
+        return $query;
     }
 
     function returnExportYield($filter){
@@ -2959,19 +2975,19 @@ class ApiTransaction extends Controller
                 if (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Cancelled') {
                     unset($result['detail']['order_id_qrcode']);
                     unset($result['detail']['order_id']);
-                    unset($result['detail']['pickup_time']);
+                    // unset($result['detail']['pickup_time']);
                     $result['transaction_status'] = 0;
                     $result['transaction_status_text'] = 'PESANAN TELAH DIBATALKAN';
                 } elseif (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Pending') {
                     unset($result['detail']['order_id_qrcode']);
                     unset($result['detail']['order_id']);
-                    unset($result['detail']['pickup_time']);
+                    // unset($result['detail']['pickup_time']);
                     $result['transaction_status'] = 6;
                     $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
                 } elseif($list['detail']['reject_at'] != null) {
                     unset($result['detail']['order_id_qrcode']);
                     unset($result['detail']['order_id']);
-                    unset($result['detail']['pickup_time']);
+                    // unset($result['detail']['pickup_time']);
                     $result['transaction_status'] = 0;
                     $result['transaction_status_text'] = 'PESANAN DITOLAK';
                 } elseif($list['detail']['taken_by_system_at'] != null) {

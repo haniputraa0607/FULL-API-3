@@ -598,11 +598,6 @@ class ApiIrisController extends Controller
                 $subTotal = $subTotal + $bundlingProductTotalDiscount;
                 $nominalFeeToCentral = $subTotal;
 
-                if($settingProductPlastic == 0){
-                    $subtotalPlastic = TransactionProduct::where('id_transaction', $id_transaction)->where('type', 'Plastic')->sum('transaction_product_subtotal');
-                    $nominalFeeToCentral = $subTotal - $subtotalPlastic;
-                }
-
                 // ===== Calculate Fee Subscription ====== //
                 $totalChargedSubcriptionOutlet = 0;
                 $totalChargedSubcriptionCentral = 0;
@@ -684,7 +679,7 @@ class ApiIrisController extends Controller
                                 $feePGType = $settingMDRAll[$balanceMdr]['percent_type'];
                                 $charged = $settingMDRAll[$balanceMdr]['charged'];
 
-                                $feePointOutlet = (float)$settingMDRAll[$balanceMdr]['mdr'];
+                                $feePointOutlet = (float)$settingMDRAll[$balanceMdr]['mdr']+(float)$settingMDRAll[$balanceMdr]['mdr_central'];
                                 $feePointCentral = 100 - $feePointOutlet;
 
                                 if((int)$feePointOutlet === 0){
@@ -870,7 +865,7 @@ class ApiIrisController extends Controller
                     if(isset($additionalDataPromoPayment['override_mdr_status']) && $additionalDataPromoPayment['override_mdr_status'] == 1){
                         $totalFeeForCentralPromoPG = 0;
                         if($additionalDataPromoPayment['override_mdr_percent_type'] == 'Percent' && !empty($additionalDataPromoPayment['mdr'])){
-                            $totalFeePromoPG = $amountMDR * ($additionalDataPromoPayment['mdr']/100);//MDR
+                            $totalFeePromoPG = $amountMDRPromoPG * ($additionalDataPromoPayment['mdr']/100);//MDR
                         }elseif($additionalDataPromoPayment['override_mdr_percent_type'] == 'Nominal'){
                             $totalFeePromoPG = $additionalDataPromoPayment['mdr'];//MDR
                         }
@@ -894,6 +889,11 @@ class ApiIrisController extends Controller
                     }else{
                         $nominalFeeToCentral = $nominalFeeToCentral - $bundlingProductTotalDiscount;
                     }
+                }
+
+                if($settingProductPlastic == 0){
+                    $subtotalPlastic = TransactionProduct::where('id_transaction', $id_transaction)->where('type', 'Plastic')->sum('transaction_product_subtotal');
+                    $nominalFeeToCentral = $nominalFeeToCentral - $subtotalPlastic;
                 }
 
                 $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
@@ -928,8 +928,8 @@ class ApiIrisController extends Controller
                     'fee_item' => $feeItemForCentral,
                     'discount' => $totalChargedPromo,
                     'discount_central' => $totalChargedPromoCentral,
-                    'payment_charge' => $totalFee,
-                    'payment_charge_old' => $totalFeeOld,
+                    'payment_charge' => $totalFee+$nominalBalance,
+                    'payment_charge_old' => $totalFeeOld+$nominalBalance,
                     'point_use_expense' => $nominalBalance,
                     'subscription' => $totalChargedSubcriptionOutlet,
                     'subscription_central' => $totalChargedSubcriptionCentral,
@@ -1066,11 +1066,6 @@ class ApiIrisController extends Controller
                     $subTotal = $subTotal + $bundlingProductTotalDiscount;
                     $nominalFeeToCentral = $subTotal;
 
-                    if($settingProductPlastic == 0){
-                        $subtotalPlastic = TransactionProduct::where('id_transaction', $data['id_transaction'])->where('type', 'Plastic')->sum('transaction_product_subtotal');
-                        $nominalFeeToCentral = $subTotal - $subtotalPlastic;
-                    }
-
                     // ===== Calculate Fee Subscription ====== //
                     $totalChargedSubcriptionOutlet = 0;
                     $totalChargedSubcriptionCentral = 0;
@@ -1147,7 +1142,7 @@ class ApiIrisController extends Controller
                                     $feePGType = $settingMDRAll[$balanceMdr]['percent_type'];
                                     $charged = $settingMDRAll[$balanceMdr]['charged'];
 
-                                    $feePointOutlet = (float)$settingMDRAll[$balanceMdr]['mdr'];
+                                    $feePointOutlet = (float)$settingMDRAll[$balanceMdr]['mdr']+(float)$settingMDRAll[$balanceMdr]['mdr_central'];
                                     $feePointCentral = 100 - $feePointOutlet;
 
                                     if((int)$feePointOutlet === 0){
@@ -1337,6 +1332,11 @@ class ApiIrisController extends Controller
                         }
                     }
 
+                    if($settingProductPlastic == 0){
+                        $subtotalPlastic = TransactionProduct::where('id_transaction', $data['id_transaction'])->where('type', 'Plastic')->sum('transaction_product_subtotal');
+                        $nominalFeeToCentral = $subTotal - $subtotalPlastic;
+                    }
+
                     $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
                     $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet - $bundlingProductFeeOutlet, 2);//income outlet
                     $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentral, 2);//income central
@@ -1369,8 +1369,8 @@ class ApiIrisController extends Controller
                         'fee_item' => $feeItemForCentral,
                         'discount' => $totalChargedPromo,
                         'discount_central' => $totalChargedPromoCentral,
-                        'payment_charge' => $totalFee,
-                        'payment_charge_old' => $totalFeeOld,
+                        'payment_charge' => $totalFee+$nominalBalance,
+                        'payment_charge_old' => $totalFeeOld+$nominalBalance,
                         'point_use_expense' => $nominalBalance,
                         'subscription' => $totalChargedSubcriptionOutlet,
                         'subscription_central' => $totalChargedSubcriptionCentral,

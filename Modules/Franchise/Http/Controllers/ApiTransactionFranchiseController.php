@@ -1178,10 +1178,11 @@ class ApiTransactionFranchiseController extends Controller
      * return Response
      */
     public function listExport(Request $request) {
-    	// return $request->all();
-        $result = ExportFranchiseQueue::where('report_type', 'Transaction')->where('id_user_franchise', $request->user()->id_user_franchise);
+        $result = ExportFranchiseQueue::where('report_type', 'Transaction');
         if ($request->id_outlet) {
         	$result->where('id_outlet', $request->id_outlet);
+        }else{
+        	$result->where('id_user_franchise', $request->user()->id_user_franchise);
         }
 
         if (is_array($orders = $request->order)) {
@@ -1279,38 +1280,11 @@ class ApiTransactionFranchiseController extends Controller
 
             $filter['conditions'] = array_merge($filter['conditions'], $post['conditions']);
 
-            $summary = $this->summaryCalculationFee($start, $end, $getOutlet['id_outlet'], $post);
-
-            $generateTrx = $this->exportTransaction($filter, 1);
-
-            $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-                ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-                ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
-                ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
-                ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
-                ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
-                ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
-                ->where('transaction_payment_status', 'Completed')
-                // ->whereNull('reject_at')
-                ->where('transactions.id_outlet', $getOutlet['id_outlet'])
-                ->whereDate('transactions.transaction_date', '>=',$start)
-                ->whereDate('transactions.transaction_date', '<=',$end)
-                ->with(['transaction_payment_subscription'=> function($q){
-                    $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
-                        ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
-                        ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
-                }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
-                ->select('transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
-                    'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
-                    'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
-                    'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code');
-
-            $dataDisburse = $this->filterTransaction($dataDisburse, $post);
-
-            $dataDisburse = $dataDisburse->get()->toArray();
+            $summary = app('Modules\Disburse\Http\Controllers\ApiDisburseController')->summaryCalculationFee(null,$start, $end, $getOutlet['id_outlet'], 0, $post);
+            $generateTrx = app('Modules\Transaction\Http\Controllers\ApiTransaction')->exportTransaction($filter, 1, 'franchise');
+            $dataDisburse = app('Modules\Disburse\Http\Controllers\ApiDisburseController')->summaryDisburse(null,$start, $end, $getOutlet['id_outlet'], 0, $post);
 
             if(!empty($generateTrx['list'])){
-            	$generateTrx['show_reject_reason'] = 1;
                 $excelFile = 'Transaction_['.$start.'_'.$end.']['.$getOutlet['outlet_code'].']_'.mt_rand(0, 1000).time().'.xlsx';
                 $directory = 'franchise/report/transaction/'.$excelFile;
 
