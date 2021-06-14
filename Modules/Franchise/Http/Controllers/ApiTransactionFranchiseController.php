@@ -1285,7 +1285,6 @@ class ApiTransactionFranchiseController extends Controller
             $dataDisburse = app('Modules\Disburse\Http\Controllers\ApiDisburseController')->summaryDisburse(null,$start, $end, $getOutlet['id_outlet'], 0, $post);
 
             if(!empty($generateTrx['list'])){
-            	$generateTrx['show_reject_reason'] = 1;
                 $excelFile = 'Transaction_['.$start.'_'.$end.']['.$getOutlet['outlet_code'].']_'.mt_rand(0, 1000).time().'.xlsx';
                 $directory = 'franchise/report/transaction/'.$excelFile;
 
