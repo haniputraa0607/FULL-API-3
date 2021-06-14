@@ -598,12 +598,6 @@ class ApiIrisController extends Controller
                 $subTotal = $subTotal + $bundlingProductTotalDiscount;
                 $nominalFeeToCentral = $subTotal;
 
-                if($settingProductPlastic == 0){
-                    $subtotalPlastic = TransactionProduct::where('id_transaction', $id_transaction)->where('type', 'Plastic')->sum('transaction_product_subtotal');
-                    $subTotal = $subTotal - $subtotalPlastic;
-                    $nominalFeeToCentral = $subTotal;
-                }
-
                 // ===== Calculate Fee Subscription ====== //
                 $totalChargedSubcriptionOutlet = 0;
                 $totalChargedSubcriptionCentral = 0;
@@ -897,6 +891,11 @@ class ApiIrisController extends Controller
                     }
                 }
 
+                if($settingProductPlastic == 0){
+                    $subtotalPlastic = TransactionProduct::where('id_transaction', $id_transaction)->where('type', 'Plastic')->sum('transaction_product_subtotal');
+                    $nominalFeeToCentral = $nominalFeeToCentral - $subtotalPlastic;
+                }
+
                 $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
                 $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet - $bundlingProductFeeOutlet, 2);//income outlet
                 $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentral, 2);//income central
@@ -1066,12 +1065,6 @@ class ApiIrisController extends Controller
 
                     $subTotal = $subTotal + $bundlingProductTotalDiscount;
                     $nominalFeeToCentral = $subTotal;
-
-                    if($settingProductPlastic == 0){
-                        $subtotalPlastic = TransactionProduct::where('id_transaction', $data['id_transaction'])->where('type', 'Plastic')->sum('transaction_product_subtotal');
-                        $subTotal = $subTotal - $subtotalPlastic;
-                        $nominalFeeToCentral = $subTotal;
-                    }
 
                     // ===== Calculate Fee Subscription ====== //
                     $totalChargedSubcriptionOutlet = 0;
@@ -1337,6 +1330,11 @@ class ApiIrisController extends Controller
                         }else{
                             $nominalFeeToCentral = $nominalFeeToCentral - $bundlingProductTotalDiscount;
                         }
+                    }
+
+                    if($settingProductPlastic == 0){
+                        $subtotalPlastic = TransactionProduct::where('id_transaction', $data['id_transaction'])->where('type', 'Plastic')->sum('transaction_product_subtotal');
+                        $nominalFeeToCentral = $subTotal - $subtotalPlastic;
                     }
 
                     $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
