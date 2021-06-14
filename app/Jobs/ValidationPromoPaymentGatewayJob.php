@@ -255,13 +255,13 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
                 }
 
                 $update = [
-                    'income_outlet'=> $disburseTrx['income_outlet'],
+                    'income_outlet'=> $disburseTrx['income_outlet_old'],
                     'income_outlet_old' => 0,
-                    'income_central'=> $disburseTrx['income_central'],
+                    'income_central'=> $disburseTrx['income_central_old'],
                     'income_central_old' => 0,
-                    'expense_central'=> $disburseTrx['expense_central'],
+                    'expense_central'=> $disburseTrx['expense_central_old'],
                     'expense_central_old' => 0,
-                    'payment_charge' => $disburseTrx['payment_charge'],
+                    'payment_charge' => $disburseTrx['payment_charge_old'],
                     'payment_charge_old' => 0,
                     'id_rule_promo_payment_gateway' => null,
                     'fee_promo_payment_gateway_type' => NULL,
