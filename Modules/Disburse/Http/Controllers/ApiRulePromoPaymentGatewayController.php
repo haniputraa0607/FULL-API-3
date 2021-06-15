@@ -124,6 +124,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
             'operator_brand' => $post['operator_brand'],
             'start_date' => $dateStart,
             'end_date' => $dateEnd,
+            'maximum_total_cashback' => str_replace('.', '', $post['maximum_total_cashback']),
             'limit_promo_total' => $post['limit_promo_total']??NULL,
             'limit_promo_additional_day' => $post['limit_promo_additional_day']??NULL,
             'limit_promo_additional_week' => $post['limit_promo_additional_week']??NULL,
@@ -210,6 +211,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 'operator_brand' => $post['operator_brand'],
                 'start_date' => $dateStart,
                 'end_date' => $dateEnd,
+                'maximum_total_cashback' => str_replace('.', '', $post['maximum_total_cashback']),
                 'limit_promo_total' => $post['limit_promo_total'],
                 'limit_promo_additional_day' => $post['limit_promo_additional_day']??NULL,
                 'limit_promo_additional_week' => $post['limit_promo_additional_week']??NULL,
@@ -450,6 +452,16 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 $data['fee_jiwa_group'] = round($chargedJiwaGroup,2);
                 $data['fee_central'] = round($chargedCentral,2);
                 $data['fee_outlet'] = round($chargedOutlet,2);
+
+                //check maximum cashback
+                if($data['maximum_total_cashback'] > 0){
+                    $currentTotalCashback = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])
+                        ->where('status_active', 1)->sum('total_received_cashback');
+                    $currentTotalCashback = $currentTotalCashback + $cashBackCutomer;
+                    if($currentTotalCashback > $data['maximum_total_cashback']){
+                        continue;
+                    }
+                }
 
                 $dataAlreadyUsePromo = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])->where('status_active', 1)->count();
                 if($dataAlreadyUsePromo >= $data['limit_promo_total'] && $data['limit_promo_total'] != 0){
