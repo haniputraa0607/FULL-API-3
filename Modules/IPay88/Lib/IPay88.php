@@ -222,7 +222,8 @@ class IPay88
 		if(
 			($status == '1' && $response['response'] == '00') ||
 			($status == '0' && $response['response'] == 'Payment fail') ||
-			($status == '6' && $response['response'] == 'Payment Pending')
+			($status == '6' && $response['response'] == 'Payment Pending') ||
+			($status == 'void' && $response['response'] == 'Success / Approved')
 		){
 			$is_valid = true;
 		}
@@ -937,6 +938,22 @@ class IPay88
         } catch (\Exception $e) {
             Log::error($e->getMessage());
         }
+
+        if (!($response['response']['Code']??'0')) {
+			$submitted = [
+				'MerchantCode' => $model['merchant_code'] ?: $this->merchant_code,
+				'RefNo' => $model['ref_no'],
+				'Amount' => $model['amount'],
+				'type' => 'failed_void',
+				'triggers' => 'user'
+			];
+		
+			$requery = $this->reQuery($submitted,'void');
+			if ($requery['valid'] ?? false) {
+				return $requery;
+			}
+        }
+
         $message = $response['response']['Message'] ?? '';
         return $response['response']['Code']??'0';
     }
