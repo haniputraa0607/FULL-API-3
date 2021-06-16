@@ -543,7 +543,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
             ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
             ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
             ->where('status_active', 1)
-            ->select('users.name as customer_name', 'users.phone as customer_phone', 'transactions.transaction_receipt_number',
+            ->select('users.name as customer_name', 'users.phone as customer_phone', 'transactions.transaction_receipt_number', 'transactions.transaction_date',
                 'promo_payment_gateway_transactions.*', 'rule_promo_payment_gateway.name', 'transaction_payment_ipay88s.user_contact', 'transaction_payment_shopee_pays.user_id_hash');
 
         if(isset($post['id_rule_promo_payment_gateway']) && !empty($post['id_rule_promo_payment_gateway'])){
