@@ -217,4 +217,8 @@ class Outlet extends Authenticatable
     {
     	return preg_replace('/[^0-9.-]/', '', $value);
     }
+
+    public function delivery_outlet(){
+        return $this->hasMany(\Modules\Outlet\Entities\DeliveryOutlet::class, 'id_outlet');
+    }
 }

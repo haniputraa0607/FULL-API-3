@@ -24,6 +24,7 @@ use App\Http\Models\Setting;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
+use Modules\Outlet\Entities\DeliveryOutlet;
 use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
@@ -160,6 +161,10 @@ class ApiOutletController extends Controller
             $data['time_zone_utc'] = $post['time_zone_utc'];
         }
 
+        if (isset($post['delivery_outlet'])) {
+            $data['delivery_outlet'] = $post['delivery_outlet'];
+        }
+
         return $data;
     }
 
@@ -223,6 +228,20 @@ class ApiOutletController extends Controller
                     'id_brand'=>$id_brand
                 ]);
             }
+        }
+
+        if(!empty($post['delivery_outlet'])){
+            $deliveryOutlet = [];
+            foreach ($post['delivery_outlet'] as $key=>$val){
+                $deliveryOutlet[] = [
+                    'id_outlet' => $save['id_outlet'],
+                    'code' => $key,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                ];
+            }
+
+            DeliveryOutlet::insert($deliveryOutlet);
         }
         //schedule
         if($request->json('day') && $request->json('open') && $request->json('close')){
@@ -293,7 +312,22 @@ class ApiOutletController extends Controller
             }
         }
 
+        if(!empty($post['delivery_outlet'])){
+            $deliveryOutlet = [];
+            foreach ($post['delivery_outlet'] as $key=>$val){
+                $deliveryOutlet[] = [
+                    'id_outlet' => $request->json('id_outlet'),
+                    'code' => $key,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                ];
+            }
+            DeliveryOutlet::where('id_outlet',$request->json('id_outlet'))->delete();
+            DeliveryOutlet::insert($deliveryOutlet);
+        }
+
         unset($post['outlet_brands']);
+        unset($post['delivery_outlet']);
         $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update($post);
         // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
         if($save){
@@ -602,7 +636,7 @@ class ApiOutletController extends Controller
         }
 
         if (isset($post['outlet_code'])) {
-            $outlet->with(['holidays', 'holidays.date_holidays','brands'])->where('outlet_code', $post['outlet_code']);
+            $outlet->with(['holidays', 'holidays.date_holidays','brands', 'delivery_outlet'])->where('outlet_code', $post['outlet_code']);
         }
 
         if (isset($post['id_outlet'])) {
@@ -2760,8 +2794,14 @@ class ApiOutletController extends Controller
     }
 
     public function getAllCodeOutlet(Request $request){
-        $outlet = Outlet::select('outlet_code', 'id_outlet')->with('brands')->get()->toArray();
+        $post = $request->json()->all();
+        $outlet = Outlet::select('outlet_code', 'id_outlet')->with(['brands','delivery_outlet']);
 
+        if(isset($post['page'])){
+            $outlet = $outlet->paginate(30);
+        }else{
+            $outlet = $outlet->get()->toArray();
+        }
         return response()->json(MyHelper::checkGet($outlet));
     }
 
@@ -3259,5 +3299,119 @@ class ApiOutletController extends Controller
         $data = date('H:i', strtotime('+'.$time_diff.' hour',strtotime($time)));
 
         return $data;
+    }
+
+    function importDelivery(Request $request)
+    {
+        $post = $request->json()->all();
+        $dataimport = $post['data_import'][0]??[];
+
+        if(!empty($dataimport) && count($dataimport)){
+            DB::beginTransaction();
+            foreach ($dataimport as $data){
+                $checkCode = Outlet::where('outlet_code', $data['code_outlet'])->first();
+                if(empty($checkCode)){
+                    continue;
+                }
+
+                $id_outlet = $checkCode['id_outlet'];
+                DeliveryOutlet::where('id_outlet', $id_outlet)->delete();
+                $insertDelivOutlet = [];
+                foreach ($data as $key => $val) {
+                    if ($key == 'code_outlet') continue;
+
+                    if(strtoupper($val) == 'YES'){
+                        $insertDelivOutlet[] = [
+                            'id_outlet' => $id_outlet,
+                            'code' => $key
+                        ];
+                    }
+                }
+
+                if(!empty($insertDelivOutlet)){
+                    $saveDelivOutlet = DeliveryOutlet::insert($insertDelivOutlet);
+
+                    if (!$saveDelivOutlet) {
+                        DB::rollBack();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'      => [
+                                'Save delivery outlet failed.'
+                            ]
+                        ]);
+                    }
+                }
+            }
+
+            DB::commit();
+
+            if($saveDelivOutlet??false) return ['status' => 'success', 'message' => 'Data successfully imported.'];
+            else return ['status' => 'fail','messages' => ['failed to import data']];
+        }else{
+            return response()->json([
+                'status'    => 'fail',
+                'messages'      => [
+                    'File is empty.'
+                ]
+            ]);
+        }
+    }
+
+    function deliveryOutletAjax(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['start'])){
+            $start = $post['start'];
+            $length = $post['length'];
+        }
+
+
+        $outlet = Outlet::where('outlet_special_status', 1)
+            ->select(DB::raw('CONCAT(outlet_code," - ", outlet_name) as "0"'), 'id_outlet as 1', 'id_outlet');
+
+        if(isset($post["search"]["value"]) && !empty($post["search"]["value"])){
+            $key = $post["search"]["value"];
+            $outlet->where(function ($q) use ($key){
+                $q->orWhere('outlets.outlet_code', 'like', '%'.$key.'%');
+                $q->orWhere('outlets.outlet_name', 'like', '%'.$key.'%');
+            });
+        }
+        $total = $outlet->count();
+        $data = $outlet->skip($start)->take($length)->with('delivery_outlet')->get()->toArray();
+
+        $result = [
+            'status' => 'success',
+            'result' => $data,
+            'total' => $total
+        ];
+
+        return response()->json($result);
+    }
+
+    function deliveryOutletByCode(Request $request){
+        $post = $request->json()->all();
+        $data = DeliveryOutlet::where('code', $post['code'])->pluck('id_outlet')->toArray();
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function deliveryOutletUpdate(Request $request){
+        $post = $request->json()->all();
+        DeliveryOutlet::where('code', $post['code'])->delete();
+
+        $insert = [];
+        foreach ($post['id_outlet'] as $o){
+            $insert[] = [
+                'id_outlet' => (int)$o,
+                'code' => $post['code'],
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ];
+        }
+
+        if(!empty($insert)){
+            DeliveryOutlet::insert($insert);
+        }
+
+        return response()->json(['status' => 'success']);
     }
 }

@@ -944,7 +944,7 @@ class SettingsTableSeeder extends Seeder
                     'id_setting' => 105,
                     'key' => 'available_delivery',
                     'value' => null,
-                    'value_text' => '[{"code":"gosend","delivery_name":"GoSend","delivery_method":"GoSend","show_status":1,"available_status":"1","logo":"","position":1},{"code":"grabexpress","delivery_name":"Grab Express","delivery_method":"wehelpyou","show_status":1,"available_status":"1","logo":"","position":2},{"code":"lalamove","delivery_name":"LALA MOVE","delivery_method":"wehelpyou","show_status":1,"available_status":"1","logo":"","position":3},{"code":"mrspeedy","delivery_name":"Mr Speedy","delivery_method":"wehelpyou","show_status":1,"available_status":"1","logo":"","position":4}]',
+                    'value_text' => '[{"code":"gosend","delivery_name":"GoSend","delivery_method":"GoSend","show_status":1,"available_status":"1","logo":"","position":1},{"code":"wehelpyou_grabexpress","delivery_name":"Grab Express","delivery_method":"wehelpyou","show_status":1,"available_status":"1","logo":"","position":2},{"code":"wehelpyou_mrspeedy","delivery_name":"Mrspeedy","delivery_method":"wehelpyou","show_status":1,"available_status":1,"logo":"","position":3},{"code":"wehelpyou_lalamove","delivery_name":"Lalamove","delivery_method":"wehelpyou","show_status":1,"available_status":1,"logo":"","position":4}]',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
