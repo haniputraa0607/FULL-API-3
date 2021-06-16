@@ -4610,7 +4610,7 @@ class ApiOnlineTransaction extends Controller
         return 'success';
     }
 
-    public function availableDelivery()
+    public function listAvailableDelivery()
     {
         $setting  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
         $delivery = [];
@@ -4648,6 +4648,35 @@ class ApiOnlineTransaction extends Controller
         }
 
         $update = Setting::where('key', 'available_delivery')->update(['value_text' => json_encode($availableDelivery)]);
+        if($update){
+            $update = Setting::updateOrCreate(['key' => 'default_delivery'], ['value' => $post['default_delivery']]);
+        }
         return MyHelper::checkUpdate($update);
+    }
+
+    public function mergeNewDelivery($data=[]){
+        $jsonDecode = json_decode($data);
+
+        if(isset($jsonDecode->data->partners) && !empty($jsonDecode->data->partners)){
+            $availableDelivery  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
+            $dataDelivery = (array)$jsonDecode->data->partners;
+            foreach ($dataDelivery as $val){
+                $check = array_search($val->courier, array_column($availableDelivery, 'code'));
+                if($check === false){
+                    $availableDelivery[] = [
+                        "code" => $val->courier,
+                        "delivery_name" => ucfirst($val->courier),
+                        "delivery_method" => "wehelpyou",
+                        "show_status" => 1,
+                        "available_status" => 1,
+                        "logo" => "",
+                        "position" => count($availableDelivery)+1
+                    ];
+                }
+            }
+            $update = Setting::where('key', 'available_delivery')->update(['value_text' => json_encode($availableDelivery)]);
+        }
+
+        return true;
     }
 }
