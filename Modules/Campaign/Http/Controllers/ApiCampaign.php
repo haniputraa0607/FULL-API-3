@@ -507,7 +507,20 @@ class ApiCampaign extends Controller
             unset($campaign['campaign_push_receipient']);
             $data['campaign'] = $campaign;
             $data['type'] = 'push';
-            if(strpos($campaign['campaign_push_subject'],"%") === false && strpos($campaign['campaign_push_content'],"%") === false){
+
+            $textReplace = TextReplace::pluck('keyword')->toArray();
+            $notUseTextReplace = 1;
+            $data['not_use_text_replace'] = 1;
+            foreach ($textReplace as $text){
+                if(strpos($campaign['campaign_push_subject'],$text) === false && strpos($campaign['campaign_push_content'],$text) === false){
+                    continue;
+                }
+                $notUseTextReplace = 0;
+                $data['not_use_text_replace'] = 0;
+                break;
+            }
+
+            if($notUseTextReplace == 1){
                 foreach (array_chunk($receipient_push,500) as $recipients) {
                     $data['recipient']=array_filter($recipients,function($var){return !empty($var);});
                     SendCampaignJob::dispatch($data)->allOnConnection('campaignqueue');
