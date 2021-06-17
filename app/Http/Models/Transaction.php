@@ -104,7 +104,9 @@ class Transaction extends Model
 		'transaction_discount_item',
 		'transaction_discount_bill',
 		'need_manual_void',
-		'failed_void_reason'
+		'failed_void_reason',
+		'shipment_method',
+		'shipment_courier'
 	];
 
 	public $manual_refund = 0;
