@@ -863,6 +863,9 @@ class ApiOnlineTransaction extends Controller
 	                    }
 	                }
 	                $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
+	            }else{
+	            	$post['shipping'] = $shippingGoSend;
+	            	$shippingGoSend = 0;
 	            }
 	            $shipment_method = 'GO-SEND';
             	$shipment_courier = 'GO-SEND';
