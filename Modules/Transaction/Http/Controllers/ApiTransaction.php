@@ -3393,17 +3393,16 @@ class ApiTransaction extends Controller
                                     ];
                                     break;
                                 case 'picked':
-                                    $hasPicked = true;
                                     if (!$hasPicked) {
                                         $statusOrder[] = [
                                             'text'  => 'Driver mengambil pesanan di outlet',
                                             'date'  => $valueGosend['created_at']
                                         ];
+                                        $hasPicked = true;
                                     }
                                     break;
                                 case 'enroute drop':
                                 case 'out_for_delivery':
-                                    $hasPicked = true;
                                     $statusOrder[] = [
                                         'text'  => 'Pesanan sudah diambil dan sedang menuju lokasi #temansejiwa',
                                         'date'  => $valueGosend['created_at']
@@ -3413,6 +3412,7 @@ class ApiTransaction extends Controller
                                             'text'  => 'Driver mengambil pesanan di outlet',
                                             'date'  => $valueGosend['created_at']
                                         ];
+                                        $hasPicked = true;
                                     }
                                     break;
                                 case 'completed':
