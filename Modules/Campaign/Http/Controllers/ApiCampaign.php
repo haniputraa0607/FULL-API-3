@@ -44,6 +44,7 @@ use Validator;
 use Hash;
 use DB;
 use App\Lib\SendMail as Mail;
+use App\Http\Models\TextReplace;
 
 class ApiCampaign extends Controller
 {
