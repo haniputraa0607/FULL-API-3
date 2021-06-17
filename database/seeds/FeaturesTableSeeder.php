@@ -3190,7 +3190,17 @@ class FeaturesTableSeeder extends Seeder
                     'order' => 117,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
-                )
+                ),
+            319 =>
+                array(
+                    'id_feature' => 320,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Setting Delivery Method',
+                    'show_hide' => 1,
+                    'order' => 104,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
         ));
     }
 }

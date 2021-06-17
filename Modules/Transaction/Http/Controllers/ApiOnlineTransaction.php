@@ -4609,4 +4609,74 @@ class ApiOnlineTransaction extends Controller
 
         return 'success';
     }
+
+    public function listAvailableDelivery()
+    {
+        $setting  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
+        $delivery = [];
+
+        foreach ($setting as $value) {
+            if($value['show_status'] == 1){
+                $delivery[] = $value;
+            }
+        }
+
+        usort($delivery, function($a, $b) {
+            return $a['position'] - $b['position'];
+        });
+
+        $setting_default = Setting::where('key', 'default_delivery')->first()->value??null;
+
+        $result = [
+            'default_delivery' => $setting_default,
+            'delivery' => $delivery
+        ];
+        return MyHelper::checkGet($result);
+    }
+
+    public function availableDeliveryUpdate(Request $request)
+    {
+        $post = $request->json()->all();
+        $availableDelivery  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
+        $dtDelivery = $post['delivery']??[];
+        foreach ($availableDelivery as $key => $value) {
+            $check = array_search($value['code'], array_column($dtDelivery, 'code'));
+            if($check !== false){
+                $availableDelivery[$key]['available_status'] = $dtDelivery[$check]['available_status'];
+                $availableDelivery[$key]['position'] = $check;
+            }
+        }
+
+        $update = Setting::where('key', 'available_delivery')->update(['value_text' => json_encode($availableDelivery)]);
+        if($update){
+            $update = Setting::updateOrCreate(['key' => 'default_delivery'], ['value' => $post['default_delivery']]);
+        }
+        return MyHelper::checkUpdate($update);
+    }
+
+    public function mergeNewDelivery($data=[]){
+        $jsonDecode = json_decode($data);
+
+        if(isset($jsonDecode->data->partners) && !empty($jsonDecode->data->partners)){
+            $availableDelivery  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
+            $dataDelivery = (array)$jsonDecode->data->partners;
+            foreach ($dataDelivery as $val){
+                $check = array_search($val->courier, array_column($availableDelivery, 'code'));
+                if($check === false){
+                    $availableDelivery[] = [
+                        "code" => $val->courier,
+                        "delivery_name" => ucfirst($val->courier),
+                        "delivery_method" => "wehelpyou",
+                        "show_status" => 1,
+                        "available_status" => 1,
+                        "logo" => "",
+                        "position" => count($availableDelivery)+1
+                    ];
+                }
+            }
+            $update = Setting::where('key', 'available_delivery')->update(['value_text' => json_encode($availableDelivery)]);
+        }
+
+        return true;
+    }
 }

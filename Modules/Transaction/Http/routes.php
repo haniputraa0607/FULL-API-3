@@ -2,6 +2,8 @@
 Route::group(['middleware' => ['auth:api'],'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::any('available-payment', 'ApiOnlineTransaction@availablePayment');
     Route::any('available-payment/update', 'ApiOnlineTransaction@availablePaymentUpdate')->middleware('scopes:be');
+    Route::get('be/available-delivery', 'ApiOnlineTransaction@listAvailableDelivery')->middleware('scopes:be');
+    Route::post('available-delivery/update', 'ApiOnlineTransaction@availableDeliveryUpdate')->middleware('scopes:be');
     Route::any('trigger-reversal', 'ApiOnlineTransaction@triggerReversal')->middleware('scopes:be');
 });
 
