@@ -2107,7 +2107,7 @@ class MyHelper{
 				if($row['subject'] == 'all_user'){
 					$condition[$type.'_rule_operator'] = "";
 				}elseif($row['subject'] == 'Deals' || $row['subject'] == 'Subscription' || $row['subject'] == 'Quest'){
-                    $condition[$type.'_rule_param'] = '=';
+                    $condition[$type.'_rule_operator'] = '=';
                 }
 				elseif($row['subject'] == 'trx_product' || $row['subject'] == 'trx_outlet'){
                     $condition[$type.'_rule_operator'] = $row['operatorSpecialCondition'];
