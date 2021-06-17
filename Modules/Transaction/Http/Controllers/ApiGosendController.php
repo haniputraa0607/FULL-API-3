@@ -190,7 +190,7 @@ class ApiGosendController extends Controller
                         DB::commit();
                     }
                     $status = GoSend::getStatus($post['booking_id'], true);
-                    $arrived_at = date('Y-m-d H:i:s', ($status['orderArrivalTime']??false)?strtotime($status['orderArrivalTime']):time());
+                    $arrived_at = date('Y-m-d H:i:s', ($status['orderClosedTime']??false)?strtotime($status['orderClosedTime']):time());
                     TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
                     $dataSave       = [
                         'id_transaction'                => $id_transaction,

@@ -2948,7 +2948,7 @@ class ApiOutletApp extends Controller
                             $checkMembership = app($this->membership)->calculateMembership($user['phone']);
                             DB::commit();
                         }
-                        $arrived_at = date('Y-m-d H:i:s', ($status['orderArrivalTime']??false)?strtotime($status['orderArrivalTime']):time());
+                        $arrived_at = date('Y-m-d H:i:s', ($status['orderClosedTime']??false)?strtotime($status['orderClosedTime']):time());
                         TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
                         $dataSave = [
                             'id_transaction'                => $trx['id_transaction'],
