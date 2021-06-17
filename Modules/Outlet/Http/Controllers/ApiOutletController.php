@@ -3323,7 +3323,9 @@ class ApiOutletController extends Controller
                     if(strtoupper($val) == 'YES'){
                         $insertDelivOutlet[] = [
                             'id_outlet' => $id_outlet,
-                            'code' => $key
+                            'code' => $key,
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
                         ];
                     }
                 }
@@ -3366,8 +3368,7 @@ class ApiOutletController extends Controller
         }
 
 
-        $outlet = Outlet::where('outlet_special_status', 1)
-            ->select(DB::raw('CONCAT(outlet_code," - ", outlet_name) as "0"'), 'id_outlet as 1', 'id_outlet');
+        $outlet = Outlet::select(DB::raw('CONCAT(outlet_code," - ", outlet_name) as "0"'), 'id_outlet as 1', 'id_outlet');
 
         if(isset($post["search"]["value"]) && !empty($post["search"]["value"])){
             $key = $post["search"]["value"];
