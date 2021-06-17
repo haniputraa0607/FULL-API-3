@@ -201,6 +201,18 @@ class Midtrans {
         } catch (\Exception $e) {
             \Log::error('Failed write log to LogMidtrans: ' . $e->getMessage());
         }
+        if (($status['status_code']??false)!=200) {
+            // check status saa seperti ipay88
+            $midtransStatus = static::status($order_id);
+            if (($midtransStatus['transaction_status'] ?? ($midtransStatus['response']['transaction_status'] ?? false)) == 'refund') {
+                return [
+                    'status' => 'success',
+                    'messages' => [
+                        'Refund already processed'
+                    ]
+                ];
+            }
+        }
         return [
             'status' => ($status['status_code']??false)==200?'success':'fail',
             'messages' => [$status['status_message']??'Something went wrong','Refund failed']
