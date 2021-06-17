@@ -2850,6 +2850,14 @@ class ApiOutletApp extends Controller
         $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->with(['outlet' => function($q) {
             $q->select('id_outlet', 'outlet_name');
         }])->where('pickup_by', 'GO-SEND')->first();
+        if (!$trx) {
+            return [
+                'status' => 'fail',
+                'messages' => [
+                    'Transaction not found'
+                ]
+            ];
+        }
         $outlet = $trx->outlet;
         if (!$trx) {
             return MyHelper::checkGet($trx, 'Transaction Not Found');
@@ -5044,6 +5052,14 @@ class ApiOutletApp extends Controller
             $date_holiday = DateHoliday::where('id_date_holiday', $id_date_holiday)->with(['holiday' => function ($q) {
                 $q->select(\DB::raw('holidays.*,(CASE WHEN COUNT(distinct(oh.id_outlet)) > 1 THEN 1 ELSE 0 END) as read_only'))->join('outlet_holidays as oh', 'oh.id_holiday', '=', 'holidays.id_holiday')->groupBy('holidays.id_holiday');
             }])->first();
+            if (!$date_holiday) {
+                return [
+                    'status' => 'false',
+                    'messages' => [
+                        'Holiday not found'
+                    ]
+                ];
+            }
             if ($date_holiday->holiday->read_only) {
                 return MyHelper::checkGet([], 'This holiday cannot be deleted');
             };
@@ -5394,7 +5410,7 @@ class ApiOutletApp extends Controller
     public function productVariantGroupSoldOut(Request $request)
     {
         $post = $request->all();
-        $id_outlet = $post['id_outlet']??auth()->user()->id_outlet;
+        $id_outlet = $post['id_outlet']??$request->user()->id_outlet;
 
         if(!$id_outlet){
             return response()->json(['status' => 'fail', 'messages' => 'Outlet ID is required']);
@@ -5687,7 +5703,7 @@ class ApiOutletApp extends Controller
     public function productPlasticSoldOut(Request $request)
     {
         $post = $request->all();
-        $id_outlet = $post['id_outlet']??auth()->user()->id_outlet;
+        $id_outlet = $post['id_outlet']??$request->user()->id_outlet;
 
         if(!$id_outlet){
             return response()->json(['status' => 'fail', 'messages' => 'Outlet ID is required']);
