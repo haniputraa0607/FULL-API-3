@@ -4724,6 +4724,7 @@ class ApiOnlineTransaction extends Controller
             if($check !== false){
                 $availableDelivery[$key]['available_status'] = $dtDelivery[$check]['available_status'];
                 $availableDelivery[$key]['position'] = $check;
+                $availableDelivery[$key]['description'] = $dtDelivery[$check]['description'];
             }
         }
 
@@ -4740,9 +4741,11 @@ class ApiOnlineTransaction extends Controller
             $availableDelivery  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
             $dataDelivery = (array)$jsonDecode->data->partners;
             foreach ($dataDelivery as $val){
+
             	if (empty($val)) {
             		continue;
             	}
+
                 $check = array_search('wehelpyou_'.$val->courier, array_column($availableDelivery, 'code'));
                 if($check === false){
                     $availableDelivery[] = [

@@ -2873,6 +2873,15 @@ class ApiOutletApp extends Controller
 		        ->where('pickup_by', '!=', 'Customer')
 		        ->first();
 
+        if (!$trx) {
+            return [
+                'status' => 'fail',
+                'messages' => [
+                    'Transaction not found'
+                ]
+            ];
+        }
+
         $outlet = $trx->outlet;
         $request->type = $trx->shipment_method ?? $request->type;
         if (!$trx) {
@@ -2973,7 +2982,7 @@ class ApiOutletApp extends Controller
                             $checkMembership = app($this->membership)->calculateMembership($user['phone']);
                             DB::commit();
                         }
-                        $arrived_at = date('Y-m-d H:i:s', ($status['orderArrivalTime']??false)?strtotime($status['orderArrivalTime']):time());
+                        $arrived_at = date('Y-m-d H:i:s', ($status['orderClosedTime']??false)?strtotime($status['orderClosedTime']):time());
                         TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
                         $dataSave = [
                             'id_transaction'                => $trx['id_transaction'],
@@ -5074,6 +5083,14 @@ class ApiOutletApp extends Controller
             $date_holiday = DateHoliday::where('id_date_holiday', $id_date_holiday)->with(['holiday' => function ($q) {
                 $q->select(\DB::raw('holidays.*,(CASE WHEN COUNT(distinct(oh.id_outlet)) > 1 THEN 1 ELSE 0 END) as read_only'))->join('outlet_holidays as oh', 'oh.id_holiday', '=', 'holidays.id_holiday')->groupBy('holidays.id_holiday');
             }])->first();
+            if (!$date_holiday) {
+                return [
+                    'status' => 'false',
+                    'messages' => [
+                        'Holiday not found'
+                    ]
+                ];
+            }
             if ($date_holiday->holiday->read_only) {
                 return MyHelper::checkGet([], 'This holiday cannot be deleted');
             };
@@ -5424,7 +5441,7 @@ class ApiOutletApp extends Controller
     public function productVariantGroupSoldOut(Request $request)
     {
         $post = $request->all();
-        $id_outlet = $post['id_outlet']??auth()->user()->id_outlet;
+        $id_outlet = $post['id_outlet']??$request->user()->id_outlet;
 
         if(!$id_outlet){
             return response()->json(['status' => 'fail', 'messages' => 'Outlet ID is required']);
@@ -5717,7 +5734,7 @@ class ApiOutletApp extends Controller
     public function productPlasticSoldOut(Request $request)
     {
         $post = $request->all();
-        $id_outlet = $post['id_outlet']??auth()->user()->id_outlet;
+        $id_outlet = $post['id_outlet']??$request->user()->id_outlet;
 
         if(!$id_outlet){
             return response()->json(['status' => 'fail', 'messages' => 'Outlet ID is required']);

@@ -3323,7 +3323,9 @@ class ApiOutletController extends Controller
                     if(strtoupper($val) == 'YES'){
                         $insertDelivOutlet[] = [
                             'id_outlet' => $id_outlet,
-                            'code' => $key
+                            'code' => $key,
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
                         ];
                     }
                 }

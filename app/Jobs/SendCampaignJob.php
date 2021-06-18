@@ -61,6 +61,7 @@ class SendCampaignJob implements ShouldQueue
         $campaign=$this->data['campaign'];
         $type=$this->data['type'];
         $recipient=$this->data['recipient'];
+        $notUseTextReplace=$this->data['not_use_text_replace']??0;
         $countPush = 0;
         $countInbox = 0;
         $countEmail = 0;
@@ -286,7 +287,7 @@ class SendCampaignJob implements ShouldQueue
                 break;
 
             case 'push':
-                if(strpos($campaign['campaign_push_subject'],"%") === false && strpos($campaign['campaign_push_content'],"%") === false){
+                if($notUseTextReplace == 1){
                     $dataOptional          = [];
                     $image = null;
                     if (isset($campaign['campaign_push_image']) && $campaign['campaign_push_image'] != null) {
