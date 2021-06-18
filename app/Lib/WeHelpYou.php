@@ -330,6 +330,35 @@ class WeHelpYou
 			]
 		];
 
+		$priceInstant = self::getPriceInstant($postRequest);
+		if ($priceInstant['status_code'] != 200) {
+			return [
+				'status' => 'fail',
+				'messages' => ['TIdak dapat menemukan layanan delivery']
+			];
+		}
+
+		$courier = null;
+		foreach ($priceInstant['response']['data']['partners'] as $val) {
+			if ($trxPickupWHY->courier == $val['courier']) {
+				$courier = $val;
+			}
+		}
+
+		if (empty($courier)) {
+			return [
+				'status' => 'fail',
+				'messages' => ['Tidak dapat menemukan layanan delivery']
+			];
+		}
+
+		if (self::isNotEnoughCredit($courier['price'])) {
+			return [
+				'status' => 'fail',
+				'messages' => ['Tidak dapat membooking delivery, kredit tidak mencukupi']
+			];
+		}
+
 		$createOrder = self::sendRequest('POST', 'v2/create/order/instant', $postRequest, 'create_order');
 		$saveOrder = self::saveCreateOrderReponse($trxPickup, $createOrder);
 
@@ -358,7 +387,7 @@ class WeHelpYou
 		if (empty($orderResponse['response']['data']['poNo'])) {
 			return [
 				'status' => 'fail',
-				'messages' => $orderResponse['response']
+				'messages' => ['PO number tidak ditemukan']
 			];
 		}
 
@@ -402,7 +431,7 @@ class WeHelpYou
 		if ($trackOrder['status_code'] != '200') {
 			return [
 				'status' => 'fail',
-				'messages' => $orderResponse['response'] ?? 'PO number tidak ditemukan'
+				'messages' => ['PO number tidak ditemukan']
 			];
 		}
 
