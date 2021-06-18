@@ -210,4 +210,24 @@ class ApiSettingTransaction extends Controller
         $pg = Setting::select('value')->where('key','credit_card_payment_gateway')->pluck('value')->first()?:'Ipay88';
         return MyHelper::checkGet($pg);
     }
+
+    public function packageDetailDelivery(Request $request){
+        $post = $request->json()->all();
+
+        if(empty($post)){
+            $setting_dimension = (array)json_decode(Setting::where('key', 'package_detail_delivery')->first()->value_text??null);
+            return response()->json(MyHelper::checkGet($setting_dimension));
+        }else{
+            $dimension = [
+                'package_name' => $post['package_name']??"",
+                'package_description' => $post['package_description']??"",
+                'length' => $post['length']??0,
+                'width' => $post['width']??0,
+                'height' => $post['height']??0,
+                'weight' => $post['weight']??0
+            ];
+            $update = Setting::updateOrCreate(['key' => 'package_detail_delivery'], ['value_text' => json_encode($dimension)]);
+            return response()->json(MyHelper::checkUpdate($update));
+        }
+    }
 }

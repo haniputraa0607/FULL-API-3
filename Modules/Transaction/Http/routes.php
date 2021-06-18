@@ -31,6 +31,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('/balance/filter', 'ApiTransaction@balanceUserFilter');
     Route::post('/admin', 'ApiNotification@adminOutletNotification');
     Route::post('/setting', 'ApiSettingTransaction@settingTrx');
+    Route::any('/setting/package-detail-delivery', 'ApiSettingTransaction@packageDetailDelivery');
     Route::any('be/filter', 'ApiTransaction@transactionFilter');
 
     Route::post('retry-void-payment/retry', 'ApiTransaction@retry');

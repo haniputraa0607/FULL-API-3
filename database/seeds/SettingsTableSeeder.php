@@ -960,9 +960,9 @@ class SettingsTableSeeder extends Seeder
             106 =>
                 array(
                     'id_setting' => 107,
-                    'key' => 'dimension_delivery',
+                    'key' => 'package_detail_delivery',
                     'value' => null,
-                    'value_text' => '{"length":0,"width":0,"height":0,"weight":0}',
+                    'value_text' => '{"package_name":"","package_description":"","length":0,"width":0,"height":0,"weight":0}',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 )
