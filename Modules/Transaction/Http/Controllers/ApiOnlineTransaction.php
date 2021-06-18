@@ -4626,11 +4626,9 @@ class ApiOnlineTransaction extends Controller
         });
 
         $setting_default = Setting::where('key', 'default_delivery')->first()->value??null;
-        $setting_dimension = (array)json_decode(Setting::where('key', 'dimension_delivery')->first()->value_text??null);
 
         $result = [
             'default_delivery' => $setting_default,
-            'dimension_delivery' => $setting_dimension,
             'delivery' => $delivery
         ];
         return MyHelper::checkGet($result);
@@ -4653,13 +4651,6 @@ class ApiOnlineTransaction extends Controller
         $update = Setting::where('key', 'available_delivery')->update(['value_text' => json_encode($availableDelivery)]);
         if($update){
             $update = Setting::updateOrCreate(['key' => 'default_delivery'], ['value' => $post['default_delivery']]);
-            $dimension = [
-                'length' => $post['length']??0,
-                'width' => $post['width']??0,
-                'height' => $post['height']??0,
-                'weight' => $post['weight']??0
-            ];
-            $update = Setting::updateOrCreate(['key' => 'dimension_delivery'], ['value_text' => json_encode($dimension)]);
         }
         return MyHelper::checkUpdate($update);
     }
