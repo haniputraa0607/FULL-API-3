@@ -27,6 +27,7 @@ use App\Http\Models\TransactionPaymentOffline;
 use App\Http\Models\TransactionPaymentOvo;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
+use App\Http\Models\TransactionPickupWehelpyou;
 use App\Http\Models\User;
 use App\Http\Models\UserOutlet;
 use App\Http\Models\PaymentMethod;
@@ -768,7 +769,15 @@ class ApiOutletApp extends Controller
             $result = ['status' => 'success'];
 
             if($order->pickup_by != 'Customer') {
-                $result = $this->bookGoSend($order);
+            	switch ($order->pickup_by) {
+            		case 'Wehelpyou':
+                		$result = $this->bookWehelpyou($order);
+            			break;
+            		
+            		default:
+                		$result = $this->bookGoSend($order);
+            			break;
+            	}
             }
 
             if (($result['status']??false) != 'success') {
@@ -829,13 +838,27 @@ class ApiOutletApp extends Controller
         }
 
         if ($order->pickup_by != 'Customer') {
-            $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-            if(!$pickup_gosend || !$pickup_gosend['latest_status'] || in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled', 'confirmed'])) {
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['Driver belum ditemukan']
-                ]);
-            }
+        	switch ($order->pickup_by) {
+        		case 'Wehelpyou':
+        			$pickupWHY = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+		            if(!$pickupWHY || !$pickupWHY['latest_status'] || in_array($pickupWHY['latest_status']??false, WeHelpYou::driverNotFoundStatus())) {
+		                return response()->json([
+		                    'status'   => 'fail',
+		                    'messages' => ['Driver belum ditemukan']
+		                ]);
+		            }
+        			break;
+        		
+        		default:
+		            $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+		            if(!$pickup_gosend || !$pickup_gosend['latest_status'] || in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled', 'confirmed'])) {
+		                return response()->json([
+		                    'status'   => 'fail',
+		                    'messages' => ['Driver belum ditemukan']
+		                ]);
+		            }
+        			break;
+        	}
         }
 
         DB::beginTransaction();
@@ -3046,27 +3069,65 @@ class ApiOutletApp extends Controller
 
     public function cancelDelivery(Request $request)
     {
-        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by', 'GO-SEND')->first();
+        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)
+        		->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+        		->where('pickup_by', '!=','Customer')
+        		->first();
+
         if (!$trx) {
             return MyHelper::checkGet($trx, 'Transaction Not Found');
         }
-        $trx->load('transaction_pickup_go_send');
-        $orderNo = $trx->transaction_pickup_go_send->go_send_order_no;
-        if (!$orderNo) {
-            return [
-                'status'   => 'fail',
-                'messages' => ['Go-Send Pickup not found'],
-            ];
-        }
-        $cancel = GoSend::cancelOrder($orderNo, $trx->transaction_receipt_number);
-        if (($cancel['status'] ?? false) == 'fail') {
-            return $cancel;
-        }
-        if (($cancel['statusCode'] ?? false) == '200') {
-            $trx->transaction_pickup_go_send->latest_status = 'Cancelled';
-            $trx->transaction_pickup_go_send->cancel_reason = $request->reason;
-            $trx->transaction_pickup_go_send->save();
-            return ['status' => 'success'];
+
+        switch ($trx->pickup_by) {
+        	case 'Wehelpyou':
+		        $trx->load('transaction_pickup_wehelpyou');
+		        $poNo = $trx->transaction_pickup_wehelpyou->poNo;
+        		if (!$poNo) {
+		            return [
+		                'status'   => 'fail',
+		                'messages' => ['PO number not found'],
+		            ];
+		        }
+		        $cancel = WeHelpYou::cancelOrder($poNo);
+		        if (($cancel['status_code'] ?? false) != '200') {
+		            return [
+		                'status'   => 'fail',
+		                'messages' => ['Cancel order failed']
+		            ];
+		        }
+
+		        if (($cancel['status_code'] ?? false) == '200') {
+		            $trx->transaction_pickup_wehelpyou->latest_status = 'Cancelled';
+		            $trx->transaction_pickup_wehelpyou->save();
+		            return ['status' => 'success'];
+		        }else{
+		        	return [
+		                'status'   => 'fail',
+		                'messages' => ['Something went wrong']
+		            ];	
+		        }
+        		break;
+        	
+        	default:
+		        $trx->load('transaction_pickup_go_send');
+		        $orderNo = $trx->transaction_pickup_go_send->go_send_order_no;
+		        if (!$orderNo) {
+		            return [
+		                'status'   => 'fail',
+		                'messages' => ['Go-Send Pickup not found'],
+		            ];
+		        }
+		        $cancel = GoSend::cancelOrder($orderNo, $trx->transaction_receipt_number);
+		        if (($cancel['status'] ?? false) == 'fail') {
+		            return $cancel;
+		        }
+		        if (($cancel['statusCode'] ?? false) == '200') {
+		            $trx->transaction_pickup_go_send->latest_status = 'Cancelled';
+		            $trx->transaction_pickup_go_send->cancel_reason = $request->reason;
+		            $trx->transaction_pickup_go_send->save();
+		            return ['status' => 'success'];
+		        }
+        		break;
         }
     }
 

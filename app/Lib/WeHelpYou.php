@@ -440,32 +440,33 @@ class WeHelpYou
 					->where('id_transaction', $trx->id_transaction)
 					->pluck('status_id')
 					->toArray();
-		$latesStatus = $trackOrder['response']['data']['status']['name'];
+		$latestStatus = $trackOrder['response']['data']['status']['name'];
 
 		$id_transaction_pickup_wehelpyou = $trx->transaction_pickup->transaction_pickup_wehelpyou->id_transaction_pickup_wehelpyou;
 		foreach ($statusNew as $status) {
 			if (!in_array($status['status_id'], $statusOld)) {
+				$statusName = self::getStatusById($status['status_id']) ?? $status['status'];
 				TransactionPickupWehelpyouUpdate::create([
 					'id_transaction' => $trx->id_transaction,
 					'id_transaction_pickup_wehelpyou' => $trx->transaction_pickup->transaction_pickup_wehelpyou->id_transaction_pickup_wehelpyou,
 					'poNo' => $po_no,
-					'status' => self::getStatusById($status['status_id']) ?? $status['status'],
+					'status' => $statusName,
 					'status_id' => $status['status_id']
 				]);
-				$latesStatus = $status['status'];
+				$latestStatus = $statusName;
 			}
 		}
 
 		TransactionPickupWehelpyou::where('id_transaction_pickup_wehelpyou', $id_transaction_pickup_wehelpyou)
 		->update([
-			'latest_status' => $latesStatus,
-			'tracking_driver_name' => $trackOrder['response']['data']['tracking']['name'] ?? null,
-			'tracking_driver_phone' => $trackOrder['response']['data']['tracking']['phone'] ?? null,
-			'tracking_live_tracking_url' => $trackOrder['response']['data']['tracking']['live_tracking_url'] ?? null,
-			'tracking_vehicle_number' => $trackOrder['response']['data']['tracking']['vehicle_number'] ?? null,
-			'tracking_photo' => $trackOrder['response']['data']['tracking']['photo'] ?? null,
-			'tracking_receiver_name' => $trackOrder['response']['data']['tracking']['receiver_name'] ?? null,
-			'tracking_driver_log' => $trackOrder['response']['data']['tracking']['driver_log'] ?? null
+			'latest_status' 			=> $latestStatus,
+			'tracking_driver_name' 		=> $trackOrder['response']['data']['tracking']['name'] ?? null,
+			'tracking_driver_phone' 	=> $trackOrder['response']['data']['tracking']['phone'] ?? null,
+			'tracking_live_tracking_url'=> $trackOrder['response']['data']['tracking']['live_tracking_url'] ?? null,
+			'tracking_vehicle_number' 	=> $trackOrder['response']['data']['tracking']['vehicle_number'] ?? null,
+			'tracking_photo' 			=> $trackOrder['response']['data']['tracking']['photo'] ?? null,
+			'tracking_receiver_name' 	=> $trackOrder['response']['data']['tracking']['receiver_name'] ?? null,
+			'tracking_driver_log' 		=> $trackOrder['response']['data']['tracking']['driver_log'] ?? null
 		]);
 
 		return ['status' => 'success'];
@@ -491,5 +492,22 @@ class WeHelpYou
 		];
 		
 		return $status[$status_id] ?? null;
+	}
+
+	public static function driverNotFoundStatus(): array
+	{
+		return [
+			'On progress', 
+			'Completed', 
+			'Order failed by system', 
+			'Cancel order failed', 
+			'Refund failed by system', 
+			'Refunded by system', 
+			'Cancelled by partner', 
+			'Finding driver', 
+			'Order expired', 
+			'Rejected', 
+			'Cancelled, without refund'
+		];
 	}
 }
