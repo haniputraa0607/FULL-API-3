@@ -64,7 +64,10 @@ class Product extends Model
 		'product_capacity',
 		'plastic_used',
         'product_variant_status',
-        'is_inactive'
+        'is_inactive',
+        'product_length',
+        'product_width',
+        'product_height'
     ];
     
 

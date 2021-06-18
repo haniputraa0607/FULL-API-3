@@ -944,7 +944,7 @@ class SettingsTableSeeder extends Seeder
                     'id_setting' => 105,
                     'key' => 'available_delivery',
                     'value' => null,
-                    'value_text' => '[{"code":"gosend","delivery_name":"GoSend","delivery_method":"GoSend","show_status":1,"available_status":"1","logo":"","position":1},{"code":"wehelpyou_grabexpress","delivery_name":"Grab Express","delivery_method":"wehelpyou","show_status":1,"available_status":"1","logo":"","position":2},{"code":"wehelpyou_mrspeedy","delivery_name":"Mrspeedy","delivery_method":"wehelpyou","show_status":1,"available_status":1,"logo":"","position":3},{"code":"wehelpyou_lalamove","delivery_name":"Lalamove","delivery_method":"wehelpyou","show_status":1,"available_status":1,"logo":"","position":4}]',
+                    'value_text' => '[{"code":"gosend","delivery_name":"GoSend","delivery_method":"GoSend","show_status":1,"available_status":"1","logo":"","position":0,"description":""},{"code":"wehelpyou_grabexpress","delivery_name":"Grab Express","delivery_method":"wehelpyou","show_status":1,"available_status":"1","logo":"","position":1,"description":""},{"code":"wehelpyou_mrspeedy","delivery_name":"Mrspeedy","delivery_method":"wehelpyou","show_status":1,"available_status":"1","logo":"","position":2,"description":""},{"code":"wehelpyou_lalamove","delivery_name":"Lalamove","delivery_method":"wehelpyou","show_status":1,"available_status":"1","logo":"","position":3,"description":""}]',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
@@ -954,6 +954,15 @@ class SettingsTableSeeder extends Seeder
                     'key' => 'default_delivery',
                     'value' => 'selected',
                     'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            106 =>
+                array(
+                    'id_setting' => 107,
+                    'key' => 'dimension_delivery',
+                    'value' => null,
+                    'value_text' => '{"length":0,"width":0,"height":0,"weight":0}',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 )

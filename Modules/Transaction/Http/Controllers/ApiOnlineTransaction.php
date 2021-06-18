@@ -4626,9 +4626,11 @@ class ApiOnlineTransaction extends Controller
         });
 
         $setting_default = Setting::where('key', 'default_delivery')->first()->value??null;
+        $setting_dimension = (array)json_decode(Setting::where('key', 'dimension_delivery')->first()->value_text??null);
 
         $result = [
             'default_delivery' => $setting_default,
+            'dimension_delivery' => $setting_dimension,
             'delivery' => $delivery
         ];
         return MyHelper::checkGet($result);
@@ -4644,12 +4646,20 @@ class ApiOnlineTransaction extends Controller
             if($check !== false){
                 $availableDelivery[$key]['available_status'] = $dtDelivery[$check]['available_status'];
                 $availableDelivery[$key]['position'] = $check;
+                $availableDelivery[$key]['description'] = $dtDelivery[$check]['description'];
             }
         }
 
         $update = Setting::where('key', 'available_delivery')->update(['value_text' => json_encode($availableDelivery)]);
         if($update){
             $update = Setting::updateOrCreate(['key' => 'default_delivery'], ['value' => $post['default_delivery']]);
+            $dimension = [
+                'length' => $post['length']??0,
+                'width' => $post['width']??0,
+                'height' => $post['height']??0,
+                'weight' => $post['weight']??0
+            ];
+            $update = Setting::updateOrCreate(['key' => 'dimension_delivery'], ['value_text' => json_encode($dimension)]);
         }
         return MyHelper::checkUpdate($update);
     }
@@ -4661,10 +4671,10 @@ class ApiOnlineTransaction extends Controller
             $availableDelivery  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
             $dataDelivery = (array)$jsonDecode->data->partners;
             foreach ($dataDelivery as $val){
-                $check = array_search($val->courier, array_column($availableDelivery, 'code'));
+                $check = array_search('wehelpyou_'.$val->courier, array_column($availableDelivery, 'code'));
                 if($check === false){
                     $availableDelivery[] = [
-                        "code" => $val->courier,
+                        "code" => 'wehelpyou_'.$val->courier,
                         "delivery_name" => ucfirst($val->courier),
                         "delivery_method" => "wehelpyou",
                         "show_status" => 1,
