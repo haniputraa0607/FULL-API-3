@@ -129,7 +129,14 @@ class TransactionPickupWehelpyou extends Eloquent
 		'order_detail_lalamove_code',
 		'order_detail_is_multiple',
 		'order_detail_createdAt',
-		'order_detail_updatedAt'
+		'order_detail_updatedAt',
+		'sla',
+		'order_detail_feature_type_id',
+		'order_detail_cancel_reason_id',
+		'order_detail_cancel_detail',
+		'order_detail_alfatrex_code',
+		'order_detail_distance',
+		'latest_status'
 	];
 
 	public function transaction_pickup()

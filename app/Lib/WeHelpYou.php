@@ -4,7 +4,8 @@ namespace App\Lib;
 use App\Http\Models\{
 	LogApiWehelpyou,
 	TransactionPickupWehelpyou,
-	TransactionPickupWehelpyouUpdate
+	TransactionPickupWehelpyouUpdate,
+	Transaction
 };
 use Modules\Transaction\Http\Requests\CheckTransaction;
 use Modules\Transaction\Http\Controllers\ApiOnlineTransaction;
@@ -107,13 +108,20 @@ class WeHelpYou
 		return self::sendRequest('GET', 'v1/available/service?origin=['.$origin.']&destination=['.$destination.']', null, 'get_available_service');
 	}
 
+	public static function getOrderHistory($startDate = null, $endDate = null)
+	{
+		$startDate = $startDate ?? date("Y-m-d 00:00:00", strtotime('-7 days'));
+		$endDate = $endDate ?? date("Y-m-d 23:59:00");
+		return self::sendRequest('GET', 'v1/order/history?startDate='.$startDate.'&endDate='.$endDate, null, 'get_order_history');
+	}
+
 	public static function formatPriceStringToInt(string $price): int
 	{
 		$price = explode('.', str_replace("IDR ", '', $price))[0];
 		return (int) str_replace(',', '', $price);
 	}
 
-	public static function getTracking($po_no)
+	public static function getTrackingStatus($po_no)
 	{
 		return self::sendRequest('GET', 'v1/tracking/order/'.$po_no, null, 'get_tracking', $po_no);
 	}
@@ -273,5 +281,129 @@ class WeHelpYou
 	public static function getSettingListDelivery(): array
 	{
 		return json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
+	}
+
+	public static function bookingDelivery(Transaction $trx)
+	{
+		$trx->load('transaction_pickup.transaction_pickup_wehelpyou');
+		if (!empty($trx['transaction_pickup']['transaction_pickup_wehelpyou']['poNo'])) {
+			return MyHelper::checkGet($trx['transaction_pickup']['transaction_pickup_wehelpyou']);
+		}
+
+		$trxPickup = $trx['transaction_pickup'];
+		$trxPickupWHY = $trx['transaction_pickup']['transaction_pickup_wehelpyou'];
+		$postRequest = [
+			"vehicle_type" => $trxPickupWHY->vehicle_type,
+			"courier" => $trxPickupWHY->courier,
+			"box" => $trxPickupWHY->box,
+			"sender" => [
+				"name" => $trxPickupWHY->sender_name,
+				"phone" => $trxPickupWHY->sender_phone,
+				"address" => $trxPickupWHY->sender_address,
+				"latitude" => $trxPickupWHY->sender_latitude,
+				"longitude" => $trxPickupWHY->sender_longitude,
+				"notes" => $trxPickupWHY->sender_notes,
+			],
+			"receiver" => [
+				"name" => $trxPickupWHY->receiver_name,
+				"phone" => $trxPickupWHY->receiver_phone,
+				"address" => $trxPickupWHY->receiver_address,
+				"notes" => $trxPickupWHY->receiver_notes,
+				"latitude" => $trxPickupWHY->receiver_latitude,
+				"longitude" => $trxPickupWHY->receiver_longitude
+			],
+			"item_specification" => [
+				"name" => $trxPickupWHY->item_specification_name,
+				"item_description" => $trxPickupWHY->item_specification_item_description,
+				"length" => $trxPickupWHY->item_specification_length,
+				"width" => $trxPickupWHY->item_specification_width,
+				"height" => $trxPickupWHY->item_specification_height,
+				"weight" => $trxPickupWHY->item_specification_weight,
+				"remarks" => $trxPickupWHY->item_specification_remarks
+			]
+		];
+
+		$createOrder = self::sendRequest('POST', 'v2/create/order/instant', $postRequest, 'create_order');
+		$saveOrder = self::saveCreateOrderReponse($trxPickup, $createOrder);
+
+		return $saveOrder;
+	}
+
+	public static function saveCreateOrderReponse($trxPickup, $orderResponse)
+	{
+		if (empty($orderResponse['response']['data']['poNo'])) {
+			return [
+				'status' => 'fail',
+				'messages' => $orderResponse['response']
+			];
+		}
+
+		$responseData = $orderResponse['response']['data'];
+
+		TransactionPickupWehelpyou::where('id_transaction_pickup', $trxPickup->id_transaction_pickup)
+		->update([
+			"poNo"		 => $responseData['poNo'],
+            "service"	 => $responseData['service'],
+            "price"		 => $responseData['price'],
+            "distance"	 => $responseData['distance'],
+            "SLA"		 => $responseData['SLA'],
+
+            "order_detail_id" 				=> $responseData['order_detail']['id'],
+            "order_detail_po_no" 			=> $responseData['order_detail']['po_no'],
+            "order_detail_feature_type_id" 	=> $responseData['order_detail']['feature_type_id'],
+            "order_detail_awb_no" 			=> $responseData['order_detail']['awb_no'],
+            "order_detail_order_date" 		=> $responseData['order_detail']['order_date'],
+            "order_detail_delivery_type_id" => $responseData['order_detail']['delivery_type_id'],
+            "order_detail_total_amount" 	=> $responseData['order_detail']['total_amount'],
+            "order_detail_partner_id" 		=> $responseData['order_detail']['partner_id'],
+            "order_detail_status_id" 		=> $responseData['order_detail']['status_id'],
+            "order_detail_cancel_reason_id" => $responseData['order_detail']['cancel_reason_id'],
+            "order_detail_cancel_detail" 	=> $responseData['order_detail']['cancel_detail'],
+            "order_detail_gosend_code" 		=> $responseData['order_detail']['gosend_code'],
+            "order_detail_alfatrex_code" 	=> $responseData['order_detail']['alfatrex_code'],
+            "order_detail_lalamove_code" 	=> $responseData['order_detail']['lalamove_code'],
+            "order_detail_speedy_code" 		=> $responseData['order_detail']['speedy_code'],
+            "order_detail_is_multiple" 		=> $responseData['order_detail']['is_multiple'],
+            "order_detail_distance" 		=> $responseData['order_detail']['distance'],
+            "order_detail_createdAt" 		=> $responseData['order_detail']['createdAt'],
+            "order_detail_updatedAt" 		=> $responseData['order_detail']['updatedAt']
+		]);
+
+		return MyHelper::checkGet($responseData);
+	}
+
+	public static function updateStatus($trx, $po_no)
+	{
+		$trackOrder = self::getTrackingStatus($po_no);
+		if ($trackOrder['status_code'] != '200') {
+			return [
+				'status' => 'fail',
+				'messages' => $orderResponse['response'] ?? 'PO number tidak ditemukan'
+			];
+		}
+
+		$statusNew = $trackOrder['response']['data']['status_log'];
+		$statusOld = TransactionPickupWehelpyouUpdate::where('poNo', $po_no)
+					->where('id_transaction', $trx->id_transaction)
+					->pluck('status')
+					->toArray();
+
+		$id_transaction_pickup_wehelpyou = $trx->transaction_pickup->transaction_pickup_wehelpyou->id_transaction_pickup_wehelpyou;
+		TransactionPickupWehelpyou::where('id_transaction_pickup_wehelpyou', $id_transaction_pickup_wehelpyou)
+		->update(['latest_status' => $trackOrder['response']['data']['status']['name']]);
+
+		foreach ($statusNew as $status) {
+			if (!in_array($status['status'], $statusOld)) {
+				TransactionPickupWehelpyouUpdate::create([
+					'id_transaction' => $trx->id_transaction,
+					'id_transaction_pickup_wehelpyou' => $trx->transaction_pickup->transaction_pickup_wehelpyou->id_transaction_pickup_wehelpyou,
+					'poNo' => $po_no,
+					'status' => $status['status'],
+					'status_id' => $status['status_id']
+				]);
+			}
+		}
+
+		return ['status' => 'success'];
 	}
 }

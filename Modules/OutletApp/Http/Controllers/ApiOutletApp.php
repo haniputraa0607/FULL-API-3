@@ -36,6 +36,7 @@ use App\Lib\Midtrans;
 use App\Lib\Ovo;
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
+use App\Lib\WeHelpYou;
 use DB;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -2700,16 +2701,33 @@ class ApiOutletApp extends Controller
         if (!$trx) {
             return MyHelper::checkGet($trx, 'Transaction Not Found');
         }
+
+        $request->type = $trx->shipment_method ?? $request->type;
         switch (strtolower($request->type)) {
+        	case 'go-send':
             case 'gosend':
                 $result = $this->bookGoSend($trx);
                 break;
+
+            case 'wehelpyou':
+        		$result = $this->bookWehelpyou($trx, $request);
+            	break;
 
             default:
                 $result = ['status' => 'fail', 'messages' => ['Invalid booking type']];
                 break;
         }
         return response()->json($result);
+    }
+
+    public function bookWehelpyou($trx)
+    {
+    	$createOrder = WeHelpYou::bookingDelivery($trx);
+    	if ($createOrder['status'] == 'fail') {
+    		return $createOrder;
+    	}
+
+    	return WeHelpYou::updateStatus($trx, $createOrder['result']['poNo']);
     }
 
     public function bookGoSend($trx,$fromRetry = false)
@@ -2847,14 +2865,21 @@ class ApiOutletApp extends Controller
 
     public function refreshDeliveryStatus(Request $request)
     {
-        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->with(['outlet' => function($q) {
-            $q->select('id_outlet', 'outlet_name');
-        }])->where('pickup_by', 'GO-SEND')->first();
+        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)
+        		->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+        		->with(['outlet' => function($q) {
+		            $q->select('id_outlet', 'outlet_name');
+		        }])
+		        ->where('pickup_by', '!=', 'Customer')
+		        ->first();
+
         $outlet = $trx->outlet;
+        $request->type = $trx->shipment_method ?? $request->type;
         if (!$trx) {
             return MyHelper::checkGet($trx, 'Transaction Not Found');
         }
         switch (strtolower($request->type)) {
+        	case 'go-send':
             case 'gosend':
                 $trxGoSend = TransactionPickupGoSend::where('id_transaction_pickup', $trx['id_transaction_pickup'])->first();
                 if (!$trxGoSend) {

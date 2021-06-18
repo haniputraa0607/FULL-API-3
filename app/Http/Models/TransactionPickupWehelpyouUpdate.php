@@ -40,7 +40,8 @@ class TransactionPickupWehelpyouUpdate extends Eloquent
 		'id_transaction_pickup_wehelpyou',
 		'poNo',
 		'status',
-		'description'
+		'description',
+		'status_id'
 	];
 
 	public function transaction_pickup_wehelpyou()
