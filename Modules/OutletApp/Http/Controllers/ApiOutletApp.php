@@ -3024,6 +3024,11 @@ class ApiOutletApp extends Controller
                 return MyHelper::checkGet($trxGoSend);
                 break;
 
+            case 'wehelpyou':
+            	$trx->load('transaction_pickup.transaction_pickup_wehelpyou');
+            	return WeHelpYou::updateStatus($trx, $trx['transaction_pickup']['transaction_pickup_wehelpyou']['poNo']);
+            	break;
+
             default:
                 return ['status' => 'fail', 'messages' => ['Invalid delivery type']];
                 break;

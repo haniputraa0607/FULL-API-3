@@ -3038,7 +3038,7 @@ class ApiOnlineTransaction extends Controller
             ];
         }
 
-        if ($request->courier) {
+        if ($request->courier && $listDelivery) {
         	$delivery = $this->getActiveCourier($listDelivery, $request->courier);
 
         	$result['payment_detail'][] = [

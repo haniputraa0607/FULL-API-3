@@ -136,7 +136,8 @@ class TransactionPickupWehelpyou extends Eloquent
 		'order_detail_cancel_detail',
 		'order_detail_alfatrex_code',
 		'order_detail_distance',
-		'latest_status'
+		'latest_status',
+		'tracking_photo'
 	];
 
 	public function transaction_pickup()

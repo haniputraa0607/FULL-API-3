@@ -95,7 +95,7 @@ class WeHelpYou
 	{
 		$credit = self::getCredit();
 		if ($credit <= 0) {
-			return false;
+			return true;
 		}
 
 		return (($credit - $price) > 0) ? false : true;
@@ -142,6 +142,9 @@ class WeHelpYou
 	public static function getListTransactionDelivery($request, $outlet)
 	{
 		$listDelivery = self::getPriceInstant(self::formatPostRequest($request->user(), $outlet, $request['destination']));
+		if ($listDelivery['status_code'] != 200) {
+			return [];
+		}
 		$listDelivery = self::disableListDelivery($listDelivery, self::getCredit(), $outlet);
 		
 		return $listDelivery;
@@ -149,6 +152,8 @@ class WeHelpYou
 
 	public static function formatPostRequest($user, $outlet, $destination)
 	{
+		$itemSpecification = self::getSettingItemSpecification();
+
 		return [
 			"vehicle_type" => "Motorcycle",
 			"box" => false,
@@ -169,13 +174,13 @@ class WeHelpYou
 				"longitude" => $destination['longitude']
 			],
 			"item_specification" => [
-				"name" => "name of goods",
-				"item_description" => "description of goods",
-				"length" => 1,
-				"width" => 1,
-				"height" => 1,
-				"weight" => 1,
-				"remarks" => "notes of goods"
+				"name" => $itemSpecification['package_name'],
+				"item_description" => $itemSpecification['package_description'],
+				"length" => $itemSpecification['length'],
+				"width" => $itemSpecification['width'],
+				"height" => $itemSpecification['height'],
+				"weight" => $itemSpecification['weight'],
+				"remarks" => $itemSpecification['remarks'] ?? null
 			]
 		];
 	}
@@ -248,6 +253,8 @@ class WeHelpYou
 
 	public static function createTrxPickupWehelpyou($dataTrxPickup, $request, $outlet)
 	{
+		$itemSpecification = self::getSettingItemSpecification();
+
 		return TransactionPickupWehelpyou::create([
 			'id_transaction_pickup' => $dataTrxPickup->id_transaction_pickup,
 			'vehicle_type' 			=> 'Motorcycle',
@@ -268,13 +275,13 @@ class WeHelpYou
 			'receiver_latitude' 	=> $request['destination']['latitude'],
 			'receiver_longitude' 	=> $request['destination']['longitude'],
 
-			'item_specification_name' 				=> 'name of goods',
-			'item_specification_item_description' 	=> 'description of goods',
-			'item_specification_length' 			=> 1,
-			'item_specification_width' 				=> 1,
-			'item_specification_height' 			=> 1,
-			'item_specification_weight' 			=> 1,
-			'item_specification_remarks' 			=> 'notes of goods',
+			'item_specification_name' 				=> $itemSpecification['package_name'],
+			'item_specification_item_description' 	=> $itemSpecification['package_description'],
+			'item_specification_length' 			=> $itemSpecification['length'],
+			'item_specification_width' 				=> $itemSpecification['width'],
+			'item_specification_height' 			=> $itemSpecification['height'],
+			'item_specification_weight' 			=> $itemSpecification['weight'],
+			'item_specification_remarks' 			=> $itemSpecification['remarks'] ?? null
 		]);
 	}
 
@@ -327,6 +334,23 @@ class WeHelpYou
 		$saveOrder = self::saveCreateOrderReponse($trxPickup, $createOrder);
 
 		return $saveOrder;
+	}
+
+	public static function getSettingItemSpecification()
+	{
+		$settingItem = json_decode(MyHelper::setting('package_detail_delivery', 'value_text', '[]'), true) ?? [];
+
+		$itemSpecification = [
+			'package_name' 			=> $settingItem['package_name'],
+			'package_description' 	=> $settingItem['package_description'],
+			'length' 				=> ceil($settingItem['length']),
+			'width' 				=> ceil($settingItem['width']),
+			'height' 				=> ceil($settingItem['height']),
+			'weight' 				=> ceil($settingItem['weight']),
+			'remarks' 				=> $settingItem['remarks'] ?? null
+		];
+
+		return $itemSpecification;
 	}
 
 	public static function saveCreateOrderReponse($trxPickup, $orderResponse)
@@ -385,25 +409,58 @@ class WeHelpYou
 		$statusNew = $trackOrder['response']['data']['status_log'];
 		$statusOld = TransactionPickupWehelpyouUpdate::where('poNo', $po_no)
 					->where('id_transaction', $trx->id_transaction)
-					->pluck('status')
+					->pluck('status_id')
 					->toArray();
+		$latesStatus = $trackOrder['response']['data']['status']['name'];
 
 		$id_transaction_pickup_wehelpyou = $trx->transaction_pickup->transaction_pickup_wehelpyou->id_transaction_pickup_wehelpyou;
-		TransactionPickupWehelpyou::where('id_transaction_pickup_wehelpyou', $id_transaction_pickup_wehelpyou)
-		->update(['latest_status' => $trackOrder['response']['data']['status']['name']]);
-
 		foreach ($statusNew as $status) {
-			if (!in_array($status['status'], $statusOld)) {
+			if (!in_array($status['status_id'], $statusOld)) {
 				TransactionPickupWehelpyouUpdate::create([
 					'id_transaction' => $trx->id_transaction,
 					'id_transaction_pickup_wehelpyou' => $trx->transaction_pickup->transaction_pickup_wehelpyou->id_transaction_pickup_wehelpyou,
 					'poNo' => $po_no,
-					'status' => $status['status'],
+					'status' => self::getStatusById($status['status_id']) ?? $status['status'],
 					'status_id' => $status['status_id']
 				]);
+				$latesStatus = $status['status'];
 			}
 		}
 
+		TransactionPickupWehelpyou::where('id_transaction_pickup_wehelpyou', $id_transaction_pickup_wehelpyou)
+		->update([
+			'latest_status' => $latesStatus,
+			'tracking_driver_name' => $trackOrder['response']['data']['tracking']['name'] ?? null,
+			'tracking_driver_phone' => $trackOrder['response']['data']['tracking']['phone'] ?? null,
+			'tracking_live_tracking_url' => $trackOrder['response']['data']['tracking']['live_tracking_url'] ?? null,
+			'tracking_vehicle_number' => $trackOrder['response']['data']['tracking']['vehicle_number'] ?? null,
+			'tracking_photo' => $trackOrder['response']['data']['tracking']['photo'] ?? null,
+			'tracking_receiver_name' => $trackOrder['response']['data']['tracking']['receiver_name'] ?? null,
+			'tracking_driver_log' => $trackOrder['response']['data']['tracking']['driver_log'] ?? null
+		]);
+
 		return ['status' => 'success'];
+	}
+
+	public static function getStatusById($status_id)
+	{
+		$status = [
+			1 	=> 'On progress', 
+			2 	=> 'Completed', 
+			99 	=> 'Order failed by system', 
+			90 	=> 'Cancel order failed', 
+			97 	=> 'Refund failed by system', 
+			88 	=> 'Refunded by system', 
+			91 	=> 'Cancelled by partner', 
+			11 	=> 'Finding driver', 
+			8 	=> 'Driver Allocated', 
+			32 	=> 'Item picked', 
+			9 	=> 'Enroute drop', 
+			98 	=> 'Order expired', 
+			96 	=> 'Rejected', 
+			89 	=> 'Cancelled, without refund'
+		];
+		
+		return $status[$status_id] ?? null;
 	}
 }
