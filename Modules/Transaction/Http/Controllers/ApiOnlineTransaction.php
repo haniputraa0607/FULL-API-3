@@ -2247,10 +2247,10 @@ class ApiOnlineTransaction extends Controller
 	                }
 	                $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
 	            } else {
-	            	foreach ($listDelivery as &$delivery) {
+	            	foreach ($listDelivery as $key => $delivery) {
 	            		if ($delivery['code'] == 'gosend') {
-	            			$delivery['price'] = $shippingGoSend;
-	            			$delivery['disable'] = 0;
+	            			$listDelivery[$key]['price'] = $shippingGoSend;
+	            			$listDelivery[$key]['disable'] = 0;
 	            		}
 	            	}
 	            }
@@ -4763,8 +4763,8 @@ class ApiOnlineTransaction extends Controller
 
     public function setGrandtotalListDelivery($listDelivery, $grandtotal)
     {
-    	foreach ($listDelivery as &$delivery) {
-    		$delivery['total_payment'] = $grandtotal + $delivery['price'];
+    	foreach ($listDelivery as $key => $delivery) {
+    		$listDelivery[$key]['total_payment'] = $grandtotal + $delivery['price'];
     	}
     	return $listDelivery;
     }

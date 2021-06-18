@@ -207,7 +207,7 @@ class WeHelpYou
 
 			$delivery['courier'] = self::getSettingCourierName($delivery['code']);
 			$delivery['price'] = self::getCourierPrice($listDelivery['response']['data']['partners'] ?? [], $delivery['courier']);
-			if ($delivery['price'] == 0) {
+			if (empty($delivery['price'])) {
 				$disable = 1;
 			}
 
