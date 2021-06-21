@@ -4613,10 +4613,16 @@ class ApiOnlineTransaction extends Controller
     public function listAvailableDelivery()
     {
         $setting  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
+        $setting_default = Setting::where('key', 'default_delivery')->first()->value??null;
         $delivery = [];
 
         foreach ($setting as $value) {
             if($value['show_status'] == 1){
+                if(!empty($value['logo'])){
+                    $value['logo'] = config('url.storage_url_api').$value['logo'];
+                }elseif(!empty($setting_default)){
+                    $value['logo'] = config('url.storage_url_api').$setting_default;
+                }
                 $delivery[] = $value;
             }
         }
@@ -4624,8 +4630,6 @@ class ApiOnlineTransaction extends Controller
         usort($delivery, function($a, $b) {
             return $a['position'] - $b['position'];
         });
-
-        $setting_default = Setting::where('key', 'default_delivery')->first()->value??null;
 
         $result = [
             'default_delivery' => $setting_default,
