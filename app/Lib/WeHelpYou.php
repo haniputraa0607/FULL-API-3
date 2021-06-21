@@ -5,7 +5,8 @@ use App\Http\Models\{
 	LogApiWehelpyou,
 	TransactionPickupWehelpyou,
 	TransactionPickupWehelpyouUpdate,
-	Transaction
+	Transaction,
+	User,
 };
 use Modules\Transaction\Http\Requests\CheckTransaction;
 use Modules\Transaction\Http\Controllers\ApiOnlineTransaction;
@@ -77,7 +78,7 @@ class WeHelpYou
 	{
 		$credit = self::sendRequest('GET', 'v1/credit/remaining', null, 'get_credit')['response']['data']['credit'] ?? 'IDR 0';
 		$credit = self::formatPriceStringToInt($credit);
-
+		self::sendBalanceNotification($credit);
 		return $credit;
 	}
 
@@ -405,5 +406,20 @@ class WeHelpYou
 		}
 
 		return ['status' => 'success'];
+	}
+
+	public static function sendBalanceNotification($balance)
+	{
+		$limit = MyHelper::setting('wehelpyou_limit_balance');
+		if ($limit && $balance < $limit) {
+			$lastSend = MyHelper::setting('wehelpyou_notif_last_send');
+			if (date('Y-m-d') < $lastSend) {
+				$send = app('\Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('WeHelpYou Low Balance', User::first()->phone, [
+					'balance' => MyHelper::requestNumber($balance, '_CURRENCY'),
+					'limit' => MyHelper::requestNumber($limit, '_CURRENCY'),
+				], null, true);
+				Setting::where('key', 'wehelpyou_notif_last_send')->update(['value' => date('Y-m-d')]);
+			}
+		}
 	}
 }
