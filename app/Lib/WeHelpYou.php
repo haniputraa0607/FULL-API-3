@@ -3,6 +3,7 @@ namespace App\Lib;
 
 use App\Http\Models\{
 	LogApiWehelpyou,
+	TransactionPickup,
 	TransactionPickupWehelpyou,
 	TransactionPickupWehelpyouUpdate,
 	Transaction
@@ -427,12 +428,21 @@ class WeHelpYou
 
 	public static function updateStatus($trx, $po_no)
 	{
-		$trackOrder = self::getTrackingStatus($po_no);
+		if ($trx->fakeStatusId) {
+			$trackOrder = self::fakeTracking($po_no, $trx->fakeStatusId);
+		}else{
+			$trackOrder = self::getTrackingStatus($po_no);
+		}
+
 		if ($trackOrder['status_code'] != '200') {
 			return [
 				'status' => 'fail',
 				'messages' => ['PO number tidak ditemukan']
 			];
+		}
+
+		if ($trx->transaction_pickup->transaction_pickup_wehelpyou->latest_status_id == 2) {
+			return ['status' => 'success'];
 		}
 
 		$statusNew = $trackOrder['response']['data']['status_log'];
@@ -441,6 +451,7 @@ class WeHelpYou
 					->pluck('status_id')
 					->toArray();
 		$latestStatus = $trackOrder['response']['data']['status']['name'];
+		$latestStatusId = $trackOrder['response']['data']['status_id'] ?? null;
 
 		$id_transaction_pickup_wehelpyou = $trx->transaction_pickup->transaction_pickup_wehelpyou->id_transaction_pickup_wehelpyou;
 		foreach ($statusNew as $status) {
@@ -454,12 +465,19 @@ class WeHelpYou
 					'status_id' => $status['status_id']
 				]);
 				$latestStatus = $statusName;
+				$latestStatusId = $status['status_id'];
+
+				if (in_array($latestStatusId, [9])) {
+					$arrived_at = date('Y-m-d H:i:s', ($status['date']??false)?strtotime($status['date']):time());
+                    TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
+				}
 			}
 		}
 
 		TransactionPickupWehelpyou::where('id_transaction_pickup_wehelpyou', $id_transaction_pickup_wehelpyou)
 		->update([
 			'latest_status' 			=> $latestStatus,
+			'latest_status_id' 			=> $latestStatusId,
 			'tracking_driver_name' 		=> $trackOrder['response']['data']['tracking']['name'] ?? null,
 			'tracking_driver_phone' 	=> $trackOrder['response']['data']['tracking']['phone'] ?? null,
 			'tracking_live_tracking_url'=> $trackOrder['response']['data']['tracking']['live_tracking_url'] ?? null,
@@ -509,5 +527,97 @@ class WeHelpYou
 			'Rejected', 
 			'Cancelled, without refund'
 		];
+	}
+
+	public static function driverFoundStatus(): array
+	{
+		return [
+			'Driver Allocated',
+			'Enroute drop'
+		];
+	}
+
+	public static function fakeTracking($poNo, $statusId = 1)
+	{
+		$now = date("Y-m-d H:i:s");
+		$response = [
+			'status_code' => 200,
+			'response' => [
+				'statusCode' => 200,
+				'message' => 'TRACKING_ORDER_SUCCESS',
+				'data' => [
+					'po_no' => $poNo,
+					'order_date' => '2021-06-18T10:19:49.945Z',
+					'total_amount' => 10000,
+					'status_log' => [
+						0 => [
+							'date' => $now,
+							'status' => 'On Progress',
+							'status_id' => 1,
+						]
+					],
+					'distance' => 1.005,
+					'status_id' => $statusId,
+					'sender' => [
+						'name' => 'outlet 103',
+						'phone' => '0811223344',
+						'address' => 'jalan outlet',
+						'notes' => 'NOTE: bila ada pertanyaan, mohon hubungi penerima terlebih dahulu untuk informasi. 
+						Pickup Code NV5M',
+					],
+					'receiver' => [
+						'name' => 'admin super',
+						'phone' => '0811223344',
+						'address' => 'jl jalan',
+						'notes' => 'deskripsi',
+					],
+					'tracking' => [
+						'name' => 'Test-Driver',
+						'phone' => '628882233',
+						'vehicle_number' => 'TEST A 3333 SYY',
+						'photo' => NULL,
+						'live_tracking_url' => NULL,
+					],
+					'feature' => [
+						'name' => NULL,
+					],
+					'status' => [
+						'name' => 'Finished',
+					],
+				],
+			],
+		];
+
+		if (in_array($statusId, [8,9,2])) {
+			$response['response']['data']['status_log'] += [
+				1 => [
+					'date' => $now,
+					'status' => 'Enroute Pickup',
+					'status_id' => 8,
+				]
+			];
+		}
+
+		if (in_array($statusId, [9,2])) {
+			$response['response']['data']['status_log'] += [
+				2 => [
+					'date' => $now,
+					'status' => 'Enroute Drop',
+					'status_id' => 9,
+				]
+			];
+		}
+
+		if (in_array($statusId, [2])) {
+			$response['response']['data']['status_log'] += [
+				3 => [
+					'date' => $now,
+					'status' => 'Finished',
+					'status_id' => 2,
+				]
+			];
+		}
+
+		return $response;
 	}
 }

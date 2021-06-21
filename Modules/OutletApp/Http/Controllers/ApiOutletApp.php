@@ -841,7 +841,10 @@ class ApiOutletApp extends Controller
         	switch ($order->pickup_by) {
         		case 'Wehelpyou':
         			$pickupWHY = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-		            if(!$pickupWHY || !$pickupWHY['latest_status'] || in_array($pickupWHY['latest_status']??false, WeHelpYou::driverNotFoundStatus())) {
+		            if( !$pickupWHY 
+		            	|| !$pickupWHY['latest_status'] 
+		            	|| !in_array($pickupWHY['latest_status']??false, WeHelpYou::driverFoundStatus())
+		            ) {
 		                return response()->json([
 		                    'status'   => 'fail',
 		                    'messages' => ['Driver belum ditemukan']
@@ -1847,9 +1850,20 @@ class ApiOutletApp extends Controller
             ]);
         }
 
-        if ($order->pickup_by != 'Customer') {
+        if ($order->pickup_by == 'GO-SEND') {
             $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
             if($pickup_gosend && $pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Driver has been booked'],
+                    'should_taken' => true,
+                ]);
+            } else {
+                goto reject;
+            }
+        } elseif ($order->pickup_by == 'Wehelpyou') {
+        	$pickupWhy = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+            if($pickupWhy && $pickupWhy['latest_status'] && in_array(WeHelpYou::driverFoundStatus())) {
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['Driver has been booked'],
@@ -1866,6 +1880,16 @@ class ApiOutletApp extends Controller
                     'status'   => 'fail',
                     'messages' => ['Order Has Been Ready'],
                 ]);
+            } elseif ($order->pickup_by == 'Wehelpyou') {
+            	$pickupWhy = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+                if($pickupWhy['latest_status'] && in_array($pickupWhy['latest_status']??false, WeHelpYou::driverFoundStatus())) {
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Driver has been booked'],
+                    ]);
+                } else {
+                    goto reject;
+                }
             } else {
                 $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
                 if($pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'cancelled'])) {

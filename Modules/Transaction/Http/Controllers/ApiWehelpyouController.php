@@ -54,4 +54,51 @@ class ApiWehelpyouController extends Controller
             return ['status' => 'fail'];
         }
     }
+
+    public function updateFakeStatus(Request $request)
+    {
+		$trx = Transaction::where('transactions.id_transaction', $request->id_transaction)
+        		->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+        		->with(['outlet' => function($q) {
+		            $q->select('id_outlet', 'outlet_name');
+		        }])
+		        ->where('pickup_by', '!=', 'Customer')
+		        ->first();
+
+        if (!$trx) {
+            return [
+                'status' => 'fail',
+                'messages' => [
+                    'Transaction not found'
+                ]
+            ];
+        }
+
+        $outlet = $trx->outlet;
+        $request->type = $trx->shipment_method ?? $request->type;
+        if (!$trx) {
+            return MyHelper::checkGet($trx, 'Transaction Not Found');
+        }
+
+        $trx->load('transaction_pickup.transaction_pickup_wehelpyou');
+        switch ($trx['transaction_pickup']['transaction_pickup_wehelpyou']['latest_status_id']) {
+        	case 1:
+        		$trx->fakeStatusId = 8;
+        		break;
+        	
+        	case 8:
+        		$trx->fakeStatusId = 9;
+        		break;
+        	
+        	case 9:
+        		$trx->fakeStatusId = 2;
+        		break;
+        	
+        	default:
+        		$trx->fakeStatusId = 1;
+        		break;
+        }
+
+        return WeHelpYou::updateStatus($trx, $trx['transaction_pickup']['transaction_pickup_wehelpyou']['poNo']);
+    }
 }

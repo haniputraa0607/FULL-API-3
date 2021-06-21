@@ -137,6 +137,7 @@ class TransactionPickupWehelpyou extends Eloquent
 		'order_detail_alfatrex_code',
 		'order_detail_distance',
 		'latest_status',
+		'latest_status_id',
 		'tracking_photo'
 	];
 
