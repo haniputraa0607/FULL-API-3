@@ -649,7 +649,7 @@ class WeHelpYou
 			88 	=> 'Refunded by system', 
 			91 	=> 'Cancelled by partner', 
 			11 	=> 'Finding driver', 
-			8 	=> 'Driver Allocated', 
+			8 	=> 'Driver allocated', 
 			32 	=> 'Item picked', 
 			9 	=> 'Enroute drop', 
 			98 	=> 'Order expired', 
