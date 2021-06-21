@@ -104,7 +104,9 @@ class Transaction extends Model
 		'transaction_discount_item',
 		'transaction_discount_bill',
 		'need_manual_void',
-		'failed_void_reason'
+		'failed_void_reason',
+		'shipment_method',
+		'shipment_courier'
 	];
 
 	public $manual_refund = 0;
@@ -221,6 +223,12 @@ class Transaction extends Model
     {
     	// make sure you have joined transaction_pickups before using this
 		return $this->belongsTo(TransactionPickupGoSend::class, 'id_transaction_pickup', 'id_transaction_pickup');
+    }
+
+    public function transaction_pickup_wehelpyou()
+    {
+    	// make sure you have joined transaction_pickups before using this
+		return $this->belongsTo(TransactionPickupWehelpyou::class, 'id_transaction_pickup', 'id_transaction_pickup');
     }
 
     public function logTopup() 

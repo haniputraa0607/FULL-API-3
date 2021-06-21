@@ -105,6 +105,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('/confirm', 'ApiConfirm@confirmTransaction');
     Route::post('/cancel', 'ApiOnlineTransaction@cancelTransaction');
     Route::post('/prod/confirm', 'ApiTransactionProductionController@confirmTransaction2');
+    Route::post('fake-update-why', 'ApiWehelpyouController@updateFakeStatus');
     Route::get('/{key}', 'ApiTransaction@transactionList');
 });
 

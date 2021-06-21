@@ -63,6 +63,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignReport;
 
 use Modules\Balance\Http\Controllers\NewTopupController;
 use Modules\PromoCampaign\Lib\PromoCampaignTools;
+use Modules\Outlet\Entities\DeliveryOutlet;
 
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Client;
@@ -79,6 +80,7 @@ use DateTime;
 use App\Lib\MyHelper;
 use App\Lib\Midtrans;
 use App\Lib\GoSend;
+use App\Lib\WeHelpYou;
 use App\Lib\PushNotificationHelper;
 
 use Modules\Transaction\Http\Requests\Transaction\NewTransaction;
@@ -129,6 +131,10 @@ class ApiOnlineTransaction extends Controller
                     'messages' => ['Incorrect PIN']
                 ];
             }
+        }
+        if ($post['type'] == 'Delivery Order' && $request->courier == 'gosend') {
+        	$post['type'] = 'GO-SEND';
+        	$request->type = 'GO-SEND';
         }
         // return $post;
         $totalPrice = 0;
@@ -506,8 +512,11 @@ class ApiOnlineTransaction extends Controller
                 $post['subtotal'] = $post['subtotal'] - $totalDisProduct;
 
                 // Additional Plastic Payment
-                if((isset($post['is_plastic_checked']) && $post['is_plastic_checked'] == true) ||
-                    $post['type'] == 'GO-SEND'){
+                if(
+                	(isset($post['is_plastic_checked']) && $post['is_plastic_checked'] == true) 
+                	|| $post['type'] == 'GO-SEND'
+                	|| $post['type'] == 'Delivery Order'
+                ){
                     $plastic = app($this->plastic)->check($post);
                     $post['plastic'] = $this->getPlasticInfo($plastic, $outlet['plastic_used_status']);
                     $post['subtotal'] =$post['subtotal'] + $post['plastic']['plastic_price_total'] ?? 0;
@@ -740,7 +749,7 @@ class ApiOnlineTransaction extends Controller
                     'phone'       => $user['phone']
                 ],
             ];
-        } elseif($post['type'] == 'GO-SEND'){
+        } elseif($post['type'] == 'GO-SEND' || $post['type'] == 'Delivery Order'){
             //check key GO-SEND
             $dataAddress = $post['destination'];
             $dataAddress['latitude'] = number_format($dataAddress['latitude'],8);
@@ -760,10 +769,22 @@ class ApiOnlineTransaction extends Controller
             }elseif(!$addressx->favorite){
                 $addressx->update($dataAddress);
             }
-            $checkKey = GoSend::checkKey();
-            if(is_array($checkKey) && $checkKey['status'] == 'fail'){
-                DB::rollback();
-                return response()->json($checkKey);
+
+            if ($post['type'] == 'GO-SEND') {
+	            $checkKey = GoSend::checkKey();
+	            if(is_array($checkKey) && $checkKey['status'] == 'fail'){
+	                DB::rollback();
+	                return response()->json($checkKey);
+	            }
+            }else{
+            	$courierWHY = WeHelpYou::getCourier($request->courier, $request, $outlet);
+	            if(!$courierWHY){
+	                DB::rollback();
+	                return response()->json([
+	                	'status' => 'fail',
+	                	'messages'  => ['Gagal menghitung biaya pengantaran. Silakan coba kembali']
+	                ]);
+	            }
             }
 
             $dataUser = [
@@ -803,8 +824,8 @@ class ApiOnlineTransaction extends Controller
         $isFree = '0';
         $shippingGoSend = 0;
 
-        if($post['type'] == 'GO-SEND'){
-            if(!($outlet['outlet_latitude']&&$outlet['outlet_longitude']&&$outlet['outlet_phone']&&$outlet['outlet_address'])){
+        if($post['type'] == 'GO-SEND' || $post['type'] == 'Delivery Order'){
+            if(!($outlet['outlet_latitude'] && $outlet['outlet_longitude'] && $outlet['outlet_phone'] && $outlet['outlet_address'])) {
                 app($this->outlet)->sendNotifIncompleteOutlet($outlet['id_outlet']);
                 $outlet->notify_admin = 1;
                 $outlet->save();
@@ -822,24 +843,42 @@ class ApiOnlineTransaction extends Controller
                 'longitude' => number_format($post['destination']['longitude'],8)
             ];
             $type = 'Pickup Order';
-            $shippingGoSendx = GoSend::getPrice($coor_origin,$coor_destination);
-            $shippingGoSend = $shippingGoSendx[GoSend::getShipmentMethod()]['price']['total_price']??null;
-            if($shippingGoSend === null){
-                $errorGosend = array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message');
-                if(isset($errorGosend[0])){
-                    if($errorGosend[0] == 'Booking distance exceeds 40 kilometres'){
-                        $errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
-                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
-                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
-                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
-                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
-                    }elseif($errorGosend[0] == 'The service is not yet available in this region'){
-                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
-                    }elseif($errorGosend[0] == "Sender's location is not serviceable"){
-                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
-                    }
-                }
-                $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
+
+            if ($post['type'] == 'GO-SEND') {
+	            $shippingGoSendx = GoSend::getPrice($coor_origin,$coor_destination);
+	            $shippingGoSend = $shippingGoSendx[GoSend::getShipmentMethod()]['price']['total_price']??null;
+	            if($shippingGoSend === null){
+	                $errorGosend = array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message');
+	                if(isset($errorGosend[0])){
+	                    if($errorGosend[0] == 'Booking distance exceeds 40 kilometres'){
+	                        $errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
+	                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
+	                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
+	                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
+	                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
+	                    }elseif($errorGosend[0] == 'The service is not yet available in this region'){
+	                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
+	                    }elseif($errorGosend[0] == "Sender's location is not serviceable"){
+	                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
+	                    }
+	                }
+	                $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
+	            }else{
+	            	$post['shipping'] = $shippingGoSend;
+	            	$shippingGoSend = 0;
+	            }
+	            $shipment_method = 'GO-SEND';
+            	$shipment_courier = 'GO-SEND';
+            }else{
+            	$post['shipping'] = $courierWHY['price'];
+	            $shipment_method = 'Wehelpyou';
+            	$shipment_courier = $courierWHY['courier'];
+            	if (WeHelpYou::isNotEnoughCredit($post['shipping'])) {
+            		return [
+	                    'status' => 'fail',
+	                    'messages' => ['Gagal menghitung biaya pengantaran. Silakan coba kembali']
+	                ];
+            	}
             }
             //cek free delivery
             // if($post['is_free'] == 'yes'){
@@ -918,9 +957,11 @@ class ApiOnlineTransaction extends Controller
             'transaction_date'            => $post['transaction_date'],
             // 'transaction_receipt_number'  => 'TRX-'.app($this->setting_trx)->getrandomnumber(8).'-'.date('YmdHis'),
             'trasaction_type'             => $type,
+            'shipment_method'             => $shipment_method ?? null,
+            'shipment_courier'            => $shipment_courier ?? null,
             'transaction_notes'           => $post['notes'],
             'transaction_subtotal'        => $post['subtotal'],
-            'transaction_gross'  => $post['subtotal_final'],
+            'transaction_gross'  		  => $post['subtotal_final'],
             'transaction_shipment'        => $post['shipping'],
             'transaction_shipment_go_send'=> $shippingGoSend,
             'transaction_is_free'         => $isFree,
@@ -1160,6 +1201,7 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
+        $totalProductQty = 0;
         foreach (($discount_promo['item']??$post['item']) as $keyProduct => $valueProduct) {
 
             $this_discount=$valueProduct['discount']??0;
@@ -1411,6 +1453,7 @@ class ApiOnlineTransaction extends Controller
                 'last_trx_date' => $insertTransaction['transaction_date']
             ];
             array_push($userTrxProduct, $dataUserTrxProduct);
+            $totalProductQty += $valueProduct['qty'];
         }
 
         array_push($dataDetailProduct, $productMidtrans);
@@ -1569,7 +1612,7 @@ class ApiOnlineTransaction extends Controller
                     'messages'  => ['Insert Shipment Transaction Failed']
                 ]);
             }
-        } elseif ($post['type'] == 'Pickup Order' || $post['type'] == 'GO-SEND') {
+        } elseif ($post['type'] == 'Pickup Order' || $post['type'] == 'GO-SEND' || $post['type'] == 'Delivery Order') {
             $link = '';
             if($configAdminOutlet && $configAdminOutlet['is_active'] == '1'){
                 $totalAdmin = $adminOutlet->where('pickup_order', 1)->first();
@@ -1631,7 +1674,7 @@ class ApiOnlineTransaction extends Controller
 
             if(isset($post['pickup_type'])){
                 $pickupType = $post['pickup_type'];
-            }elseif($post['type'] == 'GO-SEND'){
+            }elseif($post['type'] == 'GO-SEND' || $post['type'] == 'Delivery Order'){
                 $pickupType = 'right now';
             }else{
                 $pickupType = 'set time';
@@ -1672,7 +1715,9 @@ class ApiOnlineTransaction extends Controller
 
             if($post['type'] == 'GO-SEND'){
                 $dataPickup['pickup_by'] = 'GO-SEND';
-            }else{
+            } elseif ($post['type'] == 'Delivery Order') {
+                $dataPickup['pickup_by'] = 'Wehelpyou';
+            } else {
                 $dataPickup['pickup_by'] = 'Customer';
             }
 
@@ -1723,6 +1768,15 @@ class ApiOnlineTransaction extends Controller
                 }
 
                 $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
+            } elseif ($post['type'] == 'Delivery Order') {
+            	$createTrxPickupWHY = WeHelpYou::createTrxPickupWehelpyou($insertPickup, $request, $outlet, $totalProductQty);
+            	if (!$createTrxPickupWHY) {
+            		DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Insert Transaction Delivery Failed']
+                    ]);
+            	}
             }
         } elseif ($post['type'] == 'Advance Order') {
             $order_id = MyHelper::createrandom(4, 'Besar Angka');
@@ -1857,7 +1911,7 @@ class ApiOnlineTransaction extends Controller
                         ]);
                     }
 
-                    if ($post['type'] == 'Pickup Order' || $post['type'] == 'GO-SEND') {
+                    if ($post['type'] == 'Pickup Order' || $post['type'] == 'GO-SEND' || $post['type'] == 'Delivery Order') {
                         $orderIdSend = $insertPickup['order_id'];
                     } else {
                         $orderIdSend = $insertShipment['order_id'];
@@ -2146,14 +2200,16 @@ class ApiOnlineTransaction extends Controller
         }
 
         $shippingGoSend = 0;
-
+        $shippingGoSendPrice = 0;
+        $listDelivery = [];
         $error_msg=[];
 
         if($post['type'] != 'Pickup Order' && !$outlet->delivery_order) {
             $error_msg[] = 'Maaf, Outlet ini tidak support untuk delivery order';
         }
 
-        if(($post['type']??null) == 'GO-SEND'){
+        if($post['type'] == 'Delivery Order'){
+            $delivery_outlet = DeliveryOutlet::where('id_outlet', $outlet->id_outlet)->pluck('code')->toArray();
             if(!($outlet['outlet_latitude']&&$outlet['outlet_longitude']&&$outlet['outlet_phone']&&$outlet['outlet_address'])){
                 app($this->outlet)->sendNotifIncompleteOutlet($outlet['id_outlet']);
                 $outlet->notify_admin = 1;
@@ -2163,34 +2219,40 @@ class ApiOnlineTransaction extends Controller
                     'messages' => ['Outlet tidak dapat melakukan pengiriman']
                 ];
             }
-            $coor_origin = [
-                'latitude' => number_format($outlet['outlet_latitude'],8),
-                'longitude' => number_format($outlet['outlet_longitude'],8)
-            ];
-            $coor_destination = [
-                'latitude' => number_format($post['destination']['latitude'],8),
-                'longitude' => number_format($post['destination']['longitude'],8)
-            ];
-            $type = 'Pickup Order';
-            $shippingGoSendx = GoSend::getPrice($coor_origin,$coor_destination);
-            $shippingGoSend = $shippingGoSendx[GoSend::getShipmentMethod()]['price']['total_price']??null;
-            if($shippingGoSend === null){
-                $errorGosend = array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message');
-                if(isset($errorGosend[0])){
-                    if($errorGosend[0] == 'Booking distance exceeds 40 kilometres'){
-                        $errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
-                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
-                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
-                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
-                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
-                    }elseif($errorGosend[0] == 'The service is not yet available in this region'){
-                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
-                    }elseif($errorGosend[0] == "Sender's location is not serviceable"){
-                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
-                    }
-                }
-                $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
-            }
+
+        	if (in_array('gosend', $delivery_outlet)) {
+	            $coor_origin = [
+	                'latitude' => number_format($outlet['outlet_latitude'],8),
+	                'longitude' => number_format($outlet['outlet_longitude'],8)
+	            ];
+	            $coor_destination = [
+	                'latitude' => number_format($post['destination']['latitude'],8),
+	                'longitude' => number_format($post['destination']['longitude'],8)
+	            ];
+	            $type = 'Pickup Order';
+	            $shippingGoSendx = GoSend::getPrice($coor_origin,$coor_destination);
+	            $shippingGoSend = $shippingGoSendx[GoSend::getShipmentMethod()]['price']['total_price']??null;
+	            if($shippingGoSend === null){
+	                $errorGosend = array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message');
+	                if(isset($errorGosend[0])){
+	                    if($errorGosend[0] == 'Booking distance exceeds 40 kilometres'){
+	                        $errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
+	                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
+	                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
+	                    }elseif($errorGosend[0] == 'Origin and destination cannot be same'){
+	                        $errorGosend[0] = 'Lokasi outlet dan tujuan tidak boleh di lokasi yang sama';
+	                    }elseif($errorGosend[0] == 'The service is not yet available in this region'){
+	                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
+	                    }elseif($errorGosend[0] == "Sender's location is not serviceable"){
+	                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
+	                    }
+	                }
+	                $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
+	            }
+	            $shippingGoSendPrice = $shippingGoSend;
+	            $shippingGoSend = 0;
+        	}
+
             //cek free delivery
             // if($post['is_free'] == 'yes'){
             //     $isFree = '1';
@@ -2836,7 +2898,7 @@ class ApiOnlineTransaction extends Controller
                 if(!isset($post['is_plastic_checked']) || $post['is_plastic_checked'] == false){
                     $result['plastic']['plastic_price_total'] = 0;
                 }
-            }elseif($post['type'] == 'GO-SEND'){
+            }elseif($post['type'] == 'GO-SEND' || $post['type'] == 'Delivery Order'){
                 $result['plastic']['is_checked'] = true;
                 $result['plastic']['is_mandatory'] = true;
                 $result['plastic']['info'] = "Untuk mendukung #JanjiSayangBumi, outlet tidak menyediakan kantong sekali pakai";
@@ -2936,6 +2998,10 @@ class ApiOnlineTransaction extends Controller
         $result['subscription'] = (int) $result['subscription'];
         $result['discount'] = (int) $result['discount'];
 
+        $listDelivery = WeHelpYou::getListTransactionDelivery($request, $outlet, $totalItem, ['gosend' => $shippingGoSendPrice]);
+
+        $result['available_delivery'] = $this->setGrandtotalListDelivery($listDelivery, $result['total_payment']);
+
         $result['payment_detail'] = [];
         
         //subtotal
@@ -2969,6 +3035,19 @@ class ApiOnlineTransaction extends Controller
                 "is_discount"   => 0,
                 'amount'        => MyHelper::requestNumber($result['shipping'],'_CURRENCY')
             ];
+        }
+
+        if ($request->courier && $listDelivery) {
+        	$delivery = $this->getActiveCourier($listDelivery, $request->courier);
+
+        	$result['payment_detail'][] = [
+
+	    		'name'          => 'Delivery' . ($delivery['delivery_name'] ? ' (' . $delivery['delivery_name'] . ')' : null),
+	            "is_discount"   => 0,
+	            'amount'        => MyHelper::requestNumber($delivery['price'],'_CURRENCY')
+	    	];
+        	$result['grandtotal'] += $delivery['price'];
+        	$result['total_payment'] += $delivery['price'];
         }
 
         //discount delivery
@@ -4661,11 +4740,15 @@ class ApiOnlineTransaction extends Controller
 
     public function mergeNewDelivery($data=[]){
         $jsonDecode = json_decode($data);
-
         if(isset($jsonDecode->data->partners) && !empty($jsonDecode->data->partners)){
             $availableDelivery  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
             $dataDelivery = (array)$jsonDecode->data->partners;
             foreach ($dataDelivery as $val){
+
+            	if (empty($val)) {
+            		continue;
+            	}
+
                 $check = array_search('wehelpyou_'.$val->courier, array_column($availableDelivery, 'code'));
                 if($check === false){
                     $availableDelivery[] = [
@@ -4681,7 +4764,24 @@ class ApiOnlineTransaction extends Controller
             }
             $update = Setting::where('key', 'available_delivery')->update(['value_text' => json_encode($availableDelivery)]);
         }
-
         return true;
+    }
+
+    public function setGrandtotalListDelivery($listDelivery, $grandtotal)
+    {
+    	foreach ($listDelivery as $key => $delivery) {
+    		$listDelivery[$key]['total_payment'] = $grandtotal + $delivery['price'];
+    	}
+    	return $listDelivery;
+    }
+
+    public function getActiveCourier($listDelivery, $courier)
+    {
+    	foreach ($listDelivery as $delivery) {
+    		if ($delivery['courier'] == $courier) {
+    			return $delivery;
+    			break;
+    		}
+    	}
     }
 }
