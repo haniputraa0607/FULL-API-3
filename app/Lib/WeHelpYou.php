@@ -140,21 +140,27 @@ class WeHelpYou
 		return self::sendRequest('GET', 'v1/cancel/order/'.$po_no, null, 'cancel_order', $po_no);
 	}
 
-	public static function getListTransactionDelivery($request, $outlet)
+	public static function getListTransactionDelivery($request, $outlet, $totalProductQty = null, $additionalDelivery = [])
 	{
-		$listDelivery = self::getPriceInstant(self::formatPostRequest($request->user(), $outlet, $request['destination']));
+		$postRequest = self::formatPostRequest($request->user(), $outlet, $request['destination'], $totalProductQty);
+		if (!$postRequest) {
+			return [];
+		}
+		$listDelivery = self::getPriceInstant($postRequest);
 		if ($listDelivery['status_code'] != 200) {
 			return [];
 		}
-		$listDelivery = self::disableListDelivery($listDelivery, self::getCredit(), $outlet);
+		$listDelivery = self::formatListDelivery($listDelivery, self::getCredit(), $outlet, $additionalDelivery);
 		
 		return $listDelivery;
 	}
 
-	public static function formatPostRequest($user, $outlet, $destination)
+	public static function formatPostRequest($user, $outlet, $destination, $totalProductQty)
 	{
 		$itemSpecification = self::getSettingItemSpecification();
-
+		if (self::isNotValidDimension($itemSpecification, $totalProductQty)) {
+			return false;
+		}
 		return [
 			"vehicle_type" => "Motorcycle",
 			"box" => false,
@@ -177,16 +183,16 @@ class WeHelpYou
 			"item_specification" => [
 				"name" => $itemSpecification['package_name'],
 				"item_description" => $itemSpecification['package_description'],
-				"length" => $itemSpecification['length'],
-				"width" => $itemSpecification['width'],
-				"height" => $itemSpecification['height'],
-				"weight" => $itemSpecification['weight'],
+				"length" => 40,
+				"width" => 40,
+				"height" => 40,
+				"weight" => 20,
 				"remarks" => $itemSpecification['remarks'] ?? null
 			]
 		];
 	}
 
-	public static function disableListDelivery($listDelivery, $credit, $outlet)
+	public static function formatListDelivery($listDelivery, $credit, $outlet, $additionalDelivery = [])
 	{
 		(new ApiOnlineTransaction)->mergeNewDelivery(json_encode($listDelivery['response']));
 
@@ -194,6 +200,17 @@ class WeHelpYou
 		$result = [];
 		foreach (self::getSettingListDelivery() as $delivery) {
 			$disable = 0;
+			$delivery['courier'] = self::getSettingCourierName($delivery['code']);
+			$delivery['price'] = self::getCourierPrice($listDelivery['response']['data']['partners'] ?? [], $delivery['courier']);
+			if (empty($delivery['price'])) {
+				$disable = 1;
+			}
+
+			if (isset($additionalDelivery[$delivery['code']])) {
+				$delivery['price'] = $additionalDelivery[$delivery['code']];
+				$disable = 0;
+			}
+
 			if ($delivery_outlet) {
 				if (!in_array($delivery['code'], $delivery_outlet)) {
 					$disable = 1;
@@ -205,13 +222,6 @@ class WeHelpYou
 			if ($credit <= 0) {
 				$disable = 1;
 			}
-
-			$delivery['courier'] = self::getSettingCourierName($delivery['code']);
-			$delivery['price'] = self::getCourierPrice($listDelivery['response']['data']['partners'] ?? [], $delivery['courier']);
-			if (empty($delivery['price'])) {
-				$disable = 1;
-			}
-
 			$delivery['disable'] = $disable;
 			$result[] = $delivery;
 		}
@@ -252,9 +262,12 @@ class WeHelpYou
 		return $courier;
 	}
 
-	public static function createTrxPickupWehelpyou($dataTrxPickup, $request, $outlet)
+	public static function createTrxPickupWehelpyou($dataTrxPickup, $request, $outlet, $totalProductQty)
 	{
 		$itemSpecification = self::getSettingItemSpecification();
+		if (self::isNotValidDimension($itemSpecification, $totalProductQty)) {
+			return false;
+		}
 
 		return TransactionPickupWehelpyou::create([
 			'id_transaction_pickup' => $dataTrxPickup->id_transaction_pickup,
@@ -278,12 +291,30 @@ class WeHelpYou
 
 			'item_specification_name' 				=> $itemSpecification['package_name'],
 			'item_specification_item_description' 	=> $itemSpecification['package_description'],
-			'item_specification_length' 			=> $itemSpecification['length'],
-			'item_specification_width' 				=> $itemSpecification['width'],
-			'item_specification_height' 			=> $itemSpecification['height'],
-			'item_specification_weight' 			=> $itemSpecification['weight'],
+			'item_specification_length' 			=> 40,
+			'item_specification_width' 				=> 40,
+			'item_specification_height' 			=> 40,
+			'item_specification_weight' 			=> 20, // kilogram
 			'item_specification_remarks' 			=> $itemSpecification['remarks'] ?? null
 		]);
+	}
+
+	public static function isNotValidDimension($itemSpecification, $totalProductQty)
+	{
+		$maxVolume = 40 * 40 * 40; // cm
+		$totalVolume = $itemSpecification['length'] * $itemSpecification['width'] * $itemSpecification['height'] * $totalProductQty;
+
+		if ($maxVolume < $totalVolume) {
+			return true;
+		}
+
+		$maxWeight = 20000; //gram
+		$totalWeight = $itemSpecification['weight'] * $totalProductQty;
+		if ($maxWeight < $totalWeight) {
+			return true;
+		}
+
+		return false;
 	}
 
 	public static function getSettingListDelivery(): array
@@ -373,10 +404,10 @@ class WeHelpYou
 		$itemSpecification = [
 			'package_name' 			=> $settingItem['package_name'],
 			'package_description' 	=> $settingItem['package_description'],
-			'length' 				=> ceil($settingItem['length']),
-			'width' 				=> ceil($settingItem['width']),
-			'height' 				=> ceil($settingItem['height']),
-			'weight' 				=> ceil($settingItem['weight']),
+			'length' 				=> $settingItem['length'],
+			'width' 				=> $settingItem['width'],
+			'height' 				=> $settingItem['height'],
+			'weight' 				=> $settingItem['weight'],
 			'remarks' 				=> $settingItem['remarks'] ?? null
 		];
 
@@ -604,12 +635,7 @@ class WeHelpYou
 					'date' => $now,
 					'status' => 'Enroute Drop',
 					'status_id' => 9,
-				]
-			];
-		}
-
-		if (in_array($statusId, [2])) {
-			$response['response']['data']['status_log'] += [
+				],
 				3 => [
 					'date' => $now,
 					'status' => 'Finished',

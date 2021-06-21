@@ -138,6 +138,7 @@ class TransactionPickupWehelpyou extends Eloquent
 		'order_detail_distance',
 		'latest_status',
 		'latest_status_id',
+		'cancel_reason',
 		'tracking_photo'
 	];
 

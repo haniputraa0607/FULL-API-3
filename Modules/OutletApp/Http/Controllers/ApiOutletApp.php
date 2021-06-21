@@ -1863,7 +1863,7 @@ class ApiOutletApp extends Controller
             }
         } elseif ($order->pickup_by == 'Wehelpyou') {
         	$pickupWhy = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-            if($pickupWhy && $pickupWhy['latest_status'] && in_array(WeHelpYou::driverFoundStatus())) {
+            if($pickupWhy && $pickupWhy['latest_status'] && in_array($pickupWhy['latest_status'], WeHelpYou::driverFoundStatus())) {
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['Driver has been booked'],
@@ -3122,12 +3122,14 @@ class ApiOutletApp extends Controller
 
 		        if (($cancel['status_code'] ?? false) == '200') {
 		            $trx->transaction_pickup_wehelpyou->latest_status = 'Cancelled';
+		            $trx->transaction_pickup_wehelpyou->cancel_reason = $request->reason;
 		            $trx->transaction_pickup_wehelpyou->save();
+		            WeHelpYou::updateStatus($trx, $poNo);
 		            return ['status' => 'success'];
 		        }else{
 		        	return [
 		                'status'   => 'fail',
-		                'messages' => ['Something went wrong']
+		                'messages' => ['Cancel order failed']
 		            ];	
 		        }
         		break;
