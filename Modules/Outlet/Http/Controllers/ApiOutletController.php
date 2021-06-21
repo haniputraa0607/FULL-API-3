@@ -236,6 +236,7 @@ class ApiOutletController extends Controller
                 $deliveryOutlet[] = [
                     'id_outlet' => $save['id_outlet'],
                     'code' => $key,
+                    'available_status' => $val,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
@@ -318,6 +319,7 @@ class ApiOutletController extends Controller
                 $deliveryOutlet[] = [
                     'id_outlet' => $request->json('id_outlet'),
                     'code' => $key,
+                    'available_status' => $val,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
@@ -2795,7 +2797,7 @@ class ApiOutletController extends Controller
 
     public function getAllCodeOutlet(Request $request){
         $post = $request->json()->all();
-        $outlet = Outlet::select('outlet_code', 'id_outlet')->with(['brands','delivery_outlet']);
+        $outlet = Outlet::select('outlet_code', 'id_outlet', 'outlet_name')->with(['brands','delivery_outlet']);
 
         if(isset($post['page'])){
             $outlet = $outlet->paginate(30);
@@ -3307,9 +3309,10 @@ class ApiOutletController extends Controller
         $dataimport = $post['data_import'][0]??[];
 
         if(!empty($dataimport) && count($dataimport)){
-            DB::beginTransaction();
+            $updateData = 0;
+            $failed = [];
             foreach ($dataimport as $data){
-                $checkCode = Outlet::where('outlet_code', $data['code_outlet'])->first();
+                $checkCode = Outlet::where('outlet_code', $data['outlet_code'])->first();
                 if(empty($checkCode)){
                     continue;
                 }
@@ -3318,12 +3321,21 @@ class ApiOutletController extends Controller
                 DeliveryOutlet::where('id_outlet', $id_outlet)->delete();
                 $insertDelivOutlet = [];
                 foreach ($data as $key => $val) {
-                    if ($key == 'code_outlet') continue;
+                    if ($key == 'outlet_name' || $key == 'outlet_code') continue;
 
                     if(strtoupper($val) == 'YES'){
                         $insertDelivOutlet[] = [
                             'id_outlet' => $id_outlet,
                             'code' => $key,
+                            'available_status' => 1,
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ];
+                    }else{
+                        $insertDelivOutlet[] = [
+                            'id_outlet' => $id_outlet,
+                            'code' => $key,
+                            'available_status' => 0,
                             'created_at' => date('Y-m-d H:i:s'),
                             'updated_at' => date('Y-m-d H:i:s')
                         ];
@@ -3334,21 +3346,14 @@ class ApiOutletController extends Controller
                     $saveDelivOutlet = DeliveryOutlet::insert($insertDelivOutlet);
 
                     if (!$saveDelivOutlet) {
-                        DB::rollBack();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'      => [
-                                'Save delivery outlet failed.'
-                            ]
-                        ]);
+                        $failed[] = $data['outlet_code'];
                     }
                 }
+                $updateData++;
             }
 
-            DB::commit();
-
-            if($saveDelivOutlet??false) return ['status' => 'success', 'message' => 'Data successfully imported.'];
-            else return ['status' => 'fail','messages' => ['failed to import data']];
+            if($saveDelivOutlet??false) return ['status' => 'success', 'message' => $updateData .' data outlet updated'];
+            else return ['status' => 'fail','messages' => ['Failed upadate data outlet : '.implode(',',$failed)]];
         }else{
             return response()->json([
                 'status'    => 'fail',
@@ -3391,19 +3396,32 @@ class ApiOutletController extends Controller
 
     function deliveryOutletByCode(Request $request){
         $post = $request->json()->all();
-        $data = DeliveryOutlet::where('code', $post['code'])->pluck('id_outlet')->toArray();
+        $data = DeliveryOutlet::where('code', $post['code'])->get()->toArray();
         return response()->json(MyHelper::checkGet($data));
     }
 
     public function deliveryOutletUpdate(Request $request){
         $post = $request->json()->all();
         DeliveryOutlet::where('code', $post['code'])->delete();
+        $outletAvailable = Outlet::whereNotIn('id_outlet', $post['id_outlet'])->pluck('id_outlet')->toArray();
+        $outletNotAvailable = $post['id_outlet'];
 
         $insert = [];
-        foreach ($post['id_outlet'] as $o){
+        foreach ($outletNotAvailable as $o){
             $insert[] = [
                 'id_outlet' => (int)$o,
                 'code' => $post['code'],
+                'available_status' => 0,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ];
+        }
+
+        foreach ($outletAvailable as $o){
+            $insert[] = [
+                'id_outlet' => (int)$o,
+                'code' => $post['code'],
+                'available_status' => 1,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ];
@@ -3414,5 +3432,26 @@ class ApiOutletController extends Controller
         }
 
         return response()->json(['status' => 'success']);
+    }
+
+    public function listDeliveryWithCountOutlet(){
+        $setting  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
+        $countOutlet = Outlet::count();
+        $delivery = [];
+
+        foreach ($setting as $value) {
+            if($value['show_status'] == 1){
+                $countOff = DeliveryOutlet::where('code', $value['code'])->where('available_status', 0)->count();
+                $value['count_outlet_off'] = $countOff;
+                $value['count_outlet_on'] = $countOutlet-$countOff;
+                $delivery[] = $value;
+            }
+        }
+
+        usort($delivery, function($a, $b) {
+            return $a['position'] - $b['position'];
+        });
+
+        return response()->json(MyHelper::checkGet($delivery));
     }
 }

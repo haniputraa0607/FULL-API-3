@@ -13,6 +13,7 @@ use App\Http\Models\Outlet;
 use App\Lib\MyHelper;
 
 use DB;
+use Image;
 
 class ApiSettingTransaction extends Controller
 {
@@ -221,13 +222,76 @@ class ApiSettingTransaction extends Controller
             $dimension = [
                 'package_name' => $post['package_name']??"",
                 'package_description' => $post['package_description']??"",
-                'length' => $post['length']??0,
-                'width' => $post['width']??0,
-                'height' => $post['height']??0,
-                'weight' => $post['weight']??0
+                'length' => str_replace('.',"",$post['length'])??0,
+                'width' => str_replace('.',"",$post['width'])??0,
+                'height' => str_replace('.',"",$post['height'])??0,
+                'weight' => str_replace('.',"",$post['weight'])??0
             ];
             $update = Setting::updateOrCreate(['key' => 'package_detail_delivery'], ['value_text' => json_encode($dimension)]);
             return response()->json(MyHelper::checkUpdate($update));
+        }
+    }
+
+    public function imageDelivery(Request $request){
+        $post = $request->json()->all();
+
+        if(empty($post)){
+            $setting  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
+            $default_image = Setting::where('key', 'default_image_delivery')->first()->value??null;
+            $delivery = [];
+
+            foreach ($setting as $value) {
+                if($value['show_status'] == 1){
+                    if(!empty($value['logo'])){
+                        $value['logo'] = config('url.storage_url_api').$value['logo'];
+                    }
+                    $delivery[] = $value;
+                }
+            }
+
+            usort($delivery, function($a, $b) {
+                return $a['position'] - $b['position'];
+            });
+
+            $result = [
+                'default_image_delivery' => (!empty($default_image) ? config('url.storage_url_api').$default_image:null),
+                'delivery' => $delivery
+            ];
+            return response()->json(MyHelper::checkGet($result));
+        }else{
+            if(!empty($post['image_default'])){
+                $decoded = base64_decode($post['image_default']);
+                $img    = Image::make($decoded);
+                $width  = $img->width();
+                $height = $img->height();
+
+                $upload = MyHelper::uploadPhotoStrict($post['image_default'], $path = 'default_image/delivery/', $width, $height, 'delivery_default_image');
+
+                if ($upload['status'] == "success") {
+                    Setting::updateOrCreate(['key' => 'default_image_delivery'], ['value' => $upload['path']]);
+                }
+            }
+
+            $setting  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
+            foreach ($post['images']??[] as $key=>$image){
+                $decoded = base64_decode($image);
+                $img    = Image::make($decoded);
+                $width  = $img->width();
+                $height = $img->height();
+
+                $upload = MyHelper::uploadPhotoStrict($image, $path = 'default_image/delivery/', $width, $height, $key);
+
+                if ($upload['status'] == "success") {
+                    $check = array_search($key, array_column($setting, 'code'));
+                    if($check !== false){
+                        $setting[$check]['logo'] = $upload['path'];
+                    }
+                }
+            }
+
+            $update = Setting::where('key', 'available_delivery')->update(['value_text' => json_encode($setting)]);
+
+            return MyHelper::checkUpdate($update);
         }
     }
 }

@@ -965,7 +965,16 @@ class SettingsTableSeeder extends Seeder
                     'value_text' => '{"package_name":"","package_description":"","length":0,"width":0,"height":0,"weight":0}',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
-                )
+                ),
+            107 =>
+                array(
+                    'id_setting' => 108,
+                    'key' => 'default_image_delivery',
+                    'value' => null,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         ));
     }
 }
