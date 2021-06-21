@@ -3,14 +3,19 @@ namespace App\Lib;
 
 use App\Http\Models\{
 	LogApiWehelpyou,
+	TransactionPickup,
 	TransactionPickupWehelpyou,
 	TransactionPickupWehelpyouUpdate,
 	Transaction,
-	User,
+	Autocrm,
+	Outlet,
+	User
 };
 use Modules\Transaction\Http\Requests\CheckTransaction;
 use Modules\Transaction\Http\Controllers\ApiOnlineTransaction;
 use Modules\Outlet\Entities\DeliveryOutlet;
+use Modules\Autocrm\Entities\AutoresponseCodeList;
+use Illuminate\Support\Facades\Log;
 /**
  * 
  */
@@ -96,7 +101,7 @@ class WeHelpYou
 	{
 		$credit = self::getCredit();
 		if ($credit <= 0) {
-			return false;
+			return true;
 		}
 
 		return (($credit - $price) > 0) ? false : true;
@@ -140,16 +145,27 @@ class WeHelpYou
 		return self::sendRequest('GET', 'v1/cancel/order/'.$po_no, null, 'cancel_order', $po_no);
 	}
 
-	public static function getListTransactionDelivery($request, $outlet)
+	public static function getListTransactionDelivery($request, $outlet, $totalProductQty = null, $additionalDelivery = [])
 	{
-		$listDelivery = self::getPriceInstant(self::formatPostRequest($request->user(), $outlet, $request['destination']));
-		$listDelivery = self::disableListDelivery($listDelivery, self::getCredit(), $outlet);
+		$postRequest = self::formatPostRequest($request->user(), $outlet, $request['destination'], $totalProductQty);
+		if (!$postRequest) {
+			return [];
+		}
+		$listDelivery = self::getPriceInstant($postRequest);
+		if ($listDelivery['status_code'] != 200) {
+			return [];
+		}
+		$listDelivery = self::formatListDelivery($listDelivery, self::getCredit(), $outlet, $additionalDelivery);
 		
 		return $listDelivery;
 	}
 
-	public static function formatPostRequest($user, $outlet, $destination)
+	public static function formatPostRequest($user, $outlet, $destination, $totalProductQty)
 	{
+		$itemSpecification = self::getSettingItemSpecification();
+		if (self::isNotValidDimension($itemSpecification, $totalProductQty)) {
+			return false;
+		}
 		return [
 			"vehicle_type" => "Motorcycle",
 			"box" => false,
@@ -170,18 +186,18 @@ class WeHelpYou
 				"longitude" => $destination['longitude']
 			],
 			"item_specification" => [
-				"name" => "name of goods",
-				"item_description" => "description of goods",
-				"length" => 1,
-				"width" => 1,
-				"height" => 1,
-				"weight" => 1,
-				"remarks" => "notes of goods"
+				"name" => $itemSpecification['package_name'],
+				"item_description" => $itemSpecification['package_description'],
+				"length" => 40,
+				"width" => 40,
+				"height" => 40,
+				"weight" => 20,
+				"remarks" => $itemSpecification['remarks'] ?? null
 			]
 		];
 	}
 
-	public static function disableListDelivery($listDelivery, $credit, $outlet)
+	public static function formatListDelivery($listDelivery, $credit, $outlet, $additionalDelivery = [])
 	{
 		(new ApiOnlineTransaction)->mergeNewDelivery(json_encode($listDelivery['response']));
 
@@ -189,6 +205,17 @@ class WeHelpYou
 		$result = [];
 		foreach (self::getSettingListDelivery() as $delivery) {
 			$disable = 0;
+			$delivery['courier'] = self::getSettingCourierName($delivery['code']);
+			$delivery['price'] = self::getCourierPrice($listDelivery['response']['data']['partners'] ?? [], $delivery['courier']);
+			if (empty($delivery['price'])) {
+				$disable = 1;
+			}
+
+			if (isset($additionalDelivery[$delivery['code']])) {
+				$delivery['price'] = $additionalDelivery[$delivery['code']];
+				$disable = 0;
+			}
+
 			if ($delivery_outlet) {
 				if (!in_array($delivery['code'], $delivery_outlet)) {
 					$disable = 1;
@@ -200,14 +227,9 @@ class WeHelpYou
 			if ($credit <= 0) {
 				$disable = 1;
 			}
-
-			$delivery['courier'] = self::getSettingCourierName($delivery['code']);
-			$delivery['price'] = self::getCourierPrice($listDelivery['response']['data']['partners'] ?? [], $delivery['courier']);
-			if ($delivery['price'] == 0) {
-				$disable = 1;
-			}
-
 			$delivery['disable'] = $disable;
+			$delivery['short_description'] = $delivery['short_description'] ?? null;
+			unset($delivery['show_status'], $delivery['available_status']);
 			$result[] = $delivery;
 		}
 		
@@ -247,8 +269,13 @@ class WeHelpYou
 		return $courier;
 	}
 
-	public static function createTrxPickupWehelpyou($dataTrxPickup, $request, $outlet)
+	public static function createTrxPickupWehelpyou($dataTrxPickup, $request, $outlet, $totalProductQty)
 	{
+		$itemSpecification = self::getSettingItemSpecification();
+		if (self::isNotValidDimension($itemSpecification, $totalProductQty)) {
+			return false;
+		}
+
 		return TransactionPickupWehelpyou::create([
 			'id_transaction_pickup' => $dataTrxPickup->id_transaction_pickup,
 			'vehicle_type' 			=> 'Motorcycle',
@@ -269,14 +296,32 @@ class WeHelpYou
 			'receiver_latitude' 	=> $request['destination']['latitude'],
 			'receiver_longitude' 	=> $request['destination']['longitude'],
 
-			'item_specification_name' 				=> 'name of goods',
-			'item_specification_item_description' 	=> 'description of goods',
-			'item_specification_length' 			=> 1,
-			'item_specification_width' 				=> 1,
-			'item_specification_height' 			=> 1,
-			'item_specification_weight' 			=> 1,
-			'item_specification_remarks' 			=> 'notes of goods',
+			'item_specification_name' 				=> $itemSpecification['package_name'],
+			'item_specification_item_description' 	=> $itemSpecification['package_description'],
+			'item_specification_length' 			=> 40,
+			'item_specification_width' 				=> 40,
+			'item_specification_height' 			=> 40,
+			'item_specification_weight' 			=> 20, // kilogram
+			'item_specification_remarks' 			=> $itemSpecification['remarks'] ?? null
 		]);
+	}
+
+	public static function isNotValidDimension($itemSpecification, $totalProductQty)
+	{
+		$maxVolume = 40 * 40 * 40; // cm
+		$totalVolume = $itemSpecification['length'] * $itemSpecification['width'] * $itemSpecification['height'] * $totalProductQty;
+
+		if ($maxVolume < $totalVolume) {
+			return true;
+		}
+
+		$maxWeight = 20000; //gram
+		$totalWeight = $itemSpecification['weight'] * $totalProductQty;
+		if ($maxWeight < $totalWeight) {
+			return true;
+		}
+
+		return false;
 	}
 
 	public static function getSettingListDelivery(): array
@@ -324,10 +369,56 @@ class WeHelpYou
 			]
 		];
 
+		$priceInstant = self::getPriceInstant($postRequest);
+		if ($priceInstant['status_code'] != 200) {
+			return [
+				'status' => 'fail',
+				'messages' => ['TIdak dapat menemukan layanan delivery']
+			];
+		}
+
+		$courier = null;
+		foreach ($priceInstant['response']['data']['partners'] as $val) {
+			if ($trxPickupWHY->courier == $val['courier']) {
+				$courier = $val;
+			}
+		}
+
+		if (empty($courier)) {
+			return [
+				'status' => 'fail',
+				'messages' => ['Tidak dapat menemukan layanan delivery']
+			];
+		}
+
+		if (self::isNotEnoughCredit($courier['price'])) {
+			return [
+				'status' => 'fail',
+				'messages' => ['Tidak dapat membooking delivery, kredit tidak mencukupi']
+			];
+		}
+
 		$createOrder = self::sendRequest('POST', 'v2/create/order/instant', $postRequest, 'create_order');
 		$saveOrder = self::saveCreateOrderReponse($trxPickup, $createOrder);
 
 		return $saveOrder;
+	}
+
+	public static function getSettingItemSpecification()
+	{
+		$settingItem = json_decode(MyHelper::setting('package_detail_delivery', 'value_text', '[]'), true) ?? [];
+
+		$itemSpecification = [
+			'package_name' 			=> $settingItem['package_name'],
+			'package_description' 	=> $settingItem['package_description'],
+			'length' 				=> $settingItem['length'],
+			'width' 				=> $settingItem['width'],
+			'height' 				=> $settingItem['height'],
+			'weight' 				=> $settingItem['weight'],
+			'remarks' 				=> $settingItem['remarks'] ?? null
+		];
+
+		return $itemSpecification;
 	}
 
 	public static function saveCreateOrderReponse($trxPickup, $orderResponse)
@@ -335,7 +426,7 @@ class WeHelpYou
 		if (empty($orderResponse['response']['data']['poNo'])) {
 			return [
 				'status' => 'fail',
-				'messages' => $orderResponse['response']
+				'messages' => ['PO number tidak ditemukan']
 			];
 		}
 
@@ -375,37 +466,350 @@ class WeHelpYou
 
 	public static function updateStatus($trx, $po_no)
 	{
-		$trackOrder = self::getTrackingStatus($po_no);
+		if ($trx->fakeStatusId) {
+			$trackOrder = self::fakeTracking($po_no, $trx->fakeStatusId);
+		}else{
+			$trackOrder = self::getTrackingStatus($po_no);
+		}
+
 		if ($trackOrder['status_code'] != '200') {
 			return [
 				'status' => 'fail',
-				'messages' => $orderResponse['response'] ?? 'PO number tidak ditemukan'
+				'messages' => ['PO number tidak ditemukan']
 			];
+		}
+
+		if ($trx->transaction_pickup->transaction_pickup_wehelpyou->latest_status_id == 2) {
+			return ['status' => 'success'];
 		}
 
 		$statusNew = $trackOrder['response']['data']['status_log'];
 		$statusOld = TransactionPickupWehelpyouUpdate::where('poNo', $po_no)
 					->where('id_transaction', $trx->id_transaction)
-					->pluck('status')
+					->pluck('status_id')
 					->toArray();
+		$latestStatus = $trackOrder['response']['data']['status']['name'];
+		$latestStatusId = $trackOrder['response']['data']['status_id'] ?? null;
 
 		$id_transaction_pickup_wehelpyou = $trx->transaction_pickup->transaction_pickup_wehelpyou->id_transaction_pickup_wehelpyou;
-		TransactionPickupWehelpyou::where('id_transaction_pickup_wehelpyou', $id_transaction_pickup_wehelpyou)
-		->update(['latest_status' => $trackOrder['response']['data']['status']['name']]);
-
 		foreach ($statusNew as $status) {
-			if (!in_array($status['status'], $statusOld)) {
+			if (!in_array($status['status_id'], $statusOld)) {
+				$statusName = self::getStatusById($status['status_id']) ?? $status['status'];
 				TransactionPickupWehelpyouUpdate::create([
 					'id_transaction' => $trx->id_transaction,
 					'id_transaction_pickup_wehelpyou' => $trx->transaction_pickup->transaction_pickup_wehelpyou->id_transaction_pickup_wehelpyou,
 					'poNo' => $po_no,
-					'status' => $status['status'],
+					'status' => $statusName,
 					'status_id' => $status['status_id']
 				]);
+				$latestStatus = $statusName;
+				$latestStatusId = $status['status_id'];
+
+				if (in_array($latestStatusId, [9])) {
+					$arrived_at = date('Y-m-d H:i:s', ($status['date']??false)?strtotime($status['date']):time());
+                    TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
+				}
 			}
 		}
 
+		TransactionPickupWehelpyou::where('id_transaction_pickup_wehelpyou', $id_transaction_pickup_wehelpyou)
+		->update([
+			'latest_status' 			=> $latestStatus,
+			'latest_status_id' 			=> $latestStatusId,
+			'tracking_driver_name' 		=> $trackOrder['response']['data']['tracking']['name'] ?? null,
+			'tracking_driver_phone' 	=> $trackOrder['response']['data']['tracking']['phone'] ?? null,
+			'tracking_live_tracking_url'=> $trackOrder['response']['data']['tracking']['live_tracking_url'] ?? null,
+			'tracking_vehicle_number' 	=> $trackOrder['response']['data']['tracking']['vehicle_number'] ?? null,
+			'tracking_photo' 			=> $trackOrder['response']['data']['tracking']['photo'] ?? null,
+			'tracking_receiver_name' 	=> $trackOrder['response']['data']['tracking']['receiver_name'] ?? null,
+			'tracking_driver_log' 		=> $trackOrder['response']['data']['tracking']['driver_log'] ?? null
+		]);
+
+		$outlet = Outlet::where('id_outlet', $trx->id_outlet)->first();
+        $trx_pickup = TransactionPickup::where('id_transaction', $trx->id_transaction)->first();
+		self::sendOutletNotif($trx, $outlet, $latestStatusId, $trx_pickup);
+		self::sendUserNotif($trx, $outlet, $latestStatusId, $trx_pickup);
+
 		return ['status' => 'success'];
+	}
+
+	public static function sendOutletNotif($trx, $outlet, $status_id, $trx_pickup)
+	{
+        if ($status_id == 2) {
+            $trx_pickup->update(['show_confirm' => '1']);
+            Transaction::where('id_transaction', $trx->id_transaction)->update(['show_rate_popup' => '1']);
+        }
+
+        $status = self::getStatusById($status_id);
+        $message = self::getOutletMessageByStatusId($status_id) ?? $status;
+		app("Modules\OutletApp\Http\Controllers\ApiOutletApp")->outletNotif(
+			[
+            'type' => 'trx',
+            'subject' => 'Info Pesanan Delivery',
+            'string_body' => $trx_pickup->order_id.' '.($message),
+            'status' => $status,
+            'id_transaction' => $trx->id_transaction,
+            'id_reference' => $trx->id_transaction,
+            'order_id' => $trx_pickup->order_id
+        ], $outlet->id_outlet);
+	}
+
+	public static function sendUserNotif($trx, $outlet, $status_id, $trx_pickup)
+	{
+		$subject = self::getSubjectByStatusId($status_id);
+		if (!$subject) {
+			return true;
+		}
+
+		$content = self::getContentByStatusId($status_id);
+		if (!$content) {
+			return true;
+		}
+
+		$status = self::getStatusById($status_id);
+		if (!$status) {
+			return true;
+		}
+
+		$user = User::where('id', $trx->id_user)->first();
+		if ($status_id != 2) {
+			$autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $user->phone,
+                [
+                    'id_reference'              => $trx->id_transaction,
+                    'id_transaction'            => $trx->id_transaction,
+                    'receipt_number'            => $trx->transaction_receipt_number,
+                    'outlet_code'               => $outlet->outlet_code,
+                    'outlet_name'               => $outlet->outlet_name,
+                    'delivery_status_title'     => $subject,
+                    'delivery_status_content'   => $content,
+                    'order_id'                  => $trx_pickup->order_id,
+                    'name'                      => ucwords($user->name)
+                ]
+            );
+
+            return true;
+		}
+
+		$getAvailableCodeCrm = Autocrm::where('autocrm_title', 'Order Taken With Code')->first();
+        $code = null;
+        $idCode = null;
+
+        if( !empty($getAvailableCodeCrm) 
+        	&& ($getAvailableCodeCrm['autocrm_email_toogle'] == 1 
+        		|| $getAvailableCodeCrm['autocrm_sms_toogle'] == 1 
+        		|| $getAvailableCodeCrm['autocrm_push_toogle'] == 1 
+        		|| $getAvailableCodeCrm['autocrm_inbox_toogle'] == 1)
+        ){
+            $getAvailableCode = app('Modules\Autocrm\Http\Controllers\ApiAutoresponseWithCode')->getAvailableCode($trx->id_transaction);
+            $code = $getAvailableCode['autoresponse_code'] ?? null;
+            $idCode = $getAvailableCode['id_autoresponse_code_list'] ?? null;
+        }
+
+        if(!empty($code)) {
+            $send = app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Order Taken Delivery With Code', $user->phone, [
+                'id_reference'    => $trx->id_transaction,
+                'id_transaction'  => $trx->id_transaction,
+                'receipt_number'  => $trx->transaction_receipt_number,
+                'outlet_code'     => $outlet->outlet_code,
+                'outlet_name'     => $outlet->outlet_name,
+                'delivery_status' => $status,
+                'order_id'        => $trx_pickup->order_id,
+                'code'            => $code
+            ]);
+
+            $updateCode = AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $trx->id_user, 'id_transaction' => $trx->id_transaction]);
+            if($updateCode){
+                app('Modules\Autocrm\Http\Controllers\ApiAutoresponseWithCode')->stopAutoresponse($idCode);
+            }
+        }else{
+            $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $user->phone,
+                [
+                    'id_reference'              => $trx->id_transaction,
+                    'id_transaction'            => $trx->id_transaction,
+                    'receipt_number'            => $trx->transaction_receipt_number,
+                    'outlet_code'               => $outlet->outlet_code,
+                    'outlet_name'               => $outlet->outlet_name,
+                    'delivery_status_title'     => $subject,
+                    'delivery_status_content'   => $content,
+                    'order_id'                  => $trx_pickup->order_id,
+                    'name'                      => ucwords($user->name)
+                ]
+            );
+        }
+
+        return true;
+	}
+
+	public static function getStatusById($status_id)
+	{
+		$status = [
+			1 	=> 'On progress', 
+			2 	=> 'Completed', 
+			99 	=> 'Order failed by system', 
+			90 	=> 'Cancel order failed', 
+			97 	=> 'Refund failed by system', 
+			88 	=> 'Refunded by system', 
+			91 	=> 'Cancelled by partner', 
+			11 	=> 'Finding driver', 
+			8 	=> 'Driver allocated', 
+			32 	=> 'Item picked', 
+			9 	=> 'Enroute drop', 
+			98 	=> 'Order expired', 
+			96 	=> 'Rejected', 
+			89 	=> 'Cancelled, without refund'
+		];
+		
+		return $status[$status_id] ?? null;
+	}
+
+	public static function getSubjectByStatusId($status_id)
+	{
+		$subject = [
+            1 			=> 'Pesanan Diterima!',
+            8			=> 'Mohon menunggu ya!',
+            9 			=> 'Sudah siap menikmati pesananmu?',
+            'cancelled' => 'Pesananmu tidak dapat diambil oleh driver',
+            2   		=> 'Terima kasih sudah pesan di JIWA+!',
+            'no_driver' => 'Driver belum berhasil ditemukan',
+        ];
+
+        return $subject[$status_id] ?? null;
+	}
+
+	public static function getContentByStatusId($status_id)
+	{
+        $content = [
+            1			=> 'Mohon tunggu, pesanan sedang dipersiapkan',
+            8			=> 'Driver-mu sedang menuju ke outlet',
+            9			=> 'Driver sedang menuju ke tempatmu',
+            'cancelled'	=> 'Mohon tunggu konfirmasi dari outlet',
+            2			=> 'Selamat menikmati Kak %name%',
+            'no_driver'	=> 'Mohon tunggu konfirmasi dari outlet',
+        ];
+
+        return $content[$status_id] ?? null;
+	}
+
+	public static function getOutletMessageByStatusId($status_id)
+	{
+		$outlet_message = [
+            11 					=> 'Mencari Driver',
+            8 					=> 'Driver ditemukan',
+            'out_for_pickup' 	=> 'Driver menuju ke Outlet',
+            32 					=> 'Driver mengambil Pesanan',
+            9 					=> 'Driver menuju Alamat Tujuan',
+            'cancelled' 		=> 'Driver batal mengambil Pesanan',
+            2 					=> 'Pesanan sampai ke Alamat Tujuan',
+            96 					=> 'Driver batal mengantar Pesanan',
+            'no_driver' 		=> 'Driver tidak ditemukan',
+            'on_hold' 			=> 'Driver terkendala saat pengantaran'
+        ];
+
+        return $outlet_message[$status_id] ?? null;
+	}
+
+	public static function driverNotFoundStatus(): array
+	{
+		return [
+			'On progress', 
+			'Completed', 
+			'Order failed by system', 
+			'Cancel order failed', 
+			'Refund failed by system', 
+			'Refunded by system', 
+			'Cancelled by partner', 
+			'Finding driver', 
+			'Order expired', 
+			'Rejected', 
+			'Cancelled, without refund'
+		];
+	}
+
+	public static function driverFoundStatus(): array
+	{
+		return [
+			'Driver Allocated',
+			'Enroute drop'
+		];
+	}
+
+	public static function fakeTracking($poNo, $statusId = 1)
+	{
+		$now = date("Y-m-d H:i:s");
+		$response = [
+			'status_code' => 200,
+			'response' => [
+				'statusCode' => 200,
+				'message' => 'TRACKING_ORDER_SUCCESS',
+				'data' => [
+					'po_no' => $poNo,
+					'order_date' => '2021-06-18T10:19:49.945Z',
+					'total_amount' => 10000,
+					'status_log' => [
+						0 => [
+							'date' => $now,
+							'status' => 'On Progress',
+							'status_id' => 1,
+						]
+					],
+					'distance' => 1.005,
+					'status_id' => $statusId,
+					'sender' => [
+						'name' => 'outlet 103',
+						'phone' => '0811223344',
+						'address' => 'jalan outlet',
+						'notes' => 'NOTE: bila ada pertanyaan, mohon hubungi penerima terlebih dahulu untuk informasi. 
+						Pickup Code NV5M',
+					],
+					'receiver' => [
+						'name' => 'admin super',
+						'phone' => '0811223344',
+						'address' => 'jl jalan',
+						'notes' => 'deskripsi',
+					],
+					'tracking' => [
+						'name' => 'Test-Driver',
+						'phone' => '628882233',
+						'vehicle_number' => 'TEST A 3333 SYY',
+						'photo' => NULL,
+						'live_tracking_url' => NULL,
+					],
+					'feature' => [
+						'name' => NULL,
+					],
+					'status' => [
+						'name' => 'Finished',
+					],
+				],
+			],
+		];
+
+		if (in_array($statusId, [8,9,2])) {
+			$response['response']['data']['status_log'] += [
+				1 => [
+					'date' => $now,
+					'status' => 'Enroute Pickup',
+					'status_id' => 8,
+				]
+			];
+		}
+
+		if (in_array($statusId, [9,2])) {
+			$response['response']['data']['status_log'] += [
+				2 => [
+					'date' => $now,
+					'status' => 'Enroute Drop',
+					'status_id' => 9,
+				],
+				3 => [
+					'date' => $now,
+					'status' => 'Finished',
+					'status_id' => 2,
+				]
+			];
+		}
+
+		return $response;
 	}
 
 	public static function sendBalanceNotification($balance)

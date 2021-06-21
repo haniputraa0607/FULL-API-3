@@ -175,6 +175,12 @@ class Kernel extends ConsoleKernel
         $schedule->call('Modules\Transaction\Http\Controllers\ApiGosendController@cronCheckStatus')->cron('*/3 * * * *');
 
         /**
+         * Check the status of Wehelpyou which is not updated after 5 minutes
+         * run every 3 minutes
+         */
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiWehelpyouController@cronCheckStatus')->cron('*/3 * * * *');
+
+        /**
          * Auto reject order when driver not found > 30minutes
          * run every 5 minutes
          */

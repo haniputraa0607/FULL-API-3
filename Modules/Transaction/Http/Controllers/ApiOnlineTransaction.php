@@ -1201,6 +1201,7 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
+        $totalProductQty = 0;
         foreach (($discount_promo['item']??$post['item']) as $keyProduct => $valueProduct) {
 
             $this_discount=$valueProduct['discount']??0;
@@ -1452,6 +1453,7 @@ class ApiOnlineTransaction extends Controller
                 'last_trx_date' => $insertTransaction['transaction_date']
             ];
             array_push($userTrxProduct, $dataUserTrxProduct);
+            $totalProductQty += $valueProduct['qty'];
         }
 
         array_push($dataDetailProduct, $productMidtrans);
@@ -1767,7 +1769,7 @@ class ApiOnlineTransaction extends Controller
 
                 $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
             } elseif ($post['type'] == 'Delivery Order') {
-            	$createTrxPickupWHY = WeHelpYou::createTrxPickupWehelpyou($insertPickup, $request, $outlet);
+            	$createTrxPickupWHY = WeHelpYou::createTrxPickupWehelpyou($insertPickup, $request, $outlet, $totalProductQty);
             	if (!$createTrxPickupWHY) {
             		DB::rollback();
                     return response()->json([
@@ -2198,6 +2200,7 @@ class ApiOnlineTransaction extends Controller
         }
 
         $shippingGoSend = 0;
+        $shippingGoSendPrice = 0;
         $listDelivery = [];
         $error_msg=[];
 
@@ -2216,7 +2219,6 @@ class ApiOnlineTransaction extends Controller
                     'messages' => ['Outlet tidak dapat melakukan pengiriman']
                 ];
             }
-        	$listDelivery = WeHelpYou::getListTransactionDelivery($request, $outlet);
 
         	if (in_array('gosend', $delivery_outlet)) {
 	            $coor_origin = [
@@ -2246,14 +2248,8 @@ class ApiOnlineTransaction extends Controller
 	                    }
 	                }
 	                $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
-	            } else {
-	            	foreach ($listDelivery as &$delivery) {
-	            		if ($delivery['code'] == 'gosend') {
-	            			$delivery['price'] = $shippingGoSend;
-	            			$delivery['disable'] = 0;
-	            		}
-	            	}
 	            }
+	            $shippingGoSendPrice = $shippingGoSend;
 	            $shippingGoSend = 0;
         	}
 
@@ -3001,6 +2997,9 @@ class ApiOnlineTransaction extends Controller
 
         $result['subscription'] = (int) $result['subscription'];
         $result['discount'] = (int) $result['discount'];
+
+        $listDelivery = WeHelpYou::getListTransactionDelivery($request, $outlet, $totalItem, ['gosend' => $shippingGoSendPrice]);
+
         $result['available_delivery'] = $this->setGrandtotalListDelivery($listDelivery, $result['total_payment']);
 
         $result['payment_detail'] = [];
@@ -3038,7 +3037,7 @@ class ApiOnlineTransaction extends Controller
             ];
         }
 
-        if ($request->courier) {
+        if ($request->courier && $listDelivery) {
         	$delivery = $this->getActiveCourier($listDelivery, $request->courier);
 
         	$result['payment_detail'][] = [
@@ -4724,6 +4723,7 @@ class ApiOnlineTransaction extends Controller
             if($check !== false){
                 $availableDelivery[$key]['available_status'] = $dtDelivery[$check]['available_status'];
                 $availableDelivery[$key]['position'] = $check;
+                $availableDelivery[$key]['description'] = $dtDelivery[$check]['description'];
             }
         }
 
@@ -4740,9 +4740,11 @@ class ApiOnlineTransaction extends Controller
             $availableDelivery  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
             $dataDelivery = (array)$jsonDecode->data->partners;
             foreach ($dataDelivery as $val){
+
             	if (empty($val)) {
             		continue;
             	}
+
                 $check = array_search('wehelpyou_'.$val->courier, array_column($availableDelivery, 'code'));
                 if($check === false){
                     $availableDelivery[] = [
@@ -4763,8 +4765,8 @@ class ApiOnlineTransaction extends Controller
 
     public function setGrandtotalListDelivery($listDelivery, $grandtotal)
     {
-    	foreach ($listDelivery as &$delivery) {
-    		$delivery['total_payment'] = $grandtotal + $delivery['price'];
+    	foreach ($listDelivery as $key => $delivery) {
+    		$listDelivery[$key]['total_payment'] = $grandtotal + $delivery['price'];
     	}
     	return $listDelivery;
     }

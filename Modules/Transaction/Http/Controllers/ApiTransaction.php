@@ -3393,11 +3393,13 @@ class ApiTransaction extends Controller
                                     ];
                                     break;
                                 case 'picked':
-                                    $hasPicked = true;
-                                    $statusOrder[] = [
-                                        'text'  => 'Driver mengambil pesanan di outlet',
-                                        'date'  => $valueGosend['created_at']
-                                    ];
+                                    if (!$hasPicked) {
+                                        $statusOrder[] = [
+                                            'text'  => 'Driver mengambil pesanan di outlet',
+                                            'date'  => $valueGosend['created_at']
+                                        ];
+                                        $hasPicked = true;
+                                    }
                                     break;
                                 case 'enroute drop':
                                 case 'out_for_delivery':
@@ -3410,6 +3412,7 @@ class ApiTransaction extends Controller
                                             'text'  => 'Driver mengambil pesanan di outlet',
                                             'date'  => $valueGosend['created_at']
                                         ];
+                                        $hasPicked = true;
                                     }
                                     break;
                                 case 'completed':
@@ -3486,11 +3489,11 @@ class ApiTransaction extends Controller
                     ];
                     if ($status['text'] == 'Order rejected') {
                         if (strpos($list['detail']['reject_reason'], 'auto reject order by system [no driver]') !== false) {
-                            $result['detail']['detail_status'][$keyStatus]['text'] = 'Maaf Pesanan Telah Ditolak karena driver tidak ditemukan, Mohon untuk Melakukan Pemesanannya Kembali';
+                            $result['detail']['detail_status'][$keyStatus]['text'] = 'Maaf pesanan ditolak karena driver tidak ditemukan. Mohon ulangi pemesanan';
                         } elseif (strpos($list['detail']['reject_reason'], 'auto reject order by system') !== false) {
-                            $result['detail']['detail_status'][$keyStatus]['text'] = 'Maaf Pesanan Telah Ditolak, Mohon untuk Melakukan Pemesanannya Kembali';
+                            $result['detail']['detail_status'][$keyStatus]['text'] = 'Maaf pesanan ditolak. Mohon ulangi pemesanan';
                         } else {
-                            $result['detail']['detail_status'][$keyStatus]['text'] = 'Pesanan telah ditolak karena '.strtolower($list['detail']['reject_reason']);
+                            $result['detail']['detail_status'][$keyStatus]['text'] = 'Maaf pesanan ditolak karena '.strtolower($list['detail']['reject_reason']);
                         }
                         $result['detail']['reject_reason'] = $list['detail']['reject_reason'];
                         $result['detail']['detail_status'][$keyStatus]['reason'] = $list['detail']['reject_reason'];

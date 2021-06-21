@@ -225,6 +225,12 @@ class Transaction extends Model
 		return $this->belongsTo(TransactionPickupGoSend::class, 'id_transaction_pickup', 'id_transaction_pickup');
     }
 
+    public function transaction_pickup_wehelpyou()
+    {
+    	// make sure you have joined transaction_pickups before using this
+		return $this->belongsTo(TransactionPickupWehelpyou::class, 'id_transaction_pickup', 'id_transaction_pickup');
+    }
+
     public function logTopup() 
     {
     	return $this->belongsTo(LogTopup::class, 'id_transaction', 'transaction_reference');
