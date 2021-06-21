@@ -6,11 +6,16 @@ use App\Http\Models\{
 	TransactionPickup,
 	TransactionPickupWehelpyou,
 	TransactionPickupWehelpyouUpdate,
-	Transaction
+	Transaction,
+	Autocrm,
+	Outlet,
+	User
 };
 use Modules\Transaction\Http\Requests\CheckTransaction;
 use Modules\Transaction\Http\Controllers\ApiOnlineTransaction;
 use Modules\Outlet\Entities\DeliveryOutlet;
+use Modules\Autocrm\Entities\AutoresponseCodeList;
+use Illuminate\Support\Facades\Log;
 /**
  * 
  */
@@ -518,7 +523,119 @@ class WeHelpYou
 			'tracking_driver_log' 		=> $trackOrder['response']['data']['tracking']['driver_log'] ?? null
 		]);
 
+		$outlet = Outlet::where('id_outlet', $trx->id_outlet)->first();
+        $trx_pickup = TransactionPickup::where('id_transaction', $trx->id_transaction)->first();
+		self::sendOutletNotif($trx, $outlet, $latestStatusId, $trx_pickup);
+		self::sendUserNotif($trx, $outlet, $latestStatusId, $trx_pickup);
+
 		return ['status' => 'success'];
+	}
+
+	public static function sendOutletNotif($trx, $outlet, $status_id, $trx_pickup)
+	{
+        if ($status_id == 2) {
+            $trx_pickup->update(['show_confirm' => '1']);
+            Transaction::where('id_transaction', $trx->id_transaction)->update(['show_rate_popup' => '1']);
+        }
+
+        $status = self::getStatusById($status_id);
+        $message = self::getOutletMessageByStatusId($status_id) ?? $status;
+		app("Modules\OutletApp\Http\Controllers\ApiOutletApp")->outletNotif(
+			[
+            'type' => 'trx',
+            'subject' => 'Info Pesanan Delivery',
+            'string_body' => $trx_pickup->order_id.' '.($message),
+            'status' => $status,
+            'id_transaction' => $trx->id_transaction,
+            'id_reference' => $trx->id_transaction,
+            'order_id' => $trx_pickup->order_id
+        ], $outlet->id_outlet);
+	}
+
+	public static function sendUserNotif($trx, $outlet, $status_id, $trx_pickup)
+	{
+		$subject = self::getSubjectByStatusId($status_id);
+		if (!$subject) {
+			return true;
+		}
+
+		$content = self::getContentByStatusId($status_id);
+		if (!$content) {
+			return true;
+		}
+
+		$status = self::getStatusById($status_id);
+		if (!$status) {
+			return true;
+		}
+
+		$user = User::where('id', $trx->id_user)->first();
+		if ($status_id != 2) {
+			$autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $user->phone,
+                [
+                    'id_reference'              => $trx->id_transaction,
+                    'id_transaction'            => $trx->id_transaction,
+                    'receipt_number'            => $trx->transaction_receipt_number,
+                    'outlet_code'               => $outlet->outlet_code,
+                    'outlet_name'               => $outlet->outlet_name,
+                    'delivery_status_title'     => $subject,
+                    'delivery_status_content'   => $content,
+                    'order_id'                  => $trx_pickup->order_id,
+                    'name'                      => ucwords($user->name)
+                ]
+            );
+
+            return true;
+		}
+
+		$getAvailableCodeCrm = Autocrm::where('autocrm_title', 'Order Taken With Code')->first();
+        $code = null;
+        $idCode = null;
+
+        if( !empty($getAvailableCodeCrm) 
+        	&& ($getAvailableCodeCrm['autocrm_email_toogle'] == 1 
+        		|| $getAvailableCodeCrm['autocrm_sms_toogle'] == 1 
+        		|| $getAvailableCodeCrm['autocrm_push_toogle'] == 1 
+        		|| $getAvailableCodeCrm['autocrm_inbox_toogle'] == 1)
+        ){
+            $getAvailableCode = app('Modules\Autocrm\Http\Controllers\ApiAutoresponseWithCode')->getAvailableCode($trx->id_transaction);
+            $code = $getAvailableCode['autoresponse_code'] ?? null;
+            $idCode = $getAvailableCode['id_autoresponse_code_list'] ?? null;
+        }
+
+        if(!empty($code)) {
+            $send = app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Order Taken Delivery With Code', $user->phone, [
+                'id_reference'    => $trx->id_transaction,
+                'id_transaction'  => $trx->id_transaction,
+                'receipt_number'  => $trx->transaction_receipt_number,
+                'outlet_code'     => $outlet->outlet_code,
+                'outlet_name'     => $outlet->outlet_name,
+                'delivery_status' => $status,
+                'order_id'        => $trx_pickup->order_id,
+                'code'            => $code
+            ]);
+
+            $updateCode = AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $trx->id_user, 'id_transaction' => $trx->id_transaction]);
+            if($updateCode){
+                app('Modules\Autocrm\Http\Controllers\ApiAutoresponseWithCode')->stopAutoresponse($idCode);
+            }
+        }else{
+            $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $user->phone,
+                [
+                    'id_reference'              => $trx->id_transaction,
+                    'id_transaction'            => $trx->id_transaction,
+                    'receipt_number'            => $trx->transaction_receipt_number,
+                    'outlet_code'               => $outlet->outlet_code,
+                    'outlet_name'               => $outlet->outlet_name,
+                    'delivery_status_title'     => $subject,
+                    'delivery_status_content'   => $content,
+                    'order_id'                  => $trx_pickup->order_id,
+                    'name'                      => ucwords($user->name)
+                ]
+            );
+        }
+
+        return true;
 	}
 
 	public static function getStatusById($status_id)
@@ -541,6 +658,52 @@ class WeHelpYou
 		];
 		
 		return $status[$status_id] ?? null;
+	}
+
+	public static function getSubjectByStatusId($status_id)
+	{
+		$subject = [
+            1 			=> 'Pesanan Diterima!',
+            8			=> 'Mohon menunggu ya!',
+            9 			=> 'Sudah siap menikmati pesananmu?',
+            'cancelled' => 'Pesananmu tidak dapat diambil oleh driver',
+            2   		=> 'Terima kasih sudah pesan di JIWA+!',
+            'no_driver' => 'Driver belum berhasil ditemukan',
+        ];
+
+        return $subject[$status_id] ?? null;
+	}
+
+	public static function getContentByStatusId($status_id)
+	{
+        $content = [
+            1			=> 'Mohon tunggu, pesanan sedang dipersiapkan',
+            8			=> 'Driver-mu sedang menuju ke outlet',
+            9			=> 'Driver sedang menuju ke tempatmu',
+            'cancelled'	=> 'Mohon tunggu konfirmasi dari outlet',
+            2			=> 'Selamat menikmati Kak %name%',
+            'no_driver'	=> 'Mohon tunggu konfirmasi dari outlet',
+        ];
+
+        return $content[$status_id] ?? null;
+	}
+
+	public static function getOutletMessageByStatusId($status_id)
+	{
+		$outlet_message = [
+            11 					=> 'Mencari Driver',
+            8 					=> 'Driver ditemukan',
+            'out_for_pickup' 	=> 'Driver menuju ke Outlet',
+            32 					=> 'Driver mengambil Pesanan',
+            9 					=> 'Driver menuju Alamat Tujuan',
+            'cancelled' 		=> 'Driver batal mengambil Pesanan',
+            2 					=> 'Pesanan sampai ke Alamat Tujuan',
+            96 					=> 'Driver batal mengantar Pesanan',
+            'no_driver' 		=> 'Driver tidak ditemukan',
+            'on_hold' 			=> 'Driver terkendala saat pengantaran'
+        ];
+
+        return $outlet_message[$status_id] ?? null;
 	}
 
 	public static function driverNotFoundStatus(): array
