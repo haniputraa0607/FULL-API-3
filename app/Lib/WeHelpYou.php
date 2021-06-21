@@ -228,6 +228,8 @@ class WeHelpYou
 				$disable = 1;
 			}
 			$delivery['disable'] = $disable;
+			$delivery['short_description'] = $delivery['short_description'] ?? null;
+			unset($delivery['show_status'], $delivery['available_status']);
 			$result[] = $delivery;
 		}
 		
