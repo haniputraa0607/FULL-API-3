@@ -23,7 +23,7 @@ class WeHelpYou
 {
 	private static function getBaseUrl()
 	{
-		if(config('env') == 'production'){
+		if(config('app.env') == 'production'){
 			$baseUrl = config('wehelpyou.url_prod');
         }else{
 			$baseUrl = config('wehelpyou.url_sandbox');
@@ -166,6 +166,14 @@ class WeHelpYou
 		if (self::isNotValidDimension($itemSpecification, $totalProductQty)) {
 			return false;
 		}
+
+		if (empty($destination['address']) 
+			|| empty($destination['latitude'])
+			|| empty($destination['longitude'])
+		) {
+			return false;
+		}
+
 		return [
 			"vehicle_type" => "Motorcycle",
 			"box" => false,
@@ -181,7 +189,7 @@ class WeHelpYou
 				"name" => $user->name,
 				"phone" => $user->phone,
 				"address" => $destination['address'],
-				"notes" => $destination['description'],
+				"notes" => $destination['description'] ?? null,
 				"latitude" => $destination['latitude'],
 				"longitude" => $destination['longitude']
 			],
