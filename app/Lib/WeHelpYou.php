@@ -166,6 +166,15 @@ class WeHelpYou
 		if (self::isNotValidDimension($itemSpecification, $totalProductQty)) {
 			return false;
 		}
+
+		if (empty($destination['address']) 
+			|| empty($destination['description'] )
+			|| empty($destination['latitude'] )
+			|| empty($destination['longitude'])
+		) {
+			return false;
+		}
+
 		return [
 			"vehicle_type" => "Motorcycle",
 			"box" => false,

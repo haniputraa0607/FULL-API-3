@@ -2208,9 +2208,9 @@ class ApiOnlineTransaction extends Controller
             $error_msg[] = 'Maaf, Outlet ini tidak support untuk delivery order';
         }
 
-        if($post['type'] == 'Delivery Order'){
+        if($post['type'] == 'Delivery Order' || $post['type'] == 'GO-SEND'){
             $delivery_outlet = DeliveryOutlet::where('id_outlet', $outlet->id_outlet)->pluck('code')->toArray();
-            if(!($outlet['outlet_latitude']&&$outlet['outlet_longitude']&&$outlet['outlet_phone']&&$outlet['outlet_address'])){
+            if(!($outlet['outlet_latitude'] && $outlet['outlet_longitude'] && $outlet['outlet_phone'] && $outlet['outlet_address'])){
                 app($this->outlet)->sendNotifIncompleteOutlet($outlet['id_outlet']);
                 $outlet->notify_admin = 1;
                 $outlet->save();
@@ -2220,7 +2220,7 @@ class ApiOnlineTransaction extends Controller
                 ];
             }
 
-        	if (in_array('gosend', $delivery_outlet)) {
+        	if ($post['type'] == 'GO-SEND' || in_array('gosend', $delivery_outlet)) {
 	            $coor_origin = [
 	                'latitude' => number_format($outlet['outlet_latitude'],8),
 	                'longitude' => number_format($outlet['outlet_longitude'],8)
@@ -2249,8 +2249,11 @@ class ApiOnlineTransaction extends Controller
 	                }
 	                $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
 	            }
-	            $shippingGoSendPrice = $shippingGoSend;
-	            $shippingGoSend = 0;
+	            
+	            if ($post['type'] == 'Delivery Order') {
+		            $shippingGoSendPrice = $shippingGoSend;
+		            $shippingGoSend = 0;
+	            }
         	}
 
             //cek free delivery
