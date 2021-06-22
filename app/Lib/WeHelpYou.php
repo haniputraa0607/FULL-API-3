@@ -23,7 +23,7 @@ class WeHelpYou
 {
 	private static function getBaseUrl()
 	{
-		if(config('env') == 'production'){
+		if(config('app.env') == 'production'){
 			$baseUrl = config('wehelpyou.url_prod');
         }else{
 			$baseUrl = config('wehelpyou.url_sandbox');
