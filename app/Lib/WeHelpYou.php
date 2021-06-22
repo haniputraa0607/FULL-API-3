@@ -168,8 +168,7 @@ class WeHelpYou
 		}
 
 		if (empty($destination['address']) 
-			|| empty($destination['description'] )
-			|| empty($destination['latitude'] )
+			|| empty($destination['latitude'])
 			|| empty($destination['longitude'])
 		) {
 			return false;
@@ -190,7 +189,7 @@ class WeHelpYou
 				"name" => $user->name,
 				"phone" => $user->phone,
 				"address" => $destination['address'],
-				"notes" => $destination['description'],
+				"notes" => $destination['description'] ?? null,
 				"latitude" => $destination['latitude'],
 				"longitude" => $destination['longitude']
 			],
