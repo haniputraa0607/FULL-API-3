@@ -385,7 +385,7 @@ class WeHelpYou
 		if ($priceInstant['status_code'] != 200) {
 			return [
 				'status' => 'fail',
-				'messages' => ['TIdak dapat menemukan layanan delivery']
+				'messages' => ['Tidak dapat menemukan layanan delivery']
 			];
 		}
 
@@ -436,9 +436,19 @@ class WeHelpYou
 	public static function saveCreateOrderReponse($trxPickup, $orderResponse)
 	{
 		if (empty($orderResponse['response']['data']['poNo'])) {
+
+			$deliverySetting = (new ApiOnlineTransaction)->listAvailableDelivery();
+			$courier = $trxPickup['transaction_pickup_wehelpyou']['courier'];
+			foreach ((new ApiOnlineTransaction)->listAvailableDelivery()['result']['delivery'] as $delivery) {
+				if (strpos($delivery['code'], $courier)) {
+					$courier = $delivery['delivery_name'];
+					break;
+				}
+			}
+
 			return [
 				'status' => 'fail',
-				'messages' => ['PO number tidak ditemukan']
+				'messages' => $orderResponse['response']['message'] ?? ['Failed booking '.$courier]
 			];
 		}
 
@@ -487,7 +497,7 @@ class WeHelpYou
 		if ($trackOrder['status_code'] != '200') {
 			return [
 				'status' => 'fail',
-				'messages' => ['PO number tidak ditemukan']
+				'messages' => $trackOrder['response']['message'] ?? ['PO number tidak ditemukan']
 			];
 		}
 
