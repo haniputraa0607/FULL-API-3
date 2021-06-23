@@ -209,7 +209,7 @@ class WeHelpYou
 	{
 		(new ApiOnlineTransaction)->mergeNewDelivery(json_encode($listDelivery['response']));
 
-		$delivery_outlet = DeliveryOutlet::where('id_outlet', $outlet->id_outlet)->pluck('code')->toArray();
+		$delivery_outlet = DeliveryOutlet::where('id_outlet', $outlet->id_outlet)->where('available_status', 1)->pluck('code')->toArray();
 		$result = [];
 		$deliverySetting = (new ApiOnlineTransaction)->listAvailableDelivery();
 		$listDeliverySetting = $deliverySetting['result']['delivery'] ?? [];
