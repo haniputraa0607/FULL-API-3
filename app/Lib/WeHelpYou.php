@@ -209,9 +209,12 @@ class WeHelpYou
 	{
 		(new ApiOnlineTransaction)->mergeNewDelivery(json_encode($listDelivery['response']));
 
-		$delivery_outlet = DeliveryOutlet::where('id_outlet', $outlet->id_outlet)->pluck('code')->toArray();
+		$delivery_outlet = DeliveryOutlet::where('id_outlet', $outlet->id_outlet)->where('available_status', 1)->pluck('code')->toArray();
 		$result = [];
-		foreach (self::getSettingListDelivery() as $delivery) {
+		$deliverySetting = (new ApiOnlineTransaction)->listAvailableDelivery();
+		$listDeliverySetting = $deliverySetting['result']['delivery'] ?? [];
+		$defaultOrder = $deliverySetting['result']['default_delivery'] ?? null;
+		foreach ($listDeliverySetting as $delivery) {
 			$disable = 0;
 			$delivery['courier'] = self::getSettingCourierName($delivery['code']);
 			$delivery['price'] = self::getCourierPrice($listDelivery['response']['data']['partners'] ?? [], $delivery['courier']);
@@ -241,6 +244,7 @@ class WeHelpYou
 			$result[] = $delivery;
 		}
 		
+		$result = self::formatDefaultOrder($result, $defaultOrder);
 		return $result;
 	}
 
@@ -833,5 +837,31 @@ class WeHelpYou
 				Setting::where('key', 'wehelpyou_notif_last_send')->update(['value' => date('Y-m-d')]);
 			}
 		}
+	}
+
+	public static function formatDefaultOrder($listDelivery, $defaultOrder)
+	{
+		if ($defaultOrder == 'price') {
+			usort($listDelivery, function($a, $b) {
+	            return $a['price'] - $b['price'];
+	        });
+		}else{
+			usort($listDelivery, function($a, $b) {
+	            return $a['position'] - $b['position'];
+	        });
+		}
+
+		$listDisable = [];
+		$listEnable	= [];
+		foreach ($listDelivery as $delivery) {
+			if ($delivery['disable'] == 1) {
+				$listDisable[] = $delivery;
+			} else {
+				$listEnable[] = $delivery;
+			}
+		}
+
+		return array_merge($listEnable, $listDisable);
+		
 	}
 }
