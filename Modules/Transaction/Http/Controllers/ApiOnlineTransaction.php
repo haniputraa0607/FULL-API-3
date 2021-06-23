@@ -2321,7 +2321,7 @@ class ApiOnlineTransaction extends Controller
 	        	else
 	        	{
 	        		$promo_type = $code->promo_type;
-					if ($promo_type != 'Discount bill') {
+					if ($promo_type != 'Discount bill' && $promo_type != 'Discount delivery') {
 			            $validate_user = $pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
 
 			            if ($validate_user) {
@@ -2364,7 +2364,7 @@ class ApiOnlineTransaction extends Controller
 			if($deals)
 			{
 	        	$promo_type = $deals->dealVoucher->deals->promo_type;
-				if ($promo_type != 'Discount bill') {
+				if ($promo_type != 'Discount bill' && $promo_type != 'Discount delivery') {
 					$discount_promo = $pct->validatePromo($request_promo, $deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals', $errorProduct, $post['shipping']+$shippingGoSend);
 
 					$promo_source = 'voucher_online';
@@ -2817,8 +2817,14 @@ class ApiOnlineTransaction extends Controller
             $subtotal_per_brand = $itemBundlings['subtotal_per_brand']??[];
         }
 
+        if ($post['type'] == 'Delivery Order') {
+	        $listDelivery = WeHelpYou::getListTransactionDelivery($request, $outlet, $totalItem, ['gosend' => $shippingGoSendPrice]);
+			$delivery = $this->getActiveCourier($listDelivery, $request->courier);
+			$post['shipping'] = $delivery['price'] ?? $post['shipping'];
+        }
+
         if ($promo_valid) {
-        	if (($promo_type??false) == 'Discount bill') {
+        	if (isset($promo_type) && ($promo_type == 'Discount bill' || $promo_type != 'Discount delivery')) {
         		$check_promo = app($this->promo)->checkPromo($request_promo, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $subtotal_per_brand, $promo_error_product);
 
         		if ($check_promo['status'] == 'fail') {
@@ -3001,9 +3007,7 @@ class ApiOnlineTransaction extends Controller
         $result['subscription'] = (int) $result['subscription'];
         $result['discount'] = (int) $result['discount'];
 
-        $listDelivery = WeHelpYou::getListTransactionDelivery($request, $outlet, $totalItem, ['gosend' => $shippingGoSendPrice]);
-
-        $result['available_delivery'] = $this->setGrandtotalListDelivery($listDelivery, $result['total_payment']);
+        $result['available_delivery'] = $listDelivery;
 
         $result['payment_detail'] = [];
         
@@ -3031,26 +3035,24 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-        //delivery gosend
-        if($result['shipping'] > 0){
-            $result['payment_detail'][] = [
-                'name'          => 'Delivery (GO-SEND)',
-                "is_discount"   => 0,
-                'amount'        => MyHelper::requestNumber($result['shipping'],'_CURRENCY')
-            ];
+        if ($post['type'] == 'GO-SEND') {
+	        //delivery gosend
+	        if($result['shipping'] > 0){
+	            $result['payment_detail'][] = [
+	                'name'          => 'Delivery (GO-SEND)',
+	                "is_discount"   => 0,
+	                'amount'        => MyHelper::requestNumber($result['shipping'],'_CURRENCY')
+	            ];
+	        }
         }
 
-        if ($request->courier && $listDelivery) {
-        	$delivery = $this->getActiveCourier($listDelivery, $request->courier);
-
+        if (isset($delivery['delivery_name'])) {
         	$result['payment_detail'][] = [
 
 	    		'name'          => 'Delivery' . ($delivery['delivery_name'] ? ' (' . $delivery['delivery_name'] . ')' : null),
 	            "is_discount"   => 0,
 	            'amount'        => MyHelper::requestNumber($delivery['price'],'_CURRENCY')
 	    	];
-        	$result['grandtotal'] += $delivery['price'];
-        	$result['total_payment'] += $delivery['price'];
         }
 
         //discount delivery
@@ -4781,10 +4783,14 @@ class ApiOnlineTransaction extends Controller
     public function getActiveCourier($listDelivery, $courier)
     {
     	foreach ($listDelivery as $delivery) {
-    		if ($delivery['courier'] == $courier) {
+    		if ((empty($courier) && $delivery['disable'] == 0)
+    			|| $delivery['courier'] == $courier
+    		) {
     			return $delivery;
     			break;
     		}
     	}
+
+    	return null;
     }
 }
