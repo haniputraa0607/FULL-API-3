@@ -971,7 +971,7 @@ class ApiOnlineTransaction extends Controller
             'transaction_discount_item' 	=> $promo_discount_item+$post['total_discount_bundling']??0,
             'transaction_discount_bill' 	=> $promo_discount_bill,
             'transaction_tax'             => $post['tax'],
-            'transaction_grandtotal'      => $post['grandTotal'] + $shippingGoSend,
+            'transaction_grandtotal'      => $post['grandTotal'] + $shippingGoSend + $post['shipping'],
             'transaction_point_earned'    => $post['point'],
             'transaction_cashback_earned' => $post['cashback'],
             'trasaction_payment_type'     => $post['payment_type'],
