@@ -146,6 +146,7 @@ class ApiReportPaymentController extends Controller
         if($id_oultet){
             $list = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
                 ->join('users','users.id','=','transactions.id_user')
+                ->leftJoin('disburse_outlet_transactions', 'transactions.id_transaction', '=', 'disburse_outlet_transactions.id_transaction')
                 ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
                 ->leftJoin('transaction_payment_subscriptions', 'transactions.id_transaction', '=', 'transaction_payment_subscriptions.id_transaction')
                 ->leftJoin('transaction_payment_balances', 'transactions.id_transaction', '=', 'transaction_payment_balances.id_transaction')
@@ -156,10 +157,10 @@ class ApiReportPaymentController extends Controller
                 ->whereNull('reject_at');
 
             if (strtolower($post['trx_payment']) == 'shopeepay'){
-                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name', DB::raw('(transaction_payment_shopee_pays.amount/100) as amount'), 'transaction_payment_balances.balance_nominal as balance_amount', 'transaction_payment_subscriptions.subscription_nominal',
+                $list = $list->select('disburse_outlet_transactions.payment_charge', 'transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name', DB::raw('(transaction_payment_shopee_pays.amount/100) as amount'), 'transaction_payment_balances.balance_nominal as balance_amount', 'transaction_payment_subscriptions.subscription_nominal',
                     '"ShopeePay" as payment_name')->whereNotNull('transaction_payment_shopee_pays.id_transaction_payment_shopee_pay');
             }elseif (strtolower($post['trx_payment']) == 'subscription'){
-                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name', 'transaction_payment_subscriptions.subscription_nominal', 'transaction_payment_balances.balance_nominal as balance_amount',
+                $list = $list->select('disburse_outlet_transactions.payment_charge', 'transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name', 'transaction_payment_subscriptions.subscription_nominal', 'transaction_payment_balances.balance_nominal as balance_amount',
                     DB::raw('(CASE 
                         WHEN transaction_payment_midtrans.gross_amount IS NOT NULL THEN transaction_payment_midtrans.gross_amount
                         WHEN transaction_payment_ipay88s.amount IS NOT NULL THEN transaction_payment_ipay88s.amount/100
@@ -172,7 +173,7 @@ class ApiReportPaymentController extends Controller
                         ELSE NULL END) as payment_name'))
                     ->whereNotNull('transaction_payment_subscriptions.id_transaction_payment_subscription');
             }elseif (strtolower($post['trx_payment']) == 'jiwa poin'){
-                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name','transaction_payment_balances.balance_nominal as balance_amount', 'transaction_payment_subscriptions.subscription_nominal',
+                $list = $list->select('disburse_outlet_transactions.payment_charge', 'transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name','transaction_payment_balances.balance_nominal as balance_amount', 'transaction_payment_subscriptions.subscription_nominal',
                     DB::raw('(CASE 
                         WHEN transaction_payment_midtrans.gross_amount IS NOT NULL THEN transaction_payment_midtrans.gross_amount
                         WHEN transaction_payment_ipay88s.amount IS NOT NULL THEN transaction_payment_ipay88s.amount/100
@@ -185,7 +186,7 @@ class ApiReportPaymentController extends Controller
                         ELSE NULL END) as payment_name'))->whereNotNull('transaction_payment_balances.id_transaction_payment_balance')
                     ->whereNotNull('transaction_payment_balances.id_transaction_payment_balance');
             }else{
-                $list = $list->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name', 'transaction_payment_balances.balance_nominal as balance_amount', 'transaction_payment_subscriptions.subscription_nominal',
+                $list = $list->select('disburse_outlet_transactions.payment_charge', 'transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date', 'users.name', 'transaction_payment_balances.balance_nominal as balance_amount', 'transaction_payment_subscriptions.subscription_nominal',
                     DB::raw('(CASE WHEN transaction_payment_midtrans.gross_amount IS NULL THEN transaction_payment_ipay88s.amount/100
                         ELSE transaction_payment_midtrans.gross_amount END) as amount'),
                     DB::raw('(CASE WHEN transaction_payment_midtrans.gross_amount IS NOT NULL THEN transaction_payment_midtrans.payment_type
@@ -319,11 +320,12 @@ class ApiReportPaymentController extends Controller
         if($id_oultet){
             $list = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
                 ->join('users','users.id','=','transactions.id_user')
-                ->select('transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date',
+                ->select('disburse_outlet_transactions.payment_charge', 'transactions.transaction_grandtotal', 'transactions.transaction_receipt_number', 'transaction_pickups.order_id', 'transactions.id_transaction', 'transactions.transaction_date',
                     'users.name',
                     'payment_type', 'payment_method', 'transaction_payment_midtrans.gross_amount', 'transaction_payment_ipay88s.amount',
                     'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'transaction_payment_shopee_pays.amount as shopee_amount',
                     'transaction_payment_subscriptions.subscription_nominal', 'balance_nominal')
+                ->leftJoin('disburse_outlet_transactions', 'transactions.id_transaction', '=', 'disburse_outlet_transactions.id_transaction')
                 ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
                 ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
                 ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
