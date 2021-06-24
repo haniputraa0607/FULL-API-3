@@ -18,6 +18,7 @@ class RulePromoPaymentGateway extends Model
         'end_date',
         'maximum_total_cashback',
         'limit_promo_total',
+        'limit_per_user_per_day',
         'limit_promo_additional_day',
         'limit_promo_additional_week',
         'limit_promo_additional_month',
