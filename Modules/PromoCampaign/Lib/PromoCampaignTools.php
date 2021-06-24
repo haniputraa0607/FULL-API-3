@@ -1991,6 +1991,10 @@ class PromoCampaignTools{
     		$promo_shipment_list = $promo_shipment_list->toArray();
     	}
 
+    	if (in_array('GO-SEND', $promo_shipment_list)) {
+    		$promo_shipment_list[] = 'gosend';
+    	}
+
     	if ($all_shipment) {
     		return true;
     	}
@@ -2619,6 +2623,60 @@ class PromoCampaignTools{
     	}
 
     	return $product_name;
+    }
+
+    public function getActivePromoCourier($request, $listDelivery, $query)
+    {
+    	if ($request->promo_code) {
+
+    		$promoShipment = $query->promo_campaign->promo_campaign_shipment_method->pluck('shipment_method');
+    		$isAllShipment = $query->is_all_shipment;
+
+    	} elseif ($request->id_deals_user) {
+
+			$promoShipment = $query->dealVoucher->deals->deals_shipment_method->pluck('shipment_method');
+    		$isAllShipment = $query->dealVoucher->deals->is_all_shipment;
+
+    	} elseif ($request->id_subscription_user) {
+
+			$promoShipment = $query->subscription_user->subscription->subscription_shipment_method->pluck('shipment_method');
+    		$isAllShipment = $query->subscription_user->subscription->is_all_shipment;
+    	}
+
+    	$courier = $request->courier;
+    	$courierPromo = null;
+    	foreach ($listDelivery as $delivery) {
+    		if ($this->checkShipmentRule($isAllShipment, $delivery['code'], $promoShipment)) {
+    			$courierPromo = $courierPromo ?? $delivery;
+	    		if ((empty($courier) && $delivery['disable'] == 0)
+	    			|| $delivery['courier'] == $courier
+	    		) {
+		    			$courierPromo = $delivery;
+		    			break;
+    			}
+    		}
+    	}
+
+    	return $courierPromo;
+    }
+
+    public function reorderSelectedDelivery($listDelivery, $delivery)
+    {
+    	if (!$delivery) {
+    		return $listDelivery;
+    	}
+
+    	$selected = [];
+    	foreach ($listDelivery as $key => $val) {
+    		if ($val['code'] == $delivery['code']) {
+    			$selected[] = $val;
+    			unset($listDelivery[$key]);
+    			break;
+    		}
+    	}
+
+    	$listDelivery = array_merge($selected, $listDelivery);
+    	return $listDelivery;
     }
 }
 ?>
