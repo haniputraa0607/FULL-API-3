@@ -895,8 +895,8 @@ class ApiOnlineTransaction extends Controller
         }
 
         if ($promo_valid) {
-        	if (($promo_type??false) == 'Discount delivery' || ($promo_type??false) == 'Discount bill') {
-        		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $post['sub']['subtotal_per_brand'], $promo_error_product);
+        	if (isset($promo_type) && ($promo_type == 'Discount delivery' || $promo_type == 'Discount bill')) {
+        		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code ?? $deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $post['sub']['subtotal_per_brand'], $promo_error_product);
 
         		if ($check_promo['status'] == 'fail') {
 					DB::rollback();
