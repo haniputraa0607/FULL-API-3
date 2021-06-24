@@ -2303,6 +2303,7 @@ class ApiOnlineTransaction extends Controller
         $promo_error=null;
         $promo_source = null;
         $promo_valid = false;
+        $subs_valid = false;
         $promo_discount = 0;
         $promo_type = null;
         $request['bundling_promo'] = $this->checkBundlingIncludePromo($post);
@@ -2392,7 +2393,7 @@ class ApiOnlineTransaction extends Controller
 	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error);
 	        }
         } elseif (!$request->promo_code && $request->id_subscription_user && !$request->id_deals_user) {
-        	$subs = $this->checkSubscription($request->$id_subscription_user, "outlet", "product", "product_detail", null, null, "brand");
+        	$subs = app($this->subscription_use)->checkSubscription($request->id_subscription_user, "outlet", "product", "product_detail", null, null, "brand");
         	$promo_source = 'subscription';
 	    	if ($subs) {
 	    		$subs_valid = true;
@@ -2834,7 +2835,7 @@ class ApiOnlineTransaction extends Controller
 	        		$promo_discount = 0;
 	        		$promo_source 	= null;
 		        	$promo_error 	= app($this->promo_campaign)->promoError('transaction', ['Pengiriman tidak tersedia untuk promo ini']);
-	        	} elseif ($request->courier && !strpos($delivery['code'], $request->courier)) {
+	        	} elseif ($request->courier && strpos($delivery['code'], $request->courier) === false) {
 	        		$courierName 	= $this->getCourierName($request->courier);
 	        		$error_msg[] = 'Pengiriman ' . $courierName . ' tidak tersedia untuk promo ini';
 	        	}
