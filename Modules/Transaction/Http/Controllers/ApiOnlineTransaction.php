@@ -2928,6 +2928,8 @@ class ApiOnlineTransaction extends Controller
         $subtotal += $result['plastic']['plastic_price_total'] ?? 0;
         $subtotal += $itemBundlings['subtotal_bundling']??0;
 
+        $earnedPoint = $this->countEarnedPoint($post, $user);
+        
         $result['is_advance_order'] = $is_advance;
         $result['subtotal'] = $subtotal;
         $result['shipping'] = $post['shipping']+$shippingGoSend;
@@ -2944,6 +2946,7 @@ class ApiOnlineTransaction extends Controller
         $result['pickup_type'] = 1;
         $result['delivery_type'] = $outlet['delivery_order'];
         $result['available_payment'] = null;
+        $result['point_earned'] = null;
 
         if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user)
         {
@@ -2971,8 +2974,17 @@ class ApiOnlineTransaction extends Controller
 	        	}
 	        }
         }
+
         $result['get_point'] = ($post['payment_type'] != 'Balance') ? $this->checkPromoGetPoint($promo_source) : 0;
-        if (isset($post['payment_type'])&&$post['payment_type'] == 'Balance') {
+
+        if ($result['get_point'] && $earnedPoint['cashback']) {
+	        $result['point_earned'] = [
+	        	'value' => $earnedPoint['cashback'],
+	        	'text' => MyHelper::setting('cashback_earned_text', 'value', 'Point yang akan didapatkan')
+	    	];
+        }
+
+        if (isset($post['payment_type']) && $post['payment_type'] == 'Balance') {
             if($balance >= ($result['grandtotal']-$result['subscription'])){
                 $result['used_point'] = $result['grandtotal'];
 
@@ -4792,5 +4804,67 @@ class ApiOnlineTransaction extends Controller
     	}
 
     	return null;
+    }
+
+    public function getCourierName(string $courier)
+    {
+    	foreach ($this->listAvailableDelivery()['result']['delivery'] as $delivery) {
+    		if (strpos($delivery['code'], $courier) !== false) {
+				$courier = $delivery['delivery_name'];
+				break;
+			}
+    	}
+    	return $courier;
+    }
+
+    public function countEarnedPoint($post, $user)
+    {
+    	$post['point'] = app($this->setting_trx)->countTransaction('point', $post);
+    	$post['cashback'] = app($this->setting_trx)->countTransaction('cashback', $post);
+
+        //count some trx user
+        $countUserTrx = Transaction::where('id_user', $user['id'])->where('transaction_payment_status', 'Completed')->count();
+
+        $countSettingCashback = TransactionSetting::get();
+
+        if ($countUserTrx < count($countSettingCashback)) {
+
+            $post['cashback'] = $post['cashback'] * $countSettingCashback[$countUserTrx]['cashback_percent'] / 100;
+
+            if ($post['cashback'] > $countSettingCashback[$countUserTrx]['cashback_maximum']) {
+                $post['cashback'] = $countSettingCashback[$countUserTrx]['cashback_maximum'];
+            }
+        } else {
+
+            $maxCash = Setting::where('key', 'cashback_maximum')->first();
+
+            if (count($user['memberships']) > 0) {
+                $post['point'] = $post['point'] * ($user['memberships'][0]['benefit_point_multiplier']) / 100;
+                $post['cashback'] = $post['cashback'] * ($user['memberships'][0]['benefit_cashback_multiplier']) / 100;
+
+                if($user['memberships'][0]['cashback_maximum']){
+                    $maxCash['value'] = $user['memberships'][0]['cashback_maximum'];
+                }
+            }
+
+            $statusCashMax = 'no';
+
+            if (!empty($maxCash) && !empty($maxCash['value'])) {
+                $statusCashMax = 'yes';
+                $totalCashMax = $maxCash['value'];
+            }
+
+            if ($statusCashMax == 'yes') {
+                if ($totalCashMax < $post['cashback']) {
+                    $post['cashback'] = $totalCashMax;
+                }
+            } else {
+                $post['cashback'] = $post['cashback'];
+            }
+        }
+    	return [
+    		'point' => $post['point'] ?? 0,
+    		'cashback' => $post['cashback'] ?? 0
+    	];
     }
 }
