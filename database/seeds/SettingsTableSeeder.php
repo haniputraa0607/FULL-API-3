@@ -975,6 +975,15 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+           	108 =>
+                array(
+                    'id_setting' => 109,
+                    'key' => 'cashback_earned_text',
+                    'value' => 'Point yang akan didapatkan',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         ));
     }
 }
