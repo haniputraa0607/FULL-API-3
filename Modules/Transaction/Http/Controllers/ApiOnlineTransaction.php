@@ -4821,7 +4821,7 @@ class ApiOnlineTransaction extends Controller
     public function getCourierName(string $courier)
     {
     	foreach ($this->listAvailableDelivery()['result']['delivery'] as $delivery) {
-    		if (strpos($delivery['code'], $courier)) {
+    		if (strpos($delivery['code'], $courier) !== false) {
 				$courier = $delivery['delivery_name'];
 				break;
 			}
