@@ -332,7 +332,7 @@ class ApiOnlineTransaction extends Controller
         $post['item'] = $pct->removeBonusItem($post['item']);
 
         // check promo code and referral
-        $promo_error=[];
+        $promo_error = [];
         $use_referral = false;
         $discount_promo = [];
         $promo_discount = 0;
@@ -2305,6 +2305,7 @@ class ApiOnlineTransaction extends Controller
         $promo_valid = false;
         $promo_discount = 0;
         $promo_type = null;
+        $use_referral = false;
         $request['bundling_promo'] = $this->checkBundlingIncludePromo($post);
         $request_promo = $request;
         unset($request_promo['type']);
@@ -2322,6 +2323,9 @@ class ApiOnlineTransaction extends Controller
 	        	{
 	        		$promo_type = $code->promo_type;
 					if ($promo_type != 'Discount bill' && $promo_type != 'Discount delivery') {
+						if($code->promo_type == "Referral"){
+		                    $use_referral = true;
+		                }
 			            $validate_user = $pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
 
 			            if ($validate_user) {
@@ -2928,7 +2932,7 @@ class ApiOnlineTransaction extends Controller
         $subtotal += $result['plastic']['plastic_price_total'] ?? 0;
         $subtotal += $itemBundlings['subtotal_bundling']??0;
 
-        $earnedPoint = $this->countEarnedPoint($post, $user);
+        $earnedPoint = $this->countTranscationPoint($post, $user);
         
         $result['is_advance_order'] = $is_advance;
         $result['subtotal'] = $subtotal;
@@ -2977,10 +2981,23 @@ class ApiOnlineTransaction extends Controller
 
         $result['get_point'] = ($post['payment_type'] != 'Balance') ? $this->checkPromoGetPoint($promo_source) : 0;
 
+        $cashback = $post['cashback'] ?? 0;
         if ($result['get_point'] && $earnedPoint['cashback']) {
-	        $result['point_earned'] = [
-	        	'value' => $earnedPoint['cashback'],
-	        	'text' => MyHelper::setting('cashback_earned_text', 'value', 'Point yang akan didapatkan')
+        	$cashback = $earnedPoint['cashback'];
+        }
+
+        if ($use_referral) {
+        	$referralCashback = $pct->countReferralCashback($code->id_promo_campaign, $subtotal);
+        	if($referralCashback['status'] == 'fail'){
+        		$promo_error = app($this->promo_campaign)->promoError('transaction', $referralCashback['messages'] ?? ['Gagal menghitung referral cashback']);
+            }
+        	$cashback = $referralCashback['result'] ?? $post['cashback'];
+        }
+
+        if ($cashback) {
+        	$result['point_earned'] = [
+	        	'value' => MyHelper::requestNumber($cashback,'_CURRENCY'),
+	        	'text' 	=> MyHelper::setting('cashback_earned_text', 'value', 'Point yang akan didapatkan')
 	    	];
         }
 
@@ -4817,12 +4834,11 @@ class ApiOnlineTransaction extends Controller
     	return $courier;
     }
 
-    public function countEarnedPoint($post, $user)
+    public function countTranscationPoint($post, $user)
     {
     	$post['point'] = app($this->setting_trx)->countTransaction('point', $post);
     	$post['cashback'] = app($this->setting_trx)->countTransaction('cashback', $post);
 
-        //count some trx user
         $countUserTrx = Transaction::where('id_user', $user['id'])->where('transaction_payment_status', 'Completed')->count();
 
         $countSettingCashback = TransactionSetting::get();
