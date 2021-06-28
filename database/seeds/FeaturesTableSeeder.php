@@ -3201,6 +3201,16 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => '2018-05-10 08:00:00',
                     'updated_at' => '2018-05-10 08:00:00',
                 ),
+            320 =>
+                array(
+                    'id_feature' => 321,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Transaction Messages',
+                    'show_hide' => 1,
+                    'order' => 119,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
         ));
     }
 }
