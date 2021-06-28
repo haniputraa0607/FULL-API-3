@@ -126,6 +126,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
             'end_date' => $dateEnd,
             'maximum_total_cashback' => str_replace('.', '', $post['maximum_total_cashback']),
             'limit_promo_total' => $post['limit_promo_total']??NULL,
+            'limit_per_user_per_day' => $post['limit_per_user_per_day']??NULL,
             'limit_promo_additional_day' => $post['limit_promo_additional_day']??NULL,
             'limit_promo_additional_week' => $post['limit_promo_additional_week']??NULL,
             'limit_promo_additional_month' => $post['limit_promo_additional_month']??NULL,
@@ -213,6 +214,7 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 'end_date' => $dateEnd,
                 'maximum_total_cashback' => str_replace('.', '', $post['maximum_total_cashback']),
                 'limit_promo_total' => $post['limit_promo_total'],
+                'limit_per_user_per_day' => $post['limit_per_user_per_day']??NULL,
                 'limit_promo_additional_day' => $post['limit_promo_additional_day']??NULL,
                 'limit_promo_additional_week' => $post['limit_promo_additional_week']??NULL,
                 'limit_promo_additional_month' => $post['limit_promo_additional_month']??NULL,
@@ -469,6 +471,19 @@ class ApiRulePromoPaymentGatewayController extends Controller
                 }
                 $data['id_user'] = $detailTrx['id_user'];
 
+                if(!empty($data['limit_per_user_per_day'])){
+                    //check limit per user per day
+                    $getCountUserPerday = Transaction::join('promo_payment_gateway_transactions', 'promo_payment_gateway_transactions.id_transaction', 'transactions.id_transaction')
+                        ->whereDate('promo_payment_gateway_transactions.created_at', date('Y-m-d'))->where('transactions.id_user', $detailTrx['id_user'])
+                        ->where('promo_payment_gateway_transactions.id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])
+                        ->where('status_active', 1)
+                        ->count();
+
+                    if($getCountUserPerday >= $data['limit_per_user_per_day']){
+                        continue;
+                    }
+                }
+
                 if(!empty($data['limit_promo_additional_day'])){
                     $dataAlreadyUsePromoAdditionalDay = PromoPaymentGatewayTransaction::where('id_rule_promo_payment_gateway', $data['id_rule_promo_payment_gateway'])
                         ->where('status_active', 1)
@@ -538,12 +553,14 @@ class ApiRulePromoPaymentGatewayController extends Controller
 
         $report = PromoPaymentGatewayTransaction::join('rule_promo_payment_gateway', 'rule_promo_payment_gateway.id_rule_promo_payment_gateway', 'promo_payment_gateway_transactions.id_rule_promo_payment_gateway')
             ->join('transactions', 'promo_payment_gateway_transactions.id_transaction', 'transactions.id_transaction')
+            ->leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
             ->leftJoin('users', 'users.id', 'transactions.id_user')
             ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
             ->leftJoin('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
             ->where('status_active', 1)
-            ->select('users.name as customer_name', 'users.phone as customer_phone', 'transactions.transaction_receipt_number', 'transactions.transaction_date',
+            ->orderBy('transaction_pickups.reject_at', 'asc')
+            ->select('transaction_pickups.reject_at', 'users.name as customer_name', 'users.phone as customer_phone', 'transactions.transaction_receipt_number', 'transactions.transaction_date',
                 'promo_payment_gateway_transactions.*', 'rule_promo_payment_gateway.name', 'transaction_payment_ipay88s.user_contact', 'transaction_payment_shopee_pays.user_id_hash');
 
         if(isset($post['id_rule_promo_payment_gateway']) && !empty($post['id_rule_promo_payment_gateway'])){
