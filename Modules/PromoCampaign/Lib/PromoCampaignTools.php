@@ -2684,5 +2684,41 @@ class PromoCampaignTools{
     	$listDelivery = array_merge($selected, $listDelivery);
     	return $listDelivery;
     }
+
+    public function countReferralCashback($id_promo_campaign, $subtotal)
+    {
+    	$referral_rule = PromoCampaignReferral::where('id_promo_campaign', $id_promo_campaign)->first();
+        if (!$referral_rule) {
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Promo referral tidak ditemukan']
+            ]);
+        }
+
+        $referred_cashback = 0;
+        if ($referral_rule->referred_promo_type == 'Cashback') {
+            if ($referral_rule->referred_promo_unit == 'Percent') {
+                $referred_cashback = $this->countPercentDiscount($referral_rule->referred_promo_value, $subtotal, $referral_rule->referred_promo_value_max);
+            } else {
+                if ($subtotal >= $referral_rule->referred_min_value) {
+                    $referred_cashback = $this->countNominalDiscount($referral_rule->referred_promo_value, $subtotal);
+                }
+            }
+        }
+
+        return MyHelper::checkGet($referred_cashback);
+    }
+
+    public function countPercentDiscount($percentValue, $price, $maxDiscount = null)
+    {
+    	$percentValue = $percentValue <= 100 ? $percentValue : 100;
+        $discount = $price * $percentValue / 100;
+        return ($maxDiscount && $maxDiscount < $discount) ? $maxDiscount : $discount;
+    }
+
+    public function countNominalDiscount($nominalDiscount, $price)
+    {
+    	return ($nominalDiscount <= $post['subtotal']) ? $nominalDiscount : $price;
+    }
 }
 ?>
