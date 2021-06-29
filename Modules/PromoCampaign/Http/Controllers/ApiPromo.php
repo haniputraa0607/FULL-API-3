@@ -419,7 +419,6 @@ class ApiPromo extends Controller
     {
     	$check = false;
     	$disable_pickup = false;
-    	$available_shipment = ['Pickup Order', 'GO-SEND'];
     	$available_payment 	= $this->getAvailablePayment()['result'];
     	$result['pickup_type'] = 1;
     	$result['delivery_type'] = 1;
@@ -463,8 +462,17 @@ class ApiPromo extends Controller
 	    	if (!$pct->checkShipmentRule($promo->is_all_shipment, 'Pickup Order', $promo_shipment) || $disable_pickup) {
 	    		$result['pickup_type'] = 0;
 	    	}
-	    	if (!$pct->checkShipmentRule($promo->is_all_shipment, 'GO-SEND', $promo_shipment)) {
-	    		$result['delivery_type'] = 0;
+
+	    	$result['delivery_type'] = 0;
+	    	foreach ($result['available_delivery'] as $key => $val) {
+	    		if ($val['disable']) {
+	    			continue;
+	    		}
+		    	if ($pct->checkShipmentRule($promo->is_all_shipment, $val['code'], $promo_shipment)) {
+		    		$result['delivery_type'] = 1;
+		    	}else{
+		    		$result['available_delivery'][$key]['disable'] = 1;
+		    	}
 	    	}
     	}
 

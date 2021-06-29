@@ -279,10 +279,11 @@ class ApiSubscriptionUse extends Controller
 				}
 			}
 
-    		$check_shipment = $pct->checkShipmentRule($subs['subscription_user']['subscription']['is_all_shipment'], $request['type'], $promo_shipment);
+			$shipment_method = ($request['type'] == 'Pickup Order' || $request['type'] == 'GO-SEND') ? $request['type'] : $request['courier'];
+    		$check_shipment = $pct->checkShipmentRule($subs['subscription_user']['subscription']['is_all_shipment'], $shipment_method, $promo_shipment);
 
     		if(!$check_shipment){
-				$errors[]='Promo cannot be used for this shipment method';
+				$errors[] = 'Promo tidak dapat digunakan untuk tipe order ini';
 				return false;
 			}
     	}
@@ -297,7 +298,7 @@ class ApiSubscriptionUse extends Controller
     		$check_payment = $pct->checkPaymentRule($subs['subscription_user']['subscription']['is_all_payment'], $payment_method, $promo_payment);
 
     		if(!$check_payment){
-				$errors[]='Promo cannot be used for this payment method';
+				$errors[] = 'Promo tidak dapat digunakan untuk metode pembayaran ini';
 				return false;
 			}
     	}
