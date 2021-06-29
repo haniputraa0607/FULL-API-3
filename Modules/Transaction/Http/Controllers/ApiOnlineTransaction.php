@@ -3003,6 +3003,7 @@ class ApiOnlineTransaction extends Controller
         }
 
         $result['get_point'] = ($post['payment_type'] != 'Balance') ? $this->checkPromoGetPoint($promo_source) : 0;
+
         $cashback = $post['cashback'] ?? 0;
         if ($result['get_point'] && $earnedPoint['cashback']) {
         	$cashback = $earnedPoint['cashback'];
