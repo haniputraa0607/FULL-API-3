@@ -895,8 +895,8 @@ class ApiOnlineTransaction extends Controller
         }
 
         if ($promo_valid) {
-        	if (($promo_type??false) == 'Discount delivery' || ($promo_type??false) == 'Discount bill') {
-        		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $post['sub']['subtotal_per_brand'], $promo_error_product);
+        	if (isset($promo_type) && ($promo_type == 'Discount delivery' || $promo_type == 'Discount bill')) {
+        		$check_promo = app($this->promo)->checkPromo($request, $request->user(), $promo_source, $code ?? $deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $post['sub']['subtotal_per_brand'], $promo_error_product);
 
         		if ($check_promo['status'] == 'fail') {
 					DB::rollback();
@@ -2303,6 +2303,7 @@ class ApiOnlineTransaction extends Controller
         $promo_error=null;
         $promo_source = null;
         $promo_valid = false;
+        $subs_valid = false;
         $promo_discount = 0;
         $promo_type = null;
         $use_referral = false;
@@ -2395,6 +2396,12 @@ class ApiOnlineTransaction extends Controller
 	        	$error = ['Voucher is not valid'];
 	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error);
 	        }
+        } elseif (!$request->promo_code && $request->id_subscription_user && !$request->id_deals_user) {
+        	$subs = app($this->subscription_use)->checkSubscription($request->id_subscription_user, "outlet", "product", "product_detail", null, null, "brand");
+        	$promo_source = 'subscription';
+	    	if ($subs) {
+	    		$subs_valid = true;
+	    	}
         }
         // end check promo code & voucher
 
@@ -2823,25 +2830,40 @@ class ApiOnlineTransaction extends Controller
 
         if ($post['type'] == 'Delivery Order') {
 	        $listDelivery = WeHelpYou::getListTransactionDelivery($request, $outlet, $totalItem, ['gosend' => $shippingGoSendPrice]);
-			$delivery = $this->getActiveCourier($listDelivery, $request->courier);
+	        if ($promo_valid || $subs_valid) {
+	        	$delivery = $pct->getActivePromoCourier($request, $listDelivery, $code ?? $deals ?? $subs);
+	        	$listDelivery = $pct->reorderSelectedDelivery($listDelivery, $delivery);
+	        	if (empty($delivery)) {
+		        	$promo_valid 	= false;
+		        	$subs_valid 	= false;
+	        		$promo_discount = 0;
+	        		$promo_source 	= null;
+		        	$promo_error 	= app($this->promo_campaign)->promoError('transaction', ['Pengiriman tidak tersedia untuk promo ini']);
+	        	} elseif ($request->courier && strpos($delivery['code'], $request->courier) === false) {
+	        		$courierName 	= $this->getCourierName($request->courier);
+	        		$error_msg[] = 'Pengiriman ' . $courierName . ' tidak tersedia untuk promo ini';
+	        	}
+	        }else{
+				$delivery = $this->getActiveCourier($listDelivery, $request->courier);
+	        }
 			$post['shipping'] = $delivery['price'] ?? $post['shipping'];
         }
 
         if ($promo_valid) {
-        	if (isset($promo_type) && ($promo_type == 'Discount bill' || $promo_type != 'Discount delivery')) {
-        		$check_promo = app($this->promo)->checkPromo($request_promo, $request->user(), $promo_source, $code??$deals, $request->id_outlet, $post['item'], $post['shipping']+$shippingGoSend, $subtotal_per_brand, $promo_error_product);
-
+        	if (isset($promo_type) && ($promo_type == 'Discount bill' || $promo_type == 'Discount delivery')) {
+        		$check_promo = app($this->promo)->checkPromo($request_promo, $request->user(), $promo_source, $code ?? $deals, $request->id_outlet, $post['item'], $post['shipping'] + $shippingGoSend, $subtotal_per_brand, $promo_error_product);
         		if ($check_promo['status'] == 'fail') {
-	        		$promo_error = app($this->promo_campaign)->promoError('transaction', $check_promo['messages']??$error, null, $promo_error_product ?? 0);
+	        		$promo_error = app($this->promo_campaign)->promoError('transaction', $check_promo['messages'] ?? $error, null, $promo_error_product ?? 0);
         			$promo_valid = false;
         		}else{
-        			$promo_discount = $check_promo['data']['discount']??0;
+        			$promo_discount = $check_promo['data']['discount'] ?? 0;
+        			$post['discount_delivery'] = $check_promo['data']['discount_delivery'] ?? 0;
         		}
         	}
         }
 
         if ($promo_valid) {
-        	$check_promo = app($this->promo)->checkMinBasketSize($promo_source, $code??$deals, $subtotal_per_brand);
+        	$check_promo = app($this->promo)->checkMinBasketSize($promo_source, $code ?? $deals, $subtotal_per_brand);
         	if ($check_promo) {
         		$tree = $tree_promo;
         		$subtotal = $subtotal_promo;
@@ -2859,6 +2881,7 @@ class ApiOnlineTransaction extends Controller
 	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, 'all');
         	}
         }
+
         foreach ($tree as $key => $tre) {
             if (!($tre['products'] ?? false)) {
                 unset($tree[$key]);
@@ -3028,15 +3051,16 @@ class ApiOnlineTransaction extends Controller
 
         $result['total_payment'] = $result['grandtotal'] - $result['used_point'];
 
-        if ($promo_valid) {
-        	// check available shipment, payment
-        	$result = app($this->promo)->getTransactionCheckPromoRule($result, $promo_source, $code??$deals??$request);
-        }
 
         $result['subscription'] = (int) $result['subscription'];
         $result['discount'] = (int) $result['discount'];
 
         $result['available_delivery'] = $listDelivery;
+
+        if ($promo_valid) {
+        	// check available shipment, payment
+        	$result = app($this->promo)->getTransactionCheckPromoRule($result, $promo_source, $code ?? $deals ?? $request);
+        }
 
         $result['payment_detail'] = [];
         

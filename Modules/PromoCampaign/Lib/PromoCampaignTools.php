@@ -109,9 +109,11 @@ class PromoCampaignTools{
 					$promo->is_all_shipment = 1;
 				}
 			}
-			$check_shipment = $this->checkShipmentRule($promo->is_all_shipment??0, $request->type, $promo_shipment);
+
+			$shipment_method = ($request->type == 'Pickup Order' || $request->type == 'GO-SEND') ? $request->type : $request->courier;
+			$check_shipment  = $this->checkShipmentRule($promo->is_all_shipment ?? 0, $shipment_method, $promo_shipment);
 			if(!$check_shipment){
-				$errors[]='Promo tidak dapat digunakan untuk tipe order ini';
+				$errors[] = 'Promo tidak dapat digunakan untuk tipe order ini';
 				return false;
 			}
 		}
@@ -122,7 +124,7 @@ class PromoCampaignTools{
 			$check_payment 	= $this->checkPaymentRule($promo->is_all_payment??0, $payment_method, $promo_payment);
 
 			if(!$check_payment){
-				$errors[]='Promo tidak dapat digunakan untuk metode pembayaran ini';
+				$errors[] = 'Promo tidak dapat digunakan untuk metode pembayaran ini';
 				return false;
 			}
 		}
@@ -1991,15 +1993,23 @@ class PromoCampaignTools{
     		$promo_shipment_list = $promo_shipment_list->toArray();
     	}
 
+    	if (in_array('GO-SEND', $promo_shipment_list)) {
+    		$promo_shipment_list[] = 'gosend';
+    	} elseif (in_array('gosend', $promo_shipment_list)) {
+    		$promo_shipment_list[] = 'GO-SEND';
+    	}
+
     	if ($all_shipment) {
     		return true;
     	}
 
-    	if (in_array($shipment_method, $promo_shipment_list)) {
-    		return true;
-    	}else{
-    		return false;
+    	foreach ($promo_shipment_list as $shipment) {
+    		if (strpos($shipment, $shipment_method) !== false) {
+    			return true;
+    		}
     	}
+
+    	return false;
     }
 
     public function getPaymentMethod($payment_type, $payment_id, $payment_detail)

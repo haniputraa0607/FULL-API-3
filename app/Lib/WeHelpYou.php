@@ -227,11 +227,12 @@ class WeHelpYou
 				$disable = 0;
 			}
 
-			if ($delivery_outlet) {
+			if (!empty($delivery_outlet)) {
 				if (!in_array($delivery['code'], $delivery_outlet)) {
 					$disable = 1;
 				}
-			} elseif ($delivery['show_status'] != 1 && $delivery['available_status'] != 1) {
+			}
+			if ($delivery['show_status'] != 1 || $delivery['available_status'] != 1) {
 				$disable = 1;
 			}
 
