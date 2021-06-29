@@ -3477,8 +3477,7 @@ class ApiOutletApp extends Controller
                 }
 
                 $detail = $newDetail;
-
-                if ($detail['pickup_by'] == 'GO-SEND') {
+                if ($detail['pickup_by'] == 'GO-SEND' || $detail['pickup_by'] == 'Wehelpyou') {
                     $pickupType = 'Delivery';
                 }
             }
