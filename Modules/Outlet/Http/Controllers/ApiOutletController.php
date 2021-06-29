@@ -83,6 +83,7 @@ class ApiOutletController extends Controller
         $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
         $this->promo       			= "Modules\PromoCampaign\Http\Controllers\ApiPromo";
         $this->autocrm              = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+        $this->outlet_group_filter = "Modules\Outlet\Http\Controllers\ApiOutletGroupFilterController";
     }
 
     function checkInputOutlet($post=[]) {
@@ -3372,6 +3373,11 @@ class ApiOutletController extends Controller
             $length = $post['length'];
         }
 
+        if(!empty($post['id_outlet_group_filter'])){
+            $get_id_outlet = app($this->outlet_group_filter)->outletGroupFilter($post['id_outlet_group_filter']);
+            $id_outlet = array_column($get_id_outlet, 'id_outlet');
+        }
+
         $outlet = Outlet::select(DB::raw('CONCAT(outlet_code," - ", outlet_name) as "0"'), 'id_outlet as 1', 'id_outlet');
 
         if(isset($post["search"]["value"]) && !empty($post["search"]["value"])){
@@ -3381,6 +3387,11 @@ class ApiOutletController extends Controller
                 $q->orWhere('outlets.outlet_name', 'like', '%'.$key.'%');
             });
         }
+
+        if(isset($id_outlet)){
+            $outlet = $outlet->whereIn('id_outlet', $id_outlet);
+        }
+
         $total = $outlet->count();
         $data = $outlet->skip($start)->take($length)->with('delivery_outlet')->get()->toArray();
 
