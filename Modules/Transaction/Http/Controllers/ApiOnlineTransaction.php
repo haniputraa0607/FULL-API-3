@@ -4694,14 +4694,22 @@ class ApiOnlineTransaction extends Controller
         return 'success';
     }
 
-    public function listAvailableDelivery()
+    public function listAvailableDelivery(Request $request)
     {
+        $post = $request->json()->all();
         $setting  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
         $setting_default = Setting::where('key', 'default_delivery')->first()->value??null;
         $delivery = [];
 
         foreach ($setting as $value) {
-            if($value['show_status'] == 1){
+            if(!empty($post['all'])){
+                if(!empty($value['logo'])){
+                    $value['logo'] = config('url.storage_url_api').$value['logo'];
+                }elseif(!empty($setting_default)){
+                    $value['logo'] = config('url.storage_url_api').$setting_default;
+                }
+                $delivery[] = $value;
+            }elseif($value['show_status'] == 1){
                 if(!empty($value['logo'])){
                     $value['logo'] = config('url.storage_url_api').$value['logo'];
                 }elseif(!empty($setting_default)){
@@ -4730,6 +4738,7 @@ class ApiOnlineTransaction extends Controller
         foreach ($availableDelivery as $key => $value) {
             $check = array_search($value['code'], array_column($dtDelivery, 'code'));
             if($check !== false){
+                $availableDelivery[$key]['show_status'] = $dtDelivery[$check]['show_status'];
                 $availableDelivery[$key]['available_status'] = $dtDelivery[$check]['available_status'];
                 $availableDelivery[$key]['position'] = $check;
                 $availableDelivery[$key]['description'] = $dtDelivery[$check]['description'];
