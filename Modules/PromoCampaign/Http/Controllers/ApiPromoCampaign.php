@@ -2970,7 +2970,7 @@ class ApiPromoCampaign extends Controller
 
     		$shipment_list = array_flip($shipment_list);
 
-			$setting_shipment_list =  $online_trx->listAvailableDelivery()['result']['delivery'] ?? [];
+			$setting_shipment_list =  $online_trx->listAvailableDelivery(WeHelpYou::listDeliveryRequest())['result']['delivery'] ?? [];
 			$setting_shipment_list =  array_column($setting_shipment_list, 'code');
 
 			$selected_shipment = [];
