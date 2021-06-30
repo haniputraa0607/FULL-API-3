@@ -237,7 +237,8 @@ class ApiOutletController extends Controller
                 $deliveryOutlet[] = [
                     'id_outlet' => $save['id_outlet'],
                     'code' => $key,
-                    'available_status' => $val,
+                    'available_status' => $val['available_status'],
+                    'show_status' => $val['show_status'],
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
@@ -320,7 +321,8 @@ class ApiOutletController extends Controller
                 $deliveryOutlet[] = [
                     'id_outlet' => $request->json('id_outlet'),
                     'code' => $key,
-                    'available_status' => $val,
+                    'available_status' => $val['available_status'],
+                    'show_status' => $val['show_status'],
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
@@ -3321,26 +3323,34 @@ class ApiOutletController extends Controller
                 $id_outlet = $checkCode['id_outlet'];
                 DeliveryOutlet::where('id_outlet', $id_outlet)->delete();
                 $insertDelivOutlet = [];
+                $tmpCode = [];
                 foreach ($data as $key => $val) {
                     if ($key == 'outlet_name' || $key == 'outlet_code') continue;
 
-                    if(strtoupper($val) == 'YES'){
-                        $insertDelivOutlet[] = [
-                            'id_outlet' => $id_outlet,
-                            'code' => $key,
-                            'available_status' => 1,
-                            'created_at' => date('Y-m-d H:i:s'),
-                            'updated_at' => date('Y-m-d H:i:s')
-                        ];
-                    }else{
-                        $insertDelivOutlet[] = [
-                            'id_outlet' => $id_outlet,
-                            'code' => $key,
-                            'available_status' => 0,
-                            'created_at' => date('Y-m-d H:i:s'),
-                            'updated_at' => date('Y-m-d H:i:s')
-                        ];
+                    $code = str_replace('showhide', "", $key);
+                    $code = str_replace('enabledisable', "", $code);
+
+                    if(in_array($code, $tmpCode)){
+                        continue;
                     }
+
+                    if(strpos($key, 'showhide') !== false){
+                        $showStatus = $val;
+                        $availableStatus = $data[$code.'enabledisable']??0;
+                    }elseif (strpos($key, 'enabledisable') !== false){
+                        $showStatus = $data[$code.'showhide']??0;
+                        $availableStatus = $val;
+                    }
+
+                    $insertDelivOutlet[] = [
+                            'id_outlet' => $id_outlet,
+                            'code' => $code,
+                            'available_status' => (strtolower($availableStatus) == 'enable' ? 1:0),
+                            'show_status' => (strtolower($showStatus) == 'show' ? 1:0),
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ];
+                    $tmpCode[] = $code;
                 }
 
                 if(!empty($insertDelivOutlet)){
@@ -3378,7 +3388,7 @@ class ApiOutletController extends Controller
             $id_outlet = array_column($get_id_outlet, 'id_outlet');
         }
 
-        $outlet = Outlet::select(DB::raw('CONCAT(outlet_code," - ", outlet_name) as "0"'), 'id_outlet as 1', 'id_outlet');
+        $outlet = Outlet::select(DB::raw('CONCAT(outlet_code," - ", outlet_name) as "0"'), 'id_outlet as 1', 'id_outlet as 2', 'id_outlet');
 
         if(isset($post["search"]["value"]) && !empty($post["search"]["value"])){
             $key = $post["search"]["value"];
@@ -3413,25 +3423,76 @@ class ApiOutletController extends Controller
     public function deliveryOutletUpdate(Request $request){
         $post = $request->json()->all();
         DeliveryOutlet::where('code', $post['code'])->delete();
-        $outletAvailable = Outlet::whereNotIn('id_outlet', $post['id_outlet'])->pluck('id_outlet')->toArray();
-        $outletNotAvailable = $post['id_outlet'];
+        $outletAvailable = Outlet::whereNotIn('id_outlet', $post['id_outlet_not_available'])->pluck('id_outlet')->toArray();
+        $outletNotAvailable = $post['id_outlet_not_available'];
+        $outletHide = $post['id_outlet_hide'];
 
         $insert = [];
         foreach ($outletNotAvailable as $o){
+            $show = 1;
+            $check = array_search($o, $outletHide);
+            if($check !== false){
+                $show = 0;
+            }
             $insert[] = [
                 'id_outlet' => (int)$o,
                 'code' => $post['code'],
                 'available_status' => 0,
+                'show_status' => $show,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ];
         }
 
         foreach ($outletAvailable as $o){
+            $show = 1;
+            $check = array_search($o, $outletHide);
+            if($check !== false){
+                $show = 0;
+            }
+
             $insert[] = [
                 'id_outlet' => (int)$o,
                 'code' => $post['code'],
                 'available_status' => 1,
+                'show_status' => $show,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ];
+        }
+
+        if(!empty($insert)){
+            DeliveryOutlet::insert($insert);
+        }
+
+        return response()->json(['status' => 'success']);
+    }
+
+    function deliveryOutletAllUpdate(Request $request){
+        $post = $request->json()->all();
+        if(empty($post['id_outlet_group_filter'])){
+            $id_outlet = Outlet::pluck('id_outlet')->toArray();
+        }else{
+            $get_id_outlet = app($this->outlet_group_filter)->outletGroupFilter($post['id_outlet_group_filter']);
+            $id_outlet = array_column($get_id_outlet, 'id_outlet');
+        }
+
+        if(empty($id_outlet)){
+            return response()->json(['status' => 'fail', 'message' => 'ID outlet is empty']);
+        }
+        DeliveryOutlet::where('code', $post['code'])->whereIn('id_outlet', $id_outlet)->delete();
+
+        $showStatus = $post['show_status'];
+        $availableStatus = $post['available_status'];
+
+        $insert = [];
+
+        foreach ($id_outlet as $id){
+            $insert[] = [
+                'id_outlet' => $id,
+                'code' => $post['code'],
+                'available_status' => $availableStatus,
+                'show_status' => $showStatus,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ];
