@@ -210,37 +210,39 @@ class WeHelpYou
 	public static function formatListDelivery($listDelivery, $credit, $outlet, $additionalDelivery = [])
 	{
 		(new ApiOnlineTransaction)->mergeNewDelivery(json_encode($listDelivery['response']));
-
-		$delivery_outlet = DeliveryOutlet::where('id_outlet', $outlet->id_outlet)->where('available_status', 1)->pluck('code')->toArray();
+		$delivery_outlet = DeliveryOutlet::where('id_outlet', $outlet->id_outlet)->get();
+		$outletSetting = [];
+		foreach ($delivery_outlet as $val) {
+			$outletSetting[$val['code']] = $val;
+		}
 		$result = [];
 		$deliverySetting = (new ApiOnlineTransaction)->listAvailableDelivery(self::listDeliveryRequest());
 		$listDeliverySetting = $deliverySetting['result']['delivery'] ?? [];
 		$defaultOrder = $deliverySetting['result']['default_delivery'] ?? null;
+
 		foreach ($listDeliverySetting as $delivery) {
+			if ($delivery['show_status'] != 1 
+				|| (isset($outletSetting[$delivery['code']]) && $outletSetting[$delivery['code']]['show_status'] != 1)
+			) {
+				continue;
+			}
+
 			$disable = 0;
 			$delivery['courier'] = self::getSettingCourierName($delivery['code']);
 			$delivery['price'] = self::getCourierPrice($listDelivery['response']['data']['partners'] ?? [], $delivery['courier']);
-			if (empty($delivery['price'])) {
-				$disable = 1;
-			}
 
 			if (isset($additionalDelivery[$delivery['code']])) {
 				$delivery['price'] = $additionalDelivery[$delivery['code']];
-				$disable = 0;
 			}
 
-			if (!empty($delivery_outlet)) {
-				if (!in_array($delivery['code'], $delivery_outlet)) {
-					$disable = 1;
-				}
-			}
-			if ($delivery['show_status'] != 1 || $delivery['available_status'] != 1) {
+			if ($delivery['available_status'] != 1 
+				|| (isset($outletSetting[$delivery['code']]) && $outletSetting[$delivery['code']]['available_status'] != 1)
+				|| empty($delivery['price'])
+				|| $credit <= 0
+			) {
 				$disable = 1;
 			}
 
-			if ($credit <= 0) {
-				$disable = 1;
-			}
 			$delivery['disable'] = $disable;
 			$delivery['short_description'] = $delivery['short_description'] ?? null;
 			unset($delivery['show_status'], $delivery['available_status']);
