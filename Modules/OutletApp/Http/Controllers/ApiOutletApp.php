@@ -842,7 +842,7 @@ class ApiOutletApp extends Controller
         if($order->pickup_type == 'set time' && $currentdate < $setTime){
             return response()->json([
                 'status'   => 'fail',
-                'messages' => ['Minimum set ready 15 minutes before pickup'],
+                'messages' => ['Order dapat ditandai siap minimum 15 menit sebelum waktu pengambilan'],
             ]);
         }
 
@@ -3504,6 +3504,13 @@ class ApiOutletApp extends Controller
         $list['date'] = $list['transaction_date'];
         $list['type'] = 'trx';
 
+        $currentdate = date('Y-m-d H:i');
+        $setTime = date('Y-m-d H:i', strtotime($list['pickup_at'].' - 15 minutes'));
+        $allowReady = 1;
+        if($list['pickup_type'] == 'set time' && $currentdate < $setTime){
+            $allowReady = 0;
+        }
+
         $result = [
             'id_transaction'              => $list['id_transaction'],
             'user_name'                   => $list['user']['name'],
@@ -3518,6 +3525,7 @@ class ApiOutletApp extends Controller
             'trasaction_payment_type'     => $list['trasaction_payment_type'],
             'transaction_payment_status'  => $list['transaction_payment_status'],
             'rejectable'                  => 0,
+            'allow_ready'                 => $allowReady,
             'outlet'                      => [
                 'outlet_name'    => $list['outlet']['outlet_name'],
                 'outlet_address' => $list['outlet']['outlet_address'],
@@ -4515,6 +4523,12 @@ class ApiOutletApp extends Controller
 
         $list['date'] = $list['transaction_date'];
         $list['type'] = 'trx';
+        $currentdate = date('Y-m-d H:i');
+        $setTime = date('Y-m-d H:i', strtotime($list['pickup_at'].' - 15 minutes'));
+        $allowReady = 1;
+        if($list['pickup_type'] == 'set time' && $currentdate < $setTime){
+            $allowReady = 0;
+        }
 
         $result = [
             'id_transaction'              => $list['id_transaction'],
@@ -4530,6 +4544,7 @@ class ApiOutletApp extends Controller
             'trasaction_payment_type'     => $list['trasaction_payment_type'],
             'transaction_payment_status'  => $list['transaction_payment_status'],
             'rejectable'                  => 0,
+            'allow_ready'                 => $allowReady,
             'outlet'                      => [
                 'outlet_name'    => $list['outlet']['outlet_name'],
                 'outlet_address' => $list['outlet']['outlet_address'],
