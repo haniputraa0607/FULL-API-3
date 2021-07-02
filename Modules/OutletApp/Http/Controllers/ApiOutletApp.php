@@ -3510,6 +3510,11 @@ class ApiOutletApp extends Controller
         if($list['pickup_type'] == 'set time' && $currentdate < $setTime){
             $allowReady = 0;
         }
+      
+        $trxType = $list['trasaction_type'];
+        if(isset($list['pickup_by']) && ($list['pickup_by'] == 'GO-SEND' || $list['pickup_by'] == 'Wehelpyou')){
+            $trxType = 'Delivery';
+        }
 
         $result = [
             'id_transaction'              => $list['id_transaction'],
@@ -3517,7 +3522,7 @@ class ApiOutletApp extends Controller
             'user_phone'                  => $list['user']['phone'],
             'transaction_receipt_number'  => $list['transaction_receipt_number'],
             'transaction_date'            => date('d M Y H:i', strtotime($list['transaction_date'])),
-            'trasaction_type'             => $pickupType,
+            'trasaction_type'             => $trxType,
             'transaction_grandtotal'      => MyHelper::requestNumber($list['transaction_grandtotal'], '_CURRENCY'),
             'transaction_subtotal'        => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY'),
             'transaction_discount'        => MyHelper::requestNumber($list['transaction_discount'], '_CURRENCY'),
@@ -4530,13 +4535,18 @@ class ApiOutletApp extends Controller
             $allowReady = 0;
         }
 
+        $trxType = $list['trasaction_type'];
+        if(isset($list['pickup_by']) && ($list['pickup_by'] == 'GO-SEND' || $list['pickup_by'] == 'Wehelpyou')){
+            $trxType = 'Delivery';
+        }
+
         $result = [
             'id_transaction'              => $list['id_transaction'],
             'user_name'                   => $list['user']['name'],
             'user_phone'                  => $list['user']['phone'],
             'transaction_receipt_number'  => $list['transaction_receipt_number'],
             'transaction_date'            => date('d M Y H:i', strtotime($list['transaction_date'])),
-            'trasaction_type'             => $pickupType,
+            'trasaction_type'             => $trxType,
             'transaction_grandtotal'      => MyHelper::requestNumber($list['transaction_grandtotal'], '_CURRENCY'),
             'transaction_subtotal'        => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY'),
             'transaction_discount'        => MyHelper::requestNumber($list['transaction_discount'], '_CURRENCY'),

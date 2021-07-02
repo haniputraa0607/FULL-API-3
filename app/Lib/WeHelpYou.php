@@ -16,6 +16,7 @@ use Modules\Transaction\Http\Controllers\ApiOnlineTransaction;
 use Modules\Outlet\Entities\DeliveryOutlet;
 use Modules\Autocrm\Entities\AutoresponseCodeList;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
 /**
  * 
  */
@@ -211,7 +212,7 @@ class WeHelpYou
 
 		$delivery_outlet = DeliveryOutlet::where('id_outlet', $outlet->id_outlet)->where('available_status', 1)->pluck('code')->toArray();
 		$result = [];
-		$deliverySetting = (new ApiOnlineTransaction)->listAvailableDelivery();
+		$deliverySetting = (new ApiOnlineTransaction)->listAvailableDelivery(self::listDeliveryRequest());
 		$listDeliverySetting = $deliverySetting['result']['delivery'] ?? [];
 		$defaultOrder = $deliverySetting['result']['default_delivery'] ?? null;
 		foreach ($listDeliverySetting as $delivery) {
@@ -438,9 +439,8 @@ class WeHelpYou
 	{
 		if (empty($orderResponse['response']['data']['poNo'])) {
 
-			$deliverySetting = (new ApiOnlineTransaction)->listAvailableDelivery();
 			$courier = $trxPickup['transaction_pickup_wehelpyou']['courier'];
-			foreach ((new ApiOnlineTransaction)->listAvailableDelivery()['result']['delivery'] as $delivery) {
+			foreach ((new ApiOnlineTransaction)->listAvailableDelivery(self::listDeliveryRequest())['result']['delivery'] as $delivery) {
 				if (strpos($delivery['code'], $courier)) {
 					$courier = $delivery['delivery_name'];
 					break;
@@ -874,5 +874,11 @@ class WeHelpYou
 
 		return array_merge($listEnable, $listDisable);
 		
+	}
+
+	public static function listDeliveryRequest()
+	{
+		$data = [];
+		return (new request)->setJson(new \Symfony\Component\HttpFoundation\ParameterBag($data))->merge($data);
 	}
 }
