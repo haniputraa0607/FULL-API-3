@@ -842,8 +842,8 @@ class ApiOutletApp extends Controller
         		case 'Wehelpyou':
         			$pickupWHY = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
 		            if( !$pickupWHY 
-		            	|| !$pickupWHY['latest_status'] 
-		            	|| !in_array($pickupWHY['latest_status']??false, WeHelpYou::driverFoundStatus())
+		            	|| !$pickupWHY['latest_status_id'] 
+		            	|| in_array($pickupWHY['latest_status_id'] ?? false, WeHelpYou::orderEndStatusId())
 		            ) {
 		                return response()->json([
 		                    'status'   => 'fail',
@@ -1863,7 +1863,7 @@ class ApiOutletApp extends Controller
             }
         } elseif ($order->pickup_by == 'Wehelpyou') {
         	$pickupWhy = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-            if($pickupWhy && $pickupWhy['latest_status'] && in_array($pickupWhy['latest_status'], WeHelpYou::driverFoundStatus())) {
+            if($pickupWhy && $pickupWhy['latest_status_id'] && !in_array($pickupWhy['latest_status_id'], WeHelpYou::orderEndStatusId())) {
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['Driver has been booked'],
@@ -1882,7 +1882,7 @@ class ApiOutletApp extends Controller
                 ]);
             } elseif ($order->pickup_by == 'Wehelpyou') {
             	$pickupWhy = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-                if($pickupWhy['latest_status'] && in_array($pickupWhy['latest_status']??false, WeHelpYou::driverFoundStatus())) {
+                if($pickupWhy['latest_status_id'] && !in_array($pickupWhy['latest_status_id'], WeHelpYou::orderEndStatusId())) {
                     return response()->json([
                         'status'   => 'fail',
                         'messages' => ['Driver has been booked'],
@@ -2757,7 +2757,7 @@ class ApiOutletApp extends Controller
                 break;
 
             case 'wehelpyou':
-        		$result = $this->bookWehelpyou($trx, $request);
+        		$result = $this->bookWehelpyou($trx);
             	break;
 
             default:
@@ -2767,9 +2767,9 @@ class ApiOutletApp extends Controller
         return response()->json($result);
     }
 
-    public function bookWehelpyou($trx)
+    public function bookWehelpyou($trx, $isRetry = false)
     {
-    	$createOrder = WeHelpYou::bookingDelivery($trx);
+    	$createOrder = WeHelpYou::bookingDelivery($trx, $isRetry);
     	if ($createOrder['status'] == 'fail') {
     		return $createOrder;
     	}
@@ -6341,5 +6341,58 @@ class ApiOutletApp extends Controller
             'status' => 'success',
             'result' => ['updated' => $updated]
         ];
+    }
+
+    public function insertUserCashback($trx)
+    {
+    	if ($trx->cashback_insert_status != 1) {
+            //send notif to customer
+            $user = User::find($trx->id_user);
+
+            $newTrx	= Transaction::with(
+		            	'user.memberships', 
+		            	'outlet', 
+		            	'productTransaction', 
+		            	'transaction_vouchers',
+		            	'promo_campaign_promo_code',
+		            	'promo_campaign_promo_code.promo_campaign'
+		            )
+		            ->where('id_transaction', $trx->id_transaction)
+		            ->first();
+
+            $checkType = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->get()->toArray();
+            $column    = array_column($checkType, 'type');
+            
+            $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
+            \App\Jobs\UpdateQuestProgressJob::dispatch($trx->id_transaction)->onConnection('quest');
+            \Modules\OutletApp\Jobs\AchievementCheck::dispatch(['id_transaction' => $trx->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
+
+            if (!in_array('Balance', $column) || $use_referral) {
+
+                $promo_source = null;
+                if ($newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers) {
+                    if ($newTrx->id_promo_campaign_promo_code) {
+                        $promo_source = 'promo_code';
+                    } elseif (($newTrx->transaction_vouchers[0]->status ?? false) == 'success') {
+                        $promo_source = 'voucher_online';
+                    }
+                }
+
+                if (app($this->trx)->checkPromoGetPoint($promo_source) || $use_referral) {
+                    $savePoint = app($this->getNotif)->savePoint($newTrx);
+                    if (!$savePoint) {
+                        return [
+                            'status'   => 'fail',
+                            'messages' => ['Transaction failed'],
+                        ];
+                    }
+                }
+            }
+
+            $newTrx->update(['cashback_insert_status' => 1]);
+            $checkMembership = app($this->membership)->calculateMembership($user['phone']);
+        }
+
+        return ['status' => 'success'];
     }
 }
