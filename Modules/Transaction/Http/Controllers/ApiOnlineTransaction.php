@@ -1684,11 +1684,11 @@ class ApiOnlineTransaction extends Controller
                 $settingTime = Setting::where('key', 'processing_time')->first();
                 if (date('Y-m-d H:i:s', strtotime($post['pickup_at'])) <= date('Y-m-d H:i:s', strtotime('- '.$settingTime['value'].'minutes'))) {
                     $pickup = date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'));
-                }
-                else {
+                }else {
                     if(isset($outlet['today']['close'])){
-                        if(date('Y-m-d H:i', strtotime($post['pickup_at'])) > date('Y-m-d').' '.date('H:i', strtotime($outlet['today']['close']))){
-                            $pickup =  date('Y-m-d').' '.date('H:i:s', strtotime($outlet['today']['close']));
+                        if(date('Y-m-d H:i', strtotime($post['pickup_at'])) >= date('Y-m-d').' '.date('H:i', strtotime($outlet['today']['close']))){
+//                            $pickup =  date('Y-m-d').' '.date('H:i:s', strtotime($outlet['today']['close']));
+                            $pickup = date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'));
                         }else{
                             $pickup = date('Y-m-d H:i:s', strtotime($post['pickup_at']));
                         }

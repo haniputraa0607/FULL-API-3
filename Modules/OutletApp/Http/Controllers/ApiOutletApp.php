@@ -837,6 +837,15 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        $currentdate = date('Y-m-d H:i');
+        $setTime = date('Y-m-d H:i', strtotime($order->pickup_at.' - 15 minutes'));
+        if($order->pickup_type == 'set time' && $currentdate < $setTime){
+            return response()->json([
+                'status'   => 'fail',
+                'messages' => ['Minimum set ready 15 minutes before pickup'],
+            ]);
+        }
+
         if ($order->pickup_by != 'Customer') {
         	switch ($order->pickup_by) {
         		case 'Wehelpyou':

@@ -3388,7 +3388,9 @@ class ApiOutletController extends Controller
             $id_outlet = array_column($get_id_outlet, 'id_outlet');
         }
 
-        $outlet = Outlet::select(DB::raw('CONCAT(outlet_code," - ", outlet_name) as "0"'), 'id_outlet as 1', 'id_outlet as 2', 'id_outlet');
+        $outlet = Outlet::leftJoin('cities', 'cities.id_city', 'outlets.id_city')
+            ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
+            ->select(DB::raw('CONCAT(outlet_code," - ", outlet_name) as "0"'), 'id_outlet as 1', 'id_outlet as 2', 'id_outlet');
 
         if(isset($post["search"]["value"]) && !empty($post["search"]["value"])){
             $key = $post["search"]["value"];
@@ -3398,8 +3400,73 @@ class ApiOutletController extends Controller
             });
         }
 
-        if(isset($id_outlet)){
+        if($post['filter_type'] == 'outlet_group' && isset($id_outlet)){
             $outlet = $outlet->whereIn('id_outlet', $id_outlet);
+        }elseif($post['filter_type'] == 'conditions' && isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'outlet_code'){
+                            if($row['operator'] == '='){
+                                $outlet->where('outlets.outlet_code', $row['parameter']);
+                            }else{
+                                $outlet->where('outlets.outlet_code', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'outlet_name'){
+                            if($row['operator'] == '='){
+                                $outlet->where('outlets.outlet_name', $row['parameter']);
+                            }else{
+                                $outlet->where('outlets.outlet_name', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'id_city'){
+                            $outlet->where('outlets.id_city', $row['operator']);
+                        }
+
+                        if($row['subject'] == 'id_province'){
+                            $outlet->where('id_province', $row['operator']);
+                        }
+                    }
+                }
+            }else{
+                $outlet->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'outlet_code'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('outlets.outlet_code', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('outlets.outlet_code', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'outlet_name'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('outlets.outlet_name', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('outlets.outlet_name', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'id_city'){
+                                $subquery->orWhere('outlets.id_city', $row['operator']);
+                            }
+
+                            if($row['subject'] == 'id_province'){
+                                $subquery->orWhere('id_province', $row['operator']);
+                            }
+                        }
+                    }
+                });
+            }
         }
 
         $total = $outlet->count();
@@ -3470,11 +3537,81 @@ class ApiOutletController extends Controller
 
     function deliveryOutletAllUpdate(Request $request){
         $post = $request->json()->all();
-        if(empty($post['id_outlet_group_filter'])){
-            $id_outlet = Outlet::pluck('id_outlet')->toArray();
-        }else{
+        if($post['filter_type'] == 'outlet_group' && !empty($post['id_outlet_group_filter'])){
             $get_id_outlet = app($this->outlet_group_filter)->outletGroupFilter($post['id_outlet_group_filter']);
             $id_outlet = array_column($get_id_outlet, 'id_outlet');
+        }elseif($post['filter_type'] == 'conditions' && isset($post['conditions']) && !empty($post['conditions'])){
+            $outlet = Outlet::leftJoin('cities', 'cities.id_city', 'outlets.id_city')
+                ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province');
+
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'outlet_code'){
+                            if($row['operator'] == '='){
+                                $outlet->where('outlets.outlet_code', $row['parameter']);
+                            }else{
+                                $outlet->where('outlets.outlet_code', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'outlet_name'){
+                            if($row['operator'] == '='){
+                                $outlet->where('outlets.outlet_name', $row['parameter']);
+                            }else{
+                                $outlet->where('outlets.outlet_name', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'id_city'){
+                            $outlet->where('outlets.id_city', $row['operator']);
+                        }
+
+                        if($row['subject'] == 'id_province'){
+                            $outlet->where('id_province', $row['operator']);
+                        }
+                    }
+                }
+            }else{
+                $outlet->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'outlet_code'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('outlets.outlet_code', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('outlets.outlet_code', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'outlet_name'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('outlets.outlet_name', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('outlets.outlet_name', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'id_city'){
+                                $subquery->orWhere('outlets.id_city', $row['operator']);
+                            }
+
+                            if($row['subject'] == 'id_province'){
+                                $subquery->orWhere('id_province', $row['operator']);
+                            }
+                        }
+                    }
+                });
+            }
+
+            $id_outlet = $outlet->pluck('id_outlet')->toArray();
+        }else{
+            $id_outlet = Outlet::pluck('id_outlet')->toArray();
         }
 
         if(empty($id_outlet)){
@@ -3482,8 +3619,8 @@ class ApiOutletController extends Controller
         }
         DeliveryOutlet::where('code', $post['code'])->whereIn('id_outlet', $id_outlet)->delete();
 
-        $showStatus = $post['show_status'];
-        $availableStatus = $post['available_status'];
+        $showStatus = $post['show_status_all']??0;
+        $availableStatus = $post['available_status_all']??0;
 
         $insert = [];
 
