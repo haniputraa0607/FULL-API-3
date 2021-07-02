@@ -12,6 +12,7 @@ class DeliveryOutlet extends Model
     protected $fillable = [
         'id_outlet',
         'code',
-        'available_status'
+        'available_status',
+        'show_status'
     ];
 }

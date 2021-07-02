@@ -42,7 +42,7 @@ Route::get('time', function() {
 	$ptt = Setting::select('value_text')->where('key','processing_time_text')->pluck('value_text')->first()?:'Set pickup time minimum %processing_time% minutes from now';
 	return response()->json([
 		'time' => date('Y-m-d H:i:s'), 
-		'processing' => '0', 
+		'processing' => $am['value'],
 		'new_format' => date('Y-m-d H:i:s+0000'), 
 		'time_add' => date('Y-m-d H:i:s+0000', strtotime('+ '.$am['value'].' minutes')),
 		'message' => MyHelper::simpleReplace($ptt,['processing_time'=>$am['value']])
