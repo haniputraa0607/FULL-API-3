@@ -9,6 +9,7 @@ use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionPayment;
 use App\Http\Models\TransactionPickupGoSend;
+use App\Http\Models\TransactionPickupWehelpyou;
 use App\Http\Models\Province;
 use App\Http\Models\City;
 use App\Http\Models\User;
@@ -3959,18 +3960,36 @@ class ApiTransaction extends Controller
                 ];
             }
         } else {
-            $address = TransactionPickupGoSend::where('id_transaction_pickup',$trx->id_transaction_pickup)->first();
-            $result += [
-                'transaction_type' => 'GO-SEND',
-                'destination' => [
-                    'name' => $address->destination_address_name?:$address->destination_short_address,
-                    'short_address' => $address->destination_short_address,
-                    'address' => $address->destination_address,
-                    'description' => $address->destination_note,
-                    'latitude' => $address->destination_latitude,
-                    'longitude' => $address->destination_longitude,
-                ]
-            ];
+        	if ($trx->pickup_by == 'GO-SEND') {
+            	$address = TransactionPickupGoSend::where('id_transaction_pickup',$trx->id_transaction_pickup)->first();
+	            $result += [
+	                'transaction_type' => 'Delivery Order',
+	                'courier' => 'gosend',
+	                'destination' => [
+	                    'name' => $address->destination_address_name?:$address->destination_short_address,
+	                    'short_address' => $address->destination_short_address,
+	                    'address' => $address->destination_address,
+	                    'description' => $address->destination_note,
+	                    'latitude' => $address->destination_latitude,
+	                    'longitude' => $address->destination_longitude,
+	                ]
+	            ];
+        	} else {
+        		$address = TransactionPickupWehelpyou::where('id_transaction_pickup', $trx->id_transaction_pickup)->first();
+	            $result += [
+	                'transaction_type' => 'Delivery Order',
+	                'courier' => $address->courier,
+	                'destination' => [
+	                    'name' => null,
+	                    'short_address' => null,
+	                    'address' => $address->receiver_address,
+	                    'description' => $address->receiver_notes,
+	                    'latitude' => $address->receiver_latitude,
+	                    'longitude' => $address->receiver_longitude,
+	                ]
+	            ];
+        	}
+
             if (!$result['destination']['name']) {
                 $ua = UserAddress::where(['id_user' => $trx->id_user, 'latitude'=>$address->destination_latitude, 'longitude' => $address->destination_longitude])->first();
                 if ($ua) {
