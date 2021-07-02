@@ -798,7 +798,7 @@ class ApiOutletApp extends Controller
 
         $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->where('order_id', $post['order_id'])
-            ->whereDate('transaction_date', date('Y-m-d'))
+            //->whereDate('transaction_date', date('Y-m-d'))
             ->where('transactions.id_outlet', $outlet->id_outlet)
             ->first();
 
@@ -834,6 +834,15 @@ class ApiOutletApp extends Controller
             return response()->json([
                 'status'   => 'fail',
                 'messages' => ['Order Has Been Marked as Ready'],
+            ]);
+        }
+
+        $currentdate = date('Y-m-d H:i');
+        $setTime = date('Y-m-d H:i', strtotime($order->pickup_at.' - 15 minutes'));
+        if($order->pickup_type == 'set time' && $currentdate < $setTime){
+            return response()->json([
+                'status'   => 'fail',
+                'messages' => ['Minimum set ready 15 minutes before pickup'],
             ]);
         }
 
