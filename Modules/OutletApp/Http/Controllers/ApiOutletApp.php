@@ -1891,7 +1891,9 @@ class ApiOutletApp extends Controller
                 ]);
             } elseif ($order->pickup_by == 'Wehelpyou') {
             	$pickupWhy = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-                if($pickupWhy['latest_status_id'] && !in_array($pickupWhy['latest_status_id'], WeHelpYou::orderEndStatusId())) {
+            	$endStatus = WeHelpYou::orderEndStatusId();
+            	unset($endStatus['Rejected']);
+                if($pickupWhy['latest_status_id'] && !in_array($pickupWhy['latest_status_id'], $endStatus)) {
                     return response()->json([
                         'status'   => 'fail',
                         'messages' => ['Driver has been booked'],
