@@ -2715,6 +2715,10 @@ class ApiTransaction extends Controller
                 }
             }
 
+            $redirectUrlApp = "";
+            $redirectUrl = "";
+            $tokenPayment = "";
+            $continuePayment = false;
             switch ($list['trasaction_payment_type']) {
                 case 'Balance':
                     $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get()->toArray();
@@ -2748,6 +2752,11 @@ class ApiTransaction extends Controller
                                     $payment['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)).' '.strtoupper($payMidtrans->bank);
                                     $payment['amount']    = $payMidtrans->gross_amount;
                                     $list['payment'][] = $payment;
+                                    if($list['transaction_payment_status'] == 'Pending' && !empty($payMidtrans->token)) {
+                                        $redirectUrl = $payMidtrans->redirect_url;
+                                        $tokenPayment = $payMidtrans->token;
+                                        $continuePayment =  true;
+                                    }
                                     break;
                                 case 'Ovo':
                                     $payment = TransactionPaymentOvo::find($mp['id_payment']);
@@ -2759,6 +2768,10 @@ class ApiTransaction extends Controller
                                     $payment['name']    = $PayIpay->payment_method;
                                     $payment['amount']    = $PayIpay->amount / 100;
                                     $list['payment'][] = $payment;
+                                    if($list['transaction_payment_status'] == 'Pending'){
+                                        $redirectUrl = config('url.api_url').'/api/ipay88/pay?type=trx&id_reference='.$list['id_transaction'].'&payment_id='.$PayIpay->payment_id;
+                                        $continuePayment =  true;
+                                    }
                                     break;
                                 case 'Shopeepay':
                                     $shopeePay = TransactionPaymentShopeePay::find($mp['id_payment']);
@@ -2766,6 +2779,11 @@ class ApiTransaction extends Controller
                                     $payment['amount']  = $shopeePay->amount / 100;
                                     $payment['reject']  = $shopeePay->err_reason?:'payment expired';
                                     $list['payment'][]  = $payment;
+                                    if($list['transaction_payment_status'] == 'Pending'){
+                                        $redirectUrl = $shopeePay->redirect_url_http;
+                                        $redirectUrlApp = $shopeePay->redirect_url_app;
+                                        $continuePayment =  true;
+                                    }
                                     break;
                                 case 'Offline':
                                     $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
@@ -2811,6 +2829,12 @@ class ApiTransaction extends Controller
                             $payMidtrans = TransactionPaymentMidtran::find($dataPay['id_payment']);
                             $payment[$dataKey]['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)).' '.strtoupper($payMidtrans->bank);
                             $payment[$dataKey]['amount']    = $payMidtrans->gross_amount;
+                            if($list['transaction_payment_status'] == 'Pending' && !empty($payMidtrans->token)){
+                                $redirectUrl = $payMidtrans->redirect_url;
+                                $tokenPayment = $payMidtrans->token;
+                                $continuePayment =  true;
+                            }
+
                         }else{
                             $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                             $payment[$dataKey] = $dataPay;
@@ -2846,6 +2870,11 @@ class ApiTransaction extends Controller
                             $PayIpay = TransactionPaymentIpay88::find($dataPay['id_payment']);
                             $payment[$dataKey]['name']    = $PayIpay->payment_method;
                             $payment[$dataKey]['amount']    = $PayIpay->amount / 100;
+
+                            if($list['transaction_payment_status'] == 'Pending'){
+                                $redirectUrl = config('url.api_url').'/api/ipay88/pay?type=trx&id_reference='.$list['id_transaction'].'&payment_id='.$PayIpay->payment_id;
+                                $continuePayment =  true;
+                            }
                         }else{
                             $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                             $payment[$dataKey] = $dataPay;
@@ -2865,6 +2894,11 @@ class ApiTransaction extends Controller
                             $payment[$dataKey]['name']      = 'ShopeePay';
                             $payment[$dataKey]['amount']    = $payShopee->amount / 100;
                             $payment[$dataKey]['reject']    = $payShopee->err_reason?:'payment expired';
+                            if($list['transaction_payment_status'] == 'Pending') {
+                                $redirectUrl = $payShopee->redirect_url_http;
+                                $redirectUrlApp = $payShopee->redirect_url_app;
+                                $continuePayment =  true;
+                            }
                         }else{
                             $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                             $payment[$dataKey]              = $dataPay;
@@ -2955,6 +2989,10 @@ class ApiTransaction extends Controller
                 'transaction_cashback_earned'   => MyHelper::requestNumber($list['transaction_cashback_earned'],'_POINT'),
                 'trasaction_payment_type'       => $list['trasaction_payment_type'],
                 'transaction_payment_status'    => $list['transaction_payment_status'],
+                'continue_payment'              => $continuePayment,
+                'payment_redirect_url'          => $redirectUrl,
+                'payment_redirect_url_app'      => $redirectUrlApp,
+                'payment_token'                => $tokenPayment,
                 'outlet'                        => [
                     'outlet_name'       => $list['outlet']['outlet_name'],
                     'outlet_address'    => $list['outlet']['outlet_address']
