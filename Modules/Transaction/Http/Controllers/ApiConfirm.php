@@ -340,7 +340,9 @@ class ApiConfirm extends Controller
             $dataNotifMidtrans = [
                 'id_transaction' => $check['id_transaction'],
                 'gross_amount'   => $countGrandTotal,
-                'order_id'       => $check['transaction_receipt_number']
+                'order_id'       => $check['transaction_receipt_number'],
+                'redirect_url' => $connectMidtrans['redirect_url']??NULL,
+                'token' => $connectMidtrans['token']??NULL
             ];
 
             switch (strtolower($post['payment_detail']??'')) {

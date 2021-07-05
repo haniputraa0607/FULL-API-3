@@ -45,6 +45,8 @@ class TransactionPaymentMidtran extends Model
 
 	protected $fillable = [
 		'id_transaction',
+        'token',
+        'redirect_url',
 		'masked_card',
 		'approval_code',
 		'bank',
