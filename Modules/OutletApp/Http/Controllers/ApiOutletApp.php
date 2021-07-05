@@ -5862,26 +5862,47 @@ class ApiOutletApp extends Controller
     {
         $log = MyHelper::logCron('Driver Not Found Reject Order');
         try {
+        	$endStatusWehelpyou = Wehelpyou::orderEndFailStatusId();
             // dd(date('Y-m-d H:i:s', strtotime('-30minutes')));
             // dd(date('Y-m-d'));
-            $transactions = Transaction::select([
-                    'transaction_pickup_go_sends.updated_at',
+        	$transactions = Transaction::select([
+        			DB::raw('
+        				CASE WHEN transaction_pickups.pickup_by = "Wehelpyou" 
+        					THEN transaction_pickup_wehelpyous.updated_at
+        					ELSE transaction_pickup_go_sends.updated_at
+        				END AS updated_at,
+
+        				CASE WHEN transaction_pickups.pickup_by = "Wehelpyou" 
+        					THEN transaction_pickup_wehelpyous.stop_booking_at
+        					ELSE transaction_pickup_go_sends.stop_booking_at
+        				END AS stop_booking_at
+        			'),
                     'order_id',
                     'transaction_receipt_number',
                     'transactions.id_transaction',
                     'id_outlet',
                     'transaction_date',
-                    'stop_booking_at'
+                    'transaction_pickups.pickup_by'
                 ])->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                ->join('transaction_pickup_go_sends', 'transaction_pickup_go_sends.id_transaction_pickup', '=', 'transaction_pickups.id_transaction_pickup')
+                ->leftJoin('transaction_pickup_go_sends', 'transaction_pickup_go_sends.id_transaction_pickup', '=', 'transaction_pickups.id_transaction_pickup')
+                ->leftJoin('transaction_pickup_wehelpyous', 'transaction_pickup_wehelpyous.id_transaction_pickup', '=', 'transaction_pickups.id_transaction_pickup')
                 ->whereNull('transaction_pickups.reject_at')
                 ->whereDate('transaction_date', date('Y-m-d'))
-                ->whereNotNull('stop_booking_at')
-                ->where('latest_status', '<>', 'rejected')
                 ->where([
                     'transaction_payment_status' => 'Completed',
                 ])
-                ->whereIn('transaction_pickup_go_sends.latest_status', ['no_driver', 'rejected', 'cancelled'])
+                ->where(function($q) {
+                	$q->whereNotNull('transaction_pickup_go_sends.stop_booking_at')
+                		->orWhereNotNull('transaction_pickup_wehelpyous.stop_booking_at');
+                })
+                ->where(function($q) {
+                	$q->where('transaction_pickup_go_sends.latest_status', '<>', 'rejected')
+                	->orWhere('transaction_pickup_wehelpyous.latest_status_id', '<>', '96');
+                })
+                ->where(function($q) use ($endStatusWehelpyou){
+                	$q->whereIn('transaction_pickup_go_sends.latest_status', ['no_driver', 'rejected', 'cancelled'])
+                	->orWhereIn('transaction_pickup_wehelpyous.latest_status_id', $endStatusWehelpyou);
+                })
                 ->with('outlet')
                 ->get();
             $processed = [

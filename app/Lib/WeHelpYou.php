@@ -826,6 +826,14 @@ class WeHelpYou
 		return array_flip($status);
 	}
 
+	public static function orderEndFailStatusId(): array
+	{
+		$status = self::orderEndStatusId();
+		unset($status['Completed']);
+
+		return $status;
+	}
+
 	public static function fakeTracking($poNo, $statusId = 1, $case = 'completed')
 	{
 		$now = date("Y-m-d H:i:s");
