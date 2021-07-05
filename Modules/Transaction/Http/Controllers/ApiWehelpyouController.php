@@ -57,6 +57,17 @@ class ApiWehelpyouController extends Controller
 
     public function updateFakeStatus(Request $request)
     {
+    	$case = ['completed', 'driver not found', 'cancelled', 'rejected'];
+    	if (!in_array($request->case, $case)) {
+    		$case = implode(', ', $case);
+    		return [
+                'status' => 'fail',
+                'messages' => [
+                    'case not found, available case : '.$case
+                ]
+            ];
+    	}
+
 		$trx = Transaction::where('transactions.id_transaction', $request->id_transaction)
         		->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
         		->with(['outlet' => function($q) {
@@ -81,24 +92,50 @@ class ApiWehelpyouController extends Controller
         }
 
         $trx->load('transaction_pickup.transaction_pickup_wehelpyou');
-        switch ($trx['transaction_pickup']['transaction_pickup_wehelpyou']['latest_status_id']) {
-        	case 1:
-        		$trx->fakeStatusId = 8;
+        switch (strtolower($request->case)) {
+        	case 'rejected':
+        		$fakeLog = [1, 11, 8, 9, 96];
         		break;
-        	
-        	case 8:
-        		$trx->fakeStatusId = 9;
+
+        	case 'cancelled':
+        		$fakeLog = [1, 11, 8, 91];
         		break;
-        	
-        	case 9:
-        		$trx->fakeStatusId = 2;
+
+        	case 'driver not found':
+        		$fakeLog = [1, 11, 95];
         		break;
-        	
+
+        	case 'completed':
         	default:
-        		$trx->fakeStatusId = 1;
+        		$fakeLog = [1, 11, 8, 9, 2];
         		break;
         }
 
+        $latestStatusId = $trx['transaction_pickup']['transaction_pickup_wehelpyou']['latest_status_id'];
+        $flippedFakeLog = array_flip($fakeLog);
+
+        $indexLatestStatusId = $flippedFakeLog[$latestStatusId] ?? false;
+        if ($indexLatestStatusId === false) {
+        	return [
+                'status' => 'fail',
+                'messages' => [
+                    'Latest status not found'
+                ]
+            ];
+        }
+
+        $nextStatus = $fakeLog[$indexLatestStatusId + 1] ?? false;
+        if ($nextStatus === false) {
+        	return [
+                'status' => 'fail',
+                'messages' => [
+                    'Next status Log not found'
+                ]
+            ];
+        }
+
+        $trx->fakeStatusId = $nextStatus;
+        $trx->fakeStatusCase = strtolower($request->case);
         return WeHelpYou::updateStatus($trx, $trx['transaction_pickup']['transaction_pickup_wehelpyou']['poNo']);
     }
 }
