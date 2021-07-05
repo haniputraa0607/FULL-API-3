@@ -2769,7 +2769,7 @@ class ApiTransaction extends Controller
                                     $payment['amount']    = $PayIpay->amount / 100;
                                     $list['payment'][] = $payment;
                                     if($list['transaction_payment_status'] == 'Pending'){
-                                        $redirectUrl = config('url.api_url').'/api/ipay88/pay?type=trx&id_reference='.$list['id_transaction'].'&payment_id='.$PayIpay->id_transaction_payment_ipay88;
+                                        $redirectUrl = config('url.api_url').'/api/ipay88/pay?type=trx&id_reference='.$list['id_transaction'].'&payment_id='.$PayIpay->payment_id;
                                         $continuePayment =  true;
                                     }
                                     break;
@@ -2872,7 +2872,7 @@ class ApiTransaction extends Controller
                             $payment[$dataKey]['amount']    = $PayIpay->amount / 100;
 
                             if($list['transaction_payment_status'] == 'Pending'){
-                                $redirectUrl = config('url.api_url').'/api/ipay88/pay?type=trx&id_reference='.$list['id_transaction'].'&payment_id='.$PayIpay->id_transaction_payment_ipay88;
+                                $redirectUrl = config('url.api_url').'/api/ipay88/pay?type=trx&id_reference='.$list['id_transaction'].'&payment_id='.$PayIpay->payment_id;
                                 $continuePayment =  true;
                             }
                         }else{
