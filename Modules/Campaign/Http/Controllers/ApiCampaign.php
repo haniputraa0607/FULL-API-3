@@ -618,6 +618,14 @@ class ApiCampaign extends Controller
         $post['campaign_push_id_reference'] = $post['campaign_push_id_reference']??NULL;
 
 		$campaign=Campaign::where('id_campaign',$id_campaign)->first();
+		if(empty($campaign)){
+            $result = [
+                'status'	=> 'fail',
+                'messages'	=> ['Campaign not found']
+            ];
+            return response()->json($result);
+        }
+
 		DB::beginTransaction();
         if($campaign->campaign_generate_receipient=='Now' || (empty($campaign->campaign_send_at) && $campaign->campaign_generate_receipient=='Send At Time')){
             GenerateCampaignRecipient::dispatch($post)->allOnConnection('campaignqueue');
