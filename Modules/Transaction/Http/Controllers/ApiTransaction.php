@@ -3062,15 +3062,15 @@ class ApiTransaction extends Controller
                     $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
                 } elseif($list['detail']['reject_at'] != null) {
                 	$reason = $list['detail']['reject_reason'];
-	                $ditolak = 'ORDER DITOLAK';
+	                $ditolak = 'PESANAN DITOLAK';
 	                if (strpos($reason, 'auto reject order') !== false) {
-	                    $ditolak = 'ORDER DITOLAK OTOMATIS';
+	                    $ditolak = 'PESANAN DITOLAK OTOMATIS';
 	                    if (strpos($reason, 'no driver') !== false) {
 	                        $reason = 'GAGAL MENEMUKAN DRIVER';
 	                    } elseif (strpos($reason, 'not ready') !== false) {
-	                        $reason = 'STATUS ORDER TIDAK DIPROSES READY';
+	                        $reason = 'STATUS PESANAN TIDAK DIPROSES READY';
 	                    } else {
-	                        $reason = 'OUTLET GAGAL MENERIMA ORDER';
+	                        $reason = 'OUTLET GAGAL MENERIMA PESANAN';
 	                    }
 	                }
 	                if($reason) $reason = "\n$reason";
