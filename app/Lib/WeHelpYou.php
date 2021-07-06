@@ -566,8 +566,10 @@ class WeHelpYou
 		$latestStatusId = $trackOrder['response']['data']['status_id'] ?? null;
 
 		$id_transaction_pickup_wehelpyou = $trx->transaction_pickup->transaction_pickup_wehelpyou->id_transaction_pickup_wehelpyou;
+		$isNewStatus = false;
 		foreach ($statusNew as $status) {
 			if (!in_array($status['status_id'], $statusOld)) {
+				$isNewStatus = true;
 				$statusName = self::getStatusById($status['status_id']) ?? $status['status'];
 				TransactionPickupWehelpyouUpdate::create([
 					'id_transaction' => $trx->id_transaction,
@@ -614,8 +616,10 @@ class WeHelpYou
 			'tracking_driver_log' 		=> $trackOrder['response']['data']['tracking']['driver_log'] ?? null
 		]);
 
-		self::sendOutletNotif($trx, $outlet, $latestStatusId, $trx_pickup);
-		self::sendUserNotif($trx, $outlet, $latestStatusId, $trx_pickup);
+		if ($isNewStatus) {
+			self::sendOutletNotif($trx, $outlet, $latestStatusId, $trx_pickup);
+			self::sendUserNotif($trx, $outlet, $latestStatusId, $trx_pickup);
+		}
 
 		return ['status' => 'success'];
 	}
