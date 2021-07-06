@@ -2723,6 +2723,7 @@ class ApiTransaction extends Controller
             $shopeeTimer = 0;
             $shopeeMessage = "";
             $paymentType = "";
+            $paymentGateway = "";
             switch ($list['trasaction_payment_type']) {
                 case 'Balance':
                     $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get()->toArray();
@@ -2762,6 +2763,7 @@ class ApiTransaction extends Controller
                                         $continuePayment =  true;
                                         $totalPayment = $payMidtrans->gross_amount;
                                         $paymentType = strtoupper($payMidtrans->payment_type);
+                                        $paymentGateway = 'Midtrans';
                                     }
                                     break;
                                 case 'Ovo':
@@ -2779,6 +2781,7 @@ class ApiTransaction extends Controller
                                         $continuePayment =  true;
                                         $totalPayment = $PayIpay->amount / 100;
                                         $paymentType = strtoupper($PayIpay->payment_method);
+                                        $paymentGateway = 'IPay88';
                                     }
                                     break;
                                 case 'Shopeepay':
@@ -2794,6 +2797,7 @@ class ApiTransaction extends Controller
                                         $totalPayment = $shopeePay->amount / 100;
                                         $shopeeTimer = (int) MyHelper::setting('shopeepay_validity_period', 'value', 300);
                                         $shopeeMessage ='Sorry, your payment has expired';
+                                        $paymentGateway = 'Shopeepay';
                                     }
                                     break;
                                 case 'Offline':
@@ -2846,6 +2850,7 @@ class ApiTransaction extends Controller
                                 $continuePayment =  true;
                                 $totalPayment = $payMidtrans->gross_amount;
                                 $paymentType = strtoupper($payMidtrans->payment_type);
+                                $paymentGateway = 'Midtrans';
                             }
 
                         }else{
@@ -2889,6 +2894,7 @@ class ApiTransaction extends Controller
                                 $continuePayment =  true;
                                 $totalPayment = $PayIpay->amount / 100;
                                 $paymentType = strtoupper($PayIpay->payment_method);
+                                $paymentGateway = 'Ipay88';
                             }
                         }else{
                             $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
@@ -2916,6 +2922,7 @@ class ApiTransaction extends Controller
                                 $totalPayment = $payShopee->amount / 100;
                                 $shopeeTimer = (int) MyHelper::setting('shopeepay_validity_period', 'value', 300);
                                 $shopeeMessage ='Sorry, your payment has expired';
+                                $paymentGateway = 'Shopeepay';
                             }
                         }else{
                             $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
@@ -3008,6 +3015,7 @@ class ApiTransaction extends Controller
                 'trasaction_payment_type'       => $list['trasaction_payment_type'],
                 'transaction_payment_status'    => $list['transaction_payment_status'],
                 'continue_payment'              => $continuePayment,
+                'payment_gateway'               => $paymentGateway,
                 'payment_type'                  => $paymentType,
                 'payment_redirect_url'          => $redirectUrl,
                 'payment_redirect_url_app'      => $redirectUrlApp,
