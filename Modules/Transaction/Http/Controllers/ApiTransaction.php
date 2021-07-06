@@ -2719,6 +2719,9 @@ class ApiTransaction extends Controller
             $redirectUrl = "";
             $tokenPayment = "";
             $continuePayment = false;
+            $totalPayment = 0;
+            $shopeeTimer = 0;
+            $shopeeMessage = "";
             switch ($list['trasaction_payment_type']) {
                 case 'Balance':
                     $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get()->toArray();
@@ -2756,6 +2759,7 @@ class ApiTransaction extends Controller
                                         $redirectUrl = $payMidtrans->redirect_url;
                                         $tokenPayment = $payMidtrans->token;
                                         $continuePayment =  true;
+                                        $totalPayment = $payMidtrans->gross_amount;
                                     }
                                     break;
                                 case 'Ovo':
@@ -2771,6 +2775,7 @@ class ApiTransaction extends Controller
                                     if($list['transaction_payment_status'] == 'Pending'){
                                         $redirectUrl = config('url.api_url').'/api/ipay88/pay?type=trx&id_reference='.$list['id_transaction'].'&payment_id='.$PayIpay->payment_id;
                                         $continuePayment =  true;
+                                        $totalPayment = $PayIpay->amount / 100;
                                     }
                                     break;
                                 case 'Shopeepay':
@@ -2783,6 +2788,9 @@ class ApiTransaction extends Controller
                                         $redirectUrl = $shopeePay->redirect_url_http;
                                         $redirectUrlApp = $shopeePay->redirect_url_app;
                                         $continuePayment =  true;
+                                        $totalPayment = $shopeePay->amount / 100;
+                                        $shopeeTimer = (int) MyHelper::setting('shopeepay_validity_period', 'value', 300);
+                                        $shopeeMessage ='Sorry, your payment has expired';
                                     }
                                     break;
                                 case 'Offline':
@@ -2833,6 +2841,7 @@ class ApiTransaction extends Controller
                                 $redirectUrl = $payMidtrans->redirect_url;
                                 $tokenPayment = $payMidtrans->token;
                                 $continuePayment =  true;
+                                $totalPayment = $payMidtrans->gross_amount;
                             }
 
                         }else{
@@ -2874,6 +2883,7 @@ class ApiTransaction extends Controller
                             if($list['transaction_payment_status'] == 'Pending'){
                                 $redirectUrl = config('url.api_url').'/api/ipay88/pay?type=trx&id_reference='.$list['id_transaction'].'&payment_id='.$PayIpay->payment_id;
                                 $continuePayment =  true;
+                                $totalPayment = $PayIpay->amount / 100;
                             }
                         }else{
                             $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
@@ -2898,6 +2908,9 @@ class ApiTransaction extends Controller
                                 $redirectUrl = $payShopee->redirect_url_http;
                                 $redirectUrlApp = $payShopee->redirect_url_app;
                                 $continuePayment =  true;
+                                $totalPayment = $payShopee->amount / 100;
+                                $shopeeTimer = (int) MyHelper::setting('shopeepay_validity_period', 'value', 300);
+                                $shopeeMessage ='Sorry, your payment has expired';
                             }
                         }else{
                             $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
@@ -2992,7 +3005,10 @@ class ApiTransaction extends Controller
                 'continue_payment'              => $continuePayment,
                 'payment_redirect_url'          => $redirectUrl,
                 'payment_redirect_url_app'      => $redirectUrlApp,
-                'payment_token'                => $tokenPayment,
+                'payment_token'                 => $tokenPayment,
+                'total_payment'                 => (int)$totalPayment,
+                'timer_shopeepay'               => $shopeeTimer,
+                'message_timeout_shopeepay'     => $shopeeMessage,
                 'outlet'                        => [
                     'outlet_name'       => $list['outlet']['outlet_name'],
                     'outlet_address'    => $list['outlet']['outlet_address']
