@@ -3152,31 +3152,23 @@ class ApiUser extends Controller
     {
         $post = $request->json()->all();
         $user = $request->user();
-        if($user->phone == $post['phone']){
-            if (isset($post['password_new'])) {
-                $password = bcrypt($post['password_new']);
-                $update = User::where('phone', $post['phone'])->update(['password' => $password]);
+        if (isset($post['password_new'])) {
+            $password = bcrypt($post['password_new']);
+            $update = User::where('phone', $post['phone'])->update(['password' => $password]);
 
-                $user = User::where('phone', $post['phone'])->first();
+            $user = User::where('phone', $post['phone'])->first();
 
-                if ($user) {
+            if ($user) {
 
-                    $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
-                        ->where('oauth_access_tokens.user_id', $user->id)->where('oauth_access_token_providers.provider', 'users')->delete();
-                }
-
-                return MyHelper::checkUpdate($update);
-            } else {
-                $result = [
-                    'status'    => 'fail',
-                    'messages'    => ['Update profile password failed.']
-                ];
-                return response()->json($result);
+                $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+                    ->where('oauth_access_tokens.user_id', $user->id)->where('oauth_access_token_providers.provider', 'users')->delete();
             }
-        }else{
+
+            return MyHelper::checkUpdate($update);
+        } else {
             $result = [
                 'status'    => 'fail',
-                'messages'    => ["You don't have access."]
+                'messages'    => ['Update profile password failed.']
             ];
             return response()->json($result);
         }
