@@ -2722,6 +2722,7 @@ class ApiTransaction extends Controller
             $totalPayment = 0;
             $shopeeTimer = 0;
             $shopeeMessage = "";
+            $paymentType = "";
             switch ($list['trasaction_payment_type']) {
                 case 'Balance':
                     $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get()->toArray();
@@ -2760,6 +2761,7 @@ class ApiTransaction extends Controller
                                         $tokenPayment = $payMidtrans->token;
                                         $continuePayment =  true;
                                         $totalPayment = $payMidtrans->gross_amount;
+                                        $paymentType = strtoupper($payMidtrans->payment_type);
                                     }
                                     break;
                                 case 'Ovo':
@@ -2776,6 +2778,7 @@ class ApiTransaction extends Controller
                                         $redirectUrl = config('url.api_url').'/api/ipay88/pay?type=trx&id_reference='.$list['id_transaction'].'&payment_id='.$PayIpay->payment_id;
                                         $continuePayment =  true;
                                         $totalPayment = $PayIpay->amount / 100;
+                                        $paymentType = strtoupper($PayIpay->payment_method);
                                     }
                                     break;
                                 case 'Shopeepay':
@@ -2842,6 +2845,7 @@ class ApiTransaction extends Controller
                                 $tokenPayment = $payMidtrans->token;
                                 $continuePayment =  true;
                                 $totalPayment = $payMidtrans->gross_amount;
+                                $paymentType = strtoupper($payMidtrans->payment_type);
                             }
 
                         }else{
@@ -2884,6 +2888,7 @@ class ApiTransaction extends Controller
                                 $redirectUrl = config('url.api_url').'/api/ipay88/pay?type=trx&id_reference='.$list['id_transaction'].'&payment_id='.$PayIpay->payment_id;
                                 $continuePayment =  true;
                                 $totalPayment = $PayIpay->amount / 100;
+                                $paymentType = strtoupper($PayIpay->payment_method);
                             }
                         }else{
                             $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
@@ -3003,6 +3008,7 @@ class ApiTransaction extends Controller
                 'trasaction_payment_type'       => $list['trasaction_payment_type'],
                 'transaction_payment_status'    => $list['transaction_payment_status'],
                 'continue_payment'              => $continuePayment,
+                'payment_type'                  => $paymentType,
                 'payment_redirect_url'          => $redirectUrl,
                 'payment_redirect_url_app'      => $redirectUrlApp,
                 'payment_token'                 => $tokenPayment,
