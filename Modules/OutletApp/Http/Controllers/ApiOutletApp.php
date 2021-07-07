@@ -4784,14 +4784,14 @@ class ApiOutletApp extends Controller
                 if($list['transaction_pickup_wehelpyou']['poNo']){
                     $result['delivery_info']['booking_status'] = 1;
                 }
-                switch (strtolower($list['transaction_pickup_wehelpyou']['latest_status'])) {
-                    case 'on progress':
-                    case 'finding driver':
+                switch (strtolower($list['transaction_pickup_wehelpyou']['latest_status_id'])) {
+                    case 1:
+                    case 11:
                         $result['delivery_info']['delivery_status'] = 'Sedang mencari driver';
                         $result['delivery_info']['delivery_status_code']   = 1;
                         $result['transaction_status_text']          = 'PESANAN SUDAH SIAP DAN MENUNGGU PICK UP';
                         break;
-                    case 'driver allocated':
+                    case 8:
                         $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
                         $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER DITEMUKAN DAN SEDANG MENUJU OUTLET';
@@ -4804,7 +4804,7 @@ class ApiOutletApp extends Controller
                             'vehicle_number'    => $list['transaction_pickup_wehelpyou']['vehicle_type']?:'',
                         ];
                         break;
-                    case 'item picked':
+                    case 32:
                         $result['delivery_info']['delivery_status'] = 'Driver mengambil pesanan di Outlet';
                         $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
@@ -4818,7 +4818,7 @@ class ApiOutletApp extends Controller
                         ];
                         $result['delivery_info']['cancelable'] = 1;
                         break;
-                    case 'enroute drop':
+                    case 9:
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
                         $result['delivery_info']['delivery_status_code']   = 3;
                         $result['transaction_status_text']          = 'PESANAN SUDAH DI PICK UP OLEH DRIVER DAN SEDANG MENUJU LOKASI #TEMANSEJIWA';
@@ -4833,7 +4833,7 @@ class ApiOutletApp extends Controller
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         break;
-                    case 'completed':
+                    case 2:
                         $result['transaction_status'] = 2;
                         $result['transaction_status_text']          = 'PESANAN TELAH SELESAI DAN DITERIMA';
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
@@ -4848,16 +4848,17 @@ class ApiOutletApp extends Controller
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         break;
-                    case 'cancelled, without refund':
-                    case 'order failed':
-                    case 'cancelled by partner':
+                    case 89:
+                    case 90:
+                    case 91:
+                    case 99:
                         $result['delivery_info']['booking_status'] = 0;
                         $result['delivery_info']['delivery_status_code'] = 0;
                         $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
                         $result['delivery_info']['cancelable']     = 0;
                         $result['transaction_status_text']         = 'PENGANTARAN PESANAN TELAH DIBATALKAN';
                         break;
-                    case 'rejected':
+                    case 96:
                         $result['transaction_status'] = 0;
                         $result['delivery_info']['booking_status'] = 0;
                         $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
