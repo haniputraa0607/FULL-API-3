@@ -827,6 +827,15 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        $currentdate = date('Y-m-d H:i');
+        $setTime = date('Y-m-d H:i', strtotime($order->pickup_at.' - 15 minutes'));
+        if($order->pickup_type == 'set time' && $currentdate < $setTime){
+            return response()->json([
+                'status'   => 'fail',
+                'messages' => ['Order dapat ditandai siap minimum 15 menit sebelum waktu pengambilan'],
+            ]);
+        }
+
         if ($order->pickup_by != 'Customer') {
             $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
             if(!$pickup_gosend || !$pickup_gosend['latest_status'] || in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled', 'confirmed'])) {
@@ -3369,6 +3378,13 @@ class ApiOutletApp extends Controller
         $list['date'] = $list['transaction_date'];
         $list['type'] = 'trx';
 
+        $currentdate = date('Y-m-d H:i');
+        $setTime = date('Y-m-d H:i', strtotime($list['pickup_at'].' - 15 minutes'));
+        $allowReady = 1;
+        if($list['pickup_type'] == 'set time' && $currentdate < $setTime){
+            $allowReady = 0;
+        }
+
         $result = [
             'id_transaction'              => $list['id_transaction'],
             'user_name'                   => $list['user']['name'],
@@ -3383,6 +3399,7 @@ class ApiOutletApp extends Controller
             'trasaction_payment_type'     => $list['trasaction_payment_type'],
             'transaction_payment_status'  => $list['transaction_payment_status'],
             'rejectable'                  => 0,
+            'allow_ready'                 => $allowReady,
             'outlet'                      => [
                 'outlet_name'    => $list['outlet']['outlet_name'],
                 'outlet_address' => $list['outlet']['outlet_address'],
@@ -4262,6 +4279,12 @@ class ApiOutletApp extends Controller
 
         $list['date'] = $list['transaction_date'];
         $list['type'] = 'trx';
+        $currentdate = date('Y-m-d H:i');
+        $setTime = date('Y-m-d H:i', strtotime($list['pickup_at'].' - 15 minutes'));
+        $allowReady = 1;
+        if($list['pickup_type'] == 'set time' && $currentdate < $setTime){
+            $allowReady = 0;
+        }
 
         $result = [
             'id_transaction'              => $list['id_transaction'],
@@ -4277,6 +4300,7 @@ class ApiOutletApp extends Controller
             'trasaction_payment_type'     => $list['trasaction_payment_type'],
             'transaction_payment_status'  => $list['transaction_payment_status'],
             'rejectable'                  => 0,
+            'allow_ready'                 => $allowReady,
             'outlet'                      => [
                 'outlet_name'    => $list['outlet']['outlet_name'],
                 'outlet_address' => $list['outlet']['outlet_address'],

@@ -2110,9 +2110,14 @@ class ApiOnlineTransaction extends Controller
                 $outlet_status = 0;
             }
 
+            $settingTime = Setting::where('key', 'processing_time')->first();
+
+            if($outlet['today']['close']){
+                $outlet['today']['close'] = date('Y-m-d H:i:s', strtotime($outlet['today']['close'].' + '.$settingTime['value'].'minutes'));
+            }
+
              if($outlet['today']['close'] && $outlet['today']['close'] != "00:00" && $outlet['today']['open'] && $outlet['today']['open'] != '00:00'){
 
-                $settingTime = Setting::where('key', 'processing_time')->first();
                 if($settingTime && $settingTime->value){
                     if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime($outlet['today']['close']))){
                     // if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
