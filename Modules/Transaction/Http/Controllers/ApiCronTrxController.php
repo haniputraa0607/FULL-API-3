@@ -709,8 +709,8 @@ class ApiCronTrxController extends Controller
                 if (is_array($reject)) {
                     if (($reject['status'] ?? false) == 'success') {
                         $dataNotif = [
-                            'subject' => 'Order Cancelled',
-                            'string_body' => $transaction['order_id'] . ' - '. $transaction['transaction_receipt_number'],
+                            'subject' => 'Order ditolak oleh sistem',
+                            'string_body' => 'Outlet tidak merespon order JIWA+',
                             'type' => 'trx',
                             'id_reference'=> $transaction['id_transaction']
                         ];

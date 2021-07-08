@@ -627,11 +627,16 @@ class WeHelpYou
 	public static function sendOutletNotif($trx, $outlet, $status_id, $trx_pickup)
 	{
         $status = self::getStatusById($status_id);
-        $message = self::getOutletMessageByStatusId($status_id) ?? $status;
+        $title = self::getOutletNotifTitle($status_id) ?? 'Info Pesanan Delivery';
+        $message = self::getOutletNotifMessage($status_id) ?? $status;
+
+        $title = MyHelper::simpleReplace($title,['order_id' => $trx_pickup->order_id]);
+        $message = MyHelper::simpleReplace($message,['order_id' => $trx_pickup->order_id]);
+
 		app("Modules\OutletApp\Http\Controllers\ApiOutletApp")->outletNotif([
             'type' => 'trx',
-            'subject' => 'Info Pesanan Delivery',
-            'string_body' => $trx_pickup->order_id.' '.($message),
+            'subject' => $title,
+            'string_body' => $message,
             'status' => $status,
             'id_transaction' => $trx->id_transaction,
             'id_reference' => $trx->id_transaction,
@@ -779,19 +784,38 @@ class WeHelpYou
         return $content[$status_id] ?? null;
 	}
 
-	public static function getOutletMessageByStatusId($status_id)
+	public static function getOutletNotifTitle($status_id)
+	{
+		$outlet_title = [
+            11 					=> 'Info Pesanan Delivery',
+            8 					=> 'Driver ditemukan',
+            'out_for_pickup' 	=> 'Driver sedang menuju ke outlet',
+            32 					=> 'Info Pesanan Delivery',
+            9 					=> 'Driver sedang menuju ke lokasi tujuan',
+            89 					=> 'Pengantaran dibatalkan driver',
+            91 					=> 'Pengantaran dibatalkan driver',
+            2 					=> 'Pengantaran %order_id% berhasil',
+            96 					=> 'Pengantaran %order_id% gagal',
+            95 					=> 'Driver tidak ditemukan',
+            'on_hold' 			=> 'Info Pesanan Delivery'
+        ];
+
+        return $outlet_title[$status_id] ?? null;
+	}
+
+	public static function getOutletNotifMessage($status_id)
 	{
 		$outlet_message = [
             11 					=> 'Mencari Driver',
-            8 					=> 'Driver ditemukan',
-            'out_for_pickup' 	=> 'Driver menuju ke Outlet',
+            8 					=> 'Segera persiapkan pesanan',
+            'out_for_pickup' 	=> 'Apa pesanan sudah siap?',
             32 					=> 'Driver mengambil Pesanan',
-            9 					=> 'Driver menuju Alamat Tujuan',
-            89 					=> 'Driver batal mengambil Pesanan',
-            91 					=> 'Driver batal mengambil Pesanan',
-            2 					=> 'Pesanan sampai ke Alamat Tujuan',
-            96 					=> 'Driver batal mengantar Pesanan',
-            95 					=> 'Driver tidak ditemukan',
+            9 					=> 'Pesanan %order_id% sudah siap?',
+            89 					=> 'Segera ambil tindakan',
+            91 					=> 'Segera ambil tindakan',
+            2 					=> 'Pessanan sudah diterima customer',
+            96 					=> 'Tunggu, pesanan akan segera kembalikan ke outlet',
+            95 					=> 'Pilih tindakan selanjutnya',
             'on_hold' 			=> 'Driver terkendala saat pengantaran'
         ];
 
