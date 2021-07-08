@@ -1307,7 +1307,7 @@ class PromoCampaignTools{
 	    	}
 	    	else
 	    	{
-        		$errors[]='Promo tidak tersedia';
+        		$errors[]='Promo tidak berlaku untuk akun Anda';
 	    	}
 
     		return false;
@@ -1318,7 +1318,7 @@ class PromoCampaignTools{
         	if ($promo->limitation_usage) {
         		// limit usage user?
 	        	if(PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('id_user',$id_user)->count()>=$promo->limitation_usage){
-		        	$errors[]='Kuota anda untuk penggunaan kode promo ini telah habis';
+		        	$errors[]='Promo tidak tersedia';
 		    		return false;
 	        	}
         	}
@@ -1334,7 +1334,7 @@ class PromoCampaignTools{
        							->where('id_promo_campaign_promo_code',$id_code)
        							->first();
        		if ($used_by_other_user) {
-       			$errors[]='Promo tidak tersedia';
+       			$errors[] = 'Promo tidak berlaku untuk akun Anda';
 	    		return false;
        		}
 
@@ -1342,7 +1342,7 @@ class PromoCampaignTools{
 
         	if ($code_limit = $promo->code_limit) {
         		if ($used_code >= $code_limit) {
-        			$errors[]='Kuota anda untuk penggunaan kode promo ini telah habis';
+        			$errors[]='Promo tidak tersedia';
 	    			return false;
         		}
         	}
@@ -1350,7 +1350,7 @@ class PromoCampaignTools{
         	if ($promo->user_limit && !$used_code) {
         		$used_diff_code = PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('id_user',$id_user)->distinct()->count('id_promo_campaign_promo_code');
         		if ($used_diff_code >= $promo->user_limit) {
-        			$errors[]='Kuota anda untuk penggunaan promo ini telah habis';
+        			$errors[]='Promo tidak tersedia';
 	    			return false;
         		}
         	}
