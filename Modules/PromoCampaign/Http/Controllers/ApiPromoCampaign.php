@@ -2482,7 +2482,7 @@ class ApiPromoCampaign extends Controller
 	        /* End check promo code */
 
 	        // get data promo code, promo campaign, outlet, rule, and product
-	        $code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
+	        $code = PromoCampaignPromoCode::where('promo_code',$request->promo_code)
 	                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
 	                ->where('step_complete', '=', 1)
 	                ->where( function($q){
@@ -2566,8 +2566,8 @@ class ApiPromoCampaign extends Controller
         	// check user
 	        if(!$pct->validateUser($code['id_promo_campaign'], $id_user, $phone, $device_type, $device_id, $errors,$code['id_promo_campaign_promo_code'])){
 	            return [
-	                'status'=>'fail',
-	                'messages'=>$errors??['Promo tidak tersedia']
+	                'status' => 'fail',
+	                'messages' => $errors ?? ['Promo tidak tersedia']
 	            ];
 	        }
 
