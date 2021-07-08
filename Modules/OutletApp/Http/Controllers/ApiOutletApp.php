@@ -4821,7 +4821,7 @@ class ApiOutletApp extends Controller
                     case 9:
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
                         $result['delivery_info']['delivery_status_code']   = 3;
-                        $result['transaction_status_text']          = 'PESANAN SUDAH DI PICK UP OLEH DRIVER DAN SEDANG MENUJU LOKASI #TEMANSEJIWA';
+                        $result['transaction_status_text']          = 'PROSES PENGANTARAN';
                         $result['transaction_status']               = 3;
                         $result['delivery_info']['driver']          = [
                             'driver_id'         => '',
