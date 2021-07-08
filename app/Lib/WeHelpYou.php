@@ -556,7 +556,6 @@ class WeHelpYou
 		$statusNew 	= $trackOrder['response']['data']['status_log'];
 		$statusOld 	= TransactionPickupWehelpyouUpdate::where('poNo', $po_no)
 						->where('id_transaction', $trx->id_transaction)
-						->where('poNo', $po_no)
 						->pluck('status_id')
 						->toArray();
 		$outlet 	= Outlet::where('id_outlet', $trx->id_outlet)->first();
@@ -601,6 +600,14 @@ class WeHelpYou
 
 				}
 			}
+		}
+
+		if (is_null($latestStatusId)) {
+			// get latest update status id
+			$latestStatusId = TransactionPickupWehelpyouUpdate::where('poNo', $po_no)
+						->where('id_transaction', $trx->id_transaction)
+						->orderBy('id_transaction_pickup_wehelpyou_update', 'desc')
+						->first()['status_id'] ?? null;
 		}
 
 		TransactionPickupWehelpyou::where('id_transaction_pickup_wehelpyou', $id_transaction_pickup_wehelpyou)
