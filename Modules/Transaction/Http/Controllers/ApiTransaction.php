@@ -3679,39 +3679,41 @@ class ApiTransaction extends Controller
                             }
                         }
                     }elseif ($list['transaction_pickup_wehelpyou']) {
-                        $hasPicked = false;
                         foreach ($list['transaction_pickup_wehelpyou']['transaction_pickup_wehelpyou_updates'] as $valueWehelpyou) {
-                            switch (strtolower($valueWehelpyou['status'])) {
-                                case 'item picked':
-                                    if (!$hasPicked) {
-                                        $statusOrder[] = [
-                                            'text'  => 'Driver mengambil pesanan di outlet',
-                                            'date'  => $valueWehelpyou['created_at']
-                                        ];
-                                        $hasPicked = true;
-                                    }
+                            switch (strtolower($valueWehelpyou['status_id'])) {
+                                case 8:
+                                    $statusOrder[] = [
+                                        'text'  => 'Driver dalam perjalanan menuju outlet',
+                                        'date'  => $valueWehelpyou['created_at']
+                                    ];
                                     break;
-                                case 'enroute drop':
+                                case 32:
+                                    $statusOrder[] = [
+                                        'text'  => 'Driver mengambil pesanan di outlet',
+                                        'date'  => $valueWehelpyou['created_at']
+                                    ];
+                                    break;
+                                case 9:
                                     $statusOrder[] = [
                                         'text'  => 'Pesanan sudah diambil dan sedang menuju lokasi #temansejiwa',
                                         'date'  => $valueWehelpyou['created_at']
                                     ];
                                     break;
-                                case 'completed':
+                                case 2:
                                     $statusOrder[] = [
                                         'text'  => 'Pesanan telah selesai dan diterima',
                                         'date'  => $valueWehelpyou['created_at']
                                     ];
                                     break;
-                                case 'cancelled, without refund':
-                                case 'order failed':
-                                case 'cancelled by partner':
+                                case 89:
+                                case 90:
+                                case 91:
                                     $statusOrder[] = [
                                         'text'  => 'Pengantaran pesanan telah dibatalkan',
                                         'date'  => $valueWehelpyou['created_at']
                                     ];
                                     break;
-                                case 'rejected':
+                                case 96:
                                     $statusOrder[] = [
                                         'text'  => 'Pesanan telah dibatalkan karena driver tidak dapat mencapai lokasi #temansejiwa',
                                         'date'  => $valueWehelpyou['created_at']
