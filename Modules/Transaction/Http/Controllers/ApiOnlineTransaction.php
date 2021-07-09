@@ -3067,6 +3067,7 @@ class ApiOnlineTransaction extends Controller
         	$result = app($this->promo)->getTransactionCheckPromoRule($result, $promo_source, $code ?? $deals ?? $request);
         }
 
+        $result['delivery_type'] = $this->showListDelivery($result['delivery_type'], $result['available_delivery']);
         $result['payment_detail'] = [];
         
         //subtotal
@@ -4920,5 +4921,24 @@ class ApiOnlineTransaction extends Controller
     		'point' => $post['point'] ?? 0,
     		'cashback' => $post['cashback'] ?? 0
     	];
+    }
+
+    public function showListDelivery($showDelivery, $listDelivery)
+    {
+    	if (empty($listDelivery) || $showDelivery != 1) {
+    		return $showDelivery;
+    	}
+
+    	$showList = 0;
+    	foreach ($listDelivery as $val) {
+    		if ($val['disable']) {
+    			continue;
+    		}
+
+    		$showList = 1;
+    		break;
+    	}
+    	
+    	return $showList;
     }
 }

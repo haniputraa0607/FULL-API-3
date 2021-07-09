@@ -2653,7 +2653,7 @@ class PromoCampaignTools{
     	$courierPromo = null;
     	foreach ($listDelivery as $delivery) {
     		if ($this->checkShipmentRule($isAllShipment, $delivery['code'], $promoShipment)) {
-    			$courierPromo = $courierPromo ?? $delivery;
+    			// $courierPromo = $courierPromo ?? $delivery;
 	    		if ((empty($courier) && $delivery['disable'] == 0)
 	    			|| $delivery['courier'] == $courier
 	    		) {
