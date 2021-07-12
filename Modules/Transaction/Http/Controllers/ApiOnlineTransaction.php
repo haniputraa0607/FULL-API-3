@@ -2137,9 +2137,9 @@ class ApiOnlineTransaction extends Controller
                 }
             }
 
-            if($outlet['today']['close']){
-                $outlet['today']['close'] = date('Y-m-d H:i:s', strtotime($outlet['today']['close'].' + '.$settingTime['value'].'minutes'));
-            }
+            // if($outlet['today']['close']){
+            //     $outlet['today']['close'] = date('Y-m-d H:i:s', strtotime($outlet['today']['close'].' + '.$settingTime['value'].'minutes'));
+            // }
 
         }
 
