@@ -581,7 +581,7 @@ class WeHelpYou
 				$latestStatus = $statusName;
 				$latestStatusId = $status['status_id'];
 
-				if (in_array($latestStatusId, [2, 9])) { // Completed, Enroute drop
+				if (in_array($latestStatusId, [2])) { // Completed
 
 					(new ApiOutletApp)->insertUserCashback($trx);
 		            $trx_pickup->update(['show_confirm' => '1']);
