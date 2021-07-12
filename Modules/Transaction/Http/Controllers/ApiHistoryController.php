@@ -505,7 +505,7 @@ class ApiHistoryController extends Controller
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
             ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
             ->where('transactions.id_user', $id)
-            ->with('outlet', 'logTopup', 'transaction_pickup_go_send')
+            ->with('outlet', 'logTopup', 'transaction_pickup_go_send', 'transaction_pickup_wehelpyou')
             ->orderBy('transaction_date', 'DESC')
             ->groupBy('transactions.id_transaction');
         if ($post['brand'] ?? false) {
@@ -624,13 +624,15 @@ class ApiHistoryController extends Controller
         ];
 
         foreach ($transaction as $key => $value) {
-            if ($value['reject_at']) {
+            if ($value['reject_at'] || (!empty($value['transaction_pickup_wehelpyou']['latest_status_id']) && $value['transaction_pickup_wehelpyou']['latest_status_id'] == 96)) {
                 $last_status = $lastStatusText['rejected'];
             } elseif ($value['arrived_at'] || $value['taken_by_system_at'] || ($value['taken_at'] && $value['pickup_by'] == 'Customer')) {
                 $last_status = $lastStatusText['completed'];
             } elseif (($value['transaction_pickup_go_send']['latest_status'] ?? false) == 'out_for_delivery') {
                 $last_status = $lastStatusText['on_delivery'];
-            } elseif ($value['ready_at']) {
+            } elseif(($value['transaction_pickup_wehelpyou']['latest_status_id'] ?? false) == 9){
+                $last_status = $lastStatusText['on_delivery'];
+            }elseif ($value['ready_at']) {
                 $last_status = $lastStatusText['ready'];
             } elseif ($value['receive_at']) {
                 $last_status = $lastStatusText['received'];
@@ -677,7 +679,7 @@ class ApiHistoryController extends Controller
     {
         $transaction = Transaction::select(\DB::raw('*,sum(transaction_products.transaction_product_qty) as sum_qty'))->join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
-            ->with('outlet', 'transaction_pickup_go_send')
+            ->with('outlet', 'transaction_pickup_go_send', 'transaction_pickup_wehelpyou')
             ->where('transaction_payment_status', 'Completed')
             ->where(function ($q) {
                 $q->where(function ($q2) {
@@ -733,11 +735,13 @@ class ApiHistoryController extends Controller
         ];
 
         foreach ($transaction as $key => $value) {
-            if ($value['reject_at']) {
+            if ($value['reject_at'] || (!empty($value['transaction_pickup_wehelpyou']['latest_status_id']) && $value['transaction_pickup_wehelpyou']['latest_status_id'] == 96)) {
                 $last_status = $lastStatusText['rejected'];
             } elseif ($value['arrived_at'] || $value['taken_by_system_at'] || ($value['taken_at'] && $value['pickup_by'] == 'Customer')) {
                 $last_status = $lastStatusText['completed'];
             } elseif (($value['transaction_pickup_go_send']['latest_status'] ?? false) == 'out_for_delivery') {
+                $last_status = $lastStatusText['on_delivery'];
+            }elseif(($value['transaction_pickup_wehelpyou']['latest_status_id'] ?? false) == 9){
                 $last_status = $lastStatusText['on_delivery'];
             } elseif ($value['ready_at']) {
                 $last_status = $lastStatusText['ready'];

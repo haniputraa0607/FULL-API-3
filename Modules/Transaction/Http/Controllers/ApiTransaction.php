@@ -3241,7 +3241,7 @@ class ApiTransaction extends Controller
                             break;
                         case 'rejected':
                             $result['transaction_status'] = 0;
-                            $result['delivery_info']['delivery_status_code'] = 0;
+                            $result['delivery_info']['delivery_status_code'] = null;
                             $result['delivery_info']['booking_status'] = 0;
                             $result['transaction_status_text']         = $deliveryStatus[8][0];
                             $result['delivery_info']['delivery_status'] = $deliveryStatus[8][1];
@@ -3370,7 +3370,7 @@ class ApiTransaction extends Controller
                             break;
                         case 96:
                             $result['transaction_status'] = 0;
-                            $result['delivery_info']['delivery_status_code'] = 0;
+                            $result['delivery_info']['delivery_status_code'] = null;
                             $result['delivery_info']['booking_status'] = 0;
                             $result['delivery_info']['delivery_status'] = $deliveryStatus[8][1];
                             $result['delivery_info']['cancelable']     = 0;
