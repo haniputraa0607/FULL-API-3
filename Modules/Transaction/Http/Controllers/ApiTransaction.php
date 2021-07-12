@@ -3119,7 +3119,7 @@ class ApiTransaction extends Controller
                 ];
 
                 $deliveryStatus = [
-                    ['PESANAN SUDAH SIAP DAN MENUNGGU PICK UP', 'Sedang mencari driver'],
+                    ['ORDER SEDANG DIPERSIAPKAN', 'Sedang mencari driver'],
                     ['DRIVER DITEMUKAN DAN SEDANG MENUJU OUTLET', 'Driver ditemukan'],
                     ['DRIVER SEDANG MENUJU OUTLET', 'Driver dalam perjalanan menuju Outlet'],
                     ['DRIVER MENGAMBIL PESANAN DI OUTLET', 'Driver mengambil pesanan di Outlet'],
