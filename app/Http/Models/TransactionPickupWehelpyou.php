@@ -141,7 +141,9 @@ class TransactionPickupWehelpyou extends Eloquent
 		'cancel_reason',
 		'tracking_photo',
 		'retry_count',
-		'stop_booking_at'
+		'stop_booking_at',
+		'address_name',
+		'short_address'
 	];
 
 	public function transaction_pickup()
