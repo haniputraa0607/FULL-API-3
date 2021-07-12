@@ -4762,16 +4762,16 @@ class ApiOnlineTransaction extends Controller
         foreach ($setting as $value) {
             if(!empty($post['all'])){
                 if(!empty($value['logo'])){
-                    $value['logo'] = config('url.storage_url_api').$value['logo'];
+                    $value['logo'] = config('url.storage_url_api').$value['logo'].'?='.time();
                 }elseif(!empty($setting_default)){
-                    $value['logo'] = config('url.storage_url_api').$setting_default;
+                    $value['logo'] = config('url.storage_url_api').$setting_default.'?='.time();
                 }
                 $delivery[] = $value;
             }elseif($value['show_status'] == 1){
                 if(!empty($value['logo'])){
-                    $value['logo'] = config('url.storage_url_api').$value['logo'];
+                    $value['logo'] = config('url.storage_url_api').$value['logo'].'?='.time();
                 }elseif(!empty($setting_default)){
-                    $value['logo'] = config('url.storage_url_api').$setting_default;
+                    $value['logo'] = config('url.storage_url_api').$setting_default.'?='.time();
                 }
                 $delivery[] = $value;
             }
