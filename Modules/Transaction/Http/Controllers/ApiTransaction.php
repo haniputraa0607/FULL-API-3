@@ -3098,7 +3098,16 @@ class ApiTransaction extends Controller
                     $result['transaction_status_text'] = 'PESANAN SUDAH SIAP DIAMBIL';
                 } elseif($list['detail']['receive_at'] != null) {
                     $result['transaction_status'] = 4;
-                    $result['delivery_info']['delivery_status_code']   = 7;
+                    $result['delivery_info'] = [
+                        'delivery_status' => '',
+                        'delivery_address' => '',
+                        'delivery_address_note' => '',
+                        'booking_status' => 0,
+                        'cancelable' => 1,
+                        'go_send_order_no' => '',
+                        'live_tracking_url' => '',
+                        'delivery_status_code' => 7
+                    ];
                     $result['transaction_status_text'] = 'PESANAN DITERIMA. ORDER SEDANG DIPERSIAPKAN';
                 } else {
                     $result['transaction_status'] = 5;
@@ -3366,6 +3375,14 @@ class ApiTransaction extends Controller
                             $result['delivery_info']['delivery_status'] = $deliveryStatus[8][1];
                             $result['delivery_info']['cancelable']     = 0;
                             $result['transaction_status_text']         = $deliveryStatus[8][0];
+                            break;
+                        case 95:
+                            $result['delivery_info']['booking_status']  = 0;
+                            $result['delivery_info']['delivery_status_code'] = 6;
+                            $result['transaction_status_text']          = $deliveryStatus[7][0];
+                            $result['delivery_info']['delivery_status'] = $deliveryStatus[7][1];
+                            $result['delivery_info']['cancelable']      = 0;
+                            $result['transaction_status'] = 0;
                             break;
                         default:
                             break;
@@ -3738,6 +3755,13 @@ class ApiTransaction extends Controller
                                 case 96:
                                     $statusOrder[] = [
                                         'text'  => 'Pesanan telah dibatalkan karena driver tidak dapat mencapai lokasi #temansejiwa',
+                                        'date'  => $valueWehelpyou['created_at']
+                                    ];
+                                    break;
+                                case 95:
+                                    $flagStatus['no_driver'] = 1;
+                                    $statusOrder[] = [
+                                        'text'  => 'Driver tidak ditemukan',
                                         'date'  => $valueWehelpyou['created_at']
                                     ];
                                     break;
