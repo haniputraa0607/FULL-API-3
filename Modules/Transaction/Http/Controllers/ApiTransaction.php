@@ -4111,8 +4111,8 @@ class ApiTransaction extends Controller
 	                'transaction_type' => 'Delivery Order',
 	                'courier' => $address->courier,
 	                'destination' => [
-	                    'name' => null,
-	                    'short_address' => null,
+	                    'name' => $address->address_name ?: ($address->short_address ?: $address->receiver_address),
+	                    'short_address' => $address->short_address ?: $address->receiver_address,
 	                    'address' => $address->receiver_address,
 	                    'description' => $address->receiver_notes,
 	                    'latitude' => $address->receiver_latitude,

@@ -286,8 +286,10 @@ class WeHelpYou
 		return $courier;
 	}
 
-	public static function createTrxPickupWehelpyou($dataTrxPickup, $request, $outlet, $totalProductQty)
+	public static function createTrxPickupWehelpyou($dataTrxPickup, $request, $outlet, $totalProductQty, $userAddress)
 	{
+		$addressName = $userAddress->name;
+		$shortAdress = $request['destination']['short_address'] ?? $request['destination']['address'] ?? $userAddress->short_address;
 		$itemSpecification = self::getSettingItemSpecification();
 		if (self::isNotValidDimension($itemSpecification, $totalProductQty)) {
 			return false;
@@ -319,7 +321,10 @@ class WeHelpYou
 			'item_specification_width' 				=> 40,
 			'item_specification_height' 			=> 40,
 			'item_specification_weight' 			=> 20, // kilogram
-			'item_specification_remarks' 			=> $itemSpecification['remarks'] ?? null
+			'item_specification_remarks' 			=> $itemSpecification['remarks'] ?? null,
+
+			'address_name' 	=> $addressName,
+			'short_address' => $shortAdress
 		]);
 	}
 
@@ -581,7 +586,7 @@ class WeHelpYou
 				$latestStatus = $statusName;
 				$latestStatusId = $status['status_id'];
 
-				if (in_array($latestStatusId, [2, 9])) { // Completed, Enroute drop
+				if (in_array($latestStatusId, [2])) { // Completed
 
 					(new ApiOutletApp)->insertUserCashback($trx);
 		            $trx_pickup->update(['show_confirm' => '1']);

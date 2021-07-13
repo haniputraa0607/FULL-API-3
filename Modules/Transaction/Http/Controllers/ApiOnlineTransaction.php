@@ -1769,7 +1769,8 @@ class ApiOnlineTransaction extends Controller
 
                 $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
             } elseif ($post['type'] == 'Delivery Order') {
-            	$createTrxPickupWHY = WeHelpYou::createTrxPickupWehelpyou($insertPickup, $request, $outlet, $totalProductQty);
+            	
+            	$createTrxPickupWHY = WeHelpYou::createTrxPickupWehelpyou($insertPickup, $request, $outlet, $totalProductQty, $addressx);
             	if (!$createTrxPickupWHY) {
             		DB::rollback();
                     return response()->json([
