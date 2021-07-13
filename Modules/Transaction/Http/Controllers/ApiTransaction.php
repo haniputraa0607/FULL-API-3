@@ -3119,7 +3119,7 @@ class ApiTransaction extends Controller
                 ];
 
                 $deliveryStatus = [
-                    ['PESANAN SUDAH SIAP DAN MENUNGGU PICK UP', 'Sedang mencari driver'],
+                    ['ORDER SEDANG DIPERSIAPKAN', 'Sedang mencari driver'],
                     ['DRIVER DITEMUKAN DAN SEDANG MENUJU OUTLET', 'Driver ditemukan'],
                     ['DRIVER SEDANG MENUJU OUTLET', 'Driver dalam perjalanan menuju Outlet'],
                     ['DRIVER MENGAMBIL PESANAN DI OUTLET', 'Driver mengambil pesanan di Outlet'],
@@ -3362,6 +3362,7 @@ class ApiTransaction extends Controller
                         case 90:
                         case 91:
                         case 99:
+                            $result['transaction_status'] = 0;
                             $result['delivery_info']['booking_status'] = 0;
                             $result['delivery_info']['delivery_status_code'] = 0;
                             $result['delivery_info']['delivery_status'] = $deliveryStatus[8][1];
