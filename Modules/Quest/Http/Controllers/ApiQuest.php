@@ -1867,7 +1867,7 @@ class ApiQuest extends Controller
             if ($myQuest) {
                 $result['messages'] = ['Silahkan lengkapi profil untuk mengikuti misi'];
             } else {
-                $result['messages'][] = ['Silahkan lengkapi profil untuk mengikuti misi'];
+                $result['messages'][] = 'Silahkan lengkapi profil untuk mengikuti misi';
             }
         }
         return $result;
