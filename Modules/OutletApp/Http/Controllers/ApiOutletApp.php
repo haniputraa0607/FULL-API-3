@@ -4870,6 +4870,12 @@ class ApiOutletApp extends Controller
                     default:
                         break;
                 }
+
+                if (!empty($list['detail']['receive_at']) && empty($list['transaction_pickup_wehelpyou']['poNo'])) {
+                	$result['transaction_status_text'] = 'GAGAL MENCARI DRIVER';
+                	$result['delivery_info']['go_send_order_no'] = '-';
+                }
+
                 $result['delivery_info_be'] = [
                     'delivery_address' => $list['transaction_pickup_wehelpyou']['receiver_address']?:'',
                     'delivery_address_note' => $list['transaction_pickup_wehelpyou']['receiver_notes'] ?: '',
