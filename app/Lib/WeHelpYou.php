@@ -238,6 +238,7 @@ class WeHelpYou
 			if ($delivery['available_status'] != 1 
 				|| (isset($outletSetting[$delivery['code']]) && $outletSetting[$delivery['code']]['available_status'] != 1)
 				|| empty($delivery['price'])
+				|| (!empty($delivery['price']) && $credit < $delivery['price'] && empty($additionalDelivery[$delivery['code']]))
 				|| $credit <= 0
 			) {
 				$disable = 1;
