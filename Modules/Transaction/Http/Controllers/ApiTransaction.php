@@ -3388,6 +3388,10 @@ class ApiTransaction extends Controller
                         default:
                             break;
                     }
+
+                    if (empty($list['transaction_pickup_wehelpyou']['poNo'])) {
+                    	$result['delivery_info']['delivery_status_code'] = 7;
+                    }
                     $result['delivery_info_be'] = [
                         'delivery_address' => $list['transaction_pickup_wehelpyou']['receiver_address']?:'',
                         'delivery_address_note' => $list['transaction_pickup_wehelpyou']['receiver_notes'] ?: '',
