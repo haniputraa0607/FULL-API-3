@@ -4547,8 +4547,14 @@ class ApiTransaction extends Controller
 
     public function getListLocation($request)
     {
+        $key_maps = env('LOCATION_PRIMARY_KEY');
+        if (env('LOCATION_PRIMARY_KEY_TOTAL')) {
+            $weekNow = date('W') % env('LOCATION_PRIMARY_KEY_TOTAL');
+            $key_maps = env('LOCATION_PRIMARY_KEY'.$weekNow, $key_maps);
+        }
+
     	$param = [
-            'key'		=> env('LOCATION_PRIMARY_KEY'),
+            'key'		=> $key_maps,
             'location'	=> sprintf('%s,%s',$request->json('latitude'),$request->json('longitude')),
             'rankby'	=> 'distance'
         ];
