@@ -4569,10 +4569,10 @@ class ApiTransaction extends Controller
     		|| ($gmaps['status'] === 'OK' && count($gmaps['results']) < env('LOCATION_MIN_TOTAL'))
     	) {
 	    	// get place from google maps . max 20
-	        $key_maps = env('GMAPS_PLACE_KEY');
-	        if (env('GMAPS_PLACE_KEY_TOTAL')) {
-	            $weekNow = date('W') % env('GMAPS_PLACE_KEY_TOTAL');
-	            $key_maps = env('GMAPS_PLACE_KEY'.$weekNow, $key_maps);
+	        $key_maps = env('LOCATION_SECONDARY_KEY');
+	        if (env('LOCATION_SECONDARY_KEY_TOTAL')) {
+	            $weekNow = date('W') % env('LOCATION_SECONDARY_KEY_TOTAL');
+	            $key_maps = env('LOCATION_SECONDARY_KEY'.$weekNow, $key_maps);
 	        }
 	        $param = [
 	            'key'=>$key_maps,
