@@ -25,7 +25,8 @@ class Province extends Model
 	public $timestamps = false;
 
 	protected $fillable = [
-		'province_name'
+		'province_name',
+		'time_zone_utc'
 	];
 
 	public function cities()
