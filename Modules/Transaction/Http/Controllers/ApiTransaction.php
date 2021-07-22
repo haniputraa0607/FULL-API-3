@@ -4370,21 +4370,7 @@ class ApiTransaction extends Controller
         $latitude = $request->json('latitude');
         $longitude = $request->json('longitude');
 
-        // get place from google maps . max 20
-        $key_maps = env('GMAPS_PLACE_KEY');
-        if (env('GMAPS_PLACE_KEY_TOTAL')) {
-            $weekNow = date('W') % env('GMAPS_PLACE_KEY_TOTAL');
-            $key_maps = env('GMAPS_PLACE_KEY'.$weekNow, $key_maps);
-        }
-        $param = [
-            'key'=>$key_maps,
-            'location'=>sprintf('%s,%s',$request->json('latitude'),$request->json('longitude')),
-            'rankby'=>'distance'
-        ];
-        if($request->json('keyword')){
-            $param['keyword'] = $request->json('keyword');
-        }
-        $gmaps = MyHelper::get('https://maps.googleapis.com/maps/api/place/nearbysearch/json?'.http_build_query($param));
+        $gmaps = $this->getListLocation($request);
 
         if($gmaps['status'] === 'OK'){
             $gmaps = $gmaps['results'];
@@ -4496,23 +4482,8 @@ class ApiTransaction extends Controller
         }
 
         $user_address = $user_address->get()->toArray();
-
         if (!$user_address) {
-            // get place from google maps . max 20
-            $key_maps = env('GMAPS_PLACE_KEY');
-            if (env('GMAPS_PLACE_KEY_TOTAL')) {
-                $weekNow = date('W') % env('GMAPS_PLACE_KEY_TOTAL');
-                $key_maps = env('GMAPS_PLACE_KEY'.$weekNow, $key_maps);
-            }
-            $param = [
-                'key'=>$key_maps,
-                'location'=>sprintf('%s,%s',$request->json('latitude'),$request->json('longitude')),
-                'rankby'=>'distance'
-            ];
-            if($request->json('keyword')){
-                $param['keyword'] = $request->json('keyword');
-            }
-            $gmaps = MyHelper::get('https://maps.googleapis.com/maps/api/place/nearbysearch/json?'.http_build_query($param));
+            $gmaps = $this->getListLocation($request);
 
             if($gmaps['status'] === 'OK'){
                 $gmaps = $gmaps['results'];
@@ -4572,6 +4543,43 @@ class ApiTransaction extends Controller
             ];
         }
         return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function getListLocation($request)
+    {
+    	$param = [
+            'key'		=> env('LOCATION_PRIMARY_KEY'),
+            'location'	=> sprintf('%s,%s',$request->json('latitude'),$request->json('longitude')),
+            'rankby'	=> 'distance'
+        ];
+
+        if($request->json('keyword')){
+            $param['keyword'] = $request->json('keyword');
+        }
+
+        $gmaps = MyHelper::get(env('LOCATION_PRIMARY_URL').'?'.http_build_query($param));
+        
+    	if ($gmaps['status'] !== 'OK'
+    		|| ($gmaps['status'] === 'OK' && count($gmaps['results']) < env('LOCATION_MIN_TOTAL'))
+    	) {
+	    	// get place from google maps . max 20
+	        $key_maps = env('GMAPS_PLACE_KEY');
+	        if (env('GMAPS_PLACE_KEY_TOTAL')) {
+	            $weekNow = date('W') % env('GMAPS_PLACE_KEY_TOTAL');
+	            $key_maps = env('GMAPS_PLACE_KEY'.$weekNow, $key_maps);
+	        }
+	        $param = [
+	            'key'=>$key_maps,
+	            'location'=>sprintf('%s,%s',$request->json('latitude'),$request->json('longitude')),
+	            'rankby'=>'distance'
+	        ];
+	        if($request->json('keyword')){
+	            $param['keyword'] = $request->json('keyword');
+	        }
+        	$gmaps = MyHelper::get(env('LOCATION_SECONDARY_URL').'?'.http_build_query($param));
+    	}
+
+        return $gmaps;
     }
 
     public function detailAddress(GetAddress $request) {
