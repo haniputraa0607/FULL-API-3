@@ -3389,7 +3389,7 @@ class ApiTransaction extends Controller
                             break;
                     }
 
-                    if (empty($list['transaction_pickup_wehelpyou']['poNo'])) {
+                    if (empty($list['transaction_pickup_wehelpyou']['poNo']) && $list['detail']['receive_at']) {
                     	$result['delivery_info']['delivery_status_code'] = 7;
                     }
                     $result['delivery_info_be'] = [
