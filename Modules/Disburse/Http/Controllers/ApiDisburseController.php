@@ -783,7 +783,7 @@ class ApiDisburseController extends Controller
             ->leftJoin('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
             ->select('disburse.disburse_status as 0', DB::raw("CONCAT (outlets.outlet_code, ' - ',outlets.outlet_name) as '1'"), DB::raw("DATE_FORMAT(disburse.created_at, '%d %b %Y %H:%i') as '2'"),
                 DB::raw("DATE_FORMAT(transactions.transaction_date, '%d %b %Y %H:%i') as '3'"), 'transactions.transaction_receipt_number as 4',
-                DB::raw('FORMAT(transactions.transaction_grandtotal,2) as "5"'), DB::raw('FORMAT(transactions.transaction_discount,2) as "6"'), DB::raw('transactions.transaction_shipment_go_send as "7"'),
+                DB::raw('FORMAT(transactions.transaction_grandtotal,2) as "5"'), DB::raw('FORMAT(transactions.transaction_discount,2) as "6"'), DB::raw('(transactions.transaction_shipment_go_send+transactions.transaction_shipment) as "7"'),
                 DB::raw('FORMAT(transactions.transaction_subtotal,2) as "8"'), DB::raw('FORMAT(disburse_outlet_transactions.fee_item,2) as "9"'), DB::raw('FORMAT(disburse_outlet_transactions.payment_charge,2) as "10"'),
                 DB::raw('FORMAT(disburse_outlet_transactions.discount,2) as "11"'), DB::raw('FORMAT(disburse_outlet_transactions.subscription,2) as "12"'), DB::raw('FORMAT(disburse_outlet_transactions.point_use_expense,2) as "13"'),
                 DB::raw('FORMAT(disburse_outlet_transactions.income_outlet,2) as "14"'), DB::raw('FORMAT(disburse_outlet_transactions.income_central,2) as "15"'), DB::raw('FORMAT(disburse_outlet_transactions.expense_central,2) as "16"'))
@@ -1691,7 +1691,7 @@ class ApiDisburseController extends Controller
                         SUM(tps.subscription_nominal) as total_subscription, 
                         SUM(bundling_product_total_discount) as total_discount_bundling,
                         SUM(transactions.transaction_subtotal) as total_sub_total, 
-                        SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
+                        SUM(transactions.transaction_shipment_go_send+transactions.transaction_shipment) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
                         SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
                         SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription, SUM(bundling_product_fee_central) total_income_bundling_product,
                         SUM(fee_promo_payment_gateway_central) total_income_promo_payment_gateway, SUM(fee_promo_payment_gateway_outlet+fee_promo_payment_gateway_central) total_promo_payment_gateway,
@@ -1803,7 +1803,7 @@ class ApiDisburseController extends Controller
                     ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
             }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
             ->select('promo_pg.total_received_cashback', 'rule_promo_payment_gateway.name as promo_payment_gateway_name', 'transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
-                'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
+                'transactions.transaction_date', 'transactions.transaction_shipment_go_send', 'transactions.transaction_shipment',
                 'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
                 'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code');
 
