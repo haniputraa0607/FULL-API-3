@@ -4373,8 +4373,10 @@ class ApiTransaction extends Controller
         $gmaps = $this->getListLocation($request);
 
         if($gmaps['status'] === 'OK'){
+        	if ($gmaps['send_gmaps_data'] ?? false) {
+            	MyHelper::sendGmapsData($gmaps['results']);
+        	}
             $gmaps = $gmaps['results'];
-            MyHelper::sendGmapsData($gmaps);
         }else{
             $gmaps = [];
         };
@@ -4486,8 +4488,10 @@ class ApiTransaction extends Controller
             $gmaps = $this->getListLocation($request);
 
             if($gmaps['status'] === 'OK'){
+            	if ($gmaps['send_gmaps_data'] ?? false) {
+	            	MyHelper::sendGmapsData($gmaps['results']);
+	        	}
                 $gmaps = $gmaps['results'];
-                MyHelper::sendGmapsData($gmaps);
             }else{
                 return MyHelper::checkGet([]);
             };
@@ -4548,6 +4552,7 @@ class ApiTransaction extends Controller
     public function getListLocation($request)
     {
         $key_maps = env('LOCATION_PRIMARY_KEY');
+        $locationUrl = env('LOCATION_PRIMARY_URL');
         if (env('LOCATION_PRIMARY_KEY_TOTAL')) {
             $weekNow = date('W') % env('LOCATION_PRIMARY_KEY_TOTAL');
             $key_maps = env('LOCATION_PRIMARY_KEY'.$weekNow, $key_maps);
@@ -4563,13 +4568,14 @@ class ApiTransaction extends Controller
             $param['keyword'] = $request->json('keyword');
         }
 
-        $gmaps = MyHelper::get(env('LOCATION_PRIMARY_URL').'?'.http_build_query($param));
-        
+        $gmaps = MyHelper::get($locationUrl.'?'.http_build_query($param));
+
     	if ($gmaps['status'] !== 'OK'
     		|| ($gmaps['status'] === 'OK' && count($gmaps['results']) < env('LOCATION_MIN_TOTAL'))
     	) {
 	    	// get place from google maps . max 20
 	        $key_maps = env('LOCATION_SECONDARY_KEY');
+        	$locationUrl = env('LOCATION_SECONDARY_URL');
 	        if (env('LOCATION_SECONDARY_KEY_TOTAL')) {
 	            $weekNow = date('W') % env('LOCATION_SECONDARY_KEY_TOTAL');
 	            $key_maps = env('LOCATION_SECONDARY_KEY'.$weekNow, $key_maps);
@@ -4582,8 +4588,10 @@ class ApiTransaction extends Controller
 	        if($request->json('keyword')){
 	            $param['keyword'] = $request->json('keyword');
 	        }
-        	$gmaps = MyHelper::get(env('LOCATION_SECONDARY_URL').'?'.http_build_query($param));
+        	$gmaps = MyHelper::get($locationUrl.'?'.http_build_query($param));
     	}
+
+    	$gmaps['send_gmaps_data'] = (strpos($locationUrl, 'google') !== false) ? true : false;
 
         return $gmaps;
     }
