@@ -3211,6 +3211,16 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
                 ),
+            321 =>
+                array(
+                    'id_feature' => 322,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Wehelpyou',
+                    'show_hide' => 1,
+                    'order' => 120,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
         ));
     }
 }
