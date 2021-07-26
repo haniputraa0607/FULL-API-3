@@ -95,7 +95,7 @@
                         }
                     ?>
                 </td>
-                <td style="text-align: left">{{$val['transaction_shipment_go_send']}}</td>
+                <td style="text-align: left">{{$val['transaction_shipment_go_send']+$val['transaction_shipment']}}</td>
                 <td style="text-align: left">{{$val['transaction_grandtotal']-$sub}}</td>
                 <td style="text-align: left">{{(float)$val['fee_item']}}</td>
                 <td style="text-align: left">
