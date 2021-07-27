@@ -312,7 +312,7 @@ class WeHelpYou
 			'receiver_name' 		=> $request->user()->name,
 			'receiver_phone' 		=> $request->user()->phone,
 			'receiver_address' 		=> $request['destination']['address'],
-			'receiver_notes' 		=> $request['destination']['description'],
+			'receiver_notes' 		=> $request['destination']['description'] ?? null,
 			'receiver_latitude' 	=> $request['destination']['latitude'],
 			'receiver_longitude' 	=> $request['destination']['longitude'],
 
