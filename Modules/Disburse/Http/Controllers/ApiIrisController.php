@@ -167,7 +167,7 @@ class ApiIrisController extends Controller
                                     ->orWhereNull('transactions.transaction_flag_invalid');
                             })
                             ->whereDate('transactions.transaction_date', '<=', $dateForQuery)
-                            ->select('disburse_outlet_transactions.*', 'transaction_shipment_go_send', 'transactions.transaction_date', 'transactions.id_outlet', 'transactions.id_transaction', 'transactions.transaction_subtotal',
+                            ->select('disburse_outlet_transactions.*', 'transactions.transaction_shipment', 'transaction_shipment_go_send', 'transactions.transaction_date', 'transactions.id_outlet', 'transactions.id_transaction', 'transactions.transaction_subtotal',
                                 'transactions.transaction_grandtotal', 'transactions.transaction_discount', 'transactions.id_promo_campaign_promo_code',
                                 'bank_name.bank_code', 'outlets.status_franchise', 'outlets.outlet_special_status', 'outlets.outlet_special_fee',
                                 'bank_accounts.id_bank_account', 'bank_accounts.beneficiary_name', 'bank_accounts.beneficiary_account', 'bank_accounts.beneficiary_email', 'bank_accounts.beneficiary_alias')
@@ -212,6 +212,8 @@ class ApiIrisController extends Controller
                                         $transactionShipment = 0;
                                         if(!empty($data['transaction_shipment_go_send'])){
                                             $transactionShipment = $data['transaction_shipment_go_send'];
+                                        }elseif ($data['transaction_shipment']){
+                                            $transactionShipment = $data['transaction_shipment'];
                                         }
 
                                         //set to send disburse per bank account
