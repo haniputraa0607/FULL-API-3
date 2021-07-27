@@ -924,6 +924,10 @@ class ApiProductController extends Controller
 		if(isset($post['rule'])){
             foreach ($post['rule'] as $rule){
                 if($rule[0] !== 'all_product'){
+                	if ($rule[1] == 'like' && isset($rule[2])) {
+                		$rule[2] = '%' . $rule[2] . '%';
+                	}
+
                     if($post['operator'] == 'or'){
                         if(isset($rule[2])){
                             $product->orWhere('products.'.$rule[0], $rule[1],$rule[2]);
