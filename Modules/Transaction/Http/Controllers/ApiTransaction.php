@@ -3619,7 +3619,7 @@ class ApiTransaction extends Controller
                     } elseif ($list['detail']['ready_at'] != null) {
                         $is_admin = $request->user()->tokenCan('be');
                         $statusOrder[] = [
-                            'text'  => 'Pesanan sudah siap dan menunggu diambil Driver'. ($list['detail']['is_autoready'] && $is_admin ? ' (auto ready by system)' : ''),
+                            'text'  => 'Pesanan sudah siap diambil Driver'. ($list['detail']['is_autoready'] && $is_admin ? ' (auto ready by system)' : ''),
                             'date'  => $list['detail']['ready_at']
                         ];
                     }
@@ -3670,7 +3670,7 @@ class ApiTransaction extends Controller
                                 case 'enroute drop':
                                 case 'out_for_delivery':
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan sudah diambil dan sedang menuju lokasi #temansejiwa',
+                                        'text'  => 'Pesanan sudah diambil dan sedang diantar ke lokasi #temansejiwa',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     if (!$hasPicked) {
@@ -3684,7 +3684,7 @@ class ApiTransaction extends Controller
                                 case 'completed':
                                 case 'delivered':
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan telah selesai dan diterima',
+                                        'text'  => 'Pesanan telah selesai',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
@@ -3739,13 +3739,13 @@ class ApiTransaction extends Controller
                                     break;
                                 case 9:
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan sudah diambil dan sedang menuju lokasi #temansejiwa',
+                                        'text'  => 'Pesanan sudah diambil dan sedang diantar ke lokasi #temansejiwa',
                                         'date'  => $valueWehelpyou['created_at']
                                     ];
                                     break;
                                 case 2:
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan telah selesai dan diterima',
+                                        'text'  => 'Pesanan telah selesai',
                                         'date'  => $valueWehelpyou['created_at']
                                     ];
                                     break;
