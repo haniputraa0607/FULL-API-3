@@ -324,7 +324,7 @@ class ApiReportDisburseController extends Controller
                         ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
                 }, 'vouchers.deal', 'promo_campaign', 'subscription_user_voucher.subscription_user.subscription'])
                 ->select('transactions.id_subscription_user_voucher', 'transaction_payment_shopee_pays.id_transaction_payment_shopee_pay', 'payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
-                    'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
+                    'transactions.transaction_date', 'transactions.transaction_shipment_go_send', 'transactions.transaction_shipment',
                     'transactions.transaction_grandtotal', 'transactions.transaction_discount_delivery',
                     'transactions.transaction_discount', 'transactions.transaction_subtotal', 'transactions.id_promo_campaign_promo_code')
                 ->get()->toArray();
