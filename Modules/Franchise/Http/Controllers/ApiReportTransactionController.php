@@ -142,11 +142,29 @@ class ApiReportTransactionController extends Controller
                         OR `taken_by_system_at` IS NOT NULL)
                         AND DATE(transaction_date) = '$date'
                 GROUP BY DATE(transaction_date) , transaction_products.id_product , transaction_products.id_product_variant_group) as daily_report_trx_menu
-            "))
-                ->select('product_name', \DB::raw('COUNT(DISTINCT product_variants.product_variant_name) as total_variant, SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(DISTINCT(product_variants.product_variant_name)) as variant_name, name_brand, product_category_name'));
+            "));
         } else {
-            $result = DailyReportTrxMenu::select('product_name', \DB::raw('COUNT(DISTINCT product_variants.product_variant_name) as total_variant, SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal, SUM(total_product_discount) as total_product_discount, GROUP_CONCAT(DISTINCT(product_variants.product_variant_name)) as variant_name, name_brand, product_category_name'));
+            $result = new DailyReportTrxMenu;
         }
+
+        $result = $result->select(
+        	'product_name', 
+        	\DB::raw('
+        		COUNT(DISTINCT product_variants.product_variant_name) as total_variant, 
+        		SUM(total_qty) / CASE WHEN COUNT(DISTINCT product_variants.product_variant_name) != 0 
+        			THEN COUNT(DISTINCT product_variants.product_variant_name) 
+        			ELSE 1 END as total_qty, 
+        		SUM(total_nominal) / CASE WHEN COUNT(DISTINCT product_variants.product_variant_name) != 0 
+        			THEN COUNT(DISTINCT product_variants.product_variant_name) 
+        			ELSE 1 END as total_nominal, 
+        		SUM(total_product_discount) / CASE WHEN COUNT(DISTINCT product_variants.product_variant_name) != 0 
+        			THEN COUNT(DISTINCT product_variants.product_variant_name) 
+        			ELSE 1 END as total_product_discount, 
+        		GROUP_CONCAT(DISTINCT(product_variants.product_variant_name)) as variant_name, 
+        		name_brand, product_category_name
+        	')
+        );
+
         $result->leftJoin('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'daily_report_trx_menu.id_product_variant_group')
             ->leftJoin('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
             ->leftJoin('product_categories', 'product_categories.id_product_category', 'daily_report_trx_menu.id_product_category')

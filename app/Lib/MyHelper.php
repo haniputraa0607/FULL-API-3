@@ -1524,7 +1524,7 @@ class MyHelper{
 		}
 	}
 
-	public static function postWithTimeout($url, $bearer=null, $post, $form_type=0, $header=null, $timeout = 65){
+	public static function postWithTimeout($url, $bearer=null, $post, $form_type=0, $header=null, $timeout = 65, &$fullResponse = null) {
 		$client = new Client;
 
 		$content = array(
@@ -1554,10 +1554,11 @@ class MyHelper{
 				}
 			}
 		}
-		$content['timeout']=$timeout;
+		$content['timeout'] = $timeout;
 
 		try {
 			$response = $client->post($url, $content);
+			$fullResponse = $response;
 			// return plain response if json_decode fail because response is plain text
 			$return = json_decode($response->getBody()->getContents(), true)?:$response->getBody()->__toString();
 			return [
@@ -1568,6 +1569,7 @@ class MyHelper{
 			try{
 				if($e->getResponse()){
 					$response = $e->getResponse()->getBody()->getContents();
+					$fullResponse = $e->getResponse();
 					$return = json_decode($response, true);
 					return [
 						'status_code' => $e->getResponse()->getStatusCode(),
@@ -1582,7 +1584,7 @@ class MyHelper{
 		}
 	}
 
-	public static function getWithTimeout($url, $bearer=null, $post = [], $header=null, $timeout = 65){
+	public static function getWithTimeout($url, $bearer=null, $post = [], $header=null, $timeout = 65, &$fullResponse = null) {
 		$client = new Client;
 
 		$content = array(
@@ -1612,10 +1614,12 @@ class MyHelper{
 				$url .= '?' . $params;
 			}
 		}
-		$content['timeout']=$timeout;
+
+		$content['timeout'] = $timeout;
 
 		try {
 			$response = $client->get($url, $content);
+			$fullResponse = $response;
 			// return plain response if json_decode fail because response is plain text
 			$return = json_decode($response->getBody()->getContents(), true)?:$response->getBody()->__toString();
 			return [
@@ -1626,6 +1630,7 @@ class MyHelper{
 			try{
 				if($e->getResponse()){
 					$response = $e->getResponse()->getBody()->getContents();
+					$fullResponse = $e->getResponse();
 					$return = json_decode($response, true);
 					return [
 						'status_code' => $e->getResponse()->getStatusCode(),
@@ -2107,7 +2112,7 @@ class MyHelper{
 				if($row['subject'] == 'all_user'){
 					$condition[$type.'_rule_operator'] = "";
 				}elseif($row['subject'] == 'Deals' || $row['subject'] == 'Subscription' || $row['subject'] == 'Quest'){
-                    $condition[$type.'_rule_param'] = '=';
+                    $condition[$type.'_rule_operator'] = '=';
                 }
 				elseif($row['subject'] == 'trx_product' || $row['subject'] == 'trx_outlet'){
                     $condition[$type.'_rule_operator'] = $row['operatorSpecialCondition'];
@@ -3020,5 +3025,13 @@ class MyHelper{
 
         // print $command; die();
         exec($command);
+    }
+
+    public static function jj(...$param)
+    {
+    	header('Content-Type: application/json');
+
+    	echo json_encode($param);
+    	die();
     }
 }

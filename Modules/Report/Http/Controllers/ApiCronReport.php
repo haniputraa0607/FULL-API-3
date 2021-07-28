@@ -627,7 +627,11 @@ class ApiCronReport extends Controller
 				$sum['cust_adult'] += $value['cust_adult'];
 				$sum['cust_old'] += $value['cust_old'];
                 $sum['trx_net_sale'] += $value['trx_net_sale'];
-                $sum['trx_shipment_go_send'] += $value['trx_shipment_go_send'];
+                $gosend = 0;
+                if(!empty($value['trx_shipment_go_send'])){
+                    $gosend = $value['trx_shipment_go_send'];
+                }
+                $sum['trx_shipment_go_send'] += $gosend;
 
                 $save = DailyReportTrx::updateOrCreate([
                     'trx_date'  => date('Y-m-d', strtotime($value['trx_date'])),

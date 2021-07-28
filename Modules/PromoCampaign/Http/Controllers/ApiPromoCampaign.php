@@ -92,6 +92,7 @@ use Modules\SettingFraud\Entities\DailyCheckPromoCode;
 use Modules\SettingFraud\Entities\LogCheckPromoCode;
 use Illuminate\Support\Facades\Auth;
 use File;
+use App\Lib\WeHelpYou;
 
 class ApiPromoCampaign extends Controller
 {
@@ -2481,7 +2482,7 @@ class ApiPromoCampaign extends Controller
 	        /* End check promo code */
 
 	        // get data promo code, promo campaign, outlet, rule, and product
-	        $code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
+	        $code = PromoCampaignPromoCode::where('promo_code',$request->promo_code)
 	                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
 	                ->where('step_complete', '=', 1)
 	                ->where( function($q){
@@ -2565,8 +2566,8 @@ class ApiPromoCampaign extends Controller
         	// check user
 	        if(!$pct->validateUser($code['id_promo_campaign'], $id_user, $phone, $device_type, $device_id, $errors,$code['id_promo_campaign_promo_code'])){
 	            return [
-	                'status'=>'fail',
-	                'messages'=>$errors??['Promo tidak tersedia']
+	                'status' => 'fail',
+	                'messages' => $errors ?? ['Promo tidak tersedia']
 	            ];
 	        }
 
@@ -2952,18 +2953,35 @@ class ApiPromoCampaign extends Controller
 
     	$shipment_text = null;
     	if (!empty($query[$source.'_shipment_method']) && $query['is_all_shipment'] != 1) {
+    		$online_trx = app($this->online_transaction);
     		$shipment_list = array_column($query[$source.'_shipment_method'], 'shipment_method');
-    		$shipment_list = array_flip($shipment_list);
 
+    		$shipment_list = array_flip($shipment_list);
     		if (isset($shipment_list['GO-SEND'])) {
-    			$shipment_list['Delivery'] = $shipment_list['GO-SEND'];
+    			$shipment_list['gosend'] = $shipment_list['GO-SEND'];
     			unset($shipment_list['GO-SEND']);
     		}
     		if (isset($shipment_list['Pickup Order'])) {
-    			$shipment_list['Pick Up'] = $shipment_list['Pickup Order'];
+    			$temp['Pick Up'] = $shipment_list['Pickup Order'];
     			unset($shipment_list['Pickup Order']);
+    			$shipment_list = $temp  + $shipment_list;
+
     		}
+
     		$shipment_list = array_flip($shipment_list);
+
+			$setting_shipment_list =  $online_trx->listAvailableDelivery(WeHelpYou::listDeliveryRequest())['result']['delivery'] ?? [];
+			$setting_shipment_list =  array_column($setting_shipment_list, 'code');
+
+			$selected_shipment = [];
+			if (array_diff($setting_shipment_list, $shipment_list)) {
+	    		$shipment_list = array_map(function ($shipment) use ($online_trx) { 
+	    			return $online_trx->getCourierName($shipment);
+	    		}, $shipment_list);
+			} else {
+				$shipment_list[] = 'Delivery';
+				$shipment_list = array_diff($shipment_list, $setting_shipment_list);
+			}
 
     		$shipment_text = '';
     		$shipment_count = count($shipment_list);

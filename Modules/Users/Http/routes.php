@@ -93,7 +93,7 @@ Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scope
     Route::post('delete/log', ['middleware' => 'feature_control:6', 'uses' => 'ApiUser@deleteLog']);
     Route::post('update', ['uses' => 'ApiUser@updateProfileByAdmin']);
     Route::post('update/photo', ['middleware' => 'feature_control:5', 'uses' => 'ApiUser@updateProfilePhotoByAdmin']);
-    Route::post('update/password', ['uses' => 'ApiUser@updateProfilePasswordByAdmin']);
+    Route::post('update/password', ['middleware' => 'feature_control:5', 'uses' => 'ApiUser@updateProfilePasswordByAdmin']);
     Route::post('update/level', ['middleware' => 'feature_control:5', 'uses' => 'ApiUser@updateProfileLevelByAdmin']);
     Route::post('update/outlet', ['middleware' => 'feature_control:5', 'uses' => 'ApiUser@updateDoctorOutletByAdmin']);
     Route::post('update/permission', ['middleware' => 'feature_control:5', 'uses' => 'ApiUser@updateProfilePermissionByAdmin']);

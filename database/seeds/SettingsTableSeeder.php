@@ -932,13 +932,58 @@ class SettingsTableSeeder extends Seeder
                 ),
             103 =>
                 array(
-                    'id_setting' => 102,
+                    'id_setting' => 104,
                     'key' => 'disburse_fee_product_plastic',
                     'value' => 0,
                     'value_text' => null,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
-                )
+                ),
+            104 =>
+                array(
+                    'id_setting' => 105,
+                    'key' => 'available_delivery',
+                    'value' => null,
+                    'value_text' => '[{"code":"gosend","delivery_name":"GoSend","delivery_method":"GoSend","show_status":1,"available_status":"1","logo":"","position":0,"description":""},{"code":"wehelpyou_grabexpress","delivery_name":"Grab Express","delivery_method":"wehelpyou","show_status":1,"available_status":"1","logo":"","position":1,"description":""},{"code":"wehelpyou_mrspeedy","delivery_name":"Mrspeedy","delivery_method":"wehelpyou","show_status":1,"available_status":"1","logo":"","position":2,"description":""},{"code":"wehelpyou_lalamove","delivery_name":"Lalamove","delivery_method":"wehelpyou","show_status":1,"available_status":"1","logo":"","position":3,"description":""}]',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            105 =>
+                array(
+                    'id_setting' => 106,
+                    'key' => 'default_delivery',
+                    'value' => 'selected',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            106 =>
+                array(
+                    'id_setting' => 107,
+                    'key' => 'package_detail_delivery',
+                    'value' => null,
+                    'value_text' => '{"package_name":"","package_description":"","length":0,"width":0,"height":0,"weight":0}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            107 =>
+                array(
+                    'id_setting' => 108,
+                    'key' => 'default_image_delivery',
+                    'value' => null,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+           	108 =>
+                array(
+                    'id_setting' => 109,
+                    'key' => 'cashback_earned_text',
+                    'value' => 'Point yang akan didapatkan',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         ));
     }
 }

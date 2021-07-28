@@ -109,9 +109,11 @@ class PromoCampaignTools{
 					$promo->is_all_shipment = 1;
 				}
 			}
-			$check_shipment = $this->checkShipmentRule($promo->is_all_shipment??0, $request->type, $promo_shipment);
+
+			$shipment_method = ($request->type == 'Pickup Order' || $request->type == 'GO-SEND') ? $request->type : $request->courier;
+			$check_shipment  = $this->checkShipmentRule($promo->is_all_shipment ?? 0, $shipment_method, $promo_shipment);
 			if(!$check_shipment){
-				$errors[]='Promo tidak dapat digunakan untuk tipe order ini';
+				$errors[] = 'Promo tidak dapat digunakan untuk tipe order ini';
 				return false;
 			}
 		}
@@ -122,7 +124,7 @@ class PromoCampaignTools{
 			$check_payment 	= $this->checkPaymentRule($promo->is_all_payment??0, $payment_method, $promo_payment);
 
 			if(!$check_payment){
-				$errors[]='Promo tidak dapat digunakan untuk metode pembayaran ini';
+				$errors[] = 'Promo tidak dapat digunakan untuk metode pembayaran ini';
 				return false;
 			}
 		}
@@ -1305,7 +1307,7 @@ class PromoCampaignTools{
 	    	}
 	    	else
 	    	{
-        		$errors[]='Promo tidak tersedia';
+        		$errors[]='Promo tidak berlaku untuk akun Anda';
 	    	}
 
     		return false;
@@ -1316,7 +1318,7 @@ class PromoCampaignTools{
         	if ($promo->limitation_usage) {
         		// limit usage user?
 	        	if(PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('id_user',$id_user)->count()>=$promo->limitation_usage){
-		        	$errors[]='Kuota anda untuk penggunaan kode promo ini telah habis';
+		        	$errors[]='Promo tidak tersedia';
 		    		return false;
 	        	}
         	}
@@ -1332,7 +1334,7 @@ class PromoCampaignTools{
        							->where('id_promo_campaign_promo_code',$id_code)
        							->first();
        		if ($used_by_other_user) {
-       			$errors[]='Promo tidak tersedia';
+       			$errors[] = 'Promo tidak berlaku untuk akun Anda';
 	    		return false;
        		}
 
@@ -1340,7 +1342,7 @@ class PromoCampaignTools{
 
         	if ($code_limit = $promo->code_limit) {
         		if ($used_code >= $code_limit) {
-        			$errors[]='Kuota anda untuk penggunaan kode promo ini telah habis';
+        			$errors[]='Promo tidak tersedia';
 	    			return false;
         		}
         	}
@@ -1348,7 +1350,7 @@ class PromoCampaignTools{
         	if ($promo->user_limit && !$used_code) {
         		$used_diff_code = PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('id_user',$id_user)->distinct()->count('id_promo_campaign_promo_code');
         		if ($used_diff_code >= $promo->user_limit) {
-        			$errors[]='Kuota anda untuk penggunaan promo ini telah habis';
+        			$errors[]='Promo tidak tersedia';
 	    			return false;
         		}
         	}
@@ -1991,15 +1993,23 @@ class PromoCampaignTools{
     		$promo_shipment_list = $promo_shipment_list->toArray();
     	}
 
+    	if (in_array('GO-SEND', $promo_shipment_list)) {
+    		$promo_shipment_list[] = 'gosend';
+    	} elseif (in_array('gosend', $promo_shipment_list)) {
+    		$promo_shipment_list[] = 'GO-SEND';
+    	}
+
     	if ($all_shipment) {
     		return true;
     	}
 
-    	if (in_array($shipment_method, $promo_shipment_list)) {
-    		return true;
-    	}else{
-    		return false;
+    	foreach ($promo_shipment_list as $shipment) {
+    		if (strpos($shipment, $shipment_method) !== false) {
+    			return true;
+    		}
     	}
+
+    	return false;
     }
 
     public function getPaymentMethod($payment_type, $payment_id, $payment_detail)
@@ -2619,6 +2629,96 @@ class PromoCampaignTools{
     	}
 
     	return $product_name;
+    }
+
+    public function getActivePromoCourier($request, $listDelivery, $query)
+    {
+    	if ($request->promo_code) {
+
+    		$promoShipment = $query->promo_campaign->promo_campaign_shipment_method->pluck('shipment_method');
+    		$isAllShipment = $query->is_all_shipment;
+
+    	} elseif ($request->id_deals_user) {
+
+			$promoShipment = $query->dealVoucher->deals->deals_shipment_method->pluck('shipment_method');
+    		$isAllShipment = $query->dealVoucher->deals->is_all_shipment;
+
+    	} elseif ($request->id_subscription_user) {
+
+			$promoShipment = $query->subscription_user->subscription->subscription_shipment_method->pluck('shipment_method');
+    		$isAllShipment = $query->subscription_user->subscription->is_all_shipment;
+    	}
+
+    	$courier = $request->courier;
+    	$courierPromo = null;
+    	foreach ($listDelivery as $delivery) {
+    		if ($this->checkShipmentRule($isAllShipment, $delivery['code'], $promoShipment)) {
+    			// $courierPromo = $courierPromo ?? $delivery;
+	    		if ((empty($courier) && $delivery['disable'] == 0)
+	    			|| $delivery['courier'] == $courier
+	    		) {
+		    			$courierPromo = $delivery;
+		    			break;
+    			}
+    		}
+    	}
+
+    	return $courierPromo;
+    }
+
+    public function reorderSelectedDelivery($listDelivery, $delivery)
+    {
+    	if (!$delivery) {
+    		return $listDelivery;
+    	}
+
+    	$selected = [];
+    	foreach ($listDelivery as $key => $val) {
+    		if ($val['code'] == $delivery['code']) {
+    			$selected[] = $val;
+    			unset($listDelivery[$key]);
+    			break;
+    		}
+    	}
+
+    	$listDelivery = array_merge($selected, $listDelivery);
+    	return $listDelivery;
+    }
+
+    public function countReferralCashback($id_promo_campaign, $subtotal)
+    {
+    	$referral_rule = PromoCampaignReferral::where('id_promo_campaign', $id_promo_campaign)->first();
+        if (!$referral_rule) {
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Promo referral tidak ditemukan']
+            ]);
+        }
+
+        $referred_cashback = 0;
+        if ($referral_rule->referred_promo_type == 'Cashback') {
+            if ($referral_rule->referred_promo_unit == 'Percent') {
+                $referred_cashback = $this->countPercentDiscount($referral_rule->referred_promo_value, $subtotal, $referral_rule->referred_promo_value_max);
+            } else {
+                if ($subtotal >= $referral_rule->referred_min_value) {
+                    $referred_cashback = $this->countNominalDiscount($referral_rule->referred_promo_value, $subtotal);
+                }
+            }
+        }
+
+        return MyHelper::checkGet($referred_cashback);
+    }
+
+    public function countPercentDiscount($percentValue, $price, $maxDiscount = null)
+    {
+    	$percentValue = $percentValue <= 100 ? $percentValue : 100;
+        $discount = $price * $percentValue / 100;
+        return ($maxDiscount && $maxDiscount < $discount) ? $maxDiscount : $discount;
+    }
+
+    public function countNominalDiscount($nominalDiscount, $price)
+    {
+    	return ($nominalDiscount <= $post['subtotal']) ? $nominalDiscount : $price;
     }
 }
 ?>

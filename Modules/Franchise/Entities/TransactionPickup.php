@@ -44,6 +44,11 @@ class TransactionPickup extends Model
 	{
 		return $this->hasOne(\App\Http\Models\TransactionPickupGoSend::class, 'id_transaction_pickup');
 	}
+
+	public function transaction_pickup_wehelpyou()
+	{
+		return $this->hasOne(\App\Http\Models\TransactionPickupWehelpyou::class, 'id_transaction_pickup');
+	}
 	
 	public function admin_receive() 
 	{

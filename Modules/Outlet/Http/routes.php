@@ -67,6 +67,12 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     });
 
     Route::post('import-brand', 'ApiOutletController@importBrand');
+    Route::post('import-delivery', 'ApiOutletController@importDelivery');
+    Route::any('delivery-outlet-ajax', 'ApiOutletController@deliveryOutletAjax');
+    Route::post('delivery-outlet/bycode', 'ApiOutletController@deliveryOutletByCode');
+    Route::post('delivery-outlet/update', 'ApiOutletController@deliveryOutletUpdate');
+    Route::post('delivery-outlet/all/update', 'ApiOutletController@deliveryOutletAllUpdate');
+    Route::get('list-delivery/count-outlet', 'ApiOutletController@listDeliveryWithCountOutlet');
     Route::post('create', ['middleware' => 'feature_control:26', 'uses' =>'ApiOutletController@create']);
     Route::post('update', ['middleware' => 'feature_control:27', 'uses' =>'ApiOutletController@update']);
     Route::post('batch-update', 'ApiOutletController@batchUpdate');

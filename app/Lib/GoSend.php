@@ -249,22 +249,36 @@ class GoSend
 
         $ref_status2 = array_flip($ref_status);
 
-        $outlet_message = [
-            'confirmed' => 'Mencari Driver',
-            'allocated' => 'Driver ditemukan',
-            'out_for_pickup' => 'Driver menuju ke Outlet',
-            'picked' => 'Driver mengambil Pesanan',
-            'out_for_delivery' => 'Driver menuju Alamat Tujuan',
-            'cancelled' => 'Driver batal mengambil Pesanan',
-            'delivered' => 'Pesanan sampai ke Alamat Tujuan',
-            'rejected' => 'Driver batal mengantar Pesanan',
-            'no_driver' => 'Driver tidak ditemukan',
-            'on_hold' => 'Driver terkendala saat pengantaran'
-        ];
-
         if (!$found) {
             $trx_pickup = TransactionPickup::where('id_transaction', $dataUpdate['id_transaction'])->first();
             $trx = Transaction::where('id_transaction', $dataUpdate['id_transaction'])->first();
+
+	        $outlet_title = [
+	            'confirmed' => 'Info Pesanan Delivery',
+	            'allocated' => 'Driver ditemukan',
+	            'out_for_pickup' => 'Driver sedang menuju ke outlet',
+	            'picked' => 'Info Pesanan Delivery',
+	            'out_for_delivery' => 'Driver sedang menuju ke lokasi tujuan',
+	            'cancelled' => 'Pengantaran dibatalkan driver',
+	            'delivered' => 'Pengantaran ' . $trx_pickup->order_id . ' berhasil',
+	            'rejected' => 'Pengantaran ' . $trx_pickup->order_id . ' gagal',
+	            'no_driver' => 'Driver tidak ditemukan',
+	            'on_hold' => 'Info Pesanan Delivery'
+	        ];
+
+	        $outlet_message = [
+	            'confirmed' => 'Mencari Driver',
+	            'allocated' => 'Segera persiapkan pesanan',
+	            'out_for_pickup' => 'Apa pesanan sudah siap?',
+	            'picked' => 'Driver mengambil Pesanan',
+	            'out_for_delivery' => 'Pesanan ' . $trx_pickup->order_id . ' sudah siap?',
+	            'cancelled' => 'Segera ambil tindakan',
+	            'delivered' => 'Pessanan sudah diterima customer',
+	            'rejected' => 'Tunggu, pesanan akan segera kembalikan ke outlet',
+	            'no_driver' => 'Pilih tindakan selanjutnya',
+	            'on_hold' => 'Driver terkendala saat pengantaran'
+	        ];
+
             if ($dataUpdate['status'] == 'delivered') {
                 $trx_pickup->update(['show_confirm' => '1']);
                 $trx->update(['show_rate_popup' => '1']);
@@ -275,8 +289,8 @@ class GoSend
             $userName = $user['name'];
             $dataPush = [
                 'type' => 'trx',
-                'subject' => 'Info Pesanan Delivery',
-                'string_body' => $trx_pickup->order_id.' '.($outlet_message[$dataUpdate['status']] ?? $dataUpdate['status']),
+                'subject' => ($outlet_title[$dataUpdate['status']] ?? 'Info Pesanan Delivery'),
+                'string_body' => ($outlet_message[$dataUpdate['status']] ?? $dataUpdate['status']),
                 'status' => $dataUpdate['status'],
                 'id_transaction' => $trx->id_transaction,
                 'id_reference' => $trx->id_transaction,

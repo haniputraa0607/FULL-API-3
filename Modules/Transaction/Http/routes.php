@@ -2,6 +2,8 @@
 Route::group(['middleware' => ['auth:api'],'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::any('available-payment', 'ApiOnlineTransaction@availablePayment');
     Route::any('available-payment/update', 'ApiOnlineTransaction@availablePaymentUpdate')->middleware('scopes:be');
+    Route::any('be/available-delivery', 'ApiOnlineTransaction@listAvailableDelivery')->middleware('scopes:be');
+    Route::post('available-delivery/update', 'ApiOnlineTransaction@availableDeliveryUpdate')->middleware('scopes:be');
     Route::any('trigger-reversal', 'ApiOnlineTransaction@triggerReversal')->middleware('scopes:be');
 });
 
@@ -29,6 +31,8 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('/balance/filter', 'ApiTransaction@balanceUserFilter');
     Route::post('/admin', 'ApiNotification@adminOutletNotification');
     Route::post('/setting', 'ApiSettingTransaction@settingTrx');
+    Route::any('/setting/package-detail-delivery', 'ApiSettingTransaction@packageDetailDelivery');
+    Route::any('/setting/image-delivery', 'ApiSettingTransaction@imageDelivery');
     Route::any('be/filter', 'ApiTransaction@transactionFilter');
 
     Route::post('retry-void-payment/retry', 'ApiTransaction@retry');
@@ -101,6 +105,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('/confirm', 'ApiConfirm@confirmTransaction');
     Route::post('/cancel', 'ApiOnlineTransaction@cancelTransaction');
     Route::post('/prod/confirm', 'ApiTransactionProductionController@confirmTransaction2');
+    Route::post('fake-update-why', 'ApiWehelpyouController@updateFakeStatus');
     Route::get('/{key}', 'ApiTransaction@transactionList');
 });
 

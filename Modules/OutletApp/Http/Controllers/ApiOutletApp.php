@@ -27,6 +27,7 @@ use App\Http\Models\TransactionPaymentOffline;
 use App\Http\Models\TransactionPaymentOvo;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
+use App\Http\Models\TransactionPickupWehelpyou;
 use App\Http\Models\User;
 use App\Http\Models\UserOutlet;
 use App\Http\Models\PaymentMethod;
@@ -36,6 +37,7 @@ use App\Lib\Midtrans;
 use App\Lib\Ovo;
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
+use App\Lib\WeHelpYou;
 use DB;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -767,7 +769,15 @@ class ApiOutletApp extends Controller
             $result = ['status' => 'success'];
 
             if($order->pickup_by != 'Customer') {
-                $result = $this->bookGoSend($order);
+            	switch ($order->pickup_by) {
+            		case 'Wehelpyou':
+                		$result = $this->bookWehelpyou($order);
+            			break;
+            		
+            		default:
+                		$result = $this->bookGoSend($order);
+            			break;
+            	}
             }
 
             if (($result['status']??false) != 'success') {
@@ -837,13 +847,30 @@ class ApiOutletApp extends Controller
         }
 
         if ($order->pickup_by != 'Customer') {
-            $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-            if(!$pickup_gosend || !$pickup_gosend['latest_status'] || in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled', 'confirmed'])) {
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['Driver belum ditemukan']
-                ]);
-            }
+        	switch ($order->pickup_by) {
+        		case 'Wehelpyou':
+        			$pickupWHY = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+		            if( !$pickupWHY 
+		            	|| !$pickupWHY['latest_status_id'] 
+		            	|| in_array($pickupWHY['latest_status_id'] ?? false, WeHelpYou::orderEndStatusId())
+		            ) {
+		                return response()->json([
+		                    'status'   => 'fail',
+		                    'messages' => ['Driver belum ditemukan']
+		                ]);
+		            }
+        			break;
+        		
+        		default:
+		            $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+		            if(!$pickup_gosend || !$pickup_gosend['latest_status'] || in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled', 'confirmed'])) {
+		                return response()->json([
+		                    'status'   => 'fail',
+		                    'messages' => ['Driver belum ditemukan']
+		                ]);
+		            }
+        			break;
+        	}
         }
 
         DB::beginTransaction();
@@ -1034,7 +1061,7 @@ class ApiOutletApp extends Controller
     {
         $outlet                    = $request->user();
         $profile['outlet_name']    = $outlet['outlet_name'];
-        $profile['outlet_status']   = $outlet['outlet_status'];
+        $profile['outlet_status']  = $outlet['outlet_status'] == "Active" ? "Aktif" : "Tidak Aktif";
         $profile['outlet_code']    = $outlet['outlet_code'];
         $profile['outlet_address'] = $outlet['outlet_address']??'';
         $profile['outlet_phone']   = $outlet['outlet_phone']??'';
@@ -1832,9 +1859,20 @@ class ApiOutletApp extends Controller
             ]);
         }
 
-        if ($order->pickup_by != 'Customer') {
+        if ($order->pickup_by == 'GO-SEND') {
             $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
             if($pickup_gosend && $pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Driver has been booked'],
+                    'should_taken' => true,
+                ]);
+            } else {
+                goto reject;
+            }
+        } elseif ($order->pickup_by == 'Wehelpyou') {
+        	$pickupWhy = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+            if($pickupWhy && $pickupWhy['latest_status_id'] && !in_array($pickupWhy['latest_status_id'], WeHelpYou::orderEndStatusId())) {
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['Driver has been booked'],
@@ -1851,6 +1889,18 @@ class ApiOutletApp extends Controller
                     'status'   => 'fail',
                     'messages' => ['Order Has Been Ready'],
                 ]);
+            } elseif ($order->pickup_by == 'Wehelpyou') {
+            	$pickupWhy = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+            	$endStatus = WeHelpYou::orderEndStatusId();
+            	unset($endStatus['Rejected']);
+                if($pickupWhy['latest_status_id'] && !in_array($pickupWhy['latest_status_id'], $endStatus)) {
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Driver has been booked'],
+                    ]);
+                } else {
+                    goto reject;
+                }
             } else {
                 $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
                 if($pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'cancelled'])) {
@@ -2505,8 +2555,14 @@ class ApiOutletApp extends Controller
                         ->orWhereNotNull('taken_by_system_at');
                 });
         } elseif ($trx_status == 'rejected') {
-            $data->where('transaction_payment_status', 'Completed')
-                ->whereNotNull('reject_at');
+            $data->leftJoin('transaction_pickup_go_sends', 'transaction_pickup_go_sends.id_transaction_pickup', 'transaction_pickups.id_transaction_pickup')
+                ->leftJoin('transaction_pickup_wehelpyous', 'transaction_pickup_wehelpyous.id_transaction_pickup', 'transaction_pickups.id_transaction_pickup')
+                ->where('transaction_payment_status', 'Completed')
+                ->where(function ($query) {
+                    $query->whereNotNull('reject_at')
+                        ->orWhere('transaction_pickup_wehelpyous.latest_status_id', 96)
+                        ->orWhere('transaction_pickup_go_sends.latest_status', 'rejected');
+                });
         } elseif ($trx_status == 'unpaid') {
             $data->where('transaction_payment_status', 'Pending')
                 ->whereNull('taken_at')
@@ -2709,16 +2765,33 @@ class ApiOutletApp extends Controller
         if (!$trx) {
             return MyHelper::checkGet($trx, 'Transaction Not Found');
         }
+
+        $request->type = $trx->shipment_method ?? $request->type;
         switch (strtolower($request->type)) {
+        	case 'go-send':
             case 'gosend':
                 $result = $this->bookGoSend($trx);
                 break;
+
+            case 'wehelpyou':
+        		$result = $this->bookWehelpyou($trx);
+            	break;
 
             default:
                 $result = ['status' => 'fail', 'messages' => ['Invalid booking type']];
                 break;
         }
         return response()->json($result);
+    }
+
+    public function bookWehelpyou($trx, $isRetry = false)
+    {
+    	$createOrder = WeHelpYou::bookingDelivery($trx, $isRetry);
+    	if ($createOrder['status'] == 'fail') {
+    		return $createOrder;
+    	}
+
+    	return WeHelpYou::updateStatus($trx, $createOrder['result']['poNo']);
     }
 
     public function bookGoSend($trx,$fromRetry = false)
@@ -2856,14 +2929,30 @@ class ApiOutletApp extends Controller
 
     public function refreshDeliveryStatus(Request $request)
     {
-        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->with(['outlet' => function($q) {
-            $q->select('id_outlet', 'outlet_name');
-        }])->where('pickup_by', 'GO-SEND')->first();
+        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)
+        		->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+        		->with(['outlet' => function($q) {
+		            $q->select('id_outlet', 'outlet_name');
+		        }])
+		        ->where('pickup_by', '!=', 'Customer')
+		        ->first();
+
+        if (!$trx) {
+            return [
+                'status' => 'fail',
+                'messages' => [
+                    'Transaction not found'
+                ]
+            ];
+        }
+
         $outlet = $trx->outlet;
+        $request->type = $trx->shipment_method ?? $request->type;
         if (!$trx) {
             return MyHelper::checkGet($trx, 'Transaction Not Found');
         }
         switch (strtolower($request->type)) {
+        	case 'go-send':
             case 'gosend':
                 $trxGoSend = TransactionPickupGoSend::where('id_transaction_pickup', $trx['id_transaction_pickup'])->first();
                 if (!$trxGoSend) {
@@ -3008,6 +3097,11 @@ class ApiOutletApp extends Controller
                 return MyHelper::checkGet($trxGoSend);
                 break;
 
+            case 'wehelpyou':
+            	$trx->load('transaction_pickup.transaction_pickup_wehelpyou');
+            	return WeHelpYou::updateStatus($trx, $trx['transaction_pickup']['transaction_pickup_wehelpyou']['poNo']);
+            	break;
+
             default:
                 return ['status' => 'fail', 'messages' => ['Invalid delivery type']];
                 break;
@@ -3016,27 +3110,67 @@ class ApiOutletApp extends Controller
 
     public function cancelDelivery(Request $request)
     {
-        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by', 'GO-SEND')->first();
+        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)
+        		->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+        		->where('pickup_by', '!=','Customer')
+        		->first();
+
         if (!$trx) {
             return MyHelper::checkGet($trx, 'Transaction Not Found');
         }
-        $trx->load('transaction_pickup_go_send');
-        $orderNo = $trx->transaction_pickup_go_send->go_send_order_no;
-        if (!$orderNo) {
-            return [
-                'status'   => 'fail',
-                'messages' => ['Go-Send Pickup not found'],
-            ];
-        }
-        $cancel = GoSend::cancelOrder($orderNo, $trx->transaction_receipt_number);
-        if (($cancel['status'] ?? false) == 'fail') {
-            return $cancel;
-        }
-        if (($cancel['statusCode'] ?? false) == '200') {
-            $trx->transaction_pickup_go_send->latest_status = 'Cancelled';
-            $trx->transaction_pickup_go_send->cancel_reason = $request->reason;
-            $trx->transaction_pickup_go_send->save();
-            return ['status' => 'success'];
+
+        switch ($trx->pickup_by) {
+        	case 'Wehelpyou':
+		        $trx->load('transaction_pickup_wehelpyou');
+		        $poNo = $trx->transaction_pickup_wehelpyou->poNo;
+        		if (!$poNo) {
+		            return [
+		                'status'   => 'fail',
+		                'messages' => ['PO number not found'],
+		            ];
+		        }
+		        $cancel = WeHelpYou::cancelOrder($poNo);
+		        if (($cancel['status_code'] ?? false) != '200') {
+		            return [
+		                'status'   => 'fail',
+		                'messages' => ['Cancel order failed']
+		            ];
+		        }
+
+		        if (($cancel['status_code'] ?? false) == '200') {
+		            $trx->transaction_pickup_wehelpyou->latest_status = 'Cancelled';
+		            $trx->transaction_pickup_wehelpyou->cancel_reason = $request->reason;
+		            $trx->transaction_pickup_wehelpyou->save();
+		            WeHelpYou::updateStatus($trx, $poNo);
+		            return ['status' => 'success'];
+		        }else{
+		        	return [
+		                'status'   => 'fail',
+		                'messages' => ['Cancel order failed']
+		            ];	
+		        }
+        		break;
+        	
+        	default:
+		        $trx->load('transaction_pickup_go_send');
+		        $orderNo = $trx->transaction_pickup_go_send->go_send_order_no;
+		        if (!$orderNo) {
+		            return [
+		                'status'   => 'fail',
+		                'messages' => ['Go-Send Pickup not found'],
+		            ];
+		        }
+		        $cancel = GoSend::cancelOrder($orderNo, $trx->transaction_receipt_number);
+		        if (($cancel['status'] ?? false) == 'fail') {
+		            return $cancel;
+		        }
+		        if (($cancel['statusCode'] ?? false) == '200') {
+		            $trx->transaction_pickup_go_send->latest_status = 'Cancelled';
+		            $trx->transaction_pickup_go_send->cancel_reason = $request->reason;
+		            $trx->transaction_pickup_go_send->save();
+		            return ['status' => 'success'];
+		        }
+        		break;
         }
     }
 
@@ -3061,6 +3195,7 @@ class ApiOutletApp extends Controller
             'promo_campaign_promo_code.promo_campaign',
             'transaction_payment_subscription.subscription_user_voucher.subscription_user.subscription',
             'transaction_pickup_go_send',
+            'transaction_pickup_wehelpyou.transaction_pickup_wehelpyou_updates',
             'outlet.city'])
             ->where('transactions.id_outlet', $request->user()->id_outlet)
             ->first();
@@ -3359,8 +3494,7 @@ class ApiOutletApp extends Controller
                 }
 
                 $detail = $newDetail;
-
-                if ($detail['pickup_by'] == 'GO-SEND') {
+                if ($detail['pickup_by'] == 'GO-SEND' || $detail['pickup_by'] == 'Wehelpyou') {
                     $pickupType = 'Delivery';
                 }
             }
@@ -3384,6 +3518,11 @@ class ApiOutletApp extends Controller
         if($list['pickup_type'] == 'set time' && $currentdate < $setTime){
             $allowReady = 0;
         }
+      
+        $trxType = $list['trasaction_type'];
+        if(isset($list['pickup_by']) && ($list['pickup_by'] == 'GO-SEND' || $list['pickup_by'] == 'Wehelpyou')){
+            $trxType = 'Delivery';
+        }
 
         $result = [
             'id_transaction'              => $list['id_transaction'],
@@ -3391,7 +3530,7 @@ class ApiOutletApp extends Controller
             'user_phone'                  => $list['user']['phone'],
             'transaction_receipt_number'  => $list['transaction_receipt_number'],
             'transaction_date'            => date('d M Y H:i', strtotime($list['transaction_date'])),
-            'trasaction_type'             => $pickupType,
+            'trasaction_type'             => $trxType,
             'transaction_grandtotal'      => MyHelper::requestNumber($list['transaction_grandtotal'], '_CURRENCY'),
             'transaction_subtotal'        => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY'),
             'transaction_discount'        => MyHelper::requestNumber($list['transaction_discount'], '_CURRENCY'),
@@ -3481,12 +3620,14 @@ class ApiOutletApp extends Controller
                     case 'finding driver':
                     case 'confirmed':
                         $result['delivery_info']['delivery_status'] = 'Sedang mencari driver';
+                        $result['delivery_info']['delivery_status_code']   = 1;
                         $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
                         $result['rejectable']                       = 0;
                         break;
                     case 'driver allocated':
                     case 'allocated':
                         $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
+                        $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
                         $result['delivery_info']['driver']          = [
                             'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
@@ -3500,6 +3641,7 @@ class ApiOutletApp extends Controller
                     case 'enroute pickup':
                     case 'out_for_pickup':
                         $result['delivery_info']['delivery_status'] = 'Driver dalam perjalanan menuju Outlet';
+                        $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER SEDANG MENUJU OUTLET';
                         $result['delivery_info']['driver']          = [
                             'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
@@ -3513,6 +3655,7 @@ class ApiOutletApp extends Controller
                         break;
                     case 'picked':
                         $result['delivery_info']['delivery_status'] = 'Driver mengambil pesanan di Outlet';
+                        $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
                         $result['delivery_info']['driver']          = [
                             'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
@@ -3527,6 +3670,7 @@ class ApiOutletApp extends Controller
                     case 'enroute drop':
                     case 'out_for_delivery':
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
+                        $result['delivery_info']['delivery_status_code']   = 3;
                         if($list['detail']['ready_at'] != null){
                             $result['transaction_status_text']          = 'PROSES PENGANTARAN';
                             $result['transaction_status']               = 3;
@@ -3554,6 +3698,7 @@ class ApiOutletApp extends Controller
                             $result['transaction_status'] = 2;
                         }
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
+                        $result['delivery_info']['delivery_status_code']   = 4;
                         $result['delivery_info']['driver']          = [
                             'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
                             'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
@@ -3564,6 +3709,7 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['cancelable'] = 0;
                         break;
                     case 'cancelled':
+                        $result['delivery_info']['delivery_status_code']   = 0;
                         $result['delivery_info']['booking_status'] = 0;
                         $result['transaction_status_text']         = 'PENGANTARAN DIBATALKAN';
                         $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
@@ -3572,6 +3718,7 @@ class ApiOutletApp extends Controller
                         break;
                     case 'driver not found':
                     case 'no_driver':
+                        $result['delivery_info']['delivery_status_code']   = 0;
                         $result['delivery_info']['booking_status']  = 0;
                         $result['transaction_status_text']          = 'DRIVER TIDAK DITEMUKAN';
                         $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
@@ -3579,6 +3726,109 @@ class ApiOutletApp extends Controller
                         $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
                 }
+            }elseif ($list['transaction_pickup_wehelpyou'] && !$list['detail']['reject_at']) {
+                // $result['transaction_status'] = 5;
+                $result['delivery_info'] = [
+                    'driver' => null,
+                    'delivery_status' => '',
+                    'delivery_address' => $list['transaction_pickup_wehelpyou']['receiver_address']?:'',
+                    'delivery_address_note' => $list['transaction_pickup_wehelpyou']['receiver_notes'] ?: '',
+                    'booking_status' => 0,
+                    'cancelable' => 1,
+                    'go_send_order_no' => $list['transaction_pickup_wehelpyou']['poNo']?:'',
+                    'live_tracking_url' => $list['transaction_pickup_wehelpyou']['tracking_live_tracking_url']?:''
+                ];
+                if($list['transaction_pickup_wehelpyou']['poNo']){
+                    $result['delivery_info']['booking_status'] = 1;
+                }
+                switch (strtolower($list['transaction_pickup_wehelpyou']['latest_status'])) {
+                    case 'on progress':
+                    case 'finding driver':
+                        $result['delivery_info']['delivery_status'] = 'Sedang mencari driver';
+                        $result['delivery_info']['delivery_status_code']   = 1;
+                        $result['transaction_status_text']          = 'PESANAN SUDAH SIAP DAN MENUNGGU PICK UP';
+                        break;
+                    case 'driver allocated':
+                        $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
+                        $result['delivery_info']['delivery_status_code']   = 2;
+                        $result['transaction_status_text']          = 'DRIVER DITEMUKAN DAN SEDANG MENUJU OUTLET';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'         => '',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
+                            'driver_whatsapp'   => '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['vehicle_type']?:'',
+                        ];
+                        break;
+                    case 'item picked':
+                        $result['delivery_info']['delivery_status'] = 'Driver mengambil pesanan di Outlet';
+                        $result['delivery_info']['delivery_status_code']   = 2;
+                        $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'         => '',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
+                            'driver_whatsapp'   => '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['vehicle_type']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 1;
+                        break;
+                    case 'enroute drop':
+                        $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
+                        $result['delivery_info']['delivery_status_code']   = 3;
+                        $result['transaction_status_text']          = 'PESANAN SUDAH DI PICK UP OLEH DRIVER DAN SEDANG MENUJU LOKASI #TEMANSEJIWA';
+                        $result['transaction_status']               = 3;
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'         => '',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
+                            'driver_whatsapp'   => '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['vehicle_type']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 0;
+                        break;
+                    case 'completed':
+                        $result['transaction_status'] = 2;
+                        $result['transaction_status_text']          = 'PESANAN TELAH SELESAI DAN DITERIMA';
+                        $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
+                        $result['delivery_info']['delivery_status_code']   = 4;
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'         => '',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
+                            'driver_whatsapp'   => '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['vehicle_type']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 0;
+                        break;
+                    case 'cancelled, without refund':
+                    case 'order failed':
+                    case 'cancelled by partner':
+                        $result['delivery_info']['booking_status'] = 0;
+                        $result['delivery_info']['delivery_status_code'] = 0;
+                        $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
+                        $result['delivery_info']['cancelable']     = 0;
+                        $result['transaction_status_text']         = 'PENGANTARAN PESANAN TELAH DIBATALKAN';
+                        break;
+                    case 'rejected':
+                        $result['transaction_status'] = 0;
+                        $result['delivery_info']['booking_status'] = 0;
+                        $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
+                        $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
+                        $result['delivery_info']['cancelable']     = 0;
+                        $result['transaction_status_text']         = 'PENGANTARAN PESANAN TELAH DIBATALKAN';
+                        break;
+                    default:
+                        break;
+                }
+                $result['delivery_info_be'] = [
+                    'delivery_address' => $list['transaction_pickup_wehelpyou']['receiver_address']?:'',
+                    'delivery_address_note' => $list['transaction_pickup_wehelpyou']['receiver_notes'] ?: '',
+                ];
             }
         }
 
@@ -3838,6 +4088,12 @@ class ApiOutletApp extends Controller
                 'desc'      => $list['detail']['pickup_by'],
                 'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'],'_CURRENCY')
             ];
+        }elseif($list['transaction_shipment'] > 0){
+            $result['payment_detail'][] = [
+                'name'      => 'Delivery',
+                'desc'      => strtoupper($list['shipment_courier']),
+                'amount'    => MyHelper::requestNumber($list['transaction_shipment'],'_CURRENCY')
+            ];
         }
 
         if ($list['transaction_discount_delivery']) {
@@ -3963,6 +4219,7 @@ class ApiOutletApp extends Controller
             'promo_campaign_promo_code.promo_campaign',
             'transaction_payment_subscription.subscription_user_voucher.subscription_user.subscription',
             'transaction_pickup_go_send',
+            'transaction_pickup_wehelpyou.transaction_pickup_wehelpyou_updates',
             'outlet.city'])
             ->where('transactions.id_outlet', $request->user()->id_outlet)
             ->first();
@@ -4286,13 +4543,18 @@ class ApiOutletApp extends Controller
             $allowReady = 0;
         }
 
+        $trxType = $list['trasaction_type'];
+        if(isset($list['pickup_by']) && ($list['pickup_by'] == 'GO-SEND' || $list['pickup_by'] == 'Wehelpyou')){
+            $trxType = 'Delivery';
+        }
+
         $result = [
             'id_transaction'              => $list['id_transaction'],
             'user_name'                   => $list['user']['name'],
             'user_phone'                  => $list['user']['phone'],
             'transaction_receipt_number'  => $list['transaction_receipt_number'],
             'transaction_date'            => date('d M Y H:i', strtotime($list['transaction_date'])),
-            'trasaction_type'             => $pickupType,
+            'trasaction_type'             => $trxType,
             'transaction_grandtotal'      => MyHelper::requestNumber($list['transaction_grandtotal'], '_CURRENCY'),
             'transaction_subtotal'        => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY'),
             'transaction_discount'        => MyHelper::requestNumber($list['transaction_discount'], '_CURRENCY'),
@@ -4382,12 +4644,14 @@ class ApiOutletApp extends Controller
                     case 'finding driver':
                     case 'confirmed':
                         $result['delivery_info']['delivery_status'] = 'Sedang mencari driver';
+                        $result['delivery_info']['delivery_status_code']   = 1;
                         $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
                         $result['rejectable']                       = 0;
                         break;
                     case 'driver allocated':
                     case 'allocated':
                         $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
+                        $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
                         $result['delivery_info']['driver']          = [
                             'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
@@ -4401,6 +4665,7 @@ class ApiOutletApp extends Controller
                     case 'enroute pickup':
                     case 'out_for_pickup':
                         $result['delivery_info']['delivery_status'] = 'Driver dalam perjalanan menuju Outlet';
+                        $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER SEDANG MENUJU OUTLET';
                         $result['delivery_info']['driver']          = [
                             'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
@@ -4414,6 +4679,7 @@ class ApiOutletApp extends Controller
                         break;
                     case 'picked':
                         $result['delivery_info']['delivery_status'] = 'Driver mengambil pesanan di Outlet';
+                        $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
                         $result['delivery_info']['driver']          = [
                             'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
@@ -4428,6 +4694,7 @@ class ApiOutletApp extends Controller
                     case 'enroute drop':
                     case 'out_for_delivery':
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
+                        $result['delivery_info']['delivery_status_code']   = 3;
                         if($list['detail']['ready_at'] != null){
                             $result['transaction_status_text']          = 'PROSES PENGANTARAN';
                             $result['transaction_status']               = 3;
@@ -4457,6 +4724,7 @@ class ApiOutletApp extends Controller
                             }
                         }
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
+                        $result['delivery_info']['delivery_status_code']   = 4;
                         $result['delivery_info']['driver']          = [
                             'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
                             'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
@@ -4467,6 +4735,7 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['cancelable'] = 0;
                         break;
                     case 'cancelled':
+                        $result['delivery_info']['delivery_status_code']   = 0;
                         $result['delivery_info']['booking_status'] = 0;
                         $result['transaction_status_text']         = 'PENGANTARAN DIBATALKAN';
                         $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
@@ -4474,6 +4743,7 @@ class ApiOutletApp extends Controller
                         $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
                     case 'rejected':
+                        $result['delivery_info']['delivery_status_code']   = 0;
                         $result['delivery_info']['booking_status']  = 0;
                         $result['transaction_status_text']          = "PENGANTARAN DIBATALKAN\ndriver tidak dapat mencapai lokasi tujuan";
                         $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
@@ -4482,6 +4752,7 @@ class ApiOutletApp extends Controller
                         $result['transaction_status']               = 0;
                         break;
                     case 'on_hold':
+                        $result['delivery_info']['delivery_status_code']   = 5;
                         $result['delivery_info']['delivery_status'] = 'Pengiriman sedang ditahan';
                         $result['transaction_status_text']          = 'PENGIRIMAN SEDANG DITAHAN';
                         $result['delivery_info']['driver']          = [
@@ -4496,6 +4767,7 @@ class ApiOutletApp extends Controller
                         break;
                     case 'driver not found':
                     case 'no_driver':
+                        $result['delivery_info']['delivery_status_code']   = 0;
                         $result['delivery_info']['booking_status']  = 0;
                         $result['transaction_status_text']          = 'DRIVER TIDAK DITEMUKAN';
                         $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
@@ -4503,6 +4775,117 @@ class ApiOutletApp extends Controller
                         $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
                 }
+            }elseif ($list['transaction_pickup_wehelpyou'] && !$list['detail']['reject_at']) {
+                // $result['transaction_status'] = 5;
+                $result['delivery_info'] = [
+                    'driver' => null,
+                    'delivery_status' => '',
+                    'delivery_address' => $list['transaction_pickup_wehelpyou']['receiver_address']?:'',
+                    'delivery_address_note' => $list['transaction_pickup_wehelpyou']['receiver_notes'] ?: '',
+                    'booking_status' => 0,
+                    'cancelable' => 1,
+                    'go_send_order_no' => $list['transaction_pickup_wehelpyou']['poNo']?:'',
+                    'live_tracking_url' => $list['transaction_pickup_wehelpyou']['tracking_live_tracking_url']?:''
+                ];
+                if($list['transaction_pickup_wehelpyou']['poNo']){
+                    $result['delivery_info']['booking_status'] = 1;
+                }
+                switch (strtolower($list['transaction_pickup_wehelpyou']['latest_status_id'])) {
+                    case 1:
+                    case 11:
+                        $result['delivery_info']['delivery_status'] = 'Sedang mencari driver';
+                        $result['delivery_info']['delivery_status_code']   = 1;
+                        $result['transaction_status_text']          = 'PESANAN SUDAH SIAP DAN MENUNGGU PICK UP';
+                        break;
+                    case 8:
+                        $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
+                        $result['delivery_info']['delivery_status_code']   = 2;
+                        $result['transaction_status_text']          = 'DRIVER DITEMUKAN DAN SEDANG MENUJU OUTLET';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'         => '',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
+                            'driver_whatsapp'   => '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['vehicle_type']?:'',
+                        ];
+                        break;
+                    case 32:
+                        $result['delivery_info']['delivery_status'] = 'Driver mengambil pesanan di Outlet';
+                        $result['delivery_info']['delivery_status_code']   = 2;
+                        $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'         => '',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
+                            'driver_whatsapp'   => '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['vehicle_type']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 1;
+                        break;
+                    case 9:
+                        $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
+                        $result['delivery_info']['delivery_status_code']   = 3;
+                        $result['transaction_status_text']          = 'PROSES PENGANTARAN';
+                        $result['transaction_status']               = 3;
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'         => '',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
+                            'driver_whatsapp'   => '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['vehicle_type']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 0;
+                        break;
+                    case 2:
+                        $result['transaction_status'] = 2;
+                        $result['transaction_status_text']          = 'PESANAN TELAH SELESAI DAN DITERIMA';
+                        $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
+                        $result['delivery_info']['delivery_status_code']   = 4;
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'         => '',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
+                            'driver_whatsapp'   => '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['vehicle_type']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 0;
+                        break;
+                    case 89:
+                    case 90:
+                    case 91:
+                    case 99:
+                        $result['delivery_info']['booking_status'] = 0;
+                        $result['delivery_info']['delivery_status_code'] = 0;
+                        $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
+                        $result['delivery_info']['cancelable']     = 0;
+                        $result['transaction_status_text']         = 'PENGANTARAN PESANAN TELAH DIBATALKAN';
+                        break;
+                    case 96:
+                        $result['transaction_status'] = 0;
+                        $result['delivery_info']['booking_status'] = 0;
+                        $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
+                        $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
+                        $result['delivery_info']['cancelable']     = 0;
+                        $result['delivery_info']['delivery_status_code'] = 0;
+                        $result['transaction_status_text']         = 'PENGANTARAN PESANAN TELAH DIBATALKAN';
+                        break;
+                    default:
+                        break;
+                }
+
+                if (!empty($list['detail']['receive_at']) && empty($list['transaction_pickup_wehelpyou']['poNo'])) {
+                	$result['transaction_status_text'] = 'GAGAL MENCARI DRIVER';
+                	$result['delivery_info']['go_send_order_no'] = '-';
+                }
+
+                $result['delivery_info_be'] = [
+                    'delivery_address' => $list['transaction_pickup_wehelpyou']['receiver_address']?:'',
+                    'delivery_address_note' => $list['transaction_pickup_wehelpyou']['receiver_notes'] ?: '',
+                ];
             }
         }
 
@@ -4728,6 +5111,12 @@ class ApiOutletApp extends Controller
                 'name'      => 'Delivery',
                 'desc'      => $list['detail']['pickup_by'],
                 'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'],'_CURRENCY')
+            ];
+        }elseif($list['transaction_shipment'] > 0){
+            $result['payment_detail'][] = [
+                'name'      => 'Delivery',
+                'desc'      => strtoupper($list['shipment_courier']),
+                'amount'    => MyHelper::requestNumber($list['transaction_shipment'],'_CURRENCY')
             ];
         }
 
@@ -5068,6 +5457,14 @@ class ApiOutletApp extends Controller
             $date_holiday = DateHoliday::where('id_date_holiday', $id_date_holiday)->with(['holiday' => function ($q) {
                 $q->select(\DB::raw('holidays.*,(CASE WHEN COUNT(distinct(oh.id_outlet)) > 1 THEN 1 ELSE 0 END) as read_only'))->join('outlet_holidays as oh', 'oh.id_holiday', '=', 'holidays.id_holiday')->groupBy('holidays.id_holiday');
             }])->first();
+            if (!$date_holiday) {
+                return [
+                    'status' => 'false',
+                    'messages' => [
+                        'Holiday not found'
+                    ]
+                ];
+            }
             if ($date_holiday->holiday->read_only) {
                 return MyHelper::checkGet([], 'This holiday cannot be deleted');
             };
@@ -5418,7 +5815,7 @@ class ApiOutletApp extends Controller
     public function productVariantGroupSoldOut(Request $request)
     {
         $post = $request->all();
-        $id_outlet = $post['id_outlet']??auth()->user()->id_outlet;
+        $id_outlet = $post['id_outlet']??$request->user()->id_outlet;
 
         if(!$id_outlet){
             return response()->json(['status' => 'fail', 'messages' => 'Outlet ID is required']);
@@ -5478,26 +5875,47 @@ class ApiOutletApp extends Controller
     {
         $log = MyHelper::logCron('Driver Not Found Reject Order');
         try {
+        	$endStatusWehelpyou = Wehelpyou::orderEndFailStatusId();
             // dd(date('Y-m-d H:i:s', strtotime('-30minutes')));
             // dd(date('Y-m-d'));
-            $transactions = Transaction::select([
-                    'transaction_pickup_go_sends.updated_at',
+        	$transactions = Transaction::select([
+        			DB::raw('
+        				CASE WHEN transaction_pickups.pickup_by = "Wehelpyou" 
+        					THEN transaction_pickup_wehelpyous.updated_at
+        					ELSE transaction_pickup_go_sends.updated_at
+        				END AS updated_at,
+
+        				CASE WHEN transaction_pickups.pickup_by = "Wehelpyou" 
+        					THEN transaction_pickup_wehelpyous.stop_booking_at
+        					ELSE transaction_pickup_go_sends.stop_booking_at
+        				END AS stop_booking_at
+        			'),
                     'order_id',
                     'transaction_receipt_number',
                     'transactions.id_transaction',
                     'id_outlet',
                     'transaction_date',
-                    'stop_booking_at'
+                    'transaction_pickups.pickup_by'
                 ])->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                ->join('transaction_pickup_go_sends', 'transaction_pickup_go_sends.id_transaction_pickup', '=', 'transaction_pickups.id_transaction_pickup')
+                ->leftJoin('transaction_pickup_go_sends', 'transaction_pickup_go_sends.id_transaction_pickup', '=', 'transaction_pickups.id_transaction_pickup')
+                ->leftJoin('transaction_pickup_wehelpyous', 'transaction_pickup_wehelpyous.id_transaction_pickup', '=', 'transaction_pickups.id_transaction_pickup')
                 ->whereNull('transaction_pickups.reject_at')
                 ->whereDate('transaction_date', date('Y-m-d'))
-                ->whereNotNull('stop_booking_at')
-                ->where('latest_status', '<>', 'rejected')
                 ->where([
                     'transaction_payment_status' => 'Completed',
                 ])
-                ->whereIn('transaction_pickup_go_sends.latest_status', ['no_driver', 'rejected', 'cancelled'])
+                ->where(function($q) {
+                	$q->whereNotNull('transaction_pickup_go_sends.stop_booking_at')
+                		->orWhereNotNull('transaction_pickup_wehelpyous.stop_booking_at');
+                })
+                ->where(function($q) {
+                	$q->where('transaction_pickup_go_sends.latest_status', '<>', 'rejected')
+                	->orWhere('transaction_pickup_wehelpyous.latest_status_id', '<>', '96');
+                })
+                ->where(function($q) use ($endStatusWehelpyou){
+                	$q->whereIn('transaction_pickup_go_sends.latest_status', ['no_driver', 'rejected', 'cancelled'])
+                	->orWhereIn('transaction_pickup_wehelpyous.latest_status_id', $endStatusWehelpyou);
+                })
                 ->with('outlet')
                 ->get();
             $processed = [
@@ -5711,7 +6129,7 @@ class ApiOutletApp extends Controller
     public function productPlasticSoldOut(Request $request)
     {
         $post = $request->all();
-        $id_outlet = $post['id_outlet']??auth()->user()->id_outlet;
+        $id_outlet = $post['id_outlet']??$request->user()->id_outlet;
 
         if(!$id_outlet){
             return response()->json(['status' => 'fail', 'messages' => 'Outlet ID is required']);
@@ -5983,5 +6401,58 @@ class ApiOutletApp extends Controller
             'status' => 'success',
             'result' => ['updated' => $updated]
         ];
+    }
+
+    public function insertUserCashback($trx)
+    {
+    	if ($trx->cashback_insert_status != 1) {
+            //send notif to customer
+            $user = User::find($trx->id_user);
+
+            $newTrx	= Transaction::with(
+		            	'user.memberships', 
+		            	'outlet', 
+		            	'productTransaction', 
+		            	'transaction_vouchers',
+		            	'promo_campaign_promo_code',
+		            	'promo_campaign_promo_code.promo_campaign'
+		            )
+		            ->where('id_transaction', $trx->id_transaction)
+		            ->first();
+
+            $checkType = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->get()->toArray();
+            $column    = array_column($checkType, 'type');
+            
+            $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
+            \App\Jobs\UpdateQuestProgressJob::dispatch($trx->id_transaction)->onConnection('quest');
+            \Modules\OutletApp\Jobs\AchievementCheck::dispatch(['id_transaction' => $trx->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
+
+            if (!in_array('Balance', $column) || $use_referral) {
+
+                $promo_source = null;
+                if ($newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers) {
+                    if ($newTrx->id_promo_campaign_promo_code) {
+                        $promo_source = 'promo_code';
+                    } elseif (($newTrx->transaction_vouchers[0]->status ?? false) == 'success') {
+                        $promo_source = 'voucher_online';
+                    }
+                }
+
+                if (app($this->trx)->checkPromoGetPoint($promo_source) || $use_referral) {
+                    $savePoint = app($this->getNotif)->savePoint($newTrx);
+                    if (!$savePoint) {
+                        return [
+                            'status'   => 'fail',
+                            'messages' => ['Transaction failed'],
+                        ];
+                    }
+                }
+            }
+
+            $newTrx->update(['cashback_insert_status' => 1]);
+            $checkMembership = app($this->membership)->calculateMembership($user['phone']);
+        }
+
+        return ['status' => 'success'];
     }
 }

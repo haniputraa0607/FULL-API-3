@@ -57,6 +57,7 @@ class Kernel extends HttpKernel
         'auth' => \SMartins\PassportMultiauth\Http\Middleware\MultiAuthenticate::class,
         'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
         'auth_client' => \Laravel\Passport\Http\Middleware\CheckClientCredentials::class,
+        'auth_pos' => \Modules\OutletApp\Http\Middleware\AuthPOS::class,
         'bindings' => \Illuminate\Routing\Middleware\SubstituteBindings::class,
         'can' => \Illuminate\Auth\Middleware\Authorize::class,
         'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
