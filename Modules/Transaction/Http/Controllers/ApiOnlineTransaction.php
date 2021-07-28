@@ -825,7 +825,13 @@ class ApiOnlineTransaction extends Controller
         $shippingGoSend = 0;
 
         if($post['type'] == 'GO-SEND' || $post['type'] == 'Delivery Order'){
-            if(!($outlet['outlet_latitude'] && $outlet['outlet_longitude'] && $outlet['outlet_phone'] && $outlet['outlet_address'])) {
+            if (!($outlet['outlet_latitude'] 
+            	&& $outlet['outlet_longitude'] 
+            	&& $outlet['outlet_phone'] 
+            	&& $outlet['outlet_address'])
+            	&& MyHelper::validatePhoneGoSend($outlet['outlet_phone'])
+            	&& MyHelper::validatePhoneWehelpyou($outlet['outlet_phone'])
+        	) {
                 app($this->outlet)->sendNotifIncompleteOutlet($outlet['id_outlet']);
                 $outlet->notify_admin = 1;
                 $outlet->save();
@@ -2217,7 +2223,13 @@ class ApiOnlineTransaction extends Controller
 
         if($post['type'] == 'Delivery Order' || $post['type'] == 'GO-SEND'){
             $delivery_outlet = DeliveryOutlet::where('id_outlet', $outlet->id_outlet)->pluck('code')->toArray();
-            if(!($outlet['outlet_latitude'] && $outlet['outlet_longitude'] && $outlet['outlet_phone'] && $outlet['outlet_address'])){
+            if (!($outlet['outlet_latitude'] 
+            	&& $outlet['outlet_longitude'] 
+            	&& $outlet['outlet_phone'] 
+            	&& $outlet['outlet_address'])
+            	&& MyHelper::validatePhoneGoSend($outlet['outlet_phone'])
+            	&& MyHelper::validatePhoneWehelpyou($outlet['outlet_phone'])
+        	){
                 app($this->outlet)->sendNotifIncompleteOutlet($outlet['id_outlet']);
                 $outlet->notify_admin = 1;
                 $outlet->save();
