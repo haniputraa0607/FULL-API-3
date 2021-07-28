@@ -2167,10 +2167,6 @@ class ApiOnlineTransaction extends Controller
 
             $settingTime = Setting::where('key', 'processing_time')->first();
 
-            if($outlet['today']['close']){
-                $outlet['today']['close'] = date('Y-m-d H:i:s', strtotime($outlet['today']['close'].' + '.$settingTime['value'].'minutes'));
-            }
-
              if($outlet['today']['close'] && $outlet['today']['close'] != "00:00" && $outlet['today']['open'] && $outlet['today']['open'] != '00:00'){
 
                 if($settingTime && $settingTime->value){
@@ -2195,6 +2191,11 @@ class ApiOnlineTransaction extends Controller
                     $outlet_status = 0;
                 }
             }
+
+            // if($outlet['today']['close']){
+            //     $outlet['today']['close'] = date('Y-m-d H:i:s', strtotime($outlet['today']['close'].' + '.$settingTime['value'].'minutes'));
+            // }
+
         }
 
         if (!isset($post['payment_type'])) {
