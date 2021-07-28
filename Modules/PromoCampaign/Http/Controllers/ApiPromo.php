@@ -266,10 +266,12 @@ class ApiPromo extends Controller
 
     public function promoGetCashbackRule()
     {
-    	$getData = Configs::whereIn('config_name',['promo code get point','voucher offline get point','voucher online get point','subscription get point'])->get()->toArray();
+    	$getDataConfig = Configs::whereIn('config_name',['promo code get point','voucher offline get point','voucher online get point','subscription get point'])->get()->toArray();
+    	$getDataSetting = Setting::whereIn('key',['cashback_include_bundling'])->get()->toArray();
 
+    	$getData = array_merge($getDataConfig, $getDataSetting);
     	foreach ($getData as $key => $value) {
-    		$config[$value['config_name']] = $value['is_active'];
+    		$config[$value['config_name'] ?? $value['key']] = $value['is_active'] ?? $value['value'];
     	}
 
     	return $config;
@@ -285,20 +287,13 @@ class ApiPromo extends Controller
     public function updateDataCashback(UpdateCashBackRule $request)
     {
     	$post = $request->json()->all();
-    	db::beginTransaction();
-    	$update = Configs::where('config_name','promo code get point')->update(['is_active' => $post['promo_code_cashback']??0]);
-    	$update = Configs::where('config_name','voucher online get point')->update(['is_active' => $post['voucher_online_cashback']??0]);
-    	$update = Configs::where('config_name','voucher offline get point')->update(['is_active' => $post['voucher_offline_cashback']??0]);
-    	$update = Configs::where('config_name','subscription get point')->update(['is_active' => $post['subscription_cashback']??0]);
+    	Configs::updateOrCreate(['config_name' => 'promo code get point'], ['is_active' => ($post['promo_code_cashback'] ?? 0)]);
+    	Configs::updateOrCreate(['config_name' => 'voucher online get point'], ['is_active' => ($post['voucher_online_cashback'] ?? 0)]);
+    	Configs::updateOrCreate(['config_name' => 'voucher offline get point'], ['is_active' => ($post['voucher_offline_cashback'] ?? 0)]);
+    	Configs::updateOrCreate(['config_name' => 'subscription get point'], ['is_active' => ($post['subscription_cashback'] ?? 0)]);
+    	Setting::updateOrCreate(['key' => 'cashback_include_bundling'], ['value' => ($post['bundling_cashback'] ?? 0)]);
 
-    	if(is_numeric($update))
-    	{
-    		db::commit();
-    	}else{
-    		db::rollback();
-    	}
-
-    	return response()->json(myHelper::checkUpdate($update));
+    	return response()->json(['status' => 'success']);
     }
 
     public function availablePromo()
