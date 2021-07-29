@@ -3081,7 +3081,12 @@ class ApiOnlineTransaction extends Controller
         	$result = app($this->promo)->getTransactionCheckPromoRule($result, $promo_source, $code ?? $deals ?? $request);
         }
 
-        $result['delivery_type'] = $this->showListDelivery($result['delivery_type'], $result['available_delivery']);
+        if ($post['type'] == 'Pickup Order') {
+        	$result['delivery_type'] = $this->showListDeliveryPickup($result['delivery_type'], $post['id_outlet']);
+        } else {
+        	$result['delivery_type'] = $this->showListDelivery($result['delivery_type'], $result['available_delivery']);
+        }
+
         $result['payment_detail'] = [];
         
         //subtotal
@@ -4953,6 +4958,36 @@ class ApiOnlineTransaction extends Controller
     		break;
     	}
     	
+    	return $showList;
+    }
+
+    public function showListDeliveryPickup($showDelivery, $id_outlet)
+    {
+    	if ($showDelivery != 1) {
+    		return $showDelivery;
+    	}
+
+    	$listDelivery = $this->listAvailableDelivery(WeHelpYou::listDeliveryRequest())['result']['delivery'] ?? [];
+    	$delivery_outlet = DeliveryOutlet::where('id_outlet', $id_outlet)->get();
+		$outletSetting = [];
+		foreach ($delivery_outlet as $val) {
+			$outletSetting[$val['code']] = $val;
+		}
+
+    	$showList = 0;
+    	foreach ($listDelivery as $val) {
+    		if ($val['show_status'] != 1
+    			|| $val['available_status'] != 1
+    			|| empty($outletSetting[$val['code']])
+    			|| (isset($outletSetting[$val['code']]) && ($outletSetting[$val['code']]['available_status'] != 1 || $outletSetting[$val['code']]['show_status'] != 1))
+    		) {
+    			continue;
+    		}
+
+    		$showList = 1;
+    		break;
+    	}
+
     	return $showList;
     }
 }
