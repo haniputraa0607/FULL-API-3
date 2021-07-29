@@ -362,7 +362,7 @@ class ApiPromoCampaign extends Controller
         $promoCampaign = $promoCampaign->toArray();
         if ($promoCampaign) {
 
-            $promoCampaign['used_code'] = PromoCampaignReport::where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign'])->count();
+            $promoCampaign['used_code'] = PromoCampaignReport::where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign'])->distinct()->count('id_promo_campaign_promo_code');
             $total = PromoCampaignReport::where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign']);
             $this->filterReport($total,$request,$foreign);
             foreach ($foreign as $value) {
