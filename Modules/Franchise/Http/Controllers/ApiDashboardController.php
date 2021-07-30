@@ -25,7 +25,7 @@ class ApiDashboardController extends Controller
                         COUNT(DISTINCT DATE(transaction_date)) as count_date,
                         COUNT(transactions.id_transaction) as total_sales, SUM(transaction_gross) as total_nominal_sales,
                         SUM(transaction_grandtotal) as grand_total, SUM(transaction_gross) as sub_total,
-                        SUM(transaction_shipment_go_send) as total_delivery, SUM(transaction_discount_item+transaction_discount_bill+transaction_discount_delivery) as total_dicount,
+                        SUM(transaction_shipment_go_send+transaction_shipment) as total_delivery, SUM(transaction_discount_item+transaction_discount_bill+transaction_discount_delivery) as total_dicount,
                         SUM(CASE WHEN disburse.disburse_status = "Success" THEN disburse_outlet.disburse_nominal ELSE NULL END) as disburse_success,
                         SUM(disburse_outlet_transactions.income_outlet) as incomes_outlet
                     ');
