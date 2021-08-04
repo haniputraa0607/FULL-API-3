@@ -233,7 +233,7 @@ class ApiReportGosend extends Controller
                 'transactions.transaction_receipt_number as Receipt Number',
                 'transaction_pickups.order_id as Order ID',
                 DB::raw('FORMAT(transactions.transaction_grandtotal, 0) as "Grand Total"'),
-                DB::raw('FORMAT(transactions.transaction_shipment_go_send, 0) as "Price GoSend"'),
+                DB::raw('FORMAT(transactions.transaction_shipment_go_send + transactions.transaction_shipment, 0) as "Price GoSend"'),
                 'transaction_pickup_go_sends.destination_name as Receiver Name',
                 'transaction_pickup_go_sends.destination_phone as Receiver Phone',
                 'transaction_pickup_go_sends.driver_name as Driver Name',
@@ -253,7 +253,7 @@ class ApiReportGosend extends Controller
 
             return response()->json(MyHelper::checkGet($data));
         }else{
-            $sum = $data->select(DB::raw('SUM(transactions.transaction_shipment_go_send) as total_price_go_send'))->first();
+            $sum = $data->select(DB::raw('SUM(transactions.transaction_shipment_go_send + transactions.transaction_shipment) as total_price_go_send'))->first();
             $data = $data->select('outlets.outlet_name', 'outlets.outlet_code', 'transactions.*', 'transaction_pickup_go_sends.*', 'transaction_pickups.order_id')->paginate(20);
 
             if($data){
