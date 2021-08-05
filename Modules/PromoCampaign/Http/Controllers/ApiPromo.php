@@ -410,7 +410,7 @@ class ApiPromo extends Controller
         ];
     }
 
-    public function getTransactionCheckPromoRule($result, $promo_source, $query)
+    public function getTransactionCheckPromoRule($result, $promo_source, $query, $trx_type)
     {
     	$check = false;
     	$disable_pickup = false;
@@ -418,6 +418,16 @@ class ApiPromo extends Controller
     	$result['pickup_type'] = 1;
     	$result['delivery_type'] = 1;
     	$result['available_payment'] = [];
+    	$available_delivery = $result['available_delivery'];
+
+    	if ($trx_type == 'GO-SEND') {
+    		$available_delivery = [
+    			[ 
+    				'code' => 'gosend',
+    				'disable' => 0
+    			]
+    		];
+    	}
 
     	switch ($promo_source) {
     		case 'promo_code':
@@ -459,14 +469,14 @@ class ApiPromo extends Controller
 	    	}
 
 	    	$result['delivery_type'] = 0;
-	    	foreach ($result['available_delivery'] as $key => $val) {
+	    	foreach ($available_delivery as $key => $val) {
 	    		if ($val['disable']) {
 	    			continue;
 	    		}
 		    	if ($pct->checkShipmentRule($promo->is_all_shipment, $val['code'], $promo_shipment)) {
 		    		$result['delivery_type'] = 1;
 		    	}else{
-		    		$result['available_delivery'][$key]['disable'] = 1;
+		    		if ($trx_type != 'GO-SEND') $result['available_delivery'][$key]['disable'] = 1;
 		    	}
 	    	}
     	}

@@ -3078,7 +3078,7 @@ class ApiOnlineTransaction extends Controller
 
         if ($promo_valid) {
         	// check available shipment, payment
-        	$result = app($this->promo)->getTransactionCheckPromoRule($result, $promo_source, $code ?? $deals ?? $request);
+        	$result = app($this->promo)->getTransactionCheckPromoRule($result, $promo_source, $code ?? $deals ?? $request, $post['type']);
         }
 
         if ($post['type'] == 'Pickup Order') {
