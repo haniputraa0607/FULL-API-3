@@ -63,6 +63,9 @@ use Modules\SettingFraud\Entities\LogCheckPromoCode;
 
 use Modules\Brand\Entities\BrandProduct;
 use Modules\Brand\Entities\BrandOutlet;
+use Modules\Outlet\Entities\DeliveryOutlet;
+
+use App\Lib\WeHelpYou;
 
 class ApiPromo extends Controller
 {
@@ -415,8 +418,6 @@ class ApiPromo extends Controller
     	$check = false;
     	$disable_pickup = false;
     	$available_payment 	= $this->getAvailablePayment()['result'];
-    	$result['pickup_type'] = 1;
-    	$result['delivery_type'] = 1;
     	$result['available_payment'] = [];
     	$available_delivery = $result['available_delivery'];
 
@@ -468,15 +469,39 @@ class ApiPromo extends Controller
 	    		$result['pickup_type'] = 0;
 	    	}
 
-	    	$result['delivery_type'] = 0;
-	    	foreach ($available_delivery as $key => $val) {
-	    		if ($val['disable']) {
-	    			continue;
-	    		}
-		    	if ($pct->checkShipmentRule($promo->is_all_shipment, $val['code'], $promo_shipment)) {
-		    		$result['delivery_type'] = 1;
-		    	}else{
-		    		if ($trx_type != 'GO-SEND') $result['available_delivery'][$key]['disable'] = 1;
+	    	if ($trx_type == 'Pickup Order') {
+	    		$listDelivery = app($this->online_transaction)->listAvailableDelivery(WeHelpYou::listDeliveryRequest())['result']['delivery'] ?? [];
+		    	$delivery_outlet = DeliveryOutlet::where('id_outlet', $result['outlet']['id_outlet'])->get();
+				$outletSetting = [];
+				foreach ($delivery_outlet as $val) {
+					$outletSetting[$val['code']] = $val;
+				}
+
+		    	$result['delivery_type'] = 0;
+		    	foreach ($listDelivery as $val) {
+		    		if ($val['show_status'] != 1
+		    			|| $val['available_status'] != 1
+		    			|| empty($outletSetting[$val['code']])
+		    			|| (isset($outletSetting[$val['code']]) && ($outletSetting[$val['code']]['available_status'] != 1 || $outletSetting[$val['code']]['show_status'] != 1))
+		    		) {
+		    			continue;
+		    		}
+		    		if ($pct->checkShipmentRule($promo->is_all_shipment, $val['code'], $promo_shipment)) {
+			    		$result['delivery_type'] = 1;
+		    			break;
+			    	}
+		    	}
+	    	} else {
+		    	$result['delivery_type'] = 0;
+		    	foreach ($available_delivery as $key => $val) {
+		    		if ($val['disable']) {
+		    			continue;
+		    		}
+			    	if ($pct->checkShipmentRule($promo->is_all_shipment, $val['code'], $promo_shipment)) {
+			    		$result['delivery_type'] = 1;
+			    	}else{
+			    		if ($trx_type != 'GO-SEND') $result['available_delivery'][$key]['disable'] = 1;
+			    	}
 		    	}
 	    	}
     	}
