@@ -3076,15 +3076,15 @@ class ApiOnlineTransaction extends Controller
 
         $result['available_delivery'] = $listDelivery;
 
+        if ($post['type'] == 'Delivery Order') {
+        	$result['delivery_type'] = $this->showListDelivery($result['delivery_type'], $result['available_delivery']);
+        } else {
+        	$result['delivery_type'] = $this->showListDeliveryPickup($result['delivery_type'], $post['id_outlet']);
+        }
+
         if ($promo_valid) {
         	// check available shipment, payment
         	$result = app($this->promo)->getTransactionCheckPromoRule($result, $promo_source, $code ?? $deals ?? $request, $post['type']);
-        }
-
-        if ($post['type'] == 'Pickup Order') {
-        	$result['delivery_type'] = $this->showListDeliveryPickup($result['delivery_type'], $post['id_outlet']);
-        } else {
-        	$result['delivery_type'] = $this->showListDelivery($result['delivery_type'], $result['available_delivery']);
         }
 
         $result['payment_detail'] = [];
