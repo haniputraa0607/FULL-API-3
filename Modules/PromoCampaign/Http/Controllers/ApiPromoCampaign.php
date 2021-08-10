@@ -3012,7 +3012,7 @@ class ApiPromoCampaign extends Controller
 			$promo = 'Kode Promo';
 		}elseif ($source == 'subscription') {
 			$promo = 'Subscription';
-		}elseif ($source == 'deals') {
+		}elseif ($source == 'deals' || $source == 'deals_promotion') {
 			$promo = 'Voucher';
 		}
 		if (isset($payment_text) && isset($shipment_text)) {
