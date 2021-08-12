@@ -78,15 +78,15 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
                 $idTransaction = Transaction::where('transaction_receipt_number', $value['id_reference'])->first()->id_transaction??null;
             }else{
                 if(strtolower($rule['payment_gateway']) == 'shopeepay'){
-                    $idTransaction = TransactionPaymentShopeePay::where('payment_reference_id', $value['id_reference'])->first()->id_transaction??null;
+                    $idTransaction = TransactionPaymentShopeePay::where('transaction_sn', $value['id_reference'])->first()->id_transaction??null;
                 }elseif(strtolower($rule['payment_gateway']) == 'ovo'){
-                    $idTransaction = TransactionPaymentIpay88::where('payment_id', $value['id_reference'])->first()->id_transaction??null;
+                    $idTransaction = TransactionPaymentIpay88::where('trans_id', $value['id_reference'])->first()->id_transaction??null;
                 }elseif(strtolower($rule['payment_gateway']) == 'gopay'){
                     $idTransaction = TransactionPaymentMidtran::where('vt_transaction_id', $value['id_reference'])->first()->id_transaction??null;
                 }elseif(strtolower($rule['payment_gateway']) == 'credit card'){
                     $idTransaction = TransactionPaymentMidtran::where('vt_transaction_id', $value['id_reference'])->first()->id_transaction??null;
                     if(empty($idTransaction)){
-                        $idTransaction = TransactionPaymentIpay88::where('payment_id', $value['id_reference'])->first()->id_transaction??null;
+                        $idTransaction = TransactionPaymentIpay88::where('trans_id', $value['id_reference'])->first()->id_transaction??null;
                     }
                 }
             }
