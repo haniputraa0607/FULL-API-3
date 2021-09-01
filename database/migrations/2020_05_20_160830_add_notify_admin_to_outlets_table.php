@@ -14,7 +14,7 @@ class AddNotifyAdminToOutletsTable extends Migration
     public function up()
     {
         Schema::table('outlets', function (Blueprint $table) {
-            $table->boolean('notify_admin')->after('recipient_name')->default(0);
+            $table->boolean('notify_admin')->default(0);
         });
     }
 
