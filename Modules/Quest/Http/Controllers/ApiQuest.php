@@ -864,7 +864,18 @@ class ApiQuest extends Controller
                     }]);
                     $has_product = 0;
                     foreach ($transaction->productTransaction as $transaction_product) {
-                        if (($quest->id_product == $transaction_product->id_product && (!$quest->id_product_variant_group || $quest->id_product_variant_group == $transaction_product->id_product_variant_group)) || $quest->id_product_category == $transaction_product->id_product_category || $quest->different_product_category || $quest->product_total) {
+                        if (
+                            (
+                                $quest->id_product == $transaction_product->id_product 
+                                && (
+                                    !$quest->id_product_variant_group 
+                                    || $quest->id_product_variant_group == $transaction_product->id_product_variant_group
+                                )
+                            ) 
+                            || $quest->id_product_category == $transaction_product->id_product_category 
+                            || $quest->different_product_category 
+                            || (!$quest->id_product && $quest->product_total)
+                        ) {
                             $questLog = QuestProductLog::where([
                                 'id_quest' => $quest->id_quest,
                                 'id_quest_detail' => $quest->id_quest_detail,
