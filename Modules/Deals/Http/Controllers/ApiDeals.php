@@ -448,7 +448,7 @@ class ApiDeals extends Controller
         $user = $request->user();
         $curBalance = (int) $user->balance??0;
         if($request->json('admin')){
-            $deals->addSelect('id_brand');
+            $deals->addSelect('id_brand', 'deals_voucher_expired');
             $deals->with('brand');
         }else{
             if($request->json('deals_type') != 'WelcomeVoucher' && !$request->json('web')){
