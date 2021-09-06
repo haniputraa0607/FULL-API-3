@@ -102,6 +102,18 @@ class ApiDealsWebview extends Controller
             $deals['outlet_by_city'] = $kota;
         }
 
+        usort($deals['outlet_by_city'], function($a, $b) {
+            if(isset($a['city_name']) && isset($b['city_name'])){
+                return $a['city_name'] <=> $b['city_name'];
+            }
+        });
+
+        for ($i = 0; $i < count($deals['outlet_by_city']); $i++) {
+            usort($deals['outlet_by_city'][$i]['outlet'] ,function($a, $b) {
+                return $a['outlet_name'] <=> $b['outlet_name'];
+            });
+        }
+
         unset($deals['outlets']);
         $point = Auth::user()->balance;
 
