@@ -91,7 +91,7 @@ class ApiDealsVoucherWebviewController extends Controller
         	$list_outlet = array_column($voucher['deals_voucher']['deal']['deals_brands'], 'id_brand');
             $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet');
 
-        	if (($deals['brand_rule']??false) == 'or') {
+        	if (($voucher['deals_voucher']['deal']['brand_rule']??false) == 'or') {
 	            $outlets = $outlets->whereHas('brands',function($query) use ($list_outlet){
 		                    $query->whereIn('brands.id_brand',$list_outlet);
 		                });
