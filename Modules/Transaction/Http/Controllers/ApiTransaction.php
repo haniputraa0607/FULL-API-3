@@ -3098,17 +3098,19 @@ class ApiTransaction extends Controller
                     $result['transaction_status_text'] = 'PESANAN SUDAH SIAP DIAMBIL';
                 } elseif($list['detail']['receive_at'] != null) {
                     $result['transaction_status'] = 4;
-                    $result['delivery_info'] = [
-                        'delivery_status' => '',
-                        'delivery_address' => '',
-                        'delivery_address_note' => '',
-                        'booking_status' => 0,
-                        'cancelable' => 1,
-                        'go_send_order_no' => '',
-                        'live_tracking_url' => '',
-                        'delivery_status_code' => 7
-                    ];
                     $result['transaction_status_text'] = 'PESANAN DITERIMA. ORDER SEDANG DIPERSIAPKAN';
+                    if (($list['transaction_pickup_go_send'] || $list['transaction_pickup_wehelpyou']) && !$list['detail']['reject_at']) {
+                        $result['delivery_info'] = [
+                            'delivery_status' => '',
+                            'delivery_address' => '',
+                            'delivery_address_note' => '',
+                            'booking_status' => 0,
+                            'cancelable' => 1,
+                            'go_send_order_no' => '',
+                            'live_tracking_url' => '',
+                            'delivery_status_code' => 7
+                        ];
+                    }
                 } else {
                     $result['transaction_status'] = 5;
                     $result['transaction_status_text'] = 'PESANAN MASUK. MENUNGGU OUTLET UNTUK MENERIMA ORDER';
