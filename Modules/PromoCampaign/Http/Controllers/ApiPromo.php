@@ -63,6 +63,9 @@ use Modules\SettingFraud\Entities\LogCheckPromoCode;
 
 use Modules\Brand\Entities\BrandProduct;
 use Modules\Brand\Entities\BrandOutlet;
+use Modules\Outlet\Entities\DeliveryOutlet;
+
+use App\Lib\WeHelpYou;
 
 class ApiPromo extends Controller
 {
@@ -266,10 +269,12 @@ class ApiPromo extends Controller
 
     public function promoGetCashbackRule()
     {
-    	$getData = Configs::whereIn('config_name',['promo code get point','voucher offline get point','voucher online get point','subscription get point'])->get()->toArray();
+    	$getDataConfig = Configs::whereIn('config_name',['promo code get point','voucher offline get point','voucher online get point','subscription get point'])->get()->toArray();
+    	$getDataSetting = Setting::whereIn('key',['cashback_include_bundling'])->get()->toArray();
 
+    	$getData = array_merge($getDataConfig, $getDataSetting);
     	foreach ($getData as $key => $value) {
-    		$config[$value['config_name']] = $value['is_active'];
+    		$config[$value['config_name'] ?? $value['key']] = $value['is_active'] ?? $value['value'];
     	}
 
     	return $config;
@@ -285,20 +290,13 @@ class ApiPromo extends Controller
     public function updateDataCashback(UpdateCashBackRule $request)
     {
     	$post = $request->json()->all();
-    	db::beginTransaction();
-    	$update = Configs::where('config_name','promo code get point')->update(['is_active' => $post['promo_code_cashback']??0]);
-    	$update = Configs::where('config_name','voucher online get point')->update(['is_active' => $post['voucher_online_cashback']??0]);
-    	$update = Configs::where('config_name','voucher offline get point')->update(['is_active' => $post['voucher_offline_cashback']??0]);
-    	$update = Configs::where('config_name','subscription get point')->update(['is_active' => $post['subscription_cashback']??0]);
+    	Configs::updateOrCreate(['config_name' => 'promo code get point'], ['is_active' => ($post['promo_code_cashback'] ?? 0)]);
+    	Configs::updateOrCreate(['config_name' => 'voucher online get point'], ['is_active' => ($post['voucher_online_cashback'] ?? 0)]);
+    	Configs::updateOrCreate(['config_name' => 'voucher offline get point'], ['is_active' => ($post['voucher_offline_cashback'] ?? 0)]);
+    	Configs::updateOrCreate(['config_name' => 'subscription get point'], ['is_active' => ($post['subscription_cashback'] ?? 0)]);
+    	Setting::updateOrCreate(['key' => 'cashback_include_bundling'], ['value' => ($post['bundling_cashback'] ?? 0)]);
 
-    	if(is_numeric($update))
-    	{
-    		db::commit();
-    	}else{
-    		db::rollback();
-    	}
-
-    	return response()->json(myHelper::checkUpdate($update));
+    	return response()->json(['status' => 'success']);
     }
 
     public function availablePromo()
@@ -415,14 +413,22 @@ class ApiPromo extends Controller
         ];
     }
 
-    public function getTransactionCheckPromoRule($result, $promo_source, $query)
+    public function getTransactionCheckPromoRule($result, $promo_source, $query, $trx_type)
     {
     	$check = false;
     	$disable_pickup = false;
     	$available_payment 	= $this->getAvailablePayment()['result'];
-    	$result['pickup_type'] = 1;
-    	$result['delivery_type'] = 1;
     	$result['available_payment'] = [];
+    	$available_delivery = $result['available_delivery'];
+
+    	if ($trx_type == 'GO-SEND') {
+    		$available_delivery = [
+    			[ 
+    				'code' => 'gosend',
+    				'disable' => 0
+    			]
+    		];
+    	}
 
     	switch ($promo_source) {
     		case 'promo_code':
@@ -463,15 +469,39 @@ class ApiPromo extends Controller
 	    		$result['pickup_type'] = 0;
 	    	}
 
-	    	$result['delivery_type'] = 0;
-	    	foreach ($result['available_delivery'] as $key => $val) {
-	    		if ($val['disable']) {
-	    			continue;
-	    		}
-		    	if ($pct->checkShipmentRule($promo->is_all_shipment, $val['code'], $promo_shipment)) {
-		    		$result['delivery_type'] = 1;
-		    	}else{
-		    		$result['available_delivery'][$key]['disable'] = 1;
+	    	if ($trx_type == 'Pickup Order') {
+	    		$listDelivery = app($this->online_transaction)->listAvailableDelivery(WeHelpYou::listDeliveryRequest())['result']['delivery'] ?? [];
+		    	$delivery_outlet = DeliveryOutlet::where('id_outlet', $result['outlet']['id_outlet'])->get();
+				$outletSetting = [];
+				foreach ($delivery_outlet as $val) {
+					$outletSetting[$val['code']] = $val;
+				}
+
+		    	$result['delivery_type'] = 0;
+		    	foreach ($listDelivery as $val) {
+		    		if ($val['show_status'] != 1
+		    			|| $val['available_status'] != 1
+		    			|| empty($outletSetting[$val['code']])
+		    			|| (isset($outletSetting[$val['code']]) && ($outletSetting[$val['code']]['available_status'] != 1 || $outletSetting[$val['code']]['show_status'] != 1))
+		    		) {
+		    			continue;
+		    		}
+		    		if ($pct->checkShipmentRule($promo->is_all_shipment, $val['code'], $promo_shipment)) {
+			    		$result['delivery_type'] = 1;
+		    			break;
+			    	}
+		    	}
+	    	} else {
+		    	$result['delivery_type'] = 0;
+		    	foreach ($available_delivery as $key => $val) {
+		    		if ($val['disable']) {
+		    			continue;
+		    		}
+			    	if ($pct->checkShipmentRule($promo->is_all_shipment, $val['code'], $promo_shipment)) {
+			    		$result['delivery_type'] = 1;
+			    	}else{
+			    		if ($trx_type != 'GO-SEND') $result['available_delivery'][$key]['disable'] = 1;
+			    	}
 		    	}
 	    	}
     	}

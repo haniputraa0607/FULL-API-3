@@ -37,7 +37,7 @@ class WeHelpYou
 	private static function getHeader($method, $request)
 	{
 		$time = date("D, d M Y H:i:s ", time()-7*3600).'GMT';
-		$signatureString = $time . '|' . (($method == 'get') ? '' : json_encode($request));
+		$signatureString = $time . '|' . (($method == 'get') ? '' : json_encode($request, JSON_UNESCAPED_SLASHES));
 		$signature = base64_encode(hash_hmac('sha256', $signatureString, config('wehelpyou.secret'), true));
 		return [
 			'time' => $time,
@@ -312,7 +312,7 @@ class WeHelpYou
 			'receiver_name' 		=> $request->user()->name,
 			'receiver_phone' 		=> $request->user()->phone,
 			'receiver_address' 		=> $request['destination']['address'],
-			'receiver_notes' 		=> $request['destination']['description'],
+			'receiver_notes' 		=> $request['destination']['description'] ?? null,
 			'receiver_latitude' 	=> $request['destination']['latitude'],
 			'receiver_longitude' 	=> $request['destination']['longitude'],
 

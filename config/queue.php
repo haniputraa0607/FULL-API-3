@@ -51,7 +51,7 @@ return [
         'quest' => [
             'driver' => 'database',
             'table' => 'questjobs',
-            'queue' => 'default',
+            'queue' => 'quest',
             'retry_after' => 90,
         ],
 

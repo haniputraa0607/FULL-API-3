@@ -26,7 +26,7 @@ use DB;
 use Mail;
 
 
-class ApiReportGosend extends Controller
+class ApiReportWehelpyou extends Controller
 {
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
@@ -37,12 +37,11 @@ class ApiReportGosend extends Controller
 
         $data = Transaction::join('outlets','outlets.id_outlet', 'transactions.id_outlet')
             ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-            ->join('transaction_pickup_go_sends', 'transaction_pickup_go_sends.id_transaction_pickup', 'transaction_pickups.id_transaction_pickup')
+            ->join('transaction_pickup_wehelpyous', 'transaction_pickup_wehelpyous.id_transaction_pickup', 'transaction_pickups.id_transaction_pickup')
             ->where('transactions.transaction_payment_status','Completed')
             ->orderBy('transactions.transaction_date', 'desc');
 
-        if(isset($post['date_start']) && !empty($post['date_start']) &&
-            isset($post['date_end']) && !empty($post['date_end'])){
+        if (!empty($post['date_start']) && !empty($post['date_end'])) {
             $start_date = date('Y-m-d', strtotime($post['date_start']));
             $end_date = date('Y-m-d', strtotime($post['date_end']));
 
@@ -50,10 +49,10 @@ class ApiReportGosend extends Controller
                 ->whereDate('transactions.transaction_date', '<=', $end_date);
         }
 
-        if(isset($post['conditions']) && !empty($post['conditions'])){
+        if (isset($post['conditions']) && !empty($post['conditions'])) {
             $checkFilterStatus = array_search('status', array_column($post['conditions'], 'subject'));
             if($checkFilterStatus === false){
-                $data = $data->where('transaction_pickup_go_sends.latest_status', 'delivered');
+                $data = $data->where('transaction_pickup_wehelpyous.latest_status_id', '2');
             }
 
             $rule = 'and';
@@ -65,7 +64,7 @@ class ApiReportGosend extends Controller
                 foreach ($post['conditions'] as $row){
                     if(isset($row['subject'])){
                         if($row['subject'] == 'status'){
-                            $data = $data->where('transaction_pickup_go_sends.latest_status', $row['operator']);
+                            $data = $data->where('transaction_pickup_wehelpyous.latest_status_id', $row['operator']);
                         }
 
                         if($row['subject'] == 'outlet_code'){
@@ -102,38 +101,38 @@ class ApiReportGosend extends Controller
 
                         if($row['subject'] == 'destination_name'){
                             if($row['operator'] == '='){
-                                $data = $data->where('transaction_pickup_go_sends.destination_name', $row['parameter']);
+                                $data = $data->where('transaction_pickup_wehelpyous.receiver_name', $row['parameter']);
                             }else{
-                                $data = $data->where('transaction_pickup_go_sends.destination_name', 'like', '%'.$row['parameter'].'%');
+                                $data = $data->where('transaction_pickup_wehelpyous.receiver_name', 'like', '%'.$row['parameter'].'%');
                             }
                         }
 
                         if($row['subject'] == 'destination_phone'){
                             if($row['operator'] == '='){
-                                $data = $data->where('transaction_pickup_go_sends.destination_phone', $row['parameter']);
+                                $data = $data->where('transaction_pickup_wehelpyous.receiver_phone', $row['parameter']);
                             }else{
-                                $data = $data->where('transaction_pickup_go_sends.destination_phone', 'like', '%'.$row['parameter'].'%');
+                                $data = $data->where('transaction_pickup_wehelpyous.receiver_phone', 'like', '%'.$row['parameter'].'%');
                             }
                         }
 
                         if($row['subject'] == 'driver_name'){
                             if($row['operator'] == '='){
-                                $data = $data->where('transaction_pickup_go_sends.driver_name', $row['parameter']);
+                                $data = $data->where('transaction_pickup_wehelpyous.tracking_driver_name', $row['parameter']);
                             }else{
-                                $data = $data->where('transaction_pickup_go_sends.driver_name', 'like', '%'.$row['parameter'].'%');
+                                $data = $data->where('transaction_pickup_wehelpyous.tracking_driver_name', 'like', '%'.$row['parameter'].'%');
                             }
                         }
 
                         if($row['subject'] == 'driver_phone'){
                             if($row['operator'] == '='){
-                                $data = $data->where('transaction_pickup_go_sends.driver_phone', $row['parameter']);
+                                $data = $data->where('transaction_pickup_wehelpyous.tracking_driver_phone', $row['parameter']);
                             }else{
-                                $data = $data->where('transaction_pickup_go_sends.driver_phone', 'like', '%'.$row['parameter'].'%');
+                                $data = $data->where('transaction_pickup_wehelpyous.tracking_driver_phone', 'like', '%'.$row['parameter'].'%');
                             }
                         }
 
-                        if($row['subject'] == 'transaction_shipment_go_send'){
-                            $data = $data->where('transactions.transaction_shipment_go_send',$row['operator'] ,$row['parameter']);
+                        if($row['subject'] == 'transaction_shipment'){
+                            $data = $data->where('transactions.transaction_shipment',$row['operator'] ,$row['parameter']);
                         }
 
                         if($row['subject'] == 'transaction_grandtotal'){
@@ -146,7 +145,7 @@ class ApiReportGosend extends Controller
                     foreach ($post['conditions'] as $row){
                         if(isset($row['subject'])){
                             if($row['subject'] == 'status'){
-                                $subquery->orWhere('transaction_pickup_go_sends.latest_status', $row['operator']);
+                                $subquery->orWhere('transaction_pickup_wehelpyous.latest_status_id', $row['operator']);
                             }
 
                             if($row['subject'] == 'outlet_code'){
@@ -183,38 +182,38 @@ class ApiReportGosend extends Controller
 
                             if($row['subject'] == 'destination_name'){
                                 if($row['operator'] == '='){
-                                    $subquery->orWhere('transaction_pickup_go_sends.destination_name', $row['parameter']);
+                                    $subquery->orWhere('transaction_pickup_wehelpyous.receiver_name', $row['parameter']);
                                 }else{
-                                    $subquery->orWhere('transaction_pickup_go_sends.destination_name', 'like', '%'.$row['parameter'].'%');
+                                    $subquery->orWhere('transaction_pickup_wehelpyous.receiver_name', 'like', '%'.$row['parameter'].'%');
                                 }
                             }
 
                             if($row['subject'] == 'destination_phone'){
                                 if($row['operator'] == '='){
-                                    $subquery->orWhere('transaction_pickup_go_sends.destination_phone', $row['parameter']);
+                                    $subquery->orWhere('transaction_pickup_wehelpyous.receiver_phone', $row['parameter']);
                                 }else{
-                                    $subquery->orWhere('transaction_pickup_go_sends.destination_phone', 'like', '%'.$row['parameter'].'%');
+                                    $subquery->orWhere('transaction_pickup_wehelpyous.receiver_phone', 'like', '%'.$row['parameter'].'%');
                                 }
                             }
 
                             if($row['subject'] == 'driver_name'){
                                 if($row['operator'] == '='){
-                                    $subquery->orWhere('transaction_pickup_go_sends.driver_name', $row['parameter']);
+                                    $subquery->orWhere('transaction_pickup_wehelpyous.tracking_driver_name', $row['parameter']);
                                 }else{
-                                    $subquery->orWhere('transaction_pickup_go_sends.driver_name', 'like', '%'.$row['parameter'].'%');
+                                    $subquery->orWhere('transaction_pickup_wehelpyous.tracking_driver_name', 'like', '%'.$row['parameter'].'%');
                                 }
                             }
 
                             if($row['subject'] == 'driver_phone'){
                                 if($row['operator'] == '='){
-                                    $subquery->orWhere('transaction_pickup_go_sends.driver_phone', $row['parameter']);
+                                    $subquery->orWhere('transaction_pickup_wehelpyous.tracking_driver_phone', $row['parameter']);
                                 }else{
-                                    $subquery->orWhere('transaction_pickup_go_sends.driver_phone', 'like', '%'.$row['parameter'].'%');
+                                    $subquery->orWhere('transaction_pickup_wehelpyous.tracking_driver_phone', 'like', '%'.$row['parameter'].'%');
                                 }
                             }
 
-                            if($row['subject'] == 'transaction_shipment_go_send'){
-                                $subquery->orWhere('transactions.transaction_shipment_go_send',$row['operator'] ,$row['parameter']);
+                            if($row['subject'] == 'transaction_shipment'){
+                                $subquery->orWhere('transactions.transaction_shipment',$row['operator'] ,$row['parameter']);
                             }
 
                             if($row['subject'] == 'transaction_grandtotal'){
@@ -225,7 +224,7 @@ class ApiReportGosend extends Controller
                 });
             }
         }else{
-            $data = $data->where('transaction_pickup_go_sends.latest_status', 'delivered');
+            $data = $data->where('transaction_pickup_wehelpyous.latest_status_id', '2');
         }
 
         if(isset($post['export']) && $post['export'] == 1){
@@ -233,28 +232,28 @@ class ApiReportGosend extends Controller
                 'transactions.transaction_receipt_number as Receipt Number',
                 'transaction_pickups.order_id as Order ID',
                 DB::raw('FORMAT(transactions.transaction_grandtotal, 0) as "Grand Total"'),
-                DB::raw('FORMAT(transactions.transaction_shipment_go_send + transactions.transaction_shipment, 0) as "Price GoSend"'),
-                'transaction_pickup_go_sends.destination_name as Receiver Name',
-                'transaction_pickup_go_sends.destination_phone as Receiver Phone',
-                'transaction_pickup_go_sends.driver_name as Driver Name',
-                'transaction_pickup_go_sends.driver_phone as Driver Phone',
+                DB::raw('FORMAT(transactions.transaction_shipment, 0) as "Price Wehelpyou"'),
+                'transaction_pickup_wehelpyous.receiver_name as Receiver Name',
+                'transaction_pickup_wehelpyous.receiver_phone as Receiver Phone',
+                'transaction_pickup_wehelpyous.tracking_driver_name as Driver Name',
+                'transaction_pickup_wehelpyous.tracking_driver_phone as Driver Phone',
                 DB::raw('(
                     CASE
-                        WHEN transaction_pickup_go_sends.latest_status = "confirmed" THEN "Booking is received"
-                        WHEN transaction_pickup_go_sends.latest_status = "allocated" THEN "Driver is found"
-                        WHEN transaction_pickup_go_sends.latest_status = "out_for_pickup" THEN "Driver is on their way to pick-up location"
-                        WHEN transaction_pickup_go_sends.latest_status = "out_for_delivery" THEN "Driver is enroute to deliver the item"
-                        WHEN transaction_pickup_go_sends.latest_status = "cancelled" THEN "Booking is cancelled by CS"
-                        WHEN transaction_pickup_go_sends.latest_status = "delivered" THEN "Delivered"
-                        WHEN transaction_pickup_go_sends.latest_status = "no_driver" THEN "Driver not found"
+                        WHEN transaction_pickup_wehelpyous.latest_status_id = "1" THEN "Booking is received"
+                        WHEN transaction_pickup_wehelpyous.latest_status_id = "8" THEN "Driver is found and on their way to pick-up location"
+                        WHEN transaction_pickup_wehelpyous.latest_status_id = "9" THEN "Driver is enroute to deliver the item"
+                        WHEN transaction_pickup_wehelpyous.latest_status_id = "91" THEN "Booking is cancelled by CS"
+                        WHEN transaction_pickup_wehelpyous.latest_status_id = "2" THEN "Completed"
+                        WHEN transaction_pickup_wehelpyous.latest_status_id = "95" THEN "Driver not found"
+                        WHEN transaction_pickup_wehelpyous.latest_status_id = "11" THEN "Finding Driver"
                         ELSE "-"
                     END
                 ) as "Status"'))->get()->toArray();
 
             return response()->json(MyHelper::checkGet($data));
         }else{
-            $sum = $data->select(DB::raw('SUM(transactions.transaction_shipment_go_send + transactions.transaction_shipment) as total_price_go_send'))->first();
-            $data = $data->select('outlets.outlet_name', 'outlets.outlet_code', 'transactions.*', 'transaction_pickup_go_sends.*', 'transaction_pickups.order_id')->paginate(20);
+            $sum = $data->select(DB::raw('SUM(transactions.transaction_shipment) as total_price_wehelpyou'))->first();
+            $data = $data->select('outlets.outlet_name', 'outlets.outlet_code', 'transactions.*', 'transaction_pickup_wehelpyous.*', 'transaction_pickups.order_id')->paginate(20);
 
             if($data){
                 $result = [

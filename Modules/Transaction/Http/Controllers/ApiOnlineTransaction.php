@@ -825,7 +825,13 @@ class ApiOnlineTransaction extends Controller
         $shippingGoSend = 0;
 
         if($post['type'] == 'GO-SEND' || $post['type'] == 'Delivery Order'){
-            if(!($outlet['outlet_latitude'] && $outlet['outlet_longitude'] && $outlet['outlet_phone'] && $outlet['outlet_address'])) {
+            if (!($outlet['outlet_latitude'] 
+            	&& $outlet['outlet_longitude'] 
+            	&& $outlet['outlet_phone'] 
+            	&& $outlet['outlet_address'])
+            	&& MyHelper::validatePhoneGoSend($outlet['outlet_phone'])
+            	&& MyHelper::validatePhoneWehelpyou($outlet['outlet_phone'])
+        	) {
                 app($this->outlet)->sendNotifIncompleteOutlet($outlet['id_outlet']);
                 $outlet->notify_admin = 1;
                 $outlet->save();
@@ -2167,10 +2173,6 @@ class ApiOnlineTransaction extends Controller
 
             $settingTime = Setting::where('key', 'processing_time')->first();
 
-            if($outlet['today']['close']){
-                $outlet['today']['close'] = date('Y-m-d H:i:s', strtotime($outlet['today']['close'].' + '.$settingTime['value'].'minutes'));
-            }
-
              if($outlet['today']['close'] && $outlet['today']['close'] != "00:00" && $outlet['today']['open'] && $outlet['today']['open'] != '00:00'){
 
                 if($settingTime && $settingTime->value){
@@ -2195,6 +2197,11 @@ class ApiOnlineTransaction extends Controller
                     $outlet_status = 0;
                 }
             }
+
+            // if($outlet['today']['close']){
+            //     $outlet['today']['close'] = date('Y-m-d H:i:s', strtotime($outlet['today']['close'].' + '.$settingTime['value'].'minutes'));
+            // }
+
         }
 
         if (!isset($post['payment_type'])) {
@@ -2216,7 +2223,13 @@ class ApiOnlineTransaction extends Controller
 
         if($post['type'] == 'Delivery Order' || $post['type'] == 'GO-SEND'){
             $delivery_outlet = DeliveryOutlet::where('id_outlet', $outlet->id_outlet)->pluck('code')->toArray();
-            if(!($outlet['outlet_latitude'] && $outlet['outlet_longitude'] && $outlet['outlet_phone'] && $outlet['outlet_address'])){
+            if (!($outlet['outlet_latitude'] 
+            	&& $outlet['outlet_longitude'] 
+            	&& $outlet['outlet_phone'] 
+            	&& $outlet['outlet_address'])
+            	&& MyHelper::validatePhoneGoSend($outlet['outlet_phone'])
+            	&& MyHelper::validatePhoneWehelpyou($outlet['outlet_phone'])
+        	){
                 app($this->outlet)->sendNotifIncompleteOutlet($outlet['id_outlet']);
                 $outlet->notify_admin = 1;
                 $outlet->save();
@@ -3063,12 +3076,17 @@ class ApiOnlineTransaction extends Controller
 
         $result['available_delivery'] = $listDelivery;
 
-        if ($promo_valid) {
-        	// check available shipment, payment
-        	$result = app($this->promo)->getTransactionCheckPromoRule($result, $promo_source, $code ?? $deals ?? $request);
+        if ($post['type'] == 'Delivery Order') {
+        	$result['delivery_type'] = $this->showListDelivery($result['delivery_type'], $result['available_delivery']);
+        } else {
+        	$result['delivery_type'] = $this->showListDeliveryPickup($result['delivery_type'], $post['id_outlet']);
         }
 
-        $result['delivery_type'] = $this->showListDelivery($result['delivery_type'], $result['available_delivery']);
+        if ($promo_valid) {
+        	// check available shipment, payment
+        	$result = app($this->promo)->getTransactionCheckPromoRule($result, $promo_source, $code ?? $deals ?? $request, $post['type']);
+        }
+
         $result['payment_detail'] = [];
         
         //subtotal
@@ -4940,6 +4958,36 @@ class ApiOnlineTransaction extends Controller
     		break;
     	}
     	
+    	return $showList;
+    }
+
+    public function showListDeliveryPickup($showDelivery, $id_outlet)
+    {
+    	if ($showDelivery != 1) {
+    		return $showDelivery;
+    	}
+
+    	$listDelivery = $this->listAvailableDelivery(WeHelpYou::listDeliveryRequest())['result']['delivery'] ?? [];
+    	$delivery_outlet = DeliveryOutlet::where('id_outlet', $id_outlet)->get();
+		$outletSetting = [];
+		foreach ($delivery_outlet as $val) {
+			$outletSetting[$val['code']] = $val;
+		}
+
+    	$showList = 0;
+    	foreach ($listDelivery as $val) {
+    		if ($val['show_status'] != 1
+    			|| $val['available_status'] != 1
+    			|| empty($outletSetting[$val['code']])
+    			|| (isset($outletSetting[$val['code']]) && ($outletSetting[$val['code']]['available_status'] != 1 || $outletSetting[$val['code']]['show_status'] != 1))
+    		) {
+    			continue;
+    		}
+
+    		$showList = 1;
+    		break;
+    	}
+
     	return $showList;
     }
 }

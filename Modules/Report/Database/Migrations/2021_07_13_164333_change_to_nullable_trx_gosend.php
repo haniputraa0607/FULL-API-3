@@ -13,7 +13,7 @@ class ChangeToNullableTrxGosend extends Migration
      */
     public function up()
     {
-        \DB::statement("ALTER TABLE daily_report_trx MODIFY trx_shipment_go_send INTEGER null default(0);");
+        \DB::statement("ALTER TABLE daily_report_trx MODIFY trx_shipment_go_send INTEGER null default 0;");
     }
 
     /**
@@ -23,6 +23,6 @@ class ChangeToNullableTrxGosend extends Migration
      */
     public function down()
     {
-        \DB::statement("ALTER TABLE daily_report_trx MODIFY trx_shipment_go_send INTEGER default(0);");
+        \DB::statement("ALTER TABLE daily_report_trx MODIFY trx_shipment_go_send INTEGER default 0;");
     }
 }

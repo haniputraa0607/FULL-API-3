@@ -6,6 +6,7 @@ use App\Http\Models\CrmUserData;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\User;
+use App\Jobs\QuestRecipientNotification;
 use App\Lib\MyHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -28,6 +29,7 @@ use Modules\Quest\Entities\QuestContent;
 use Modules\Quest\Jobs\AutoclaimQuest;
 
 use Modules\Quest\Http\Requests\StoreRequest;
+use function Clue\StreamFilter\fun;
 
 class ApiQuest extends Controller
 {
@@ -344,7 +346,7 @@ class ApiQuest extends Controller
     public function triggerAutoclaim($quest)
     {
         if ($quest->autoclaim_quest) {
-            User::select('id')->where('phone_verified', 1)->where('is_suspended', 0)->where('complete_profile', 1)->chunk(2000, function($users) use ($quest) {
+            User::select('id')->where('phone_verified', 1)->where('is_suspended', 0)->where('complete_profile', 1)->chunk(1000, function($users) use ($quest) {
                 AutoclaimQuest::dispatch($quest, $users->pluck('id'))->allOnConnection('quest_autoclaim');
             });
         }
@@ -864,7 +866,18 @@ class ApiQuest extends Controller
                     }]);
                     $has_product = 0;
                     foreach ($transaction->productTransaction as $transaction_product) {
-                        if (($quest->id_product == $transaction_product->id_product && (!$quest->id_product_variant_group || $quest->id_product_variant_group == $transaction_product->id_product_variant_group)) || $quest->id_product_category == $transaction_product->id_product_category || $quest->different_product_category || $quest->product_total) {
+                        if (
+                            (
+                                $quest->id_product == $transaction_product->id_product 
+                                && (
+                                    !$quest->id_product_variant_group 
+                                    || $quest->id_product_variant_group == $transaction_product->id_product_variant_group
+                                )
+                            ) 
+                            || $quest->id_product_category == $transaction_product->id_product_category 
+                            || $quest->different_product_category 
+                            || (!$quest->id_product && $quest->product_total)
+                        ) {
                             $questLog = QuestProductLog::where([
                                 'id_quest' => $quest->id_quest,
                                 'id_quest_detail' => $quest->id_quest_detail,
@@ -1115,6 +1128,9 @@ class ApiQuest extends Controller
                     'stop_at' => date('Y-m-d H:i:s'),
                     'stop_reason' => 'voucher runs out'
                 ]);
+
+                //send notification bulk for user
+                QuestRecipientNotification::dispatch(['id_quest' => $quest->id_quest, 'deals' => $deals])->allOnConnection('quest');
             }
 
             if ($count) {
@@ -1300,7 +1316,8 @@ class ApiQuest extends Controller
             ->where(function($query) {
                 $query->where(function($query2) {
                     $query2->where('publish_end', '>=', date('Y-m-d H:i:s'))
-                        ->whereNull('quest_users.id_user');
+                        ->whereNull('quest_users.id_user')
+                        ->where('quests.autoclaim_quest', 0);
                 })
                     ->orWhere(function($query2) {
                         // claimed
@@ -1657,6 +1674,10 @@ class ApiQuest extends Controller
         $result = Deal::select('id_deals', 'deals_title', 'deals_voucher_type', 'deals_total_voucher', 'deals_total_claimed')
             ->where('step_complete', '1')
             ->where('deals_type', 'Quest')
+            ->where(function ($q){
+                $q->whereNull('deals_voucher_expired')
+                    ->orWhere('deals_voucher_expired', '>=', date('Y-m-d H:i:s'));
+            })
             ->get()
             ->toArray();
         return MyHelper::checkGet($result);

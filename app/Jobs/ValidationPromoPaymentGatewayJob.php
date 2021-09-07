@@ -64,7 +64,9 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
         $allPromoTrx = PromoPaymentGatewayTransaction::join('transactions', 'transactions.id_transaction', 'promo_payment_gateway_transactions.id_transaction')
             ->whereDate('transaction_date', '>=', date('Y-m-d', strtotime($datas['start_date_periode'])))
             ->whereDate('transaction_date', '<=', date('Y-m-d', strtotime($datas['end_date_periode'])))
-            ->where('id_rule_promo_payment_gateway', $datas['id_rule_promo_payment_gateway'])->pluck('promo_payment_gateway_transactions.id_transaction')->toArray();
+            ->where('id_rule_promo_payment_gateway', $datas['id_rule_promo_payment_gateway'])
+            ->where('status_active', 1)
+            ->pluck('promo_payment_gateway_transactions.id_transaction')->toArray();
 
         foreach ($data as $key => $value) {
             if(empty($value['id_reference'])){
@@ -76,15 +78,15 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
                 $idTransaction = Transaction::where('transaction_receipt_number', $value['id_reference'])->first()->id_transaction??null;
             }else{
                 if(strtolower($rule['payment_gateway']) == 'shopeepay'){
-                    $idTransaction = TransactionPaymentShopeePay::where('payment_reference_id', $value['id_reference'])->first()->id_transaction??null;
+                    $idTransaction = TransactionPaymentShopeePay::where('transaction_sn', $value['id_reference'])->first()->id_transaction??null;
                 }elseif(strtolower($rule['payment_gateway']) == 'ovo'){
-                    $idTransaction = TransactionPaymentIpay88::where('payment_id', $value['id_reference'])->first()->id_transaction??null;
+                    $idTransaction = TransactionPaymentIpay88::where('trans_id', $value['id_reference'])->first()->id_transaction??null;
                 }elseif(strtolower($rule['payment_gateway']) == 'gopay'){
                     $idTransaction = TransactionPaymentMidtran::where('vt_transaction_id', $value['id_reference'])->first()->id_transaction??null;
                 }elseif(strtolower($rule['payment_gateway']) == 'credit card'){
                     $idTransaction = TransactionPaymentMidtran::where('vt_transaction_id', $value['id_reference'])->first()->id_transaction??null;
                     if(empty($idTransaction)){
-                        $idTransaction = TransactionPaymentIpay88::where('payment_id', $value['id_reference'])->first()->id_transaction??null;
+                        $idTransaction = TransactionPaymentIpay88::where('trans_id', $value['id_reference'])->first()->id_transaction??null;
                     }
                 }
             }
@@ -201,6 +203,7 @@ class ValidationPromoPaymentGatewayJob implements ShouldQueue
                     'new_cashback' => 0,
                     'old_cashback' => $chasbackTrx
                 ];
+                PromoPaymentGatewayTransaction::where('id_transaction', $idTransaction)->update(['status_active' => 1]);
             }else{
                 $getPromoTrx = PromoPaymentGatewayTransaction::where('id_transaction', $idTransaction)->first();
                 $new_cashback = 0;

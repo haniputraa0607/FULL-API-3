@@ -3098,17 +3098,19 @@ class ApiTransaction extends Controller
                     $result['transaction_status_text'] = 'PESANAN SUDAH SIAP DIAMBIL';
                 } elseif($list['detail']['receive_at'] != null) {
                     $result['transaction_status'] = 4;
-                    $result['delivery_info'] = [
-                        'delivery_status' => '',
-                        'delivery_address' => '',
-                        'delivery_address_note' => '',
-                        'booking_status' => 0,
-                        'cancelable' => 1,
-                        'go_send_order_no' => '',
-                        'live_tracking_url' => '',
-                        'delivery_status_code' => 7
-                    ];
                     $result['transaction_status_text'] = 'PESANAN DITERIMA. ORDER SEDANG DIPERSIAPKAN';
+                    if (($list['transaction_pickup_go_send'] || $list['transaction_pickup_wehelpyou']) && !$list['detail']['reject_at']) {
+                        $result['delivery_info'] = [
+                            'delivery_status' => '',
+                            'delivery_address' => '',
+                            'delivery_address_note' => '',
+                            'booking_status' => 0,
+                            'cancelable' => 1,
+                            'go_send_order_no' => '',
+                            'live_tracking_url' => '',
+                            'delivery_status_code' => 7
+                        ];
+                    }
                 } else {
                     $result['transaction_status'] = 5;
                     $result['transaction_status_text'] = 'PESANAN MASUK. MENUNGGU OUTLET UNTUK MENERIMA ORDER';
@@ -3619,7 +3621,7 @@ class ApiTransaction extends Controller
                     } elseif ($list['detail']['ready_at'] != null) {
                         $is_admin = $request->user()->tokenCan('be');
                         $statusOrder[] = [
-                            'text'  => 'Pesanan sudah siap dan menunggu diambil Driver'. ($list['detail']['is_autoready'] && $is_admin ? ' (auto ready by system)' : ''),
+                            'text'  => 'Pesanan sudah siap diambil Driver'. ($list['detail']['is_autoready'] && $is_admin ? ' (auto ready by system)' : ''),
                             'date'  => $list['detail']['ready_at']
                         ];
                     }
@@ -3670,7 +3672,7 @@ class ApiTransaction extends Controller
                                 case 'enroute drop':
                                 case 'out_for_delivery':
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan sudah diambil dan sedang menuju lokasi #temansejiwa',
+                                        'text'  => 'Pesanan sudah diambil dan sedang diantar ke lokasi #temansejiwa',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     if (!$hasPicked) {
@@ -3684,7 +3686,7 @@ class ApiTransaction extends Controller
                                 case 'completed':
                                 case 'delivered':
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan telah selesai dan diterima',
+                                        'text'  => 'Pesanan telah selesai',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
@@ -3739,13 +3741,13 @@ class ApiTransaction extends Controller
                                     break;
                                 case 9:
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan sudah diambil dan sedang menuju lokasi #temansejiwa',
+                                        'text'  => 'Pesanan sudah diambil dan sedang diantar ke lokasi #temansejiwa',
                                         'date'  => $valueWehelpyou['created_at']
                                     ];
                                     break;
                                 case 2:
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan telah selesai dan diterima',
+                                        'text'  => 'Pesanan telah selesai',
                                         'date'  => $valueWehelpyou['created_at']
                                     ];
                                     break;
@@ -4373,8 +4375,10 @@ class ApiTransaction extends Controller
         $gmaps = $this->getListLocation($request);
 
         if($gmaps['status'] === 'OK'){
+        	if ($gmaps['send_gmaps_data'] ?? false) {
+            	MyHelper::sendGmapsData($gmaps['results']);
+        	}
             $gmaps = $gmaps['results'];
-            MyHelper::sendGmapsData($gmaps);
         }else{
             $gmaps = [];
         };
@@ -4486,8 +4490,10 @@ class ApiTransaction extends Controller
             $gmaps = $this->getListLocation($request);
 
             if($gmaps['status'] === 'OK'){
+            	if ($gmaps['send_gmaps_data'] ?? false) {
+	            	MyHelper::sendGmapsData($gmaps['results']);
+	        	}
                 $gmaps = $gmaps['results'];
-                MyHelper::sendGmapsData($gmaps);
             }else{
                 return MyHelper::checkGet([]);
             };
@@ -4548,6 +4554,7 @@ class ApiTransaction extends Controller
     public function getListLocation($request)
     {
         $key_maps = env('LOCATION_PRIMARY_KEY');
+        $locationUrl = env('LOCATION_PRIMARY_URL');
         if (env('LOCATION_PRIMARY_KEY_TOTAL')) {
             $weekNow = date('W') % env('LOCATION_PRIMARY_KEY_TOTAL');
             $key_maps = env('LOCATION_PRIMARY_KEY'.$weekNow, $key_maps);
@@ -4563,13 +4570,14 @@ class ApiTransaction extends Controller
             $param['keyword'] = $request->json('keyword');
         }
 
-        $gmaps = MyHelper::get(env('LOCATION_PRIMARY_URL').'?'.http_build_query($param));
-        
+        $gmaps = MyHelper::get($locationUrl.'?'.http_build_query($param));
+
     	if ($gmaps['status'] !== 'OK'
     		|| ($gmaps['status'] === 'OK' && count($gmaps['results']) < env('LOCATION_MIN_TOTAL'))
     	) {
 	    	// get place from google maps . max 20
 	        $key_maps = env('LOCATION_SECONDARY_KEY');
+        	$locationUrl = env('LOCATION_SECONDARY_URL');
 	        if (env('LOCATION_SECONDARY_KEY_TOTAL')) {
 	            $weekNow = date('W') % env('LOCATION_SECONDARY_KEY_TOTAL');
 	            $key_maps = env('LOCATION_SECONDARY_KEY'.$weekNow, $key_maps);
@@ -4582,8 +4590,10 @@ class ApiTransaction extends Controller
 	        if($request->json('keyword')){
 	            $param['keyword'] = $request->json('keyword');
 	        }
-        	$gmaps = MyHelper::get(env('LOCATION_SECONDARY_URL').'?'.http_build_query($param));
+        	$gmaps = MyHelper::get($locationUrl.'?'.http_build_query($param));
     	}
+
+    	$gmaps['send_gmaps_data'] = (strpos($locationUrl, 'google') !== false) ? true : false;
 
         return $gmaps;
     }

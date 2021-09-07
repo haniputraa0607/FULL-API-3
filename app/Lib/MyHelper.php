@@ -3034,4 +3034,85 @@ class MyHelper{
     	echo json_encode($param);
     	die();
     }
+
+    /**
+     * Validate phone number with gosend rule
+     * @param  string $phone Phone number
+     * @return bool        true/false
+     */
+    public static function validatePhoneGoSend(string $phone) : bool
+    {
+    	/* Length of phone number should not be less than 10 digits */
+    	if (strlen($phone) < 10) {
+    		return false;
+    	}
+
+    	/* If the num starts with `08` then the length of the remaining digits should be between 8 and 12 */
+    	if (substr($phone, 0, 2) === '08') {
+    		$remaining = substr($phone, 2);
+    		if (strlen($remaining) < 8 || strlen($remaining) > 12) {
+    			return false;
+    		}
+    	}
+    	/* If the num does not start with `08` then the length of the remaining digits should be between 8 and 14 */
+    	else {
+    		$remaining = substr($phone, 2);
+    		if (strlen($remaining) < 8 || strlen($remaining) > 14) {
+    			return false;
+    		}
+    	}
+
+    	/* No non-numeric characters should be present */
+    	if (!preg_match('/^([0-9]*)$/', $phone)) {
+    		return false;
+    	}
+
+    	return true;
+    }
+
+    /**
+     * Validate phone number with wehelpyou rule
+     * @param  string $phone Phone number
+     * @return bool        true/false
+     */
+    public static function validatePhoneWehelpyou(string $phone) : bool
+    {
+    	/* Length of phone number should not be less than 10 digits */
+    	if (strlen($phone) < 10) {
+    		return false;
+    	}
+
+    	/* If the num starts with `08` then the length of the remaining digits should be between 8 and 11 */
+    	if (substr($phone, 0, 2) === '08') {
+    		$remaining = substr($phone, 2);
+    		if (strlen($remaining) < 8 || strlen($remaining) > 11) {
+    			return false;
+    		}
+    	}
+    	/* If the num starts with `62` then the length of the remaining digits should be between 9 and 12 */
+    	elseif (substr($phone, 0, 2) === '62') {
+    		$remaining = substr($phone, 2);
+    		if (strlen($remaining) < 9 || strlen($remaining) > 12) {
+    			return false;
+    		}
+    	}
+    	/* If the num starts with `021` then the length of the remaining digits should be between 7 and 8 */
+    	elseif (substr($phone, 0, 3) === '021') {
+    		$remaining = substr($phone, 3);
+    		if (strlen($remaining) < 7 || strlen($remaining) > 8) {
+    			return false;
+    		}
+    	}
+    	/* only indonesian phone numbers are allowed */
+    	else {
+    		return false;
+    	}
+
+    	/* No non-numeric characters should be present */
+    	if (!preg_match('/^([0-9]*)$/', $phone)) {
+    		return false;
+    	}
+
+    	return true;
+    }
 }

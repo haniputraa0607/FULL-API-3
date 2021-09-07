@@ -2555,8 +2555,14 @@ class ApiOutletApp extends Controller
                         ->orWhereNotNull('taken_by_system_at');
                 });
         } elseif ($trx_status == 'rejected') {
-            $data->where('transaction_payment_status', 'Completed')
-                ->whereNotNull('reject_at');
+            $data->leftJoin('transaction_pickup_go_sends', 'transaction_pickup_go_sends.id_transaction_pickup', 'transaction_pickups.id_transaction_pickup')
+                ->leftJoin('transaction_pickup_wehelpyous', 'transaction_pickup_wehelpyous.id_transaction_pickup', 'transaction_pickups.id_transaction_pickup')
+                ->where('transaction_payment_status', 'Completed')
+                ->where(function ($query) {
+                    $query->whereNotNull('reject_at')
+                        ->orWhere('transaction_pickup_wehelpyous.latest_status_id', 96)
+                        ->orWhere('transaction_pickup_go_sends.latest_status', 'rejected');
+                });
         } elseif ($trx_status == 'unpaid') {
             $data->where('transaction_payment_status', 'Pending')
                 ->whereNull('taken_at')
