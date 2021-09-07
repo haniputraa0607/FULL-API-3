@@ -54,7 +54,10 @@ class QuestRecipientNotification implements ShouldQueue
             $subject = $this->textReplace($crm['autocrm_forward_email_subject'], $variables);
             $content = $this->textReplace($crm['autocrm_forward_email_content'], $variables);
 
-            $users = QuestUser::leftJoin('quest_user_redemptions', 'quest_user_redemptions.id_quest', 'quest_users.id_quest')
+            $users = QuestUser::leftJoin('quest_user_redemptions', function($join) {
+                    $join->on('quest_user_redemptions.id_quest', 'quest_users.id_quest')
+                        ->whereColumn('quest_user_redemptions.id_user', 'quest_users.id_user');
+                })
                 ->join('users', 'users.id', 'quest_users.id_user')
                 ->where('date_end', '>', date('Y-m-d'))
                 ->where('quest_users.id_quest', $id_quest)
