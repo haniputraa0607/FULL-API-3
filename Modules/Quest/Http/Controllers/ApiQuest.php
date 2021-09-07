@@ -346,7 +346,7 @@ class ApiQuest extends Controller
     public function triggerAutoclaim($quest)
     {
         if ($quest->autoclaim_quest) {
-            User::select('id')->where('phone_verified', 1)->where('is_suspended', 0)->where('complete_profile', 1)->chunk(2000, function($users) use ($quest) {
+            User::select('id')->where('phone_verified', 1)->where('is_suspended', 0)->where('complete_profile', 1)->chunk(1000, function($users) use ($quest) {
                 AutoclaimQuest::dispatch($quest, $users->pluck('id'))->allOnConnection('quest_autoclaim');
             });
         }
@@ -1316,7 +1316,8 @@ class ApiQuest extends Controller
             ->where(function($query) {
                 $query->where(function($query2) {
                     $query2->where('publish_end', '>=', date('Y-m-d H:i:s'))
-                        ->whereNull('quest_users.id_user');
+                        ->whereNull('quest_users.id_user')
+                        ->where('quests.autoclaim_quest', 0);
                 })
                     ->orWhere(function($query2) {
                         // claimed
