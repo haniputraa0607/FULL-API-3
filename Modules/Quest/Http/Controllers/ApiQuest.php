@@ -6,6 +6,7 @@ use App\Http\Models\CrmUserData;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\User;
+use App\Jobs\QuestRecipientNotification;
 use App\Lib\MyHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -28,6 +29,7 @@ use Modules\Quest\Entities\QuestContent;
 use Modules\Quest\Jobs\AutoclaimQuest;
 
 use Modules\Quest\Http\Requests\StoreRequest;
+use function Clue\StreamFilter\fun;
 
 class ApiQuest extends Controller
 {
@@ -1126,6 +1128,9 @@ class ApiQuest extends Controller
                     'stop_at' => date('Y-m-d H:i:s'),
                     'stop_reason' => 'voucher runs out'
                 ]);
+
+                //send notification bulk for user
+                QuestRecipientNotification::dispatch(['id_quest' => $quest->id_quest, 'deals' => $deals])->allOnConnection('quest');
             }
 
             if ($count) {
@@ -1669,6 +1674,10 @@ class ApiQuest extends Controller
         $result = Deal::select('id_deals', 'deals_title', 'deals_voucher_type', 'deals_total_voucher', 'deals_total_claimed')
             ->where('step_complete', '1')
             ->where('deals_type', 'Quest')
+            ->where(function ($q){
+                $q->whereNull('deals_voucher_expired')
+                    ->orWhere('deals_voucher_expired', '>=', date('Y-m-d H:i:s'));
+            })
             ->get()
             ->toArray();
         return MyHelper::checkGet($result);
