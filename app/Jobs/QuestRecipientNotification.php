@@ -42,43 +42,48 @@ class QuestRecipientNotification implements ShouldQueue
     public function handle()
     {
         $id_quest=$this->data['id_quest'];
-        $users = QuestUser::leftJoin('quest_user_redemptions', 'quest_user_redemptions.id_quest', 'quest_users.id_quest')
-                    ->join('users', 'users.id', 'quest_users.id_user')
-                    ->where('date_end', '>', date('Y-m-d'))
-                    ->where('quest_users.id_quest', $id_quest)
-                    ->where( function($query){
-                        $query->whereNull('id_quest_user_redemption')
-                            ->orWhere('redemption_status', 0);
-                    })->groupBy('users.phone')->pluck('users.phone')->toArray();
+        $dataQuest = Quest::where('id_quest', $id_quest)->first();
+        $crm = Autocrm::where('autocrm_title','=','Quest Voucher Ended')->first();
 
-        if(!empty($users)){
-            $dataQuest = Quest::where('id_quest', $id_quest)->first();
-            $crm = Autocrm::where('autocrm_title','=','Quest Voucher Ended')->first();
+        if(!empty($crm)){
+            $crm['status_forwad'] = 0;
+            $variables =[
+                'quest_name' => $dataQuest['name'],
+                'deals_title' => $this->data['deals']['deals_title']
+            ];
+            $subject = $this->textReplace($crm['autocrm_forward_email_subject'], $variables);
+            $content = $this->textReplace($crm['autocrm_forward_email_content'], $variables);
 
-            if(!empty($crm)){
-                $variables =[
-                    'quest_name' => $dataQuest['name'],
-                    'deals_title' => $this->data['deals']['deals_title']
-                ];
-                $subject = $this->textReplace($crm['autocrm_forward_email_subject'], $variables);
-                $content = $this->textReplace($crm['autocrm_forward_email_content'], $variables);
-                if($crm['autocrm_forward_toogle'] == 1){
-                    $this->sendForwardNotification([
-                        'autoresponse' => $crm,
-                        'subject' => $subject,
-                        'content' => $content
-                    ]);
-                }
-                foreach (array_chunk($users,600) as $recipients) {
+            $users = QuestUser::leftJoin('quest_user_redemptions', 'quest_user_redemptions.id_quest', 'quest_users.id_quest')
+                ->join('users', 'users.id', 'quest_users.id_user')
+                ->where('date_end', '>', date('Y-m-d'))
+                ->where('quest_users.id_quest', $id_quest)
+                ->where( function($query){
+                    $query->whereNull('id_quest_user_redemption')
+                        ->orWhere('redemption_status', 0);
+                })->groupBy('users.phone')->select('users.phone')
+                ->chunk(600, function ($users) use ($id_quest,$subject,$content,$crm){
+                    $recipient = [];
+                    foreach ($users as $val){
+                        $recipient[] = $val->phone;
+                    }
                     $data = [
                         'variables' => ['id_quest' => $id_quest],
-                        'recipient' => $recipients,
+                        'recipient' => $recipient,
                         'subject' => $subject,
                         'content' => $content,
                         'autoresponse' => $crm
                     ];
                     QuestSendNotification::dispatch($data)->allOnConnection('quest');
-                }
+                    $crm['status_forwad'] = 1;
+                });
+
+            if($crm['status_forwad'] == 1 && $crm['autocrm_forward_toogle'] == 1){
+                $this->sendForwardNotification([
+                    'autoresponse' => $crm,
+                    'subject' => $subject,
+                    'content' => $content
+                ]);
             }
         }
 
