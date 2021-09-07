@@ -218,6 +218,11 @@ class ApiOutletController extends Controller
             DB::rollBack();
         }
 
+        $data_pin = [
+            ['id_outlet' => $save['id_outlet'], 'data' => $request->outlet_pin]
+        ];
+        MyHelper::updateOutletFile($data_pin);
+
         if(is_array($brands=$post['outlet_brands']??false)){
             if(in_array('*', $post['outlet_brands'])){
                 $brands=Brand::select('id_brand')->get()->toArray();
