@@ -115,7 +115,7 @@ class Quest extends Model
         $date_end = MyHelper::indonesian_date_v2($this->date_end, 'd F Y');
         if ($this->claimed_status) {
             return [
-                'text' => 'Selesai pada '.MyHelper::indonesian_date_v2($this['redemption_date'], 'd F Y'),
+                'text' => 'Selesai '.MyHelper::indonesian_date_v2($this['redemption_date'], 'd F Y'),
                 'code' => 2
             ];
         }
@@ -131,7 +131,7 @@ class Quest extends Model
             ];
         } else {
             return [
-                'text' => 'Selesai '.$date_end,
+                'text' => 'Berakhir pada '.$date_end,
                 'code' => -1,
             ];
         }
