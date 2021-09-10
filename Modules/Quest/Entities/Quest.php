@@ -126,12 +126,12 @@ class Quest extends Model
             ];
         } elseif ($this->date_start <= $now && $this->date_end >= $now) {
             return [
-                'text' => 'Aktif hingga '.$date_end,
+                'text' => 'Berlaku sampai '.$date_end,
                 'code' => 1,
             ];
         } else {
             return [
-                'text' => 'Berakhir pada '.$date_end,
+                'text' => 'Selesai '.$date_end,
                 'code' => -1,
             ];
         }
