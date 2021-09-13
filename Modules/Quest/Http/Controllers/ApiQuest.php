@@ -1886,9 +1886,9 @@ class ApiQuest extends Controller
         if (!$complete_profile) {
             $result['code'] = 'profile_incomplete';
             if ($myQuest) {
-                $result['messages'] = ['Silahkan lengkapi profil untuk mengikuti misi'];
+                $result['messages'] = ['Lengkapi Profile Kamu Sekarang'];
             } else {
-                $result['messages'][] = 'Silahkan lengkapi profil untuk mengikuti misi';
+                $result['messages'][] = 'Lengkapi Profile Kamu Sekarang';
             }
         }
         return $result;
