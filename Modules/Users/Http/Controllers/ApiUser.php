@@ -558,9 +558,9 @@ class ApiUser extends Controller
                 if ($condition['operator'] == 'WHERE IN') {
                     $param = explode(',', $condition['parameter']);
                     if ($rule == 'and') {
-                        $query = $query->whereIn($condition['subject'], $param);
+                        $query = $query->whereIn('users.' . $condition['subject'], $param);
                     } else {
-                        $query = $query->orWhereIn($condition['subject'], $param);
+                        $query = $query->orWhereIn('users.' . $condition['subject'], $param);
                     }
                     continue;
                 }
