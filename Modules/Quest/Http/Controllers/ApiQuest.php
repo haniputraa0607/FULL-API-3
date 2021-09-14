@@ -1638,6 +1638,7 @@ class ApiQuest extends Controller
 
         if ($result['text_label']['code'] == -1) {
             $result['progress']['complete'] = 0;
+            $result['text_label']['text'] = str_replace('Berakhir', 'berakhir', $result['text_label']['text']) . $result['text_label']['stop_reason'];
         }
 
         $result['benefit']['id_reference'] = $result['user_redemption']['id_reference'] ?? null;
