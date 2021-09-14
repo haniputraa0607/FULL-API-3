@@ -132,6 +132,7 @@ class Quest extends Model
         } else {
             return [
                 'text' => 'Berakhir pada '.$date_end,
+                'stop_reason' => $this->stop_reason ? "\n" . $this->stop_reason : null,
                 'code' => -1,
             ];
         }
