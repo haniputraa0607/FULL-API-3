@@ -130,9 +130,15 @@ class Quest extends Model
                 'code' => 1,
             ];
         } else {
+            $stop_reason = $this->stop_reason ? $this->stop_reason : null;
+            if ($stop_reason == 'voucher runs out') {
+                $stop_reason = "\n" . 'karena hadiah sudah habis';
+            } else {
+                $stop_reason = "\n karena " . $stop_reason;
+            }
             return [
                 'text' => 'Berakhir pada '.$date_end,
-                'stop_reason' => $this->stop_reason ? "\n" . $this->stop_reason : null,
+                'stop_reason' => $stop_reason,
                 'code' => -1,
             ];
         }
