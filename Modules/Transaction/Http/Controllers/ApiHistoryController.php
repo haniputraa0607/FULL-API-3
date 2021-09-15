@@ -1159,7 +1159,7 @@ class ApiHistoryController extends Controller
                 $dataList['type']   = 'quest';
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']    = date('d M Y H:i', strtotime($value['created_at']));
-                $dataList['outlet'] = 'Hadiah Misi';
+                $dataList['outlet'] = 'Hadiah Tantangan';
                 $dataList['amount'] = '+ ' . MyHelper::requestNumber($value['balance'], '_POINT');
             } else {
                 $dataList['type']   = 'profile';
