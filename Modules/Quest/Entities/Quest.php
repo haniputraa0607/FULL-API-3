@@ -134,7 +134,7 @@ class Quest extends Model
             if ($stop_reason == 'voucher runs out') {
                 $stop_reason = "\n" . 'karena hadiah sudah habis';
             } else {
-                $stop_reason = "\n karena " . $stop_reason;
+                $stop_reason = $stop_reason ? "\n karena $stop_reason" : '';
             }
             return [
                 'text' => 'Berakhir pada '.$date_end,

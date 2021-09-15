@@ -888,7 +888,6 @@ class ApiOutletApp extends Controller
             $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
             MyHelper::updateFlagTransactionOnline($newTrx, 'success', $newTrx->user);
 
-            \App\Jobs\UpdateQuestProgressJob::dispatch($order->id_transaction)->onConnection('quest');
             AchievementCheck::dispatch(['id_transaction' => $order->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
             if (!in_array('Balance', $column) || $use_referral) {
 
@@ -998,6 +997,7 @@ class ApiOutletApp extends Controller
 
         if ($order->taken_by == 'Customer') {
             $order->show_rate_popup = 1;
+            \App\Jobs\UpdateQuestProgressJob::dispatch($order->id_transaction)->onConnection('quest');
         }
 
         $order->save();

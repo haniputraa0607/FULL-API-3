@@ -450,6 +450,7 @@ class ApiCronTrxController extends Controller
                         if (($reject['should_taken'] ?? false) === true) {
                             TransactionPickup::where('id_transaction', $newTrx->id_transaction)
                                         ->update(['taken_by_system_at' => date('Y-m-d H:i:s')]);
+                            \App\Jobs\UpdateQuestProgressJob::dispatch($newTrx->id_transaction)->onConnection('quest');
                         }
                         $processed['failed_reject']++;
                         $processed['errors'][] = $reject['messages'] ?? 'Something went wrong';
@@ -515,6 +516,10 @@ class ApiCronTrxController extends Controller
             $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
                                         ->whereNotNull('ready_at')
                                         ->update(['taken_by_system_at' => date('Y-m-d H:i:s')]);
+            foreach ($idTrx as $id_trx) {
+                \App\Jobs\UpdateQuestProgressJob::dispatch($id_trx)->onConnection('quest');
+            }
+            \App\Jobs\UpdateQuestProgressJob::dispatch($newTrx->id_transaction)->onConnection('quest');
 
             //change status transaction to invalid transaction
             $dataTrx = Transaction::join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
