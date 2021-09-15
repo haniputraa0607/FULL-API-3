@@ -995,7 +995,7 @@ class ApiOutletApp extends Controller
 
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['taken_at' => date('Y-m-d H:i:s')]);
 
-        if ($order->taken_by == 'Customer') {
+        if ($order->pickup_by == 'Customer') {
             $order->show_rate_popup = 1;
             \App\Jobs\UpdateQuestProgressJob::dispatch($order->id_transaction)->onConnection('quest');
         }
