@@ -1122,7 +1122,7 @@ class ApiQuest extends Controller
                 }
             }
 
-            if ($total_voucher <= $total_claimed) {
+            if ($total_voucher && $total_voucher <= $total_claimed) {
                 // set inactive quest
                 $quest->update([
                     'stop_at' => date('Y-m-d H:i:s'),
