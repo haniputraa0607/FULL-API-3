@@ -2222,7 +2222,21 @@ class ApiOnlineTransaction extends Controller
         }
 
         if($post['type'] == 'Delivery Order' || $post['type'] == 'GO-SEND'){
-            $delivery_outlet = DeliveryOutlet::where('id_outlet', $outlet->id_outlet)->pluck('code')->toArray();
+			$gosendAvailable = false;
+        	$deliverySetting = $this->listAvailableDelivery(WeHelpYou::listDeliveryRequest())['result']['delivery'] ?? [];
+        	foreach ($deliverySetting as $val) {
+        		if ($val['code'] == 'gosend' && $val['show_status'] && $val['available_status']) {
+        			$gosendAvailable = true;
+        		}
+        	}
+
+        	if ($gosendAvailable) {
+	        	$gosendOutlet = DeliveryOutlet::where('id_outlet', $outlet->id_outlet)->where('code', 'gosend')->first();
+	        	if ($gosendOutlet) {
+	            	$gosendAvailable = ($gosendOutlet->available_status && $gosendOutlet->show_status) ? true : false;
+	        	}
+        	}
+
             if (!($outlet['outlet_latitude'] 
             	&& $outlet['outlet_longitude'] 
             	&& $outlet['outlet_phone'] 
@@ -2239,7 +2253,7 @@ class ApiOnlineTransaction extends Controller
                 ];
             }
 
-        	if ($post['type'] == 'GO-SEND' || in_array('gosend', $delivery_outlet)) {
+        	if ($post['type'] == 'GO-SEND' || $gosendAvailable) {
 	            $coor_origin = [
 	                'latitude' => number_format($outlet['outlet_latitude'],8),
 	                'longitude' => number_format($outlet['outlet_longitude'],8)
