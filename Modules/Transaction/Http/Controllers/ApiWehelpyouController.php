@@ -38,7 +38,7 @@ class ApiWehelpyouController extends Controller
         $log = MyHelper::logCron('Check Status Wehelpyou');
         try {
             $trxWehelpyous = TransactionPickupWehelpyou::select('id_transaction')->join('transaction_pickups', 'transaction_pickups.id_transaction_pickup', 'transaction_pickup_wehelpyous.id_transaction_pickup')
-				->whereNotIn('latest_status', ['cancelled', 'Finished'])
+				->whereNotIn('transaction_pickup_wehelpyous.latest_status_id', WeHelpYou::orderEndStatusId())
                 ->whereDate('transaction_pickup_wehelpyous.created_at', date('Y-m-d'))
                 ->where('transaction_pickup_wehelpyous.updated_at', '<', date('Y-m-d H:i:s', time() - (5 * 60)))
                 ->get();
