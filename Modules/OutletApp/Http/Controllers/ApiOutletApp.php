@@ -3754,7 +3754,7 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER DITEMUKAN DAN SEDANG MENUJU OUTLET';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'         => '',
+                            'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
                             'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
@@ -3767,7 +3767,7 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'         => '',
+                            'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
                             'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
@@ -3782,7 +3782,7 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']          = 'PESANAN SUDAH DI PICK UP OLEH DRIVER DAN SEDANG MENUJU LOKASI #TEMANSEJIWA';
                         $result['transaction_status']               = 3;
                         $result['delivery_info']['driver']          = [
-                            'driver_id'         => '',
+                            'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
                             'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
@@ -3797,7 +3797,7 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['delivery_status_code']   = 4;
                         $result['delivery_info']['driver']          = [
-                            'driver_id'         => '',
+                            'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
                             'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
@@ -4803,7 +4803,7 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER DITEMUKAN DAN SEDANG MENUJU OUTLET';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'         => '',
+                            'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
                             'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
@@ -4816,7 +4816,7 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'         => '',
+                            'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
                             'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
@@ -4831,7 +4831,7 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']          = 'PROSES PENGANTARAN';
                         $result['transaction_status']               = 3;
                         $result['delivery_info']['driver']          = [
-                            'driver_id'         => '',
+                            'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
                             'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
@@ -4846,7 +4846,7 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['delivery_status_code']   = 4;
                         $result['delivery_info']['driver']          = [
-                            'driver_id'         => '',
+                            'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
                             'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
