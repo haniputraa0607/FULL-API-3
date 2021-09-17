@@ -3757,7 +3757,7 @@ class ApiOutletApp extends Controller
                             'driver_id'         => '',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => '',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                             'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
                             'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
                         ];
@@ -3770,7 +3770,7 @@ class ApiOutletApp extends Controller
                             'driver_id'         => '',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => '',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                             'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
                             'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
                         ];
@@ -3785,7 +3785,7 @@ class ApiOutletApp extends Controller
                             'driver_id'         => '',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => '',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                             'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
                             'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
                         ];
@@ -3800,7 +3800,7 @@ class ApiOutletApp extends Controller
                             'driver_id'         => '',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => '',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                             'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
                             'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
                         ];
@@ -4806,7 +4806,7 @@ class ApiOutletApp extends Controller
                             'driver_id'         => '',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => '',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                             'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
                             'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
                         ];
@@ -4819,7 +4819,7 @@ class ApiOutletApp extends Controller
                             'driver_id'         => '',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => '',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                             'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
                             'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
                         ];
@@ -4834,7 +4834,7 @@ class ApiOutletApp extends Controller
                             'driver_id'         => '',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => '',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                             'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
                             'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
                         ];
@@ -4849,7 +4849,7 @@ class ApiOutletApp extends Controller
                             'driver_id'         => '',
                             'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
                             'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => '',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                             'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
                             'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
                         ];
