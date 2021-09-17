@@ -3308,11 +3308,11 @@ class ApiTransaction extends Controller
                             $result['transaction_status_text']          = $deliveryStatus[2][0];
                             $result['delivery_info']['driver']          = [
                                 'driver_id'         => '',
-                                'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
+                                'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'Data tidak tersedia dari jasa pengiriman',
                                 'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                                 'driver_whatsapp'   => '',
                                 'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
-                                'vehicle_number'    => $list['transaction_pickup_wehelpyou']['vehicle_type']?:'',
+                                'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'',
                             ];
                             break;
                         case 32:
@@ -3322,11 +3322,11 @@ class ApiTransaction extends Controller
                             $result['transaction_status_text']          = $deliveryStatus[3][0];
                             $result['delivery_info']['driver']          = [
                                 'driver_id'         => '',
-                                'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
+                                'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'Data tidak tersedia dari jasa pengiriman',
                                 'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                                 'driver_whatsapp'   => '',
                                 'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
-                                'vehicle_number'    => $list['transaction_pickup_wehelpyou']['vehicle_type']?:'',
+                                'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'',
                             ];
                             $result['delivery_info']['cancelable'] = 1;
                             break;
@@ -3337,11 +3337,11 @@ class ApiTransaction extends Controller
                             $result['transaction_status']               = 3;
                             $result['delivery_info']['driver']          = [
                                 'driver_id'         => '',
-                                'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
+                                'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'Data tidak tersedia dari jasa pengiriman',
                                 'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                                 'driver_whatsapp'   => '',
                                 'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
-                                'vehicle_number'    => $list['transaction_pickup_wehelpyou']['vehicle_type']?:'',
+                                'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'',
                             ];
                             $result['delivery_info']['cancelable'] = 0;
                             break;
@@ -3352,11 +3352,11 @@ class ApiTransaction extends Controller
                             $result['delivery_info']['delivery_status_code']   = 4;
                             $result['delivery_info']['driver']          = [
                                 'driver_id'         => '',
-                                'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
+                                'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'Data tidak tersedia dari jasa pengiriman',
                                 'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                                 'driver_whatsapp'   => '',
                                 'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
-                                'vehicle_number'    => $list['transaction_pickup_wehelpyou']['vehicle_type']?:'',
+                                'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'',
                             ];
                             $result['delivery_info']['cancelable'] = 0;
                             break;
