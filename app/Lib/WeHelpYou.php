@@ -149,15 +149,16 @@ class WeHelpYou
 
 	public static function getListTransactionDelivery($request, $outlet, $totalProductQty = null, $additionalDelivery = [])
 	{
+		$successResponse = true;
 		$postRequest = self::formatPostRequest($request->user(), $outlet, $request['destination'], $totalProductQty);
 		if (!$postRequest) {
-			return [];
+			$successResponse = false;
 		}
 		$listDelivery = self::getPriceInstant($postRequest);
 		if ($listDelivery['status_code'] != 200) {
-			return [];
+			$successResponse = false;
 		}
-		$listDelivery = self::formatListDelivery($listDelivery, self::getCredit(), $outlet, $additionalDelivery);
+		$listDelivery = self::formatListDelivery($listDelivery, self::getCredit(), $outlet, $additionalDelivery, $successResponse);
 		
 		return $listDelivery;
 	}
@@ -207,9 +208,12 @@ class WeHelpYou
 		];
 	}
 
-	public static function formatListDelivery($listDelivery, $credit, $outlet, $additionalDelivery = [])
+	public static function formatListDelivery($listDelivery, $credit, $outlet, $additionalDelivery = [], $successResponse = false)
 	{
-		(new ApiOnlineTransaction)->mergeNewDelivery(json_encode($listDelivery['response']));
+		if ($successResponse) {
+			(new ApiOnlineTransaction)->mergeNewDelivery(json_encode($listDelivery['response']));
+		}
+
 		$delivery_outlet = DeliveryOutlet::where('id_outlet', $outlet->id_outlet)->get();
 		$outletSetting = [];
 		foreach ($delivery_outlet as $val) {
