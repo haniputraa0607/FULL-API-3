@@ -604,6 +604,15 @@ class WeHelpYou
 
 					$trx->transaction_pickup->transaction_pickup_wehelpyou->update(['stop_booking_at' => date('Y-m-d H:i:s')]);
 
+				} elseif (in_array($latestStatusId, [9])) { // enroute drop
+					$dateNow = date('Y-m-d H:i:s', ($status['date'] ?? false) ? strtotime($status['date']) : time());
+					$checkTrxPickup = TransactionPickup::where('id_transaction', $trx->id_transaction)->first();
+					if ($checkTrxPickup) {
+						$checkTrxPickup->update([
+							'ready_at' => $checkTrxPickup->ready_at ?? $dateNow,
+							'taken_at' => $checkTrxPickup->taken_at ?? $dateNow
+						]);
+					}
 				}
 			}
 		}
