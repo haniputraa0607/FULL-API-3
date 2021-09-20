@@ -3086,6 +3086,17 @@ class ApiOutletApp extends Controller
                         ];
                         GoSend::saveUpdate($dataSave);
                     } else {
+
+                    	if (in_array(strtolower($status['status']), ['out_for_delivery'])) {
+							$checkTrxPickup = TransactionPickup::where('id_transaction', $trx->id_transaction)->first();
+							if ($checkTrxPickup) {
+								$checkTrxPickup->update([
+									'ready_at' => $checkTrxPickup->ready_at ?? date('Y-m-d H:i:s'),
+									'taken_at' => $checkTrxPickup->taken_at ?? date('Y-m-d H:i:s')
+								]);
+							}
+						}
+
                         $dataSave = [
                             'id_transaction'                => $trx['id_transaction'],
                             'id_transaction_pickup_go_send' => $trxGoSend['id_transaction_pickup_go_send'],
