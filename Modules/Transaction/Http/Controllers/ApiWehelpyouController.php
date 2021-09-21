@@ -159,15 +159,18 @@ class ApiWehelpyouController extends Controller
                     'transactions.id_transaction',
                     'id_outlet',
                     'transaction_date',
+                    'transaction_pickup_wehelpyou_updates.date',
                     'transaction_pickups.pickup_by'
                 ])
         		->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
                 ->join('transaction_pickup_wehelpyous', 'transaction_pickup_wehelpyous.id_transaction_pickup', '=', 'transaction_pickups.id_transaction_pickup')
+                ->leftJoin('transaction_pickup_wehelpyou_updates', 'transaction_pickup_wehelpyou_updates.id_transaction_pickup_wehelpyou', '=', 'transaction_pickup_wehelpyous.id_transaction_pickup_wehelpyou')
                 ->whereNull('transaction_pickups.reject_at')
                 ->whereDate('transaction_date', date('Y-m-d'))
-                ->where('transaction_date', '<', $limitTime)
+                ->where('transaction_pickup_wehelpyou_updates.date', '<', $limitTime)
                 ->where('transaction_payment_status' ,'Completed')
                 ->where('transaction_pickup_wehelpyous.latest_status_id', '11') // finding driver
+                ->where('transaction_pickup_wehelpyou_updates.status_id', '11') // finding driver
                 ->with('outlet')
                 ->get();
 
