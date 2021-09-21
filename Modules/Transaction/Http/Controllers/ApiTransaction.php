@@ -3533,9 +3533,17 @@ class ApiTransaction extends Controller
                     'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'],'_CURRENCY')
                 ];
             }elseif($list['transaction_shipment'] > 0){
+                $getListDelivery = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
+                $shipmentCode = strtolower($list['shipment_method'].'_'.$list['shipment_courier']);
+                if($list['shipment_method'] == 'GO-SEND'){
+                    $shipmentCode = 'gosend';
+                }
+
+                $search = array_search($shipmentCode, array_column($getListDelivery, 'code'));
+                $shipmentName = ($search !== false ? $getListDelivery[$search]['delivery_name']:strtoupper($list['shipment_courier']));
                 $result['payment_detail'][] = [
                     'name'      => 'Delivery',
-                    'desc'      => strtoupper($list['shipment_courier']),
+                    'desc'      => $shipmentName,
                     'amount'    => MyHelper::requestNumber($list['transaction_shipment'],'_CURRENCY')
                 ];
             }

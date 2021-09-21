@@ -4830,6 +4830,7 @@ class ApiOnlineTransaction extends Controller
         foreach ($availableDelivery as $key => $value) {
             $check = array_search($value['code'], array_column($dtDelivery, 'code'));
             if($check !== false){
+                $availableDelivery[$key]['delivery_name'] = $dtDelivery[$check]['delivery_name'];
                 $availableDelivery[$key]['show_status'] = $dtDelivery[$check]['show_status'];
                 $availableDelivery[$key]['available_status'] = $dtDelivery[$check]['available_status'];
                 $availableDelivery[$key]['position'] = $check;
