@@ -197,6 +197,12 @@ class Kernel extends ConsoleKernel
          * run every day at
          */
         $schedule->call('Modules\ProductBundling\Http\Controllers\ApiBundlingController@bundlingToday')->dailyAt('04:00');
+
+        /**
+         * Auto reject order wehelpyou when driver not found > 10 minutes
+         * run every 3 minutes
+         */
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiWehelpyouController@cronCancelDelivery')->cron('*/3 * * * *');
     }
 
     /**
