@@ -162,7 +162,7 @@ class ApiOnlineTransaction extends Controller
                 DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
-                    'messages'  => ['Outlet Not Found']
+                    'messages'  => ['Outlet tidak ditemukan']
                     ]);
             }
         }else{
@@ -1221,7 +1221,7 @@ class ApiOnlineTransaction extends Controller
                 DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
-                    'messages'  => ['Product Not Found']
+                    'messages'  => ['Menu tidak ditemukan']
                 ]);
             }
 
@@ -2118,7 +2118,7 @@ class ApiOnlineTransaction extends Controller
             DB::rollback();
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['Outlet Not Found']
+                'messages'  => ['Outlet tidak ditemukan']
                 ]);
         }
 
@@ -2558,6 +2558,7 @@ class ApiOnlineTransaction extends Controller
         $missing_bonus_product 	= false;
         $subtotal_per_brand 	= [];
         $totalItem = 0;
+        return 123;
         foreach ($discount_promo['item']??$post['item'] as &$item) {
             // get detail product
             $product = Product::select([
@@ -4492,7 +4493,7 @@ class ApiOnlineTransaction extends Controller
                     DB::rollback();
                     return [
                         'status'    => 'fail',
-                        'messages'  => ['Product Not Found '.$itemProduct['product_name']]
+                        'messages'  => ['Menu tidak ditemukan '.$itemProduct['product_name']]
                     ];
                 }
 

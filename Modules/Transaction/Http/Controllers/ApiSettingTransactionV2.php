@@ -558,7 +558,7 @@ class ApiSettingTransactionV2 extends Controller
                 DB::rollback();
                 return response()->json([
                     'status' => 'fail',
-                    'messages' => ['Product Not Found']
+                    'messages' => ['Menu tidak ditemukan']
                 ]);
             }
             $different_price = Outlet::select('outlet_different_price')->where('id_outlet',$data['id_outlet'])->pluck('outlet_different_price')->first();
