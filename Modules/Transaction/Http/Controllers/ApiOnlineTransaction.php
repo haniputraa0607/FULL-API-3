@@ -162,7 +162,7 @@ class ApiOnlineTransaction extends Controller
                 DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
-                    'messages'  => ['Outlet Not Found']
+                    'messages'  => ['Outlet tidak ditemukan']
                     ]);
             }
         }else{
@@ -867,6 +867,10 @@ class ApiOnlineTransaction extends Controller
 	                    }elseif($errorGosend[0] == "Sender's location is not serviceable"){
 	                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
 	                    }
+
+	                    if (strpos($errorGosend[0], 'distance') !== false) {
+	                    	$errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
+	                    }
 	                }
 	                $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
 	            }else{
@@ -1217,7 +1221,7 @@ class ApiOnlineTransaction extends Controller
                 DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
-                    'messages'  => ['Product Not Found']
+                    'messages'  => ['Menu tidak ditemukan']
                 ]);
             }
 
@@ -2114,7 +2118,7 @@ class ApiOnlineTransaction extends Controller
             DB::rollback();
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['Outlet Not Found']
+                'messages'  => ['Outlet tidak ditemukan']
                 ]);
         }
 
@@ -2279,8 +2283,15 @@ class ApiOnlineTransaction extends Controller
 	                    }elseif($errorGosend[0] == "Sender's location is not serviceable"){
 	                        $errorGosend[0] = 'Pengiriman tidak tersedia di lokasi Anda';
 	                    }
+
+	                    if (strpos($errorGosend[0], 'distance') !== false) {
+	                    	$errorGosend[0] = 'Lokasi tujuan melebihi jarak maksimum pengantaran';
+	                    }
 	                }
-	                $error_msg += $errorGosend?:['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
+
+	                if ($post['type'] == 'GO-SEND' || $request->courier == 'gosend') {
+	                	$errorDelivery = $errorGosend ?: ['Gagal menghitung biaya pengantaran. Silakan coba kembali'];
+	                }
 	            }
 	            
 	            if ($post['type'] == 'Delivery Order') {
@@ -2547,6 +2558,7 @@ class ApiOnlineTransaction extends Controller
         $missing_bonus_product 	= false;
         $subtotal_per_brand 	= [];
         $totalItem = 0;
+        return 123;
         foreach ($discount_promo['item']??$post['item'] as &$item) {
             // get detail product
             $product = Product::select([
@@ -3173,6 +3185,9 @@ class ApiOnlineTransaction extends Controller
             ];
         }
 
+        if (!empty($errorDelivery)) {
+        	$error_msg += $errorDelivery;
+        }
         if (count($error_msg) > 1) {
             $error_msg = ['Produk, Varian, atau Topping yang anda pilih tidak tersedia. Silakan cek kembali pesanan anda'];
         }
@@ -4478,7 +4493,7 @@ class ApiOnlineTransaction extends Controller
                     DB::rollback();
                     return [
                         'status'    => 'fail',
-                        'messages'  => ['Product Not Found '.$itemProduct['product_name']]
+                        'messages'  => ['Menu tidak ditemukan '.$itemProduct['product_name']]
                     ];
                 }
 
