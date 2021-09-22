@@ -2558,7 +2558,6 @@ class ApiOnlineTransaction extends Controller
         $missing_bonus_product 	= false;
         $subtotal_per_brand 	= [];
         $totalItem = 0;
-        return 123;
         foreach ($discount_promo['item']??$post['item'] as &$item) {
             // get detail product
             $product = Product::select([
