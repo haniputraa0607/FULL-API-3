@@ -84,21 +84,20 @@ class ApiUserV2 extends Controller
 
         if($data){
             $result = [
-                'register' => false,
                 'challenge_key' => $data[0]['challenge_key']
             ];
 
-            if ($data[0]['email'] == null || $data[0]['phone_verified'] == '0') {
-                $data[0]['is_verified'] = false;
+            if ($data[0]['email'] == null || $data[0]['phone_verified'] == 0) {
+                $result['register'] = true;
                 $result['confirmation_message'] = $msg_check;
-                $result['data'] =  $data[0];
+                $result['is_suspended'] = $data[0]['is_suspended'];
                 return response()->json([
                     'status' => 'success',
                     'result' => $result
                 ]);
             }else{
-                $data[0]['is_verified'] = true;
-                $result['data'] =  $data[0];
+                $result['register'] = false;
+                $result['is_suspended'] = $data[0]['is_suspended'];
                 return response()->json([
                     'status' => 'success',
                     'result' => $result
@@ -110,7 +109,7 @@ class ApiUserV2 extends Controller
                 'status' => 'success',
                 'result' => [
                     'register' => true,
-                    'data' => null,
+                    'is_suspended' => 0,
                     'confirmation_message' => $msg_check
                 ]
             ]);
@@ -391,7 +390,6 @@ class ApiUserV2 extends Controller
                     'result'    => [
                         'otp_timer' => $holdTime,
                         'phone'    =>    $data[0]['phone'],
-                        'pin'    =>    '',
                         'message' => $msg_otp,
                         'challenge_key' => $user->challenge_key,
                         'forget' => (empty($data[0]['email']) ? false : true)
@@ -605,8 +603,7 @@ class ApiUserV2 extends Controller
                         'phone'    =>    $phone,
                         'message'  =>    $msg_otp,
                         'challenge_key' => $user->challenge_key,
-                        'forget' => true,
-                        'pin'        =>  ''
+                        'forget' => true
                     ]
                 ];
             }
