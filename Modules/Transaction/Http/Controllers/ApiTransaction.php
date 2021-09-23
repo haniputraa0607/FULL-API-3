@@ -4469,7 +4469,7 @@ class ApiTransaction extends Controller
                 'nearby' => $user_address
             ];
         }
-        return response()->json(MyHelper::checkGet($result));
+        return response()->json(MyHelper::checkGet($result, 'Lokasi tidak ditemukan'));
     }
 
     public function getDefaultAddress (GetNearbyAddress $request) {
