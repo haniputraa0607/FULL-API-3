@@ -3680,7 +3680,7 @@ class ApiTransaction extends Controller
                                 case 'enroute drop':
                                 case 'out_for_delivery':
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan sudah diambil dan sedang diantar ke lokasi #temansejiwa',
+                                        'text'  => 'Driver sedang mengantar pesanan ke lokasi #temansejiwa',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     if (!$hasPicked) {
@@ -3749,7 +3749,7 @@ class ApiTransaction extends Controller
                                     break;
                                 case 9:
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan sudah diambil dan sedang diantar ke lokasi #temansejiwa',
+                                        'text'  => 'Driver sedang mengantar pesanan ke lokasi #temansejiwa',
                                         'date'  => $valueWehelpyou['created_at']
                                     ];
                                     break;
