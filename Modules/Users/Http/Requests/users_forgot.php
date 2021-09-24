@@ -28,7 +28,6 @@ class users_forgot extends FormRequest
 		return [
 			'phone'			=> 'required|string|max:18',
 			// 'birthday'		=> 'required|date',
-			'email'		    => 'required',
 			'device_id'		=> 'max:50',
 			'device_token'	=> 'max:255'
         ];

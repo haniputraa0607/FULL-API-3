@@ -87,7 +87,7 @@ class ApiUserV2 extends Controller
                 'challenge_key' => $data[0]['challenge_key']
             ];
 
-            if ($data[0]['email'] == null || $data[0]['phone_verified'] == 0) {
+            if ($data[0]['phone_verified'] == 0) {
                 $result['register'] = true;
                 $result['confirmation_message'] = $msg_check;
                 $result['is_suspended'] = $data[0]['is_suspended'];
@@ -211,33 +211,19 @@ class ApiUserV2 extends Controller
                     $phone,
                     []
                 );
-                if($request->request_type == 'whatsapp'){
-                    $autocrm = app($this->autocrm)->SendAutoCRM(
-                        'Pin Sent WhatsApp',
-                        $phone,
-                        [
-                            'pin' => $pin,
-                            'useragent' => $useragent,
-                            'now' => date('Y-m-d H:i:s'),
-                            'date_sent' => date('d-m-y H:i:s'),
-                            'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
-                        ],
-                        $useragent
-                    );
-                }else{
-                    $autocrm = app($this->autocrm)->SendAutoCRM(
-                        'Pin Sent',
-                        $phone,
-                        [
-                            'pin' => $pin,
-                            'useragent' => $useragent,
-                            'now' => date('Y-m-d H:i:s'),
-                            'date_sent' => date('d-m-y H:i:s'),
-                            'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
-                        ],
-                        $useragent
-                    );
-                }
+                $autocrm = app($this->autocrm)->SendAutoCRM(
+                    'Pin Sent',
+                    $phone,
+                    [
+                        'pin' => $pin,
+                        'useragent' => $useragent,
+                        'now' => date('Y-m-d H:i:s'),
+                        'date_sent' => date('d-m-y H:i:s'),
+                        'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
+                    ],
+                    $useragent,
+                    false, false, null, null, true, $request->request_type
+                );
             }
 
             app($this->membership)->calculateMembership($phone);
@@ -325,33 +311,19 @@ class ApiUserV2 extends Controller
                         $phone,
                         []
                     );
-                    if($request->request_type == 'whatsapp'){
-                        $autocrm = app($this->autocrm)->SendAutoCRM(
-                            'Pin Sent WhatsApp',
-                            $phone,
-                            [
-                                'pin' => $pinnya,
-                                'useragent' => $useragent,
-                                'now' => date('Y-m-d H:i:s'),
-                                'date_sent' => date('d-m-y H:i:s'),
-                                'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
-                            ],
-                            $useragent
-                        );
-                    }else{
-                        $autocrm = app($this->autocrm)->SendAutoCRM(
-                            'Pin Sent',
-                            $phone,
-                            [
-                                'pin' => $pinnya,
-                                'useragent' => $useragent,
-                                'now' => date('Y-m-d H:i:s'),
-                                'date_sent' => date('d-m-y H:i:s'),
-                                'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
-                            ],
-                            $useragent
-                        );
-                    }
+                    $autocrm = app($this->autocrm)->SendAutoCRM(
+                        'Pin Sent',
+                        $phone,
+                        [
+                            'pin' => $pinnya,
+                            'useragent' => $useragent,
+                            'now' => date('Y-m-d H:i:s'),
+                            'date_sent' => date('d-m-y H:i:s'),
+                            'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
+                        ],
+                        $useragent,
+                        false, false, null, null, true, $request->request_type
+                    );
                 }
             }elseif(isset($checkRuleRequest['otp_timer']) && $checkRuleRequest['otp_timer'] !== false){
                 $holdTime = $checkRuleRequest['otp_timer'];
@@ -504,17 +476,7 @@ class ApiUserV2 extends Controller
         $user->sms_increment = 0;
         $user->save();
 
-        if ($user['email'] == null) {
-            $result = [
-                'status'    => 'fail',
-                'otp_timer' => $holdTime,
-                'messages'    => ['User email is empty.']
-            ];
-            return response()->json($result);
-        }
-
         $data = User::select('*',\DB::raw('0 as challenge_key'))->where('phone', '=', $phone)
-            ->where('email', '=', $request->json('email'))
             ->get()
             ->toArray();
 
@@ -562,7 +524,8 @@ class ApiUserV2 extends Controller
                         'date_sent' => date('d-m-y H:i:s'),
                         'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
                     ],
-                    $useragent
+                    $useragent,
+                    false, false, null, null, true, $request->request_type
                 );
             }elseif(isset($checkRuleRequest['otp_timer']) && $checkRuleRequest['otp_timer'] !== false){
                 $holdTime = $checkRuleRequest['otp_timer'];

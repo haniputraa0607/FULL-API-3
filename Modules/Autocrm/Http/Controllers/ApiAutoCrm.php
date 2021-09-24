@@ -49,8 +49,7 @@ class ApiAutoCrm extends Controller
 		$this->apiwha = new apiwha();
     }
 
-	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null, $forward_only = false, $outlet = false, $recipient_type = null, $franchise = null, $save_log=true){
-
+	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null, $forward_only = false, $outlet = false, $recipient_type = null, $franchise = null, $save_log=true, $otp_type = null){
 		$query = Autocrm::where('autocrm_title','=',$autocrm_title)->with('whatsapp_content')->get()->toArray();
 
 		if (!isset($recipient_type)) {
@@ -316,7 +315,7 @@ class ApiAutoCrm extends Controller
 				}
 			}
 
-			if($crm['autocrm_sms_toogle'] == 1 && !$forward_only){
+			if($crm['autocrm_sms_toogle'] == 1 && !$forward_only && (is_null($otp_type) || $otp_type == 'sms')){
 				if(!empty($user['phone'])){
 					//input env to log
 					$gateway = env('SMS_GATEWAY');
@@ -456,7 +455,7 @@ class ApiAutoCrm extends Controller
 				}
 			}
 
-			if($crm['autocrm_whatsapp_toogle'] == 1 && !$forward_only){
+			if($crm['autocrm_whatsapp_toogle'] == 1 && !$forward_only && (is_null($otp_type) || $otp_type == 'whatsapp')){
 				if(!empty($user['phone'])){
 					//cek api key whatsapp
 					$api_key = Setting::where('key', 'api_key_whatsapp')->first();
