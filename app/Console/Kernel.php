@@ -175,10 +175,10 @@ class Kernel extends ConsoleKernel
         $schedule->call('Modules\Transaction\Http\Controllers\ApiGosendController@cronCheckStatus')->cron('*/3 * * * *');
 
         /**
-         * Check the status of Wehelpyou which is not updated after 5 minutes
-         * run every 3 minutes
+         * Check the status of Wehelpyou which is not updated after 3 minutes
+         * run every 1 minutes
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiWehelpyouController@cronCheckStatus')->cron('*/3 * * * *');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiWehelpyouController@cronCheckStatus')->cron('*/1 * * * *');
 
         /**
          * Auto reject order when driver not found > 30minutes
@@ -200,9 +200,9 @@ class Kernel extends ConsoleKernel
 
         /**
          * Auto reject order wehelpyou when driver not found > 10 minutes
-         * run every 3 minutes
+         * run every 1 minutes
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiWehelpyouController@cronCancelDelivery')->cron('*/3 * * * *');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiWehelpyouController@cronCancelDelivery')->cron('*/1 * * * *');
     }
 
     /**

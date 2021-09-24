@@ -169,8 +169,15 @@ class ApiWehelpyouController extends Controller
                 ->whereDate('transaction_date', date('Y-m-d'))
                 ->where('transaction_pickup_wehelpyou_updates.date', '<', $limitTime)
                 ->where('transaction_payment_status' ,'Completed')
-                ->where('transaction_pickup_wehelpyous.latest_status_id', '11') // finding driver
-                ->where('transaction_pickup_wehelpyou_updates.status_id', '11') // finding driver
+                ->where(function($q) {
+                	$q->where(function($q2) {
+                		$q2->where('transaction_pickup_wehelpyous.latest_status_id', '11') // finding driver
+                		->where('transaction_pickup_wehelpyou_updates.status_id', '11'); // finding driver
+                	})->orWhere(function($q2) {
+                		$q2->where('transaction_pickup_wehelpyous.latest_status_id', '1') // on progress
+                		->where('transaction_pickup_wehelpyou_updates.status_id', '1'); // on progress
+                	});
+                })
                 ->with('outlet')
                 ->get();
 
