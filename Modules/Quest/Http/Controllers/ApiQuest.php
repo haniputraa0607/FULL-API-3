@@ -1855,7 +1855,8 @@ class ApiQuest extends Controller
             ->where(function($query) {
                 $query->where(function($query2) {
                     $query2->where('publish_end', '>=', date('Y-m-d H:i:s'))
-                        ->whereNull('quest_users.id_user');
+                        ->whereNull('quest_users.id_user')
+                        ->where('quests.autoclaim_quest', 0);
                 })
                     ->orWhere(function($query2) {
                         // claimed
