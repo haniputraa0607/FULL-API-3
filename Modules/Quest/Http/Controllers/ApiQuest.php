@@ -1878,16 +1878,32 @@ class ApiQuest extends Controller
                     'total_quest' => $myQuest,
                 ]
             ];
-        } else {
+        }
+
+        $questAutoClaim = Quest::where('autoclaim_quest', 1)
+                        ->whereNull('stop_at')->where('is_complete', 1)
+                        ->where('publish_start', '<=', date('Y-m-d H:i:s'))
+                        ->where('publish_end', '>=', date('Y-m-d H:i:s'))->count();
+        if ($questAutoClaim) {
+            $result = [
+                'status' => 'success',
+                'result' => [
+                    'total_quest' => $questAutoClaim,
+                ]
+            ];
+        }
+
+        if(empty($myQuest) && empty($questAutoClaim)){
             $result = [
                 'status' => 'fail',
                 'messages' => ['Belum ada misi yang berjalan']
             ];
         }
+
         $complete_profile = $request->user()->complete_profile;
         if (!$complete_profile) {
             $result['code'] = 'profile_incomplete';
-            if ($myQuest) {
+            if ($myQuest || $questAutoClaim) {
                 $result['messages'] = ['Lengkapi Profile Kamu Sekarang'];
             } else {
                 $result['messages'][] = 'Lengkapi Profile Kamu Sekarang';
