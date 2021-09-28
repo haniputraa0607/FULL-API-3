@@ -2579,7 +2579,6 @@ class ApiPromoCampaign extends Controller
         {
         	$deals = DealsUser::where('id_deals_user', '=', $request->id_deals_user)
         			->whereIn('paid_status', ['Free', 'Completed'])
-        			->whereNull('used_at')
         			->with([  
                         'dealVoucher.deals.outlets_active',
                         'dealVoucher.deals.brand',
@@ -2605,6 +2604,13 @@ class ApiPromoCampaign extends Controller
                     ])
         			->first();
 			
+			if (!empty($deals['used_at'])) {
+				return [
+	                'status'=>'fail',
+	                'messages'=>['Voucher sudah pernah digunakan']
+	            ];
+			}
+
 			if(!$deals){
 	            return [
 	                'status'=>'fail',
