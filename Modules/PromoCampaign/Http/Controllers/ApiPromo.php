@@ -481,7 +481,6 @@ class ApiPromo extends Controller
 		    	foreach ($listDelivery as $val) {
 		    		if ($val['show_status'] != 1
 		    			|| $val['available_status'] != 1
-		    			|| empty($outletSetting[$val['code']])
 		    			|| (isset($outletSetting[$val['code']]) && ($outletSetting[$val['code']]['available_status'] != 1 || $outletSetting[$val['code']]['show_status'] != 1))
 		    		) {
 		    			continue;

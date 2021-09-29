@@ -425,7 +425,7 @@ class ApiOnlineTransaction extends Controller
 						DB::rollback();
 	                    return [
 	                        'status'=>'fail',
-	                        'messages'=> $errors??['Voucher is not valid']
+	                        'messages'=> $errors??['Voucher tidak tersedia']
 	                    ];
 		            }
 
@@ -443,7 +443,7 @@ class ApiOnlineTransaction extends Controller
 	        {
 	        	return [
                     'status'=>'fail',
-                    'messages'=>['Voucher is not valid']
+                    'messages'=>['Voucher tidak ditemukan']
                 ];
 	        }
         }
@@ -1896,7 +1896,7 @@ class ApiOnlineTransaction extends Controller
 							DB::rollBack();
 				            return [
 				                'status'=>'fail',
-				                'messages'=>['Voucher is not valid']
+				                'messages'=>['Voucher sudah digunakan']
 				            ];
 				        }
 			        }
@@ -2074,7 +2074,7 @@ class ApiOnlineTransaction extends Controller
 				DB::rollBack();
 	            return [
 	                'status'=>'fail',
-	                'messages'=>['Voucher is not valid']
+	                'messages'=>['Voucher sudah digunakan']
 	            ];
 	        }
         }
@@ -2437,7 +2437,7 @@ class ApiOnlineTransaction extends Controller
 	        }
 	        else
 	        {
-	        	$error = ['Voucher is not valid'];
+	        	$error = ['Voucher tidak ditemukan'];
 	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error);
 	        }
         } elseif (!$request->promo_code && $request->id_subscription_user && !$request->id_deals_user) {

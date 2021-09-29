@@ -355,6 +355,7 @@ class SendCampaignJob implements ShouldQueue
                     if (!empty($deviceToken)) {
                         if (isset($deviceToken['token']) && !empty($deviceToken['token'])) {
                             try{
+                                $dataOptional['id_notif'] = $campaign['id_campaign'];
                                 $dataOptional['source'] = 'campaign';
                                 $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptional, 1);
 
@@ -458,7 +459,7 @@ class SendCampaignJob implements ShouldQueue
 
                                     $logs = CampaignPushSent::create($push);
 
-                                    $dataOptionalInsert['id_notif'] = $logs->id_campaign_push_sent;
+                                    $dataOptionalInsert['id_notif'] = $campaign['id_campaign'];
                                     $dataOptionalInsert['source'] = 'campaign';
 
                                     $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptionalInsert);

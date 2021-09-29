@@ -3732,31 +3732,36 @@ class ApiTransaction extends Controller
                                     break;
                             }
                         }
-                    }elseif ($list['transaction_pickup_wehelpyou']) {
+                    } elseif ($list['transaction_pickup_wehelpyou']) {
+
                         foreach ($list['transaction_pickup_wehelpyou']['transaction_pickup_wehelpyou_updates'] as $valueWehelpyou) {
                             switch (strtolower($valueWehelpyou['status_id'])) {
                                 case 8:
                                     $statusOrder[] = [
                                         'text'  => 'Driver dalam perjalanan menuju outlet',
-                                        'date'  => $valueWehelpyou['created_at']
+                                        'date'  => $valueWehelpyou['created_at'],
+                                        'id_log'  => $valueWehelpyou['id_transaction_pickup_wehelpyou_update']
                                     ];
                                     break;
                                 case 32:
                                     $statusOrder[] = [
                                         'text'  => 'Driver mengambil pesanan di outlet',
-                                        'date'  => $valueWehelpyou['created_at']
+                                        'date'  => $valueWehelpyou['created_at'],
+                                        'id_log'  => $valueWehelpyou['id_transaction_pickup_wehelpyou_update']
                                     ];
                                     break;
                                 case 9:
                                     $statusOrder[] = [
                                         'text'  => 'Driver sedang mengantar pesanan ke lokasi #temansejiwa',
-                                        'date'  => $valueWehelpyou['created_at']
+                                        'date'  => $valueWehelpyou['created_at'],
+                                        'id_log'  => $valueWehelpyou['id_transaction_pickup_wehelpyou_update']
                                     ];
                                     break;
                                 case 2:
                                     $statusOrder[] = [
                                         'text'  => 'Pesanan telah selesai',
-                                        'date'  => $valueWehelpyou['created_at']
+                                        'date'  => $valueWehelpyou['created_at'],
+                                        'id_log'  => $valueWehelpyou['id_transaction_pickup_wehelpyou_update']
                                     ];
                                     break;
                                 case 89:
@@ -3764,20 +3769,23 @@ class ApiTransaction extends Controller
                                 case 91:
                                     $statusOrder[] = [
                                         'text'  => 'Pengantaran pesanan telah dibatalkan',
-                                        'date'  => $valueWehelpyou['created_at']
+                                        'date'  => $valueWehelpyou['created_at'],
+                                        'id_log'  => $valueWehelpyou['id_transaction_pickup_wehelpyou_update']
                                     ];
                                     break;
                                 case 96:
                                     $statusOrder[] = [
                                         'text'  => 'Pesanan telah dibatalkan karena driver tidak dapat mencapai lokasi #temansejiwa',
-                                        'date'  => $valueWehelpyou['created_at']
+                                        'date'  => $valueWehelpyou['created_at'],
+                                        'id_log'  => $valueWehelpyou['id_transaction_pickup_wehelpyou_update']
                                     ];
                                     break;
                                 case 95:
                                     $flagStatus['no_driver'] = 1;
                                     $statusOrder[] = [
                                         'text'  => 'Driver tidak ditemukan',
-                                        'date'  => $valueWehelpyou['created_at']
+                                        'date'  => $valueWehelpyou['created_at'],
+                                        'id_log'  => $valueWehelpyou['id_transaction_pickup_wehelpyou_update']
                                     ];
                                     break;
                             }
@@ -3805,6 +3813,10 @@ class ApiTransaction extends Controller
                 usort($statusOrder, function($a1, $a2) {
                     $v1 = strtotime($a1['date']);
                     $v2 = strtotime($a2['date']);
+
+                    if ($v2 == $v1 && isset($a1['id_log']) && isset($a2['id_log'])) {
+                    	return $a2['id_log'] - $a1['id_log'];
+                    }
                     return $v2 - $v1; // $v2 - $v1 to reverse direction
                 });
 
