@@ -977,9 +977,24 @@ class ApiCampaign extends Controller
     	$now = date("Y-m-d H:i:s");
     	switch ($request->source) {
     		case 'campaign':
-    			$update = CampaignPushSent::where('id_campaign_push_sent', $request->id_notif)->whereNull('click_at')->update(['click_at' => $now]);
+    			$phone = $request->user()->phone ?? null;
+    			$campaign = CampaignPushSent::where('id_campaign', $request->id_notif)
+    					->where('push_sent_to', $phone)
+    					->whereNull('click_at');
+
+    			if (!$campaign) {
+    				\Log::error([
+    					'campaign click count error' => [
+	    					'status' => 'fail',
+	    					'messages' => $request->all()
+	    				]
+	    			]);
+    			} else {
+    				$campaign->update(['click_at' => $now]);
+    			}
+
     			break;
-    		
+		
     		case 'promotion':
     			$update = PromotionSent::where('id_promotion_sent', $request->id_notif)->whereNull('push_click_at')->update(['push_click_at' => $now]);
     			break;
