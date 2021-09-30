@@ -941,11 +941,12 @@ class WeHelpYou
 			'status_id' => 1,
 		];
 
+		$now = date('Y-m-d H:i:s');
 		switch ($case) {
 			case 'rejected':
         		if (in_array($statusId, [11, 8, 9, 96])) {
 					$statusLog[] = [
-						'date' => '2021-06-18T15:00:00.603Z',
+						'date' => $now,
 						'status' => 'Finding Driver',
 						'status_id' => 11,
 					];
@@ -953,7 +954,7 @@ class WeHelpYou
 
 				if (in_array($statusId, [8, 9, 96])) {
 					$statusLog[] = [
-						'date' => '2021-06-18T15:05:00.603Z',
+						'date' => $now,
 						'status' => 'Enroute Pickup',
 						'status_id' => 8,
 					];
@@ -961,7 +962,7 @@ class WeHelpYou
 
 				if (in_array($statusId, [9, 96])) {
 					$statusLog[] = [
-						'date' => '2021-06-18T15:10:00.603Z',
+						'date' => $now,
 						'status' => 'Enroute Drop',
 						'status_id' => 9,
 					];
@@ -969,7 +970,7 @@ class WeHelpYou
 
 				if (in_array($statusId, [96])) {
 					$statusLog[] = [
-						'date' => '2021-06-18T15:15:00.603Z',
+						'date' => $now,
 						'status' => 'Rejected',
 						'status_id' => 96,
 					];
@@ -979,7 +980,7 @@ class WeHelpYou
         	case 'cancelled':
         		if (in_array($statusId, [11, 8, 91])) {
 					$statusLog[] = [
-						'date' => '2021-06-18T15:00:00.603Z',
+						'date' => $now,
 						'status' => 'Finding Driver',
 						'status_id' => 11,
 					];
@@ -987,7 +988,7 @@ class WeHelpYou
 
 				if (in_array($statusId, [8, 91])) {
 					$statusLog[] = [
-						'date' => '2021-06-18T15:05:00.603Z',
+						'date' => $now,
 						'status' => 'Enroute Pickup',
 						'status_id' => 8,
 					];
@@ -995,7 +996,7 @@ class WeHelpYou
 
 				if (in_array($statusId, [91])) {
 					$statusLog[] = [
-						'date' => '2021-06-18T15:10:00.603Z',
+						'date' => $now,
 						'status' => 'Cancelled by partner',
 						'status_id' => 91,
 					];
@@ -1006,7 +1007,7 @@ class WeHelpYou
         	case 'driver not found':
         		if (in_array($statusId, [11, 95])) {
 					$statusLog[] = [
-						'date' => '2021-06-18T15:00:00.603Z',
+						'date' => $now,
 						'status' => 'Finding Driver',
 						'status_id' => 11,
 					];
@@ -1014,7 +1015,7 @@ class WeHelpYou
 
 				if (in_array($statusId, [95])) {
 					$statusLog[] = [
-						'date' => '2021-06-18T15:10:00.603Z',
+						'date' => $now,
 						'status' => 'Driver Not Found',
 						'status_id' => 95,
 					];
@@ -1026,7 +1027,7 @@ class WeHelpYou
 
 				if (in_array($statusId, [11, 8, 9, 2])) {
 					$statusLog[] = [
-						'date' => '2021-06-18T15:00:00.603Z',
+						'date' => $now,
 						'status' => 'Finding Driver',
 						'status_id' => 11,
 					];
@@ -1034,7 +1035,7 @@ class WeHelpYou
 
 				if (in_array($statusId, [8, 9, 2])) {
 					$statusLog[] = [
-						'date' => '2021-06-18T15:05:00.603Z',
+						'date' => $now,
 						'status' => 'Enroute Pickup',
 						'status_id' => 8,
 					];
@@ -1042,7 +1043,7 @@ class WeHelpYou
 
 				if (in_array($statusId, [9, 2])) {
 					$statusLog[] = [
-						'date' => '2021-06-18T15:10:00.603Z',
+						'date' => $now,
 						'status' => 'Enroute Drop',
 						'status_id' => 9,
 					];
@@ -1050,7 +1051,7 @@ class WeHelpYou
 
 				if (in_array($statusId, [2])) {
 					$statusLog[] = [
-						'date' => '2021-06-18T15:15:00.603Z',
+						'date' => $now,
 						'status' => 'Finished',
 						'status_id' => 2,
 					];

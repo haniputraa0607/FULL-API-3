@@ -3310,7 +3310,7 @@ class ApiTransaction extends Controller
                                 'driver_id'         => '',
                                 'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'Data tidak tersedia dari jasa pengiriman',
                                 'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                                'driver_whatsapp'   => '',
+                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                                 'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
                                 'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'',
                             ];
@@ -3324,7 +3324,7 @@ class ApiTransaction extends Controller
                                 'driver_id'         => '',
                                 'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'Data tidak tersedia dari jasa pengiriman',
                                 'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                                'driver_whatsapp'   => '',
+                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                                 'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
                                 'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'',
                             ];
@@ -3339,7 +3339,7 @@ class ApiTransaction extends Controller
                                 'driver_id'         => '',
                                 'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'Data tidak tersedia dari jasa pengiriman',
                                 'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                                'driver_whatsapp'   => '',
+                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                                 'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
                                 'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'',
                             ];
@@ -3354,7 +3354,7 @@ class ApiTransaction extends Controller
                                 'driver_id'         => '',
                                 'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'Data tidak tersedia dari jasa pengiriman',
                                 'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                                'driver_whatsapp'   => '',
+                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
                                 'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
                                 'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'',
                             ];
@@ -3630,7 +3630,8 @@ class ApiTransaction extends Controller
                         $is_admin = $request->user()->tokenCan('be');
                         $statusOrder[] = [
                             'text'  => 'Pesanan sudah siap diambil Driver'. ($list['detail']['is_autoready'] && $is_admin ? ' (auto ready by system)' : ''),
-                            'date'  => $list['detail']['ready_at']
+                            'date'  => $list['detail']['ready_at'],
+                            'id_log'  => 1
                         ];
                     }
                     if ($list['transaction_pickup_go_send']) {
