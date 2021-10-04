@@ -1337,6 +1337,26 @@ class ApiQuest extends Controller
             })
             ->where('is_complete', 1);
 
+        if ($request->completed && $request->claimed && $request->available) {
+            // do nothing
+        } elseif ($request->completed) {
+            $quests->where('quest_users.is_done', 1);
+        } elseif ($request->ongoing) {
+            $quests->whereNotNull('quest_users.id_quest_user')
+                ->where('quest_users.is_done', 0);
+        } elseif ($request->available) {
+            $quests->whereNotNull('quest_users.id_quest_user');
+        }
+
+        $date_start = $request->date_start ? date('Y-m-d', strtotime($request->date_start)) : null;
+        $date_end = $request->date_end ?  date('Y-m-d', strtotime($request->date_end)) : null;
+        if ($date_start) {
+            $quests->whereDate(\DB::raw('(CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.publish_end END)'), '>=', $date_start);
+        }
+        if ($date_end) {
+            $quests->whereDate(\DB::raw('(CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END)'), '<=', $date_end);
+        }
+
         if(!empty($dataNotAvailableQuest)){
             $quests = $quests->whereNotIn('quests.id_quest', $dataNotAvailableQuest);
         }
