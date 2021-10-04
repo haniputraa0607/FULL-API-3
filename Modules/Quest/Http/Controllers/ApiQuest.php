@@ -1832,13 +1832,14 @@ class ApiQuest extends Controller
         $dataNotAvailableQuest = $this->userRuleNotAvailableQuest($id_user);
 
         $quests = Quest::select('quests.id_quest', 'quest_users.id_user', 'name', 'image as image_url', 'quests.date_start', 'quests.date_end', 'short_description', 'description', \DB::raw('(CASE WHEN id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.publish_end END) as date_end'))
-            ->where(function($query) {
+            ->where(function($query) { // limit belum habis atau sudah di klaim
                 $query->where('quests.quest_limit', 0)
                     ->orWhere(function($query2) {
                         $query2->whereColumn('quests.quest_limit', '>', 'quests.quest_claimed');
-                    });
+                    })
+                    ->whereNotNull('quest_users.id_user');
             })
-            ->whereNull('quests.stop_at')
+            ->whereNull('quests.stop_at') // belum berakhir
             ->leftJoin('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
                     ->where('quest_users.id_user', $id_user);
@@ -1847,22 +1848,22 @@ class ApiQuest extends Controller
                 $q->on('quest_users.id_quest', 'quest_user_redemptions.id_quest')
                     ->where('quest_user_redemptions.id_user', $id_user);
             })
-            ->where(function ($query) {
+            ->where(function ($query) { // hadiah belum diambil
                 $query->where('quest_user_redemptions.redemption_status', '<>', 1)
                     ->orWhereNull('quest_user_redemptions.redemption_status');
             })
-            ->where('publish_start', '<=', date('Y-m-d H:i:s'))
+            ->where('publish_start', '<=', date('Y-m-d H:i:s')) // sudah di publish
             ->where(function($query) {
                 $query->where(function($query2) {
-                    $query2->where('publish_end', '>=', date('Y-m-d H:i:s'))
-                        ->whereNull('quest_users.id_user')
-                        ->where('quests.autoclaim_quest', 0);
+                    $query2->where('publish_end', '>=', date('Y-m-d H:i:s')) // masih aktif
+                        ->whereNull('quest_users.id_user') // belum diklaim
+                        ->where('quests.autoclaim_quest', 0); // bukan quest autoclaim
                 })
                     ->orWhere(function($query2) {
                         // claimed
-                        $query2->whereNotNull('quest_users.id_user')
+                        $query2->whereNotNull('quest_users.id_user') // sudah di klaim
                             // not expired
-                            ->whereRaw('(CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.date_end END) >= "'.date('Y-m-d H:i:s').'"');
+                            ->whereRaw('(CASE WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.date_end END) >= "'.date('Y-m-d H:i:s').'"'); // belum expired
                     });
             })
             ->where('is_complete', 1);
@@ -1880,17 +1881,21 @@ class ApiQuest extends Controller
             ];
         }
 
-        $questAutoClaim = Quest::where('autoclaim_quest', 1)
-                        ->whereNull('stop_at')->where('is_complete', 1)
-                        ->where('publish_start', '<=', date('Y-m-d H:i:s'))
-                        ->where('publish_end', '>=', date('Y-m-d H:i:s'))->count();
-        if ($questAutoClaim) {
-            $result = [
-                'status' => 'success',
-                'result' => [
-                    'total_quest' => $questAutoClaim,
-                ]
-            ];
+        $complete_profile = $request->user()->complete_profile;
+        $questAutoClaim = null;
+        if (!$complete_profile) {
+            $questAutoClaim = Quest::where('autoclaim_quest', 1)
+                            ->whereNull('stop_at')->where('is_complete', 1)
+                            ->where('publish_start', '<=', date('Y-m-d H:i:s'))
+                            ->where('publish_end', '>=', date('Y-m-d H:i:s'))->count();
+            if ($questAutoClaim) {
+                $result = [
+                    'status' => 'success',
+                    'result' => [
+                        'total_quest' => $questAutoClaim,
+                    ]
+                ];
+            }
         }
 
         if(empty($myQuest) && empty($questAutoClaim)){
@@ -1900,7 +1905,6 @@ class ApiQuest extends Controller
             ];
         }
 
-        $complete_profile = $request->user()->complete_profile;
         if (!$complete_profile) {
             $result['code'] = 'profile_incomplete';
             if ($myQuest || $questAutoClaim) {
