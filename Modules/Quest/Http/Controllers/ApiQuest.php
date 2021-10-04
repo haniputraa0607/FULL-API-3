@@ -352,6 +352,15 @@ class ApiQuest extends Controller
         }
     }
 
+    public function triggerManualAutoclaim(Request $request)
+    {
+        if ($quest->autoclaim_quest) {
+            User::select('id')->where('phone_verified', 1)->where('is_suspended', 0)->where('complete_profile', 1)->chunk(1000, function($users) use ($quest) {
+                AutoclaimQuest::dispatch($quest, $users->pluck('id'))->allOnConnection('quest_autoclaim');
+            });
+        }
+    }
+
     public function storeQuestDetail(Request $request)
     {
         $quest = Quest::find($request->id_quest);
@@ -1584,7 +1593,7 @@ class ApiQuest extends Controller
     public function detail(Request $request)
     {
         $id_user = $request->user()->id;
-        $quest = Quest::select('quests.id_quest', 'quest_users.id_quest_user', 'quest_users.id_user', 'name', 'image as image_url', 'description', 'short_description', 'stop_reason', \DB::raw('(CASE WHEN quest_users.id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quests.stop_at IS NOT NULL THEN quests.stop_at WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.publish_end END) as date_end'))
+        $quest = Quest::select('quests.id_quest', 'quest_users.id_quest_user', 'quest_users.id_user', 'name', 'image as image_url', 'description', 'short_description', 'stop_reason', \DB::raw('(CASE WHEN quest_users.id_quest_user IS NOT NULL THEN 1 ELSE 0 END) as quest_claimed, (CASE WHEN quest_users.date_start IS NOT NULL THEN quest_users.date_start ELSE quests.date_start END) as date_start, (CASE WHEN quests.stop_at IS NOT NULL THEN quests.stop_at WHEN quest_users.date_end IS NOT NULL THEN quest_users.date_end ELSE quests.publish_end END) as date_end, 1 as text_label'))
             ->with(['quest_benefit', 'quest_benefit.deals'])
             ->leftJoin('quest_users', function($q) use ($id_user) {
                 $q->on('quest_users.id_quest', 'quests.id_quest')
@@ -1618,7 +1627,7 @@ class ApiQuest extends Controller
             $benefit['text'] = MyHelper::requestNumber($quest->quest_benefit->value, '_POINT').' '.env('POINT_NAME', 'Points');
         }
 
-        $quest->append(['progress', 'contents', 'user_redemption', 'text_label']);
+        $quest->append(['progress', 'contents', 'user_redemption']);
         $quest->makeHidden(['quest_contents', 'description', 'quest_benefit', 'id_quest_user']);
         $result = $quest->toArray();
         $result['date_start_format'] = MyHelper::indonesian_date_v2($result['date_start'], 'd F Y, H:i');
@@ -1639,6 +1648,10 @@ class ApiQuest extends Controller
         if ($result['text_label']['code'] == -1) {
             $result['progress']['complete'] = 0;
             $result['text_label']['text'] = str_replace('Berakhir', 'Tantangan telah berakhir', $result['text_label']['text']) . $result['text_label']['stop_reason'];
+        }
+
+        if ($result['text_label']['code'] == 0) {
+            $result['text_label']['text'] = 'Dimulai pada '. $result['date_start_format'];
         }
 
         $result['benefit']['id_reference'] = $result['user_redemption']['id_reference'] ?? null;
