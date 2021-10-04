@@ -1197,11 +1197,12 @@ class ApiUser extends Controller
 
         if (isset($data[0]['is_suspended']) && $data[0]['is_suspended'] == '1') {
             $emailSender = Setting::where('key', 'email_sender')->first();
+            $emailReply = Setting::where('key', 'email_reply_to')->first();
             return response()->json([
                 'status' => 'success',
                 'result' => $data,
                 'otp_timer' => $holdTime,
-                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
+                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.($emailReply['value']??$emailSender['value']??'')]
             ]);
         }
 
@@ -1596,18 +1597,19 @@ class ApiUser extends Controller
 
                         if ($deviceCus && count($deviceCus) > (int) $fraud['parameter_detail'] && array_search($datauser[0]['id'], $check) !== false) {
                             $emailSender = Setting::where('key', 'email_sender')->first();
+                            $emailReply = Setting::where('key', 'email_reply_to')->first();
                             $sendFraud = app($this->setting_fraud)->checkFraud($fraud, $datauser[0], ['device_id' => $device_id, 'device_type' => $request->json('device_type')], 0, 0, null, 0);
                             $data = User::with('city')->where('phone', '=', $datauser[0]['phone'])->get()->toArray();
 
                             if ($data[0]['is_suspended'] == 1) {
                                 return response()->json([
                                     'status' => 'fail',
-                                    'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
+                                    'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.($emailReply['value']??$emailSender['value']??'')]
                                 ]);
                             } else {
                                 return response()->json([
                                     'status' => 'fail',
-                                    'messages' => ['Akun Anda tidak dapat login di device ini karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
+                                    'messages' => ['Akun Anda tidak dapat login di device ini karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.($emailReply['value']??$emailSender['value']??'')]
                                 ]);
                             }
                         }
@@ -2050,18 +2052,19 @@ class ApiUser extends Controller
 
                             if ($deviceCus && count($deviceCus) > (int) $fraud['parameter_detail'] && array_search($data[0]['id'], $check) !== false) {
                                 $emailSender = Setting::where('key', 'email_sender')->first();
+                                $emailReply = Setting::where('key', 'email_reply_to')->first();
                                 $sendFraud = app($this->setting_fraud)->checkFraud($fraud, $data[0], ['device_id' => $device_id, 'device_type' => $request->json('device_type')], 0, 0, null, 0);
                                 $data = User::with('city')->where('phone', '=', $phone)->get()->toArray();
 
                                 if ($data[0]['is_suspended'] == 1) {
                                     return response()->json([
                                         'status' => 'fail',
-                                        'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
+                                        'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.($emailReply['value']??$emailSender['value']??'')]
                                     ]);
                                 } else {
                                     return response()->json([
                                         'status' => 'fail',
-                                        'messages' => ['Akun Anda tidak dapat di daftarkan karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
+                                        'messages' => ['Akun Anda tidak dapat di daftarkan karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.($emailReply['value']??$emailSender['value']??'')]
                                     ]);
                                 }
                             }
