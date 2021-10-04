@@ -108,14 +108,14 @@ class Quest extends Model
         return $result;
     }
 
-    public function getTextLabelAttribute()
+    public function getTextLabelAttribute($value = null)
     {
         $now = date('Y-m-d H:i:s');
-        $date_start = MyHelper::indonesian_date_v2($this->date_start, 'd F Y');
-        $date_end = MyHelper::indonesian_date_v2($this->date_end, 'd F Y');
+        $date_start = MyHelper::indonesian_date_v2($this->date_start, $value ? 'd F Y, H:i' : 'd F Y');
+        $date_end = MyHelper::indonesian_date_v2($this->date_end, $value ? 'd F Y, H:i' : 'd F Y');
         if ($this->claimed_status) {
             return [
-                'text' => 'Selesai '.MyHelper::indonesian_date_v2($this['redemption_date'], 'd F Y'),
+                'text' => 'Selesai '.MyHelper::indonesian_date_v2($this['redemption_date'], $value ? 'd F Y, H:i' : 'd F Y'),
                 'code' => 2
             ];
         }
