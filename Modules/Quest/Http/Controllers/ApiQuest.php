@@ -356,8 +356,8 @@ class ApiQuest extends Controller
                     ->where('crm_user_data.'.$quest->user_rule_subject, $quest->user_rule_operator, $quest->user_rule_parameter);
             }
 
-            $users->chunk(1000, function($users) use ($quest) {
-                    AutoclaimQuest::dispatch($quest, $users->pluck('id'))->allOnConnection('quest_autoclaim');
+            $users->chunk(1000, function($users2) use ($quest) {
+                    AutoclaimQuest::dispatch($quest, $users2->pluck('id'))->allOnConnection('quest_autoclaim');
                 });
         }
     }
@@ -383,21 +383,21 @@ class ApiQuest extends Controller
 
         if ($quest->autoclaim_quest) {
             $total = 0;
-            User::leftJoin('user_quests', 'user_quests.id_user', '=', 'users.id')
+            $users = User::leftJoin('quest_users', 'quest_users.id_user', '=', 'users.id')
                 ->select('users.id')
                 ->where('phone_verified', 1)
                 ->where('is_suspended', 0)
                 ->where('complete_profile', 1)
-                ->whereNull('user_quests.id_user_quest');
+                ->whereNull('quest_users.id_quest_user');
 
             if ($quest->user_rule_subject && $quest->user_rule_operator) {
                 $users->join('crm_user_data', 'crm_user_data.id_user', 'users.id_user')
                     ->where('crm_user_data.'.$quest->user_rule_subject, $quest->user_rule_operator, $quest->user_rule_parameter);
             }
 
-            $quest->chunk(1000, function($users) use ($quest, &$total) {
-                    $total += $users->count();
-                    AutoclaimQuest::dispatch($quest, $users->pluck('id'))->allOnConnection('quest_autoclaim');
+            $users->chunk(1000, function($users2) use ($quest, &$total) {
+                    $total += $users2->count();
+                    AutoclaimQuest::dispatch($quest, $users2->pluck('id'))->allOnConnection('quest_autoclaim');
                 });
             if (!$total) {
                 return [
