@@ -29,6 +29,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::any('detail/update', 'ApiQuest@update');
     Route::any('destroy', 'ApiQuest@destroy');
     Route::post('start', 'ApiQuest@start');
+    Route::post('trigger-manual-autoclaim', 'ApiQuest@triggerManualAutoclaim');
 
 	Route::group(['prefix' => 'report'], function () {
     	Route::any('/', 'ApiReportQuest@list');
