@@ -346,9 +346,19 @@ class ApiQuest extends Controller
     public function triggerAutoclaim($quest)
     {
         if ($quest->autoclaim_quest) {
-            User::select('id')->where('phone_verified', 1)->where('is_suspended', 0)->where('complete_profile', 1)->chunk(1000, function($users) use ($quest) {
-                AutoclaimQuest::dispatch($quest, $users->pluck('id'))->allOnConnection('quest_autoclaim');
-            });
+            $users = User::select('users.id')
+                ->where('phone_verified', 1)
+                ->where('is_suspended', 0)
+                ->where('complete_profile', 1);
+
+            if ($quest->user_rule_subject && $quest->user_rule_operator) {
+                $users->join('crm_user_data', 'crm_user_data.id_user', 'users.id_user')
+                    ->where('crm_user_data.'.$quest->user_rule_subject, $quest->user_rule_operator, $quest->user_rule_parameter);
+            }
+
+            $users->chunk(1000, function($users) use ($quest) {
+                    AutoclaimQuest::dispatch($quest, $users->pluck('id'))->allOnConnection('quest_autoclaim');
+                });
         }
     }
 
@@ -378,8 +388,14 @@ class ApiQuest extends Controller
                 ->where('phone_verified', 1)
                 ->where('is_suspended', 0)
                 ->where('complete_profile', 1)
-                ->whereNull('user_quests.id_user_quest')
-                ->chunk(1000, function($users) use ($quest, &$total) {
+                ->whereNull('user_quests.id_user_quest');
+
+            if ($quest->user_rule_subject && $quest->user_rule_operator) {
+                $users->join('crm_user_data', 'crm_user_data.id_user', 'users.id_user')
+                    ->where('crm_user_data.'.$quest->user_rule_subject, $quest->user_rule_operator, $quest->user_rule_parameter);
+            }
+
+            $quest->chunk(1000, function($users) use ($quest, &$total) {
                     $total += $users->count();
                     AutoclaimQuest::dispatch($quest, $users->pluck('id'))->allOnConnection('quest_autoclaim');
                 });
