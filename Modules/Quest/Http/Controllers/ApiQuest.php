@@ -1381,7 +1381,7 @@ class ApiQuest extends Controller
             })
             ->where('is_complete', 1);
 
-        if ($request->completed && $request->claimed && $request->available) {
+        if ($request->completed && $request->ongoing && $request->available) {
             // do nothing
         } elseif ($request->completed) {
             $quests->where('quest_users.is_done', 1);
@@ -1389,7 +1389,7 @@ class ApiQuest extends Controller
             $quests->whereNotNull('quest_users.id_quest_user')
                 ->where('quest_users.is_done', 0);
         } elseif ($request->available) {
-            $quests->whereNotNull('quest_users.id_quest_user');
+            $quests->whereNull('quest_users.id_quest_user');
         }
 
         $date_start = $request->date_start ? date('Y-m-d', strtotime($request->date_start)) : null;
