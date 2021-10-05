@@ -354,11 +354,55 @@ class ApiQuest extends Controller
 
     public function triggerManualAutoclaim(Request $request)
     {
-        if ($quest->autoclaim_quest) {
-            User::select('id')->where('phone_verified', 1)->where('is_suspended', 0)->where('complete_profile', 1)->chunk(1000, function($users) use ($quest) {
-                AutoclaimQuest::dispatch($quest, $users->pluck('id'))->allOnConnection('quest_autoclaim');
-            });
+        $quest = Quest::find($request->id_quest);
+        if (!$quest) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Quest not found']
+            ];
         }
+
+        $jobRunning = \DB::table('questjobs')->where('queue', 'quest_autoclaim')->exists();
+
+        if ($jobRunning) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Autoclaim in progess']
+            ];
+        }
+
+        if ($quest->autoclaim_quest) {
+            $total = 0;
+            User::leftJoin('user_quests', 'user_quests.id_user', '=', 'users.id')
+                ->select('users.id')
+                ->where('phone_verified', 1)
+                ->where('is_suspended', 0)
+                ->where('complete_profile', 1)
+                ->whereNull('user_quests.id_user_quest')
+                ->chunk(1000, function($users) use ($quest, &$total) {
+                    $total += $users->count();
+                    AutoclaimQuest::dispatch($quest, $users->pluck('id'))->allOnConnection('quest_autoclaim');
+                });
+            if (!$total) {
+                return [
+                    'status' => 'fail',
+                    'messages' => [
+                        "all users have received the quest"
+                    ]
+                ];
+            }
+            return [
+                'status' => 'success',
+                'messages' => [
+                    "Reclaiming quest for $total users"
+                ]
+            ];
+        }
+
+        return [
+            'status' => 'fail',
+            'messages' => ['Not an autoclaim quest']
+        ];
     }
 
     public function storeQuestDetail(Request $request)
@@ -1337,7 +1381,7 @@ class ApiQuest extends Controller
             })
             ->where('is_complete', 1);
 
-        if ($request->completed && $request->claimed && $request->available) {
+        if ($request->completed && $request->ongoing && $request->available) {
             // do nothing
         } elseif ($request->completed) {
             $quests->where('quest_users.is_done', 1);
@@ -1345,7 +1389,7 @@ class ApiQuest extends Controller
             $quests->whereNotNull('quest_users.id_quest_user')
                 ->where('quest_users.is_done', 0);
         } elseif ($request->available) {
-            $quests->whereNotNull('quest_users.id_quest_user');
+            $quests->whereNull('quest_users.id_quest_user');
         }
 
         $date_start = $request->date_start ? date('Y-m-d', strtotime($request->date_start)) : null;
