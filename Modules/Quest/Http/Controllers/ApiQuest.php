@@ -1779,7 +1779,7 @@ class ApiQuest extends Controller
 
     public function listProduct(Request $request)
     {
-        $result = Product::select('id_product', 'product_name')
+        $result = Product::select('id_product', 'product_name', 'product_code')
             ->with(['product_variant_group' => function($relation) {
                 $relation->select(
                         'product_variant_groups.id_product',
