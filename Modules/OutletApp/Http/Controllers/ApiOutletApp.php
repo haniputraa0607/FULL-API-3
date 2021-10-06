@@ -4728,6 +4728,7 @@ class ApiOutletApp extends Controller
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         $result['rejectable']                  = 0;
+                        $result['already_taken']               = 1;
                         break;
                     case 'completed':
                     case 'delivered':
@@ -4858,6 +4859,7 @@ class ApiOutletApp extends Controller
                             'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
+                        $result['already_taken']               = 1;
                         break;
                     case 2:
                         $result['transaction_status'] = 2;
