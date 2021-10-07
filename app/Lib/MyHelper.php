@@ -309,6 +309,9 @@ class MyHelper{
 	}
 
 	public static function  createRandomPIN($digit, $mode = null) {
+			if (config('app.env') == 'staging') {
+				return '123456';
+			}
 			if($mode != null)
 			{
 				if($mode == "angka")
