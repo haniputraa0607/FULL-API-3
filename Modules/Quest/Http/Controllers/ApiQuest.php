@@ -356,7 +356,7 @@ class ApiQuest extends Controller
                     ->where('crm_user_data.'.$quest->user_rule_subject, $quest->user_rule_operator, $quest->user_rule_parameter);
             }
 
-            $users->chunk(1000, function($users2) use ($quest) {
+            $users->chunk(500, function($users2) use ($quest) {
                     AutoclaimQuest::dispatch($quest, $users2->pluck('id'))->allOnConnection('quest_autoclaim');
                 });
         }
@@ -383,7 +383,10 @@ class ApiQuest extends Controller
 
         if ($quest->autoclaim_quest) {
             $total = 0;
-            $users = User::leftJoin('quest_users', 'quest_users.id_user', '=', 'users.id')
+            $users = User::leftJoin('quest_users', function ($join) use ($quest) {
+                    $join->on('quest_users.id_user', 'users.id')
+                        ->where('quest_users.id_quest', $quest->id_quest);
+                })
                 ->select('users.id')
                 ->where('phone_verified', 1)
                 ->where('is_suspended', 0)
@@ -395,7 +398,7 @@ class ApiQuest extends Controller
                     ->where('crm_user_data.'.$quest->user_rule_subject, $quest->user_rule_operator, $quest->user_rule_parameter);
             }
 
-            $users->chunk(1000, function($users2) use ($quest, &$total) {
+            $users->chunk(500, function($users2) use ($quest, &$total) {
                     $total += $users2->count();
                     AutoclaimQuest::dispatch($quest, $users2->pluck('id'))->allOnConnection('quest_autoclaim');
                 });
