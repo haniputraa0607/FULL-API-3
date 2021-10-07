@@ -3164,7 +3164,7 @@ class ApiTransaction extends Controller
                                 'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
                                 'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
                                 'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone']?:'',
-                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_whatsapp'   => $list['transaction_pickup_go_send']['driver_phone'] ? env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone'] :'',
                                 'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo']?:'',
                                 'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                             ];
@@ -3179,7 +3179,7 @@ class ApiTransaction extends Controller
                                 'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
                                 'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
                                 'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone']?:'',
-                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_whatsapp'   => $list['transaction_pickup_go_send']['driver_phone'] ? env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone'] :'',
                                 'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo']?:'',
                                 'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                             ];
@@ -3194,7 +3194,7 @@ class ApiTransaction extends Controller
                                 'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
                                 'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
                                 'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone']?:'',
-                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_whatsapp'   => $list['transaction_pickup_go_send']['driver_phone'] ? env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone'] :'',
                                 'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo']?:'',
                                 'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                             ];
@@ -3211,7 +3211,7 @@ class ApiTransaction extends Controller
                                 'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
                                 'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
                                 'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone']?:'',
-                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_whatsapp'   => $list['transaction_pickup_go_send']['driver_phone'] ? env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone'] :'',
                                 'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo']?:'',
                                 'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                             ];
@@ -3227,7 +3227,7 @@ class ApiTransaction extends Controller
                                 'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
                                 'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
                                 'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone']?:'',
-                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_whatsapp'   => $list['transaction_pickup_go_send']['driver_phone'] ? env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone'] :'',
                                 'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo']?:'',
                                 'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                             ];
@@ -3258,7 +3258,7 @@ class ApiTransaction extends Controller
                                 'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
                                 'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
                                 'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone']?:'',
-                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_whatsapp'   => $list['transaction_pickup_go_send']['driver_phone'] ? env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone'] :'',
                                 'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo']?:'',
                                 'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                             ];
@@ -3310,7 +3310,7 @@ class ApiTransaction extends Controller
                                 'driver_id'         => '',
                                 'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'Data tidak tersedia dari jasa pengiriman',
                                 'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
+                                'driver_whatsapp'   => $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ? env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] :'',
                                 'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
                                 'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'',
                             ];
@@ -3324,7 +3324,7 @@ class ApiTransaction extends Controller
                                 'driver_id'         => '',
                                 'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'Data tidak tersedia dari jasa pengiriman',
                                 'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
+                                'driver_whatsapp'   => $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ? env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] :'',
                                 'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
                                 'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'',
                             ];
@@ -3339,7 +3339,7 @@ class ApiTransaction extends Controller
                                 'driver_id'         => '',
                                 'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'Data tidak tersedia dari jasa pengiriman',
                                 'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
+                                'driver_whatsapp'   => $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ? env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] :'',
                                 'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
                                 'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'',
                             ];
@@ -3354,7 +3354,7 @@ class ApiTransaction extends Controller
                                 'driver_id'         => '',
                                 'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'Data tidak tersedia dari jasa pengiriman',
                                 'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
+                                'driver_whatsapp'   => $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ? env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] :'',
                                 'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:'',
                                 'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'',
                             ];
