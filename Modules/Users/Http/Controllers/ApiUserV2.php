@@ -284,7 +284,7 @@ class ApiUserV2 extends Controller
             }
 
             if($checkRuleRequest == true && !isset($checkRuleRequest['otp_timer'])){
-                $pinnya = rand(100000, 999999);
+                $pinnya = MyHelper::createRandomPIN(6, 'angka');
                 $pin = bcrypt($pinnya);
 
                 //get setting to set expired time for otp, if setting not exist expired default is 30 minutes
