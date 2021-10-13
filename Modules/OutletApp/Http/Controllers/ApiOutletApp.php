@@ -3758,7 +3758,7 @@ class ApiOutletApp extends Controller
                     case 'finding driver':
                         $result['delivery_info']['delivery_status'] = 'Sedang mencari driver';
                         $result['delivery_info']['delivery_status_code']   = 1;
-                        $result['transaction_status_text']          = 'PESANAN SUDAH SIAP DAN MENUNGGU PICK UP';
+                        $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
                         break;
                     case 'driver allocated':
                         $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
@@ -4816,7 +4816,7 @@ class ApiOutletApp extends Controller
                     case 11:
                         $result['delivery_info']['delivery_status'] = 'Sedang mencari driver';
                         $result['delivery_info']['delivery_status_code']   = 1;
-                        $result['transaction_status_text']          = 'PESANAN SUDAH SIAP DAN MENUNGGU PICK UP';
+                        $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
                         break;
                     case 8:
                         $result['delivery_info']['delivery_status'] = 'Driver ditemukan';

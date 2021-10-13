@@ -597,7 +597,7 @@ class WeHelpYou
 		            $trx_pickup->update(['show_confirm' => '1']);
 		            Transaction::where('id_transaction', $trx->id_transaction)->update(['show_rate_popup' => '1']);
 
-					$arrived_at = date('Y-m-d H:i:s', ($status['date'] ?? false) ? strtotime($status['date']) : time());
+					$arrived_at = date('Y-m-d H:i:s');
                     TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
 
 				} elseif (in_array($latestStatusId, [89, 91, 95])) { // cancel without refund, cancel by partner, driver not found
@@ -609,7 +609,7 @@ class WeHelpYou
 					$trx->transaction_pickup->transaction_pickup_wehelpyou->update(['stop_booking_at' => date('Y-m-d H:i:s')]);
 
 				} elseif (in_array($latestStatusId, [9])) { // enroute drop
-					$dateNow = date('Y-m-d H:i:s', ($status['date'] ?? false) ? strtotime($status['date']) : time());
+					$dateNow = date('Y-m-d H:i:s');
 					$checkTrxPickup = TransactionPickup::where('id_transaction', $trx->id_transaction)->first();
 					if ($checkTrxPickup) {
 						$checkTrxPickup->update([
