@@ -448,7 +448,7 @@ class ApiQuest extends Controller
     {
         $questPassed = 0;
         foreach ($detailQuest as $keyQuest => $quest) {
-            $getTrxUser = Transaction::with('outlet.city.province', 'productTransaction')->where(['transactions.id_user' => $idUser, 'transactions.transaction_payment_status' => 'Completed'])->get()->toArray();
+            $getTrxUser = Transaction::with('outlet.city.province', 'allProductTransaction')->where(['transactions.id_user' => $idUser, 'transactions.transaction_payment_status' => 'Completed'])->get()->toArray();
 
             if ($questPassed == $keyQuest) {
                 $totalTrx       = 0;
@@ -469,7 +469,7 @@ class ApiQuest extends Controller
                     $trxProductStatus = false;
                     $trxTotalProductStatus = false;
                     if (!is_null($quest['id_product']) || !is_null($quest['product_total'])) {
-                        foreach ($user['product_transaction'] as $product) {
+                        foreach ($user['all_product_transaction'] as $product) {
                             if (!is_null($quest['id_product'])) {
                                 if ((int) $quest['id_product'] == $product['id_product']) {
                                     $trxProductStatus = true;
@@ -842,7 +842,7 @@ class ApiQuest extends Controller
      */
     public function updateQuestProgress($id_transaction)
     {
-        $transaction = Transaction::with(['productTransaction' => function($q) {
+        $transaction = Transaction::with(['allProductTransaction' => function($q) {
                     $q->select('transaction_products.*', 'products.*', 'brand_product.id_product_category')
                         ->join('products', 'products.id_product', 'transaction_products.id_product')
                         ->leftJoin('brand_product', 'products.id_product', 'brand_product.id_product');
@@ -863,8 +863,8 @@ class ApiQuest extends Controller
             if (
                 ($quest->id_outlet && $quest->id_outlet != $transaction->id_outlet) ||
                 ($quest->id_province && $quest->id_province != ($transaction->outlet->city->id_province ?? null)) ||
-                ($quest->id_product && !$transaction->productTransaction->pluck('id_product')->contains($quest->id_product)) ||
-                ($quest->id_product_category && !$transaction->productTransaction->pluck('id_product_category')->contains($quest->id_product_category))
+                ($quest->id_product && !$transaction->allProductTransaction->pluck('id_product')->contains($quest->id_product)) ||
+                ($quest->id_product_category && !$transaction->allProductTransaction->pluck('id_product_category')->contains($quest->id_product_category))
             ) {
                 continue;
             }
@@ -895,7 +895,7 @@ class ApiQuest extends Controller
             // check absolute rule
             if (
                 ($quest_rule !== 'nominal_transaction' && $transaction->transaction_grandtotal < ($quest->trx_nominal ?: 0)) ||
-                ($quest_rule !== 'total_product' && $transaction->productTransaction->count() < ($quest->product_total ?: 0))
+                ($quest_rule !== 'total_product' && $transaction->allProductTransaction->count() < ($quest->product_total ?: 0))
             ) {
                 continue;
             }
@@ -933,11 +933,11 @@ class ApiQuest extends Controller
 
                 // product
                 if ($quest->id_product_category || $quest->different_product_category || $quest->id_product || $quest->product_total) {
-                    $transaction->load(['productTransaction' => function($q) {
+                    $transaction->load(['allProductTransaction' => function($q) {
                         $q->join('products', 'products.id_product', 'transaction_products.id_product');
                     }]);
                     $has_product = 0;
-                    foreach ($transaction->productTransaction as $transaction_product) {
+                    foreach ($transaction->allProductTransaction as $transaction_product) {
                         if (
                             (
                                 $quest->id_product == $transaction_product->id_product 
