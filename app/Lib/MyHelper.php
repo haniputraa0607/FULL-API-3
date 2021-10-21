@@ -2613,6 +2613,11 @@ class MyHelper{
         $codePhone = config('countrycode.country_code.'.env('COUNTRY_CODE').'.code');
         $min = $phoneSetting->min_length_number;
         $max = $phoneSetting->max_length_number;
+        $phone = str_replace('+', '', $phone);
+
+        if(substr($phone, 0, 2) == 62){
+            $phone = str_replace('62', '0', $phone);
+        }
 
         if(substr($phone, 0, 1) == '0'){
             $phone = $codePhone.substr($phone,1);
