@@ -86,6 +86,7 @@ class ApiUserV2 extends Controller
         if($data){
             if ($data[0]['phone_verified'] == 0) {
                 $result['register'] = true;
+                $result['forgot'] = (!empty($data[0]['pin_changed'] == 1 ? true : false));
                 $result['confirmation_message'] = $msg_check;
                 $result['is_suspended'] = $data[0]['is_suspended'];
                 return response()->json([
@@ -94,6 +95,7 @@ class ApiUserV2 extends Controller
                 ]);
             }else{
                 $result['register'] = false;
+                $result['forgot'] = false;
                 $result['challenge_key'] = $data[0]['challenge_key'];
                 $result['is_suspended'] = $data[0]['is_suspended'];
                 return response()->json([
@@ -108,6 +110,7 @@ class ApiUserV2 extends Controller
                 'result' => [
                     'register' => true,
                     'is_suspended' => 0,
+                    'forgot' => false,
                     'confirmation_message' => $msg_check
                 ]
             ]);
