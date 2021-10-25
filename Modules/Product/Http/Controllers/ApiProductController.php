@@ -887,7 +887,10 @@ class ApiProductController extends Controller
 
 		if (isset($post['id_outlet'])) {
             $product = Product::join('product_detail','product_detail.id_product','=','products.id_product')
-                                ->leftJoin('product_special_price','product_special_price.id_product','=','products.id_product')
+                                ->leftJoin('product_special_price', function ($query) use ($post) {
+                                        $query->on('product_special_price.id_product','=','products.id_product')
+                                            ->where('product_special_price.id_outlet','=',$post['id_outlet']);
+                                    })
 									->where('product_detail.id_outlet','=',$post['id_outlet'])
 									->where('product_detail.product_detail_visibility','=','Visible')
                                     ->where('product_detail.product_detail_status','=','Active')
