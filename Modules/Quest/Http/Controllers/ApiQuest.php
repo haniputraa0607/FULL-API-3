@@ -1768,7 +1768,7 @@ class ApiQuest extends Controller
     }
 
     public function listQuestVoucher(){
-        $result = Deal::select('id_deals', 'deals_title', 'deals_voucher_type', 'deals_total_voucher', 'deals_total_claimed')
+        $result = Deal::select('id_deals', 'deals_title', 'deals_voucher_type', 'deals_total_voucher', 'deals_total_claimed', 'deals_voucher_expired', 'deals_voucher_duration')
             ->where('step_complete', '1')
             ->where('deals_type', 'Quest')
             ->where(function ($q){
