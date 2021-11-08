@@ -89,12 +89,13 @@ class User extends Authenticatable
 		'job',
 		'address',
         'email_verify_request_status',
+        'otp_forgot',
         'otp_request_status',
         'otp_valid_time',
         'otp_available_time_request',
         'otp_increment',
         'transaction_online',
-        'transaction_online_status'
+        'transaction_online_status',
 	];
 
 	public function city()

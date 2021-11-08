@@ -84,9 +84,9 @@ class ApiUserV2 extends Controller
         }
 
         if($data){
-            if ($data[0]['phone_verified'] == 0) {
+            if ($data[0]['phone_verified'] == 0 && empty($data[0]['pin_changed'])) {
                 $result['register'] = true;
-                $result['forgot'] = (!empty($data[0]['pin_changed'] == 1 ? true : false));
+                $result['forgot'] = false;
                 $result['confirmation_message'] = $msg_check;
                 $result['is_suspended'] = $data[0]['is_suspended'];
                 return response()->json([
@@ -300,7 +300,11 @@ class ApiUserV2 extends Controller
                     $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+30 minutes"));
                 }
 
-                $update = User::where('phone', '=', $phone)->update(['password' => $pin, 'otp_valid_time' => $dateOtpTimeExpired]);
+                if(!empty($data[0]['pin_changed'])){
+                    $update = User::where('phone', '=', $phone)->update(['otp_forgot' => $pin, 'otp_valid_time' => $dateOtpTimeExpired]);
+                }else{
+                    $update = User::where('phone', '=', $phone)->update(['password' => $pin, 'otp_valid_time' => $dateOtpTimeExpired]);
+                }
 
                 $useragent = $_SERVER['HTTP_USER_AGENT'];
                 if (stristr($_SERVER['HTTP_USER_AGENT'], 'iOS')) $useragent = 'iOS';
@@ -397,37 +401,42 @@ class ApiUserV2 extends Controller
             ->get()
             ->toArray();
         if ($data) {
-            if (Auth::attempt(['phone' => $phone, 'password' => $request->json('pin_old')])) {
-                $pin     = bcrypt($request->json('pin_new'));
-                $update = User::where('id', '=', $data[0]['id'])->update(['password' => $pin, 'phone_verified' => '1', 'pin_changed' => '1']);
-                if (\Module::collections()->has('Autocrm')) {
-                    if ($data[0]['first_pin_change'] < 1) {
-                        $autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed', $phone);
-                        $changepincount = $data[0]['first_pin_change'] + 1;
-                        $update = User::where('id', '=', $data[0]['id'])->update(['first_pin_change' => $changepincount]);
-                    } else {
-                        $autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed Forgot Password', $phone);
-
-                        $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
-                            ->where('oauth_access_tokens.user_id', $data[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
-                    }
-                }
-
-                $user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
-
-                $result = [
-                    'status'    => 'success',
-                    'result'    => [
-                        'phone'    =>    $data[0]['phone'],
-                        'challenge_key' => $user->challenge_key
-                    ]
-                ];
-            } else {
-                $result = [
+            if(!empty($data[0]['pin_changed']) && !password_verify($request->json('pin_old'), $data[0]['otp_forgot'])){
+                return response()->json([
                     'status'    => 'fail',
                     'messages'    => ['Current PIN doesn\'t match']
-                ];
+                ]);
+            }elseif(empty($data[0]['pin_changed']) && !Auth::attempt(['phone' => $phone, 'password' => $request->json('pin_old')])){
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'    => ['Current PIN doesn\'t match']
+                ]);
             }
+
+            $pin     = bcrypt($request->json('pin_new'));
+            $update = User::where('id', '=', $data[0]['id'])->update(['password' => $pin, 'phone_verified' => '1', 'pin_changed' => '1']);
+            if (\Module::collections()->has('Autocrm')) {
+                if ($data[0]['first_pin_change'] < 1) {
+                    $autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed', $phone);
+                    $changepincount = $data[0]['first_pin_change'] + 1;
+                    $update = User::where('id', '=', $data[0]['id'])->update(['first_pin_change' => $changepincount]);
+                } else {
+                    $autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed Forgot Password', $phone);
+
+                    $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+                        ->where('oauth_access_tokens.user_id', $data[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
+                }
+            }
+
+            $user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
+
+            $result = [
+                'status'    => 'success',
+                'result'    => [
+                    'phone'    =>    $data[0]['phone'],
+                    'challenge_key' => $user->challenge_key
+                ]
+            ];
         } else {
             $result = [
                 'status'    => 'fail',
@@ -502,7 +511,7 @@ class ApiUserV2 extends Controller
                     $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+30 minutes"));
                 }
 
-                $update = User::where('id', '=', $data[0]['id'])->update(['password' => $password, 'phone_verified' => '0', 'otp_valid_time' => $dateOtpTimeExpired]);
+                $update = User::where('id', '=', $data[0]['id'])->update(['otp_forgot' => $password, 'phone_verified' => '0', 'otp_valid_time' => $dateOtpTimeExpired]);
 
                 if (!empty($request->header('user-agent-view'))) {
                     $useragent = $request->header('user-agent-view');

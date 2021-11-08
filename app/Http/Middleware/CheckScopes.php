@@ -48,11 +48,14 @@ class CheckScopes extends AddCustomProvider
             $dataToken = json_decode($request->user()->token());
             $scopeUser = $dataToken->scopes[0];
         }else{
-            $bearerToken = $request->bearerToken();
-            $tokenId = (new Parser())->parse($bearerToken)->getHeader('jti');
-            $getOauth = OauthAccessToken::find($tokenId);
-            $scopeUser = str_replace(str_split('[]""'),"",$getOauth['scopes']);
-            $clientId = $getOauth['client_id'];
+            try{
+                $bearerToken = $request->bearerToken();
+                $tokenId = (new Parser())->parse($bearerToken)->getHeader('jti');
+                $getOauth = OauthAccessToken::find($tokenId);
+                $scopeUser = str_replace(str_split('[]""'),"",$getOauth['scopes']);
+            }catch (\Exception $e){
+                return response()->json(['error' => 'Unauthenticated.'], 401);
+            }
         }
 
         if(($scope == 'pos' && $scopeUser == 'pos' && $clientId == 1) ||

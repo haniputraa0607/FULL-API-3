@@ -2014,89 +2014,93 @@ class ApiUser extends Controller
                     ->toArray();
             }
             if ($data[0]['phone_verified'] == 0) {
-                if (Auth::attempt(['phone' => $phone, 'password' => $request->json('pin')])) {
-                    /*first if --> check if otp have expired and the current time exceeds the expiration time*/
-                    if(!is_null($data[0]['otp_valid_time']) && strtotime(date('Y-m-d H:i:s')) > strtotime($data[0]['otp_valid_time'])){
-                        return response()->json(['status' => 'fail', 'otp_check'=> 1, 'messages' => ['This OTP is expired, please re-request OTP from apps']]);
-                    }
-
-                    if (isset($post['device_id'])) {
-                        if (!isset($post['device_type'])) {
-                            if (!empty($request->header('user-agent-view'))) {
-                                $useragent = $request->header('user-agent-view');
-                            } else {
-                                $useragent = $_SERVER['HTTP_USER_AGENT'];
-                            }
-
-                            if (stristr($useragent, 'iOS')) $post['device_type'] = 'iOS';
-                            if (stristr($useragent, 'okhttp')) $post['device_type'] = 'Android';
-                            if (stristr($useragent, 'GuzzleHttp')) $post['device_type'] = 'Browser';
-                        }
-
-                        $device_id = $post['device_id'];
-                        $device_type = $post['device_type'];
-                        $fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->where('fraud_settings_status', 'Active')->first();
-                        if ($fraud) {
-                            app($this->setting_fraud)->createUpdateDeviceLogin($data[0], $device_id);
-
-                            $deviceCus = UsersDeviceLogin::where('device_id', '=', $device_id)
-                                ->where('status', 'Active')
-                                ->select('id_user')
-                                ->orderBy('created_at', 'asc')
-                                ->groupBy('id_user')
-                                ->get()->toArray('id_user');
-
-                            $count = count($deviceCus);
-                            $check = array_slice($deviceCus, (int) $fraud['parameter_detail']);
-                            $check = array_column($check, 'id_user');
-
-                            if ($deviceCus && count($deviceCus) > (int) $fraud['parameter_detail'] && array_search($data[0]['id'], $check) !== false) {
-                                $emailSender = Setting::where('key', 'email_sender')->first();
-                                $emailReply = Setting::where('key', 'email_reply_to')->first();
-                                $sendFraud = app($this->setting_fraud)->checkFraud($fraud, $data[0], ['device_id' => $device_id, 'device_type' => $request->json('device_type')], 0, 0, null, 0);
-                                $data = User::with('city')->where('phone', '=', $phone)->get()->toArray();
-
-                                if ($data[0]['is_suspended'] == 1) {
-                                    return response()->json([
-                                        'status' => 'fail',
-                                        'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.($emailReply['value']??$emailSender['value']??'')]
-                                    ]);
-                                } else {
-                                    return response()->json([
-                                        'status' => 'fail',
-                                        'messages' => ['Akun Anda tidak dapat di daftarkan karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.($emailReply['value']??$emailSender['value']??'')]
-                                    ]);
-                                }
-                            }
-                        }
-                    }
-
-                    $update = User::where('id', '=', $data[0]['id'])->update(['phone_verified' => '1', 'otp_valid_time' => NULL]);
-                    if ($update) {
-                        $profile = User::select('phone', 'email', 'name', 'id_city', 'gender', 'phone_verified', 'email_verified')
-                            ->where('phone', '=', $phone)
-                            ->get()
-                            ->toArray();
-                        if (\Module::collections()->has('Autocrm')) {
-                            $autocrm = app($this->autocrm)->SendAutoCRM('Pin Verify', $phone);
-                        }
-                        $result = [
-                            'status'    => 'success',
-                            'result'    => [
-                                'phone'    =>    $data[0]['phone'],
-                                'profile' => $profile
-                            ]
-                        ];
-                    }else{
-                        $result = [
-                            'status'    => 'fail',
-                            'messages'    => ['Failed to Update Data']
-                        ];
-                    }
-                } else {
-                    $result = [
+                if(!empty($data[0]['pin_changed']) && !password_verify($request->json('pin'), $data[0]['otp_forgot'])){
+                    return response()->json([
                         'status'    => 'fail',
                         'messages'    => ['OTP yang kamu masukkan salah']
+                    ]);
+                }elseif(empty($data[0]['pin_changed']) && !Auth::attempt(['phone' => $phone, 'password' => $request->json('pin')])){
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'    => ['OTP yang kamu masukkan salah']
+                    ]);
+                }
+
+                /*first if --> check if otp have expired and the current time exceeds the expiration time*/
+                if(!is_null($data[0]['otp_valid_time']) && strtotime(date('Y-m-d H:i:s')) > strtotime($data[0]['otp_valid_time'])){
+                    return response()->json(['status' => 'fail', 'otp_check'=> 1, 'messages' => ['This OTP is expired, please re-request OTP from apps']]);
+                }
+
+                if (isset($post['device_id'])) {
+                    if (!isset($post['device_type'])) {
+                        if (!empty($request->header('user-agent-view'))) {
+                            $useragent = $request->header('user-agent-view');
+                        } else {
+                            $useragent = $_SERVER['HTTP_USER_AGENT'];
+                        }
+
+                        if (stristr($useragent, 'iOS')) $post['device_type'] = 'iOS';
+                        if (stristr($useragent, 'okhttp')) $post['device_type'] = 'Android';
+                        if (stristr($useragent, 'GuzzleHttp')) $post['device_type'] = 'Browser';
+                    }
+
+                    $device_id = $post['device_id'];
+                    $device_type = $post['device_type'];
+                    $fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->where('fraud_settings_status', 'Active')->first();
+                    if ($fraud) {
+                        app($this->setting_fraud)->createUpdateDeviceLogin($data[0], $device_id);
+
+                        $deviceCus = UsersDeviceLogin::where('device_id', '=', $device_id)
+                            ->where('status', 'Active')
+                            ->select('id_user')
+                            ->orderBy('created_at', 'asc')
+                            ->groupBy('id_user')
+                            ->get()->toArray('id_user');
+
+                        $count = count($deviceCus);
+                        $check = array_slice($deviceCus, (int) $fraud['parameter_detail']);
+                        $check = array_column($check, 'id_user');
+
+                        if ($deviceCus && count($deviceCus) > (int) $fraud['parameter_detail'] && array_search($data[0]['id'], $check) !== false) {
+                            $emailSender = Setting::where('key', 'email_sender')->first();
+                            $sendFraud = app($this->setting_fraud)->checkFraud($fraud, $data[0], ['device_id' => $device_id, 'device_type' => $request->json('device_type')], 0, 0, null, 0);
+                            $data = User::with('city')->where('phone', '=', $phone)->get()->toArray();
+
+                            if ($data[0]['is_suspended'] == 1) {
+                                return response()->json([
+                                    'status' => 'fail',
+                                    'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
+                                ]);
+                            } else {
+                                return response()->json([
+                                    'status' => 'fail',
+                                    'messages' => ['Akun Anda tidak dapat di daftarkan karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
+                                ]);
+                            }
+                        }
+                    }
+                }
+
+                $update = User::where('id', '=', $data[0]['id'])->update(['otp_valid_time' => NULL]);
+                if ($update) {
+                    $profile = User::select('phone', 'email', 'name', 'id_city', 'gender', 'phone_verified', 'email_verified')
+                        ->where('phone', '=', $phone)
+                        ->get()
+                        ->toArray();
+                    if (\Module::collections()->has('Autocrm')) {
+                        $autocrm = app($this->autocrm)->SendAutoCRM('Pin Verify', $phone);
+                    }
+                    $result = [
+                        'status'    => 'success',
+                        'result'    => [
+                            'phone'    =>    $data[0]['phone'],
+                            'profile' => $profile
+                        ]
+                    ];
+                }else{
+                    $result = [
+                        'status'    => 'fail',
+                        'messages'    => ['Failed to Update Data']
                     ];
                 }
             } else {
