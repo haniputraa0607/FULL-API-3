@@ -8,6 +8,7 @@ use Illuminate\Routing\Controller;
 
 use App\Http\Models\Configs;
 use App\Http\Models\Setting;
+use Modules\Subscription\Entities\SubscriptionBrand;
 use Modules\Subscription\Entities\SubscriptionWelcome;
 use Modules\Subscription\Entities\Subscription;
 
@@ -59,15 +60,9 @@ class ApiWelcomeSubscription extends Controller
     function list(Request $request){
         $configUseBrand = Configs::where('config_name', 'use brand')->first();
 
-        if($configUseBrand['is_active']){
-            $getSubs = Subscription::leftjoin('brands', 'brands.id_brand', 'subscriptions.id_brand')
-		                ->where('subscription_type','welcome')
-		                ->where('subscription_step_complete',1)
-		                ->select('subscriptions.*','brands.name_brand');
-        }else{
-            $getSubs = Subscription::where('subscription_type','welcome')
-		                ->select('subscriptions.*');
-        }
+        $getSubs = Subscription::where('subscription_type','welcome')
+            ->where('subscription_step_complete',1)
+            ->select('subscriptions.*');
 
         if ($request->active) {
         	$now = date("Y-m-d H:i:s");
@@ -82,6 +77,20 @@ class ApiWelcomeSubscription extends Controller
         }
 
         $getSubs = $getSubs->get()->toArray();
+
+        if($configUseBrand['is_active']){
+            foreach ($getSubs as $key=>$data){
+                $brands = SubscriptionBrand::leftJoin('brands', 'brands.id_brand', 'subscription_brands.id_brand')
+                    ->where('id_subscription', $data['id_subscription'])
+                    ->pluck('brands.name_brand')->toArray();
+                $brands = array_filter($brands);
+                $stringName = '';
+                if(!empty($brands)){
+                    $stringName = '('.implode(',', $brands).')';
+                }
+                $getSubs[$key]['name_brand'] = $stringName;
+            }
+        }
 
         $result = [
             'status' => 'success',
