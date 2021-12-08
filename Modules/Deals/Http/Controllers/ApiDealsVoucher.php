@@ -836,6 +836,7 @@ class ApiDealsVoucher extends Controller
 
         //add outlet name
         foreach($voucher as $index => $datavoucher){
+            if (!$datavoucher['deal_voucher']) continue;
             $check = count($datavoucher['deal_voucher']['deal']['outlets']);
             if ($check == $outlet_total) {
                 $voucher[$index]['deal_voucher']['deal']['label_outlet'] = 'All';
