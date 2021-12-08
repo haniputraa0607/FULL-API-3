@@ -44,7 +44,7 @@ class ApiWehelpyouController extends Controller
             $trxWehelpyous = TransactionPickupWehelpyou::select('id_transaction')->join('transaction_pickups', 'transaction_pickups.id_transaction_pickup', 'transaction_pickup_wehelpyous.id_transaction_pickup')
 				->whereNotIn('transaction_pickup_wehelpyous.latest_status_id', WeHelpYou::orderEndStatusId())
                 ->whereDate('transaction_pickup_wehelpyous.created_at', date('Y-m-d'))
-                ->where('transaction_pickup_wehelpyous.updated_at', '<', date('Y-m-d H:i:s', time() - (5 * 60)))
+                ->where('transaction_pickup_wehelpyous.updated_at', '<', date('Y-m-d H:i:s', time() - (3 * 60)))
                 ->get();
 
             foreach ($trxWehelpyous as $trxWehelpyou) {
