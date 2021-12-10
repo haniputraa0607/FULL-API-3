@@ -1500,18 +1500,23 @@ class ApiDeals extends Controller
     function welcomeVoucherSetting(Request $request){
         $setting = Setting::where('key', 'welcome_voucher_setting')->first();
         $configUseBrand = Configs::where('config_name', 'use brand')->first();
+        $getDeals = DealTotal::join('deals', 'deals.id_deals', 'deals_total.id_deals')
+            ->select('deals.*','deals_total.deals_total')
+            ->get()->toArray();
 
         if($configUseBrand['is_active']){
-            $getDeals = DealTotal::join('deals', 'deals.id_deals', 'deals_total.id_deals')
-                ->join('brands', 'brands.id_brand', 'deals.id_brand')
-                ->select('deals.*','deals_total.deals_total','brands.name_brand')
-                ->get()->toArray();
-        }else{
-            $getDeals = DealTotal::join('deals', 'deals.id_deals', 'deals_total.id_deals')
-                ->select('deals.*','deals_total.deals_total')
-                ->get()->toArray();
+            foreach ($getDeals as $key=>$data){
+                $brands = DealsBrand::leftJoin('brands', 'brands.id_brand', 'deals_brands.id_brand')
+                            ->where('id_deals', $data['id_deals'])
+                            ->pluck('brands.name_brand')->toArray();
+                $brands = array_filter($brands);
+                $stringName = '';
+                if(!empty($brands)){
+                    $stringName = '('.implode(',', $brands).')';
+                }
+                $getDeals[$key]['name_brand'] = $stringName;
+            }
         }
-
 
         $result = [
             'status' => 'success',
