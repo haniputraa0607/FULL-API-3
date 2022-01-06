@@ -98,6 +98,7 @@ class ApiUserV2 extends Controller
                 $result['forgot'] = false;
                 $result['challenge_key'] = $data[0]['challenge_key'];
                 $result['is_suspended'] = $data[0]['is_suspended'];
+                $result['confirmation_message'] = $msg_check;
                 return response()->json([
                     'status' => 'success',
                     'result' => $result
