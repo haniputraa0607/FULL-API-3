@@ -170,6 +170,8 @@ class WeHelpYou
 			return false;
 		}
 
+		$s = ($itemSpecification['width'] * $itemSpecification['height'] * $itemSpecification['weight'] * $totalProductQty) ** (1/3);
+
 		if (empty($destination['address']) 
 			|| empty($destination['latitude'])
 			|| empty($destination['longitude'])
@@ -199,10 +201,10 @@ class WeHelpYou
 			"item_specification" => [
 				"name" => $itemSpecification['package_name'],
 				"item_description" => $itemSpecification['package_description'],
-				"length" => 40,
-				"width" => 40,
-				"height" => 40,
-				"weight" => 20,
+				"length" => (int) $s,
+				"width" => (int) $s,
+				"height" => (int) $s,
+				"weight" => $itemSpecification['weight'] * $totalProductQty,
 				"remarks" => $itemSpecification['remarks'] ?? null
 			]
 		];
@@ -300,6 +302,8 @@ class WeHelpYou
 			return false;
 		}
 
+		$s = ($itemSpecification['width'] * $itemSpecification['height'] * $itemSpecification['weight'] * $totalProductQty) ** (1/3);
+
 		return TransactionPickupWehelpyou::create([
 			'id_transaction_pickup' => $dataTrxPickup->id_transaction_pickup,
 			'vehicle_type' 			=> 'Motorcycle',
@@ -320,12 +324,12 @@ class WeHelpYou
 			'receiver_latitude' 	=> $request['destination']['latitude'],
 			'receiver_longitude' 	=> $request['destination']['longitude'],
 
-			'item_specification_name' 				=> $itemSpecification['package_name'],
+			'item_specification_name' 				=> str_replace('%order_id%', $dataTrxPickup->order_id,$itemSpecification['package_name']),
 			'item_specification_item_description' 	=> $itemSpecification['package_description'],
-			'item_specification_length' 			=> 40,
-			'item_specification_width' 				=> 40,
-			'item_specification_height' 			=> 40,
-			'item_specification_weight' 			=> 20, // kilogram
+			'item_specification_length' 			=> (int) $s,
+			'item_specification_width' 				=> (int) $s,
+			'item_specification_height' 			=> (int) $s,
+			'item_specification_weight' 			=> $itemSpecification['weight'] * $totalProductQty, // kilogram
 			'item_specification_remarks' 			=> $itemSpecification['remarks'] ?? null,
 
 			'address_name' 	=> $addressName,
