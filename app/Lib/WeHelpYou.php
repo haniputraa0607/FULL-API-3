@@ -199,12 +199,12 @@ class WeHelpYou
 				"longitude" => $destination['longitude']
 			],
 			"item_specification" => [
-				"name" => $itemSpecification['package_name'],
+				"name" => str_replace('%order_id%', '', $itemSpecification['package_name']),
 				"item_description" => $itemSpecification['package_description'],
 				"length" => (int) $s,
 				"width" => (int) $s,
 				"height" => (int) $s,
-				"weight" => ((int) ($itemSpecification['weight'] * $totalProductQty)) ?: 1,
+				"weight" => ((int) ($itemSpecification['weight'] * $totalProductQty / 1000)) ?: 1,
 				"remarks" => $itemSpecification['remarks'] ?? null
 			]
 		];
@@ -329,7 +329,7 @@ class WeHelpYou
 			'item_specification_length' 			=> (int) $s,
 			'item_specification_width' 				=> (int) $s,
 			'item_specification_height' 			=> (int) $s,
-			'item_specification_weight' 			=> ((int) ($itemSpecification['weight'] * $totalProductQty)) ?: 1, // kilogram
+			'item_specification_weight' 			=> ((int) ($itemSpecification['weight'] * $totalProductQty / 1000)) ?: 1, // kilogram
 			'item_specification_remarks' 			=> $itemSpecification['remarks'] ?? null,
 
 			'address_name' 	=> $addressName,
