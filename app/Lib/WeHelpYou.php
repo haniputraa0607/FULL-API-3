@@ -170,7 +170,7 @@ class WeHelpYou
 			return false;
 		}
 
-		$s = ($itemSpecification['width'] * $itemSpecification['height'] * $itemSpecification['length'] * $totalProductQty) ** (1/3);
+		$s = round(($itemSpecification['width'] * $itemSpecification['height'] * $itemSpecification['length'] * $totalProductQty) ** (1/3), 0);
 
 		if (empty($destination['address']) 
 			|| empty($destination['latitude'])
@@ -204,7 +204,7 @@ class WeHelpYou
 				"length" => (int) $s,
 				"width" => (int) $s,
 				"height" => (int) $s,
-				"weight" => ((int) ($itemSpecification['weight'] * $totalProductQty / 1000)) ?: 1,
+				"weight" => ((int) round($itemSpecification['weight'] * $totalProductQty / 1000)) ?: 1,
 				"remarks" => $itemSpecification['remarks'] ?? null
 			]
 		];
@@ -302,7 +302,7 @@ class WeHelpYou
 			return false;
 		}
 
-		$s = ($itemSpecification['width'] * $itemSpecification['height'] * $itemSpecification['length'] * $totalProductQty) ** (1/3);
+		$s = round(($itemSpecification['width'] * $itemSpecification['height'] * $itemSpecification['length'] * $totalProductQty) ** (1/3), 0);
 
 		return TransactionPickupWehelpyou::create([
 			'id_transaction_pickup' => $dataTrxPickup->id_transaction_pickup,
@@ -329,7 +329,7 @@ class WeHelpYou
 			'item_specification_length' 			=> (int) $s,
 			'item_specification_width' 				=> (int) $s,
 			'item_specification_height' 			=> (int) $s,
-			'item_specification_weight' 			=> ((int) ($itemSpecification['weight'] * $totalProductQty / 1000)) ?: 1, // kilogram
+			'item_specification_weight' 			=> ((int) round($itemSpecification['weight'] * $totalProductQty / 1000)) ?: 1, // kilogram
 			'item_specification_remarks' 			=> $itemSpecification['remarks'] ?? null,
 
 			'address_name' 	=> $addressName,
