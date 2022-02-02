@@ -415,7 +415,7 @@ class ApiUserV2 extends Controller
             }
 
             $pin     = bcrypt($request->json('pin_new'));
-            $update = User::where('id', '=', $data[0]['id'])->update(['password' => $pin, 'phone_verified' => '1', 'pin_changed' => '1']);
+            $update = User::where('id', '=', $data[0]['id'])->update(['password' => $pin, 'otp_forgot' => null, 'phone_verified' => '1', 'pin_changed' => '1']);
             if (\Module::collections()->has('Autocrm')) {
                 if ($data[0]['first_pin_change'] < 1) {
                     $autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed', $phone);
@@ -512,16 +512,13 @@ class ApiUserV2 extends Controller
                     $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+30 minutes"));
                 }
 
-                $update = User::where('id', '=', $data[0]['id'])->update(['otp_forgot' => $password, 'phone_verified' => '0', 'otp_valid_time' => $dateOtpTimeExpired]);
+                $update = User::where('id', '=', $data[0]['id'])->update(['otp_forgot' => $password, 'otp_valid_time' => $dateOtpTimeExpired]);
 
                 if (!empty($request->header('user-agent-view'))) {
                     $useragent = $request->header('user-agent-view');
                 } else {
                     $useragent = $_SERVER['HTTP_USER_AGENT'];
                 }
-
-                $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
-                    ->where('oauth_access_tokens.user_id', $data[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
 
                 if (stristr($useragent, 'iOS')) $useragent = 'iOS';
                 if (stristr($useragent, 'okhttp')) $useragent = 'Android';
