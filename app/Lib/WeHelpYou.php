@@ -66,8 +66,8 @@ class WeHelpYou
                 'request_parameter' => json_encode($request),
                 'request_header'    => json_encode($headers),
                 'response_body'     => json_encode($response),
-                'response_header'   => json_encode($fullResponse->getHeaders()),
-                'response_code'     => $fullResponse->getStatusCode()
+                'response_header'   => json_encode(optional($fullResponse)->getHeaders()),
+                'response_code'     => optional($fullResponse)->getStatusCode()
             ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Failed write log to LogApiWehelpyou: ' . $e->getMessage());

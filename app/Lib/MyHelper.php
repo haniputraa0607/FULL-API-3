@@ -1566,6 +1566,7 @@ class MyHelper{
 				'response' => $return
 			];
 		}catch (\GuzzleHttp\Exception\RequestException $e) {
+			\Log::error($e);
 			try{
 				if($e->getResponse()){
 					$response = $e->getResponse()->getBody()->getContents();
@@ -1627,6 +1628,7 @@ class MyHelper{
 				'response' => $return
 			];
 		}catch (\GuzzleHttp\Exception\RequestException $e) {
+			\Log::error($e);
 			try{
 				if($e->getResponse()){
 					$response = $e->getResponse()->getBody()->getContents();
