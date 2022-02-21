@@ -402,12 +402,12 @@ class ApiUserV2 extends Controller
             ->get()
             ->toArray();
         if ($data) {
-            if(!empty($data[0]['pin_changed']) && !password_verify($request->json('pin_old'), $data[0]['otp_forgot'])){
+            if(!empty($data[0]['otp_forgot']) && !empty($data[0]['phone_verified']) && !password_verify($request->json('pin_old'), $data[0]['otp_forgot'])){
                 return response()->json([
                     'status'    => 'fail',
                     'messages'    => ['Current PIN doesn\'t match']
                 ]);
-            }elseif(empty($data[0]['pin_changed']) && !Auth::attempt(['phone' => $phone, 'password' => $request->json('pin_old')])){
+            }elseif(empty($data[0]['otp_forgot']) && !empty($data[0]['pin_changed']) && !empty($data[0]['phone_verified']) && !Auth::attempt(['phone' => $phone, 'password' => $request->json('pin_old')])){
                 return response()->json([
                     'status'    => 'fail',
                     'messages'    => ['Current PIN doesn\'t match']
