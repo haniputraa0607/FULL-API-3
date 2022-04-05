@@ -75,4 +75,19 @@ class ProductCategory extends Model
     public function scopeMaster($query) {
         return $query->whereNull('id_parent_category');
     }
+
+    public function category_parent()
+    {
+        return $this->belongsTo(ProductCategory::class, 'id_parent_category', 'id_product_category');
+    }
+
+    public function category_child()
+    {
+        return $this->hasMany(ProductCategory::class, 'id_parent_category', 'id_product_category');
+    }
+
+    public function parent()
+    {
+        return $this->belongsTo(ProductCategory::class, 'id_parent_category');
+    }
 }

@@ -93,6 +93,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
         Route::get('all', 'ApiCategoryController@getAllCategory');
         Route::post('create', 'ApiCategoryController@create');
         Route::post('update', 'ApiCategoryController@update');
+        Route::post('edit', 'ApiCategoryController@edit');
         Route::post('delete', 'ApiCategoryController@delete');
     });
 
