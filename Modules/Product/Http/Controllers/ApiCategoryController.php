@@ -1186,4 +1186,21 @@ class ApiCategoryController extends Controller
         return $products;
         // end promo code
     }
+
+    function listCategoryCustomerApps()
+    {
+        $list = ProductCategory::where('id_parent_category', null)->orderBy('product_category_order')->select('id_product_category', 'product_category_name')->get()->toArray();
+
+        foreach ($list as $key => $value) {
+            $child = ProductCategory::where('id_parent_category', $value['id_product_category'])->select('id_product_category', 'product_category_name')->orderBy('product_category_order')->get()->toArray();
+            $list[$key]['childs'] = $child;
+            foreach ($child as $index=>$c){
+                $childChild = ProductCategory::where('id_parent_category', $c['id_product_category'])->select('id_product_category', 'product_category_name')->orderBy('product_category_order')->get()->toArray();
+                $list[$key]['childs'][$index]['childs'] = $childChild;
+            }
+        }
+
+        return response()->json(MyHelper::checkGet($list));
+    }
+
 }

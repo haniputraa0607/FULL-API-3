@@ -12,14 +12,9 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     /* category */
     Route::group(['prefix' => 'category'], function() {
 
-    	Route::any('list', 'ApiCategoryController@listCategory');
+    	Route::get('list', 'ApiCategoryController@listCategoryCustomerApps');
     	Route::any('list/tree', 'ApiCategoryController@listCategoryTree');
     });
-//	Route::group(['prefix' => 'discount'], function() {
-//        Route::post('create', 'ApiDiskonProductController@create');
-//        Route::post('update', 'ApiDiskonProductController@update');
-//		Route::post('delete', 'ApiDiskonProductController@delete');
-//	});
 });
 
 Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:api', 'scopes:be'], 'namespace' => 'Modules\Product\Http\Controllers'], function()
