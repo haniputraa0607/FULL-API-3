@@ -39,10 +39,10 @@ class ApiMerchantController extends Controller
             return response()->json(MyHelper::checkGet($detail));
         }else{
             $setting = Setting::where('key', 'merchant_register_intoduction')->first()['value_text']??null;
-            $setting = json_decode($setting);
+            $setting = (array)json_decode($setting);
             $image = $setting['image']??'';
             if(!empty($post['image'])){
-                $upload = MyHelper::uploadPhotoStrict($post['value'], 'img', 720, 360, 'merchant_introduction_image');
+                $upload = MyHelper::uploadPhotoStrict($post['image'], 'img/', 720, 360, 'merchant_introduction_image');
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
                     $image = $upload['path'].'?'.time();
@@ -80,10 +80,10 @@ class ApiMerchantController extends Controller
             return response()->json(MyHelper::checkGet($detail));
         }else{
             $setting = Setting::where('key', 'merchant_register_success')->first()['value_text']??null;
-            $setting = json_decode($setting);
+            $setting = (array)json_decode($setting);
             $image = $setting['image']??'';
             if(!empty($post['image'])){
-                $upload = MyHelper::uploadPhotoStrict($post['value'], 'img', 500, 500, 'merchant_success_image');
+                $upload = MyHelper::uploadPhotoStrict($post['image'], 'img/', 500, 500, 'merchant_success_image');
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
                     $image = $upload['path'].'?'.time();
@@ -127,6 +127,7 @@ class ApiMerchantController extends Controller
         }
 
         $dataCreate = [
+            "id_user" =>$request->user()->id,
             "merchant_name" => $post['merchant_name'],
             "merchant_license_number" => $post['merchant_license_number'],
             "merchant_email" => (empty($post['merchant_email']) ? null : $post['merchant_email']),
