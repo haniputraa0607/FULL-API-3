@@ -110,22 +110,51 @@ class ApiCategoryController extends Controller
     /**
      * create category
      */
-    function create(CreateProduct $request)
+    function create(Request $request)
     {
 
-        $post = $request->json()->all();
-        $data = $this->checkInputCategory($post, "create");
+        $post = $request->all();
+        if(isset($post['data']) && !empty($post['data'])){
+            DB::beginTransaction();
+            $data_request = $post['data'];
 
-        if (isset($data['error'])) {
-            unset($data['error']);
+            $store = ProductCategory::create([
+                'product_category_name' => $data_request[0]['product_category_name']]);
 
-            return response()->json($data);
+            if($store){
+                if(isset($data_request['child'])){
+                    $id = $store['id_product_category'];
+                    foreach ($data_request['child'] as $key=>$child){
+                        $id_parent = NULL;
+
+                        if($child['parent'] == 0){
+                            $id_parent = $id;
+                        }elseif(isset($data_request['child'][(int)$child['parent']]['id'])){
+                            $id_parent = $data_request['child'][(int)$child['parent']]['id'];
+                        }
+
+                        $store = ProductCategory::create([
+                            'product_category_name' => $child['product_category_name'],
+                            'id_parent_category' => $id_parent]);
+
+                        if($store){
+                            $data_request['child'][$key]['id'] = $store['id_product_category'];
+                        }else{
+                            DB::rollback();
+                            return response()->json(['status' => 'fail', 'messages' => ['Failed add product category']]);
+                        }
+                    }
+                }
+            }else{
+                DB::rollback();
+                return response()->json(['status' => 'fail', 'messages' => ['Failed add product category']]);
+            }
+
+            DB::commit();
+            return response()->json(MyHelper::checkCreate($store));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
         }
-
-        // create
-        $create = ProductCategory::create($data);
-
-        return response()->json(MyHelper::checkCreate($create));
     }
 
     /**
@@ -159,65 +188,97 @@ class ApiCategoryController extends Controller
     /**
      * update category
      */
-    function update(UpdateCategory $request)
+    public function update(Request $request)
     {
-        // info
-        $dataCategory = ProductCategory::where('id_product_category', $request->json('id_product_category'))->get()->toArray();
+        $post = $request->all();
 
-        if (empty($dataCategory)) {
-            return response()->json(MyHelper::checkGet($dataCategory));
-        }
-
-        $post = $request->json()->all();
-
-        $data = $this->checkInputCategory($post);
-
-        if (isset($data['error'])) {
-            unset($data['error']);
-
-            return response()->json($data);
-        }
-
-        // update
-        $update = ProductCategory::where('id_product_category', $post['id_product_category'])->update($data);
-
-        // hapus file
-        if (isset($data['product_category_photo'])) {
-            MyHelper::deletePhoto($dataCategory[0]['product_category_photo']);
-        }
-
-        return response()->json(MyHelper::checkUpdate($update));
-    }
-
-    /**
-     * delete (main)
-     */
-    function delete(DeleteCategory $request)
-    {
-
-        $id = $request->json('id_product_category');
-
-        if (($this->checkDeleteParent($id)) && ($this->checkDeleteProduct($id))) {
-            // info
-            $dataCategory = ProductCategory::where('id_product_category', $request->json('id_product_category'))->get()->toArray();
-
-            if (empty($dataCategory)) {
-                return response()->json(MyHelper::checkGet($dataCategory));
+        if(isset($post['id_product_category']) && !empty($post['id_product_category'])){
+            DB::beginTransaction();
+            if(isset($post['product_category_name'])){
+                $data_update['product_category_name'] = $post['product_category_name'];
             }
 
-            $delete = ProductCategory::where('id_product_category', $id)->delete();
+            if(isset($post['id_parent'])){
+                $data_update['id_parent'] = $post['id_parent'];
+            }
 
-            // delete file
-            MyHelper::deletePhoto($dataCategory[0]['product_category_photo']);
+            $update = ProductCategory::where('id_product_category', $post['id_product_category'])->update($data_update);
 
-            return response()->json(MyHelper::checkDelete($delete));
-        } else {
-            $result = [
-                'status' => 'fail',
-                'messages' => ['category has been used.']
-            ];
+            if($update){
+                if(isset($post['child']) && !empty($post['child'])){
+                    foreach ($post['child'] as $child){
+                        $data_update_child['id_parent_category'] = $post['id_product_category'];
+                        if(isset($child['product_category_name'])){
+                            $data_update_child['product_category_name'] = $child['product_category_name'];
+                        }
 
-            return response()->json($result);
+                        $update = ProductCategory::updateOrCreate(['id_product_category' => $child['id_product_category']], $data_update_child);
+
+                        if(!$update){
+                            DB::rollback();
+                            return response()->json(['status' => 'fail', 'messages' => ['Failed update child product category']]);
+                        }
+                    }
+                }
+            }else{
+                DB::rollback();
+                return response()->json(['status' => 'fail', 'messages' => ['Failed update product category']]);
+            }
+
+            DB::commit();
+            return response()->json(['status' => 'success']);
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
+        }
+    }
+
+    public function edit(Request $request)
+    {
+        $post = $request->all();
+
+        if(isset($post['id_product_category']) && !empty($post['id_product_category'])){
+            $get_all_parent = ProductCategory::where(function ($q){
+                $q->whereNull('id_parent_category')->orWhere('id_parent_category', 0);
+            })->get()->toArray();
+
+            $product_category = ProductCategory::where('id_product_category', $post['id_product_category'])->with(['category_parent', 'category_child'])->first();
+            if($product_category){
+                $product_category['last_child'] = 0;
+                if(!empty($product_category['id_parent_category'])){
+                    $cat_child = ProductCategory::where('id_product_category', $product_category['id_parent_category'])->first();
+                    if(!empty($cat_child['id_parent_category'])){
+                        $product_category['last_child'] = 1;
+                    }
+                }
+            }
+            return response()->json(['status' => 'success', 'result' => [
+                'all_parent' => $get_all_parent,
+                'category' => $product_category
+            ]]);
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
+        }
+    }
+
+    public function delete(Request $request)
+    {
+        $id_product_category = $request->json('id_product_category');
+        $delete       = ProductCategory::where('id_product_category', $id_product_category)->delete();
+
+        if($delete){
+            $delete = $this->deleteChild($id_product_category);
+        }
+        return MyHelper::checkDelete($delete);
+    }
+
+    public function deleteChild($id_parent){
+        $get = ProductCategory::where('id_parent_category', $id_parent)->first();
+        if($get){
+            $delete  = ProductCategory::where('id_parent_category', $id_parent)->delete();
+            $this->deleteChild($get['id_product_category']);
+            return $delete;
+        }else{
+            return true;
         }
     }
 
@@ -256,20 +317,26 @@ class ApiCategoryController extends Controller
      */
     function listCategory(Request $request)
     {
-        $post = $request->json()->all();
+        $post = $request->all();
+        $list = ProductCategory::with(['category_parent', 'category_child']);
 
-        if (!empty($post)) {
-            $list = $this->getData($post);
-        } else {
-            $list = ProductCategory::where('id_parent_category', null)->orderBy('product_category_order')->get();
-
-            foreach ($list as $key => $value) {
-                $child = ProductCategory::where('id_parent_category', $value['id_product_category'])->orderBy('product_category_order')->get();
-                $list[$key]['child'] = $child;
-            }
+        if ($keyword = ($request->search['value']??false)) {
+            $list->where('product_category_name', 'like', '%'.$keyword.'%')
+                ->orWhereHas('category_parent', function($q) use ($keyword) {
+                    $q->where('product_category_name', 'like', '%'.$keyword.'%');
+                })
+                ->orWhereHas('category_child', function($q) use ($keyword) {
+                    $q->where('product_category_name', 'like', '%'.$keyword.'%');
+                });
         }
 
-        return response()->json(MyHelper::checkGet($list));
+        if(isset($post['get_child']) && $post['get_child'] == 1){
+            $list = $list->whereNotNull('id_parent_category');
+        }
+
+        $list = $list->orderBy('product_category_order', 'asc')->get()->toArray();
+
+        return MyHelper::checkGet($list);
     }
 
     /**
@@ -1186,4 +1253,21 @@ class ApiCategoryController extends Controller
         return $products;
         // end promo code
     }
+
+    function listCategoryCustomerApps()
+    {
+        $list = ProductCategory::where('id_parent_category', null)->orderBy('product_category_order')->select('id_product_category', 'product_category_name')->get()->toArray();
+
+        foreach ($list as $key => $value) {
+            $child = ProductCategory::where('id_parent_category', $value['id_product_category'])->select('id_product_category', 'product_category_name')->orderBy('product_category_order')->get()->toArray();
+            $list[$key]['childs'] = $child;
+            foreach ($child as $index=>$c){
+                $childChild = ProductCategory::where('id_parent_category', $c['id_product_category'])->select('id_product_category', 'product_category_name')->orderBy('product_category_order')->get()->toArray();
+                $list[$key]['childs'][$index]['childs'] = $childChild;
+            }
+        }
+
+        return response()->json(MyHelper::checkGet($list));
+    }
+
 }

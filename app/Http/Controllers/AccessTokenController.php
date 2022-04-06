@@ -35,7 +35,7 @@ class AccessTokenController extends PassportAccessTokenController
                         }
 
                         //check if otp have expired and the current time exceeds the expiration time
-                        if(!is_null($user->otp_valid_time) && strtotime(date('Y-m-d H:i:s')) > strtotime($user->otp_valid_time)){
+                        if(!empty($user->otp_forgot) && !is_null($user->otp_valid_time) && strtotime(date('Y-m-d H:i:s')) > strtotime($user->otp_valid_time)){
                             return response()->json(['status' => 'fail', 'messages' => 'This OTP is expired, please re-request OTP from apps']);
                         }
 

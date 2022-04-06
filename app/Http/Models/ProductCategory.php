@@ -35,7 +35,7 @@ class ProductCategory extends Model
 		'id_parent_category' => 'int',
 		'product_category_order' => 'int'
 	];
-protected $appends  = ['url_product_category_photo'];
+
 	protected $fillable = [
 		'id_parent_category',
 		'product_category_order',
@@ -64,15 +64,6 @@ protected $appends  = ['url_product_category_photo'];
         return $this->belongsTo(ProductCategory::class, 'id_parent_category', 'id_product_category');
     }
 
-    public function getUrlProductCategoryPhotoAttribute() {
-        if (empty($this->product_category_photo)) {
-            return config('url.storage_url_api').'img/default.jpg';
-        }
-        else {
-            return config('url.storage_url_api').$this->product_category_photo;
-        }
-    }
-
     public function scopeId($query, $id) {
         return $query->where('id_product_category', $id);
     }
@@ -83,5 +74,20 @@ protected $appends  = ['url_product_category_photo'];
 
     public function scopeMaster($query) {
         return $query->whereNull('id_parent_category');
+    }
+
+    public function category_parent()
+    {
+        return $this->belongsTo(ProductCategory::class, 'id_parent_category', 'id_product_category');
+    }
+
+    public function category_child()
+    {
+        return $this->hasMany(ProductCategory::class, 'id_parent_category', 'id_product_category');
+    }
+
+    public function parent()
+    {
+        return $this->belongsTo(ProductCategory::class, 'id_parent_category');
     }
 }

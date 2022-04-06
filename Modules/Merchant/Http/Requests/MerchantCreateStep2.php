@@ -1,12 +1,12 @@
 <?php
 
-namespace Modules\Users\Http\Requests;
+namespace Modules\Merchant\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class users_phone_pin_new_v2 extends FormRequest
+class MerchantCreateStep2 extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,14 +23,14 @@ class users_phone_pin_new_v2 extends FormRequest
      *
      * @return array
      */
-    public function rules()
-    {
-        return [
-            'phone'			=> 'required|string|max:18',
-            'pin_old'		=> 'required|string|digits:6',
-            'pin_new'		=> 'required|string|digits:6',
-            'device_id'		=> 'max:200',
-            'device_token'	=> 'max:225'
+	public function rules()
+	{
+		return [
+		    'id_merchant'               => 'required|int',
+            'merchant_pic_name'         => 'required|string',
+            'merchant_pic_id_card_number' => 'required|string',
+            'merchant_pic_email'        => 'required|email',
+            'merchant_pic_phone'        => 'required|string'
         ];
     }
 
