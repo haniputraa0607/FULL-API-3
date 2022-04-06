@@ -5,6 +5,13 @@ Route::group(['namespace' => 'Modules\Users\Http\Controllers'], function()
     Route::any('email/verify/{slug}', 'ApiUser@verifyEmail');
 });
 
+Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'api/v2/users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
+{
+    Route::post('phone/check', 'ApiUserV2@phoneCheck');
+
+    Route::post('pin/forgot', 'ApiUserV2@forgotPin');
+});
+
 Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent']], function(){
     Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'namespace' => 'Modules\Users\Http\Controllers'], function()
     {
