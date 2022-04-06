@@ -13,15 +13,20 @@ Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent'
 
 	Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 	{
-        Route::post('phone/check', 'ApiUser@check');
-        Route::post('pin/check', 'ApiUser@checkPin')->middleware('decrypt_pin');
-        Route::post('pin/resend', 'ApiUser@resendPin');
-        Route::post('pin/forgot', 'ApiUser@forgotPin');
-        Route::post('pin/verify', 'ApiUser@verifyPin')->middleware('decrypt_pin');
-        Route::post('pin/create', 'ApiUser@createPin');
-        Route::post('pin/change', 'ApiUser@changePin')->middleware(['decrypt_pin:pin_new','decrypt_pin:pin_old']);
-        Route::post('profile/update', 'ApiUser@profileUpdate');
+        Route::post('pin/verify', 'ApiLoginRegisterV2@verifyPin')->middleware('decrypt_pin');
+        Route::post('pin/check', 'ApiLoginRegisterV2@checkPin')->middleware('decrypt_pin');
+        Route::post('pin/resend', 'ApiLoginRegisterV2@resendPin');
+        Route::post('phone/check', 'ApiLoginRegisterV2@phoneCheck');
+        Route::post('pin/forgot', 'ApiLoginRegisterV2@forgotPin');
+        Route::post('pin/change', 'ApiLoginRegisterV2@changePin')->middleware(['decrypt_pin:pin_new','decrypt_pin:pin_old']);
+        Route::post('pin/request', 'ApiLoginRegisterV2@pinRequest');
+        Route::post('profile/update/register', 'ApiLoginRegisterV2@profileUpdateRegister')->middleware(['decrypt_pin:pin_new','decrypt_pin:pin_old']);
 	});
+
+    Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
+    {
+        Route::post('profile/update', 'ApiUser@profileUpdate');
+    });
 
     Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
     {
