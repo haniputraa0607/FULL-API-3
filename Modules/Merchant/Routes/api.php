@@ -25,5 +25,7 @@ Route::group(['prefix' => 'merchant'], function () {
     Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be']], function () {
         Route::get('register/introduction/detail', 'ApiMerchantController@registerIntroduction');
         Route::post('register/introduction/save', 'ApiMerchantController@registerIntroduction');
+        Route::get('register/success/detail', 'ApiMerchantController@registerSuccess');
+        Route::post('register/success/save', 'ApiMerchantController@registerSuccess');
     });
 });
