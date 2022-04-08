@@ -27,5 +27,12 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::post('register/introduction/save', 'ApiMerchantController@registerIntroduction');
         Route::get('register/success/detail', 'ApiMerchantController@registerSuccess');
         Route::post('register/success/save', 'ApiMerchantController@registerSuccess');
+
+        Route::post('list', 'ApiMerchantManagementController@list');
+        Route::post('detail', 'ApiMerchantManagementController@detail');
+        Route::post('update', 'ApiMerchantManagementController@update');
+        Route::post('delete', 'ApiMerchantManagementController@delete');
+        Route::any('candidate/list', 'ApiMerchantManagementController@canditateList');
+        Route::post('candidate/update', 'ApiMerchantManagementController@canditateUpdate');
     });
 });
