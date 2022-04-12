@@ -60,10 +60,14 @@ class ApiNews extends Controller
 
         if (isset($post['news_content_short'])) {
             $data['news_content_short'] = $post['news_content_short'];
+        }else{
+            $data['news_content_short'] = ' ';
         }
 
         if (isset($post['news_content_long'])) {
             $data['news_content_long'] = $post['news_content_long'];
+        }else{
+            $data['news_content_short'] = ' ';
         }
 
         if (isset($post['news_image_luar'])) {
@@ -216,6 +220,26 @@ class ApiNews extends Controller
             $data['customform'] = null;
         }
 
+        if (isset($post['news_type'])) {
+            $data['news_type'] = $post['news_type'];
+        }
+
+        if (isset($post['news_by'])) {
+            $data['news_by'] = $post['news_by'];
+        }
+
+        if ($post['news_type'] == 'video' && isset($post['link_video'])) {
+            $data['news_video'] = $post['link_video'];
+        }
+
+        if (isset($post['news_button_text'])) {
+            $data['news_button_text'] = $post['news_button_text'];
+        }
+
+        if (isset($post['news_button_link'])) {
+            $data['news_button_link'] = $post['news_button_link'];
+        }
+
         return $data;
     }
 
@@ -244,6 +268,16 @@ class ApiNews extends Controller
                 }
             }
             $post['news_video'] = trim($post['news_video'], ';');
+        }
+
+        if (isset($request->link_video) && $request->news_type == 'video') {
+            $youtube = MyHelper::parseYoutube($request->link_video);
+            if ($youtube['status'] != 'success') {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['url youtube not valid.']
+                ]);
+            }
         }
 
         $data = $this->cekInputan($post);
@@ -332,6 +366,17 @@ class ApiNews extends Controller
         } else {
             $post['news_video'] = null;
         }
+
+        if (isset($request->link_video) && $request->news_type == 'video') {
+            $youtube = MyHelper::parseYoutube($request->link_video);
+            if ($youtube['status'] != 'success') {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['url youtube not valid.']
+                ]);
+            }
+        }
+
         $dataNews = News::where('id_news', $request->json('id_news'))->get()->toArray();
 
         if (empty($dataNews)) {

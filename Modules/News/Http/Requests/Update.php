@@ -19,8 +19,6 @@ class Update extends FormRequest
             'id_news'               => 'required|integer',
             'news_slug'             => 'required',
             'news_title'            => 'required',
-            'id_news_category'      => 'required|exists:news_categories,id_news_category',
-            'news_content_long'     => 'required',
             'news_video.*'          => ["nullable", "regex:/^(http(s)?:\/\/)?((w){3}.)?youtu(be|.be)?(\.com)?\/.+/"],
             'news_image_luar'       => '',
             'news_image_dalam'      => '',

@@ -48,3 +48,14 @@ Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes
         Route::post('position/assign', ['uses' => 'ApiNewsCategoryController@positionCategory']);
     });
 });
+
+Route::group(['middleware' => ['auth:api','user_agent', 'scopes:apps', 'log_activities'], 'prefix' => 'api/e-learning', 'namespace' => 'Modules\News\Http\Controllers'], function()
+{
+    Route::any('video', 'ApiElearning@videoList');
+    Route::post('video/detail', 'ApiElearning@videoDetail');
+    Route::any('article', 'ApiElearning@articleList');
+    Route::post('article/detail', 'ApiElearning@articleDetail');
+    Route::get('online-class/banner', 'ApiElearning@onlineClassBanner');
+    Route::any('online-class', 'ApiElearning@onlineClassList');
+    Route::post('online-class/detail', 'ApiElearning@onlineClassDetail');
+});

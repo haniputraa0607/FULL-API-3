@@ -30,6 +30,8 @@ class News extends Model
     protected $fillable = [
     	'id_news_category',
     	'news_slug',
+        'news_type',
+        'news_by',
 		'news_title',
 		'id_news_category',
 		'news_second_title',
@@ -58,6 +60,8 @@ class News extends Model
 		'news_button_form_text',
 		'news_button_form_expired',
 		'news_form_success_message',
+        'news_button_text',
+        'news_button_link',
         'news_order',
 		'created_at',
 		'updated_at'
