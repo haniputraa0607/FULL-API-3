@@ -862,4 +862,34 @@ class ApiNews extends Controller
 
         return ['status' => 'success'];
     }
+
+    public function featured(Request $request){
+        $post = $request->json()->all();
+
+        if(empty($post)){
+            $now = date('Y-m-d');
+            $res['video'] = News::whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
+                        $query->whereDate('news_expired_date', '>=', $now)
+                            ->orWhere('news_expired_date', null);
+                    })->where('news_type', 'video')->select('id_news', 'news_title', 'news_featured_status')->get()->toArray();
+
+            $res['article'] = News::whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
+                $query->whereDate('news_expired_date', '>=', $now)
+                    ->orWhere('news_expired_date', null);
+            })->where('news_type', 'article')->select('id_news', 'news_title', 'news_featured_status')->get()->toArray();
+
+            $res['online_class'] = News::whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
+                $query->whereDate('news_expired_date', '>=', $now)
+                    ->orWhere('news_expired_date', null);
+            })->where('news_type', 'online_class')->select('id_news', 'news_title', 'news_featured_status')->get()->toArray();
+
+            return response()->json(MyHelper::checkGet($res));
+        }else{
+            News::where('news_featured_status', 1)->update(['news_featured_status' => 0]);
+            $merged = array_merge($post['video'], $post['article'], $post['online_class']);
+            $update = News::whereIn('id_news', $merged)->update(['news_featured_status' => 1]);
+
+            return response()->json(MyHelper::checkUpdate($update));
+        }
+    }
 }

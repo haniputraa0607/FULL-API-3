@@ -38,18 +38,133 @@ class ApiElearning extends Controller
     public $saveImage = "img/news/";
     public $endPoint  = "http://localhost/crmsys-api/public/";
 
-    public function queryList($type, $post){
+    public function home(Request $request){
+        $post = $request->json()->all();
         $now = date('Y-m-d');
         $list = News::whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
             $query->whereDate('news_expired_date', '>=', $now)
                 ->orWhere('news_expired_date', null);
-        })->where('news_type', $type);
+        })->where('news_featured_status', 1)->orderBy('news_publish_date', 'desc');
 
         if(!empty($post['search_key'])){
-            $list = $list->where('news_title', 'like', '%'.$post['search_key'].'%');
+            $list = $list = $list->where(function ($query) use ($post){
+                $query->where('news_title', 'like', '%'.$post['search_key'].'%')
+                    ->orWhere('news_content_short', 'like', '%'.$post['search_key'].'%');
+            });
         }
 
         $list = $list->get()->toArray();
+        $video = [];
+        $article = [];
+        $onlineClass = [];
+
+        foreach ($list as $value){
+            if($value['news_type'] == 'video'){
+                $video[] = [
+                    'slug' => $value['news_slug'],
+                    'title' => $value['news_title'],
+                    'link_video' => $value['news_video'],
+                    'short_description' => $value['news_content_short']
+                ];
+            }elseif($value['news_type'] == 'article'){
+                $article[] = [
+                    'slug' => $value['news_slug'],
+                    'title' => $value['news_title'],
+                    'image' => $value['url_news_image_dalam'],
+                    'short_description' => $value['news_content_short']
+                ];
+            }elseif($value['news_type'] == 'online_class'){
+                $date = '';
+                if(!empty($value['news_event_date_start'])){
+                    $dateEventStart = MyHelper::dateFormatInd($value['news_event_date_start'], true, false);
+                    $dateEventEnd = MyHelper::dateFormatInd($value['news_event_date_end'], true, false);
+
+                    if($dateEventStart == $dateEventEnd){
+                        $date = $dateEventStart;
+                    }else{
+                        $date = $dateEventStart.' - '.$dateEventEnd;
+                    }
+                }
+
+                $onlineClass[] = [
+                    'slug' => $value['news_slug'],
+                    'title' => $value['news_title'],
+                    'image' => $value['url_news_image_dalam'],
+                    'class_date' => $date,
+                    'class_by' => $value['news_by']
+                ];
+            }
+        }
+
+        $bannerTmp = [];
+        $bannerVideo = $this->queryList('video', ['news_featured_status' => 1]);
+        $bannerArticle = $this->queryList('article', ['news_featured_status' => 1]);
+        $bannerOnlineClass = $this->queryList('online_class', ['news_featured_status' => 1]);
+
+        if(count($bannerArticle) >= 2){
+            $bannerTmp[] = $bannerArticle[0];
+            $bannerTmp[] = $bannerArticle[1];
+        }
+
+        if(count($bannerVideo) >= 1){
+            $bannerTmp[] = $bannerVideo[0];
+        }
+
+        if(count($bannerOnlineClass) >= 1){
+            $bannerTmp[] = $bannerOnlineClass[0];
+        }
+
+        if(count($bannerTmp) != 4){
+            $listBanner = News::whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
+                $query->whereDate('news_expired_date', '>=', $now)
+                    ->orWhere('news_expired_date', null);
+            })->where('news_featured_status', 1)->orderBy('news_publish_date', 'desc')->get()->toArray();
+            shuffle($listBanner);
+            $bannerTmp = array_slice($listBanner,0, 5);
+        }else{
+            shuffle($bannerTmp);
+        }
+
+        $banners = [];
+        foreach ($bannerTmp as $tmp){
+            $banners[] = [
+                'type' => $tmp['news_type'],
+                'slug' => $tmp['news_slug'],
+                'title' => $tmp['news_title'],
+                'link_video' => $tmp['news_video'],
+                'short_description' => $tmp['news_content_short'],
+                'image' => $tmp['url_news_image_dalam']
+            ];
+        }
+
+        $res = [
+            'banner' => $banners,
+            'top_video' => $video,
+            'top_article' => $article,
+            'top_online_class' => $onlineClass
+        ];
+        return response()->json(MyHelper::checkGet($res));
+    }
+
+    public function queryList($type, $post){
+        $now = date('Y-m-d');
+        $list = News::whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
+                    $query->whereDate('news_expired_date', '>=', $now)
+                        ->orWhere('news_expired_date', null);
+                })->where('news_type', $type);
+
+        if(!empty($post['search_key'])){
+            $list = $list->where(function ($query) use ($post){
+                        $query->where('news_title', 'like', '%'.$post['search_key'].'%')
+                            ->orWhere('news_content_short', 'like', '%'.$post['search_key'].'%');
+                    });
+        }
+
+        if(isset($post['news_featured_status'])){
+            $list = $list->where('news_featured_status', $post['news_featured_status']);
+        }
+
+        $list = $list->orderBy('news_publish_date', 'desc')->get()->toArray();
 
         return $list;
     }
@@ -63,7 +178,8 @@ class ApiElearning extends Controller
             $res[] = [
                 'slug' => $value['news_slug'],
                 'title' => $value['news_title'],
-                'link_video' => $value['news_video']
+                'link_video' => $value['news_video'],
+                'short_description' => $value['news_content_short']
             ];
         }
 
@@ -80,7 +196,8 @@ class ApiElearning extends Controller
                 $res = [
                     'slug' => $detail['news_slug'],
                     'title' => $detail['news_title'],
-                    'link_video' => $detail['news_video']
+                    'link_video' => $detail['news_video'],
+                    'short_description' => $detail['news_content_short']
                 ];
             }
             return response()->json(MyHelper::checkGet($res??$detail));
@@ -98,7 +215,8 @@ class ApiElearning extends Controller
             $res[] = [
                 'slug' => $value['news_slug'],
                 'title' => $value['news_title'],
-                'image' => $value['url_news_image_dalam']
+                'image' => $value['url_news_image_dalam'],
+                'short_description' => $value['news_content_short']
             ];
         }
 
@@ -118,6 +236,7 @@ class ApiElearning extends Controller
                     'image' => $news['url_news_image_dalam'],
                     'post_date' => MyHelper::dateFormatInd($news['news_post_date'], true, false),
                     'creator_by' => $news['news_by'],
+                    'short_description' => $news['news_content_short'],
                     'description' => $news['news_content_long'],
                 ];
 
@@ -256,6 +375,7 @@ class ApiElearning extends Controller
                     'image' => $news['url_news_image_dalam'],
                     'post_date' => MyHelper::dateFormatInd($news['news_post_date'], true, false),
                     'class_by' => $news['news_by'],
+                    'short_description' => $news['news_content_short'],
                     'description' => $news['news_content_long'],
                 ];
 

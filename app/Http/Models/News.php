@@ -63,6 +63,7 @@ class News extends Model
         'news_button_text',
         'news_button_link',
         'news_order',
+        'news_featured_status',
 		'created_at',
 		'updated_at'
 	];

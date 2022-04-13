@@ -23,6 +23,9 @@ Route::group(['prefix' => 'news', 'namespace' => 'Modules\News\Http\Controllers'
 
 Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes:be'], 'prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controllers'], function()
 {
+    Route::get('featured', 'ApiNews@featured');
+    Route::post('featured', 'ApiNews@featured');
+
     Route::any('be/list', ['middleware' => 'feature_control:19', 'uses' => 'ApiNews@listNews']);
     Route::any('be/category', ['middleware' => 'feature_control:164', 'uses' => 'ApiNews@listCategory']);
 
@@ -51,6 +54,7 @@ Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes
 
 Route::group(['middleware' => ['auth:api','user_agent', 'scopes:apps', 'log_activities'], 'prefix' => 'api/e-learning', 'namespace' => 'Modules\News\Http\Controllers'], function()
 {
+    Route::any('home', 'ApiElearning@home');
     Route::any('video', 'ApiElearning@videoList');
     Route::post('video/detail', 'ApiElearning@videoDetail');
     Route::any('article', 'ApiElearning@articleList');
