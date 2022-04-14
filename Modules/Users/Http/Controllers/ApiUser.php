@@ -133,13 +133,6 @@ class ApiUser extends Controller
         $resultApps = $queryApps->skip($skip)->take($take)->get()->toArray();
         $resultBe = $queryBe->skip($skip)->take($take)->get()->toArray();
 
-        foreach ($resultApps as $keyApps => $valApps) {
-            $resultApps[$keyApps]->id_log_activities_apps = MyHelper::encSlug($valApps->id_log_activities_apps);
-        }
-        foreach ($resultBe as $keyBe => $valBe) {
-            $resultBe[$keyBe]->id_log_activities_apps = MyHelper::encSlug($valBe->id_log_activities_be);
-        }
-
         if ($resultApps || $resultBe) {
             $response = [
                 'status'    => 'success',
