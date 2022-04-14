@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Seeder;
+use App\Http\Models\Setting;
 
 class SettingsTableSeeder extends Seeder
 {
@@ -8,9 +9,7 @@ class SettingsTableSeeder extends Seeder
     {
 
 
-        \DB::table('settings')->delete();
-
-        \DB::table('settings')->insert(array(
+        $settings = array(
             0 =>
             array(
                 'id_setting' => 1,
@@ -984,6 +983,15 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
-        ));
+        );
+
+        foreach ($settings as $setting) {
+            if (Setting::where('key', $setting['key'])->exists()) continue;
+            Setting::create([
+                'key' => $setting['key'],
+                'value' => $setting['value'] ?? null,
+                'value_text' => $setting['value_text'] ?? null,
+            ]);
+        }
     }
 }
