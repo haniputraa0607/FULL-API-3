@@ -60,10 +60,14 @@ class ApiNews extends Controller
 
         if (isset($post['news_content_short'])) {
             $data['news_content_short'] = $post['news_content_short'];
+        }else{
+            $data['news_content_short'] = ' ';
         }
 
         if (isset($post['news_content_long'])) {
             $data['news_content_long'] = $post['news_content_long'];
+        }else{
+            $data['news_content_short'] = ' ';
         }
 
         if (isset($post['news_image_luar'])) {
@@ -216,6 +220,26 @@ class ApiNews extends Controller
             $data['customform'] = null;
         }
 
+        if (isset($post['news_type'])) {
+            $data['news_type'] = $post['news_type'];
+        }
+
+        if (isset($post['news_by'])) {
+            $data['news_by'] = $post['news_by'];
+        }
+
+        if ($post['news_type'] == 'video' && isset($post['link_video'])) {
+            $data['news_video'] = $post['link_video'];
+        }
+
+        if (isset($post['news_button_text'])) {
+            $data['news_button_text'] = $post['news_button_text'];
+        }
+
+        if (isset($post['news_button_link'])) {
+            $data['news_button_link'] = $post['news_button_link'];
+        }
+
         return $data;
     }
 
@@ -244,6 +268,16 @@ class ApiNews extends Controller
                 }
             }
             $post['news_video'] = trim($post['news_video'], ';');
+        }
+
+        if (isset($request->link_video) && $request->news_type == 'video') {
+            $youtube = MyHelper::parseYoutube($request->link_video);
+            if ($youtube['status'] != 'success') {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['url youtube not valid.']
+                ]);
+            }
         }
 
         $data = $this->cekInputan($post);
@@ -332,6 +366,17 @@ class ApiNews extends Controller
         } else {
             $post['news_video'] = null;
         }
+
+        if (isset($request->link_video) && $request->news_type == 'video') {
+            $youtube = MyHelper::parseYoutube($request->link_video);
+            if ($youtube['status'] != 'success') {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['url youtube not valid.']
+                ]);
+            }
+        }
+
         $dataNews = News::where('id_news', $request->json('id_news'))->get()->toArray();
 
         if (empty($dataNews)) {
@@ -816,5 +861,35 @@ class ApiNews extends Controller
         }
 
         return ['status' => 'success'];
+    }
+
+    public function featured(Request $request){
+        $post = $request->json()->all();
+
+        if(empty($post)){
+            $now = date('Y-m-d');
+            $res['video'] = News::whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
+                        $query->whereDate('news_expired_date', '>=', $now)
+                            ->orWhere('news_expired_date', null);
+                    })->where('news_type', 'video')->select('id_news', 'news_title', 'news_featured_status')->get()->toArray();
+
+            $res['article'] = News::whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
+                $query->whereDate('news_expired_date', '>=', $now)
+                    ->orWhere('news_expired_date', null);
+            })->where('news_type', 'article')->select('id_news', 'news_title', 'news_featured_status')->get()->toArray();
+
+            $res['online_class'] = News::whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
+                $query->whereDate('news_expired_date', '>=', $now)
+                    ->orWhere('news_expired_date', null);
+            })->where('news_type', 'online_class')->select('id_news', 'news_title', 'news_featured_status')->get()->toArray();
+
+            return response()->json(MyHelper::checkGet($res));
+        }else{
+            News::where('news_featured_status', 1)->update(['news_featured_status' => 0]);
+            $merged = array_merge($post['video'], $post['article'], $post['online_class']);
+            $update = News::whereIn('id_news', $merged)->update(['news_featured_status' => 1]);
+
+            return response()->json(MyHelper::checkUpdate($update));
+        }
     }
 }
