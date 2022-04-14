@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Seeder;
+use App\Http\Models\Feature;
 
 class FeaturesTableSeeder extends Seeder
 {
@@ -8,9 +9,7 @@ class FeaturesTableSeeder extends Seeder
     {
 
 
-        \DB::table('features')->delete();
-
-        \DB::table('features')->insert(array(
+        $rows = array (
             0 =>
                 array(
                     'id_feature' => 1,
@@ -3271,6 +3270,15 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
                 ),
-        ));
+        );
+
+        foreach ($rows as $row) {
+            Feature::updateOrCreate(['id_feature' => $row['id_feature']], [
+                'feature_type' => $row['feature_type'],
+                'feature_module' => $row['feature_module'],
+                'show_hide' => $row['show_hide'],
+                'order' => $row['order'],
+            ]);
+        }
     }
 }
