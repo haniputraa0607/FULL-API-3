@@ -2,6 +2,7 @@
 
 namespace Modules\Merchant\Http\Controllers;
 
+use App\Http\Models\Outlet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -11,6 +12,7 @@ use Modules\Merchant\Entities\Merchant;
 use Modules\Merchant\Http\Requests\MerchantCreateStep1;
 use Modules\Merchant\Http\Requests\MerchantCreateStep2;
 use Modules\Recruitment\Entities\UserHairStylist;
+use DB;
 
 class ApiMerchantController extends Controller
 {
@@ -120,26 +122,42 @@ class ApiMerchantController extends Controller
             $phone = $checkPhoneFormat['phone'];
         }
 
-        $check = Merchant::where('merchant_phone', $post['merchant_phone'])->first();
+        $check = Outlet::where('outlet_phone', $post['merchant_phone'])->first();
 
         if(!empty($check)){
             return response()->json(['status' => 'fail', 'messages' => ['Nomor telepon sudah terdaftar']]);
         }
 
-        $dataCreate = [
-            "id_user" =>$request->user()->id,
-            "merchant_name" => $post['merchant_name'],
-            "merchant_license_number" => $post['merchant_license_number'],
-            "merchant_email" => (empty($post['merchant_email']) ? null : $post['merchant_email']),
-            "merchant_phone" => $phone,
-            "id_province" => $post['id_province'],
+        DB::beginTransaction();
+
+        $create = Merchant::create(["id_user" =>$request->user()->id]);
+        if(!$create){
+            return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan data merchant']]);
+        }
+
+        $lastOutlet = Outlet::orderBy('outlet_code', 'desc')->first()['outlet_code']??'';
+        $lastOutlet = substr($lastOutlet, -5);
+        $lastOutlet = (int)$lastOutlet;
+        $countCode = $lastOutlet+1;
+        $dataCreateOutlet = [
+            "outlet_code" => 'M'.sprintf("%06d", $countCode),
+            "outlet_name" => $post['merchant_name'],
+            "outlet_license_number" => $post['merchant_license_number'],
+            "outlet_email" => (empty($post['merchant_email']) ? null : $post['merchant_email']),
+            "outlet_phone" => $phone,
             "id_city" => $post['id_city'],
-            "merchant_address" => $post['merchant_address'],
-            "merchant_postal_code" => (empty($post['merchant_postal_code']) ? null : $post['merchant_postal_code'])
+            "outlet_address" => $post['merchant_address'],
+            "outlet_postal_code" => (empty($post['merchant_postal_code']) ? null : $post['merchant_postal_code'])
         ];
 
-        $create = Merchant::create($dataCreate);
+        $createOutlet = Outlet::create($dataCreateOutlet);
+        if(!$createOutlet){
+            return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan data outlet']]);
+        }
 
+        Merchant::where('id_merchant', $create['id_merchant'])->update(['id_outlet' => $createOutlet['id_outlet']]);
+
+        DB::commit();
         return response()->json(MyHelper::checkCreate($create));
     }
 

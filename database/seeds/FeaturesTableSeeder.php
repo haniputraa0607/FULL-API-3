@@ -2475,7 +2475,7 @@ class FeaturesTableSeeder extends Seeder
                     'id_feature' => 247,
                     'feature_type' => 'List',
                     'feature_module' => 'List User Franchise',
-                    'show_hide' => 1,
+                    'show_hide' => 0,
                     'order' => 100,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
@@ -2485,7 +2485,7 @@ class FeaturesTableSeeder extends Seeder
                     'id_feature' => 248,
                     'feature_type' => 'Update',
                     'feature_module' => 'User Franchise',
-                    'show_hide' => 1,
+                    'show_hide' => 0,
                     'order' => 101,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
@@ -3005,7 +3005,7 @@ class FeaturesTableSeeder extends Seeder
                     'id_feature' => 301,
                     'feature_type' => 'List',
                     'feature_module' => 'User Franchise',
-                    'show_hide' => 1,
+                    'show_hide' => 0,
                     'order' => 116,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
@@ -3015,7 +3015,7 @@ class FeaturesTableSeeder extends Seeder
                     'id_feature' => 302,
                     'feature_type' => 'Detail',
                     'feature_module' => 'User Franchise',
-                    'show_hide' => 1,
+                    'show_hide' => 0,
                     'order' => 116,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
@@ -3025,7 +3025,7 @@ class FeaturesTableSeeder extends Seeder
                     'id_feature' => 303,
                     'feature_type' => 'Create',
                     'feature_module' => 'User Franchise',
-                    'show_hide' => 1,
+                    'show_hide' => 0,
                     'order' => 116,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
@@ -3035,7 +3035,7 @@ class FeaturesTableSeeder extends Seeder
                     'id_feature' => 304,
                     'feature_type' => 'Update',
                     'feature_module' => 'User Franchise',
-                    'show_hide' => 1,
+                    'show_hide' => 0,
                     'order' => 116,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
@@ -3045,7 +3045,7 @@ class FeaturesTableSeeder extends Seeder
                     'id_feature' => 305,
                     'feature_type' => 'Delete',
                     'feature_module' => 'User Franchise',
-                    'show_hide' => 1,
+                    'show_hide' => 0,
                     'order' => 116,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')

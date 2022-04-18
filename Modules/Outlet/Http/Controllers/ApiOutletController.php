@@ -3277,8 +3277,8 @@ class ApiOutletController extends Controller
         $default_time_zone_utc = 7;
         $time_diff = $time_zone_utc - $default_time_zone_utc;
 
-        $data['open'] = date('H:i', strtotime('+'.$time_diff.' hour',strtotime($data['open'])));
-        $data['close'] = date('H:i', strtotime('+'.$time_diff.' hour', strtotime($data['close'])));
+        $data['open'] = date('H:i', strtotime('+'.$time_diff.' hour',strtotime($data['open']??'00:00')));
+        $data['close'] = date('H:i', strtotime('+'.$time_diff.' hour', strtotime($data['close']??'00:00')));
 
         switch ($time_zone_utc) {
             case 8:
