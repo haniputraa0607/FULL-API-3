@@ -2,6 +2,7 @@
 
 namespace Modules\Merchant\Http\Controllers;
 
+use App\Http\Models\Outlet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -23,15 +24,19 @@ class ApiMerchantManagementController extends Controller
     public function list(Request $request){
         $post = $request->json()->all();
 
-        $data = Merchant::whereIn('merchant_status', ['Active', 'Inactive'])->orderBy('created_at', 'desc');
+        $data = Merchant::whereIn('merchant_status', ['Active', 'Inactive'])
+            ->leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+            ->leftJoin('cities', 'outlets.id_city', 'cities.id_city')
+            ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
+            ->orderBy('merchants.created_at', 'desc');
 
         if(isset($post['date_start']) && !empty($post['date_start']) &&
             isset($post['date_end']) && !empty($post['date_end'])){
             $start_date = date('Y-m-d', strtotime($post['date_start']));
             $end_date = date('Y-m-d', strtotime($post['date_end']));
 
-            $data->whereDate('created_at', '>=', $start_date)
-                ->whereDate('created_at', '<=', $end_date);
+            $data->whereDate('merchants.created_at', '>=', $start_date)
+                ->whereDate('merchants.created_at', '<=', $end_date);
         }
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
@@ -76,12 +81,6 @@ class ApiMerchantManagementController extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['Detail not found']]);
             }
 
-            $checkPhone = Merchant::where('merchant_phone', $post['merchant_phone'])->whereNotIn('id_merchant', [$post['id_merchant']])->first();
-
-            if(!empty($checkPhone)){
-                return response()->json(['status' => 'fail', 'messages' => ['Phone number already use with merchant : '.$checkPhone['merchant_name']]]);
-            }
-
             $update = Merchant::where('id_merchant', $check['id_merchant'])->update($post);
             return response()->json(MyHelper::checkUpdate($update));
         }else{
@@ -92,15 +91,19 @@ class ApiMerchantManagementController extends Controller
     public function canditateList(Request $request){
         $post = $request->json()->all();
 
-        $data = Merchant::whereNotIn('merchant_status', ['Active', 'Inactive'])->orderBy('created_at', 'desc');
+        $data = Merchant::whereNotIn('merchant_status', ['Active', 'Inactive'])
+            ->leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+            ->leftJoin('cities', 'outlets.id_city', 'cities.id_city')
+            ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
+            ->orderBy('merchants.created_at', 'desc');
 
         if(isset($post['date_start']) && !empty($post['date_start']) &&
             isset($post['date_end']) && !empty($post['date_end'])){
             $start_date = date('Y-m-d', strtotime($post['date_start']));
             $end_date = date('Y-m-d', strtotime($post['date_end']));
 
-            $data->whereDate('created_at', '>=', $start_date)
-                ->whereDate('created_at', '<=', $end_date);
+            $data->whereDate('merchants.created_at', '>=', $start_date)
+                ->whereDate('merchants.created_at', '<=', $end_date);
         }
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
@@ -149,19 +152,22 @@ class ApiMerchantManagementController extends Controller
         $post = $request->json()->all();
 
         if(!empty($post['id_merchant'])){
-            $check = Merchant::where('id_merchant', $post['id_merchant'])->first();
+            $check = Merchant::leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+                    ->leftJoin('users', 'users.id', 'merchants.id_user')
+                    ->where('id_merchant', $post['id_merchant'])->first();
             if(empty($check)){
                 return response()->json(['status' => 'fail', 'messages' => ['Detail not found']]);
             }
             $type = ($post['action_type'] == 'approve' ? 'Active' : $post['action_type']);
             $update = Merchant::where('id_merchant', $check['id_merchant'])->update(['merchant_status' => ucfirst($type)]);
             if($update){
+                $update = Outlet::where('id_outlet', $check['id_outlet'])->update(['outlet_status' => 'Active']);
                 $autocrm = app($this->autocrm)->SendAutoCRM(
                     ucfirst($post['action_type']).' Merchant',
-                    $request->user()->phone,
+                    $check['phone'],
                     [
-                        'merchant_name' => $check['merchant_name'],
-                        'merchant_phone' => $check['merchant_phone'],
+                        'merchant_name' => $check['outlet_name'],
+                        'merchant_phone' => $check['outlet_phone'],
                         "merchant_pic_name" => $check['merchant_pic_name'],
                         "merchant_pic_email" => $check['merchant_pic_email'],
                         "merchant_pic_phone" => $check['merchant_pic_phone']
@@ -181,7 +187,9 @@ class ApiMerchantManagementController extends Controller
         if(!empty($post['id_merchant'])){
             $detail = Merchant::leftJoin('users', 'users.id', 'merchants.id_user')
                     ->leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
-                    ->where('id_merchant', $post['id_merchant'])->select('merchants.*', 'users.name', 'users.phone', 'outlets.outlet_name', 'outlets.outlet_code')
+                    ->leftJoin('cities', 'outlets.id_city', 'cities.id_city')
+                    ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
+                    ->where('id_merchant', $post['id_merchant'])->select('merchants.*', 'users.name', 'users.phone', 'users.email', 'provinces.id_province', 'users.phone', 'outlets.*')
                     ->first();
             return response()->json(MyHelper::checkGet($detail));
         }else{
