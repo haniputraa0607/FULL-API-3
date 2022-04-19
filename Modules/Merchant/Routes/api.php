@@ -21,14 +21,14 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::post('register/submit/step-2', 'ApiMerchantController@registerSubmitStep2');
         Route::post('register/detail', 'ApiMerchantController@registerDetail');
 
-        Route::post('product/variant/create-combination', 'ApiMerchantController@variantCombination');
-        Route::post('product/variant/delete', 'ApiMerchantController@variantDelete');
-        Route::any('product/list', 'ApiMerchantController@productList');
-        Route::post('product/create', 'ApiMerchantController@productCreate');
-        Route::post('product/detail', 'ApiMerchantController@productDetail');
-        Route::post('product/update', 'ApiMerchantController@productUpdate');
-        Route::post('product/delete', 'ApiMerchantController@productDelete');
-        Route::post('product/photo/delete', 'ApiMerchantController@productPhotoDelete');
+        Route::post('product/variant/create-combination', 'ApiMerchantManagementController@variantCombination');
+        Route::post('product/variant/delete', 'ApiMerchantManagementController@variantDelete');
+        Route::any('product/list', 'ApiMerchantManagementController@productList');
+        Route::post('product/create', 'ApiMerchantManagementController@productCreate');
+        Route::post('product/detail', 'ApiMerchantManagementController@productDetail');
+        Route::post('product/update', 'ApiMerchantManagementController@productUpdate');
+        Route::post('product/delete', 'ApiMerchantManagementController@productDelete');
+        Route::post('product/photo/delete', 'ApiMerchantManagementController@productPhotoDelete');
     });
 
     Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be']], function () {
