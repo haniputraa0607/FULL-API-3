@@ -1764,8 +1764,6 @@ class ApiProductController extends Controller
             $product = $product->toArray();
 
         }
-        $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
-        $product['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
 
         $post['id_outlet'] = Merchant::where('id_merchant', $product['id_merchant'])->first()['id_outlet']??null;
         $outlet = Outlet::find($post['id_outlet']);
@@ -1804,6 +1802,14 @@ class ApiProductController extends Controller
         unset($product['product_variant_status']);
         $product['product_price'] = (int)$product['product_price'];
         $product['id_outlet'] = $post['id_outlet'];
+
+        $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+        $imageDetail = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->whereNotIn('id_product_photo', [$image['id_product_photo']??null])->get()->toArray();
+        $imagesDetail = [];
+        foreach ($imageDetail as $dt){
+            $imagesDetail[] = $dt['url_product_photo'];
+        }
+        $product['image_detail'] = (empty($imagesDetail) ? [config('url.storage_url_api').'img/default.jpg'] : $imagesDetail);
 
         return MyHelper::checkGet($product);
     }
