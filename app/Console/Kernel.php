@@ -203,6 +203,13 @@ class Kernel extends ConsoleKernel
          * run every 1 minutes
          */
         $schedule->call('Modules\Transaction\Http\Controllers\ApiWehelpyouController@cronCancelDelivery')->cron('*/1 * * * *');
+
+        /**
+         * To backup and truncate log database
+         */
+        $schedule->command('backup:logdb --table=log_activities_apps --table=log_activities_be --table=log_activities_outlet_apps --table=log_activities_pos --table=log_activities_pos_transaction --truncate --chunk=10000')->dailyAt('00:20');
+
+        $schedule->command('backup:logdb --table=log_api_gosends --table=log_api_wehelpyou --table=log_backend_errors --table=log_call_outlet_apps --table=log_check_promo_code --table=log_crons --table=log_ipay88s --table=log_iris --table=log_midtrans --table=log_ovo_deals --table=log_ovos --table=log_shopee_pays --table=log_xendits --truncate')->dailyAt('00:25');
     }
 
     /**
