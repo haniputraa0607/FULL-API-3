@@ -1792,6 +1792,8 @@ class ApiProductController extends Controller
             $product['product_price'] = $selectedVariant['product_variant_group_price']??$product['product_price'];
             $post['id_product_variant_group'] = $selectedVariant['id_product_variant_group']??null;
             $product['id_product_variant_group'] = $post['id_product_variant_group'];
+        }else{
+            $product['stock_item'] = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_detail_stock_item']??0;
         }
 
         $product['variants'] = Product::getVariantTree($product['id_product'], $outlet, false, $product['product_price'], $product['product_variant_status'])['variants_tree']??null;
