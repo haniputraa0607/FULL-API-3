@@ -1,5 +1,10 @@
 <?php
 
+Route::group(['prefix' => 'api/merchant','middleware' => ['log_activities','auth:api', 'scopes:apps'], 'namespace' => 'Modules\Product\Http\Controllers'], function()
+{
+    Route::get('product/category/list', 'ApiCategoryController@listCategoryCustomerApps');
+});
+
 Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:api', 'scopes:apps'], 'namespace' => 'Modules\Product\Http\Controllers'], function()
 {
     /* product */

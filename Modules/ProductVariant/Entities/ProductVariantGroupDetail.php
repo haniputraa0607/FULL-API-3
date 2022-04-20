@@ -14,6 +14,7 @@ class ProductVariantGroupDetail extends Model
     	'id_product_variant_group',
     	'product_variant_group_stock_status',
     	'product_variant_group_status',
-    	'product_variant_group_visibility'
+    	'product_variant_group_visibility',
+        'product_variant_group_stock_item'
     ];
 }

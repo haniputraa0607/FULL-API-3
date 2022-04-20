@@ -3,6 +3,9 @@
 namespace Modules\Merchant\Http\Controllers;
 
 use App\Http\Models\Outlet;
+use App\Http\Models\Product;
+use App\Http\Models\ProductPhoto;
+use App\Http\Models\TransactionProduct;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -11,7 +14,12 @@ use App\Lib\MyHelper;
 use Modules\Merchant\Entities\Merchant;
 use Modules\Merchant\Http\Requests\MerchantCreateStep1;
 use Modules\Merchant\Http\Requests\MerchantCreateStep2;
-use Modules\Recruitment\Entities\UserHairStylist;
+use Modules\Product\Entities\ProductDetail;
+use Modules\Product\Entities\ProductGlobalPrice;
+use Modules\ProductVariant\Entities\ProductVariant;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
+use Modules\ProductVariant\Entities\ProductVariantPivot;
 use DB;
 
 class ApiMerchantController extends Controller
@@ -20,6 +28,7 @@ class ApiMerchantController extends Controller
     {
         date_default_timezone_set('Asia/Jakarta');
         $this->autocrm          = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+        $this->product_variant_group = "Modules\ProductVariant\Http\Controllers\ApiProductVariantGroupController";
     }
 
     public function registerIntroduction(Request $request)
@@ -152,6 +161,7 @@ class ApiMerchantController extends Controller
 
         $createOutlet = Outlet::create($dataCreateOutlet);
         if(!$createOutlet){
+            DB::rollback();
             return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan data outlet']]);
         }
 
