@@ -168,6 +168,10 @@ class ApiOutletController extends Controller
             $data['delivery_outlet'] = $post['delivery_outlet'];
         }
 
+        if (isset($post['outlet_license_number'])) {
+            $data['outlet_license_number'] = $post['outlet_license_number'];
+        }
+
         return $data;
     }
 
@@ -340,6 +344,10 @@ class ApiOutletController extends Controller
 
         unset($post['outlet_brands']);
         unset($post['delivery_outlet']);
+        $checkLicense = Outlet::where('outlet_license_number', $post['outlet_license_number'])->whereNotIn('id_outlet', [$request->json('id_outlet')])->first();
+        if(!empty($checkLicense)){
+            return response()->json(['status' => 'fail', 'messages' => ['License number already use with outlet : '.$checkLicense['outlet_name']]]);
+        }
         $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update($post);
         // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
         if($save){

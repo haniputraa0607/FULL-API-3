@@ -30,6 +30,11 @@ Route::group(['prefix' => 'merchant'], function () {
             Route::post('product/update', 'ApiMerchantManagementController@productUpdate');
             Route::post('product/delete', 'ApiMerchantManagementController@productDelete');
             Route::post('product/photo/delete', 'ApiMerchantManagementController@productPhotoDelete');
+
+            //profile
+            Route::get('profile/detail', 'ApiMerchantManagementController@profileDetail');
+            Route::post('profile/outlet/update', 'ApiMerchantManagementController@profileOutletUpdate');
+            Route::post('profile/pic/update', 'ApiMerchantManagementController@profilePICUpdate');
         });
     });
 

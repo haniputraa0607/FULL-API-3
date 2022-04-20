@@ -137,6 +137,11 @@ class ApiMerchantController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Nomor telepon sudah terdaftar']]);
         }
 
+        $checkRegister = Merchant::where('id_user', $request->user()->id)->first();
+        if(!empty($checkRegister)){
+            return response()->json(['status' => 'fail', 'messages' => ['Anda sudah pernah mendaftar']]);
+        }
+
         DB::beginTransaction();
 
         $create = Merchant::create(["id_user" =>$request->user()->id]);
