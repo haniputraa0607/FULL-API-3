@@ -9,7 +9,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
 {
     /* product */
     Route::post('search', 'ApiCategoryController@search');
-    Route::any('list', 'ApiProductController@listProduct');
+    Route::any('list', 'ApiProductController@listProductMerchant');
     Route::post('detail', 'ApiProductController@detail');
     Route::any('sync', 'ApiSyncProductController@sync');
     Route::get('next/{id}', 'ApiProductController@getNextID');

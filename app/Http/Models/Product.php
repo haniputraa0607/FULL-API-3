@@ -43,8 +43,7 @@ class Product extends Model
 	protected $primaryKey = 'id_product';
 
 	protected $casts = [
-		'id_product_category' => 'int',
-		'product_weight' => 'int'
+		'id_product_category' => 'int'
 	];
 
 	protected $fillable = [
@@ -68,7 +67,8 @@ class Product extends Model
         'is_inactive',
         'product_length',
         'product_width',
-        'product_height'
+        'product_height',
+        'product_count_transaction'
     ];
     
 

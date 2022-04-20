@@ -22,15 +22,16 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::any('filter/geolocation', 'ApiOutletController@filterGeolocation');
     Route::any('sync', 'ApiSyncOutletController@sync');//SYNC
 
+    Route::post('detail', 'ApiOutletController@detailOutletMerchant');
 });
 
-Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth_client'],'namespace' => 'Modules\Outlet\Http\Controllers'], function()
-{
-    Route::any('list/mobile', 'ApiOutletController@listOutlet');
-    Route::any('/detail', 'ApiOutletController@detailTransaction');
-    Route::any('filter/android', 'ApiOutletController@filter');
-    Route::any('nearme', 'ApiOutletController@nearMe');
-});
+//Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth_client'],'namespace' => 'Modules\Outlet\Http\Controllers'], function()
+//{
+//    Route::any('list/mobile', 'ApiOutletController@listOutlet');
+//    Route::any('/detail', 'ApiOutletController@detailTransaction');
+//    Route::any('filter/android', 'ApiOutletController@filter');
+//    Route::any('nearme', 'ApiOutletController@nearMe');
+//});
 
 Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {

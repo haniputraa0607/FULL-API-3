@@ -82,6 +82,9 @@ class Outlet extends Authenticatable
 		'outlet_latitude',
 		'outlet_longitude',
 		'outlet_status',
+        'outlet_image_cover',
+        'outlet_image_logo_portrait',
+        'outlet_image_logo_landscape',
 		'deep_link_gojek',
 		'deep_link_grab',
 		'delivery_order',
@@ -94,7 +97,7 @@ class Outlet extends Authenticatable
         'time_zone_utc'
 	];
 
-	protected $appends  = ['call', 'url'];
+	protected $appends  = ['call', 'url', 'url_outlet_image_cover', 'url_outlet_image_logo_portrait', 'url_outlet_image_logo_landscape'];
 
 	public function getCallAttribute() {
 		$call = preg_replace("/[^0-9]/", "", $this->outlet_phone);
@@ -105,6 +108,33 @@ class Outlet extends Authenticatable
 	{
 		return config('url.api_url').'/api/outlet/webview/'.$this->id_outlet;
 	}
+
+    public function getUrlOutletImageCoverAttribute() {
+        if (empty($this->outlet_image_cover)) {
+            return config('url.storage_url_api').'img/default.jpg';
+        }
+        else {
+            return config('url.storage_url_api').$this->outlet_image_cover;
+        }
+    }
+
+    public function getUrlOutletImageLogoPortraitAttribute() {
+        if (empty($this->url_outlet_image_logo_portrait)) {
+            return config('url.storage_url_api').'img/default.jpg';
+        }
+        else {
+            return config('url.storage_url_api').$this->url_outlet_image_logo_portrait;
+        }
+    }
+
+    public function getUrlOutletImageLogoLandscapeAttribute() {
+        if (empty($this->outlet_image_logo_landscape)) {
+            return config('url.storage_url_api').'img/default.jpg';
+        }
+        else {
+            return config('url.storage_url_api').$this->outlet_image_logo_landscape;
+        }
+    }
 
 	public function brands(){
 		return $this->belongsToMany(\Modules\Brand\Entities\Brand::class, 'brand_outlet', 'id_outlet', 'id_brand')->orderBy('brands.order_brand');
