@@ -21,6 +21,7 @@ use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\ProductVariant\Entities\ProductVariantPivot;
 use DB;
+use Image;
 
 class ApiMerchantManagementController extends Controller
 {
@@ -311,6 +312,10 @@ class ApiMerchantManagementController extends Controller
         $post = $request->all();
         $idUser = $request->user()->id;
 
+        if(empty($post['product_weight']) || empty($post['product_height']) || empty($post['product_width'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Product weight/height/width tidak boleh kosong']]);
+        }
+
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
         if(empty($checkMerchant)){
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
@@ -320,6 +325,14 @@ class ApiMerchantManagementController extends Controller
             return ['status' => 'fail', 'messages' => ['You can upload maximum 3 image detail file']];
         }
 
+        $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $checkMerchant['id_outlet'])->first();
+        if (!$outlet) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Outlet not found']
+            ];
+        }
+
         $product = [
             'id_merchant' => $checkMerchant['id_merchant'],
             'product_code' => 'P'.rand().'-'.$checkMerchant['id_merchant'],
@@ -327,7 +340,11 @@ class ApiMerchantManagementController extends Controller
             'product_description' => $post['product_description'],
             'id_product_category' => (!empty($post['id_product_category']) ? $post['id_product_category'] : null),
             'product_visibility' => 'Visible',
-            'product_status' => 'Active'
+            'product_status' => 'Active',
+            'product_weight' => (!empty($post['product_weight']) ? $post['product_weight'] : 0),
+            'product_height' => (!empty($post['product_height']) ? $post['product_height'] : 0),
+            'product_width' => (!empty($post['product_width']) ? $post['product_width'] : 0),
+            'product_variant_status' => (empty($post['variants']) ? 0 : 1)
         ];
 
         DB::beginTransaction();
@@ -376,8 +393,16 @@ class ApiMerchantManagementController extends Controller
             ProductGlobalPrice::create(['id_product' => $idProduct, 'product_global_price' => $post['base_price']]);
         }
 
-        ProductDetail::create(['id_product' => $idProduct, 'id_outlet' => $checkMerchant['id_outlet'], 'product_detail_visibility' => 'Visible']);
+        $stockProduct = $post['stock']??0;
+        ProductDetail::create([
+            'id_product' => $idProduct,
+            'id_outlet' => $checkMerchant['id_outlet'],
+            'product_detail_visibility' => 'Visible',
+            'product_detail_stock_status' => (empty($post['variants']) && empty($stockProduct)? 'Sold Out' : 'Available'),
+            'product_detail_stock_item' => (empty($post['variants'])? $stockProduct : 0)
+        ]);
 
+        $priceVariant = [];
         if(!empty($post['variants'])){
             $variants = (array)json_decode($post['variants']);
 
@@ -422,9 +447,11 @@ class ApiMerchantManagementController extends Controller
                         'id_product' => $idProduct,
                         'product_variant_group_code' => 'PV'.time().'-'.implode('', $idVariants),
                         'product_variant_group_name' => $combination['name'],
-                        'product_variant_group_visibility' => 'Visible',
+                        'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible'),
                         'product_variant_group_price' => $combination['price']
                     ]);
+
+                    $priceVariant[] = $combination['price'];
 
                     $insertPivot = [];
                     foreach ($idVariants as $id){
@@ -441,13 +468,19 @@ class ApiMerchantManagementController extends Controller
                     ProductVariantGroupDetail::create([
                         'id_product_variant_group' => $variantGroup['id_product_variant_group'],
                         'id_outlet' => $checkMerchant['id_outlet'],
-                        'product_variant_group_visibility' => 'Visible',
+                        'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible'),
+                        'product_variant_group_stock_status' => (empty($combination['stock']) ? 'Sold Out': 'Available'),
                         'product_variant_group_stock_item' => $combination['stock']]);
                 }
             }
         }
 
         DB::commit();
+        $price = $post['base_price']??0;
+        if(!empty($post['variants'])){
+            $price = min($priceVariant);
+        }
+        ProductGlobalPrice::where('id_product', $idProduct)->update(['product_global_price' => $price]);
         return response()->json(MyHelper::checkCreate($create));
     }
 
@@ -456,6 +489,10 @@ class ApiMerchantManagementController extends Controller
         $idUser = $request->user()->id;
 
         if(!empty($post['id_product'])){
+            if(empty($post['product_weight']) || empty($post['product_height']) || empty($post['product_width'])){
+                return response()->json(['status' => 'fail', 'messages' => ['Product weight/height/width tidak boleh kosong']]);
+            }
+
             $checkMerchant = Merchant::where('id_user', $idUser)->first();
             if(empty($checkMerchant)){
                 return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
@@ -470,10 +507,22 @@ class ApiMerchantManagementController extends Controller
                 return ['status' => 'fail', 'messages' => ['You can upload maximum 3 image detail file']];
             }
 
+            $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $checkMerchant['id_outlet'])->first();
+            if (!$outlet) {
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Outlet not found']
+                ];
+            }
+
             $product = [
                 'product_name' => $post['product_name'],
                 'product_description' => $post['product_description'],
-                'id_product_category' => (!empty($post['id_product_category']) ? $post['id_product_category'] : null)
+                'id_product_category' => (!empty($post['id_product_category']) ? $post['id_product_category'] : null),
+                'product_weight' => (!empty($post['product_weight']) ? $post['product_weight'] : 0),
+                'product_height' => (!empty($post['product_height']) ? $post['product_height'] : 0),
+                'product_width' => (!empty($post['product_width']) ? $post['product_width'] : 0),
+                'product_variant_status' => (empty($post['variants']) ? 0 : 1)
             ];
 
             DB::beginTransaction();
@@ -484,6 +533,12 @@ class ApiMerchantManagementController extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan product']]);
             }
             $idProduct = $post['id_product'];
+
+            $stockProduct = $post['stock']??0;
+            ProductDetail::where('id_product', $idProduct)->where('id_outlet', $outlet['id_outlet'])->update([
+                'product_detail_stock_status' => (empty($post['variants']) && empty($stockProduct)? 'Sold Out' : 'Available'),
+                'product_detail_stock_item' => (empty($post['variants'])? $stockProduct : 0)
+            ]);
 
             $img = [];
             if(!empty($post['image'])){
@@ -532,6 +587,7 @@ class ApiMerchantManagementController extends Controller
                 ProductGlobalPrice::where('id_product', $idProduct)->update( ['product_global_price' => $post['base_price']]);
             }
 
+            $priceVariant = [];
             if(!empty($post['variants'])){
                 $variants = (array)json_decode($post['variants']);
 
@@ -596,7 +652,7 @@ class ApiMerchantManagementController extends Controller
                                 'id_product' => $idProduct,
                                 'product_variant_group_code' => 'PV'.time().'-'.implode('', $idVariants),
                                 'product_variant_group_name' => $combination['name'],
-                                'product_variant_group_visibility' => 'Visible',
+                                'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible'),
                                 'product_variant_group_price' => $combination['price']
                             ]);
 
@@ -615,22 +671,34 @@ class ApiMerchantManagementController extends Controller
                             ProductVariantGroupDetail::create([
                                 'id_product_variant_group' => $variantGroup['id_product_variant_group'],
                                 'id_outlet' => $checkMerchant['id_outlet'],
-                                'product_variant_group_visibility' => 'Visible',
+                                'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible'),
+                                'product_variant_group_stock_status' => (empty($combination['stock']) ? 'Sold Out': 'Available'),
                                 'product_variant_group_stock_item' => $combination['stock']]);
                         }
                     }else{
                         ProductVariantGroup::where('id_product_variant_group', $combination['id_product_variant_group'])->update([
                             'product_variant_group_name' => $combination['name'],
-                            'product_variant_group_price' => $combination['price']
+                            'product_variant_group_price' => $combination['price'],
+                            'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible')
                         ]);
 
                         ProductVariantGroupDetail::where('id_product_variant_group', $combination['id_product_variant_group'])->where('id_outlet', $checkMerchant['id_outlet'])
-                            ->update(['product_variant_group_stock_item' => $combination['stock']]);
+                            ->update([
+                                'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible'),
+                                'product_variant_group_stock_status' => (empty($combination['stock']) ? 'Sold Out': 'Available'),
+                                'product_variant_group_stock_item' => $combination['stock']]);
                     }
+                    $priceVariant[] = $combination['price'];
                 }
             }
 
             DB::commit();
+
+            $price = $post['base_price']??0;
+            if(!empty($post['variants'])){
+                $price = min($priceVariant);
+            }
+            ProductGlobalPrice::where('id_product', $post['id_product'])->update(['product_global_price' => $price]);
             return response()->json(MyHelper::checkUpdate($update));
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
@@ -691,7 +759,10 @@ class ApiMerchantManagementController extends Controller
                 'product_description' => $detail['product_description'],
                 'base_price' => ($variantTree['base_price']??false)?:$price,
                 'image' => $image,
-                'image_detail' => $imagesDetail
+                'image_detail' => $imagesDetail,
+                'product_weight' => $detail['product_weight'],
+                'product_height' => $detail['product_height'],
+                'product_width' => $detail['product_width']
             ];
 
             $variantGroup = ProductVariantGroup::where('id_product', $detail['id_product'])->get()->toArray();
@@ -699,8 +770,6 @@ class ApiMerchantManagementController extends Controller
             foreach ($variantGroup as $group){
                 $variant = ProductVariant::join('product_variant_pivot', 'product_variant_pivot.id_product_variant', 'product_variants.id_product_variant')->where('id_product_variant_group', $group['id_product_variant_group'])->get()->toArray();
                 $variantName = array_column($variant, 'product_variant_name');
-
-                $variantDetail = ProductVariantGroup::where('id_product_variant_group', $group['id_product_variant_group'])->first();
 
                 $variantChild = [];
                 foreach ($variant as $value){
@@ -716,13 +785,17 @@ class ApiMerchantManagementController extends Controller
                     ];
                 }
 
-                $variants['variants_price'][] = [
-                    "id_product_variant_group" => $group['id_product_variant_group'],
-                    "name" => implode(' ', $variantName),
-                    "price" => (int)$group['product_variant_group_price'],
-                    "stock" => (int)(ProductVariantGroupDetail::where('id_product_variant_group', $group['id_product_variant_group'])->where('id_outlet', $checkMerchant['id_outlet'])->first()['product_variant_group_stock_item']??0),
-                    "data" => $variantChild
-                ];
+                if(!empty($variantName)){
+                    $stock = ProductVariantGroupDetail::where('id_product_variant_group', $group['id_product_variant_group'])->where('id_outlet', $checkMerchant['id_outlet'])->first();
+                    $variants['variants_price'][] = [
+                        "id_product_variant_group" => $group['id_product_variant_group'],
+                        "name" => implode(' ', $variantName),
+                        "price" => (int)$group['product_variant_group_price'],
+                        "visibility" => ($stock['product_variant_group_visibility'] == 'Hidden' ? 0 : 1),
+                        "stock" => (int)($stock['product_variant_group_stock_item']??0),
+                        "data" => $variantChild
+                    ];
+                }
             }
 
             if(!empty($variants['variants'])){

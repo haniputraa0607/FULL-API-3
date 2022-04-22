@@ -24,6 +24,7 @@ use App\Http\Models\Setting;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
+use Modules\Merchant\Entities\Merchant;
 use Modules\Outlet\Entities\DeliveryOutlet;
 use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductGlobalPrice;
@@ -84,6 +85,7 @@ class ApiOutletController extends Controller
         $this->promo       			= "Modules\PromoCampaign\Http\Controllers\ApiPromo";
         $this->autocrm              = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->outlet_group_filter = "Modules\Outlet\Http\Controllers\ApiOutletGroupFilterController";
+        $this->product = "Modules\Product\Http\Controllers\ApiProductController";
     }
 
     function checkInputOutlet($post=[]) {
@@ -164,6 +166,10 @@ class ApiOutletController extends Controller
 
         if (isset($post['delivery_outlet'])) {
             $data['delivery_outlet'] = $post['delivery_outlet'];
+        }
+
+        if (isset($post['outlet_license_number'])) {
+            $data['outlet_license_number'] = $post['outlet_license_number'];
         }
 
         return $data;
@@ -338,6 +344,10 @@ class ApiOutletController extends Controller
 
         unset($post['outlet_brands']);
         unset($post['delivery_outlet']);
+        $checkLicense = Outlet::where('outlet_license_number', $post['outlet_license_number'])->whereNotIn('id_outlet', [$request->json('id_outlet')])->first();
+        if(!empty($checkLicense)){
+            return response()->json(['status' => 'fail', 'messages' => ['License number already use with outlet : '.$checkLicense['outlet_name']]]);
+        }
         $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update($post);
         // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
         if($save){
@@ -3666,5 +3676,38 @@ class ApiOutletController extends Controller
         });
 
         return response()->json(MyHelper::checkGet($delivery));
+    }
+
+    public function detailOutletMerchant(Request $request){
+        $post = $request->json()->all();
+
+        if(!empty($post['id_outlet'])){
+            $detail = Outlet::where('id_outlet', $post['id_outlet'])->first();
+
+            if(empty($detail)){
+                return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
+            }
+
+            $idMerchant = Merchant::where('id_outlet', $detail['id_outlet'])->first()['id_merchant']??null;
+            $detail['id_merchant'] = $idMerchant;
+            $bestProduct = app($this->product)->listProductMerchantBestSeller($detail);
+            if(!empty($bestProduct)){
+                $detail['id_best'] = array_column($bestProduct, 'id_product');
+            }
+            $newestProduct = app($this->product)->listProductMerchantNewest($detail);
+
+            $result = [
+                'id_outlet' => $detail['id_outlet'],
+                'outlet_name' => $detail['outlet_name'],
+                'outlet_description' => $detail['outlet_description'],
+                'outlet_image_cover' => $detail['url_outlet_image_cover'],
+                'product_newest' => $newestProduct,
+                'product_best_seller' => $bestProduct
+             ];
+
+            return response()->json(MyHelper::checkGet($result));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
+        }
     }
 }

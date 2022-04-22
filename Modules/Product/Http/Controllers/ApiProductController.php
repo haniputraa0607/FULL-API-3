@@ -15,6 +15,7 @@ use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\ProductModifierGlobalPrice;
 use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
+use Modules\Merchant\Entities\Merchant;
 use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
@@ -1752,230 +1753,63 @@ class ApiProductController extends Controller
     }
     public function detail(Request $request) {
         $post = $request->json()->all();
-        if(!($post['id_outlet']??false)){
-            $post['id_outlet'] = Setting::where('key','default_outlet')->pluck('value')->first();
-        }
-        $outlet = Outlet::find($post['id_outlet']);
-        if(!$outlet){
-            return MyHelper::checkGet([],'Outlet not found');
-        }
         //get product
-        $product = Product::select('id_product','product_code','product_name','product_description','product_code','product_visibility','product_photo_detail', 'product_variant_status')
-        ->where('id_product',$post['id_product'])
-        ->whereHas('brand_category')
-        ->whereRaw('products.id_product in (CASE
-                    WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
-                    is NULL THEN products.id_product
-                    ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_status = "Active" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
-                END)')
-        ->with(['brand_category'=>function($query) use ($post){
-            $query->where('id_product',$post['id_product']);
-            $query->where('id_brand',$post['id_brand']);
-        }])
-        ->first();
+        $product = Product::select('id_merchant', 'id_product_category', 'id_product','product_code','product_name','product_description','product_code', 'product_variant_status')
+                    ->where('id_product',$post['id_product'])->first();
+
         if(!$product){
             return MyHelper::checkGet([]);
         }else{
             // toArray error jika $product Null,
             $product = $product->toArray();
-            if($product['product_photo_detail']){
-                $product['photo'] = config('url.storage_url_api').$product['product_photo_detail'];
-            }else{
-                $product['photo'] = config('url.storage_url_api').'img/product/item/detail/default.png';
-            }
-        }
-        $product['product_detail'] = ProductDetail::where(['id_product' => $post['id_product'], 'id_outlet' => $post['id_outlet']])->first();
 
-        if(empty($product['product_detail'])){
-            $product['product_detail']['product_detail_visibility'] = $product['product_visibility'];
-            $product['product_detail']['product_detail_status'] = 'Active';
         }
-        $max_order = null;
 
-        if(isset($product['product_detail']['max_order'])){
-            $max_order = $product['product_detail']['max_order'];
-        }
-        if($max_order==null){
-            $max_order = Outlet::select('max_order')->where('id_outlet',$post['id_outlet'])->pluck('max_order')->first();
-            if($max_order == null){
-                $max_order = Setting::select('value')->where('key','max_order')->pluck('value')->first();
-                if($max_order == null){
-                    $max_order = 100;
-                }
-            }
-        }
-        
-        if(isset($product['product_detail']['product_detail_visibility']) && $product['product_detail']['product_detail_visibility']=='Hidden'){
-            return MyHelper::checkGet([]);
+        $post['id_outlet'] = Merchant::where('id_merchant', $product['id_merchant'])->first()['id_outlet']??null;
+        $outlet = Outlet::find($post['id_outlet']);
+        if(!$outlet){
+            return MyHelper::checkGet([],'Outlet not found');
         }
         unset($product['product_detail']);
-        $post['id_product_category'] = $product['brand_category'][0]['id_product_category']??0;
+        $post['id_product_category'] = $product['id_product_category']??0;
         if($post['id_product_category'] === 0){
             return MyHelper::checkGet([]);
         }
-        //get modifiers
-        $product_modifiers = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price as price')
-            ->where(function($query) use($post){
-                $query->where('modifier_type','Global')
-                ->orWhere(function($query) use ($post){
-                    $query->whereHas('products',function($query) use ($post){
-                        $query->where('products.id_product',$post['id_product']);
-                    });
-                    $query->orWhereHas('product_categories',function($query) use ($post){
-                        $query->where('product_categories.id_product_category',$post['id_product_category']);
-                    });
-                    $query->orWhereHas('brands',function($query) use ($post){
-                        $query->where('brands.id_brand',$post['id_brand']);
-                    });
-                });
-            })
-            ->leftJoin('product_modifier_details', function($join) use ($post) {
-                $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
-                    ->where('product_modifier_details.id_outlet',$post['id_outlet']);
-            })
-            ->where(function($q){
-                $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
-            })
-            ->where(function($q){
-                $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
-            })
-            ->where(function($query){
-                $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
-                        ->orWhere(function($q){
-                            $q->whereNull('product_modifier_details.product_modifier_visibility')
-                            ->where('product_modifiers.product_modifier_visibility', 'Visible');
-                        });
-            });
 
         $product['product_price'] = 0;
-        if($outlet->outlet_different_price){
-            $product_modifiers->join('product_modifier_prices',function($join) use ($post){
-                $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
-                $join->where('product_modifier_prices.id_outlet',$post['id_outlet']);
-            });
+        $productGlobalPrice = ProductGlobalPrice::where('id_product',$post['id_product'])->first();
+        if($productGlobalPrice){
+            $product['product_price'] = $productGlobalPrice['product_global_price'];
+        }
 
-            $productSpecialPrice = ProductSpecialPrice::where('id_product',$post['id_product'])
-                ->where('id_outlet',$post['id_outlet'])->first();
-            if($productSpecialPrice){
-                $product['product_price'] = $productSpecialPrice['product_special_price'];
-            }
+        if ($product['product_variant_status']) {
+            $selectedVariant = ProductVariantGroup::join('product_variant_group_details', 'product_variant_group_details.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
+                                ->where('id_outlet', $post['id_outlet'])
+                                ->where('product_variant_group_details.product_variant_group_visibility', 'Visible')
+                                ->where('product_variant_group_stock_status', 'Available')->orderBy('product_variant_group_price', 'asc')->first();
+            $product['product_price'] = $selectedVariant['product_variant_group_price']??$product['product_price'];
+            $post['id_product_variant_group'] = $selectedVariant['id_product_variant_group']??null;
+            $product['id_product_variant_group'] = $post['id_product_variant_group'];
         }else{
-            $product_modifiers->join('product_modifier_global_prices',function($join) use ($post){
-                $join->on('product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
-            });
+            $product['stock_item'] = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_detail_stock_item']??0;
+        }
 
-            $productGlobalPrice = ProductGlobalPrice::where('id_product',$post['id_product'])->first();
-            if($productGlobalPrice){
-                $product['product_price'] = $productGlobalPrice['product_global_price'];
-            }
-        }
-        if(isset($post['id_bundling_product']) && !empty($post['id_bundling_product'])){
-            $getProductBundling = BundlingProduct::where('id_bundling_product', $post['id_bundling_product'])->first();
-            $product['variants'] = Product::getSingleVariantTree($product['id_product'], $getProductBundling['id_product_variant_group'], $outlet, false, $product['product_price'], $product['product_variant_status'])['variants_tree']??null;
-        }else{
-            $product['variants'] = Product::getVariantTree($product['id_product'], $outlet, false, $product['product_price'], $product['product_variant_status'])['variants_tree']??null;
-        }
-        if ($product['variants']) {
-            $appliedPromo = UserPromo::where('id_user', $request->user()->id)->first();
-            if ($appliedPromo) {
-                switch ($appliedPromo->promo_type) {
-                    case 'deals':
-                        $query = Deal::select('*', 'deals.id_deals as id_deals')->join('deals_vouchers', 'deals_vouchers.id_deals', 'deals.id_deals')
-                            ->join('deals_users', 'deals_users.id_deals_voucher', 'deals_vouchers.id_deals_voucher')
-                            ->where('id_deals_user', $appliedPromo->id_reference)
-                            ->with([
-                                'deals_product_discount_rules',
-                                'deals_discount_bill_rules',
-                                'deals_tier_discount_rules',
-                                'deals_buyxgety_rules',
-                                'deals_product_discount',
-                                'deals_tier_discount_product',
-                                'deals_buyxgety_product_requirement',
-                                'deals_discount_bill_products'
-                            ])
-                            ->first();
-                        if (!$query) {
-                            goto skip;
-                        }
-                        break;
+        $product['variants'] = Product::getVariantTree($product['id_product'], $outlet, false, $product['product_price'], $product['product_variant_status'])['variants_tree']??null;
 
-                    case 'promo_campaign':
-                        $query = PromoCampaign::join('promo_campaign_promo_codes', 'promo_campaign_promo_codes.id_promo_campaign', 'promo_campaigns.id_promo_campaign')
-                            ->where('id_promo_campaign_promo_code', $appliedPromo->id_reference)
-                            ->with([
-                                'promo_campaign_product_discount_rules',
-                                'promo_campaign_discount_bill_rules',
-                                'promo_campaign_tier_discount_rules',
-                                'promo_campaign_buyxgety_rules',
-                                'promo_campaign_product_discount',
-                                'promo_campaign_tier_discount_product',
-                                'promo_campaign_buyxgety_product_requirement',
-                                'promo_campaign_discount_bill_products'
-                            ])
-                            ->first();
-                        if (!$query) {
-                            goto skip;
-                        }
-                        break;
-                    
-                    case 'subscription':
-                        $query = Subscription::join('subscription_users', 'subscription_users.id_subscription', 'subscriptions.id_subscription')
-                            ->join('subscription_user_vouchers', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
-                            ->where('id_subscription_user_voucher', $appliedPromo->id_reference)
-                            ->with([
-                                'subscription_products',
-                                'subscription_products.product'
-                            ])
-                            ->first();
-                        if (!$query) {
-                            goto skip;
-                        }
-                        break;
-                    
-                    default:
-                        goto skip;
-                        break;
+        if ($post['id_product_variant_group'] ?? false) {
+            $product['selected_available'] = (!!Product::getVariantParentId($post['id_product_variant_group'], $product['variants'], $post['selected']['extra_modifiers'] ?? []))?1:0;
+        }
+        unset($product['product_variant_status']);
+        $product['product_price'] = (int)$product['product_price'];
+        $product['id_outlet'] = $post['id_outlet'];
 
-                }
-                $promoVariant = app('\Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign')->getProduct($appliedPromo->promo_type, $query->toArray(), $post['id_outlet'])['applied_product'] ?? [];
-                $productVariantIdPromo = [];
-                if (is_array($promoVariant)) {
-                    $productVariantIdPromo = array_filter(array_column($promoVariant, 'id_product_variant_group'));
-                    if (!$productVariantIdPromo) {
-                        $productPromo = array_filter(array_column($promoVariant, 'id_product'));
-                        if (in_array($product['id_product'], $productPromo)) {
-                            $productVariantIdPromo = ProductVariantGroup::where('id_product', $product['id_product'])->pluck('id_product_variant_group')->toArray();
-                        }
-                    };
-                } elseif ($promoVariant == '*') {
-                    $productVariantIdPromo = ProductVariantGroup::where('id_product', $product['id_product'])->pluck('id_product_variant_group')->toArray();
-                }
-
-                if ($productVariantIdPromo) {
-                    $product['variants'] = $this->addPromoFlag($product['variants'], $productVariantIdPromo);
-                    unset($product['variants']['promo']);
-                }
-                skip:
-            }
+        $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+        $imageDetail = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->whereNotIn('id_product_photo', [$image['id_product_photo']??null])->get()->toArray();
+        $imagesDetail = [];
+        foreach ($imageDetail as $dt){
+            $imagesDetail[] = $dt['url_product_photo'];
         }
-        $product['selected_available'] = 1;
-        if ($post['selected']['id_product_variant_group'] ?? false) {
-            $product['selected_available'] = (!!Product::getVariantParentId($post['selected']['id_product_variant_group'], $product['variants'], $post['selected']['extra_modifiers'] ?? []))?1:0;
-        }
-        $product['popup_message'] = $product['selected_available'] ? '' : 'Varian yang dipilih tidak tersedia';
-        $product['modifiers'] = $product_modifiers->orderBy('product_modifier_order', 'asc')->orderBy('text', 'asc')->get()->toArray();
-        foreach ($product['modifiers'] as $key => &$modifier) {
-            $modifier['price'] = (int) $modifier['price'];
-            unset($modifier['product_modifier_prices']);
-        }
-        $product['max_order'] = (int) $max_order;
-        $product['max_order_alert'] = MyHelper::simpleReplace(Setting::select('value_text')->where('key','transaction_exceeds_limit_text')->pluck('value_text')->first()?:'Transaksi anda melebihi batas! Maksimal transaksi untuk %product_name% : %max_order%',
-                    [
-                        'product_name' => $product['product_name'],
-                        'max_order' => $max_order
-                    ]
-                );
-        $product['outlet'] = Outlet::select('id_outlet','outlet_code','outlet_address','outlet_name')->find($post['id_outlet']);
+        $product['image_detail'] = (empty($imagesDetail) ? [config('url.storage_url_api').'img/default.jpg'] : $imagesDetail);
 
         return MyHelper::checkGet($product);
     }
@@ -2059,5 +1893,157 @@ class ApiProductController extends Controller
         $data = $data->get()->toArray();
 
         return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function listProductMerchantBestSeller($query = []){
+        $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $query['id_outlet'])->first();
+
+        $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
+                    'product_detail_stock_status as stock_status')
+                ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
+                ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
+                ->where('id_outlet', $query['id_outlet'])
+                ->where('product_global_price', '>', 0)
+                ->where('product_visibility', 'Visible')
+                ->where('product_detail_stock_status', 'Available')
+                ->where('product_count_transaction', '>', 0)
+                ->orderBy('product_count_transaction', 'desc')
+                ->limit(30)
+                ->get()->toArray();
+
+        foreach ($list as $key=>$product){
+            if ($product['product_variant_status']) {
+                $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                if(empty($variantTree['base_price'])){
+                    unset($list[$key]);
+                    continue;
+                }
+                $list[$key]['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
+            }
+
+            unset($list[$key]['product_variant_status']);
+            unset($list[$key]['stock_status']);
+            $list[$key]['product_price'] = (int)$list[$key]['product_price'];
+            $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+            $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
+        }
+        $list = array_values($list);
+        $list = array_slice($list,0,10);
+        shuffle($list);
+        return $list;
+    }
+
+    public function listProductMerchantNewest($query = []){
+        $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $query['id_outlet'])->first();
+
+        $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
+            'product_detail_stock_status as stock_status')
+            ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
+            ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
+            ->where('id_outlet', $query['id_outlet'])
+            ->where('product_global_price', '>', 0)
+            ->where('product_visibility', 'Visible')
+            ->where('product_detail_stock_status', 'Available')
+            ->orderBy('products.created_at', 'desc');
+
+        if(!empty($query['id_best'])){
+            $list = $list->whereNotIn('products.id_product', $query['id_best']);
+        }
+        $list = $list->limit(10)->get()->toArray();
+
+        foreach ($list as $key=>$product){
+            if ($product['product_variant_status']) {
+                $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                if(empty($variantTree['base_price'])){
+                    unset($list[$key]);
+                    continue;
+                }
+                $list[$key]['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
+            }
+
+            unset($list[$key]['product_variant_status']);
+            unset($list[$key]['stock_status']);
+            $list[$key]['product_price'] = (int)$list[$key]['product_price'];
+            $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+            $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
+        }
+        $list = array_values($list);
+        return $list;
+    }
+
+    public function listProductMerchant(Request $request){
+        $post = $request->json()->all();
+
+        if(!empty($post['id_outlet'])){
+            $idMerchant = Merchant::where('id_outlet', $post['id_outlet'])->first()['id_merchant']??null;
+            if(empty($outlet)){
+                return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
+            }
+        }
+
+        $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
+            'product_detail_stock_status as stock_status', 'product_detail.id_outlet')
+            ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
+            ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
+            ->where('product_global_price', '>', 0)
+            ->where('product_visibility', 'Visible')
+            ->orderBy('product_count_transaction', 'desc')
+            ->groupBy('products.id_product');
+
+        if(!empty($idMerchant)){
+            $list = $list->where('id_merchant', $idMerchant);
+        }
+
+        if(!empty($post['search_key'])){
+            $list = $list->where('product_name', 'like', '%'.$post['search_key'].'%');
+        }
+
+        if(!empty($post['id_product_category'])){
+            $list = $list->where('id_product_category', $post['id_product_category']);
+        }
+
+        if(!empty($post['pagination'])){
+            $list = $list->paginate($post['pagination_total_row']??10)->toArray();
+
+            foreach ($list['data'] as $key=>$product){
+                if ($product['product_variant_status']) {
+                    $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
+                    $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                    if(empty($variantTree['base_price'])){
+                        $list['data'][$key]['stock_status'] = 'Sold Out';
+                    }
+                    $list['data'][$key]['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
+                }
+
+                unset($list['data'][$key]['id_outlet']);
+                unset($list['data'][$key]['product_variant_status']);
+                $list['data'][$key]['product_price'] = (int)$list['data'][$key]['product_price'];
+                $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+                $list['data'][$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
+            }
+            $list['data'] = array_values($list['data']);
+        }else{
+            $list = $list->get()->toArray();
+
+            foreach ($list as $key=>$product){
+                if ($product['product_variant_status']) {
+                    $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
+                    $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                    if(empty($variantTree['base_price'])){
+                        $list[$key]['stock_status'] = 'Sold Out';
+                    }
+                    $list[$key]['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
+                }
+
+                unset($list[$key]['id_outlet']);
+                unset($list[$key]['product_variant_status']);
+                $list[$key]['product_price'] = (int)$list[$key]['product_price'];
+                $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+                $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
+            }
+            $list = array_values($list);
+        }
+
+        return response()->json(MyHelper::checkGet($list));
     }
 }

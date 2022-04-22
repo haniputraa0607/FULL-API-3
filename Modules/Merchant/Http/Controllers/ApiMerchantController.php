@@ -11,9 +11,13 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Http\Models\Setting;
 use App\Lib\MyHelper;
+use Modules\Disburse\Entities\BankAccount;
+use Modules\Disburse\Entities\BankAccountOutlet;
+use Modules\Disburse\Entities\BankName;
 use Modules\Merchant\Entities\Merchant;
 use Modules\Merchant\Http\Requests\MerchantCreateStep1;
 use Modules\Merchant\Http\Requests\MerchantCreateStep2;
+use Modules\Outlet\Entities\DeliveryOutlet;
 use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\ProductVariant\Entities\ProductVariant;
@@ -29,6 +33,7 @@ class ApiMerchantController extends Controller
         date_default_timezone_set('Asia/Jakarta');
         $this->autocrm          = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->product_variant_group = "Modules\ProductVariant\Http\Controllers\ApiProductVariantGroupController";
+        $this->online_trx = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
     }
 
     public function registerIntroduction(Request $request)
@@ -135,6 +140,11 @@ class ApiMerchantController extends Controller
 
         if(!empty($check)){
             return response()->json(['status' => 'fail', 'messages' => ['Nomor telepon sudah terdaftar']]);
+        }
+
+        $checkRegister = Merchant::where('id_user', $request->user()->id)->first();
+        if(!empty($checkRegister)){
+            return response()->json(['status' => 'fail', 'messages' => ['Anda sudah pernah mendaftar']]);
         }
 
         DB::beginTransaction();
@@ -275,5 +285,327 @@ class ApiMerchantController extends Controller
             ];
         }
         return response()->json(MyHelper::checkGet($detail));
+    }
+
+    public function profileDetail(Request $request){
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        $detail = Merchant::leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+            ->where('id_merchant', $checkMerchant['id_merchant'])
+            ->select('merchants.*', 'outlets.*')
+            ->first();
+
+        if(empty($detail)){
+            return response()->json(['status' => 'fail', 'messages' => ['Detail merchant tidak ditemukan']]);
+        }
+
+        $detail = [
+            'outlet' => [
+                'merchant_name' => $detail['outlet_name'],
+                'merchant_description' => $detail['outlet_description'],
+                'merchant_license_number' => $detail['outlet_license_number'],
+                "merchant_email" => $detail['outlet_email'],
+                "merchant_phone" => $detail['outlet_phone'],
+                "image_cover" => (!empty($detail['outlet_image_cover']) ? config('url.storage_url_api').$detail['outlet_image_cover']: ''),
+                "image_logo_portrait" => (!empty($detail['outlet_image_logo_portrait']) ? config('url.storage_url_api').$detail['outlet_image_logo_portrait']: ''),
+                "image_logo_landscape" => (!empty($detail['outlet_image_logo_landscape']) ? config('url.storage_url_api').$detail['outlet_image_logo_landscape']: '')
+            ],
+            'pic' => [
+                'merchant_pic_name' => $detail['merchant_pic_name'],
+                'merchant_pic_id_card_number' => $detail['merchant_pic_id_card_number'],
+                'merchant_pic_email' => $detail['merchant_pic_email'],
+                'merchant_pic_phone' => $detail['merchant_pic_phone']
+            ]
+        ];
+
+        return response()->json(MyHelper::checkGet($detail));
+    }
+
+    public function profileOutletUpdate(Request $request){
+        $post = $request->all();
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        if(empty($post['merchant_license_number'])){
+            $checkLicense = Outlet::where('outlet_license_number', $post['merchant_license_number'])->whereNotIn('id_outlet', [$checkMerchant['id_outlet']])->first();
+            if(!empty($checkLicense)){
+                return response()->json(['status' => 'fail', 'messages' => ['License number already use with outlet : '.$checkLicense['outlet_name']]]);
+            }
+        }
+
+        $dataUpdate = [];
+        if(!empty($post['image_cover'])){
+            $image = $post['image_cover'];
+            $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
+            $upload = MyHelper::uploadPhotoStrict($encode, 'img/outlet/'.$checkMerchant['id_outlet'].'/', 720, 360);
+
+            if (isset($upload['status']) && $upload['status'] == "success") {
+                $dataUpdate['outlet_image_cover'] = $upload['path'];
+            }
+        }
+
+        if(!empty($post['image_logo_portrait'])){
+            $image = $post['image_logo_portrait'];
+            $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
+            $upload = MyHelper::uploadPhotoStrict($encode, 'img/outlet/'.$checkMerchant['id_outlet'].'/', 300, 300);
+
+            if (isset($upload['status']) && $upload['status'] == "success") {
+                $dataUpdate['outlet_image_logo_portrait'] = $upload['path'];
+            }
+        }
+
+        if(!empty($post['image_logo_landscape'])){
+            $image = $post['image_logo_landscape'];
+            $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
+            $imgGet = Image::make($image);
+            $imgwidth = $imgGet->width();
+            $upload = MyHelper::uploadPhotoStrict($encode, 'img/outlet/'.$checkMerchant['id_outlet'].'/', $imgwidth, 300);
+
+            if (isset($upload['status']) && $upload['status'] == "success") {
+                $dataUpdate['outlet_image_logo_landscape'] = $upload['path'];
+            }
+        }
+
+        $dataUpdate['outlet_name'] = $post['merchant_name'];
+        $dataUpdate['outlet_description'] = $post['merchant_description'];
+        $dataUpdate['outlet_license_number'] = $post['merchant_license_number']??null;
+        $dataUpdate['outlet_email'] = $post['merchant_email'];
+        $dataUpdate['outlet_phone'] = $post['merchant_phone'];
+
+        $update = Outlet::where('id_outlet', $checkMerchant['id_outlet'])->update($dataUpdate);
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function profilePICUpdate(Request $request){
+        $post = $request->all();
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        $dataUpdate['merchant_pic_name'] = $post['merchant_pic_name'];
+        $dataUpdate['merchant_pic_id_card_number'] = $post['merchant_pic_id_card_number'];
+        $dataUpdate['merchant_pic_email'] = $post['merchant_pic_email'];
+        $dataUpdate['merchant_pic_phone'] = $post['merchant_pic_phone'];
+
+        $update = Merchant::where('id_merchant', $checkMerchant['id_merchant'])->update($dataUpdate);
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function addressDetail(Request $request){
+        $post = $request->all();
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        if(empty($post)){
+            $data = Merchant::leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+                ->leftJoin('cities', 'outlets.id_city', 'cities.id_city')
+                ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
+                ->where('id_merchant', $checkMerchant['id_merchant'])
+                ->select('merchants.*', 'provinces.id_province', 'outlets.*')
+                ->first();
+            if(empty($data)){
+                return response()->json(['status' => 'fail', 'messages' => ['Data tidak ditemukan']]);
+            }
+
+            $detail = [
+                'latitude' => $data['outlet_latitude'],
+                'longitude' => $data['outlet_longitude'],
+                'id_province' => $data['id_province'],
+                'id_city' => $data['id_city'],
+                'address' => $data['outlet_address'],
+                'postal_code' => $data['outlet_postal_code']
+            ];
+
+            return response()->json(MyHelper::checkGet($detail));
+        }else{
+            $dataUpdate = [
+                'outlet_latitude' => $post['latitude']??null,
+                'outlet_longitude' => $post['longitude']??null,
+                'id_city' => $post['id_city']??null,
+                'outlet_address' => $post['address']??null,
+                'outlet_postal_code' => $post['postal_code']??null
+            ];
+
+            $update = Outlet::where('id_outlet', $checkMerchant['id_outlet'])->update($dataUpdate);
+            return response()->json(MyHelper::checkUpdate($update));
+        }
+    }
+
+    public function bankList(){
+        $list = BankName::select('id_bank_name', 'bank_code', 'bank_name', DB::raw("'' as bank_image"))->get()->toArray();
+        return response()->json(MyHelper::checkGet($list));
+    }
+
+    public function bankAccountCheck(Request $request){
+        $post = $request->all();
+
+        if(empty($post['beneficiary_account'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Account number can not be empty']]);
+        }
+
+        if(empty($post['id_bank_name'])){
+            return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
+        }
+
+        $arr = [0,1];
+        shuffle($arr);
+
+        if($arr[0]){
+            return response()->json(['status' => 'success', 'result' => [
+                'beneficiary_name' => 'Nama',
+                'beneficiary_account' => '010101010101'
+            ]]);
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Akun tidak ditemukan']]);
+        }
+    }
+
+    public function bankAccountCreate(Request $request){
+        $post = $request->all();
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        if(empty($post['beneficiary_account'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Account number can not be empty']]);
+        }
+
+        if(empty($post['id_bank_name'])){
+            return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
+        }
+
+        $check = BankAccount::where('beneficiary_account', $post['beneficiary_account'])->first();
+        if(empty($check)){
+            $save = BankAccount::create([
+                'id_bank_name' => $post['id_bank_name'],
+                'beneficiary_name' => 'Beneficiary Name',
+                'beneficiary_account' => $post['beneficiary_account']
+                ]);
+        }
+
+        $save = BankAccountOutlet::updateOrCreate([
+            'id_bank_account' => $check['id_bank_account'],
+            'id_outlet' => $checkMerchant['id_outlet']
+        ], [
+            'created_at' =>date('Y-m-d H:i:s'),
+            'updated_at' =>date('Y-m-d H:i:s')
+        ]);
+        return response()->json(MyHelper::checkUpdate($save));
+    }
+
+    public function bankAccountList(Request $request){
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        $list = BankAccount::join('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
+                ->join('bank_account_outlets', 'bank_account_outlets.id_bank_account', 'bank_accounts.id_bank_account')
+                ->select('bank_account_outlets.id_bank_account', 'beneficiary_name', 'beneficiary_account', DB::raw("'' as bank_image"), 'bank_name.bank_name')
+                ->where('id_outlet', $checkMerchant['id_outlet'])
+                ->get()->toArray();
+        return response()->json(MyHelper::checkGet($list));
+    }
+
+    public function bankAccountDelete(Request $request){
+        $post = $request->all();
+
+        if(empty($post['id_bank_account'])){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['ID can not be empty']
+            ]);
+        }
+
+        $delete = BankAccount::where('id_bank_account', $post['id_bank_account'])->delete();
+        if($delete){
+            BankAccountOutlet::where('id_bank_account', $post['id_bank_account'])->delete();
+        }
+
+        return response()->json(MyHelper::checkDelete($delete));
+    }
+
+    public function deliverySetting(Request $request){
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        $post = New Request();
+        $availableDelivery = app($this->online_trx)->listAvailableDelivery($post);
+        if(isset($availableDelivery['status']) && $availableDelivery['status'] == 'fail'){
+            return response()->json(['status' => 'fail', 'messages' => ['List delivery not found']]);
+        }
+
+        $deliveryOutlet = DeliveryOutlet::where('id_outlet', $checkMerchant['id_outlet'])->where('show_status', 1)
+                        ->select('code', 'available_status', 'available_status')->get()->toArray();
+
+        $delivery = $availableDelivery['result']['delivery']??[];
+        $res = [];
+        foreach ($delivery as $key => $val){
+            $check = array_search($val['code'], array_column($deliveryOutlet,'code'));
+            $available = 0;
+            if($check === false){
+                $available = 1;
+            }else if($val['show_status'] == 1){
+                $available = 1;
+            }
+
+            if($available == 1){
+                $res[] = [
+                    "code" => $val['code'],
+                    "delivery_name" => $val['delivery_name'],
+                    "delivery_method" =>$val['delivery_method'],
+                    "logo" => $val['logo'],
+                    "active_status" => $deliveryOutlet[$check]['available_status']??1
+                ];
+            }
+        }
+
+        return response()->json(MyHelper::checkGet($res));
+    }
+
+    public function deliverySettingUpdate(Request $request){
+        $post = $request->all();
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        if(empty($post['code'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Code can not be empty']]);
+        }
+
+        if(!isset($post['active_status'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Status can not be empty']]);
+        }
+
+        $save = DeliveryOutlet::updateOrCreate([
+            'code' => $post['code'],
+            'id_outlet' => $checkMerchant['id_outlet']
+        ], [
+            'available_status' => $post['active_status'],
+            'created_at' =>date('Y-m-d H:i:s'),
+            'updated_at' =>date('Y-m-d H:i:s')
+        ]);
+        return response()->json(MyHelper::checkUpdate($save));
     }
 }

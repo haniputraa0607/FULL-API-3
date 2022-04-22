@@ -43,8 +43,7 @@ class Product extends Model
 	protected $primaryKey = 'id_product';
 
 	protected $casts = [
-		'id_product_category' => 'int',
-		'product_weight' => 'int'
+		'id_product_category' => 'int'
 	];
 
 	protected $fillable = [
@@ -68,7 +67,8 @@ class Product extends Model
         'is_inactive',
         'product_length',
         'product_width',
-        'product_height'
+        'product_height',
+        'product_count_transaction'
     ];
     
 
@@ -271,7 +271,7 @@ class Product extends Model
         }
 
         // get all product variant groups assigned to this product
-        $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_stock_status')->where('id_product', $id_product)->with(['id_product_variants']);
+        $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_stock_status', 'product_variant_group_stock_item')->where('id_product', $id_product)->with(['id_product_variants']);
 
         if ($outlet['outlet_different_price']) {
             $variant_group_raws->addSelect('product_variant_group_special_prices.product_variant_group_price')->join('product_variant_group_special_prices', function($join) use ($outlet) {
@@ -459,6 +459,7 @@ class Product extends Model
             // product has this variant combination (product variant group)?
             if ($variant_group = ($variant_groups[$slug] ?? false)) { // it has
                 // assigning product_variant_group_price and id_product_variant_group to this variant
+                $variant['stock_item']    = $variant_group['product_variant_group_stock_item'];
                 $variant['id_product_variant_group']    = $variant_group['id_product_variant_group'];
                 $variant['product_variant_group_price'] = (double) $variant_group['product_variant_group_price'];
                 $variant['product_variant_stock_status'] = $variant_group['product_variant_group_stock_status'];
@@ -493,6 +494,7 @@ class Product extends Model
             }
 
             if ($variant['id_product_variant_group'] ?? false) {
+                $new_order['stock_item']    = $variant['stock_item']??0;
                 $new_order['id_product_variant_group']    = $variant['id_product_variant_group'];
                 $new_order['product_variant_group_price'] = $variant['product_variant_group_price'];
                 $new_order['extra_modifiers'] = [];
@@ -718,7 +720,7 @@ class Product extends Model
         }
 
         // get all product variant groups assigned to this product
-        $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_stock_status')->where('id_product', $id_product)->where('product_variant_groups.id_product_variant_group', $id_product_variant_group)->with(['id_product_variants']);
+        $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_stock_status', 'product_variant_group_stock_item')->where('id_product', $id_product)->where('product_variant_groups.id_product_variant_group', $id_product_variant_group)->with(['id_product_variants']);
 
         if ($outlet['outlet_different_price']) {
             $variant_group_raws->addSelect('product_variant_group_special_prices.product_variant_group_price')->join('product_variant_group_special_prices', function($join) use ($outlet) {
