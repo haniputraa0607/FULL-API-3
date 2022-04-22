@@ -39,9 +39,8 @@ class ApiDoctorClinicController extends Controller
  
         DB::beginTransaction();
         if (isset($post['id_doctor_clinic'])) {
-            DoctorClinic::where('id_doctor_clinic', $post['id_doctor_clinic'])->update($post);
             try {
-                
+                DoctorClinic::where('id_doctor_clinic', $post['id_doctor_clinic'])->update($post);
             } catch (\Exception $e) {
                 $result = [
                     'status'  => 'fail',
@@ -64,7 +63,6 @@ class ApiDoctorClinicController extends Controller
                 return response()->json($result);
             }
             DB::commit();
-            //dd($save);
             return response()->json(['status'  => 'success', 'result' => ['doctor_clinic_name' => $post['doctor_clinic_name'], 'created_at' => $save->created_at]]);
         }
     }
