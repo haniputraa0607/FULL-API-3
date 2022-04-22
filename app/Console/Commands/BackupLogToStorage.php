@@ -92,7 +92,7 @@ class BackupLogToStorage extends Command
             unlink($backupFileUC . '.gz');
 
             if ($this->option('truncate') && $table) {
-                \DB::connection('mysql2')->table($table)->limit($totalRow)->delete();
+                \DB::connection('mysql2')->table($table)->where('created_at', '<', date('Y-m-d H:i:s', strtotime('-30days')))->limit($totalRow)->delete();
             }
             $currentbackup++;
             goto backupagain;
