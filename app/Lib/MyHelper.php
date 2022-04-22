@@ -1100,6 +1100,7 @@ class MyHelper{
 				}
 
 			}
+
 			/* if($imgwidth < $width){
 				$img->resize($width, null, function ($constraint) {
 					$constraint->aspectRatio();

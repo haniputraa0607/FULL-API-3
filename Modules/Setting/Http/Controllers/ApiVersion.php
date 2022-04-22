@@ -41,7 +41,17 @@ class ApiVersion extends Controller
         $post = $request->json()->all();
         $dbSetting = Setting::where('key', 'like', 'version_%')->get()->toArray();
         $dbDevice = Version::select('app_type', 'app_version')->orderBy('app_version', 'desc')->where('rules', '1')->get()->toArray();
-        $setting = array();
+        $setting = array(
+            "version_image_mobile" => "error_default_version_image_mobile.png",
+            "version_text_alert_mobile" => "Update aplikasi ke version $post[version]",
+            "version_text_button_mobile" => "Update",
+            "version_playstore" => "",
+            "version_appstore" => "",
+            "version_image_outlet" => "error_default_version_image_mobile.png",
+            "version_text_alert_outlet" => "Update aplikasi ke version $post[version]",
+            "version_text_button_outlet" => "Update",
+            "version_outletstore" => ""
+        );
         foreach ($dbSetting as $val) {
             $setting[$val['key']] = $val['value'];
         }
@@ -72,12 +82,10 @@ class ApiVersion extends Controller
                 $setting['version_text_alert_mobile'] = str_replace('%version_app%', $versionRec['app_version'], $setting['version_text_alert_mobile']);
                 return response()->json([
                     'status' => 'fail',
-                    'result' => [
-                        'image' => config('url.storage_url_api') . $setting['version_image_mobile'],
-                        'text' => $setting['version_text_alert_mobile'],
-                        'button_text' => $setting['version_text_button_mobile'],
-                        'button_url' => $setting['version_playstore']
-                    ],
+                    'image' => config('url.storage_url_api') . $setting['version_image_mobile'],
+                    'text' => $setting['version_text_alert_mobile'],
+                    'button_text' => $setting['version_text_button_mobile'],
+                    'button_url' => $setting['version_playstore']
                 ]);
             }
             if ($device == 'ios') {
@@ -96,15 +104,13 @@ class ApiVersion extends Controller
                 $setting['version_text_alert_mobile'] = str_replace('%version_app%', $versionRec['app_version'], $setting['version_text_alert_mobile']);
                 return response()->json([
                     'status' => 'fail',
-                    'result' => [
-                        'image' => config('url.storage_url_api') . $setting['version_image_mobile'],
-                        'text' => $setting['version_text_alert_mobile'],
-                        'button_text' => $setting['version_text_button_mobile'],
-                        'button_url' => $setting['version_appstore']
-                    ],
+                    'image' => config('url.storage_url_api') . $setting['version_image_mobile'],
+                    'text' => $setting['version_text_alert_mobile'],
+                    'button_text' => $setting['version_text_button_mobile'],
+                    'button_url' => $setting['version_appstore']
                 ]);
             }
-            if ($device == 'outlet') {
+            if ($device == 'OutletApp') {
                 foreach ($setting['Device'] as $value) {
                     if (in_array('OutletApp', $value)) {
                         $value['app_type'] = strtolower($value['app_type']);
@@ -120,12 +126,10 @@ class ApiVersion extends Controller
                 $setting['version_text_alert_outlet'] = str_replace('%version_app%', $versionRec['app_version'], $setting['version_text_alert_outlet']);
                 return response()->json([
                     'status' => 'fail',
-                    'result' => [
-                        'image' => config('url.storage_url_api') . $setting['version_image_outlet'],
-                        'text' => $setting['version_text_alert_outlet'],
-                        'button_text' => $setting['version_text_button_outlet'],
-                        'button_url' => $setting['version_outletstore']
-                    ]
+                    'image' => config('url.storage_url_api') . $setting['version_image_outlet'],
+                    'text' => $setting['version_text_alert_outlet'],
+                    'button_text' => $setting['version_text_button_outlet'],
+                    'button_url' => $setting['version_outletstore']
                 ]);
             }
         } else {
