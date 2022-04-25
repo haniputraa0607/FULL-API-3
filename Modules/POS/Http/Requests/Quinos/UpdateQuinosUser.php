@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class updateQuinosUser extends FormRequest
+class UpdateQuinosUser extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
