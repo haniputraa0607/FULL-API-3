@@ -17,6 +17,7 @@ class Merchant extends Model
         'merchant_pic_id_card_number',
         'merchant_pic_email',
         'merchant_pic_phone',
-        'merchant_completed_step'
+        'merchant_completed_step',
+        'merchant_count_transaction'
 	];
 }

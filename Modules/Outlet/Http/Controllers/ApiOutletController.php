@@ -3710,4 +3710,86 @@ class ApiOutletController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
     }
+
+    public function outletMerchantList(Request $request){
+        $post = $request->json()->all();
+
+        $list = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
+            ->where('outlet_status', 'Active')
+            ->where('merchant_status', 'Active')
+            ->select('outlets.id_outlet', 'id_merchant');
+
+        if(!empty($post['search_key'])){
+            $list = $list->where('outlet_name', 'like', '%'.$post['search_key'].'%');
+        }
+
+        if(!empty($post['pagination'])){
+            $list = $list->paginate($post['pagination_total_row']??10)->toArray();
+
+            foreach ($list['data'] as $key=>$dt){
+                $list['data'][$key]['outlet_image_logo_portrait'] = $dt['url_outlet_image_logo_portrait'];
+                $list['data'][$key]['outlet_image_logo_landscape'] = $dt['url_outlet_image_logo_landscape'];
+                unset($list['data'][$key]['url_outlet_image_logo_landscape']);
+                unset($list['data'][$key]['url_outlet_image_logo_portrait']);
+                unset($list['data'][$key]['url_outlet_image_cover']);
+                unset($list['data'][$key]['call']);
+                unset($list['data'][$key]['url']);
+            }
+        }else{
+            $list = $list->get()->toArray();
+
+            foreach ($list as $key=>$dt){
+                $list[$key]['outlet_image_logo_portrait'] = $dt['url_outlet_image_logo_portrait'];
+                $list[$key]['outlet_image_logo_landscape'] = $dt['url_outlet_image_logo_landscape'];
+                unset($list[$key]['url_outlet_image_logo_landscape']);
+                unset($list[$key]['url_outlet_image_logo_portrait']);
+                unset($list[$key]['url_outlet_image_cover']);
+                unset($list[$key]['call']);
+                unset($list[$key]['url']);
+            }
+        }
+
+        return response()->json(MyHelper::checkGet($list));
+    }
+
+    public function outletMerchantStorePage(){
+        $topList = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
+                ->where('outlet_status', 'Active')
+                ->where('merchant_status', 'Active')->orderBy('merchant_count_transaction', 'desc')->limit(10)->get()->toArray();
+
+        $top = [];
+        $idTop = [];
+        foreach ($topList as $dt){
+            $idTop[] = $dt['id_outlet'];
+            $top[] = [
+                'id_outlet' => $dt['id_outlet'],
+                'id_merchant' => $dt['id_merchant'],
+                'outlet_image_logo_landscape' => $dt['url_outlet_image_logo_portrait'],
+                'outlet_image_logo_portrait' => $dt['url_outlet_image_logo_portrait']
+            ];
+        }
+
+        $newest = [];
+        $newestList  = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
+            ->where('outlet_status', 'Active')
+            ->where('merchant_status', 'Active')
+            ->whereNotIn('outlets.id_outlet', $idTop)
+            ->orderBy('outlets.created_at', 'desc')->limit(10)->get()->toArray();
+
+        foreach ($newestList as $dt){
+            $newest[] = [
+                'id_outlet' => $dt['id_outlet'],
+                'id_merchant' => $dt['id_merchant'],
+                'outlet_image_logo_landscape' => $dt['url_outlet_image_logo_portrait'],
+                'outlet_image_logo_portrait' => $dt['url_outlet_image_logo_portrait']
+            ];
+        }
+
+        $result = [
+            'top_outlet' => $top,
+            'newest_outlet' => $newest
+        ];
+
+        return response()->json(MyHelper::checkGet($result));
+    }
 }

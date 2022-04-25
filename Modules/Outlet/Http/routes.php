@@ -1,7 +1,7 @@
 <?php
 Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth:api', 'user_agent', 'scopes:apps'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
-    Route::any('list', 'ApiOutletController@listOutlet');
+    Route::any('list', 'ApiOutletController@outletMerchantList');
     Route::any('list/simple', 'ApiOutletController@listOutletSimple');
     Route::any('list/ordernow', 'ApiOutletController@listOutletOrderNow');
     Route::any('list/gofood', 'ApiOutletGofoodController@listOutletGofood');
@@ -22,7 +22,8 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::any('filter/geolocation', 'ApiOutletController@filterGeolocation');
     Route::any('sync', 'ApiSyncOutletController@sync');//SYNC
 
-    Route::post('detail', 'ApiOutletController@detailOutletMerchant');
+    Route::post('detail', 'ApiOutletController@outletMerchantStorePage');
+    Route::get('store-page', 'ApiOutletController@outletMerchantStorePage');
 });
 
 //Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth_client'],'namespace' => 'Modules\Outlet\Http\Controllers'], function()
