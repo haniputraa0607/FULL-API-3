@@ -3322,7 +3322,7 @@ class FeaturesTableSeeder extends Seeder
                 ),
             332 =>
                 array(
-                    'id_feature' => 332,
+                    'id_feature' => 333,
                     'feature_type' => 'Create',
                     'feature_module' => 'Doctor Clinic',
                     'show_hide' => 1,
