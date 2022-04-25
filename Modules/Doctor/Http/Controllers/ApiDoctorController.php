@@ -116,7 +116,9 @@ class ApiDoctorController extends Controller
                 //set password
                 if ($post['pin'] == null) {
                     $pin = MyHelper::createRandomPIN(6, 'angka');
-                    $pin = '777777';
+                    if(env('APP_ENV') != "production"){
+                        $pin = '777777';
+                    }
                 } else {
                     $pin = $post['pin'];
                 }
@@ -141,49 +143,50 @@ class ApiDoctorController extends Controller
             DB::commit();
             return response()->json(['status'  => 'success', 'result' => ['id_doctor' => $post['id_doctor']]]);
         } else {
-            //upload photo id
-            if (isset($post['doctor_photo'])) {
-                $upload = MyHelper::uploadPhotoStrict($post['doctor_photo'], $path = 'img/doctor/', 300, 300);
-                if ($upload['status'] == "success") {
-                    $post['doctor_photo'] = $upload['path'];
-                } else {
-                    $result = [
-                        'status'    => 'fail',
-                        'messages'    => ['fail upload image']
-                    ];
-                    return response()->json($result);
-                }
-            }
-
-            //set active
-            if (isset($post['is_active'])) { 
-                if($post['is_active'] == "on") {
-                    $post['is_active'] = 1;
-                } else {
-                    $post['is_active'] = 0;
-                }
-            }
-
-            //set password
-            if ($post['pin'] == null) {
-                $pin = MyHelper::createRandomPIN(6, 'angka');
-                $pin = '777777';
-            } else {
-                $pin = $post['pin'];
-            }
-            unset($post['pin']);
-    
-            $post['password'] = bcrypt($pin);
-
-            //get specialist id
-            $specialist_id = $post['doctor_specialist'];
-
-            unset($post['doctor_specialist']);
-            
-            $save = Doctor::create($post);
-            $specialist = $save->specialists()->attach($specialist_id);
             try {
+                //upload photo id
+                if (isset($post['doctor_photo'])) {
+                    $upload = MyHelper::uploadPhotoStrict($post['doctor_photo'], $path = 'img/doctor/', 300, 300);
+                    if ($upload['status'] == "success") {
+                        $post['doctor_photo'] = $upload['path'];
+                    } else {
+                        $result = [
+                            'status'    => 'fail',
+                            'messages'    => ['fail upload image']
+                        ];
+                        return response()->json($result);
+                    }
+                }
+
+                //set active
+                if (isset($post['is_active'])) { 
+                    if($post['is_active'] == "on") {
+                        $post['is_active'] = 1;
+                    } else {
+                        $post['is_active'] = 0;
+                    }
+                }
+
+                //set password
+                if ($post['pin'] == null) {
+                    $pin = MyHelper::createRandomPIN(6, 'angka');
+                    if(env('APP_ENV') != "production"){
+                        $pin = '777777';
+                    }
+                } else {
+                    $pin = $post['pin'];
+                }
+                unset($post['pin']);
+        
+                $post['password'] = bcrypt($pin);
+
+                //get specialist id
+                $specialist_id = $post['doctor_specialist'];
+
+                unset($post['doctor_specialist']);
                 
+                $save = Doctor::create($post);
+                $specialist = $save->specialists()->attach($specialist_id);
             } catch (\Exception $e) {
                 $result = [
                     'status'  => 'fail',

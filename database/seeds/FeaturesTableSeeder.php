@@ -3270,6 +3270,166 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
                 ),
+            327 =>
+                array(
+                    'id_feature' => 328,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Doctor',
+                    'show_hide' => 1,
+                    'order' => 122,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            328 =>
+                array(
+                    'id_feature' => 329,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Doctor',
+                    'show_hide' => 1,
+                    'order' => 122,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            329 =>
+                array(
+                    'id_feature' => 330,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Doctor',
+                    'show_hide' => 1,
+                    'order' => 122,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            330 =>
+                array(
+                    'id_feature' => 331,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Doctor',
+                    'show_hide' => 1,
+                    'order' => 122,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            331 =>
+                array(
+                    'id_feature' => 332,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Doctor Clinic',
+                    'show_hide' => 1,
+                    'order' => 123,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            332 =>
+                array(
+                    'id_feature' => 332,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Doctor Clinic',
+                    'show_hide' => 1,
+                    'order' => 123,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            333 =>
+                array(
+                    'id_feature' => 334,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Doctor Clinic',
+                    'show_hide' => 1,
+                    'order' => 123,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            334 =>
+                array(
+                    'id_feature' => 335,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Doctor Clinic',
+                    'show_hide' => 1,
+                    'order' => 123,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            335 =>
+                array(
+                    'id_feature' => 336,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Doctor Specialist',
+                    'show_hide' => 1,
+                    'order' => 123,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            336 =>
+                array(
+                    'id_feature' => 337,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Doctor Specialist',
+                    'show_hide' => 1,
+                    'order' => 123,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            337 =>
+                array(
+                    'id_feature' => 338,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Doctor Specialist',
+                    'show_hide' => 1,
+                    'order' => 123,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            338 =>
+                array(
+                    'id_feature' => 339,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Doctor Specialist',
+                    'show_hide' => 1,
+                    'order' => 123,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            339 =>
+                array(
+                    'id_feature' => 340,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Doctor Specialist Category',
+                    'show_hide' => 1,
+                    'order' => 124,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            340 =>
+                array(
+                    'id_feature' => 341,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Doctor Specialist Category',
+                    'show_hide' => 1,
+                    'order' => 124,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            341 =>
+                array(
+                    'id_feature' => 342,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Doctor Specialist Category',
+                    'show_hide' => 1,
+                    'order' => 124,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            342 =>
+                array(
+                    'id_feature' => 343,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Doctor Specialist Category',
+                    'show_hide' => 1,
+                    'order' => 124,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
         );
 
         foreach ($rows as $row) {
