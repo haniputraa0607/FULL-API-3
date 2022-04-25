@@ -3356,7 +3356,7 @@ class FeaturesTableSeeder extends Seeder
                     'feature_type' => 'List',
                     'feature_module' => 'Doctor Specialist',
                     'show_hide' => 1,
-                    'order' => 123,
+                    'order' => 124,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
                 ),
@@ -3366,7 +3366,7 @@ class FeaturesTableSeeder extends Seeder
                     'feature_type' => 'Create',
                     'feature_module' => 'Doctor Specialist',
                     'show_hide' => 1,
-                    'order' => 123,
+                    'order' => 124,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
                 ),
@@ -3376,7 +3376,7 @@ class FeaturesTableSeeder extends Seeder
                     'feature_type' => 'Update',
                     'feature_module' => 'Doctor Specialist',
                     'show_hide' => 1,
-                    'order' => 123,
+                    'order' => 124,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
                 ),
@@ -3386,7 +3386,7 @@ class FeaturesTableSeeder extends Seeder
                     'feature_type' => 'Delete',
                     'feature_module' => 'Doctor Specialist',
                     'show_hide' => 1,
-                    'order' => 123,
+                    'order' => 124,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
                 ),
@@ -3396,7 +3396,7 @@ class FeaturesTableSeeder extends Seeder
                     'feature_type' => 'List',
                     'feature_module' => 'Doctor Specialist Category',
                     'show_hide' => 1,
-                    'order' => 124,
+                    'order' => 125,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
                 ),
@@ -3406,7 +3406,7 @@ class FeaturesTableSeeder extends Seeder
                     'feature_type' => 'Create',
                     'feature_module' => 'Doctor Specialist Category',
                     'show_hide' => 1,
-                    'order' => 124,
+                    'order' => 125,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
                 ),
@@ -3416,7 +3416,7 @@ class FeaturesTableSeeder extends Seeder
                     'feature_type' => 'Update',
                     'feature_module' => 'Doctor Specialist Category',
                     'show_hide' => 1,
-                    'order' => 124,
+                    'order' => 125,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
                 ),
@@ -3426,7 +3426,47 @@ class FeaturesTableSeeder extends Seeder
                     'feature_type' => 'Delete',
                     'feature_module' => 'Doctor Specialist Category',
                     'show_hide' => 1,
-                    'order' => 124,
+                    'order' => 125,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            343 =>
+                array(
+                    'id_feature' => 344,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Doctor Service',
+                    'show_hide' => 1,
+                    'order' => 126,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            344 =>
+                array(
+                    'id_feature' => 345,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Doctor Service',
+                    'show_hide' => 1,
+                    'order' => 126,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            345 =>
+                array(
+                    'id_feature' => 346,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Doctor Service',
+                    'show_hide' => 1,
+                    'order' => 126,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+            346 =>
+                array(
+                    'id_feature' => 347,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Doctor Service',
+                    'show_hide' => 1,
+                    'order' => 126,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
                 ),
