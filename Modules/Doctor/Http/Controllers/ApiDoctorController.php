@@ -116,7 +116,9 @@ class ApiDoctorController extends Controller
                 //set password
                 if ($post['pin'] == null) {
                     $pin = MyHelper::createRandomPIN(6, 'angka');
-                    $pin = '777777';
+                    if(env('APP_ENV') != "production"){
+                        $pin = '777777';
+                    }
                 } else {
                     $pin = $post['pin'];
                 }
@@ -168,7 +170,9 @@ class ApiDoctorController extends Controller
                 //set password
                 if ($post['pin'] == null) {
                     $pin = MyHelper::createRandomPIN(6, 'angka');
-                    $pin = '777777';
+                    if(env('APP_ENV') != "production"){
+                        $pin = '777777';
+                    }
                 } else {
                     $pin = $post['pin'];
                 }
