@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\POS\Http\Requests;
+namespace Modules\POS\Http\Requests\Quinos;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;

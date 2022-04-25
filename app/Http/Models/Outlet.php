@@ -120,7 +120,7 @@ class Outlet extends Authenticatable
 
     public function getUrlOutletImageLogoPortraitAttribute() {
         if (empty($this->url_outlet_image_logo_portrait)) {
-            return config('url.storage_url_api').'img/default.jpg';
+            return 'img/default.jpg';
         }
         else {
             return config('url.storage_url_api').$this->url_outlet_image_logo_portrait;
