@@ -86,7 +86,18 @@ class ApiBrandController extends Controller
             }
 
             try {
+                $defaultBrand = $post['default_brand_status']??null;
+                unset($post['default_brand_status']);
+
                 Brand::where('id_brand', $post['id_brand'])->update($post);
+
+                $checkSetting = Setting::where('key', 'default_brand')->first()['value']??null;
+                if(!empty($defaultBrand)){
+                    $default = $post['id_brand'];
+                    Setting::updateOrCreate(['key' => 'default_brand'], ['value' => $default]);
+                }elseif(empty($defaultBrand) && $checkSetting == $post['id_brand']){
+                    Setting::updateOrCreate(['key' => 'default_brand'], ['value' => null]);
+                }
             } catch (\Exception $e) {
                 $result = [
                     'status'  => 'fail',
@@ -103,7 +114,14 @@ class ApiBrandController extends Controller
                 'code_brand'    => 'required'
             ]);
             try {
+                $defaultBrand = $post['default_brand_status']??null;
+                unset($post['default_brand_status']);
+
                 $save = Brand::create($post);
+
+                if(!empty($defaultBrand)){
+                    Setting::updateOrCreate(['key' => 'default_brand'], ['value' => $save['id_brand']]);
+                }
             } catch (\Exception $e) {
                 $result = [
                     'status'  => 'fail',
@@ -135,7 +153,8 @@ class ApiBrandController extends Controller
         ->where('id_brand', $post['id_brand'])->get()->first();
 
         $getBrand['brand_deal'] = Deal::where('id_brand', $post['id_brand'])->get()->toArray();
-
+        $default = Setting::where('key', 'default_brand')->first()['value']??NULL;
+        $getBrand['default_brand_status'] = ($default == $post['id_brand'] ? 1 : 0);
         return response()->json(['status'  => 'success', 'result' => $getBrand]);
     }
 
@@ -362,5 +381,10 @@ class ApiBrandController extends Controller
     public function switchVisibility(Request $request){
         $save=Brand::where('id_brand',$request->json('id_brand'))->update(['brand_visibility'=>$request->json('brand_visibility')=="true"?1:0]);
         return MyHelper::checkUpdate($save);
+    }
+
+    public function defaultBrand(){
+        $value =  Setting::where('key', 'default_brand')->first()['value']??null;
+        return MyHelper::checkGet($value);
     }
 }
