@@ -11,6 +11,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Http\Models\Setting;
 use App\Lib\MyHelper;
+use Modules\Brand\Entities\BrandProduct;
 use Modules\Merchant\Entities\Merchant;
 use Modules\Merchant\Http\Requests\MerchantCreateStep1;
 use Modules\Merchant\Http\Requests\MerchantCreateStep2;
@@ -356,6 +357,11 @@ class ApiMerchantManagementController extends Controller
         }
         $idProduct = $create['id_product'];
 
+        $defaultBrand = Setting::where('key', 'default_brand')->first()['value']??null;
+        if(!empty($defaultBrand)){
+            BrandProduct::create(['id_product' => $idProduct, 'id_brand' => $defaultBrand]);
+        }
+
         $img = [];
         if(!empty($post['image'])){
             $image = $post['image'];
@@ -533,6 +539,14 @@ class ApiMerchantManagementController extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan product']]);
             }
             $idProduct = $post['id_product'];
+
+            $checkBrand = BrandProduct::where('id_product', $idProduct)->first();
+            if(empty($checkBrand)){
+                $defaultBrand = Setting::where('key', 'default_brand')->first()['value']??null;
+                if(!empty($defaultBrand)){
+                    BrandProduct::create(['id_product' => $idProduct, 'id_brand' => $defaultBrand]);
+                }
+            }
 
             $stockProduct = $post['stock']??0;
             ProductDetail::where('id_product', $idProduct)->where('id_outlet', $outlet['id_outlet'])->update([

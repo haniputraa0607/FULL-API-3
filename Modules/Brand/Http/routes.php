@@ -24,6 +24,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
     Route::post('product/store', 'ApiBrandController@productStore');
 
     Route::post('sync', 'ApiSyncBrandController@syncBrand');
+    Route::get('default', 'ApiBrandController@defaultBrand');
 });
 
 Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'api/brand', 'namespace' => 'Modules\Brand\Http\Controllers'], function () {
