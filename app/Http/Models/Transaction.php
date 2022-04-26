@@ -291,4 +291,297 @@ class Transaction extends Model
         return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet')
             ->join('cities','cities.id_city','outlets.id_city');
     }
+
+    /**
+     * Called when payment completed
+     * @return [type] [description]
+     */
+    public function triggerPaymentCompleted($data = [])
+    {
+    	\DB::beginTransaction();
+    	// check complete allowed
+    	if ($this->transaction_payment_status != 'Pending') {
+    		return $this->transaction_payment_status == 'Completed';
+    	}
+    	// update transaction status
+    	if ($this->transaction_from != 'academy') {
+	    	$this->update([
+	    		'transaction_payment_status' => 'Completed', 
+	    		'completed_at' => date('Y-m-d H:i:s')
+	    	]);
+    	}
+
+    	// trigger payment complete -> service
+    	switch ($this->trasaction_type) {
+    		case 'Pickup Order':
+    			$this->transaction_pickup->triggerPaymentCompleted($data);
+    			break;
+
+    	}
+
+    	// check fraud
+    	if ($this->user) {
+	    	$this->user->update([
+	            'count_transaction_day' => $this->user->count_transaction_day + 1,
+	            'count_transaction_week' => $this->user->count_transaction_week + 1,
+	    	]);
+
+	    	$config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->value('is_active');
+
+	        if($config_fraud_use_queue == 1){
+	            FraudJob::dispatch($this->user, $this, 'transaction')->onConnection('fraudqueue');
+	        }else {
+	            $checkFraud = app('\Modules\SettingFraud\Http\Controllers\ApiFraud')->checkFraudTrxOnline($this->user, $this);
+	        }
+    	}
+
+    	// send notification
+        $trx = clone $this;
+        $mid = [
+            'order_id'     => $trx->transaction_receipt_number,
+            'gross_amount' => $trx->transaction_multiple_payment->where('type', '<>', 'Balance')->sum(),
+        ];
+        $trx->load('outlet');
+        $trx->load('productTransaction');
+
+        $trx->productTransaction->each(function($transaction_product,$index){
+            $transaction_product->breakdown();
+        });
+
+        app('\Modules\Transaction\Http\Controllers\ApiNotification')->notification($mid, $trx);
+
+        \DB::commit();
+    	return true;
+    }
+
+    /**
+     * Called when payment completed
+     * @return [type] [description]
+     */
+    public function triggerPaymentCompletedFromCancelled($data = [])
+    {
+        \DB::beginTransaction();
+        // check complete allowed
+        if ($this->transaction_payment_status == 'Pending' || $this->transaction_payment_status == 'Completed') {
+            return false;
+        }
+
+        $this->update([
+            'transaction_payment_status' => 'Completed',
+            'completed_at' => date('Y-m-d H:i:s'),
+            'void_date' => null
+        ]);
+
+        // trigger payment complete -> service
+    	switch ($this->trasaction_type) {
+    		case 'Pickup Order':
+                $this->transaction_pickup->triggerPaymentCompleted($data);
+                break;
+        }
+
+        // check fraud
+        if ($this->user) {
+            $this->user->update([
+                'count_transaction_day' => $this->user->count_transaction_day + 1,
+                'count_transaction_week' => $this->user->count_transaction_week + 1,
+            ]);
+
+            $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->value('is_active');
+
+            if($config_fraud_use_queue == 1){
+                FraudJob::dispatch($this->user, $this, 'transaction')->onConnection('fraudqueue');
+            }else {
+                $checkFraud = app('\Modules\SettingFraud\Http\Controllers\ApiFraud')->checkFraudTrxOnline($this->user, $this);
+            }
+        }
+
+        $trx = clone $this;
+        $checkPromo = TransactionPromo::where('id_transaction', $trx['id_transaction'])->get()->toArray();
+
+        foreach ($checkPromo as $val){
+            if(!empty($val['id_deals_user'])){
+                $idDeals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', 'deals_users.id_deals_voucher')
+                            ->where('id_deals_user', $val['id_deals_user'])->select('deals_vouchers.id_deals')->first()['id_deals']??null;
+                app('\Modules\Transaction\Http\Controllers\ApiPromoTransaction')->insertUsedVoucher($trx, [
+                   'id_deals_user' => $val['id_deals_user'],
+                   'id_deals' => $idDeals
+                ]);
+            }elseif(!empty($val['id_promo_campaign_promo_code'])){
+                $user = User::where('id', $trx['id_user'])->first();
+                $idPromoCampaignCode = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $val['id_promo_campaign_promo_code'])->first()['id_promo_campaign']??null;
+                app('\Modules\Transaction\Http\Controllers\ApiPromoTransaction')->insertUsedCode($trx, [
+                    'id_promo_campaign' => $idPromoCampaignCode,
+                    'id_promo_campaign_promo_code' => $val['id_promo_campaign_promo_code'],
+                    'id_user' => $user['id'],
+                    'user_name' => $user['name'],
+                    'user_phone' => $user['phone']
+                ], 1);
+            }
+        }
+
+        if($trx['transaction_from'] == 'outlet-service' || $trx['transaction_from'] == 'shop'){
+            app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->bookHS($trx['id_transaction']);
+            app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->bookProductStock($trx['id_transaction']);
+        }
+
+        // send notification
+        $mid = [
+            'order_id'     => $trx->transaction_receipt_number,
+            'gross_amount' => $trx->transaction_multiple_payment->where('type', '<>', 'Balance')->sum(),
+        ];
+        $trx->load('outlet');
+        $trx->load('productTransaction');
+
+        $trx->productTransaction->each(function($transaction_product,$index){
+            $transaction_product->breakdown();
+        });
+
+        app('\Modules\Transaction\Http\Controllers\ApiNotification')->notification($mid, $trx);
+
+        \DB::commit();
+        return true;
+    }
+
+    /**
+     * Called when payment completed
+     * @return [type] [description]
+     */
+    public function triggerPaymentCancelled($data = [])
+    {
+    	\DB::beginTransaction();
+    	// check complete allowed
+    	if ($this->transaction_payment_status != 'Pending') {
+    		return $this->transaction_payment_status == 'Completed';
+    	}
+
+    	// update transaction payment cancelled
+    	$this->update([
+    		'transaction_payment_status' => 'Cancelled', 
+    		'void_date' => date('Y-m-d H:i:s')
+    	]);
+		MyHelper::updateFlagTransactionOnline($this, 'cancel', $this->user);
+
+        //reversal balance
+        $logBalance = LogBalance::where('id_reference', $this->id_transaction)->whereIn('source', ['Online Transaction', 'Transaction'])->where('balance', '<', 0)->get();
+        foreach($logBalance as $logB){
+            $reversal = app('\Modules\Balance\Http\Controllers\BalanceController')->addLogBalance( $this->id_user, abs($logB['balance']), $this->id_transaction, 'Reversal', $this->transaction_grandtotal);
+            if (!$reversal) {
+            	\DB::rollBack();
+            	return false;
+            }
+            $user = User::where('id', $this->id_user)->first();
+            $send = app('\Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Transaction Failed Point Refund', $this->user->phone,
+                [
+                    "outlet_name"       => $this->outlet_name->outlet_name,
+                    "transaction_date"  => $this->transaction_date,
+                    'id_transaction'    => $this->id_transaction,
+                    'receipt_number'    => $this->transaction_receipt_number,
+                    'received_point'    => (string) abs($logB['balance']),
+                    'order_id'          => $this->order_id,
+                ]
+            );
+        }
+
+        // restore promo status
+        if ($this->id_promo_campaign_promo_code) {
+	        // delete promo campaign report
+        	$update_promo_report = app('\Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign')->deleteReport($this->id_transaction, $this->id_promo_campaign_promo_code);
+        	if (!$update_promo_report) {
+            	\DB::rollBack();
+            	return false;
+            }	
+        }
+
+        // return voucher
+        $update_voucher = app('\Modules\Deals\Http\Controllers\ApiDealsVoucher')->returnVoucher($this->id_transaction);
+
+        // return subscription
+        $update_subscription = app('\Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher')->returnSubscription($this->id_transaction);
+
+    	// trigger payment cancelled -> service
+    	switch ($this->trasaction_type) {
+    		case 'Pickup Order':
+    			$this->transaction_pickup->triggerPaymentCancelled($data);
+    			break;
+    	}
+
+        if($this->transaction_from == 'outlet-service' || $this->transaction_from == 'shop') {
+            app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->cancelBookProductStock($this->id_transaction);
+        }
+
+    	// send notification
+    	// TODO write notification logic here
+    	app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM(
+        	'Transaction Expired', 
+        	$this->user->phone, 
+        	[
+	            'date' => $this->transaction_date,
+            	'outlet_name' => $this->outlet['outlet_name'],
+            	'detail' => $detail ?? null,
+            	'receipt_number' => $this->transaction_receipt_number
+	        ]
+	    );
+
+    	\DB::commit();
+    	return true;
+    }
+
+    public function triggerReject($data = [])
+    {
+    	\DB::beginTransaction();
+
+    	if ($this->reject_at) {
+    		return true;
+    	}
+
+    	$this->update([
+    		'reject_at' => date('Y-m-d H:i:s'),
+    		'reject_reason' => $data['reject_reason'] ?? null
+    	]);
+
+    	$refundPayment = app('\Modules\OutletApp\Http\Controllers\ApiOutletApp')->refundPayment($this);
+    	if (empty($refundPayment['status']) || $refundPayment['status'] != 'success') {
+        	\DB::rollBack();
+        	return false;
+        }	
+
+    	// restore promo status
+        if ($this->id_promo_campaign_promo_code) {
+	        // delete promo campaign report
+        	$update_promo_report = app('\Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign')->deleteReport($this->id_transaction, $this->id_promo_campaign_promo_code);
+        	if (!$update_promo_report) {
+            	\DB::rollBack();
+            	return false;
+            }	
+        }
+
+        // return voucher
+        $update_voucher = app('\Modules\Deals\Http\Controllers\ApiDealsVoucher')->returnVoucher($this->id_transaction);
+
+        // return subscription
+        $update_subscription = app('\Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher')->returnSubscription($this->id_transaction);
+
+        // trigger reject -> service
+    	switch ($this->trasaction_type) {
+    		case 'outlet-service':
+    			$this->transaction_pickup->triggerRejectOutletService($data);
+    			break;
+    	}
+
+    	// send notification
+    	// TODO write notification logic here
+    	app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM(
+        	'Transaction Rejected', 
+        	$this->user->phone, 
+        	[
+	            'date' => $this->transaction_date,
+            	'outlet_name' => $this->outlet['outlet_name'],
+            	'detail' => $detail ?? null,
+            	'receipt_number' => $this->transaction_receipt_number
+	        ]
+	    );
+
+    	\DB::commit();
+    	return true;
+    }
 }

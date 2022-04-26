@@ -4,7 +4,7 @@ namespace App\Http\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class TransactionPickup extends Model
+class TransactionPickup extends \App\Http\Models\Template\TransactionService
 {
     protected $primaryKey = 'id_transaction_pickup';
 
