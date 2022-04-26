@@ -79,6 +79,33 @@ class ApiDoctorController extends Controller
     }
 
     /**
+     * Display a listing of the resource.
+     * @return Response
+     */
+    public function listDoctor(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $doctor = Doctor::with('clinic')->with('specialists')->orderBy('created_at', 'DESC');
+
+        if(isset($post['id_doctor_specialist_category'])){
+            $doctor->whereHas('specialists', function($query) use ($post) {
+                $query->whereHas('category', function($query2) use ($post) {
+                    $query2->where('id_doctor_specialist_category', $post['id_doctor_specialist_category']);
+                });
+             });
+        }
+
+        if($request['page']) {
+            $doctor = $doctor->paginate($post['length'] ?: 10);
+        } else {
+            $doctor = $doctor->get()->toArray();
+        }
+
+        return response()->json(['status'  => 'success', 'result' => $doctor]);
+    }
+
+    /**
      * Store a newly created resource in storage.
      * @param Request $request
      * @return Response
