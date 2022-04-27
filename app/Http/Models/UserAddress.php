@@ -47,7 +47,8 @@ class UserAddress extends Model
 		'latitude',
 		'longitude',
 		'favorite',
-		'type'
+		'type',
+        'main_address'
 	];
 
 	public function city()
