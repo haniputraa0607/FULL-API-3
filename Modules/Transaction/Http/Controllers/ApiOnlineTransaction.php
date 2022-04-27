@@ -2148,11 +2148,17 @@ class ApiOnlineTransaction extends Controller
         $availableDelivery =  $this->listAvailableDelivery(new Request([]))['result']['delivery']??[];
         $currentBalance = LogBalance::where('id_user', $user->id)->sum('balance');
         $summaryOrder = [
-            'subtotal' => 'Rp '.$subtotal,
-            'delivery_price' => 'Rp 0',
-            'discount' => [
-                'discount_name' => '',
-                'discount' => (empty($discount) ? '-' : $discount)
+            [
+                'name' => 'Subtotal',
+                'value' => 'Rp '.$subtotal
+            ],
+            [
+                'name' => 'Biaya Kirim',
+                'value' => 'Rp 0'
+            ],
+            [
+                'name' => 'Diskon',
+                'value' => (empty($discount) ? '-' : 'Rp '.number_format((int)$discount,0,",","."))
             ]
         ];
         $grandTotal = $subtotal;
