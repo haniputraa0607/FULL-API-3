@@ -17,7 +17,7 @@ class ConfirmPayment extends FormRequest
     {
         return [
             'payment_type'             => 'required|in:Midtrans,Manual,Balance,Ovo,Ipay88,Shopeepay',
-            'id'                       => 'required|string',
+            'id'                       => 'required',
             'id_manual_payment_method' => 'nullable|integer',
             'id_bank_method'           => 'required_if:payment_type,Manual|integer',
             'id_bank'                  => 'required_if:payment_type,Manual|integer',

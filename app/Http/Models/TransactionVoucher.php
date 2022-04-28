@@ -33,6 +33,7 @@ class TransactionVoucher extends Model
 
 	protected $fillable = [
 		'id_transaction',
+        'id_transaction_group',
 		'id_deals_voucher',
         'deals_voucher_invalid'
 	];

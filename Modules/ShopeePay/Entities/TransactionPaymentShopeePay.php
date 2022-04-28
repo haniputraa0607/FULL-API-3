@@ -9,6 +9,7 @@ class TransactionPaymentShopeePay extends Model
     public $primaryKey  = 'id_transaction_payment_shopee_pay';
     protected $fillable = [
         'id_transaction',
+        'id_transaction_group',
     	'request_id',
     	'payment_reference_id',
     	'merchant_ext_id',

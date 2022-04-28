@@ -8,6 +8,8 @@
 namespace App\Http\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Jobs\FraudJob;
+use App\Lib\MyHelper;
 
 /**
  * Class Transaction
@@ -59,6 +61,7 @@ class Transaction extends Model
 	];
 
 	protected $fillable = [
+	    'id_transaction_group',
 		'id_user',
 		'id_outlet',
 		'id_promo_campaign_promo_code',
@@ -303,13 +306,11 @@ class Transaction extends Model
     	if ($this->transaction_payment_status != 'Pending') {
     		return $this->transaction_payment_status == 'Completed';
     	}
-    	// update transaction status
-    	if ($this->transaction_from != 'academy') {
-	    	$this->update([
-	    		'transaction_payment_status' => 'Completed', 
-	    		'completed_at' => date('Y-m-d H:i:s')
-	    	]);
-    	}
+
+        $this->update([
+            'transaction_payment_status' => 'Completed',
+            'completed_at' => date('Y-m-d H:i:s')
+        ]);
 
     	// trigger payment complete -> service
     	switch ($this->trasaction_type) {
@@ -344,102 +345,10 @@ class Transaction extends Model
         $trx->load('outlet');
         $trx->load('productTransaction');
 
-        $trx->productTransaction->each(function($transaction_product,$index){
-            $transaction_product->breakdown();
-        });
-
-        app('\Modules\Transaction\Http\Controllers\ApiNotification')->notification($mid, $trx);
+        //app('\Modules\Transaction\Http\Controllers\ApiNotification')->notification($mid, $trx);
 
         \DB::commit();
     	return true;
-    }
-
-    /**
-     * Called when payment completed
-     * @return [type] [description]
-     */
-    public function triggerPaymentCompletedFromCancelled($data = [])
-    {
-        \DB::beginTransaction();
-        // check complete allowed
-        if ($this->transaction_payment_status == 'Pending' || $this->transaction_payment_status == 'Completed') {
-            return false;
-        }
-
-        $this->update([
-            'transaction_payment_status' => 'Completed',
-            'completed_at' => date('Y-m-d H:i:s'),
-            'void_date' => null
-        ]);
-
-        // trigger payment complete -> service
-    	switch ($this->trasaction_type) {
-    		case 'Pickup Order':
-                $this->transaction_pickup->triggerPaymentCompleted($data);
-                break;
-        }
-
-        // check fraud
-        if ($this->user) {
-            $this->user->update([
-                'count_transaction_day' => $this->user->count_transaction_day + 1,
-                'count_transaction_week' => $this->user->count_transaction_week + 1,
-            ]);
-
-            $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->value('is_active');
-
-            if($config_fraud_use_queue == 1){
-                FraudJob::dispatch($this->user, $this, 'transaction')->onConnection('fraudqueue');
-            }else {
-                $checkFraud = app('\Modules\SettingFraud\Http\Controllers\ApiFraud')->checkFraudTrxOnline($this->user, $this);
-            }
-        }
-
-        $trx = clone $this;
-        $checkPromo = TransactionPromo::where('id_transaction', $trx['id_transaction'])->get()->toArray();
-
-        foreach ($checkPromo as $val){
-            if(!empty($val['id_deals_user'])){
-                $idDeals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', 'deals_users.id_deals_voucher')
-                            ->where('id_deals_user', $val['id_deals_user'])->select('deals_vouchers.id_deals')->first()['id_deals']??null;
-                app('\Modules\Transaction\Http\Controllers\ApiPromoTransaction')->insertUsedVoucher($trx, [
-                   'id_deals_user' => $val['id_deals_user'],
-                   'id_deals' => $idDeals
-                ]);
-            }elseif(!empty($val['id_promo_campaign_promo_code'])){
-                $user = User::where('id', $trx['id_user'])->first();
-                $idPromoCampaignCode = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $val['id_promo_campaign_promo_code'])->first()['id_promo_campaign']??null;
-                app('\Modules\Transaction\Http\Controllers\ApiPromoTransaction')->insertUsedCode($trx, [
-                    'id_promo_campaign' => $idPromoCampaignCode,
-                    'id_promo_campaign_promo_code' => $val['id_promo_campaign_promo_code'],
-                    'id_user' => $user['id'],
-                    'user_name' => $user['name'],
-                    'user_phone' => $user['phone']
-                ], 1);
-            }
-        }
-
-        if($trx['transaction_from'] == 'outlet-service' || $trx['transaction_from'] == 'shop'){
-            app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->bookHS($trx['id_transaction']);
-            app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->bookProductStock($trx['id_transaction']);
-        }
-
-        // send notification
-        $mid = [
-            'order_id'     => $trx->transaction_receipt_number,
-            'gross_amount' => $trx->transaction_multiple_payment->where('type', '<>', 'Balance')->sum(),
-        ];
-        $trx->load('outlet');
-        $trx->load('productTransaction');
-
-        $trx->productTransaction->each(function($transaction_product,$index){
-            $transaction_product->breakdown();
-        });
-
-        app('\Modules\Transaction\Http\Controllers\ApiNotification')->notification($mid, $trx);
-
-        \DB::commit();
-        return true;
     }
 
     /**
@@ -505,9 +414,7 @@ class Transaction extends Model
     			break;
     	}
 
-        if($this->transaction_from == 'outlet-service' || $this->transaction_from == 'shop') {
-            app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->cancelBookProductStock($this->id_transaction);
-        }
+        app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->updateStockProduct($this->id_transaction, 'cancel');
 
     	// send notification
     	// TODO write notification logic here
@@ -560,13 +467,6 @@ class Transaction extends Model
 
         // return subscription
         $update_subscription = app('\Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher')->returnSubscription($this->id_transaction);
-
-        // trigger reject -> service
-    	switch ($this->trasaction_type) {
-    		case 'outlet-service':
-    			$this->transaction_pickup->triggerRejectOutletService($data);
-    			break;
-    	}
 
     	// send notification
     	// TODO write notification logic here

@@ -10,6 +10,7 @@ class TransactionMultiplePayment extends Model
 
 	protected $fillable = [
 		'id_transaction',
+        'id_transaction_group',
 		'type',
 		'id_payment',
 		'created_at',

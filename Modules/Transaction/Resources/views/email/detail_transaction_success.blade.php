@@ -461,52 +461,7 @@ use App\Lib\MyHelper;
                 <div class="col-12 text-right text-black-grey-light text-13-3px WorkSans-SemiBold" style="text-align: right"><b>{{ $data['transaction_receipt_number'] }}</b></div>
             </div>
             <div class="kotak" style="margin: 0px;border-radius: 10px;">
-                @if(!empty($data['product_bundling_transaction']))
-                    <div class="row" style="margin-bottom: 5%;">
-                        <div class="col-12 text-13-3px WorkSans-Medium text-black">
-                            <div class="round-grey bg-grey" style="border: 1px solid #aaaaaa;border-radius: 50%;width: 5px;height: 5px;display: inline-block;margin-right:3px;background-color: #aaaaaa"></div>
-                            {{$data['name_brand_bundling']}}
-                        </div>
-                    </div>
-                @foreach ($data['product_bundling_transaction']??[] as $trx)
-                        <div class="row">
-                            <div class="col-2 text-13-3px WorkSans-SemiBold text-black">{{$trx['bundling_qty']}}x</div>
-                            <div class="col-6 text-14px WorkSans-SemiBold text-black" style="margin-left:-100px;margin-right: 50px;">{{$trx['bundling_name']}}</div>
-                            <div class="col-4 text-13-3px text-right WorkSans-SemiBold text-black">{{$trx['bundling_subtotal']}}</div>
-                        </div>
-                    @foreach ($trx['product'] as $prod)
-                        <div class="row">
-                            <div class="col-2 text-13-3px WorkSans-SemiBold text-black"></div>
-                            <div class="col-10 text-14px WorkSans-SemiBold text-black" style="margin-left:-100px;margin-right: 50px;">{{$prod['product_name']}} {{$prod['product_qty']}}x</div>
-                        </div>
-                        <?php
-                        $modVar = '';
-                        $dataMod = array_column($prod['modifiers'], 'text');
-                        $dataVar = array_column($prod['variants'], 'product_variant_name');
-                        $modVar  = implode(',', array_merge($dataMod,$dataVar));
-                        ?>
-                        @if(!empty($modVar))
-                            <div class="row">
-                                <div class="col-2 text-13-3px WorkSans-SemiBold text-black"></div>
-                                <div class="col-6 text-14px WorkSans-SemiBold text-black" style="margin-left:-100px;margin-right: 50px;color: darkgrey;font-size: 11px;">{{$modVar}}</div>
-                                <div class="col-4 text-13-3px text-right WorkSans-SemiBold text-black"></div>
-                            </div>
-                        @endif
-                        @if(isset($prod['note']))
-                            <div class="row">
-                                <div class="col-2 text-13-3px WorkSans-SemiBold text-black"></div>
-                                <div class="col-6 text-14px WorkSans-SemiBold text-black" style="margin-left:-100px;margin-right: 50px;color: darkgrey;font-size: 11px;">{{$prod['transaction_product_note']}}</div>
-                                <div class="col-4 text-13-3px text-right WorkSans-SemiBold text-black"></div>
-                            </div>
-                        @endif
-                    @endforeach
-                @endforeach
-                    <div class="col-12">
-                        <hr style="border-top: 1px solid #eeeeee;">
-                    </div>
-                @endif
-
-                @foreach ($data['product_transaction']??[] as $trx)
+                @foreach ($data['product_transaction'] as $trx)
                     <div class="row" style="margin-bottom: 5%;">
                         <div class="col-12 text-13-3px WorkSans-Medium text-black">
                             <div class="round-grey bg-grey" style="border: 1px solid #aaaaaa;border-radius: 50%;width: 5px;height: 5px;display: inline-block;margin-right:3px;background-color: #aaaaaa"></div>
@@ -646,6 +601,29 @@ use App\Lib\MyHelper;
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pace/1.0.2/pace.js"></script>
+
+    @if(isset($data['detail']['pickup_by']) && $data['detail']['pickup_by'] == 'GO-SEND')
+
+        <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCOHBNv3Td9_zb_7uW-AJDU6DHFYk-8e9Y&callback=initMap">
+        </script>
+
+        <script>
+            // Initialize and add the map
+            function initMap() {
+                // The location of Uluru
+                var uluru = {lat: parseFloat("{{$data['detail']['transaction_pickup_go_send']['destination_latitude']}}"), lng: parseFloat("{{$data['detail']['transaction_pickup_go_send']['destination_longitude']}}")};
+                // The map, centered at Uluru
+                var map = new google.maps.Map(
+                    document.getElementById('map'), {
+                        zoom: 15,
+                        center: uluru,
+                        disableDefaultUI: true
+                    });
+                // The marker, positioned at Uluru
+                var marker = new google.maps.Marker({position: uluru, map: map});
+            }
+        </script>
+    @endif
 
     <script>
         $(document).ready(function() {
