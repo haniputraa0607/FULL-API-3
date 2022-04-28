@@ -236,4 +236,9 @@ class User extends Authenticatable
     public function quest_user_redemption() {
     	return $this->hasMany(\Modules\Quest\Entities\QuestUserRedemption::class, 'id_user', 'id');
     }
+
+    public function devices()
+    {
+        return $this->hasMany(UserDevice::class, 'id_user');
+    }
 }
