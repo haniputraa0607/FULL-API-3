@@ -1250,4 +1250,13 @@ class ApiLoginRegisterV2 extends Controller
 
         return response()->json($result);
     }
+
+    public function logout(Request $request)
+    {
+        $user = $request->user();
+        $user->devices()->where('device_id', $request->device_id)->delete();
+        return [
+            'status' => 'success'
+        ];
+    }
 }
