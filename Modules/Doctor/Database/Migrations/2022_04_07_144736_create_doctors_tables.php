@@ -18,8 +18,8 @@ class CreateDoctorsTables extends Migration
             $table->string('doctor_name');
             $table->string('doctor_phone');
             $table->string('password');
-            $table->string('id_doctor_clinic');
-            $table->string('doctor_status');
+            $table->integer('id_doctor_clinic');
+            $table->enum('doctor_status', array('offline', 'online', 'busy'))->default('offline');
             $table->string('doctor_session_price');
             $table->string('is_active');
             $table->string('doctor_service');

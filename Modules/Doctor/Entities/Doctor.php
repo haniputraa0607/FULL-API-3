@@ -34,4 +34,9 @@ class Doctor extends Model
     {
         return $this->belongsToMany(DoctorSpecialist::class, 'doctors_specialists_pivots', 'id_doctor', 'id_doctor_specialist');
     }
+
+    public function scopeOnlyActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 }

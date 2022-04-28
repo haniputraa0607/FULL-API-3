@@ -1,0 +1,14 @@
+{
+    "name": "Consultasion",
+    "alias": "consultasion",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Consultasion\\Providers\\ConsultasionServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}
