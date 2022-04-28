@@ -43,11 +43,17 @@ class UserAddress extends Model
 		'id_user',
 		'short_address',
 		'address',
+        'postal_code',
 		'description',
 		'latitude',
 		'longitude',
 		'favorite',
-		'type'
+		'type',
+        'main_address',
+        'id_city',
+        'receiver_name',
+        'receiver_phone',
+        'receiver_email'
 	];
 
 	public function city()
