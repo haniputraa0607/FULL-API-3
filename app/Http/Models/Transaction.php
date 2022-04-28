@@ -584,4 +584,9 @@ class Transaction extends Model
     	\DB::commit();
     	return true;
     }
+
+	public function consultasion()
+    {
+        return $this->belongsTo(\App\Http\Models\TransactionConsultasion::class, 'id_transaction', 'id_transaction');
+    }
 }
