@@ -26,7 +26,6 @@ class MerchantCreateStep2 extends FormRequest
 	public function rules()
 	{
 		return [
-		    'id_merchant'               => 'required|int',
             'merchant_pic_name'         => 'required|string',
             'merchant_pic_id_card_number' => 'required|string',
             'merchant_pic_email'        => 'required|email',
