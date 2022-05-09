@@ -19,7 +19,7 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::get('register/success', 'ApiMerchantController@registerSuccess');
         Route::post('register/submit/step-1', 'ApiMerchantController@registerSubmitStep1');
         Route::post('register/submit/step-2', 'ApiMerchantController@registerSubmitStep2');
-        Route::post('register/detail', 'ApiMerchantController@registerDetail');
+        Route::get('register/detail', 'ApiMerchantController@registerDetail');
 
         Route::group(['prefix' => 'management'], function () {
             Route::post('product/variant/create-combination', 'ApiMerchantManagementController@variantCombination');
