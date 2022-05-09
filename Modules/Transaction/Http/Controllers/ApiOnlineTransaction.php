@@ -188,10 +188,12 @@ class ApiOnlineTransaction extends Controller
         $grandtotal = 0;
         $currentDate = date('Y-m-d H:i:s');
         $paymentType = NULL;
+        $transactionStatus = 'Unpaid';
         $paymentStatus = 'Pending';
         if(isset($post['point_use']) && $post['point_use']){
             $paymentType = 'Balance';
             $paymentStatus = 'Completed';
+            $transactionStatus = 'Pending';
         }
 
         DB::beginTransaction();
@@ -239,6 +241,7 @@ class ApiOnlineTransaction extends Controller
                 'id_user'                     => $user->id,
                 'transaction_date'            => $currentDate,
                 'transaction_receipt_number'  => rand().time().'-'.substr($data['id_outlet'], 0, 4).rand(1000,9999),
+                'transaction_status'          => $transactionStatus,
                 'trasaction_type'             => $transactionType,
                 'transaction_subtotal'        => $data['items_subtotal'],
                 'transaction_gross'  		  => $data['items_subtotal'],

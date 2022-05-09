@@ -2,6 +2,8 @@
 
 namespace Modules\Transaction\Http\Controllers;
 
+use App\Http\Models\ProductPhoto;
+use App\Http\Models\TransactionProduct;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -14,6 +16,7 @@ use App\Http\Models\Configs;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\TransactionPaymentBalance;
+use Modules\ProductVariant\Entities\ProductVariantPivot;
 use Modules\UserFeedback\Entities\UserFeedback;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\PointInjection\Entities\PointInjection;
@@ -1471,4 +1474,94 @@ class ApiHistoryController extends Controller
         return response()->json($result);
     }
     /*============================= End Filter & Sort V2 ================================*/
+
+    public function historyTrxV2(Request $request){
+        $post = $request->json()->all();
+        $idUser = $request->user()->id;
+
+        $filterCode = [
+            1 => 'Reject',
+            2 => 'Unpaid',
+            3 => 'Pending',
+            4 => 'On Progress',
+            5 => 'On Delivery',
+            6 => 'Completed'
+        ];
+
+        $codeIndo = [
+            'Reject' => [
+                'code' => 1,
+                'text' => 'Ditolak'
+            ],
+            'Unpaid' => [
+                'code' => 2,
+                'text' => 'Belum dibayar'
+            ],
+            'Pending' => [
+                'code' => 3,
+                'text' => 'Pending'
+            ],
+            'On Progress' => [
+                'code' => 4,
+                'text' => 'Diproses'
+            ],
+            'On Delivery' => [
+                'code' => 5,
+                'text' => 'Dikirim'
+            ],
+            'Completed' => [
+                'code' => 6,
+                'text' => 'Selesai'
+            ]
+        ];
+
+        $list = Transaction::join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+                ->where('id_user', $idUser)
+                ->orderBy('transaction_date', 'desc');
+
+        if(!empty($post['filter_date'])){
+            $list = $list->whereDate('transaction_date', date('Y-m-d', strtotime($filterCode)));
+        }
+
+        if(!empty($post['filter_status_code']) && !empty($filterCode[$post['filter_status_code']])){
+            $list = $list->where('transaction_status', $filterCode[$post['filter_status_code']]);
+        }
+
+        $list = $list->get()->toArray();
+
+        $resultDate = [];
+        foreach ($list as $value){
+            $trxDate = date('Y-m-d', strtotime($value['transaction_date']));
+            $product = TransactionProduct::where('id_transaction', $value['id_transaction'])
+                            ->join('products', 'products.id_product', 'transaction_products.id_product')->first();
+            $variant = '';
+            if(!empty($product['id_product_variant_group'])){
+                $variant = ProductVariantPivot::join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
+                            ->where('id_product_variant_group', $product['id_product_variant_group'])->pluck('product_variant_name')->toArray();
+                $variant = implode(', ', $variant);
+            }
+
+            $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first()['url_product_photo']??'';
+            $resultDate[$trxDate][] = [
+                'id_transaction' => $value['id_transaction'],
+                'id_transaction_group' => $value['id_transaction_group'],
+                'transaction_status_code' => $codeIndo[$value['transaction_status']]['code']??'',
+                'transaction_status_text' => $codeIndo[$value['transaction_status']]['text']??'',
+                'transaction_grandtotal' => $value['transaction_grandtotal'],
+                'product_name' => $product['product_name'],
+                'product_image' => (empty($image) ? config('url.storage_url_api').'img/default.jpg': $image),
+                'product_variants' => $variant
+            ];
+        }
+
+        $result = [];
+        foreach ($resultDate as $key=>$data){
+            $result[] = [
+                'date' => MyHelper::dateFormatInd($key, false, false),
+                'transactions' => $data
+            ];
+        }
+
+        return response()->json($result);
+    }
 }

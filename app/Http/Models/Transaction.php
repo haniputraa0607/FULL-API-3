@@ -67,6 +67,7 @@ class Transaction extends Model
 		'id_promo_campaign_promo_code',
 		'id_subscription_user_voucher',
 		'transaction_receipt_number',
+        'transaction_status',
 		'transaction_notes',
 		'transaction_subtotal',
         'transaction_gross',
@@ -308,6 +309,7 @@ class Transaction extends Model
     	}
 
         $this->update([
+            'transaction_status' => 'Pending',
             'transaction_payment_status' => 'Completed',
             'completed_at' => date('Y-m-d H:i:s')
         ]);
@@ -365,6 +367,7 @@ class Transaction extends Model
 
     	// update transaction payment cancelled
     	$this->update([
+            'transaction_status' => 'Reject',
     		'transaction_payment_status' => 'Cancelled', 
     		'void_date' => date('Y-m-d H:i:s')
     	]);
@@ -442,6 +445,7 @@ class Transaction extends Model
     	}
 
     	$this->update([
+            'transaction_status' => 'Reject',
     		'reject_at' => date('Y-m-d H:i:s'),
     		'reject_reason' => $data['reject_reason'] ?? null
     	]);
