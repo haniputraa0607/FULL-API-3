@@ -243,21 +243,10 @@ class ApiMerchantController extends Controller
     }
 
     public function registerDetail(Request $request){
-        $post = $request->json()->all();
-
-        if(empty($post['id_merchant'])){
-            return response()->json([
-                'status' => 'fail',
-                'messages' => ['ID can not be empty']
-            ]);
-        }
-
-        $checkData = Merchant::where('id_merchant', $post['id_merchant'])->first();
+        $idUser = $request->user()->id;
+        $checkData = Merchant::where('id_user', $idUser)->first();
         if(empty($checkData)){
-            return response()->json([
-                'status' => 'fail',
-                'messages' => ['Data Toko/Perusahaan tidak ditemukan']
-            ]);
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
         $detail['id_merchant'] = $checkData['id_merchant'];
