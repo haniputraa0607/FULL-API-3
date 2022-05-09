@@ -29,6 +29,7 @@ use LaravelFCM\Message\PayloadNotificationBuilder;
 use FCM;
 use App\Lib\MyHelper;
 use App\Http\Models\LogMidtrans;
+use Modules\Transaction\Entities\TransactionGroup;
 
 class Midtrans {
 
@@ -257,7 +258,7 @@ class Midtrans {
                     break;
 
                 default:
-                    $trx = Transaction::join('transaction_payment_midtrans','transaction_payment_midtrans.id_transaction', '=', 'transactions.id_transaction')->where('transactions.id_transaction',$order_id)->first();
+                    $trx = TransactionGroup::join('transaction_payment_midtrans','transaction_payment_midtrans.id_transaction_group', '=', 'transaction_groups.id_transaction_group')->where('transaction_groups.id_transaction_group',$order_id)->first();
 
                     if (!$trx) {
                         // jika edit messages error ini, pastikan edit juga di ApiCronTrxController@cron

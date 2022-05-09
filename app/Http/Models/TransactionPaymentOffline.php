@@ -36,6 +36,7 @@ class TransactionPaymentOffline extends Model
 
 	protected $fillable = [
 		'id_transaction',
+        'id_transaction_group',
 		'id_payment_method',
 		'payment_type',
 		'payment_bank',

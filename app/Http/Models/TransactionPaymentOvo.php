@@ -19,6 +19,7 @@ class TransactionPaymentOvo extends Model
 
 	protected $fillable = [
 		'id_transaction',
+        'id_transaction_group',
 		'is_production',
 		'push_to_pay_at',
 		'reversal',

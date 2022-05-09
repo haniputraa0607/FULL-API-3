@@ -9,6 +9,7 @@ class TransactionPaymentIpay88 extends Model
     public $primaryKey  = 'id_transaction_payment_ipay88';
     protected $fillable = [
         'id_transaction',
+        'id_transaction_group',
         'from_user',
         'from_backend',
         'merchant_code',

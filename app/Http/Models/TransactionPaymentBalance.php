@@ -10,6 +10,7 @@ class TransactionPaymentBalance extends Model
 
 	protected $fillable = [
 		'id_transaction',
+        'id_transaction_group',
 		'balance_nominal',
 		'created_at',
 		'updated_at'

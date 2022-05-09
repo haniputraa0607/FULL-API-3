@@ -57,6 +57,7 @@ class TransactionPaymentManual extends Model
 
 	protected $fillable = [
 		'id_transaction',
+        'id_transaction_group',
 		'id_manual_payment_method',
 		'payment_date',
 		'payment_time',

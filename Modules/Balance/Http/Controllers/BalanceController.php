@@ -409,4 +409,109 @@ class BalanceController extends Controller
 
         return false;
     }
+
+    public function topUpGroup($id_user, $dataTrx)
+    {
+        $current_balance = $this->balanceNow($id_user);
+        $grandTotal = $dataTrx->transaction_grandtotal;
+        if ($current_balance < 1) {
+            return [
+                'status'   => 'fail',
+                'messages' => ['You need more point']
+            ];
+        }
+
+        if ($current_balance >= $grandTotal) {
+            $balanceNotif = app($this->notif)->balanceNotifGroup($dataTrx);
+
+            if ($balanceNotif) {
+                $dataPaymentBalance = [
+                    'id_transaction_group'  => $dataTrx['id_transaction_group'],
+                    'balance_nominal' => $grandTotal
+                ];
+
+                $savePaymentBalance = TransactionPaymentBalance::create($dataPaymentBalance);
+                if (!$savePaymentBalance) {
+                    return [
+                        'status'   => 'fail',
+                        'messages' => ['fail to create transaction']
+                    ];
+                }
+
+                $dataMultiple = [
+                    'id_transaction_group' => $dataTrx['id_transaction_group'],
+                    'type'           => 'Balance',
+                    'id_payment'     => $savePaymentBalance['id_transaction_payment_balance']
+                ];
+
+                $saveMultiple = TransactionMultiplePayment::create($dataMultiple);
+                if (!$saveMultiple) {
+                    return [
+                        'status'   => 'fail',
+                        'messages' => ['fail to create transaction']
+                    ];
+                }
+
+                return [
+                    'status' => 'success',
+                    'payment_status' => 'full'
+                ];
+            }
+
+            return [
+                'status'   => 'fail',
+                'messages' => ['transaction invalid']
+            ];
+        } else {
+            $dataTrx->transaction_grandtotal = $current_balance;
+            $balanceNotif = app($this->notif)->balanceNotifGroup($dataTrx);
+            if (empty($dataTrx)) {
+                return [
+                    'status'   => 'fail',
+                    'messages' => ['transaction not found']
+                ];
+            }
+            $dataTrx->transaction_grandtotal = $grandTotal;
+
+            $dataPaymentBalance = [
+                'id_transaction_group'  => $dataTrx['id_transaction_group'],
+                'balance_nominal' => $current_balance
+            ];
+
+            $savePaymentBalance = TransactionPaymentBalance::create($dataPaymentBalance);
+            // return $savePaymentBalance;
+            if (!$savePaymentBalance) {
+                return [
+                    'status'   => 'fail',
+                    'messages' => ['fail to create transaction']
+                ];
+            }
+
+            $dataMultiple = [
+                'id_transaction_group' => $dataTrx['id_transaction_group'],
+                'type'           => 'Balance',
+                'id_payment'     => $savePaymentBalance['id_transaction_payment_balance']
+            ];
+
+            $saveMultiple = TransactionMultiplePayment::create($dataMultiple);
+            if (!$saveMultiple) {
+                return [
+                    'status'   => 'fail',
+                    'messages' => ['fail to create transaction']
+                ];
+            }
+
+            if (!$balanceNotif) {
+                return [
+                    'status'   => 'fail',
+                    'messages' => ['transaction not found']
+                ];
+            }
+
+            return [
+                'status' => 'success',
+                'payment_status' => 'split'
+            ];
+        }
+    }
 }

@@ -33,6 +33,7 @@ use App\Lib\Ovo;
 use Modules\ProductVariant\Entities\TransactionProductVariant;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use Modules\Transaction\Entities\TransactionBundlingProduct;
+use Modules\Transaction\Entities\TransactionGroup;
 use Modules\Transaction\Http\Requests\Transaction\ConfirmPayment;
 
 class ApiConfirm extends Controller
@@ -53,9 +54,24 @@ class ApiConfirm extends Controller
 
     public function confirmTransaction(ConfirmPayment $request)
     {
-        DB::beginTransaction();
         $post = $request->json()->all();
-        $user = User::where('id', $request->user()->id)->first();
+        $user = $request->user();
+
+        $check = TransactionGroup::where('id_transaction_group', $post['id'])->first();
+        if (empty($check)) {
+            return response()->json([
+                'status'   => 'fail',
+                'messages' => ['Transaction Not Found'],
+            ]);
+        }
+
+        if ($check['transaction_payment_status'] != 'Pending') {
+            DB::rollback();
+            return response()->json([
+                'status'   => 'fail',
+                'messages' => ['Transaction already '.$check['transaction_payment_status']],
+            ]);
+        }
 
         if ($post['payment_type'] && $post['payment_type'] != 'Balance') {
             $available_payment = app($this->trx)->availablePayment(new Request())['result'] ?? [];
@@ -67,260 +83,248 @@ class ApiConfirm extends Controller
             }
         }
 
-        $productMidtrans   = [];
-        $dataDetailProduct = [];
-
-        $check = Transaction::with('transaction_shipments', 'productTransaction.product', 'productTransaction.product_variant_group','outlet_name', 'transaction_payment_subscription')->where('id_transaction', $post['id'])->first();
-
-        if (empty($check)) {
-            DB::rollback();
-            return response()->json([
-                'status'   => 'fail',
-                'messages' => ['Transaction Not Found'],
-            ]);
-        }
-
-        if ($check['transaction_payment_status'] != 'Pending') {
-            DB::rollback();
-            return response()->json([
-                'status'   => 'fail',
-                'messages' => ['Transaction Invalid'],
-            ]);
-        }
-
-        $checkPayment = TransactionMultiplePayment::where('id_transaction', $check['id_transaction'])->first();
+        $payment_id = strtoupper(str_replace(' ', '_', $post['payment_id']??$post['payment_detail']??null));
+        $post['payment_id'] = $payment_id;
         $countGrandTotal = $check['transaction_grandtotal'];
-        $totalPriceProduct = 0;
+        $checkPaymentBalance = TransactionPaymentBalance::where('id_transaction_group', $check['id_transaction_group'])->first();
 
-        if (isset($check['productTransaction'])) {
-            foreach ($check['productTransaction'] as $key => $value) {
-                // get modifiers name
-                $mods           = TransactionProductModifier::select('qty', 'text')->where('id_transaction_product', $value['id_transaction_product'])->get()->toArray();
-                $more_name_text = '';
-                foreach ($mods as $mod) {
-                    if ($mod['qty'] > 1) {
-                        $more_name_text .= ',' . $mod['qty'] . 'x ' . $mod['text'];
-                    } else {
-                        $more_name_text .= ',' . $mod['text'];
-                    }
+        if ($checkPaymentBalance) {
+            $countGrandTotal = $countGrandTotal - $checkPaymentBalance['balance_nominal'];
+        }
+
+        if ($countGrandTotal < 1) {
+            return [
+                'status' => 'fail',
+                'messages' => ['No need to pay']
+            ];
+        }
+
+        TransactionGroup::where('id_transaction_group', $check['id_transaction_group'])->update(['transaction_payment_type' => $post['payment_type']]);
+        if ($post['payment_type'] == 'Midtrans') {
+            if (\Cache::has('midtrans_confirm_'.$check['id_transaction_group'])) {
+                return response()->json(\Cache::get('midtrans_confirm_'.$check['id_transaction_group']));
+            }
+
+            $check->load('transactions.productTransaction.product');
+
+            $productMidtrans   = [];
+            $dataDetailProduct = [];
+            $checkPayment = TransactionMultiplePayment::where('id_transaction_group', $check['id_transaction_group'])->first();
+            foreach ($check['transactions'] as $subtrx) {
+                foreach ($subtrx['productTransaction'] as $key => $value) {
+                    $dataProductMidtrans = [
+                        'id'       => $value['id_product'],
+                        'price'    => abs($value['transaction_product_price']-($value['transaction_product_discount']/$value['transaction_product_qty'])),
+                        'name'     => $value['product']['product_name'],
+                        'quantity' => $value['transaction_product_qty'],
+                    ];
+
+                    $productMidtrans[] = $dataProductMidtrans;
+                    $dataDetailProduct[] = $dataProductMidtrans;
                 }
-                $dataProductMidtrans = [
-                    'id'       => $value['product_variant_group']['product_variant_group_code'] ?? $value['product']['product_code'],
-                    // 'price'    => abs($value['transaction_product_price']+$value['transaction_variant_subtotal']+$value['transaction_modifier_subtotal']-($value['transaction_product_discount']/$value['transaction_product_qty'])),
-                    'price'    => abs($value['transaction_product_price']+$value['transaction_variant_subtotal']+$value['transaction_modifier_subtotal']),
-                    // 'name'     => $value['product']['product_name'].($more_name_text?'('.trim($more_name_text,',').')':''), // name + modifier too long
-                    'name'     => $value['product']['product_name'],
-                    'quantity' => $value['transaction_product_qty'],
-                ];
-
-                $totalPriceProduct+= ($dataProductMidtrans['quantity'] * $dataProductMidtrans['price']);
-
-                array_push($productMidtrans, $dataProductMidtrans);
-                array_push($dataDetailProduct, $dataProductMidtrans);
             }
-        }
 
-        $checkItemBundling = TransactionBundlingProduct::where('id_transaction', $check['id_transaction'])
-            ->join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
-            ->select('transaction_bundling_products.*', 'bundling.bundling_name', 'bundling.bundling_code')
-            ->get()->toArray();
-
-        if (!empty($checkItemBundling)) {
-            foreach ($checkItemBundling as $key => $value) {
-                $dataProductMidtrans = [
-                    'id'       => $value['bundling_code'],
-                    'price'    => abs((int)$value['transaction_bundling_product_subtotal']/$value['transaction_bundling_product_qty']),
-                    'name'     => $value['bundling_name'],
-                    'quantity' => $value['transaction_bundling_product_qty'],
-                ];
-
-                $totalPriceProduct+= ($dataProductMidtrans['quantity'] * $dataProductMidtrans['price']);
-
-                array_push($productMidtrans, $dataProductMidtrans);
-                array_push($dataDetailProduct, $dataProductMidtrans);
-            }
-        }
-
-        $checkProductPlastic = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
-                                ->where('id_transaction', $check['id_transaction'])->where('type', 'Plastic')->get()->toArray();
-        if (!empty($checkProductPlastic)) {
-            foreach ($checkProductPlastic as $key => $value) {
-                $dataProductMidtrans = [
-                    'id'       => $value['product_code'],
-                    'price'    => abs($value['transaction_product_price']),
-                    'name'     => $value['product_name'],
-                    'quantity' => $value['transaction_product_qty'],
-                ];
-
-                $totalPriceProduct+= ($dataProductMidtrans['quantity'] * $dataProductMidtrans['price']);
-
-                array_push($productMidtrans, $dataProductMidtrans);
-                array_push($dataDetailProduct, $dataProductMidtrans);
-            }
-        }
-
-        if ($check['transaction_shipment'] > 0) {
-            $dataShip = [
-                'id'       => null,
-                'price'    => abs($check['transaction_shipment']),
-                'name'     => 'Shipping',
-                'quantity' => 1,
-            ];
-            array_push($dataDetailProduct, $dataShip);
-        }
-
-        if ($check['transaction_shipment_go_send'] > 0) {
-            $dataShip = [
-                'id'       => null,
-                'price'    => abs($check['transaction_shipment_go_send']),
-                'name'     => 'Shipping',
-                'quantity' => 1,
-            ];
-            array_push($dataDetailProduct, $dataShip);
-        }
-
-        if ($check['transaction_service'] > 0) {
-            $dataService = [
-                'id'       => null,
-                'price'    => abs($check['transaction_service']),
-                'name'     => 'Service',
-                'quantity' => 1,
-            ];
-            array_push($dataDetailProduct, $dataService);
-        }
-
-        if ($check['transaction_tax'] > 0) {
-            $dataTax = [
-                'id'       => null,
-                'price'    => abs($check['transaction_tax']),
-                'name'     => 'Tax',
-                'quantity' => 1,
-            ];
-            array_push($dataDetailProduct, $dataTax);
-        }
-
-        if ($check['transaction_payment_subscription']) {
-            $countGrandTotal -= $check['transaction_payment_subscription']['subscription_nominal'];
-            $dataDis = [
-                'id'       => null,
-                'price'    => -abs($check['transaction_payment_subscription']['subscription_nominal']),
-                'name'     => 'Subscription',
-                'quantity' => 1,
-            ];
-            array_push($dataDetailProduct, $dataDis);
-        }
-
-        $detailPayment = [
-            'subtotal' => $check['transaction_subtotal'],
-            'shipping' => $check['transaction_shipment'],
-            'tax'      => $check['transaction_tax'],
-            'service'  => $check['transaction_service'],
-            'discount' => -$check['transaction_discount'],
-        ];
-
-        $payment_balance = 0;
-        if (!empty($checkPayment)) {
-            if ($checkPayment['type'] == 'Balance') {
-                $checkPaymentBalance = TransactionPaymentBalance::where('id_transaction', $check['id_transaction'])->first();
-                if (empty($checkPaymentBalance)) {
-                    DB::rollback();
-                    return response()->json([
-                        'status'   => 'fail',
-                        'messages' => ['Transaction is invalid'],
-                    ]);
-                }
-
-                $countGrandTotal = $countGrandTotal - $checkPaymentBalance['balance_nominal'];
-                $payment_balance = $checkPaymentBalance['balance_nominal'];
-                $dataBalance     = [
+            if ($check['transaction_shipment'] > 0) {
+                $dataShip = [
                     'id'       => null,
-                    'price'    => -abs($checkPaymentBalance['balance_nominal']),
-                    'name'     => 'Balance',
+                    'price'    => abs($check['transaction_shipment']),
+                    'name'     => 'Shipping',
                     'quantity' => 1,
                 ];
-
-                array_push($dataDetailProduct, $dataBalance);
-
-                $detailPayment['balance'] = -$checkPaymentBalance['balance_nominal'];
+                array_push($dataDetailProduct, $dataShip);
             }
-        }
 
-        // if ($check['transaction_discount'] != 0 && (($countGrandTotal + $payment_balance) < $totalPriceProduct)) {
-        if ($check['transaction_discount'] != 0) {
-            $dataDis = [
-                'id'       => null,
-                'price'    => -abs($check['transaction_discount']),
-                'name'     => 'Discount',
-                'quantity' => 1,
-            ];
-            array_push($dataDetailProduct, $dataDis);
-        }
-
-        if ($check['transaction_discount_delivery'] != 0) {
-            $dataDis = [
-                'id'       => null,
-                'price'    => -abs($check['transaction_discount_delivery']),
-                'name'     => 'Discount',
-                'quantity' => 1,
-            ];
-            array_push($dataDetailProduct, $dataDis);
-        }
-
-        if ($check['trasaction_type'] == 'Delivery') {
-            $dataUser = [
-                'first_name'      => $user['name'],
-                'email'           => $user['email'],
-                'phone'           => $user['phone'],
-                'billing_address' => [
-                    'first_name' => $check['transaction_shipments']['destination_name'],
-                    'phone'      => $check['transaction_shipments']['destination_phone'],
-                    'address'    => $check['transaction_shipments']['destination_address'],
-                ],
-            ];
-
-            $dataShipping = [
-                'first_name'  => $check['transaction_shipments']['name'],
-                'phone'       => $check['transaction_shipments']['phone'],
-                'address'     => $check['transaction_shipments']['address'],
-                'postal_code' => $check['transaction_shipments']['postal_code'],
-            ];
-        } else {
-            $dataUser = [
-                'first_name'      => $user['name'],
-                'email'           => $user['email'],
-                'phone'           => $user['phone'],
-                'billing_address' => [
-                    'first_name' => $user['name'],
-                    'phone'      => $user['phone'],
-                ],
-            ];
-        }
-
-        if ($post['payment_type'] == 'Midtrans') {
-            if (\Cache::has('midtrans_confirm_'.$check['id_transaction'])) {
-                return response()->json(\Cache::get('midtrans_confirm_'.$check['id_transaction']));
+            if ($check['transaction_shipment_go_send'] > 0) {
+                $dataShip = [
+                    'id'       => null,
+                    'price'    => abs($check['transaction_shipment_go_send']),
+                    'name'     => 'Shipping',
+                    'quantity' => 1,
+                ];
+                array_push($dataDetailProduct, $dataShip);
             }
+
+            if ($check['transaction_shipment_grab'] > 0) {
+                $dataShip = [
+                    'id'       => null,
+                    'price'    => abs($check['transaction_shipment_grab']),
+                    'name'     => 'Shipping',
+                    'quantity' => 1,
+                ];
+                array_push($dataDetailProduct, $dataShip);
+            }
+
+            if ($check['transaction_service'] > 0) {
+                $dataService = [
+                    'id'       => null,
+                    'price'    => abs($check['transaction_service']),
+                    'name'     => 'Service',
+                    'quantity' => 1,
+                ];
+                array_push($dataDetailProduct, $dataService);
+            }
+
+            if ($check['transaction_tax'] > 0) {
+                $dataTax = [
+                    'id'       => null,
+                    'price'    => abs($check['transaction_tax']),
+                    'name'     => 'Tax',
+                    'quantity' => 1,
+                ];
+                array_push($dataDetailProduct, $dataTax);
+            }
+
+            if (!empty($check['transaction_discount'])) {
+                $dataDis = [
+                    'id'       => null,
+                    'price'    => -abs($check['transaction_discount']),
+                    'name'     => 'Discount',
+                    'quantity' => 1,
+                ];
+                array_push($dataDetailProduct, $dataDis);
+            }
+
+            if (!empty($check['transaction_discount_delivery'])) {
+                $dataDis = [
+                    'id'       => null,
+                    'price'    => -abs($check['transaction_discount_delivery']),
+                    'name'     => 'Discount',
+                    'quantity' => 1,
+                ];
+                array_push($dataDetailProduct, $dataDis);
+            }
+
+            if (!empty($checkPayment)) {
+                if ($checkPayment['type'] == 'Balance') {
+                    if (empty($checkPaymentBalance)) {
+                        DB::rollback();
+                        return response()->json([
+                            'status'   => 'fail',
+                            'messages' => ['Transaction is invalid'],
+                        ]);
+                    }
+
+                    $dataBalance     = [
+                        'id'       => null,
+                        'price'    => -abs($checkPaymentBalance['balance_nominal']),
+                        'name'     => 'Balance',
+                        'quantity' => 1,
+                    ];
+
+                    array_push($dataDetailProduct, $dataBalance);
+
+                    $detailPayment['balance'] = -$checkPaymentBalance['balance_nominal'];
+                }
+            }
+
+            if ($check['transaction_type'] == 'Delivery') {
+                $dataUser = [
+                    'first_name'      => $user['name'],
+                    'email'           => $user['email'],
+                    'phone'           => $user['phone'],
+                    'billing_address' => [
+                        'first_name' => $check['transaction_shipments']['destination_name'],
+                        'phone'      => $check['transaction_shipments']['destination_phone'],
+                        'address'    => $check['transaction_shipments']['destination_address'],
+                    ],
+                ];
+
+                $dataShipping = [
+                    'first_name'  => $check['transaction_shipments']['name'],
+                    'phone'       => $check['transaction_shipments']['phone'],
+                    'address'     => $check['transaction_shipments']['address'],
+                    'postal_code' => $check['transaction_shipments']['postal_code'],
+                ];
+            } else {
+                $dataUser = [
+                    'first_name'      => $user['name'],
+                    'email'           => $user['email'],
+                    'phone'           => $user['phone'],
+                    'billing_address' => [
+                        'first_name' => $user['name'],
+                        'phone'      => $user['phone'],
+                    ],
+                ];
+            }
+
+            $dataNotifMidtrans = [
+                'id_transaction_group' => $check['id_transaction_group'],
+                'gross_amount'   => $countGrandTotal,
+                'order_id'       => $check['transaction_receipt_number']
+            ];
+
+            switch ($payment_id) {
+                case 'CREDIT_CARD':
+                    $dataNotifMidtrans['payment_type'] = 'Credit Card';
+                    break;
+
+                case 'GOPAY':
+                    $dataNotifMidtrans['payment_type'] = 'Gopay';
+                    break;
+
+                case 'SHOPEEPAY':
+                    $dataNotifMidtrans['payment_type'] = 'Shopeepay';
+                    break;
+
+                default:
+                    $dataNotifMidtrans['payment_type'] = null;
+                    break;
+            }
+
+            $insertNotifMidtrans = TransactionPaymentMidtran::create($dataNotifMidtrans);
+            if (!$insertNotifMidtrans) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => [
+                        'Failed Create Transaction Payment Midtrans Data',
+                    ],
+                ]);
+            }
+
+            $dataMultiple = [
+                'id_transaction_group' => $check['id_transaction_group'],
+                'type'           => 'Midtrans',
+                'id_payment'     => $insertNotifMidtrans['id_transaction_payment'],
+            ];
+
+            $saveMultiple = TransactionMultiplePayment::create($dataMultiple);
+            if (!$saveMultiple) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['fail to confirm transaction'],
+                ]);
+            }
+
             $transaction_details = array(
                 'order_id'     => $check['transaction_receipt_number'],
                 'gross_amount' => $countGrandTotal,
             );
 
-            if ($check['trasaction_type'] == 'Delivery') {
+            $methodPayment = $payment_id == 'SHOPEEPAY' ? 'charge' : 'token';
+
+            if ($check['transaction_type'] == 'Delivery') {
                 $dataMidtrans = array(
                     'transaction_details' => $transaction_details,
                     'customer_details'    => $dataUser,
                     'shipping_address'    => $dataShipping,
+                    'expiry_duration'     => (int) MyHelper::setting('shopeepay_validity_period', 'value', 300),
+                    'unit'                => 'second',
                 );
-                $connectMidtrans = Midtrans::token($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $dataShipping, $dataDetailProduct, 'trx', $check['transaction_receipt_number']);
+
+                $connectMidtrans = Midtrans::{$methodPayment}($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $dataShipping, $dataDetailProduct, 'trx', $check['transaction_receipt_number']);
+
             } else {
                 $dataMidtrans = array(
                     'transaction_details' => $transaction_details,
                     'customer_details'    => $dataUser,
+                    'expiry_duration'     => (int) MyHelper::setting('shopeepay_validity_period', 'value', 300),
+                    'unit'                => 'second',
                 );
-                $connectMidtrans = Midtrans::token($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $ship=null, $dataDetailProduct, 'trx', $check['transaction_receipt_number']);
+
+                $connectMidtrans = Midtrans::{$methodPayment}($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $ship=null, $dataDetailProduct, 'trx', $check['transaction_receipt_number']);
             }
 
-            if (empty($connectMidtrans['token'])) {
+            if (empty($connectMidtrans['token']) && $payment_id != 'SHOPEEPAY') {
                 DB::rollback();
                 return response()->json([
                     'status'   => 'fail',
@@ -335,93 +339,64 @@ class ApiConfirm extends Controller
                         'user'        => $dataUser,
                     ],
                 ]);
-            }
-
-            $dataNotifMidtrans = [
-                'id_transaction' => $check['id_transaction'],
-                'gross_amount'   => $countGrandTotal,
-                'order_id'       => $check['transaction_receipt_number'],
-                'redirect_url' => $connectMidtrans['redirect_url']??NULL,
-                'token' => $connectMidtrans['token']??NULL
-            ];
-
-            switch (strtolower($post['payment_detail']??'')) {
-                case 'credit card':
-                    $dataNotifMidtrans['payment_type'] = 'Credit Card';
-                    break;
-
-                case 'gopay':
-                    $dataNotifMidtrans['payment_type'] = 'Gopay';
-                    break;
-                
-                default:
-                    $dataNotifMidtrans['payment_type'] = null;
-                    break;
-            }
-
-            $insertNotifMidtrans = TransactionPaymentMidtran::create($dataNotifMidtrans);
-            if (!$insertNotifMidtrans) {
-                DB::rollback();
+            } elseif ($payment_id == 'SHOPEEPAY' && !in_array($connectMidtrans['status_code'], [200, 201])) {
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => [
-                        'Payment Midtrans Failed.',
+                        'Failed create midtrans payment',
                     ],
-                    'data'     => [$connectMidtrans],
+                    'error'    => [$connectMidtrans],
+                    'data'     => [
+                        'trx'         => $transaction_details,
+                        'grand_total' => $countGrandTotal,
+                        'product'     => $dataDetailProduct,
+                        'user'        => $dataUser,
+                    ],
                 ]);
             }
 
-            $dataMultiple = [
-                'id_transaction' => $check['id_transaction'],
-                'type'           => 'Midtrans',
-                'id_payment'     => $insertNotifMidtrans['id_transaction_payment'],
-                'payment_detail' => $dataNotifMidtrans['payment_type'],
-            ];
-
-            $saveMultiple = TransactionMultiplePayment::create($dataMultiple);
-            if (!$saveMultiple) {
-                DB::rollback();
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['fail to confirm transaction'],
-                ]);
-            }
-
-            $dataMidtrans['items']            = $productMidtrans;
-            $dataMidtrans['payment']          = $detailPayment;
-            $dataMidtrans['midtrans_product'] = $dataDetailProduct;
-
-            // $update = Transaction::where('transaction_receipt_number', $post['id'])->update(['trasaction_payment_type' => $post['payment_type']]);
-
-            // if (!$update) {
-            //     DB::rollback();
-            //     return response()->json([
-            //         'status'    => 'fail',
-            //         'messages'  => [
-            //             'Payment Midtrans Invalid.'
-            //         ],
-            //         'data' => [$connectMidtrans]
-            //     ]);
-            // }
+            $dataMidtrans['items']            = $productMidtrans ?? [];
+            $dataMidtrans['payment']          = $detailPayment ?? [];
+            $dataMidtrans['midtrans_product'] = $dataDetailProduct ?? [];
 
             DB::commit();
 
-            $dataEncode = [
-                'transaction_receipt_number' => $check['transaction_receipt_number'],
-                'type'                       => 'trx',
-                'trx_success'                => 1,
-            ];
-            $encode = json_encode($dataEncode);
-            $base   = base64_encode($encode);
-            $response = [
-                'status'           => 'success',
-                'snap_token'       => $connectMidtrans['token'],
-                'redirect_url'     => $connectMidtrans['redirect_url'],
-                'transaction_data' => $dataMidtrans,
-                'url'              => env('VIEW_URL') . '/transaction/web/view/detail?data=' . $base,
+            if ($payment_id == 'SHOPEEPAY') {
+                $response = [
+                    'status' => 'success',
+                    'result' => [
+                        'redirect' => true,
+                        'timer_shopeepay'           => (int) MyHelper::setting('shopeepay_validity_period', 'value', 300),
+                        'message_timeout_shopeepay' => 'Sorry, your payment has expired',
+                        'redirect_url_app'          => $connectMidtrans['actions'][0]['url'],
+                    ]
+                ];
+                \Cache::put('midtrans_confirm_'.$check['id_transaction_group'], $response, now()->addMinutes(10));
+            } else {
+                $dataEncode = [
+                    'transaction_receipt_number' => $check['transaction_receipt_number'],
+                    'type'                       => 'trx',
+                    'trx_success'                => 1,
+                ];
+                $encode = json_encode($dataEncode);
+                $base   = base64_encode($encode);
+                $response = [
+                    'status'           => 'success',
+                    'result'           => [
+                        'snap_token'       => $connectMidtrans['token'],
+                        'redirect_url'     => $connectMidtrans['redirect_url'],
+                        'transaction_data' => $dataMidtrans,
+                        'url'              => env('VIEW_URL') . '/transaction/web/view/detail?data=' . $base,
+                    ],
+                ];
+            }
+            $transactionGroup = Transaction::where('id_transaction_group', $check['id_transaction_group'])->get()->toArray();
+            foreach ($transactionGroup as $transactions){
+                app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->updateStockProduct($transactions['id_transaction'], 'book');
+                Transaction::where('id_transaction', $transactions['id_transaction'])->update(['trasaction_payment_type' => $post['payment_type']]);
+            }
 
-            ];
-            \Cache::put('midtrans_confirm_'.$check['id_transaction'], $response, now()->addMinutes(10));
+            \Cache::put('midtrans_confirm_'.$check['id_transaction_group'], $response, now()->addMinutes(10));
             return response()->json($response);
         } elseif ($post['payment_type'] == 'Ovo') {
 
@@ -454,13 +429,12 @@ class ApiConfirm extends Controller
                 ]);
             }
             $dataMultiple = [
-                'id_transaction' => $check['id_transaction'],
+                'id_transaction_group' => $check['id_transaction_group'],
                 'type'           => 'IPay88',
                 'id_payment'     => $trx_ipay88->id_transaction_payment_ipay88,
-                'payment_detail' => $post['payment_id'] ?? null,
             ];
             $saveMultiple = TransactionMultiplePayment::updateOrCreate([
-                'id_transaction' => $check['id_transaction'],
+                'id_transaction_group' => $check['id_transaction_group'],
                 'type'           => 'IPay88',
             ], $dataMultiple);
             if (!$saveMultiple) {
@@ -475,18 +449,18 @@ class ApiConfirm extends Controller
                 'status'    => 'success',
                 'result'    => [
                     'url'  => config('url.api_url').'api/ipay88/pay?'.http_build_query([
-                        'type' => 'trx',
-                        'id_reference' => $check['id_transaction'],
-                        'payment_id'   => $request->payment_id ?: '',
-                    ]),
+                            'type' => 'trx',
+                            'id_reference' => $check['id_transaction_group'],
+                            'payment_id'   => $payment_id,
+                        ]),
                 ],
             ];
         } elseif ($post['payment_type'] == 'Shopeepay') {
-            $paymentShopeepay = TransactionPaymentShopeePay::where('id_transaction', $check['id_transaction'])->first();
+            $paymentShopeepay = TransactionPaymentShopeePay::where('id_transaction_group', $check['id_transaction_group'])->first();
             $trx_shopeepay    = null;
             if (!$paymentShopeepay) {
                 $paymentShopeepay                 = new TransactionPaymentShopeePay;
-                $paymentShopeepay->id_transaction = $check['id_transaction'];
+                $paymentShopeepay->id_transaction_group = $check['id_transaction_group'];
                 $paymentShopeepay->amount         = $countGrandTotal * 100;
                 $paymentShopeepay->save();
                 $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'trx', $errors);
@@ -509,14 +483,13 @@ class ApiConfirm extends Controller
                     ];
                 }
                 $dataMultiple = [
-                    'id_transaction' => $check['id_transaction'],
+                    'id_transaction_group' => $check['id_transaction_group'],
                     'type'           => 'Shopeepay',
                     'id_payment'     => $paymentShopeepay->id_transaction_payment_shopee_pay,
-                    'payment_detail' => 'Shopeepay',
                 ];
                 // save multiple payment
                 $saveMultiple = TransactionMultiplePayment::updateOrCreate([
-                    'id_transaction' => $check['id_transaction'],
+                    'id_transaction_group' => $check['id_transaction_group'],
                     'type'           => 'Shopeepay',
                 ], $dataMultiple);
                 if (!$saveMultiple) {
@@ -531,66 +504,7 @@ class ApiConfirm extends Controller
                 $paymentShopeepay->err_reason = app($this->shopeepay)->errcode[$errcode]??null;
                 $paymentShopeepay->save();
                 $trx = $check;
-                $update = $trx->update(['transaction_payment_status' => 'Cancelled', 'void_date' => date('Y-m-d H:i:s')]);
-                if (!$update) {
-                    DB::rollBack();
-                    return [
-                        'status'   => 'fail',
-                        'messages' => ['Failed update transaction status']
-                    ];
-                }
-                $trx->load('outlet_name');
-                // $send = app($this->notif)->notificationDenied($mid, $trx);
-
-                //return balance
-                $payBalance = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->where('type', 'Balance')->first();
-                if (!empty($payBalance)) {
-                    $checkBalance = TransactionPaymentBalance::where('id_transaction_payment_balance', $payBalance['id_payment'])->first();
-                    if (!empty($checkBalance)) {
-                        $insertDataLogCash = app("Modules\Balance\Http\Controllers\BalanceController")->addLogBalance($trx['id_user'], $checkBalance['balance_nominal'], $trx['id_transaction'], 'Transaction Failed', $trx['transaction_grandtotal']);
-                        if (!$insertDataLogCash) {
-                            DB::rollBack();
-                            return response()->json([
-                                'status'    => 'fail',
-                                'messages'  => ['Insert Cashback Failed']
-                            ]);
-                        }
-                        $usere= User::where('id',$trx['id_user'])->first();
-                        $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone,
-                            [
-                                "outlet_name"       => $trx['outlet_name']['outlet_name']??'',
-                                "transaction_date"  => $trx['transaction_date'],
-                                'id_transaction'    => $trx['id_transaction'],
-                                'receipt_number'    => $trx['transaction_receipt_number'],
-                                'received_point'    => (string) $checkBalance['balance_nominal']
-                            ]
-                        );
-                        if($send != true){
-                            DB::rollBack();
-                            return response()->json([
-                                    'status' => 'fail',
-                                    'messages' => ['Failed Send notification to customer']
-                                ]);
-                        }
-                    }
-                }
-
-                // delete promo campaign report
-                if ($trx->id_promo_campaign_promo_code) 
-                {
-                    $update_promo_report = app($this->promo_campaign)->deleteReport($trx->id_transaction, $trx->id_promo_campaign_promo_code);
-                }
-
-                // return voucher
-                $update_voucher = app($this->voucher)->returnVoucher($trx->id_transaction);
-
-                if(!$update){
-                    DB::rollBack();
-                    return [
-                        'status'=>'fail',
-                        'messages' => ['Failed update payment status']
-                    ];
-                }
+                $trx->cancel();
                 DB::commit();
                 return [
                     'status' => 'fail',
@@ -601,14 +515,13 @@ class ApiConfirm extends Controller
             $paymentShopeepay->redirect_url_http = $trx_shopeepay['response']['redirect_url_http'];
             $paymentShopeepay->save();
             $dataMultiple = [
-                'id_transaction' => $check['id_transaction'],
+                'id_transaction_group' => $check['id_transaction_group'],
                 'type'           => 'Shopeepay',
                 'id_payment'     => $paymentShopeepay->id_transaction_payment_shopee_pay,
-                'payment_detail' => 'Shopeepay',
             ];
             // save multiple payment
             $saveMultiple = TransactionMultiplePayment::updateOrCreate([
-                'id_transaction' => $check['id_transaction'],
+                'id_transaction_group' => $check['id_transaction_group'],
                 'type'           => 'Shopeepay',
             ], $dataMultiple);
             if (!$saveMultiple) {
@@ -625,8 +538,8 @@ class ApiConfirm extends Controller
                     'redirect'                  => true,
                     'timer_shopeepay'           => (int) MyHelper::setting('shopeepay_validity_period', 'value', 300),
                     'message_timeout_shopeepay' => 'Sorry, your payment has expired',
-                    'redirect_url_app'          => $paymentShopeepay->redirect_url_app ?: 'shopeeid://main',
-                    'redirect_url_http'         => $paymentShopeepay->redirect_url_http ?: 'https://wsa.wallet.airpay.co.id/universal-link/wallet/pay',
+                    'redirect_url_app'          => $paymentShopeepay->redirect_url_app,
+                    'redirect_url_http'         => $paymentShopeepay->redirect_url_http,
                 ],
             ];
         } else {
@@ -708,7 +621,6 @@ class ApiConfirm extends Controller
                 'status' => 'success',
                 'result' => $check,
             ]);
-
         }
     }
 
