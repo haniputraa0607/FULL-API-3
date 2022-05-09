@@ -17,6 +17,7 @@ Route::group(['prefix' => 'merchant'], function () {
     Route::group(['middleware' => ['auth:api', 'user_agent', 'log_activities', 'scopes:apps']], function () {
         Route::get('summary', 'ApiMerchantController@summaryOrder');
         Route::post('statistics', 'ApiMerchantController@statisticsOrder');
+        Route::get('share-message', 'ApiMerchantController@shareMessage');
         Route::get('help-page', 'ApiMerchantController@helpPage');
 
         Route::get('register/introduction', 'ApiMerchantController@registerIntroduction');

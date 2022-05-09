@@ -983,6 +983,24 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            109 =>
+                array(
+                    'id_setting' => 110,
+                    'key' => 'merchant_share_message',
+                    'value' => null,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            110 =>
+                array(
+                    'id_setting' => 111,
+                    'key' => 'merchant_help_page',
+                    'value' => null,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         );
 
         foreach ($settings as $setting) {

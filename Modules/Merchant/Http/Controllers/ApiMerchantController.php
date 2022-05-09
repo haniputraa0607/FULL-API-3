@@ -621,9 +621,26 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkUpdate($save));
     }
 
+    public function shareMessage(Request $request){
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        $message = Setting::where('key', 'merchant_share_message')->first()['value_text']??'';
+        $url = str_replace('id', $checkMerchant['id_outlet'], env('URL_SHARE'));
+
+        $result = [
+            'message' => $message,
+            'url' => $url
+        ];
+        return response()->json(MyHelper::checkGet($result));
+    }
+
     public function helpPage(){
-        $helpPage = Setting::where('key', 'merchant_help_page')->first()['value_text']??'';
-        return response()->json(MyHelper::checkGet($helpPage));
+        $helpPage = Setting::where('key', 'merchant_help_page')->first()['value']??'';
+        return response()->json(MyHelper::checkGet(['url' => env('STORAGE_URL_API').'/api/custom-page/webview/'.$helpPage]));
     }
 
     public function summaryOrder(Request $request){
