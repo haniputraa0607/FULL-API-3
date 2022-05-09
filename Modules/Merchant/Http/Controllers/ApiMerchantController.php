@@ -253,15 +253,18 @@ class ApiMerchantController extends Controller
         $detail['merchant_completed_step'] = $checkData['merchant_completed_step'];
         $detail['merchant_status'] = $checkData['merchant_status'];
 
+        $outlet = Outlet::leftJoin('cities', 'outlets.id_city', 'cities.id_city')
+                ->where('id_outlet', $checkData['id_outlet'])->select('outlets.*', 'cities.id_province')->first();
+
         $detail['step_1'] = [
-            "merchant_name" => $checkData['merchant_name'],
-            "merchant_license_number" => $checkData['merchant_license_number'],
-            "merchant_email" => $checkData['merchant_email'],
-            "merchant_phone" => $checkData['merchant_phone'],
-            "id_province" => $checkData['id_province'],
-            "id_city" => $checkData['id_city'],
-            "merchant_address" => $checkData['merchant_address'],
-            "merchant_postal_code" => $checkData['merchant_postal_code']
+            "merchant_name" => $outlet['outlet_name'],
+            "merchant_license_number" => $outlet['outlet_license_number'],
+            "merchant_email" => $outlet['outlet_email'],
+            "merchant_phone" => $outlet['outlet_phone'],
+            "id_province" => $outlet['id_province'],
+            "id_city" => $outlet['id_city'],
+            "merchant_address" => $outlet['outlet_address'],
+            "merchant_postal_code" => $outlet['outlet_postal_code']
         ];
 
         $detail['step_2'] = null;
