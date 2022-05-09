@@ -120,7 +120,8 @@ class ApiMerchantController extends Controller
 
     public function registerSubmitStep1(MerchantCreateStep1 $request){
         $post = $request->json()->all();
-
+        $idUser = $request->user()->id;
+        $checkData = Merchant::where('id_user', $idUser)->first();
         $phone = $request->json('merchant_phone');
 
         $phone = preg_replace("/[^0-9]/", "", $phone);
@@ -136,55 +137,76 @@ class ApiMerchantController extends Controller
             $phone = $checkPhoneFormat['phone'];
         }
 
-        $check = Outlet::where('outlet_phone', $post['merchant_phone'])->first();
+        if(empty($checkData)) {
+            $check = Outlet::where('outlet_phone', $post['merchant_phone'])->first();
 
-        if(!empty($check)){
-            return response()->json(['status' => 'fail', 'messages' => ['Nomor telepon sudah terdaftar']]);
+            if(!empty($check)){
+                return response()->json(['status' => 'fail', 'messages' => ['Nomor telepon sudah terdaftar']]);
+            }
+
+            DB::beginTransaction();
+
+            $create = Merchant::create(["id_user" =>$request->user()->id]);
+            if(!$create){
+                return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan data merchant']]);
+            }
+
+            $lastOutlet = Outlet::orderBy('outlet_code', 'desc')->first()['outlet_code']??'';
+            $lastOutlet = substr($lastOutlet, -5);
+            $lastOutlet = (int)$lastOutlet;
+            $countCode = $lastOutlet+1;
+            $dataCreateOutlet = [
+                "outlet_code" => 'M'.sprintf("%06d", $countCode),
+                "outlet_name" => $post['merchant_name'],
+                "outlet_license_number" => $post['merchant_license_number'],
+                "outlet_email" => (empty($post['merchant_email']) ? null : $post['merchant_email']),
+                "outlet_phone" => $phone,
+                "id_city" => $post['id_city'],
+                "outlet_address" => $post['merchant_address'],
+                "outlet_postal_code" => (empty($post['merchant_postal_code']) ? null : $post['merchant_postal_code'])
+            ];
+
+            $createOutlet = Outlet::create($dataCreateOutlet);
+            if(!$createOutlet){
+                DB::rollback();
+                return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan data outlet']]);
+            }
+
+            Merchant::where('id_merchant', $create['id_merchant'])->update(['id_outlet' => $createOutlet['id_outlet']]);
+
+            DB::commit();
+            return response()->json(MyHelper::checkCreate($create));
+        }else{
+            $checkPhone = Outlet::where('outlet_phone', $phone)->whereNotIn('id_outlet', [$checkData['id_outlet']])->first();
+
+            if(!empty($checkPhone)){
+                return response()->json(['status' => 'fail', 'messages' => ['Nomor telepon sudah terdaftar']]);
+            }
+
+            $dataUpdateOutlet = [
+                "outlet_name" => $post['merchant_name'],
+                "outlet_license_number" => $post['merchant_license_number'],
+                "outlet_email" => (empty($post['merchant_email']) ? null : $post['merchant_email']),
+                "outlet_phone" => $phone,
+                "id_city" => $post['id_city'],
+                "outlet_address" => $post['merchant_address'],
+                "outlet_postal_code" => (empty($post['merchant_postal_code']) ? null : $post['merchant_postal_code'])
+            ];
+
+            $update = Outlet::where('id_outlet', $checkData['id_outlet'])->update($dataUpdateOutlet);
+            if(!$update){
+                return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan data outlet']]);
+            }
+
+            return response()->json(MyHelper::checkUpdate($update));
         }
-
-        $checkRegister = Merchant::where('id_user', $request->user()->id)->first();
-        if(!empty($checkRegister)){
-            return response()->json(['status' => 'fail', 'messages' => ['Anda sudah pernah mendaftar']]);
-        }
-
-        DB::beginTransaction();
-
-        $create = Merchant::create(["id_user" =>$request->user()->id]);
-        if(!$create){
-            return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan data merchant']]);
-        }
-
-        $lastOutlet = Outlet::orderBy('outlet_code', 'desc')->first()['outlet_code']??'';
-        $lastOutlet = substr($lastOutlet, -5);
-        $lastOutlet = (int)$lastOutlet;
-        $countCode = $lastOutlet+1;
-        $dataCreateOutlet = [
-            "outlet_code" => 'M'.sprintf("%06d", $countCode),
-            "outlet_name" => $post['merchant_name'],
-            "outlet_license_number" => $post['merchant_license_number'],
-            "outlet_email" => (empty($post['merchant_email']) ? null : $post['merchant_email']),
-            "outlet_phone" => $phone,
-            "id_city" => $post['id_city'],
-            "outlet_address" => $post['merchant_address'],
-            "outlet_postal_code" => (empty($post['merchant_postal_code']) ? null : $post['merchant_postal_code'])
-        ];
-
-        $createOutlet = Outlet::create($dataCreateOutlet);
-        if(!$createOutlet){
-            DB::rollback();
-            return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan data outlet']]);
-        }
-
-        Merchant::where('id_merchant', $create['id_merchant'])->update(['id_outlet' => $createOutlet['id_outlet']]);
-
-        DB::commit();
-        return response()->json(MyHelper::checkCreate($create));
     }
 
     public function registerSubmitStep2(MerchantCreateStep2 $request){
         $post = $request->json()->all();
+        $idUser = $request->user()->id;
 
-        $checkData = Merchant::where('id_merchant', $post['id_merchant'])->first();
+        $checkData = Merchant::where('id_user', $idUser)->first();
         if(empty($checkData)){
             return response()->json([
                 'status' => 'fail',
