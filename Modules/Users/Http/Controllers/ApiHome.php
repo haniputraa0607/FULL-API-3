@@ -18,6 +18,7 @@ use App\Http\Models\HomeBackground;
 use App\Http\Models\UsersMembership;
 use App\Http\Models\Transaction;
 use App\Http\Models\Banner;
+use Modules\Merchant\Entities\Merchant;
 use Modules\SettingFraud\Entities\FraudSetting;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\FeaturedDeal;
@@ -737,10 +738,13 @@ class ApiHome extends Controller
         ])->orderBy('transaction_date')->first();
         $rate_popup = $trx?$trx->transaction_receipt_number.','.$trx->id_transaction:null;
         $retUser['membership']=$membership;
+        $checkMerchant = Merchant::where('id_user', $user->id)->where('merchant_status', 'Active')->first();
+
         $result = [
             'status' => 'success',
             'result' => [
                 'total_point' => (int) $user->balance??0,
+                'id_merchant' => $checkMerchant['id_merchant']??null,
                 'user_info'     => $retUser,
                 'qr_code'       => $qrCode??'',
                 'greeting'      => $greetingss??'',
