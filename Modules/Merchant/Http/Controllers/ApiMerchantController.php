@@ -2,6 +2,7 @@
 
 namespace Modules\Merchant\Http\Controllers;
 
+use App\Http\Models\MonthlyReportTrx;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPhoto;
@@ -18,13 +19,8 @@ use Modules\Merchant\Entities\Merchant;
 use Modules\Merchant\Http\Requests\MerchantCreateStep1;
 use Modules\Merchant\Http\Requests\MerchantCreateStep2;
 use Modules\Outlet\Entities\DeliveryOutlet;
-use Modules\Product\Entities\ProductDetail;
-use Modules\Product\Entities\ProductGlobalPrice;
-use Modules\ProductVariant\Entities\ProductVariant;
-use Modules\ProductVariant\Entities\ProductVariantGroup;
-use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
-use Modules\ProductVariant\Entities\ProductVariantPivot;
 use DB;
+use App\Http\Models\Transaction;
 
 class ApiMerchantController extends Controller
 {
@@ -309,8 +305,9 @@ class ApiMerchantController extends Controller
         }
 
         $detail = Merchant::leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+            ->leftJoin('cities', 'cities.id_city', 'outlets.id_city')
             ->where('id_merchant', $checkMerchant['id_merchant'])
-            ->select('merchants.*', 'outlets.*')
+            ->select('merchants.*', 'outlets.*', 'cities.city_name')
             ->first();
 
         if(empty($detail)){
@@ -324,6 +321,7 @@ class ApiMerchantController extends Controller
                 'merchant_license_number' => $detail['outlet_license_number'],
                 "merchant_email" => $detail['outlet_email'],
                 "merchant_phone" => $detail['outlet_phone'],
+                "city_name" => $detail['city_name'],
                 "image_cover" => (!empty($detail['outlet_image_cover']) ? config('url.storage_url_api').$detail['outlet_image_cover']: ''),
                 "image_logo_portrait" => (!empty($detail['outlet_image_logo_portrait']) ? config('url.storage_url_api').$detail['outlet_image_logo_portrait']: ''),
                 "image_logo_landscape" => (!empty($detail['outlet_image_logo_landscape']) ? config('url.storage_url_api').$detail['outlet_image_logo_landscape']: '')
@@ -621,5 +619,141 @@ class ApiMerchantController extends Controller
             'updated_at' =>date('Y-m-d H:i:s')
         ]);
         return response()->json(MyHelper::checkUpdate($save));
+    }
+
+    public function shareMessage(Request $request){
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        $message = Setting::where('key', 'merchant_share_message')->first()['value_text']??'';
+        $url = str_replace('id', $checkMerchant['id_outlet'], env('URL_SHARE'));
+
+        $result = [
+            'message' => $message,
+            'url' => $url
+        ];
+        return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function helpPage(){
+        $helpPage = Setting::where('key', 'merchant_help_page')->first()['value']??'';
+        return response()->json(MyHelper::checkGet(['url' => env('STORAGE_URL_API').'/api/custom-page/webview/'.$helpPage]));
+    }
+
+    public function summaryOrder(Request $request){
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        $newOrder = Transaction::where('id_outlet', $checkMerchant['id_outlet'])->where('transaction_status', 'Pending')->count();
+        $onProgress = Transaction::where('id_outlet', $checkMerchant['id_outlet'])->where('transaction_status', 'On Progress')->count();
+        $onDelivery = Transaction::where('id_outlet', $checkMerchant['id_outlet'])->where('transaction_status', 'On Delivery')->count();
+        $completed = Transaction::where('id_outlet', $checkMerchant['id_outlet'])->where('transaction_status', 'Completed')->count();
+
+        $result = [
+            'new_order' => $newOrder,
+            'on_progress' => $onProgress,
+            'onDelivery' => $onDelivery,
+            'completed' => $completed
+        ];
+
+        return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function statisticsOrder(Request $request){
+        $post = $request->all();
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        if(empty($post['type'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Type can not be empty']]);
+        }
+
+        $result = [];
+        if($post['type'] == 'weekly'){
+            $result = $this->statisticsWeekly($checkMerchant['id_outlet']);
+        }elseif($post['type'] == 'monthly'){
+            $result = $this->statisticsMonthly($checkMerchant['id_outlet']);
+        }elseif($post['type'] == 'yearly'){
+            $result = $this->statisticsYearly($checkMerchant['id_outlet']);
+        }
+
+        return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function statisticsWeekly($id_outlet){
+        $currentDate = date('Y-m-d');
+        $start = date('Y-m-d', strtotime('-6 day', strtotime($currentDate)));
+        $end = $currentDate;
+
+        $transactions = Transaction::where('id_outlet', $id_outlet)->where('transaction_status', 'Completed')
+                    ->whereDate('transaction_date', '>=', $start)->whereDate('transaction_date', '<=', $end)
+                    ->select('transaction_date', 'transaction_grandtotal')->get()->toArray();
+
+        $resultDate = [];
+        foreach ($transactions as $trx){
+            $date = date('Y-m-d', strtotime($trx['transaction_date']));
+            if(!empty($resultDate[$date])){
+                $resultDate[$date] = $resultDate[$date] + 1;
+            }else{
+                $resultDate[$date] = 1;
+            }
+        }
+
+        $result = [];
+        for($i=0;$i<=6;$i++){
+            $date = date('Y-m-d', strtotime('-'.$i.' day', strtotime($currentDate)));
+            $result[] = [
+                'key' => MyHelper::dateFormatInd($date, false, false),
+                'value' => $resultDate[$date]??0
+            ];
+        }
+
+        return $result;
+    }
+
+    public function statisticsMonthly($id_outlet){
+        $result = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $date = date("Y-m-01", strtotime( date( 'Y-m-01' )." -$i months"));
+            $monthFormat = MyHelper::dateFormatInd($date, false, false);
+            $monthFormat = str_replace('01', '', $monthFormat);
+
+            $month = date('m', strtotime($date));
+            $year = date('Y', strtotime($date));
+            $value = MonthlyReportTrx::where('id_outlet', $id_outlet)
+                    ->where('trx_month', $month)
+                    ->where('trx_year', $year)->first()['trx_count']??0;
+            $result[] = [
+                'key' => $monthFormat,
+                'value' => (int)$value
+            ];
+        }
+
+        return $result;
+    }
+
+    public function statisticsYearly($id_outlet){
+        $currentYear = date('Y');
+        $result = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $year = $currentYear-$i;
+            $value = MonthlyReportTrx::where('id_outlet', $id_outlet)
+                    ->where('trx_year', $year)->sum('trx_count');
+            $result[] = [
+                'key' => $year,
+                'value' => (int)$value
+            ];
+        }
+
+        return $result;
     }
 }
