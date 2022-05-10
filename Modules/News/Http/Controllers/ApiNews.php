@@ -67,7 +67,7 @@ class ApiNews extends Controller
         if (isset($post['news_content_long'])) {
             $data['news_content_long'] = $post['news_content_long'];
         }else{
-            $data['news_content_short'] = ' ';
+            $data['news_content_long'] = ' ';
         }
 
         if (isset($post['news_image_luar'])) {
