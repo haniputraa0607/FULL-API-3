@@ -9,6 +9,7 @@ use App\Lib\MyHelper;
 
 use Modules\Doctor\Entities\Doctor;
 use Modules\Doctor\Entities\DoctorSpecialist;
+use Modules\Doctor\Entities\DoctorSchedule;
 use Modules\Doctor\Http\Requests\DoctorCreate;
 use Validator;
 use Image;
@@ -235,6 +236,32 @@ class ApiDoctorController extends Controller
     public function show($id)
     {
         $doctor = Doctor::where('id_doctor', $id)->with('specialists')->first();
+
+        $doctor_schedule = DoctorSchedule::where('id_doctor', $doctor['id_doctor'])->with('schedule_time');
+
+        $doctor_schedule = $doctor_schedule->get()->toArray();
+
+        $schedule = array();
+        $i = 0;
+        while(count($schedule) < 4){
+            if($i > 0) {
+                $date = date("Y-m-d", strtotime("+$i day"));
+                $day = strtolower(date("l", strtotime($date)));
+            } else {
+                $date = date("Y-m-d");
+                $day = strtolower(date("l", strtotime($date)));
+            }
+            $i += 1;
+
+            foreach($doctor_schedule as $row) {
+                if($row['day'] == $day) {
+                    $row['date'] = $date;
+                    $schedule[] = $row;
+                }
+            }
+        }
+
+        $doctor['schedules'] = $schedule;
 
         return response()->json(['status'  => 'success', 'result' => $doctor]);
     }
