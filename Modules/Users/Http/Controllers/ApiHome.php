@@ -738,13 +738,14 @@ class ApiHome extends Controller
         ])->orderBy('transaction_date')->first();
         $rate_popup = $trx?$trx->transaction_receipt_number.','.$trx->id_transaction:null;
         $retUser['membership']=$membership;
-        $checkMerchant = Merchant::where('id_user', $user->id)->where('merchant_status', 'Active')->first();
+        $checkMerchant = Merchant::where('id_user', $user->id)->first();
 
         $result = [
             'status' => 'success',
             'result' => [
                 'total_point' => (int) $user->balance??0,
                 'id_merchant' => $checkMerchant['id_merchant']??null,
+                'merchant_status' => $checkMerchant['merchant_status']??null,
                 'user_info'     => $retUser,
                 'qr_code'       => $qrCode??'',
                 'greeting'      => $greetingss??'',
