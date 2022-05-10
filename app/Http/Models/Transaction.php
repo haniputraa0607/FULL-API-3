@@ -10,6 +10,7 @@ namespace App\Http\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Jobs\FraudJob;
 use App\Lib\MyHelper;
+use Modules\Transaction\Entities\TransactionShipmentTrackingUpdate;
 
 /**
  * Class Transaction
@@ -321,6 +322,12 @@ class Transaction extends Model
     			break;
 
     	}
+
+    	TransactionShipmentTrackingUpdate::create([
+    	    'id_transaction' => $this->id_transaction,
+            'tracking_description' => 'Paket sedang dikemas oleh pengirim',
+            'tracking_date_time' => date('Y-m-d H:i:s')
+        ]);
 
     	// check fraud
     	if ($this->user) {

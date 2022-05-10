@@ -114,6 +114,86 @@ class ApiMerchantController extends Controller
         }
     }
 
+    public function registerApproved(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if(empty($post)){
+            $setting = Setting::where('key', 'merchant_register_approved')->first()['value_text']??null;
+            $setting = (array)json_decode($setting);
+
+            $detail = [];
+            if(!empty($setting)){
+                $detail['image'] = (empty($setting['image']) ? '' : config('url.storage_url_api').$setting['image']);
+                $detail['title'] = $setting['title'];
+                $detail['description'] = $setting['description'];
+                $detail['button_text'] = $setting['button_text'];
+            }
+
+            return response()->json(MyHelper::checkGet($detail));
+        }else{
+            $setting = Setting::where('key', 'merchant_register_approved')->first()['value_text']??null;
+            $setting = (array)json_decode($setting);
+            $image = $setting['image']??'';
+            if(!empty($post['image'])){
+                $upload = MyHelper::uploadPhotoStrict($post['image'], 'img/', 500, 500, 'merchant_approved_image');
+
+                if (isset($upload['status']) && $upload['status'] == "success") {
+                    $image = $upload['path'].'?'.time();
+                }else{
+                    $image = '';
+                }
+            }
+
+            $detailSave['image'] = $image;
+            $detailSave['title'] = $post['title'];
+            $detailSave['description'] = $post['description'];
+            $detailSave['button_text'] = $post['button_text'];
+
+            $save = Setting::updateOrCreate(['key' => 'merchant_register_approved'], ['value_text' => json_encode($detailSave)]);
+            return response()->json(MyHelper::checkUpdate($save));
+        }
+    }
+
+    public function registerRejected(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if(empty($post)){
+            $setting = Setting::where('key', 'merchant_register_rejected')->first()['value_text']??null;
+            $setting = (array)json_decode($setting);
+
+            $detail = [];
+            if(!empty($setting)){
+                $detail['image'] = (empty($setting['image']) ? '' : config('url.storage_url_api').$setting['image']);
+                $detail['title'] = $setting['title'];
+                $detail['description'] = $setting['description'];
+            }
+
+            return response()->json(MyHelper::checkGet($detail));
+        }else{
+            $setting = Setting::where('key', 'merchant_register_rejected')->first()['value_text']??null;
+            $setting = (array)json_decode($setting);
+            $image = $setting['image']??'';
+            if(!empty($post['image'])){
+                $upload = MyHelper::uploadPhotoStrict($post['image'], 'img/', 500, 500, 'merchant_rejected_image');
+
+                if (isset($upload['status']) && $upload['status'] == "success") {
+                    $image = $upload['path'].'?'.time();
+                }else{
+                    $image = '';
+                }
+            }
+
+            $detailSave['image'] = $image;
+            $detailSave['title'] = $post['title'];
+            $detailSave['description'] = $post['description'];
+
+            $save = Setting::updateOrCreate(['key' => 'merchant_register_rejected'], ['value_text' => json_encode($detailSave)]);
+            return response()->json(MyHelper::checkUpdate($save));
+        }
+    }
+
     public function registerSubmitStep1(MerchantCreateStep1 $request){
         $post = $request->json()->all();
         $idUser = $request->user()->id;
@@ -658,7 +738,7 @@ class ApiMerchantController extends Controller
         $result = [
             'new_order' => $newOrder,
             'on_progress' => $onProgress,
-            'onDelivery' => $onDelivery,
+            'on_delivery' => $onDelivery,
             'completed' => $completed
         ];
 

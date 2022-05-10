@@ -22,6 +22,8 @@ Route::group(['prefix' => 'merchant'], function () {
 
         Route::get('register/introduction', 'ApiMerchantController@registerIntroduction');
         Route::get('register/success', 'ApiMerchantController@registerSuccess');
+        Route::get('register/approved', 'ApiMerchantController@registerApproved');
+        Route::get('register/rejected', 'ApiMerchantController@registerRejected');
         Route::post('register/submit/step-1', 'ApiMerchantController@registerSubmitStep1');
         Route::post('register/submit/step-2', 'ApiMerchantController@registerSubmitStep2');
         Route::get('register/detail', 'ApiMerchantController@registerDetail');
@@ -63,6 +65,10 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::post('register/introduction/save', 'ApiMerchantController@registerIntroduction');
         Route::get('register/success/detail', 'ApiMerchantController@registerSuccess');
         Route::post('register/success/save', 'ApiMerchantController@registerSuccess');
+        Route::get('register/approved/detail', 'ApiMerchantController@registerApproved');
+        Route::post('register/approved/save', 'ApiMerchantController@registerApproved');
+        Route::get('register/rejected/detail', 'ApiMerchantController@registerRejected');
+        Route::post('register/rejected/save', 'ApiMerchantController@registerRejected');
 
         Route::post('list', 'ApiMerchantManagementController@list');
         Route::post('detail', 'ApiMerchantManagementController@detail');
