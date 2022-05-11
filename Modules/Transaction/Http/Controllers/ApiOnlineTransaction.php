@@ -365,18 +365,8 @@ class ApiOnlineTransaction extends Controller
                 }
             }
 
-            $order_id = MyHelper::createrandom(2, 'Besar Angka').$data['id_outlet'].MyHelper::createrandom(2, 'Besar Angka');
-            if(empty($data['delivery_code'])){
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Pengiriman tidak boleh kosong']
-                ]);
-            }
-
             $dataShipment = [
                 'id_transaction'           => $insertTransaction['id_transaction'],
-                'order_id'                 => $order_id,
                 'depart_name'              => $outlet['outlet_name'],
                 'depart_phone'             => $outlet['outlet_phone'],
                 'depart_address'           => $outlet['outlet_address'],
