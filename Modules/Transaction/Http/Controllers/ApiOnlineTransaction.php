@@ -162,7 +162,7 @@ class ApiOnlineTransaction extends Controller
             $post['membership_promo_id'] = null;
         }
 
-        $itemsCheck = $this->checkDataTransaction($post['items']);
+        $itemsCheck = $this->checkDataTransaction($post['items'], 'new');
         if(!empty($itemsCheck['error_messages'])){
             return response()->json(['status'    => 'fail', 'messages'  => [$itemsCheck['error_messages']]]);
         }
@@ -2292,7 +2292,7 @@ class ApiOnlineTransaction extends Controller
         }
     }
 
-    function checkDataTransaction($post){
+    function checkDataTransaction($post, $from_new = 0){
         $items = $this->mergeProducts($post);
 
         $availableCheckout = true;
@@ -2300,7 +2300,7 @@ class ApiOnlineTransaction extends Controller
         $errorMsg = [];
         $weight = [];
         foreach ($items as $index=>$value){
-            $checkOutlet = Outlet::where('id_outlet', $value['id_outlet'])->where('outlet_status', 'Active')->first();
+            $checkOutlet = Outlet::where('id_outlet', $value['id_outlet'])->where('outlet_status', 'Active')->where('outlet_is_closed', 0)->first();
             if(!empty($checkOutlet)){
                 $productSubtotal = 0;
                 $weightProduct = 0;
@@ -2311,6 +2311,10 @@ class ApiOnlineTransaction extends Controller
                         ->where('id_product',$item['id_product'])->first();
 
                     if(empty($product)){
+                        if(!empty($from_new)){
+                            $errorMsg[] = 'Produk tidak valid';
+                        }
+
                         unset($value['items'][$key]);
                         continue;
                     }else{
@@ -2330,6 +2334,9 @@ class ApiOnlineTransaction extends Controller
                         //check visibility
                         $check = ProductVariantGroupDetail::where('id_product_variant_group', $item['id_product_variant_group'])->where('id_outlet', $value['id_outlet'])->first();
                         if($check['product_variant_group_visibility' == 'Hidden']){
+                            if(!empty($from_new)){
+                                $errorMsg[] = 'Produk tidak valid';
+                            }
                             unset($value['items'][$key]);
                             continue;
                         }
@@ -2368,7 +2375,7 @@ class ApiOnlineTransaction extends Controller
                         $weight[] = $product['product_weight'];
                         $weightProduct = $weightProduct+$product['product_weight'];
                     }else{
-                        $error = 'Produk tidak valid.';
+                        $error = 'Produk tidak valid';
                     }
 
                     $totalPrice = (int)$product['product_price'] * $item['qty'];
@@ -2402,13 +2409,20 @@ class ApiOnlineTransaction extends Controller
                     }
                 }
 
-                $items[$index]['delivery_code'] = $value['delivery_code']??'';
-                $items[$index]['delivery_service'] = $value['delivery_service']??'';
-                $items[$index]['items_total_weight'] = $weightProduct;
-                $items[$index]['items_subtotal'] = $productSubtotal;
-                $items[$index]['items_subtotal_text'] = 'Rp '.number_format($productSubtotal,0,",",".");
-                $items[$index]['items'] = array_values($value['items']);
+                if(!empty($value['items'])){
+                    $items[$index]['delivery_code'] = $value['delivery_code']??'';
+                    $items[$index]['delivery_service'] = $value['delivery_service']??'';
+                    $items[$index]['items_total_weight'] = $weightProduct;
+                    $items[$index]['items_subtotal'] = $productSubtotal;
+                    $items[$index]['items_subtotal_text'] = 'Rp '.number_format($productSubtotal,0,",",".");
+                    $items[$index]['items'] = array_values($value['items']);
+                }else{
+                    $errorMsg[] = 'Stock produk habis';
+                    unset($items[$index]);
+                    continue;
+                }
             }else{
+                $errorMsg[] = 'Outlet tidak ditemukan';
                 unset($items[$index]);
                 continue;
             }

@@ -22,7 +22,7 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::any('filter/geolocation', 'ApiOutletController@filterGeolocation');
     Route::any('sync', 'ApiSyncOutletController@sync');//SYNC
 
-    Route::post('detail', 'ApiOutletController@outletMerchantStorePage');
+    Route::post('detail', 'ApiOutletController@detailOutletMerchant');
     Route::get('store-page', 'ApiOutletController@outletMerchantStorePage');
 });
 

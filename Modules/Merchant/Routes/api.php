@@ -38,6 +38,10 @@ Route::group(['prefix' => 'merchant'], function () {
             Route::post('product/delete', 'ApiMerchantManagementController@productDelete');
             Route::post('product/photo/delete', 'ApiMerchantManagementController@productPhotoDelete');
 
+            //holiday
+            Route::get('holiday/status', 'ApiMerchantController@holiday');
+            Route::post('holiday/update', 'ApiMerchantController@holiday');
+
             //profile
             Route::get('profile/detail', 'ApiMerchantController@profileDetail');
             Route::post('profile/outlet/update', 'ApiMerchantController@profileOutletUpdate');
@@ -57,6 +61,12 @@ Route::group(['prefix' => 'merchant'], function () {
             //delivery
             Route::get('delivery', 'ApiMerchantController@deliverySetting');
             Route::post('delivery/update-status', 'ApiMerchantController@deliverySettingUpdate');
+        });
+
+        Route::group(['prefix' => 'transaction'], function () {
+            Route::post('/', 'ApiMerchantTransactionController@listTransaction');
+            Route::post('detail', 'ApiMerchantTransactionController@detailTransaction');
+            Route::get('status-count', 'ApiMerchantTransactionController@statusCount');
         });
     });
 

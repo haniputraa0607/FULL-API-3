@@ -111,7 +111,11 @@ class Transaction extends Model
 		'need_manual_void',
 		'failed_void_reason',
 		'shipment_method',
-		'shipment_courier'
+		'shipment_courier',
+        'transactions_maximum_date_process',
+        'transactions_maximum_date_delivery',
+        'transactions_reject_reason',
+        'transactions_reject_at'
 	];
 
 	public $manual_refund = 0;
@@ -312,7 +316,8 @@ class Transaction extends Model
         $this->update([
             'transaction_status' => 'Pending',
             'transaction_payment_status' => 'Completed',
-            'completed_at' => date('Y-m-d H:i:s')
+            'completed_at' => date('Y-m-d H:i:s'),
+            'transactions_maximum_date_process' => date('Y-m-d', strtotime(('Y-m-d'). ' + 3 days'))
         ]);
 
     	// trigger payment complete -> service

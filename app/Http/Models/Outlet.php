@@ -82,6 +82,7 @@ class Outlet extends Authenticatable
 		'outlet_latitude',
 		'outlet_longitude',
 		'outlet_status',
+        'outlet_is_closed',
         'outlet_image_cover',
         'outlet_image_logo_portrait',
         'outlet_image_logo_landscape',

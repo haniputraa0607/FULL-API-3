@@ -1491,7 +1491,7 @@ class ApiHistoryController extends Controller
         $codeIndo = [
             'Reject' => [
                 'code' => 1,
-                'text' => 'Ditolak'
+                'text' => 'Dibatalkan'
             ],
             'Unpaid' => [
                 'code' => 2,
@@ -1550,6 +1550,7 @@ class ApiHistoryController extends Controller
                 'transaction_status_text' => $codeIndo[$value['transaction_status']]['text']??'',
                 'transaction_grandtotal' => $value['transaction_grandtotal'],
                 'product_name' => $product['product_name'],
+                'product_qty' => $product['transaction_product_qty'],
                 'product_image' => (empty($image) ? config('url.storage_url_api').'img/default.jpg': $image),
                 'product_variants' => $variant
             ];
