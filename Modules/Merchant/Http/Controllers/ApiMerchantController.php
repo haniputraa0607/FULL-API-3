@@ -377,6 +377,25 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkGet($detail));
     }
 
+    public function holiday(Request $request){
+        $post = $request->json()->all();
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        if(empty($post)){
+            $status = Outlet::where('id_outlet', $checkMerchant['id_outlet'])->first()['outlet_is_closed']??0;
+            $res = ['status' => (empty($status) ? false: true)];
+            return response()->json(MyHelper::checkGet($res));
+        }else{
+            $update = Outlet::where('id_outlet', $checkMerchant['id_outlet'])->update(['outlet_is_closed' => ($post['status'] ? 1 : 0)]);
+            return response()->json(MyHelper::checkUpdate($update));
+        }
+
+    }
+
     public function profileDetail(Request $request){
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
@@ -396,6 +415,7 @@ class ApiMerchantController extends Controller
 
         $detail = [
             'outlet' => [
+                'is_closed' => (empty($detail['outlet_is_closed']) ?false:true),
                 'merchant_name' => $detail['outlet_name'],
                 'merchant_description' => $detail['outlet_description'],
                 'merchant_license_number' => $detail['outlet_license_number'],
@@ -720,7 +740,7 @@ class ApiMerchantController extends Controller
 
     public function helpPage(){
         $helpPage = Setting::where('key', 'merchant_help_page')->first()['value']??'';
-        return response()->json(MyHelper::checkGet(['url' => env('STORAGE_URL_API').'/api/custom-page/webview/'.$helpPage]));
+        return response()->json(MyHelper::checkGet(['url' => config('url.api_url').'api/custom-page/webview/'.$helpPage]));
     }
 
     public function summaryOrder(Request $request){

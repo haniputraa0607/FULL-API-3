@@ -3697,6 +3697,7 @@ class ApiOutletController extends Controller
             $newestProduct = app($this->product)->listProductMerchantNewest($detail);
 
             $result = [
+                'is_closed' => (empty($detail['outlet_is_closed']) ?false:true),
                 'id_outlet' => $detail['id_outlet'],
                 'outlet_name' => $detail['outlet_name'],
                 'outlet_description' => $detail['outlet_description'],
@@ -3716,6 +3717,7 @@ class ApiOutletController extends Controller
 
         $list = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
             ->where('outlet_status', 'Active')
+            ->where('outlet_is_closed', 0)
             ->where('merchant_status', 'Active')
             ->select('outlets.id_outlet', 'id_merchant');
 
@@ -3755,6 +3757,7 @@ class ApiOutletController extends Controller
     public function outletMerchantStorePage(){
         $topList = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
                 ->where('outlet_status', 'Active')
+                ->where('outlet_is_closed', 0)
                 ->where('merchant_status', 'Active')->orderBy('merchant_count_transaction', 'desc')->limit(10)->get()->toArray();
 
         $top = [];
@@ -3772,6 +3775,7 @@ class ApiOutletController extends Controller
         $newest = [];
         $newestList  = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
             ->where('outlet_status', 'Active')
+            ->where('outlet_is_closed', 0)
             ->where('merchant_status', 'Active')
             ->whereNotIn('outlets.id_outlet', $idTop)
             ->orderBy('outlets.created_at', 'desc')->limit(10)->get()->toArray();
