@@ -793,13 +793,14 @@ class ApiMerchantController extends Controller
         $currentDate = date('Y-m-d');
         $start = date('Y-m-d', strtotime('-6 day', strtotime($currentDate)));
         $end = $currentDate;
-
+        $grandTotal = 0;
         $transactions = Transaction::where('id_outlet', $id_outlet)->where('transaction_status', 'Completed')
                     ->whereDate('transaction_date', '>=', $start)->whereDate('transaction_date', '<=', $end)
                     ->select('transaction_date', 'transaction_grandtotal')->get()->toArray();
 
         $resultDate = [];
         foreach ($transactions as $trx){
+            $grandTotal = $grandTotal + $trx['transaction_grandtotal'];
             $date = date('Y-m-d', strtotime($trx['transaction_date']));
             if(!empty($resultDate[$date])){
                 $resultDate[$date] = $resultDate[$date] + 1;
@@ -808,22 +809,35 @@ class ApiMerchantController extends Controller
             }
         }
 
-        $result = [];
+        $data = [];
         for($i=0;$i<=6;$i++){
             $date = date('Y-m-d', strtotime('-'.$i.' day', strtotime($currentDate)));
-            $result[] = [
+            $data[] = [
                 'key' => MyHelper::dateFormatInd($date, false, false),
                 'value' => $resultDate[$date]??0
             ];
         }
 
+        $result = [
+            'revenue_text' => 'Pendapatan '.MyHelper::dateFormatInd($start, false, false).' sampai '.MyHelper::dateFormatInd($end, false, false),
+            'revenue_value' => 'Rp '.number_format((int)$grandTotal,0,",","."),
+            'data' => $data
+        ];
         return $result;
     }
 
     public function statisticsMonthly($id_outlet){
-        $result = [];
+        $data = [];
+        $grandTotal = 0;
+        $start = '';
+        $end = '';
         for ($i = 1; $i <= 12; $i++) {
             $date = date("Y-m-01", strtotime( date( 'Y-m-01' )." -$i months"));
+            if($i==1){
+                $end = $date;
+            }elseif($i==12){
+                $start = $date;
+            }
             $monthFormat = MyHelper::dateFormatInd($date, false, false);
             $monthFormat = str_replace('01', '', $monthFormat);
 
@@ -831,28 +845,49 @@ class ApiMerchantController extends Controller
             $year = date('Y', strtotime($date));
             $value = MonthlyReportTrx::where('id_outlet', $id_outlet)
                     ->where('trx_month', $month)
-                    ->where('trx_year', $year)->first()['trx_count']??0;
-            $result[] = [
+                    ->where('trx_year', $year)->first();
+            $grandTotal = $grandTotal + (int)($value['trx_grand']??0);
+            $data[] = [
                 'key' => $monthFormat,
-                'value' => (int)$value
+                'value' => (int)$value['trx_count']??0
             ];
         }
 
+        $start = MyHelper::dateFormatInd($start, false, false);
+        $start = str_replace('01', '', $start);
+        $end = MyHelper::dateFormatInd($end, false, false);
+        $end = str_replace('01', '', $end);
+
+        $result = [
+            'revenue_text' => 'Pendapatan'.$start.' sampai '.$end,
+            'revenue_value' => 'Rp '.number_format((int)$grandTotal,0,",","."),
+            'data' => $data
+        ];
         return $result;
     }
 
     public function statisticsYearly($id_outlet){
         $currentYear = date('Y');
-        $result = [];
+        $data = [];
+        $grandTotal = 0;
         for ($i = 1; $i <= 12; $i++) {
             $year = $currentYear-$i;
             $value = MonthlyReportTrx::where('id_outlet', $id_outlet)
                     ->where('trx_year', $year)->sum('trx_count');
-            $result[] = [
+            $valueGrand = MonthlyReportTrx::where('id_outlet', $id_outlet)
+                ->where('trx_year', $year)->sum('trx_grand');
+            $grandTotal = $grandTotal + (int)$valueGrand;
+            $data[] = [
                 'key' => $year,
                 'value' => (int)$value
             ];
         }
+
+        $result = [
+            'revenue_text' => 'Pendapatan',
+            'revenue_value' => 'Rp '.number_format((int)$grandTotal,0,",","."),
+            'data' => $data
+        ];
 
         return $result;
     }
