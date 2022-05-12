@@ -17,10 +17,14 @@ Route::middleware('auth:api')->get('/consultasion', function (Request $request) 
     return $request->user();
 });
 
-Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'consultasion/transaction'], function () {
-    Route::post('/check', 'ApiTransactionConsultasionController@checkTransaction');
-    Route::post('/new', 'ApiTransactionConsultasionController@newTransaction');
-    Route::post('/get', 'ApiTransactionConsultasionController@getTransaction');
-    Route::get('/reminder/list', 'ApiTransactionConsultasionController@getSoonConsultasionList');
-    Route::post('/reminder/detail', 'ApiTransactionConsultasionController@getSoonConsultasionDetail');
+Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'consultasion'], function () {
+    Route::post('/start', 'ApiTransactionConsultasionController@startConsultasion');
+    Route::group(['prefix' => 'transaction'], function () {
+        Route::post('/check', 'ApiTransactionConsultasionController@checkTransaction');
+        Route::post('/new', 'ApiTransactionConsultasionController@newTransaction');
+        Route::post('/get', 'ApiTransactionConsultasionController@getTransaction');
+        Route::get('/reminder/list', 'ApiTransactionConsultasionController@getSoonConsultasionList');
+        Route::post('/reminder/detail', 'ApiTransactionConsultasionController@getSoonConsultasionDetail');
+        Route::get('/history/list', 'ApiTransactionConsultasionController@getHistoryConsultasionList');
+    });
 });
