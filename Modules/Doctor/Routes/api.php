@@ -60,7 +60,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix
     Route::post('schedule/list', ['uses' => 'ApiScheduleController@getSchedule']);
 });
 
-Route::group(['prefix' => 'auth'], function () {
+Route::group(['prefix' => 'doctor/auth'], function () {
     Route::post('check', ['uses' => 'AuthDoctorController@checkPhoneNumber']);
     Route::post('otp-verification', ['uses' => 'AuthDoctorController@otpVerification']);
     Route::post('forgot-password', ['uses' => 'AuthDoctorController@forgotPassword']);
