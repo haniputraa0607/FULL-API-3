@@ -5,6 +5,7 @@ namespace Modules\Doctor\Entities;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Doctor\Entities\DoctorClinic;
 use Modules\Doctor\Entities\DoctorSpecialist;
+use Modules\Doctor\Entities\DoctorSchedule;
 
 class Doctor extends Model
 {
@@ -38,5 +39,10 @@ class Doctor extends Model
     public function scopeOnlyActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function schedules()
+    {
+        return $this->hasMany(DoctorSchedule::class, 'id_doctor', 'id_doctor');
     }
 }

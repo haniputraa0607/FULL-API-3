@@ -20,6 +20,9 @@ class CreateDoctorsTables extends Migration
             $table->string('password');
             $table->integer('id_doctor_clinic');
             $table->enum('doctor_status', array('offline', 'online', 'busy'))->default('offline');
+            $table->string('practical_experience');
+            $table->string('alumni');
+            $table->string('registrasion_certificate_number');
             $table->string('doctor_session_price');
             $table->string('is_active');
             $table->string('doctor_service');
