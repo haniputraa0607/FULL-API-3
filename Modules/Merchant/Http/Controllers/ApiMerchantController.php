@@ -114,6 +114,86 @@ class ApiMerchantController extends Controller
         }
     }
 
+    public function registerApproved(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if(empty($post)){
+            $setting = Setting::where('key', 'merchant_register_approved')->first()['value_text']??null;
+            $setting = (array)json_decode($setting);
+
+            $detail = [];
+            if(!empty($setting)){
+                $detail['image'] = (empty($setting['image']) ? '' : config('url.storage_url_api').$setting['image']);
+                $detail['title'] = $setting['title'];
+                $detail['description'] = $setting['description'];
+                $detail['button_text'] = $setting['button_text'];
+            }
+
+            return response()->json(MyHelper::checkGet($detail));
+        }else{
+            $setting = Setting::where('key', 'merchant_register_approved')->first()['value_text']??null;
+            $setting = (array)json_decode($setting);
+            $image = $setting['image']??'';
+            if(!empty($post['image'])){
+                $upload = MyHelper::uploadPhotoStrict($post['image'], 'img/', 500, 500, 'merchant_approved_image');
+
+                if (isset($upload['status']) && $upload['status'] == "success") {
+                    $image = $upload['path'].'?'.time();
+                }else{
+                    $image = '';
+                }
+            }
+
+            $detailSave['image'] = $image;
+            $detailSave['title'] = $post['title'];
+            $detailSave['description'] = $post['description'];
+            $detailSave['button_text'] = $post['button_text'];
+
+            $save = Setting::updateOrCreate(['key' => 'merchant_register_approved'], ['value_text' => json_encode($detailSave)]);
+            return response()->json(MyHelper::checkUpdate($save));
+        }
+    }
+
+    public function registerRejected(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if(empty($post)){
+            $setting = Setting::where('key', 'merchant_register_rejected')->first()['value_text']??null;
+            $setting = (array)json_decode($setting);
+
+            $detail = [];
+            if(!empty($setting)){
+                $detail['image'] = (empty($setting['image']) ? '' : config('url.storage_url_api').$setting['image']);
+                $detail['title'] = $setting['title'];
+                $detail['description'] = $setting['description'];
+            }
+
+            return response()->json(MyHelper::checkGet($detail));
+        }else{
+            $setting = Setting::where('key', 'merchant_register_rejected')->first()['value_text']??null;
+            $setting = (array)json_decode($setting);
+            $image = $setting['image']??'';
+            if(!empty($post['image'])){
+                $upload = MyHelper::uploadPhotoStrict($post['image'], 'img/', 500, 500, 'merchant_rejected_image');
+
+                if (isset($upload['status']) && $upload['status'] == "success") {
+                    $image = $upload['path'].'?'.time();
+                }else{
+                    $image = '';
+                }
+            }
+
+            $detailSave['image'] = $image;
+            $detailSave['title'] = $post['title'];
+            $detailSave['description'] = $post['description'];
+
+            $save = Setting::updateOrCreate(['key' => 'merchant_register_rejected'], ['value_text' => json_encode($detailSave)]);
+            return response()->json(MyHelper::checkUpdate($save));
+        }
+    }
+
     public function registerSubmitStep1(MerchantCreateStep1 $request){
         $post = $request->json()->all();
         $idUser = $request->user()->id;
@@ -297,6 +377,25 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkGet($detail));
     }
 
+    public function holiday(Request $request){
+        $post = $request->json()->all();
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        if(empty($post)){
+            $status = Outlet::where('id_outlet', $checkMerchant['id_outlet'])->first()['outlet_is_closed']??0;
+            $res = ['status' => (empty($status) ? false: true)];
+            return response()->json(MyHelper::checkGet($res));
+        }else{
+            $update = Outlet::where('id_outlet', $checkMerchant['id_outlet'])->update(['outlet_is_closed' => ($post['status'] ? 1 : 0)]);
+            return response()->json(MyHelper::checkUpdate($update));
+        }
+
+    }
+
     public function profileDetail(Request $request){
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
@@ -316,6 +415,7 @@ class ApiMerchantController extends Controller
 
         $detail = [
             'outlet' => [
+                'is_closed' => (empty($detail['outlet_is_closed']) ?false:true),
                 'merchant_name' => $detail['outlet_name'],
                 'merchant_description' => $detail['outlet_description'],
                 'merchant_license_number' => $detail['outlet_license_number'],
@@ -640,7 +740,7 @@ class ApiMerchantController extends Controller
 
     public function helpPage(){
         $helpPage = Setting::where('key', 'merchant_help_page')->first()['value']??'';
-        return response()->json(MyHelper::checkGet(['url' => env('STORAGE_URL_API').'/api/custom-page/webview/'.$helpPage]));
+        return response()->json(MyHelper::checkGet(['url' => config('url.api_url').'api/custom-page/webview/'.$helpPage]));
     }
 
     public function summaryOrder(Request $request){
@@ -658,7 +758,7 @@ class ApiMerchantController extends Controller
         $result = [
             'new_order' => $newOrder,
             'on_progress' => $onProgress,
-            'onDelivery' => $onDelivery,
+            'on_delivery' => $onDelivery,
             'completed' => $completed
         ];
 
@@ -693,13 +793,14 @@ class ApiMerchantController extends Controller
         $currentDate = date('Y-m-d');
         $start = date('Y-m-d', strtotime('-6 day', strtotime($currentDate)));
         $end = $currentDate;
-
+        $grandTotal = 0;
         $transactions = Transaction::where('id_outlet', $id_outlet)->where('transaction_status', 'Completed')
                     ->whereDate('transaction_date', '>=', $start)->whereDate('transaction_date', '<=', $end)
                     ->select('transaction_date', 'transaction_grandtotal')->get()->toArray();
 
         $resultDate = [];
         foreach ($transactions as $trx){
+            $grandTotal = $grandTotal + $trx['transaction_grandtotal'];
             $date = date('Y-m-d', strtotime($trx['transaction_date']));
             if(!empty($resultDate[$date])){
                 $resultDate[$date] = $resultDate[$date] + 1;
@@ -708,22 +809,35 @@ class ApiMerchantController extends Controller
             }
         }
 
-        $result = [];
+        $data = [];
         for($i=0;$i<=6;$i++){
             $date = date('Y-m-d', strtotime('-'.$i.' day', strtotime($currentDate)));
-            $result[] = [
+            $data[] = [
                 'key' => MyHelper::dateFormatInd($date, false, false),
                 'value' => $resultDate[$date]??0
             ];
         }
 
+        $result = [
+            'revenue_text' => 'Pendapatan '.MyHelper::dateFormatInd($start, false, false).' sampai '.MyHelper::dateFormatInd($end, false, false),
+            'revenue_value' => 'Rp '.number_format((int)$grandTotal,0,",","."),
+            'data' => $data
+        ];
         return $result;
     }
 
     public function statisticsMonthly($id_outlet){
-        $result = [];
+        $data = [];
+        $grandTotal = 0;
+        $start = '';
+        $end = '';
         for ($i = 1; $i <= 12; $i++) {
             $date = date("Y-m-01", strtotime( date( 'Y-m-01' )." -$i months"));
+            if($i==1){
+                $end = $date;
+            }elseif($i==12){
+                $start = $date;
+            }
             $monthFormat = MyHelper::dateFormatInd($date, false, false);
             $monthFormat = str_replace('01', '', $monthFormat);
 
@@ -731,28 +845,49 @@ class ApiMerchantController extends Controller
             $year = date('Y', strtotime($date));
             $value = MonthlyReportTrx::where('id_outlet', $id_outlet)
                     ->where('trx_month', $month)
-                    ->where('trx_year', $year)->first()['trx_count']??0;
-            $result[] = [
+                    ->where('trx_year', $year)->first();
+            $grandTotal = $grandTotal + (int)($value['trx_grand']??0);
+            $data[] = [
                 'key' => $monthFormat,
-                'value' => (int)$value
+                'value' => (int)$value['trx_count']??0
             ];
         }
 
+        $start = MyHelper::dateFormatInd($start, false, false);
+        $start = str_replace('01', '', $start);
+        $end = MyHelper::dateFormatInd($end, false, false);
+        $end = str_replace('01', '', $end);
+
+        $result = [
+            'revenue_text' => 'Pendapatan'.$start.' sampai '.$end,
+            'revenue_value' => 'Rp '.number_format((int)$grandTotal,0,",","."),
+            'data' => $data
+        ];
         return $result;
     }
 
     public function statisticsYearly($id_outlet){
         $currentYear = date('Y');
-        $result = [];
+        $data = [];
+        $grandTotal = 0;
         for ($i = 1; $i <= 12; $i++) {
             $year = $currentYear-$i;
             $value = MonthlyReportTrx::where('id_outlet', $id_outlet)
                     ->where('trx_year', $year)->sum('trx_count');
-            $result[] = [
+            $valueGrand = MonthlyReportTrx::where('id_outlet', $id_outlet)
+                ->where('trx_year', $year)->sum('trx_grand');
+            $grandTotal = $grandTotal + (int)$valueGrand;
+            $data[] = [
                 'key' => $year,
                 'value' => (int)$value
             ];
         }
+
+        $result = [
+            'revenue_text' => 'Pendapatan',
+            'revenue_value' => 'Rp '.number_format((int)$grandTotal,0,",","."),
+            'data' => $data
+        ];
 
         return $result;
     }

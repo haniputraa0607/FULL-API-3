@@ -28,7 +28,9 @@ use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
 use Modules\ProductBundling\Entities\BundlingProduct;
+use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
+use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\ProductVariant\Entities\ProductVariantPivot;
 use Validator;
 use Hash;
@@ -1776,6 +1778,8 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([]);
         }
 
+        $product['outlet_is_closed'] = (empty($outlet['outlet_is_closed']) ?false:true);
+        $product['stock_item'] = 0;
         $product['product_price'] = 0;
         $productGlobalPrice = ProductGlobalPrice::where('id_product',$post['id_product'])->first();
         if($productGlobalPrice){
@@ -1902,6 +1906,8 @@ class ApiProductController extends Controller
                     'product_detail_stock_status as stock_status')
                 ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
                 ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
+                ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
+                ->where('outlet_is_closed', 0)
                 ->where('id_outlet', $query['id_outlet'])
                 ->where('product_global_price', '>', 0)
                 ->where('product_visibility', 'Visible')
@@ -1940,6 +1946,8 @@ class ApiProductController extends Controller
             'product_detail_stock_status as stock_status')
             ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
             ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
+            ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
+            ->where('outlet_is_closed', 0)
             ->where('id_outlet', $query['id_outlet'])
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
@@ -1976,7 +1984,7 @@ class ApiProductController extends Controller
 
         if(!empty($post['id_outlet'])){
             $idMerchant = Merchant::where('id_outlet', $post['id_outlet'])->first()['id_merchant']??null;
-            if(empty($outlet)){
+            if(empty($idMerchant)){
                 return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
             }
         }
@@ -1985,6 +1993,8 @@ class ApiProductController extends Controller
             'product_detail_stock_status as stock_status', 'product_detail.id_outlet')
             ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
             ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
+            ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
+            ->where('outlet_is_closed', 0)
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
             ->orderBy('product_count_transaction', 'desc')

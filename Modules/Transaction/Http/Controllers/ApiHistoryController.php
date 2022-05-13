@@ -1491,7 +1491,7 @@ class ApiHistoryController extends Controller
         $codeIndo = [
             'Reject' => [
                 'code' => 1,
-                'text' => 'Ditolak'
+                'text' => 'Dibatalkan'
             ],
             'Unpaid' => [
                 'code' => 2,
@@ -1541,14 +1541,16 @@ class ApiHistoryController extends Controller
                 $variant = implode(', ', $variant);
             }
 
-            $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first()['url_product_photo']??'';
+            $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first()['url_product_photo']??config('url.storage_url_api').'img/default.jpg';
             $resultDate[$trxDate][] = [
                 'id_transaction' => $value['id_transaction'],
                 'id_transaction_group' => $value['id_transaction_group'],
+                'transaction_receipt_number' => $value['transaction_receipt_number'],
                 'transaction_status_code' => $codeIndo[$value['transaction_status']]['code']??'',
                 'transaction_status_text' => $codeIndo[$value['transaction_status']]['text']??'',
                 'transaction_grandtotal' => $value['transaction_grandtotal'],
                 'product_name' => $product['product_name'],
+                'product_qty' => $product['transaction_product_qty'],
                 'product_image' => (empty($image) ? config('url.storage_url_api').'img/default.jpg': $image),
                 'product_variants' => $variant
             ];

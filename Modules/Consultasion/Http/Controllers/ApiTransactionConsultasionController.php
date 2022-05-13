@@ -16,6 +16,7 @@ use Modules\Doctor\Entities\TimeSchedule;
 use Modules\Doctor\Entities\Doctor;
 use Modules\Transaction\Entities\TransactionGroup;
 use DB;
+use DateTime;
 
 
 class ApiTransactionConsultasionController extends Controller
@@ -671,14 +672,24 @@ class ApiTransactionConsultasionController extends Controller
             ]);
         }
 
+        $now = new DateTime();
+
         $result = array();
         foreach($transaction as $key => $value) {
             $doctor = Doctor::where('id_doctor', $value['consultasion']['id_doctor'])->first()->toArray();
+            $schedule_date_time = $value['consultasion']['schedule_date'] .' '. $value['consultasion']['schedule_start_time'];
+            $schedule_date_time =new DateTime($schedule_date_time);
+            $diff_date = "missed";
+            if($schedule_date_time > $now) {
+                $diff_date = $now->diff($schedule_date_time)->format("%d days, %h hours and %i minuts");
+            }
 
-            $result[$key]['id_doctor'] = $value['id_transaction'];
+            $result[$key]['id_transaction'] = $value['id_transaction'];
             $result[$key]['id_doctor'] = $value['consultasion']['id_doctor'];
             $result[$key]['doctor_name'] = $doctor['doctor_name'];
+            $result[$key]['doctor_photo'] = $doctor['doctor_photo'];
             $result[$key]['schedule_date'] = $value['consultasion']['schedule_date'];
+            $result[$key]['diff_date'] = $diff_date;
         }
 
         return response()->json([
@@ -701,7 +712,7 @@ class ApiTransactionConsultasionController extends Controller
             $id = $post['id_user'];
         }
 
-        //cek id doctor
+        //cek id transaction
         if(!isset($post['id_transaction'])){
             return response()->json([
                 'status'    => 'fail',
@@ -715,7 +726,7 @@ class ApiTransactionConsultasionController extends Controller
         if(empty($transaction)){
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['Tidak ada transaksi yang akan datang']
+                'messages'  => ['Transaksi tidak ditemukan']
             ]);
         }
 
@@ -729,20 +740,146 @@ class ApiTransactionConsultasionController extends Controller
             ]);
         }
 
-        dd($detailDoctor);
-
         //get day
-
         $day = date('l', strtotime($transaction['consultasion']['schedule_date']));
 
+        //get diff date
+        $now = new DateTime();
+        $schedule_date_time = $transaction['consultasion']['schedule_date'] .' '. $transaction['consultasion']['schedule_start_time'];
+        $schedule_date_time =new DateTime($schedule_date_time);
+        $diff_date = "missed";
+
+        if($schedule_date_time > $now) {
+            $diff_date = $now->diff($schedule_date_time)->format("%d days, %h hours and %i minuts");
+        }
+
         $result = [
-            'doctor' => $detailDoctor,
+            'doctor' => $detailDoctor->getData()->result,
             'schedule_date' => $transaction['consultasion']['schedule_date'],
             'schedule_start_time' => $transaction['consultasion']['schedule_start_time'],
-            'schedule_day' => $day
+            'schedule_day' => $day,
+            'diff_date' => $diff_date
         ];
 
-        dd($result);
+        return response()->json([
+            'status'   => 'success',
+            'result'   => $result
+        ]);
+    }
+
+    /**
+     * Get info from given cart data
+     * @param  GetTransaction $request [description]
+     * @return View                    [description]
+     */
+    public function startConsultasion(Request $request) {
+        $post = $request->json()->all();
+
+        if (!isset($post['id_user'])) {
+            $id = $request->user()->id;
+        } else {
+            $id = $post['id_user'];
+        }
+
+        //cek id transaction
+        if(!isset($post['id_transaction'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Id transaction tidak boleh kosong']
+            ]);
+        }
+
+        //get Transaction
+        $transaction = Transaction::with('consultasion')->where('id_transaction', $post['id_transaction'])->first()->toArray();
+
+        if(empty($transaction)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaksi tidak ditemukan']
+            ]);
+        }
+
+        //get Doctor
+        $doctor = Doctor::where('id_doctor', $transaction['consultasion']['id_doctor'])->first();
+
+        if(empty($doctor)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Doctor tidak ditemukan']
+            ]);
+        }
+
+        DB::beginTransaction();
+        try {
+            $result = TransactionConsultasion::where('id_transaction', $transaction['consultasion']['id_transaction'])
+            ->update([
+                'consultasion_status' => "ongoing",
+                'consultasion_start_at' => new DateTime
+            ]);
+    
+            $doctor->update(['doctor_status' => "busy"]);
+            $doctor->save();
+        } catch (\Exception $e) {
+            $result = [
+                'status'  => 'fail',
+                'message' => 'Start Consultasion Failed'
+            ];
+            DB::rollBack();
+            return response()->json($result);
+        }
+        DB::commit();
+
+        return response()->json(['status'  => 'success', 'result' => $result]);
+    }
+
+    /**
+     * Get info from given cart data
+     * @param  GetTransaction $request [description]
+     * @return View                    [description]
+     */
+    public function getHistoryConsultasionList(Request $request) {
+        $post = $request->json()->all();
+
+        if (!isset($post['id_user'])) {
+            $id = $request->user()->id;
+        } else {
+            $id = $post['id_user'];
+        }
+
+        $transaction = Transaction::with('consultasion')->where('id_user', $id);
+
+        if(isset($post['filter'])) {
+            $id_doctor = Doctor::where('doctor_name', 'like', '%'.$post['filter'].'%')->pluck('id_doctor')->toArray();
+            $transaction = $transaction->whereHas('consultasion', function($query) use ($post, $id_doctor){
+                $query->onlyDone()->where(function($query2) use ($post, $id_doctor){
+                    $query2->orWhere('schedule_date', 'like', '%'.$post['filter'].'%');
+                    $query2->orWhereIn('id_doctor', $id_doctor);
+                });
+            });
+        } else {
+            $transaction = $transaction->whereHas('consultasion', function($query){
+                $query->onlyDone();
+            });
+        }
+
+        $transaction = $transaction->get()->toArray();
+
+        if(empty($transaction)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['History transaksi konsultasi tidak ditemukan']
+            ]);
+        }
+
+        $result = array();
+        foreach($transaction as $key => $value) {
+            $doctor = Doctor::where('id_doctor', $value['consultasion']['id_doctor'])->first()->toArray();
+
+            $result[$key]['id_transaction'] = $value['id_transaction'];
+            $result[$key]['doctor_name'] = $doctor['doctor_name'];
+            $result[$key]['doctor_photo'] = $doctor['doctor_photo'];
+            $result[$key]['schedule_date'] = $value['consultasion']['schedule_date'];
+        }
 
         return response()->json([
             'status'   => 'success',

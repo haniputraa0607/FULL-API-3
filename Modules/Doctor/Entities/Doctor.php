@@ -7,6 +7,7 @@ use Modules\Doctor\Entities\DoctorClinic;
 use Modules\Doctor\Entities\DoctorSpecialist;
 use App\Lib\MyHelper;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Modules\Doctor\Entities\DoctorSchedule;
 
 class Doctor extends Authenticatable
 {
@@ -55,5 +56,10 @@ class Doctor extends Authenticatable
     public function scopeOnlyActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function schedules()
+    {
+        return $this->hasMany(DoctorSchedule::class, 'id_doctor', 'id_doctor');
     }
 }
