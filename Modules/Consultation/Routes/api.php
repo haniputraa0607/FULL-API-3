@@ -17,7 +17,7 @@ Route::middleware('auth:api')->get('/consultation', function (Request $request) 
     return $request->user();
 });
 
-Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-apps'], 'prefix' => 'consultation'], function () {
+Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'consultation'], function () {
     Route::post('/start', 'ApiTransactionConsultationController@startConsultation');
     Route::group(['prefix' => 'transaction'], function () {
         Route::post('/check', 'ApiTransactionConsultationController@checkTransaction');

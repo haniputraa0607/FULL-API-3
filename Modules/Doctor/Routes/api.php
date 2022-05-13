@@ -53,12 +53,21 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
     });
 });
 
-Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-apps'], 'prefix' => 'doctor'], function () {
+Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'doctor'], function () {
     Route::post('list', ['uses' => 'ApiDoctorController@listDoctor']);
     Route::get('detail-apps/{id}', ['uses' => 'ApiDoctorController@show']);
 
     Route::post('schedule/list', ['uses' => 'ApiScheduleController@getSchedule']);
 
+    Route::group(['prefix' => 'auth'], function () {
+        Route::post('check', ['uses' => 'AuthDoctorController@checkPhoneNumber']);
+        Route::post('otp-verification', ['uses' => 'AuthDoctorController@otpVerification']);
+        Route::post('forgot-password', ['uses' => 'AuthDoctorController@forgotPassword']);
+        Route::post('change-password', ['uses' => 'AuthDoctorController@changePassword']);
+    });
+});
+
+Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-apps'], 'prefix' => 'doctor'], function () {
     Route::group(['prefix' => 'auth'], function () {
         Route::post('check', ['uses' => 'AuthDoctorController@checkPhoneNumber']);
         Route::post('otp-verification', ['uses' => 'AuthDoctorController@otpVerification']);
