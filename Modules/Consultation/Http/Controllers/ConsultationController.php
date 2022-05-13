@@ -1,12 +1,12 @@
 <?php
 
-namespace Modules\Consultasion\Http\Controllers;
+namespace Modules\Consultation\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
-class ConsultasionController extends Controller
+class ConsultationController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -14,7 +14,7 @@ class ConsultasionController extends Controller
      */
     public function index()
     {
-        return view('consultasion::index');
+        return view('consultation::index');
     }
 
     /**
@@ -23,7 +23,7 @@ class ConsultasionController extends Controller
      */
     public function create()
     {
-        return view('consultasion::create');
+        return view('consultation::create');
     }
 
     /**
@@ -43,7 +43,7 @@ class ConsultasionController extends Controller
      */
     public function show($id)
     {
-        return view('consultasion::show');
+        return view('consultation::show');
     }
 
     /**
@@ -53,7 +53,7 @@ class ConsultasionController extends Controller
      */
     public function edit($id)
     {
-        return view('consultasion::edit');
+        return view('consultation::edit');
     }
 
     /**

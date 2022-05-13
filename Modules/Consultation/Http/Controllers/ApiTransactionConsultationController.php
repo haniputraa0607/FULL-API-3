@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Consultasion\Http\Controllers;
+namespace Modules\Consultation\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -8,7 +8,7 @@ use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
 use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
-use App\Http\Models\TransactionConsultasion;
+use App\Http\Models\TransactionConsultation;
 
 use Modules\UserFeedback\Entities\UserFeedbackLog;
 use Modules\Doctor\Entities\DoctorSchedule;
@@ -19,7 +19,7 @@ use DB;
 use DateTime;
 
 
-class ApiTransactionConsultasionController extends Controller
+class ApiTransactionConsultationController extends Controller
 {
     function __construct() {
         ini_set('max_execution_time', 0);
@@ -55,7 +55,7 @@ class ApiTransactionConsultasionController extends Controller
         $user = $request->user();
 
         //cek date time schedule
-        if($post['consultasion_type'] != "now") {
+        if($post['consultation_type'] != "now") {
             if(empty($post['date']) && empty($post['time'])){
                 return response()->json([
                     'status'    => 'fail',
@@ -79,7 +79,7 @@ class ApiTransactionConsultasionController extends Controller
         }
 
         //check session availability
-        if($post['consultasion_type'] != "now") {
+        if($post['consultation_type'] != "now") {
             $picked_date = $post['date'];
             $picked_day = strtolower(date('l', strtotime($picked_date)));
 
@@ -106,8 +106,8 @@ class ApiTransactionConsultasionController extends Controller
 
         $result = array();
 
-        //consultasion type
-        $result['consultasion_type'] = $post['consultasion_type'];
+        //consultation type
+        $result['consultation_type'] = $post['consultation_type'];
 
         //selected doctor
         $result['doctor'] = [
@@ -191,7 +191,7 @@ class ApiTransactionConsultasionController extends Controller
         $user = $request->user();
 
         //cek input date and time
-        if($post['consultasion_type'] != 'now') {
+        if($post['consultation_type'] != 'now') {
             if(empty($post['date']) && empty($post['time'])){
                 return response()->json([
                     'status'    => 'fail',
@@ -226,7 +226,7 @@ class ApiTransactionConsultasionController extends Controller
         }
 
         //check session availability
-        if($post['consultasion_type'] != "now") {
+        if($post['consultation_type'] != "now") {
             $picked_date = $post['date'];
             $picked_day = strtolower(date('l', strtotime($picked_date)));
 
@@ -365,8 +365,8 @@ class ApiTransactionConsultasionController extends Controller
             $id = $post['id_user'];
         }
 
-        $type = 'Consultasion';
-        $consultasion_type = $post['consultasion_type'];
+        $type = 'Consultation';
+        $consultation_type = $post['consultation_type'];
 
         if (isset($post['headers'])) {
             unset($post['headers']);
@@ -496,7 +496,7 @@ class ApiTransactionConsultasionController extends Controller
 
         //get picked schedule
         $picked_schedule = null;
-        if($post['consultasion_type'] != 'now') {
+        if($post['consultation_type'] != 'now') {
             $picked_schedule = DoctorSchedule::where('id_doctor', $doctor['id_doctor'])->leftJoin('time_schedules', function($query) {
                 $query->on('time_schedules.id_doctor_schedule', '=' , 'doctor_schedules.id_doctor_schedule');
             })->where('start_time', '=', $post['time'])->first();
@@ -508,10 +508,10 @@ class ApiTransactionConsultasionController extends Controller
 
         $insertTransaction['transaction_receipt_number'] = $receipt;
 
-        $dataConsultasion = [
+        $dataConsultation = [
             'id_transaction'               => $insertTransaction['id_transaction'],
             'id_doctor'                   => $doctor['id_doctor'],
-            'consultasion_type'            => $consultasion_type,
+            'consultation_type'            => $consultation_type,
             'id_user'                      => $insertTransaction['id_user'],
             'schedule_date'                => $post['date'],
             'schedule_start_time'          => $picked_schedule['start_time'],
@@ -520,17 +520,17 @@ class ApiTransactionConsultasionController extends Controller
             'updated_at'                   => date('Y-m-d H:i:s')
         ];
 
-        $trx_consultasion = TransactionConsultasion::create($dataConsultasion);
-        if (!$trx_consultasion) {
+        $trx_consultation = TransactionConsultation::create($dataConsultation);
+        if (!$trx_consultation) {
             DB::rollback();
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['Insert Consultasion Transaction Failed']
+                'messages'  => ['Insert Consultation Transaction Failed']
             ]);
         }
 
         if(strtotime($insertTransaction['transaction_date'])){
-            $trx_consultasion->created_at = strtotime($insertTransaction['transaction_date']);
+            $trx_consultation->created_at = strtotime($insertTransaction['transaction_date']);
         }
 
         //update remaining slot
@@ -550,7 +550,7 @@ class ApiTransactionConsultasionController extends Controller
         //     DB::rollback();
         //     return response()->json([
         //         'status'    => 'fail',
-        //         'messages'  => ['Insert Consultasion Transaction Failed']
+        //         'messages'  => ['Insert Consultation Transaction Failed']
         //     ]);
         // }
 
@@ -614,7 +614,7 @@ class ApiTransactionConsultasionController extends Controller
     public function getTransaction(Request $request) {
         $post = $request->json()->all();
 
-        $transaction = Transaction::where('id_transaction', $post['id_transaction'])->where('trasaction_type', 'Consultasion')->first();
+        $transaction = Transaction::where('id_transaction', $post['id_transaction'])->where('trasaction_type', 'Consultation')->first();
 
         if(empty($transaction)){
             return response()->json([
@@ -625,18 +625,18 @@ class ApiTransactionConsultasionController extends Controller
 
         $transaction = $transaction->toArray();
 
-        $transaction_consultasion = TransactionConsultasion::where('id_transaction', $transaction['id_transaction'])->first()->toArray();
+        $transaction_consultation = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->first()->toArray();
 
-        $doctor = Doctor::where('id_doctor', $transaction_consultasion['id_doctor'])->with('specialists')->first()->toArray();
+        $doctor = Doctor::where('id_doctor', $transaction_consultation['id_doctor'])->with('specialists')->first()->toArray();
 
-        $day = date('l', strtotime($transaction_consultasion['schedule_date']));
+        $day = date('l', strtotime($transaction_consultation['schedule_date']));
 
         $result = [
             "doctor_name" => $doctor['doctor_name'],
             "doctor_specialist" => $doctor['specialists'],
             "day" => $day,
-            "date" => $transaction_consultasion['schedule_date'],
-            "time" => $transaction_consultasion['schedule_start_time'],
+            "date" => $transaction_consultation['schedule_date'],
+            "time" => $transaction_consultation['schedule_start_time'],
             "total_payment" => $transaction['transaction_grandtotal'],
             "payment_method" => $transaction['trasaction_payment_type']
         ];
@@ -652,7 +652,7 @@ class ApiTransactionConsultasionController extends Controller
      * @param  GetTransaction $request [description]
      * @return View                    [description]
      */
-    public function getSoonConsultasionList(Request $request) {
+    public function getSoonConsultationList(Request $request) {
         $post = $request->json()->all();
 
         if (!isset($post['id_user'])) {
@@ -661,7 +661,7 @@ class ApiTransactionConsultasionController extends Controller
             $id = $post['id_user'];
         }
 
-        $transaction = Transaction::with('consultasion')->where('id_user', $id)->whereHas('consultasion', function($query){
+        $transaction = Transaction::with('consultation')->where('id_user', $id)->whereHas('consultation', function($query){
             $query->onlySoon();
         })->get()->toArray();
 
@@ -676,8 +676,8 @@ class ApiTransactionConsultasionController extends Controller
 
         $result = array();
         foreach($transaction as $key => $value) {
-            $doctor = Doctor::where('id_doctor', $value['consultasion']['id_doctor'])->first()->toArray();
-            $schedule_date_time = $value['consultasion']['schedule_date'] .' '. $value['consultasion']['schedule_start_time'];
+            $doctor = Doctor::where('id_doctor', $value['consultation']['id_doctor'])->first()->toArray();
+            $schedule_date_time = $value['consultation']['schedule_date'] .' '. $value['consultation']['schedule_start_time'];
             $schedule_date_time =new DateTime($schedule_date_time);
             $diff_date = "missed";
             if($schedule_date_time > $now) {
@@ -685,10 +685,10 @@ class ApiTransactionConsultasionController extends Controller
             }
 
             $result[$key]['id_transaction'] = $value['id_transaction'];
-            $result[$key]['id_doctor'] = $value['consultasion']['id_doctor'];
+            $result[$key]['id_doctor'] = $value['consultation']['id_doctor'];
             $result[$key]['doctor_name'] = $doctor['doctor_name'];
             $result[$key]['doctor_photo'] = $doctor['doctor_photo'];
-            $result[$key]['schedule_date'] = $value['consultasion']['schedule_date'];
+            $result[$key]['schedule_date'] = $value['consultation']['schedule_date'];
             $result[$key]['diff_date'] = $diff_date;
         }
 
@@ -703,7 +703,7 @@ class ApiTransactionConsultasionController extends Controller
      * @param  GetTransaction $request [description]
      * @return View                    [description]
      */
-    public function getSoonConsultasionDetail(Request $request) {
+    public function getSoonConsultationDetail(Request $request) {
         $post = $request->json()->all();
 
         if (!isset($post['id_user'])) {
@@ -721,7 +721,7 @@ class ApiTransactionConsultasionController extends Controller
         }
 
         //get Transaction
-        $transaction = Transaction::with('consultasion')->where('id_transaction', $post['id_transaction'])->first()->toArray();
+        $transaction = Transaction::with('consultation')->where('id_transaction', $post['id_transaction'])->first()->toArray();
 
         if(empty($transaction)){
             return response()->json([
@@ -731,7 +731,7 @@ class ApiTransactionConsultasionController extends Controller
         }
 
         //get Doctor
-        $detailDoctor = app($this->doctor)->show($transaction['consultasion']['id_doctor']);
+        $detailDoctor = app($this->doctor)->show($transaction['consultation']['id_doctor']);
 
         if(empty($detailDoctor)) {
             return response()->json([
@@ -741,11 +741,11 @@ class ApiTransactionConsultasionController extends Controller
         }
 
         //get day
-        $day = date('l', strtotime($transaction['consultasion']['schedule_date']));
+        $day = date('l', strtotime($transaction['consultation']['schedule_date']));
 
         //get diff date
         $now = new DateTime();
-        $schedule_date_time = $transaction['consultasion']['schedule_date'] .' '. $transaction['consultasion']['schedule_start_time'];
+        $schedule_date_time = $transaction['consultation']['schedule_date'] .' '. $transaction['consultation']['schedule_start_time'];
         $schedule_date_time =new DateTime($schedule_date_time);
         $diff_date = "missed";
 
@@ -755,8 +755,8 @@ class ApiTransactionConsultasionController extends Controller
 
         $result = [
             'doctor' => $detailDoctor->getData()->result,
-            'schedule_date' => $transaction['consultasion']['schedule_date'],
-            'schedule_start_time' => $transaction['consultasion']['schedule_start_time'],
+            'schedule_date' => $transaction['consultation']['schedule_date'],
+            'schedule_start_time' => $transaction['consultation']['schedule_start_time'],
             'schedule_day' => $day,
             'diff_date' => $diff_date
         ];
@@ -772,7 +772,7 @@ class ApiTransactionConsultasionController extends Controller
      * @param  GetTransaction $request [description]
      * @return View                    [description]
      */
-    public function startConsultasion(Request $request) {
+    public function startConsultation(Request $request) {
         $post = $request->json()->all();
 
         if (!isset($post['id_user'])) {
@@ -790,7 +790,7 @@ class ApiTransactionConsultasionController extends Controller
         }
 
         //get Transaction
-        $transaction = Transaction::with('consultasion')->where('id_transaction', $post['id_transaction'])->first()->toArray();
+        $transaction = Transaction::with('consultation')->where('id_transaction', $post['id_transaction'])->first()->toArray();
 
         if(empty($transaction)){
             return response()->json([
@@ -800,7 +800,7 @@ class ApiTransactionConsultasionController extends Controller
         }
 
         //get Doctor
-        $doctor = Doctor::where('id_doctor', $transaction['consultasion']['id_doctor'])->first();
+        $doctor = Doctor::where('id_doctor', $transaction['consultation']['id_doctor'])->first();
 
         if(empty($doctor)){
             return response()->json([
@@ -811,10 +811,10 @@ class ApiTransactionConsultasionController extends Controller
 
         DB::beginTransaction();
         try {
-            $result = TransactionConsultasion::where('id_transaction', $transaction['consultasion']['id_transaction'])
+            $result = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])
             ->update([
-                'consultasion_status' => "ongoing",
-                'consultasion_start_at' => new DateTime
+                'consultation_status' => "ongoing",
+                'consultation_start_at' => new DateTime
             ]);
     
             $doctor->update(['doctor_status' => "busy"]);
@@ -822,7 +822,7 @@ class ApiTransactionConsultasionController extends Controller
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
-                'message' => 'Start Consultasion Failed'
+                'message' => 'Start Consultation Failed'
             ];
             DB::rollBack();
             return response()->json($result);
@@ -837,7 +837,7 @@ class ApiTransactionConsultasionController extends Controller
      * @param  GetTransaction $request [description]
      * @return View                    [description]
      */
-    public function getHistoryConsultasionList(Request $request) {
+    public function getHistoryConsultationList(Request $request) {
         $post = $request->json()->all();
 
         if (!isset($post['id_user'])) {
@@ -846,18 +846,18 @@ class ApiTransactionConsultasionController extends Controller
             $id = $post['id_user'];
         }
 
-        $transaction = Transaction::with('consultasion')->where('id_user', $id);
+        $transaction = Transaction::with('consultation')->where('id_user', $id);
 
         if(isset($post['filter'])) {
             $id_doctor = Doctor::where('doctor_name', 'like', '%'.$post['filter'].'%')->pluck('id_doctor')->toArray();
-            $transaction = $transaction->whereHas('consultasion', function($query) use ($post, $id_doctor){
+            $transaction = $transaction->whereHas('consultation', function($query) use ($post, $id_doctor){
                 $query->onlyDone()->where(function($query2) use ($post, $id_doctor){
                     $query2->orWhere('schedule_date', 'like', '%'.$post['filter'].'%');
                     $query2->orWhereIn('id_doctor', $id_doctor);
                 });
             });
         } else {
-            $transaction = $transaction->whereHas('consultasion', function($query){
+            $transaction = $transaction->whereHas('consultation', function($query){
                 $query->onlyDone();
             });
         }
@@ -873,12 +873,12 @@ class ApiTransactionConsultasionController extends Controller
 
         $result = array();
         foreach($transaction as $key => $value) {
-            $doctor = Doctor::where('id_doctor', $value['consultasion']['id_doctor'])->first()->toArray();
+            $doctor = Doctor::where('id_doctor', $value['consultation']['id_doctor'])->first()->toArray();
 
             $result[$key]['id_transaction'] = $value['id_transaction'];
             $result[$key]['doctor_name'] = $doctor['doctor_name'];
             $result[$key]['doctor_photo'] = $doctor['doctor_photo'];
-            $result[$key]['schedule_date'] = $value['consultasion']['schedule_date'];
+            $result[$key]['schedule_date'] = $value['consultation']['schedule_date'];
         }
 
         return response()->json([

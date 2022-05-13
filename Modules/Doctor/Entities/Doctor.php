@@ -7,11 +7,15 @@ use Modules\Doctor\Entities\DoctorClinic;
 use Modules\Doctor\Entities\DoctorSpecialist;
 use App\Lib\MyHelper;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Passport\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
 use Modules\Doctor\Entities\DoctorSchedule;
 
-class Doctor extends Authenticatable
+class Doctor extends Authenticatable 
 {
     protected $table = 'doctors';
+
+    use HasApiTokens, Notifiable;
 
     protected $primaryKey = 'id_doctor';
 

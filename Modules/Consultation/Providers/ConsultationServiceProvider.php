@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\Consultasion\Providers;
+namespace Modules\Consultation\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Database\Eloquent\Factory;
 
-class ConsultasionServiceProvider extends ServiceProvider
+class ConsultationServiceProvider extends ServiceProvider
 {
     /**
      * Boot the application events.
@@ -39,10 +39,10 @@ class ConsultasionServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('consultasion.php'),
+            __DIR__.'/../Config/config.php' => config_path('consultation.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'consultasion'
+            __DIR__.'/../Config/config.php', 'consultation'
         );
     }
 
@@ -53,7 +53,7 @@ class ConsultasionServiceProvider extends ServiceProvider
      */
     public function registerViews()
     {
-        $viewPath = resource_path('views/modules/consultasion');
+        $viewPath = resource_path('views/modules/consultation');
 
         $sourcePath = __DIR__.'/../Resources/views';
 
@@ -62,8 +62,8 @@ class ConsultasionServiceProvider extends ServiceProvider
         ],'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
-            return $path . '/modules/consultasion';
-        }, \Config::get('view.paths')), [$sourcePath]), 'consultasion');
+            return $path . '/modules/consultation';
+        }, \Config::get('view.paths')), [$sourcePath]), 'consultation');
     }
 
     /**
@@ -73,12 +73,12 @@ class ConsultasionServiceProvider extends ServiceProvider
      */
     public function registerTranslations()
     {
-        $langPath = resource_path('lang/modules/consultasion');
+        $langPath = resource_path('lang/modules/consultation');
 
         if (is_dir($langPath)) {
-            $this->loadTranslationsFrom($langPath, 'consultasion');
+            $this->loadTranslationsFrom($langPath, 'consultation');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'consultasion');
+            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'consultation');
         }
     }
 

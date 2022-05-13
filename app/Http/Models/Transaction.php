@@ -325,8 +325,8 @@ class Transaction extends Model
     		case 'Pickup Order':
     			$this->transaction_pickup->triggerPaymentCompleted($data);
     			break;
-			case 'Consultasion':
-				$this->consultasion->triggerPaymentCompleted($data);
+			case 'Consultation':
+				$this->consultation->triggerPaymentCompleted($data);
 				break;
     	}
 
@@ -503,8 +503,8 @@ class Transaction extends Model
     	return true;
     }
 
-	public function consultasion()
+	public function consultation()
     {
-        return $this->belongsTo(\App\Http\Models\TransactionConsultasion::class, 'id_transaction', 'id_transaction');
+        return $this->belongsTo(\App\Http\Models\TransactionConsultation::class, 'id_transaction', 'id_transaction');
     }
 }
