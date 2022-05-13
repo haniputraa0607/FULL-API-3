@@ -27,7 +27,7 @@ use Illuminate\Database\Eloquent\Model;
  *
  * @package App\Models
  */
-class TransactionConsultasion extends Model
+class TransactionConsultasion extends \App\Http\Models\Template\TransactionService
 {
 	protected $primaryKey = 'id_transaction_consultasion';
 
@@ -47,6 +47,7 @@ class TransactionConsultasion extends Model
 		'schedule_end_time',
 		'consultasion_start_time',
 		'consultasion_end_time',
+		'consultasion_session_price',
 		'consultasion_status'
 	];
 

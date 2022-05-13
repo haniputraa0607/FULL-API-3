@@ -33,6 +33,7 @@ class AuthServiceProvider extends ServiceProvider
             Passport::tokensCan([
                 'be' => 'Manage admin panel scope',
                 'apps' => 'Manage mobile scope',
+                'doctor-apps' => 'Manage doctor mobile scope',
                 'franchise-client' => 'General scope franchise',
                 'franchise-super-admin' => 'Manage super admin franchise scope',
                 'franchise-user' => 'Manage admin franchise scope'

@@ -14,6 +14,7 @@ use Modules\UserFeedback\Entities\UserFeedbackLog;
 use Modules\Doctor\Entities\DoctorSchedule;
 use Modules\Doctor\Entities\TimeSchedule;
 use Modules\Doctor\Entities\Doctor;
+use Modules\Transaction\Entities\TransactionGroup;
 use DB;
 
 
@@ -186,6 +187,7 @@ class ApiTransactionConsultasionController extends Controller
 
     public function newTransaction(Request $request) {
         $post = $request->json()->all();
+        $user = $request->user();
 
         //cek input date and time
         if($post['consultasion_type'] != 'now') {
@@ -240,7 +242,6 @@ class ApiTransactionConsultasionController extends Controller
                 $query->whereTime('start_time', '<', $post['time'])->whereTime('end_time', '>', $post['time'])->onlyAvailabile();
             })->first();
         }
-
 
         if(empty($schedule_session)){
             return response()->json([
@@ -370,9 +371,61 @@ class ApiTransactionConsultasionController extends Controller
             unset($post['headers']);
         }
 
+        $grandtotal = 0;
+        $subtotal = $post['subtotal'];
+        $deliveryTotal = 0; 
+        $currentDate = date('Y-m-d H:i:s');
+        $paymentType = NULL;
+        $transactionStatus = 'Unpaid';
+        $paymentStatus = 'Pending';
+        if(isset($post['point_use']) && $post['point_use']){
+            $paymentType = 'Balance';
+            $paymentStatus = 'Completed';
+            $transactionStatus = 'Pending';
+        }
+
         DB::beginTransaction();
-        //UserFeedbackLog::where('id_user',$request->user()->id)->delete();
+        UserFeedbackLog::where('id_user',$request->user()->id)->delete();
+
+        $outlet = Outlet::where('id_outlet', $post['id_outlet'])->where('outlet_status', 'Active')->first();
+        if (empty($outlet)) {
+            DB::rollback();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Outlet tidak ditemukan']
+            ]);
+        }
+
+        $dataTransactionGroup = [
+            'id_user' => $user->id,
+            'transaction_receipt_number' => 'TRX'.time().rand().substr($grandtotal, 0,5),
+            'transaction_subtotal' => 0,
+            'transaction_shipment' => 0,
+            'transaction_grandtotal' => 0,
+            'transaction_payment_status' => $paymentStatus,
+            'transaction_payment_type' => $paymentType,
+            'transaction_transaction_date' => $currentDate
+        ];
+
+        $insertTransactionGroup = TransactionGroup::create($dataTransactionGroup);
+        if(!$insertTransactionGroup){
+            DB::rollback();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Insert Transaction Group Failed']
+            ]);
+        }
+
+        $grandtotal = $post['grandtotal'];
+
+        TransactionGroup::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->update([
+            'transaction_subtotal' => $subtotal,
+            'transaction_shipment' => $deliveryTotal,
+            'transaction_grandtotal' => $grandtotal
+        ]);
+
         $transaction = [
+            'id_transaction_group'        => $insertTransactionGroup['id_transaction_group'],
             'id_outlet'                   => $post['id_outlet'],
             'id_user'                     => $id,
             'id_promo_campaign_promo_code'=> $post['id_promo_campaign_promo_code']??null,
@@ -425,7 +478,7 @@ class ApiTransactionConsultasionController extends Controller
         }
 
         //update receipt
-        $receipt = 'K+'.MyHelper::createrandom(4,'Angka').time().substr($insertTransaction['id_outlet'], 0, 4);
+        $receipt = rand().time().'-'.substr($post['id_outlet'], 0, 4).rand(1000,9999);
         $updateReceiptNumber = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
             'transaction_receipt_number' => $receipt
         ]);

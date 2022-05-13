@@ -61,6 +61,10 @@ return [
             'driver' => 'passport',
             'provider' => 'franchise'
         ],
+        'doctor-apps' => [
+            'driver' => 'passport',
+            'provider' => 'doctor-apps'
+        ],
     ],
 
     /*
@@ -113,6 +117,10 @@ return [
         'franchise' => [
             'driver' => 'eloquent',
             'model' => \Modules\Franchise\Entities\UserFranchise::class
+        ],
+        'doctor-apps' => [
+            'driver' => 'eloquent',
+            'model' => \Modules\Doctor\Entities\Doctor::class
         ],
     ],
 

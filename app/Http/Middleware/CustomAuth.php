@@ -49,9 +49,12 @@ class CustomAuth extends AddCustomProvider
             $request->merge(['provider' => 'franchise']);
         }elseif($request->get('quinos')){
             $request->merge(['provider' => 'quinos']);
+        }elseif($request->scope == 'doctor-apps'){
+            $request->merge(['provider' => 'doctor-apps']);
         }else{
             $request->merge(['provider' => 'users']);
         }
+
         return parent::handle($request, $next);
     }
 

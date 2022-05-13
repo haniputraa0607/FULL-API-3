@@ -319,7 +319,9 @@ class Transaction extends Model
     		case 'Pickup Order':
     			$this->transaction_pickup->triggerPaymentCompleted($data);
     			break;
-
+			case 'Consultasion':
+				$this->consultasion->triggerPaymentCompleted($data);
+				break;
     	}
 
     	// check fraud

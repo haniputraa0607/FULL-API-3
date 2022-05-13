@@ -5,12 +5,29 @@ namespace Modules\Doctor\Entities;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Doctor\Entities\DoctorClinic;
 use Modules\Doctor\Entities\DoctorSpecialist;
+use App\Lib\MyHelper;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class Doctor extends Model
+class Doctor extends Authenticatable
 {
     protected $table = 'doctors';
 
     protected $primaryKey = 'id_doctor';
+
+    public function findForPassport($username) {
+		if(substr($username, 0, 2) == '62'){
+			$username = substr($username,2);
+		}elseif(substr($username, 0, 3) == '+62'){
+			$username = substr($username,3);
+		}
+
+		if(substr($username, 0, 1) != '0'){
+			$username = '0'.$username;
+		}
+
+        return $this->where('doctor_phone', $username)->first();
+    }
+
 
     protected $fillable   = [
         'doctor_name',
