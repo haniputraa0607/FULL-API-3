@@ -67,6 +67,9 @@ Route::group(['prefix' => 'merchant'], function () {
             Route::post('/', 'ApiMerchantTransactionController@listTransaction');
             Route::post('detail', 'ApiMerchantTransactionController@detailTransaction');
             Route::get('status-count', 'ApiMerchantTransactionController@statusCount');
+
+            //action
+            Route::post('accept', 'ApiMerchantTransactionController@acceptTransaction');
         });
     });
 

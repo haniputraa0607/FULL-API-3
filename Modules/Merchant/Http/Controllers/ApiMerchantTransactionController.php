@@ -304,4 +304,38 @@ class ApiMerchantTransactionController extends Controller
 
         return response()->json(MyHelper::checkGet($result));
     }
+
+    public function acceptTransaction(Request $request){
+        $post = $request->json()->all();
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+        $idOutlet = $checkMerchant['id_outlet'];
+
+        if(empty($post['id_transaction']) || empty($post['maximum_date_delivery'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Incompleted data']]);
+        }
+
+        $transaction = Transaction::where('id_outlet', $idOutlet)
+                        ->where('id_transaction', $post['id_transaction'])
+                        ->where('transaction_status', 'Pending')->first();
+        if(empty($transaction)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data order tidak ditemukan']]);
+        }
+
+        $update = Transaction::where('id_transaction', $transaction['id_transaction'])
+                ->update(['transaction_status' => 'On Progress', 'transactions_maximum_date_delivery' => date('Y-m-d', strtotime($post['maximum_date_delivery']))]);
+
+        if($update){
+            TransactionShipmentTrackingUpdate::create([
+                'id_transaction' => $transaction['id_transaction'],
+                'tracking_description' => 'Paket sedang dikemas oleh penjual dan akan dikirim',
+                'tracking_date_time' => date('Y-m-d H:i:s')
+            ]);
+        }
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
 }

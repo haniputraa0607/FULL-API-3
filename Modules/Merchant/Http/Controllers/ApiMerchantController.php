@@ -406,12 +406,25 @@ class ApiMerchantController extends Controller
         $detail = Merchant::leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
             ->leftJoin('cities', 'cities.id_city', 'outlets.id_city')
             ->where('id_merchant', $checkMerchant['id_merchant'])
-            ->select('merchants.*', 'outlets.*', 'cities.city_name')
+            ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
+            ->where('id_merchant', $checkMerchant['id_merchant'])
+            ->select('merchants.*', 'provinces.id_province', 'outlets.*', 'city_name', 'province_name')
             ->first();
 
         if(empty($detail)){
             return response()->json(['status' => 'fail', 'messages' => ['Detail merchant tidak ditemukan']]);
         }
+
+        $address = [
+            'latitude' => $detail['outlet_latitude'],
+            'longitude' => $detail['outlet_longitude'],
+            'id_province' => $detail['id_province'],
+            'province_name' => $detail['province_name'],
+            'id_city' => $detail['id_city'],
+            'city_name' => $detail['city_name'],
+            'address' => $detail['outlet_address'],
+            'postal_code' => $detail['outlet_postal_code']
+        ];
 
         $detail = [
             'outlet' => [
@@ -431,7 +444,8 @@ class ApiMerchantController extends Controller
                 'merchant_pic_id_card_number' => $detail['merchant_pic_id_card_number'],
                 'merchant_pic_email' => $detail['merchant_pic_email'],
                 'merchant_pic_phone' => $detail['merchant_pic_phone']
-            ]
+            ],
+            'address' => $address
         ];
 
         return response()->json(MyHelper::checkGet($detail));
@@ -632,7 +646,7 @@ class ApiMerchantController extends Controller
                 ->select('bank_account_outlets.id_bank_account', 'beneficiary_name', 'beneficiary_account', DB::raw("'' as bank_image"), 'bank_name.bank_name')
                 ->where('id_outlet', $checkMerchant['id_outlet'])
                 ->get()->toArray();
-        return response()->json(MyHelper::checkGet($list));
+        return response()->json(['status' => 'success' , 'result' => $list]);
     }
 
     public function bankAccountDelete(Request $request){
@@ -653,45 +667,64 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkDelete($delete));
     }
 
-    public function deliverySetting(Request $request){
+    public function deliverySetting(Request $request)
+    {
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
+        $res = $this->availableDelivery($checkMerchant['id_outlet']);
+        return response()->json(MyHelper::checkGet($res));
+    }
+
+    public function availableDelivery($id_outlet, $available_check = 0){
         $post = New Request();
         $availableDelivery = app($this->online_trx)->listAvailableDelivery($post);
         if(isset($availableDelivery['status']) && $availableDelivery['status'] == 'fail'){
             return response()->json(['status' => 'fail', 'messages' => ['List delivery not found']]);
         }
 
-        $deliveryOutlet = DeliveryOutlet::where('id_outlet', $checkMerchant['id_outlet'])->where('show_status', 1)
+        $deliveryOutlet = DeliveryOutlet::where('id_outlet', $id_outlet)->where('show_status', 1)
                         ->select('code', 'available_status', 'available_status')->get()->toArray();
 
         $delivery = $availableDelivery['result']['delivery']??[];
         $res = [];
         foreach ($delivery as $key => $val){
-            $check = array_search($val['code'], array_column($deliveryOutlet,'code'));
-            $available = 0;
-            if($check === false){
-                $available = 1;
-            }else if($val['show_status'] == 1){
-                $available = 1;
+            if($val['available_status'] == 0){
+                continue;
+            }
+            $service = [];
+            foreach ($val['service'] as $s){
+                $check = array_search($s['code'], array_column($deliveryOutlet,'code'));
+                $available = 0;
+                if($check === false){
+                    $available = 1;
+                }else if($val['available_status'] == 1){
+                    $available = 1;
+                }
+
+                if ($available == 1 && ($available_check == 0 || $available_check == 1 && $deliveryOutlet[$check]['available_status'] == 1)){
+                    $service[] = [
+                        "code" => $s['code'],
+                        "service_name" => $s['service_name'],
+                        "active_status" => $deliveryOutlet[$check]['available_status']??1
+                    ];
+                }
             }
 
-            if($available == 1){
+            if(!empty($service)){
                 $res[] = [
-                    "code" => $val['code'],
                     "delivery_name" => $val['delivery_name'],
                     "delivery_method" =>$val['delivery_method'],
                     "logo" => $val['logo'],
-                    "active_status" => $deliveryOutlet[$check]['available_status']??1
+                    "service" => $service
                 ];
             }
         }
 
-        return response()->json(MyHelper::checkGet($res));
+        return $res;
     }
 
     public function deliverySettingUpdate(Request $request){
