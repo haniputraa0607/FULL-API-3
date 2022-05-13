@@ -592,7 +592,7 @@ class ApiMerchantController extends Controller
         if($arr[0]){
             return response()->json(['status' => 'success', 'result' => [
                 'beneficiary_name' => 'Nama',
-                'beneficiary_account' => '010101010101'
+                'beneficiary_account' => $post['beneficiary_account']
             ]]);
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['Akun tidak ditemukan']]);
@@ -622,6 +622,7 @@ class ApiMerchantController extends Controller
                 'beneficiary_name' => 'Beneficiary Name',
                 'beneficiary_account' => $post['beneficiary_account']
                 ]);
+            $check['id_bank_account'] = $save['id_bank_account'];
         }
 
         $save = BankAccountOutlet::updateOrCreate([
