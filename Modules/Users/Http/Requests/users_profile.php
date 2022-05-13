@@ -27,7 +27,9 @@ class users_profile extends FormRequest
 	{
 		return [
 			'phone'		=> 'required|string|max:18',
-			'pin'		=> 'nullable|string|digits:6',
+			'pin'		=> 'nullable|string|min:8|max:10',
+            'pin_new'	=> 'nullable|string|digits:6',
+            'pin_new'	=> 'nullable|string|min:8|max:10',
 			'name'		=> 'nullable|max:200',
 			'email'		=> 'nullable|email',
 			'gender'	=> 'nullable|in:Male,Female',

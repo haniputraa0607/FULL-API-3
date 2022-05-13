@@ -116,6 +116,7 @@ class ApiOnlineTransaction extends Controller
         $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
         $this->bundling      = "Modules\ProductBundling\Http\Controllers\ApiBundlingController";
+        $this->merchant = "Modules\Merchant\Http\Controllers\ApiMerchantController";
     }
 
     public function newTransaction(Request $request) {
@@ -463,7 +464,7 @@ class ApiOnlineTransaction extends Controller
         }
 
         $errorMsg = [];
-        $itemsCheck = $this->checkDataTransaction($post['items']);
+        $itemsCheck = $this->checkDataTransaction($post['items'], 0, 0, 1);
         $items = $itemsCheck['items'];
         $subtotal = $itemsCheck['subtotal'];
         $checkOutStatus = $itemsCheck['available_checkout'];
@@ -499,7 +500,6 @@ class ApiOnlineTransaction extends Controller
             $checkOutStatus = false;
         }
 
-        $availableDelivery =  $this->listAvailableDelivery(new Request([]))['result']['delivery']??[];
         $currentBalance = LogBalance::where('id_user', $user->id)->sum('balance');
         $summaryOrder = [
             [
@@ -530,7 +530,6 @@ class ApiOnlineTransaction extends Controller
         }
         $result = [
             'address' => $mainAddress,
-            'available_delivery' => $availableDelivery,
             'items' => $items,
             'current_points' => $currentBalance,
             'summary_order' => $summaryOrder,
@@ -2279,7 +2278,7 @@ class ApiOnlineTransaction extends Controller
         $post = $request->json()->all();
 
         if(!empty($post)){
-            $itemsCheck = $this->checkDataTransaction($post);
+            $itemsCheck = $this->checkDataTransaction($post, 0, 1);
             $items = $itemsCheck['items'];
             $subtotal = $itemsCheck['subtotal'];
 
@@ -2292,7 +2291,7 @@ class ApiOnlineTransaction extends Controller
         }
     }
 
-    function checkDataTransaction($post, $from_new = 0){
+    function checkDataTransaction($post, $from_new = 0, $from_cart = 0, $from_check = 0){
         $items = $this->mergeProducts($post);
 
         $availableCheckout = true;
@@ -2416,6 +2415,10 @@ class ApiOnlineTransaction extends Controller
                     $items[$index]['items_subtotal'] = $productSubtotal;
                     $items[$index]['items_subtotal_text'] = 'Rp '.number_format($productSubtotal,0,",",".");
                     $items[$index]['items'] = array_values($value['items']);
+                    if($from_check == 1){
+                        $availableDelivery = app($this->merchant)->availableDelivery($value['id_outlet'], 1);
+                        $items[$index]['available_delivery'] = $availableDelivery;
+                    }
                 }else{
                     $errorMsg[] = 'Stock produk habis';
                     unset($items[$index]);
