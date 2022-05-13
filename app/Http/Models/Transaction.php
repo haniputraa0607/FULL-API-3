@@ -332,7 +332,7 @@ class Transaction extends Model
 
     	TransactionShipmentTrackingUpdate::create([
     	    'id_transaction' => $this->id_transaction,
-            'tracking_description' => 'Paket sedang dikemas oleh pengirim',
+            'tracking_description' => 'Menunggu konfirmasi penjual',
             'tracking_date_time' => date('Y-m-d H:i:s')
         ]);
 

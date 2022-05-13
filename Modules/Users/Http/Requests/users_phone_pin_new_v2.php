@@ -28,7 +28,7 @@ class users_phone_pin_new_v2 extends FormRequest
         return [
             'phone'			=> 'required|string|max:18',
             'pin_old'		=> 'required|string|digits:6',
-            'pin_new'		=> 'required|string|digits:6',
+            'pin_new'		=> 'required|string|min:8|max:10',
             'device_id'		=> 'max:200',
             'device_token'	=> 'max:225'
         ];
