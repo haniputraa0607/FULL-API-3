@@ -10,7 +10,9 @@ namespace App\Http\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Jobs\FraudJob;
 use App\Lib\MyHelper;
+use Modules\Transaction\Entities\TransactionGroup;
 use Modules\Transaction\Entities\TransactionShipmentTrackingUpdate;
+use DB;
 
 /**
  * Class Transaction
@@ -112,10 +114,10 @@ class Transaction extends Model
 		'failed_void_reason',
 		'shipment_method',
 		'shipment_courier',
-        'transactions_maximum_date_process',
-        'transactions_maximum_date_delivery',
-        'transactions_reject_reason',
-        'transactions_reject_at'
+        'transaction_maximum_date_process',
+        'transaction_maximum_date_delivery',
+        'transaction_reject_reason',
+        'transaction_reject_at'
 	];
 
 	public $manual_refund = 0;
@@ -459,16 +461,26 @@ class Transaction extends Model
     	}
 
     	$this->update([
-            'transaction_status' => 'Reject',
-    		'reject_at' => date('Y-m-d H:i:s'),
-    		'reject_reason' => $data['reject_reason'] ?? null
+            'transaction_status' => 'Rejected',
+    		'transaction_reject_at' => date('Y-m-d H:i:s'),
+    		'transaction_reject_reason' => $data['reject_reason'] ?? null
     	]);
 
-    	$refundPayment = app('\Modules\OutletApp\Http\Controllers\ApiOutletApp')->refundPayment($this);
-    	if (empty($refundPayment['status']) || $refundPayment['status'] != 'success') {
-        	\DB::rollBack();
-        	return false;
-        }	
+    	$checkCountTrxGroup = TransactionGroup::where('id_transaction_group', $this->id_transaction_group)->count();
+    	if($checkCountTrxGroup > 1){
+            $refund = app('Modules\Balance\Http\Controllers\BalanceController')->addLogBalance( $this->id_user, (int)$this->transaction_grandtotal, $this->id_transaction, 'Rejected Order', $this->transaction_grandtotal);
+            if ($refund == false) {
+                DB::rollback();
+                return false;
+            }
+    	}else{
+            $refund = app('Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->rejectPayment($this);
+            if ($refund == false) {
+                DB::rollback();
+                return false;
+            }
+        }
+
 
     	// restore promo status
         if ($this->id_promo_campaign_promo_code) {

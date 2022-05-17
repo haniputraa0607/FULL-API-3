@@ -22,7 +22,8 @@ class CheckScopes extends AddCustomProvider
     public function handle($request, Closure $next, $scope = null)
     {
         /*check status maintenance mode for apps*/
-        if($scope == 'apps' || $scope == 'doctor-apps'){
+        $appScope = ['apps', 'doctor-apps'];
+        if (in_array($scope,$appScope)) {
             $getMaintenance = Setting::where('key', 'maintenance_mode')->first();
             if($getMaintenance && $getMaintenance['value'] == 1){
                 $dt = (array)json_decode($getMaintenance['value_text']);
@@ -58,14 +59,9 @@ class CheckScopes extends AddCustomProvider
             }
         }
 
-        if(($scope == 'pos' && $scopeUser == 'pos' && $clientId == 1) ||
-            ($scope == 'be' && $scopeUser == 'be') ||
-            ($scope == 'apps' && $scopeUser == 'apps') ||
-            ($scope == 'doctor-apps' && $scopeUser == 'doctor-apps') ||
-            ($scope == 'franchise-client' && $scopeUser == 'franchise-client') ||
-            ($scope == 'franchise-super-admin' && $scopeUser == 'franchise-super-admin') ||
-            ($scope == 'franchise-user' && $scopeUser == 'franchise-user')){
-
+        $arrScope = ['pos', 'be', 'apps', 'franchise-client', 'franchise-super-admin',
+            'franchise-user', 'client', 'doctor-apps'];
+        if((in_array($scope, $arrScope) && $scope == $scopeUser)){
             return $next($request);
         }
 

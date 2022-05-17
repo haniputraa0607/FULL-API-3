@@ -6,8 +6,10 @@ use App\Http\Models\MonthlyReportTrx;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPhoto;
+use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\TransactionProduct;
+use App\Http\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -23,6 +25,7 @@ use Modules\Outlet\Entities\DeliveryOutlet;
 use DB;
 use App\Http\Models\Transaction;
 use Modules\ProductVariant\Entities\ProductVariantPivot;
+use Modules\Transaction\Entities\TransactionGroup;
 use Modules\Transaction\Entities\TransactionShipmentTrackingUpdate;
 use Modules\Transaction\Http\Requests\TransactionDetail;
 
@@ -144,11 +147,11 @@ class ApiMerchantTransactionController extends Controller
                 'delivery_city' => $value['city_name'],
                 'delivery_method' => strtoupper($value['shipment_courier']),
                 'delivery_service' => ucfirst($value['shipment_courier_service']),
-                'maximum_date_process' => (!empty($value['transactions_maximum_date_process'])? MyHelper::dateFormatInd($value['transactions_maximum_date_process'], false, false):''),
-                'maximum_date_delivery' => (!empty($value['transactions_maximum_date_delivery'])? MyHelper::dateFormatInd($value['transactions_maximum_date_delivery'], false, false):''),
+                'maximum_date_process' => (!empty($value['transaction_maximum_date_process'])? MyHelper::dateFormatInd($value['transaction_maximum_date_process'], false, false):''),
+                'maximum_date_delivery' => (!empty($value['transaction_maximum_date_delivery'])? MyHelper::dateFormatInd($value['transaction_maximum_date_delivery'], false, false):''),
                 'estimated_delivery' => '',
-                'reject_at' => (!empty($value['transactions_reject_at'])? MyHelper::dateFormatInd($value['transactions_reject_at'], false, false):''),
-                'reject_reason' => (!empty($value['transactions_reject_reason'])? $value['transactions_reject_reason']:''),
+                'reject_at' => (!empty($value['transaction_reject_at'])? MyHelper::dateFormatInd($value['transaction_reject_at'], false, false):''),
+                'reject_reason' => (!empty($value['transaction_reject_reason'])? $value['transaction_reject_reason']:''),
             ];
 
             if(!empty($status) && $status == 'completed'){
@@ -326,7 +329,7 @@ class ApiMerchantTransactionController extends Controller
         }
 
         $update = Transaction::where('id_transaction', $transaction['id_transaction'])
-                ->update(['transaction_status' => 'On Progress', 'transactions_maximum_date_delivery' => date('Y-m-d', strtotime($post['maximum_date_delivery']))]);
+                ->update(['transaction_status' => 'On Progress', 'transaction_maximum_date_delivery' => date('Y-m-d', strtotime($post['maximum_date_delivery']))]);
 
         if($update){
             TransactionShipmentTrackingUpdate::create([
@@ -337,5 +340,37 @@ class ApiMerchantTransactionController extends Controller
         }
 
         return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function rejectTransaction(Request $request){
+        $post = $request->json()->all();
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+        $idOutlet = $checkMerchant['id_outlet'];
+
+        if(empty($post['id_transaction']) || empty($post['reject_reason'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Incompleted data']]);
+        }
+
+        $transaction = Transaction::where('id_outlet', $idOutlet)
+            ->where('id_transaction', $post['id_transaction'])
+            ->where('transaction_status', 'Pending')->first();
+        if(empty($transaction)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data order tidak ditemukan']]);
+        }
+
+        $reject = $transaction->triggerReject($post);
+
+        if(!$reject){
+            return response()->json([
+                'status'   => 'fail',
+                'messages' => ['Reject transaction failed'],
+            ]);
+        }
+
+        return response()->json(['status' => 'success']);
     }
 }

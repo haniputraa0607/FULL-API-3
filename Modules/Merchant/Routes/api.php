@@ -70,6 +70,7 @@ Route::group(['prefix' => 'merchant'], function () {
 
             //action
             Route::post('accept', 'ApiMerchantTransactionController@acceptTransaction');
+            Route::post('reject', 'ApiMerchantTransactionController@rejectTransaction');
         });
     });
 

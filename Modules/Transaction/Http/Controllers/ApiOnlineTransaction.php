@@ -4,8 +4,11 @@ namespace Modules\Transaction\Http\Controllers;
 
 use App\Http\Models\DailyTransactions;
 use App\Http\Models\ProductPhoto;
+use App\Http\Models\TransactionPaymentBalance;
+use App\Http\Models\TransactionPaymentOvo;
 use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
+use App\Lib\Ovo;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -23,6 +26,7 @@ use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionProductModifier;
+use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\Merchant\Entities\Merchant;
 use Modules\ProductBundling\Entities\BundlingOutlet;
 use Modules\ProductBundling\Entities\BundlingProduct;
@@ -57,6 +61,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignReferral;
 use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
 use Modules\PromoCampaign\Entities\UserReferralCode;
 use Modules\PromoCampaign\Entities\UserPromo;
+use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use Modules\Subscription\Entities\TransactionPaymentSubscription;
 use Modules\Subscription\Entities\Subscription;
 use Modules\Subscription\Entities\SubscriptionUser;
@@ -2521,5 +2526,90 @@ class ApiOnlineTransaction extends Controller
                     ->update(['product_detail_stock_status' => $statusStock, 'product_detail_stock_item' => $stockItem]);
             }
         }
+    }
+
+    public function rejectPayment($data){
+        $user = User::where('id', $data['id_user'])->first();
+        $multiple = TransactionMultiplePayment::where('id_transaction_group', $data['id_transaction_group'])->get()->toArray();
+        $trxGroup = TransactionGroup::where('id_transaction_group', $data['id_transaction_group'])->first();
+        if ($multiple) {
+            foreach ($multiple as $pay) {
+                if ($pay['type'] == 'Balance') {
+                    $payBalance = TransactionPaymentBalance::find($pay['id_payment']);
+                    if ($payBalance) {
+                        $refund = app($this->balance)->topUpGroup($user->id, $trxGroup);
+                        if ($refund == false) {
+                            return false;
+                        }
+                    }
+                } else {
+                    $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
+                    if ($payMidtrans) {
+                        $doRefundPayment = MyHelper::setting('refund_midtrans');
+                        if ($doRefundPayment) {
+                            $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
+
+                            if ($refund['status'] != 'success') {
+                                $data->update(['failed_void_reason' => $refund['messages'] ?? []]);
+                                $data->update(['need_manual_void' => 1]);
+                                $order2 = clone $data;
+                                $order2->payment_method = 'Midtrans';
+                                $order2->payment_detail = $payMidtrans['payment_type'];
+                                $order2->manual_refund = $payMidtrans['gross_amount'];
+                                $order2->payment_reference_number = $payMidtrans['vt_transaction_id'];
+                                if ($shared['reject_batch'] ?? false) {
+                                    $shared['void_failed'][] = $order2;
+                                } else {
+                                    $variables = [
+                                        'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                    ];
+                                    app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $user->phone, $variables, null, true);
+                                }
+
+                                return false;
+                            }
+                        }
+                    }
+                }
+
+            }
+        } else {
+            $payMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $data['id_transaction_group'])->first();
+            if ($payMidtrans) {
+                $doRefundPayment = MyHelper::setting('refund_midtrans');
+                if ($doRefundPayment) {
+                    $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
+                    if ($refund['status'] != 'success') {
+                        $data->update(['need_manual_void' => 1]);
+                        $order2 = clone $data;
+                        $order2->payment_method = 'Midtrans';
+                        $order2->payment_detail = $payMidtrans['payment_type'];
+                        $order2->manual_refund = $payMidtrans['gross_amount'];
+                        $order2->payment_reference_number = $payMidtrans['vt_transaction_id'];
+                        if ($shared['reject_batch'] ?? false) {
+                            $shared['void_failed'][] = $order2;
+                        } else {
+                            $variables = [
+                                'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                            ];
+                            app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $user->phone, $variables, null, true);
+                        }
+
+                        return false;
+                    }
+                }
+            } else {
+                $payBalance = TransactionPaymentBalance::where('id_transaction_group', $data['id_transaction_group'])->first();
+                if ($payBalance) {
+                    $refund = app($this->balance)->topUpGroup($user->id, $trxGroup);
+                    if ($refund == false) {
+                        return false;
+                    }
+                }
+            }
+
+        }
+
+        return true;
     }
 }
