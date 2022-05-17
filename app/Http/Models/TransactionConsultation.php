@@ -27,9 +27,9 @@ use Illuminate\Database\Eloquent\Model;
  *
  * @package App\Models
  */
-class TransactionConsultasion extends Model
+class TransactionConsultation extends \App\Http\Models\Template\TransactionService
 {
-	protected $primaryKey = 'id_transaction_consultasion';
+	protected $primaryKey = 'id_transaction_consultation';
 
 	protected $casts = [
 		'id_transaction' => 'int',
@@ -41,23 +41,24 @@ class TransactionConsultasion extends Model
 		'id_transaction',
 		'id_doctor',
 		'id_user',
-		'consultasion_type',
+		'consultation_type',
 		'schedule_date',
 		'schedule_start_time',
 		'schedule_end_time',
-		'consultasion_start_time',
-		'consultasion_end_time',
-		'consultasion_status'
+		'consultation_start_time',
+		'consultation_end_time',
+		'consultation_session_price',
+		'consultation_status'
 	];
 
 	public function scopeOnlySoon($query)
     {
-        return $query->where('consultasion_status', "soon");
+        return $query->where('consultation_status', "soon");
     }
 
 	public function scopeOnlyDone($query)
     {
-        return $query->where('consultasion_status', "done");
+        return $query->where('consultation_status', "done");
     }
 	
 }
