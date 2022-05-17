@@ -1,5 +1,5 @@
 {
-    "name": "nwidart/consultasion",
+    "name": "nwidart/consultation",
     "description": "",
     "authors": [
         {
@@ -10,7 +10,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Modules\\Consultasion\\Providers\\ConsultasionServiceProvider"
+                "Modules\\Consultation\\Providers\\ConsultationServiceProvider"
             ],
             "aliases": {
                 
@@ -19,7 +19,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Modules\\Consultasion\\": ""
+            "Modules\\Consultation\\": ""
         }
     }
 }

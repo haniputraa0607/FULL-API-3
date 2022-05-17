@@ -1,10 +1,10 @@
 <?php
 
-namespace Modules\Consultasion\Http\Requests;
+namespace Modules\Consultation\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class TransactionConsultasionNew extends FormRequest
+class TransactionConsultationNew extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
