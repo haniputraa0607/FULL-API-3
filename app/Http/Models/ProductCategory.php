@@ -44,6 +44,17 @@ class ProductCategory extends Model
 		'product_category_photo'
 	];
 
+    protected $appends    = ['url_product_category_photo'];
+
+    public function getUrlProductCategoryPhotoAttribute() {
+        if (empty($this->product_category_photo)) {
+            return config('url.storage_url_api').'img/default.jpg';
+        }
+        else {
+            return config('url.storage_url_api').$this->product_category_photo;
+        }
+    }
+
 	public function product_category()
 	{
 		return $this->belongsTo(\App\Http\Models\ProductCategory::class, 'id_parent_category');

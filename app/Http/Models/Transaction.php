@@ -10,6 +10,7 @@ namespace App\Http\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Jobs\FraudJob;
 use App\Lib\MyHelper;
+use Modules\Merchant\Entities\Merchant;
 use Modules\Transaction\Entities\TransactionGroup;
 use Modules\Transaction\Entities\TransactionShipmentTrackingUpdate;
 use DB;
@@ -383,32 +384,11 @@ class Transaction extends Model
 
     	// update transaction payment cancelled
     	$this->update([
-            'transaction_status' => 'Reject',
+            'transaction_status' => 'Rejected',
     		'transaction_payment_status' => 'Cancelled', 
     		'void_date' => date('Y-m-d H:i:s')
     	]);
 		MyHelper::updateFlagTransactionOnline($this, 'cancel', $this->user);
-
-        //reversal balance
-        $logBalance = LogBalance::where('id_reference', $this->id_transaction)->whereIn('source', ['Online Transaction', 'Transaction'])->where('balance', '<', 0)->get();
-        foreach($logBalance as $logB){
-            $reversal = app('\Modules\Balance\Http\Controllers\BalanceController')->addLogBalance( $this->id_user, abs($logB['balance']), $this->id_transaction, 'Reversal', $this->transaction_grandtotal);
-            if (!$reversal) {
-            	\DB::rollBack();
-            	return false;
-            }
-            $user = User::where('id', $this->id_user)->first();
-            $send = app('\Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Transaction Failed Point Refund', $this->user->phone,
-                [
-                    "outlet_name"       => $this->outlet_name->outlet_name,
-                    "transaction_date"  => $this->transaction_date,
-                    'id_transaction'    => $this->id_transaction,
-                    'receipt_number'    => $this->transaction_receipt_number,
-                    'received_point'    => (string) abs($logB['balance']),
-                    'order_id'          => $this->order_id,
-                ]
-            );
-        }
 
         // restore promo status
         if ($this->id_promo_campaign_promo_code) {
@@ -513,6 +493,39 @@ class Transaction extends Model
 
     	\DB::commit();
     	return true;
+    }
+
+    public function triggerTransactionCompleted($data = [])
+    {
+        \DB::beginTransaction();
+
+        $this->update([
+            'transaction_status' => 'Completed'
+        ]);
+
+        //insert point cashback
+        $savePoint = app('Modules\Transaction\Http\Controllers\ApiNotification')->savePoint($this);
+        if (!$savePoint) {
+            DB::rollback();
+            return false;
+        }
+
+        //insert balance merchant
+        $idMerchant = Merchant::where('id_outlet', $this->id_outlet)->first()['id_merchant']??null;
+        $dt = [
+            'id_merchant' => $idMerchant,
+            'id_transaction' => $this->id_transaction,
+            'balance_nominal' => $this->transaction_grandtotal,
+            'source' => 'Transaction Completed'
+        ];
+        $saveBalanceMerchant = app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dt);
+        if (!$saveBalanceMerchant) {
+            DB::rollback();
+            return false;
+        }
+
+        \DB::commit();
+        return true;
     }
 
 	public function consultation()

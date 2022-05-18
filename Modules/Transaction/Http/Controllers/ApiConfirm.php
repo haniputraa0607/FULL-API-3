@@ -99,7 +99,10 @@ class ApiConfirm extends Controller
             ];
         }
 
-        TransactionGroup::where('id_transaction_group', $check['id_transaction_group'])->update(['transaction_payment_type' => $post['payment_type']]);
+        if (!$checkPaymentBalance) {
+            TransactionGroup::where('id_transaction_group', $check['id_transaction_group'])->update(['transaction_payment_type' => $post['payment_type']]);
+        }
+
         if ($post['payment_type'] == 'Midtrans') {
             if (\Cache::has('midtrans_confirm_'.$check['id_transaction_group'])) {
                 return response()->json(\Cache::get('midtrans_confirm_'.$check['id_transaction_group']));
@@ -393,7 +396,9 @@ class ApiConfirm extends Controller
             $transactionGroup = Transaction::where('id_transaction_group', $check['id_transaction_group'])->get()->toArray();
             foreach ($transactionGroup as $transactions){
                 app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->updateStockProduct($transactions['id_transaction'], 'book');
-                Transaction::where('id_transaction', $transactions['id_transaction'])->update(['trasaction_payment_type' => $post['payment_type']]);
+                if (!$checkPaymentBalance) {
+                    Transaction::where('id_transaction', $transactions['id_transaction'])->update(['trasaction_payment_type' => $post['payment_type']]);
+                }
             }
 
             \Cache::put('midtrans_confirm_'.$check['id_transaction_group'], $response, now()->addMinutes(10));

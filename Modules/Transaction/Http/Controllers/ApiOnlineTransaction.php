@@ -198,8 +198,6 @@ class ApiOnlineTransaction extends Controller
         $paymentStatus = 'Pending';
         if(isset($post['point_use']) && $post['point_use']){
             $paymentType = 'Balance';
-            $paymentStatus = 'Completed';
-            $transactionStatus = 'Pending';
         }
 
         DB::beginTransaction();
@@ -413,6 +411,11 @@ class ApiOnlineTransaction extends Controller
         }
 
         $grandtotal = $subtotal+$deliveryTotal;
+        TransactionGroup::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->update([
+            'transaction_subtotal' => $subtotal,
+            'transaction_shipment' => $deliveryTotal,
+            'transaction_grandtotal' => $grandtotal
+        ]);
 
         $currentBalance = LogBalance::where('id_user', $user->id)->sum('balance');
         if(isset($post['point_use']) && $post['point_use']){
@@ -423,14 +426,10 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-        TransactionGroup::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->update([
-            'transaction_subtotal' => $subtotal,
-            'transaction_shipment' => $deliveryTotal,
-            'transaction_grandtotal' => $grandtotal
-        ]);
+        $trxGroup = TransactionGroup::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->first();
         if ($paymentType == 'Balance') {
 
-            $save = app($this->balance)->topUpGroup($user->id, $insertTransactionGroup);
+            $save = app($this->balance)->topUpGroup($user->id, $trxGroup);
 
             if (!isset($save['status'])) {
                 DB::rollBack();
@@ -443,7 +442,7 @@ class ApiOnlineTransaction extends Controller
             }
 
             if($grandtotal == 0){
-                $insertTransactionGroup->triggerPaymentCompleted();
+                $trxGroup->triggerPaymentCompleted();
             }
         }
 
@@ -2356,7 +2355,6 @@ class ApiOnlineTransaction extends Controller
 
                     $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first()['product_photo']??null;
                     $product['image'] = (empty($image) ? config('url.storage_url_api').'img/default.jpg': config('url.storage_url_api').$image);
-                    $subtotal = $subtotal + (int)$product['product_price'];
 
                     $error = '';
                     if(empty($productGlobalPrice['product_global_price'])){
@@ -2414,6 +2412,7 @@ class ApiOnlineTransaction extends Controller
                 }
 
                 if(!empty($value['items'])){
+                    $subtotal = $subtotal + $productSubtotal;
                     $items[$index]['delivery_code'] = $value['delivery_code']??'';
                     $items[$index]['delivery_service'] = $value['delivery_service']??'';
                     $items[$index]['items_total_weight'] = $weightProduct;
@@ -2537,7 +2536,7 @@ class ApiOnlineTransaction extends Controller
                 if ($pay['type'] == 'Balance') {
                     $payBalance = TransactionPaymentBalance::find($pay['id_payment']);
                     if ($payBalance) {
-                        $refund = app($this->balance)->topUpGroup($user->id, $trxGroup);
+                        $refund = app($this->balance)->addLogBalance( $user->id, (int)$payBalance['balance_nominal'], $trxGroup['id_transaction_group'], 'Rejected Order Group', $payBalance['balance_nominal']);
                         if ($refund == false) {
                             return false;
                         }
@@ -2601,7 +2600,7 @@ class ApiOnlineTransaction extends Controller
             } else {
                 $payBalance = TransactionPaymentBalance::where('id_transaction_group', $data['id_transaction_group'])->first();
                 if ($payBalance) {
-                    $refund = app($this->balance)->topUpGroup($user->id, $trxGroup);
+                    $refund = app($this->balance)->addLogBalance( $user->id, (int)$payBalance['balance_nominal'], $trxGroup['id_transaction_group'], 'Rejected Order Group', $payBalance['balance_nominal']);
                     if ($refund == false) {
                         return false;
                     }

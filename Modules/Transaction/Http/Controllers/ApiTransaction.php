@@ -2646,6 +2646,18 @@ class ApiTransaction extends Controller
             ]
         ];
 
+        $grandTotal = $transaction['transaction_grandtotal'];
+        $trxPaymentBalance = TransactionPaymentBalance::where('id_transaction_group', $transaction['id_transaction_group'])->first()['balance_nominal']??0;
+        $trxCount = Transaction::where('id_transaction_group', $transaction['id_transaction_group'])->count();
+        $balance = (int)$trxPaymentBalance/$trxCount;
+        if(!empty($trxPaymentBalance)){
+            $grandTotal = $grandTotal - $balance;
+            $paymentDetail[] = [
+                'text' => 'Point yang digunakan',
+                'value' => '-'.number_format($balance,0,",",".")
+            ];
+        }
+
         $trxPayment = TransactionPaymentMidtran::where('id_transaction_group', $transaction['id_transaction_group'])->first();
         $paymentMethod = $trxPayment['payment_type'].(!empty($trxPayment['bank']) ? ' ('.$trxPayment['bank'].')':'');
         $address = [
@@ -2658,7 +2670,7 @@ class ApiTransaction extends Controller
         ];
 
         $tracking = [];
-        $trxTracking = TransactionShipmentTrackingUpdate::where('id_transaction', $id)->orderBy('tracking_date_time', 'asc')->get()->toArray();
+        $trxTracking = TransactionShipmentTrackingUpdate::where('id_transaction', $id)->orderBy('tracking_date_time', 'desc')->get()->toArray();
         foreach ($trxTracking as $value){
             $tracking[] = [
                 'date' => MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($value['tracking_date_time'])), true),
@@ -2674,7 +2686,7 @@ class ApiTransaction extends Controller
             'transaction_date' => MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_date'])), true),
             'transaction_products' => $products,
             'address' => $address,
-            'transaction_grandtotal' => 'Rp '. number_format((int)$transaction['transaction_grandtotal'],0,",","."),
+            'transaction_grandtotal' => 'Rp '. number_format($grandTotal,0,",","."),
             'delivery' => [
                 'delivery_id' => $transaction['order_id'],
                 'delivery_method' => strtoupper($transaction['shipment_courier']),
