@@ -778,6 +778,31 @@ class ApiHome extends Controller
         return $result;
     }
 
+    public function doctorSplash(Request $request){
+        $splash = Setting::where('key', '=', 'default_doctor_home_splash_screen')->first();
+        $duration = Setting::where('key', '=', 'default_doctor_home_splash_duration')->pluck('value')->first();
+
+        if(!empty($splash)){
+            $splash = $this->endPoint.$splash['value'];
+        } else {
+            $splash = null;
+            $result = ['status' => 'success', 'result' => null];
+
+            return $result;
+        }
+
+        $ext=explode('.', $splash);
+        $result = [
+            'status' => 'success',
+            'result' => [
+                'splash_screen_url' => $splash."?update=".time(),
+                'splash_screen_duration' => $duration??5,
+                'splash_screen_ext' => '.'.end($ext)
+            ]
+        ];
+        return $result;
+    }
+
     public function banner(Request $request){
         $banners = $this->getBanner();
         $result = [

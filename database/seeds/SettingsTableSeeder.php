@@ -1001,6 +1001,24 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            111 =>
+                array(
+                    'id_setting' => 112,
+                    'key' => 'about-doctor-apps',
+                    'value' => null,
+                    'value_text' => '<h1> About Doctor Apps </h1>',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            112 =>
+                array(
+                    'id_setting' => 113,
+                    'key' => 'tos-doctor-apps',
+                    'value' => null,
+                    'value_text' => '<h1>Terms of Service Doctor Apps</h1>',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         );
 
         foreach ($settings as $setting) {

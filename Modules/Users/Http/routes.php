@@ -60,6 +60,11 @@ Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent'
         Route::any('splash','ApiHome@splash');
         Route::any('notloggedin', 'ApiHome@homeNotLoggedIn');
     });
+
+    Route::group(['prefix' => 'home-doctor', 'namespace' => 'Modules\Users\Http\Controllers'], function()
+    {
+        Route::any('splash','ApiHome@doctorSplash');
+    });
 });
 
 Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'namespace' => 'Modules\Users\Http\Controllers'], function()
