@@ -4,8 +4,11 @@ namespace Modules\Transaction\Http\Controllers;
 
 use App\Http\Models\DailyTransactions;
 use App\Http\Models\ProductPhoto;
+use App\Http\Models\TransactionPaymentBalance;
+use App\Http\Models\TransactionPaymentOvo;
 use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
+use App\Lib\Ovo;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -23,6 +26,7 @@ use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionProductModifier;
+use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\Merchant\Entities\Merchant;
 use Modules\ProductBundling\Entities\BundlingOutlet;
 use Modules\ProductBundling\Entities\BundlingProduct;
@@ -57,6 +61,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignReferral;
 use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
 use Modules\PromoCampaign\Entities\UserReferralCode;
 use Modules\PromoCampaign\Entities\UserPromo;
+use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use Modules\Subscription\Entities\TransactionPaymentSubscription;
 use Modules\Subscription\Entities\Subscription;
 use Modules\Subscription\Entities\SubscriptionUser;
@@ -193,8 +198,6 @@ class ApiOnlineTransaction extends Controller
         $paymentStatus = 'Pending';
         if(isset($post['point_use']) && $post['point_use']){
             $paymentType = 'Balance';
-            $paymentStatus = 'Completed';
-            $transactionStatus = 'Pending';
         }
 
         DB::beginTransaction();
@@ -408,6 +411,11 @@ class ApiOnlineTransaction extends Controller
         }
 
         $grandtotal = $subtotal+$deliveryTotal;
+        TransactionGroup::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->update([
+            'transaction_subtotal' => $subtotal,
+            'transaction_shipment' => $deliveryTotal,
+            'transaction_grandtotal' => $grandtotal
+        ]);
 
         $currentBalance = LogBalance::where('id_user', $user->id)->sum('balance');
         if(isset($post['point_use']) && $post['point_use']){
@@ -418,14 +426,10 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-        TransactionGroup::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->update([
-            'transaction_subtotal' => $subtotal,
-            'transaction_shipment' => $deliveryTotal,
-            'transaction_grandtotal' => $grandtotal
-        ]);
+        $trxGroup = TransactionGroup::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->first();
         if ($paymentType == 'Balance') {
 
-            $save = app($this->balance)->topUpGroup($user->id, $insertTransactionGroup);
+            $save = app($this->balance)->topUpGroup($user->id, $trxGroup);
 
             if (!isset($save['status'])) {
                 DB::rollBack();
@@ -438,7 +442,7 @@ class ApiOnlineTransaction extends Controller
             }
 
             if($grandtotal == 0){
-                $insertTransactionGroup->triggerPaymentCompleted();
+                $trxGroup->triggerPaymentCompleted();
             }
         }
 
@@ -2351,7 +2355,6 @@ class ApiOnlineTransaction extends Controller
 
                     $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first()['product_photo']??null;
                     $product['image'] = (empty($image) ? config('url.storage_url_api').'img/default.jpg': config('url.storage_url_api').$image);
-                    $subtotal = $subtotal + (int)$product['product_price'];
 
                     $error = '';
                     if(empty($productGlobalPrice['product_global_price'])){
@@ -2409,6 +2412,7 @@ class ApiOnlineTransaction extends Controller
                 }
 
                 if(!empty($value['items'])){
+                    $subtotal = $subtotal + $productSubtotal;
                     $items[$index]['delivery_code'] = $value['delivery_code']??'';
                     $items[$index]['delivery_service'] = $value['delivery_service']??'';
                     $items[$index]['items_total_weight'] = $weightProduct;
@@ -2521,5 +2525,90 @@ class ApiOnlineTransaction extends Controller
                     ->update(['product_detail_stock_status' => $statusStock, 'product_detail_stock_item' => $stockItem]);
             }
         }
+    }
+
+    public function rejectPayment($data){
+        $user = User::where('id', $data['id_user'])->first();
+        $multiple = TransactionMultiplePayment::where('id_transaction_group', $data['id_transaction_group'])->get()->toArray();
+        $trxGroup = TransactionGroup::where('id_transaction_group', $data['id_transaction_group'])->first();
+        if ($multiple) {
+            foreach ($multiple as $pay) {
+                if ($pay['type'] == 'Balance') {
+                    $payBalance = TransactionPaymentBalance::find($pay['id_payment']);
+                    if ($payBalance) {
+                        $refund = app($this->balance)->addLogBalance( $user->id, (int)$payBalance['balance_nominal'], $trxGroup['id_transaction_group'], 'Rejected Order Group', $payBalance['balance_nominal']);
+                        if ($refund == false) {
+                            return false;
+                        }
+                    }
+                } else {
+                    $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
+                    if ($payMidtrans) {
+                        $doRefundPayment = MyHelper::setting('refund_midtrans');
+                        if ($doRefundPayment) {
+                            $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
+
+                            if ($refund['status'] != 'success') {
+                                $data->update(['failed_void_reason' => $refund['messages'] ?? []]);
+                                $data->update(['need_manual_void' => 1]);
+                                $order2 = clone $data;
+                                $order2->payment_method = 'Midtrans';
+                                $order2->payment_detail = $payMidtrans['payment_type'];
+                                $order2->manual_refund = $payMidtrans['gross_amount'];
+                                $order2->payment_reference_number = $payMidtrans['vt_transaction_id'];
+                                if ($shared['reject_batch'] ?? false) {
+                                    $shared['void_failed'][] = $order2;
+                                } else {
+                                    $variables = [
+                                        'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                    ];
+                                    app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $user->phone, $variables, null, true);
+                                }
+
+                                return false;
+                            }
+                        }
+                    }
+                }
+
+            }
+        } else {
+            $payMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $data['id_transaction_group'])->first();
+            if ($payMidtrans) {
+                $doRefundPayment = MyHelper::setting('refund_midtrans');
+                if ($doRefundPayment) {
+                    $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
+                    if ($refund['status'] != 'success') {
+                        $data->update(['need_manual_void' => 1]);
+                        $order2 = clone $data;
+                        $order2->payment_method = 'Midtrans';
+                        $order2->payment_detail = $payMidtrans['payment_type'];
+                        $order2->manual_refund = $payMidtrans['gross_amount'];
+                        $order2->payment_reference_number = $payMidtrans['vt_transaction_id'];
+                        if ($shared['reject_batch'] ?? false) {
+                            $shared['void_failed'][] = $order2;
+                        } else {
+                            $variables = [
+                                'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                            ];
+                            app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $user->phone, $variables, null, true);
+                        }
+
+                        return false;
+                    }
+                }
+            } else {
+                $payBalance = TransactionPaymentBalance::where('id_transaction_group', $data['id_transaction_group'])->first();
+                if ($payBalance) {
+                    $refund = app($this->balance)->addLogBalance( $user->id, (int)$payBalance['balance_nominal'], $trxGroup['id_transaction_group'], 'Rejected Order Group', $payBalance['balance_nominal']);
+                    if ($refund == false) {
+                        return false;
+                    }
+                }
+            }
+
+        }
+
+        return true;
     }
 }

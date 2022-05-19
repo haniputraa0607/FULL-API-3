@@ -1256,13 +1256,14 @@ class ApiCategoryController extends Controller
 
     function listCategoryCustomerApps()
     {
-        $list = ProductCategory::where('id_parent_category', null)->orderBy('product_category_order')->select('id_product_category', 'product_category_name')->get()->toArray();
+        $result = [];
+        $list = ProductCategory::where('id_parent_category', null)->orderBy('product_category_order')->select('id_product_category', 'product_category_name', 'product_category_photo')->get()->toArray();
 
         foreach ($list as $key => $value) {
-            $child = ProductCategory::where('id_parent_category', $value['id_product_category'])->select('id_product_category', 'product_category_name')->orderBy('product_category_order')->get()->toArray();
+            $child = ProductCategory::where('id_parent_category', $value['id_product_category'])->select('id_product_category', 'product_category_name', 'product_category_photo')->orderBy('product_category_order')->get()->toArray();
             $list[$key]['childs'] = $child;
             foreach ($child as $index=>$c){
-                $childChild = ProductCategory::where('id_parent_category', $c['id_product_category'])->select('id_product_category', 'product_category_name')->orderBy('product_category_order')->get()->toArray();
+                $childChild = ProductCategory::where('id_parent_category', $c['id_product_category'])->select('id_product_category', 'product_category_name', 'product_category_photo')->orderBy('product_category_order')->get()->toArray();
                 $list[$key]['childs'][$index]['childs'] = $childChild;
             }
         }
