@@ -28,6 +28,11 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
 
 });
 
+Route::group(['middleware' => ['auth:doctor-apps', 'log_activities', 'user_agent', 'scopes:doctor-apps'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::any('/faq-doctor-apps', 'ApiSetting@faqListDoctorApps');
+});
+
 Route::group(['middleware' => ['auth_client', 'log_activities', 'user_agent'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::any('/', 'ApiSetting@settingList');
@@ -48,6 +53,7 @@ Route::group(['middleware' => ['auth_client', 'log_activities', 'user_agent'], '
 
 Route::group(['prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {
     Route::post('/', 'ApiVersion@index');
+    Route::post('/doctor-app', 'ApiDoctorAppVersion@index');
 });
 
 Route::group(['namespace' => 'Modules\Setting\Http\Controllers'], function()

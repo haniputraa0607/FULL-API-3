@@ -15,6 +15,7 @@ use Illuminate\Routing\Controller;
 use App\Http\Models\Level;
 use App\Http\Models\Outlet;
 use App\Http\Models\Faq;
+use App\Http\Models\FaqDoctor;
 use App\Http\Models\OutletHoliday;
 use App\Http\Models\Holiday;
 use App\Http\Models\DateHoliday;
@@ -1675,5 +1676,43 @@ class ApiSetting extends Controller
 
             return response()->json(MyHelper::checkUpdate($save));
         }
+    }
+
+    public function faqCreateDoctorApps(FaqCreate $request) {
+        $post = $request->json()->all();
+
+        $faq = FaqDoctor::create($post);
+
+        return response()->json(MyHelper::checkCreate($faq));
+    }
+
+    public function faqListDoctorApps(FaqList $request) {
+        $faqList = FaqDoctor::orderBy('faq_number_list', 'ASC')->get()->toArray();
+
+        return response()->json(MyHelper::checkGet($faqList));
+    }
+
+    public function faqEditDoctorApps(FaqEdit $request) {
+        $id = $request->json('id_faq');
+
+        $faq = FaqDoctor::where('id_faq', $id)->first();
+
+        return response()->json(MyHelper::checkGet($faq));
+    }
+
+    public function faqUpdateDoctorApps(FaqUpdate $request) {
+        $post = $request->json()->all();
+
+        $update = FaqDoctor::where('id_faq', $post['id_faq'])->update($post);
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function faqDeleteDoctorApps(FaqDelete $request) {
+        $id = $request->json('id_faq');
+
+        $delete = FaqDoctor::where('id_faq', $id)->delete();
+
+        return response()->json(MyHelper::checkDelete($delete));
     }
 }
