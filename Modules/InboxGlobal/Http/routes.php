@@ -11,8 +11,10 @@ Route::group(['middleware' => ['auth:api','log_activities','user_agent', 'scopes
 
 Route::group(['middleware' => ['auth:api','log_activities','user_agent', 'scopes:apps'], 'prefix' => 'api/inbox', 'namespace' => 'Modules\InboxGlobal\Http\Controllers'], function()
 {
+    Route::get('user/promotion', 'ApiInbox@listInboxUserPromotion');
     Route::any('user/{mode?}', 'ApiInbox@listInboxUser');
     Route::post('marked', 'ApiInbox@markedInbox');
+    Route::post('marked-all', 'ApiInbox@markedAllInbox');
     Route::post('unmark', 'ApiInbox@unmarkInbox');
     Route::post('unread', 'ApiInbox@unread');
 });

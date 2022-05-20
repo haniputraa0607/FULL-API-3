@@ -464,6 +464,7 @@ class SendPromotionJob implements ShouldQueue
 			$inbox['inboxes_link'] = $promotionContent['promotion_inbox_link'];
 		}
 
+		$inbox['inboxes_promotion_status'] = 1;
 		$inbox['inboxes_send_at'] = date("Y-m-d H:i:s");
 		$inbox['created_at'] = date("Y-m-d H:i:s");
 		$inbox['updated_at'] = date("Y-m-d H:i:s");
