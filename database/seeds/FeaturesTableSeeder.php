@@ -505,7 +505,7 @@ class FeaturesTableSeeder extends Seeder
                     'id_feature' => 50,
                     'feature_type' => 'Create',
                     'feature_module' => 'Product',
-                    'show_hide' => 1,
+                    'show_hide' => 0,
                     'order' => 14,
                     'created_at' => '2018-05-10 08:00:00',
                     'updated_at' => '2018-05-10 08:00:00',
