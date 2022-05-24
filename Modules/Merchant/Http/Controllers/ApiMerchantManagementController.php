@@ -17,9 +17,11 @@ use Modules\Merchant\Http\Requests\MerchantCreateStep1;
 use Modules\Merchant\Http\Requests\MerchantCreateStep2;
 use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductGlobalPrice;
+use Modules\Product\Entities\ProductWholesaler;
 use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
+use Modules\ProductVariant\Entities\ProductVariantGroupWholesaler;
 use Modules\ProductVariant\Entities\ProductVariantPivot;
 use DB;
 use Image;
@@ -295,7 +297,8 @@ class ApiMerchantManagementController extends Controller
                     'name' => implode(' ', $name),
                     'price' => 0,
                     'stock' => 0,
-                    'data' => $combination
+                    'data' => $combination,
+                    'wholesaler_price' => []
                 ];
             }
 
@@ -477,8 +480,69 @@ class ApiMerchantManagementController extends Controller
                         'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible'),
                         'product_variant_group_stock_status' => (empty($combination['stock']) ? 'Sold Out': 'Available'),
                         'product_variant_group_stock_item' => $combination['stock']]);
+
+
+                    if(!empty($combination['wholesaler_price'])){
+                        $insertWholesalerVariant = [];
+                        foreach ($combination['wholesaler_price'] as $wholesaler){
+                            $wholesaler = (array)$wholesaler;
+                            if($wholesaler['minimum'] <= 1){
+                                DB::rollback();
+                                return response()->json(['status' => 'fail', 'messages' => ['Jumlah unit harus lebih dari satu']]);
+                            }
+                            $insertWholesalerVariant[] = [
+                                'id_product_variant_group' => $variantGroup['id_product_variant_group'],
+                                'variant_wholesaler_minimum' => $wholesaler['minimum']??0,
+                                'variant_wholesaler_unit_price' => $wholesaler['unit_price']??0,
+                                'created_at' => date('Y-m-d H:i:s'),
+                                'updated_at' => date('Y-m-d H:i:s')
+                            ];
+                        }
+
+                        $arrayColumn = array_column($insertWholesalerVariant, 'variant_wholesaler_minimum');
+                        $withoutDuplicates = array_unique($arrayColumn);
+                        $duplicates = array_diff_assoc($arrayColumn, $withoutDuplicates);
+                        if(!empty($duplicates)){
+                            DB::rollback();
+                            return response()->json(['status' => 'fail', 'messages' => ['Minimum tidak boleh sama']]);
+                        }
+
+                        ProductVariantGroupWholesaler::insert($insertWholesalerVariant);
+                    }
                 }
             }
+        }
+
+        if(empty($post['variants']) && !empty($post['wholesaler_price'])){
+            $post['wholesaler_price'] = (array)json_decode($post['wholesaler_price']);
+            $insertWholesaler = [];
+
+            foreach ($post['wholesaler_price'] as $wholesaler){
+                $wholesaler = (array)$wholesaler;
+                if($wholesaler['minimum'] <= 1){
+                    DB::rollback();
+                    return response()->json(['status' => 'fail', 'messages' => ['Jumlah unit harus lebih dari satu']]);
+                }
+
+                $insertWholesaler[] = [
+                    'id_product' => $idProduct,
+                    'product_wholesaler_minimum' => $wholesaler['minimum']??0,
+                    'product_wholesaler_unit_price' => $wholesaler['unit_price']??0,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                ];
+            }
+
+
+            $arrayColumn = array_column($insertWholesaler, 'product_wholesaler_minimum');
+            $withoutDuplicates = array_unique($arrayColumn);
+            $duplicates = array_diff_assoc($arrayColumn, $withoutDuplicates);
+            if(!empty($duplicates)){
+                DB::rollback();
+                return response()->json(['status' => 'fail', 'messages' => ['Minimum tidak boleh sama']]);
+            }
+
+            ProductWholesaler::insert($insertWholesaler);
         }
 
         DB::commit();
@@ -669,6 +733,7 @@ class ApiMerchantManagementController extends Controller
                                 'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible'),
                                 'product_variant_group_price' => $combination['price']
                             ]);
+                            $idProductVariantGroup = $variantGroup['id_product_variant_group'];
 
                             $insertPivot = [];
                             foreach ($idVariants as $id){
@@ -701,7 +766,39 @@ class ApiMerchantManagementController extends Controller
                                 'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible'),
                                 'product_variant_group_stock_status' => (empty($combination['stock']) ? 'Sold Out': 'Available'),
                                 'product_variant_group_stock_item' => $combination['stock']]);
+
+                        $idProductVariantGroup = $combination['id_product_variant_group'];
                     }
+
+                    ProductVariantGroupWholesaler::where('id_product_variant_group', $idProductVariantGroup)->delete();
+                    if(!empty($combination['wholesaler_price'])){
+                        $insertWholesalerVariant = [];
+                        foreach ($combination['wholesaler_price'] as $wholesaler){
+                            $wholesaler = (array)$wholesaler;
+                            if($wholesaler['minimum'] <= 1){
+                                DB::rollback();
+                                return response()->json(['status' => 'fail', 'messages' => ['Jumlah unit harus lebih dari satu']]);
+                            }
+                            $insertWholesalerVariant[] = [
+                                'id_product_variant_group' => $idProductVariantGroup,
+                                'variant_wholesaler_minimum' => $wholesaler['minimum']??0,
+                                'variant_wholesaler_unit_price' => $wholesaler['unit_price']??0,
+                                'created_at' => date('Y-m-d H:i:s'),
+                                'updated_at' => date('Y-m-d H:i:s')
+                            ];
+                        }
+
+                        $arrayColumn = array_column($insertWholesalerVariant, 'variant_wholesaler_minimum');
+                        $withoutDuplicates = array_unique($arrayColumn);
+                        $duplicates = array_diff_assoc($arrayColumn, $withoutDuplicates);
+                        if(!empty($duplicates)){
+                            DB::rollback();
+                            return response()->json(['status' => 'fail', 'messages' => ['Minimum tidak boleh sama']]);
+                        }
+
+                        ProductVariantGroupWholesaler::insert($insertWholesalerVariant);
+                    }
+
                     $priceVariant[] = $combination['price'];
                 }
             }
@@ -711,6 +808,39 @@ class ApiMerchantManagementController extends Controller
             $price = $post['base_price']??0;
             if(!empty($post['variants'])){
                 $price = min($priceVariant);
+            }
+
+            ProductWholesaler::where('id_product', $post['id_product'])->delete();
+            if(empty($post['variants']) && !empty($post['wholesaler_price'])){
+                $post['wholesaler_price'] = (array)json_decode($post['wholesaler_price']);
+                $insertWholesaler = [];
+
+                foreach ($post['wholesaler_price'] as $wholesaler){
+                    $wholesaler = (array)$wholesaler;
+                    if($wholesaler['minimum'] <= 1){
+                        DB::rollback();
+                        return response()->json(['status' => 'fail', 'messages' => ['Jumlah unit harus lebih dari satu']]);
+                    }
+
+                    $insertWholesaler[] = [
+                        'id_product' => $post['id_product'],
+                        'product_wholesaler_minimum' => $wholesaler['minimum']??0,
+                        'product_wholesaler_unit_price' => $wholesaler['unit_price']??0,
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+                }
+
+
+                $arrayColumn = array_column($insertWholesaler, 'product_wholesaler_minimum');
+                $withoutDuplicates = array_unique($arrayColumn);
+                $duplicates = array_diff_assoc($arrayColumn, $withoutDuplicates);
+                if(!empty($duplicates)){
+                    DB::rollback();
+                    return response()->json(['status' => 'fail', 'messages' => ['Minimum tidak boleh sama']]);
+                }
+
+                ProductWholesaler::insert($insertWholesaler);
             }
             ProductGlobalPrice::where('id_product', $post['id_product'])->update(['product_global_price' => $price]);
             return response()->json(MyHelper::checkUpdate($update));
@@ -801,19 +931,30 @@ class ApiMerchantManagementController extends Controller
 
                 if(!empty($variantName)){
                     $stock = ProductVariantGroupDetail::where('id_product_variant_group', $group['id_product_variant_group'])->where('id_outlet', $checkMerchant['id_outlet'])->first();
+                    $wholesaler = ProductVariantGroupWholesaler::where('id_product_variant_group', $group['id_product_variant_group'])->select('id_product_variant_group_wholesaler', 'variant_wholesaler_minimum as minimum', 'variant_wholesaler_unit_price as unit_price')->get()->toArray();
+                    foreach ($wholesaler as $key=>$w){
+                        $wholesaler[$key]['unit_price'] = (int)$w['unit_price'];
+                    }
                     $variants['variants_price'][] = [
                         "id_product_variant_group" => $group['id_product_variant_group'],
                         "name" => implode(' ', $variantName),
                         "price" => (int)$group['product_variant_group_price'],
                         "visibility" => ($stock['product_variant_group_visibility'] == 'Hidden' ? 0 : 1),
                         "stock" => (int)($stock['product_variant_group_stock_item']??0),
-                        "data" => $variantChild
+                        "data" => $variantChild,
+                        "wholesaler_price" => $wholesaler
                     ];
                 }
             }
 
             if(!empty($variants['variants'])){
                 $variants['variants'] = array_values(array_map("unserialize", array_unique(array_map("serialize", $variants['variants']))));
+            }else{
+                $wholesaler = ProductWholesaler::where('id_product', $detail['id_product'])->select('id_product_wholesaler', 'product_wholesaler_minimum as minimum', 'product_wholesaler_unit_price as unit_price')->get()->toArray();
+                foreach ($wholesaler as $key=>$w){
+                    $wholesaler[$key]['unit_price'] = (int)$w['unit_price'];
+                }
+                $result['wholesaler_price'] =$wholesaler;
             }
             $result['variants'] = $variants;
             return response()->json(MyHelper::checkGet($result));
