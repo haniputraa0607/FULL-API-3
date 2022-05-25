@@ -27,6 +27,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
+use Modules\Product\Entities\ProductWholesaler;
 use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
@@ -1799,6 +1800,18 @@ class ApiProductController extends Controller
         }
 
         $product['variants'] = Product::getVariantTree($product['id_product'], $outlet, false, $product['product_price'], $product['product_variant_status'])['variants_tree']??null;
+
+        if($product['product_variant_status'] && empty($product['variants'])){
+            return MyHelper::checkGet([],'Variants not available');
+        }
+
+        if(!$product['product_variant_status']){
+            $wholesaler = ProductWholesaler::where('id_product', $product['id_product'])->select('id_product_wholesaler', 'product_wholesaler_minimum as minimum', 'product_wholesaler_unit_price as unit_price')->get()->toArray();
+            foreach ($wholesaler as $key=>$w){
+                $wholesaler[$key]['unit_price'] = (int)$w['unit_price'];
+            }
+            $product['wholesaler_price'] =$wholesaler;
+        }
 
         if ($post['id_product_variant_group'] ?? false) {
             $product['selected_available'] = (!!Product::getVariantParentId($post['id_product_variant_group'], $product['variants'], $post['selected']['extra_modifiers'] ?? []))?1:0;

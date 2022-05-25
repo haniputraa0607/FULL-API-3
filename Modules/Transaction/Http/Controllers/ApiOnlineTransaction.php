@@ -28,11 +28,13 @@ use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionProductModifier;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\Merchant\Entities\Merchant;
+use Modules\Product\Entities\ProductWholesaler;
 use Modules\ProductBundling\Entities\BundlingOutlet;
 use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
+use Modules\ProductVariant\Entities\ProductVariantGroupWholesaler;
 use Modules\ProductVariant\Entities\TransactionProductVariant;
 use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
@@ -300,6 +302,7 @@ class ApiOnlineTransaction extends Controller
 
                 $idBrand = BrandProduct::where('id_product', $checkProduct['id_product'])->first()['id_brand']??null;
 
+                $variantSubtotal = $valueProduct['product_variant_price'] - $valueProduct['product_base_price'];
                 $dataProduct = [
                     'id_transaction'               => $insertTransaction['id_transaction'],
                     'id_product'                   => $checkProduct['id_product'],
@@ -313,8 +316,9 @@ class ApiOnlineTransaction extends Controller
                     'transaction_product_price_base' => $valueProduct['product_price'],
                     'transaction_product_subtotal' => $valueProduct['product_price_subtotal'],
                     'transaction_product_net' => $valueProduct['product_price_subtotal'],
-                    'transaction_variant_subtotal' => $valueProduct['product_variant_price'] - $valueProduct['product_base_price'],
+                    'transaction_variant_subtotal' => ($variantSubtotal < 0 ? 0:$variantSubtotal),
                     'transaction_product_note'     => $valueProduct['note'],
+                    'transaction_product_wholesaler_minimum_qty'  => $valueProduct['wholesaler_minimum']??null,
                     'created_at'                   => date('Y-m-d', strtotime($insertTransaction['transaction_date'])).' '.date('H:i:s'),
                     'updated_at'                   => date('Y-m-d H:i:s')
                 ];
@@ -2308,6 +2312,7 @@ class ApiOnlineTransaction extends Controller
                 $productSubtotal = 0;
                 $weightProduct = 0;
                 foreach ($value['items'] as $key=>$item){
+                    $error = '';
                     $product = Product::select('product_weight', 'id_merchant', 'product_category_name', 'products.id_product_category', 'id_product','product_code','product_name','product_description','product_code', 'product_variant_status')
                         ->leftJoin('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
                         ->where('product_visibility', 'Visible')
@@ -2349,14 +2354,36 @@ class ApiOnlineTransaction extends Controller
                         $product['stock_item'] = $check['product_variant_group_stock_item']??0;
                         $variantPrice = ProductVariantGroup::where('id_product_variant_group', $item['id_product_variant_group'])->first()['product_variant_group_price']??0;
                         $product['product_price'] = $variantPrice;
+
+                        //check wholesaler
+                        $wholesalerVariant = ProductVariantGroupWholesaler::where('id_product_variant_group_wholesaler', $item['id_product_variant_group_wholesaler'])->first();
+                        if(!empty($wholesalerVariant)){
+                            if($item['qty'] < $wholesalerVariant['variant_wholesaler_minimum']){
+                                $error = 'Jumlah quantity tidak sesuai dengan harga grosir minimum '.$wholesalerVariant['variant_wholesaler_minimum'];
+                            }
+                            $variantPrice = $wholesalerVariant['variant_wholesaler_unit_price'];
+                            $product['product_price'] = $wholesalerVariant['variant_wholesaler_unit_price'];
+                            $product['wholesaler_minimum'] = $wholesalerVariant['variant_wholesaler_minimum'];
+                        }
                     }else{
                         $product['stock_item'] = ProductDetail::where('id_product', $item['id_product'])->where('id_outlet', $value['id_outlet'])->first()['product_detail_stock_item']??0;
+                    }
+
+                    if (!$product['product_variant_status'] && !empty($item['id_product_wholesaler'])){
+                        //check wholesaler
+                        $wholesaler = ProductWholesaler::where('id_product_wholesaler', $item['id_product_wholesaler'])->first();
+                        if(!empty($wholesaler)){
+                            if($item['qty'] < $wholesaler['product_wholesaler_minimum']){
+                                $error = 'Jumlah quantity tidak sesuai dengan harga grosir minimum '.$wholesaler['product_wholesaler_minimum'];
+                            }
+                            $product['product_price'] = $wholesaler['product_wholesaler_unit_price'];
+                            $product['wholesaler_minimum'] = $wholesaler['product_wholesaler_minimum'];
+                        }
                     }
 
                     $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first()['product_photo']??null;
                     $product['image'] = (empty($image) ? config('url.storage_url_api').'img/default.jpg': config('url.storage_url_api').$image);
 
-                    $error = '';
                     if(empty($productGlobalPrice['product_global_price'])){
                         $error = 'Harga produk tidak valid';
                     }
@@ -2398,6 +2425,9 @@ class ApiOnlineTransaction extends Controller
                         "qty" => $item['qty'],
                         "current_stock" => $product['stock_item'],
                         "id_custom" => $item['id_custom'],
+                        "id_product_wholesaler" => $item['id_product_wholesaler']??null,
+                        "id_product_variant_group_wholesaler" => $item['id_product_variant_group_wholesaler']??null,
+                        "wholesaler_minimum" => $product['wholesaler_minimum']??null,
                         "image" => $product['image'],
                         "error_message" => $error
                     ];
@@ -2408,6 +2438,11 @@ class ApiOnlineTransaction extends Controller
 
                     if($item['qty'] > $product['stock_item']){
                         $availableCheckout = false;
+                    }
+
+                    if($from_check == 1 && !empty($error)){
+                        unset($value['items'][$key]);
+                        continue;
                     }
                 }
 
@@ -2465,6 +2500,8 @@ class ApiOnlineTransaction extends Controller
                 $new_item = [
                     'id_product' => $item['id_product'],
                     'id_product_variant_group' => $item['id_product_variant_group']??null,
+                    'id_product_variant_group_wholesaler' => $item['id_product_variant_group_wholesaler']??null,
+                    'id_product_wholesaler' => $item['id_product_wholesaler']??null,
                     'note' => $item['note']
                 ];
                 $pos = array_search($new_item, $new_items);
