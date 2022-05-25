@@ -909,6 +909,7 @@ class ApiMerchantManagementController extends Controller
                 'product_width' => $detail['product_width']
             ];
 
+            $wholesalerStatus = false;
             $variantGroup = ProductVariantGroup::where('id_product', $detail['id_product'])->get()->toArray();
             $variants = [];
             foreach ($variantGroup as $group){
@@ -934,6 +935,7 @@ class ApiMerchantManagementController extends Controller
                     $wholesaler = ProductVariantGroupWholesaler::where('id_product_variant_group', $group['id_product_variant_group'])->select('id_product_variant_group_wholesaler', 'variant_wholesaler_minimum as minimum', 'variant_wholesaler_unit_price as unit_price')->get()->toArray();
                     foreach ($wholesaler as $key=>$w){
                         $wholesaler[$key]['unit_price'] = (int)$w['unit_price'];
+                        $wholesalerStatus = true;
                     }
                     $variants['variants_price'][] = [
                         "id_product_variant_group" => $group['id_product_variant_group'],
@@ -949,12 +951,15 @@ class ApiMerchantManagementController extends Controller
 
             if(!empty($variants['variants'])){
                 $variants['variants'] = array_values(array_map("unserialize", array_unique(array_map("serialize", $variants['variants']))));
+                $result['wholesaler_status'] =$wholesalerStatus;
             }else{
                 $wholesaler = ProductWholesaler::where('id_product', $detail['id_product'])->select('id_product_wholesaler', 'product_wholesaler_minimum as minimum', 'product_wholesaler_unit_price as unit_price')->get()->toArray();
                 foreach ($wholesaler as $key=>$w){
                     $wholesaler[$key]['unit_price'] = (int)$w['unit_price'];
+                    $wholesalerStatus = true;
                 }
                 $result['wholesaler_price'] =$wholesaler;
+                $result['wholesaler_status'] =$wholesalerStatus;
             }
             $result['variants'] = $variants;
             return response()->json(MyHelper::checkGet($result));
@@ -1005,6 +1010,269 @@ class ApiMerchantManagementController extends Controller
             return response()->json(MyHelper::checkDelete($delete));
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
+        }
+    }
+
+    public function productStockDetail(Request $request){
+        $post = $request->all();
+        $idUser = $request->user()->id;
+
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        if(empty($post['id_product'])){
+            return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
+        }
+
+        $product = Product::where('id_product', $post['id_product'])->first();
+        if(empty($product)){
+            return response()->json(['status' => 'fail', 'messages' => ['Product not found']]);
+        }
+
+        $result['id_product'] = $product['id_product'];
+        $result['product_variant_status'] = $product['product_variant_status'];
+
+        if($product['product_variant_status']){
+            $variantGroup = ProductVariantGroup::where('id_product', $product['id_product'])->get()->toArray();
+            $variants = [];
+            foreach ($variantGroup as $group){
+                $variant = ProductVariant::join('product_variant_pivot', 'product_variant_pivot.id_product_variant', 'product_variants.id_product_variant')->where('id_product_variant_group', $group['id_product_variant_group'])->get()->toArray();
+                $variantName = array_column($variant, 'product_variant_name');
+
+                if(!empty($variantName)){
+                    $stock = ProductVariantGroupDetail::where('id_product_variant_group', $group['id_product_variant_group'])->where('id_outlet', $checkMerchant['id_outlet'])->first();
+                    $variants[] = [
+                        "id_product_variant_group" => $group['id_product_variant_group'],
+                        "name" => implode(' ', $variantName),
+                        "visibility" => ($stock['product_variant_group_visibility'] == 'Hidden' ? 0 : 1),
+                        "stock" => (int)($stock['product_variant_group_stock_item']??0)
+                    ];
+                }
+            }
+
+            $result['variants'] = $variants;
+        }else{
+            $productDetail = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $checkMerchant['id_outlet'])->first();
+            $result['visibility'] = (($productDetail['product_detail_visibility']??'Visible') == 'Hidden' ? 0 : 1);
+            $result['stock'] = $productDetail['product_detail_stock_item']??0;
+        }
+
+        return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function productStockUpdate(Request $request)
+    {
+        $post = $request->all();
+        $idUser = $request->user()->id;
+
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if (empty($checkMerchant)) {
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        if (empty($post['id_product'])) {
+            return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
+        }
+
+        if (empty($post['variants']) && empty($post['stock'])) {
+            return response()->json(['status' => 'fail', 'messages' => ['Incompleted data']]);
+        }
+
+        $product = Product::where('id_product', $post['id_product'])->first();
+        if (empty($product)) {
+            return response()->json(['status' => 'fail', 'messages' => ['Product not found']]);
+        }
+
+        if(!empty($post['variants'])){
+            DB::beginTransaction();
+            foreach ($post['variants'] as $variant){
+                $stock = $variant['stock']??0;
+                $update = ProductVariantGroupDetail::where('id_product_variant_group', $variant['id_product_variant_group'])->where('id_outlet', $checkMerchant['id_outlet'])
+                    ->update([
+                        "product_variant_group_visibility" => ($variant['visibility'] == 1 ? 'Visible' : 'Hidden'),
+                        'product_variant_group_stock_status' => (empty($stock) ? 'Sold Out': 'Available'),
+                        "product_variant_group_stock_item" => (int)$stock
+                        ]);
+
+                if(!$update){
+                    DB::rollback();
+                    return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan stock']]);
+                }
+            }
+
+            DB::commit();
+            return response()->json(['status' => 'success']);
+        }else{
+            $stock = $post['stock']??0;
+            $update = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $checkMerchant['id_outlet'])
+                ->update([
+                    'product_detail_visibility' => (($post['visibility']??0) == 1 ? 'Visible' : 'Hidden'),
+                    'product_detail_stock_status' => (empty($stock) ? 'Sold Out': 'Available'),
+                    'product_detail_stock_item' => (int)$stock
+                ]);
+            return response()->json(MyHelper::checkUpdate($update));
+        }
+    }
+
+    public function variantGroupUpdate(Request $request){
+        $post = $request->all();
+        $idUser = $request->user()->id;
+
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if (empty($checkMerchant)) {
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        $product = Product::where('id_product', $post['id_product'])->first();
+        if (empty($product)) {
+            return response()->json(['status' => 'fail', 'messages' => ['Product not found']]);
+        }
+
+        $idProduct = $product['id_product'];
+        if(!empty($post['variants'])){
+            DB::beginTransaction();
+
+            $dtVariant = [];
+            foreach ($post['variants'] as $key=>$variant){
+                $variant = (array)$variant;
+                if(empty($variant['id_product_variant'])){
+                    $createVariant = ProductVariant::create([
+                        'product_variant_name' => $variant['variant_name'],
+                        'product_variant_visibility' => 'Visible',
+                        'product_variant_order' => $key+1
+                    ]);
+                    $dtVariant[$variant['variant_name']]['id'] = $createVariant['id_product_variant'];
+                    $idProductVariant = $createVariant['id_product_variant'];
+                }else{
+                    ProductVariant::where('id_product_variant', $variant['id_product_variant'])->update([
+                        'product_variant_name' => $variant['variant_name'],
+                        'product_variant_order' => $key+1
+                    ]);
+                    $dtVariant[$variant['variant_name']]['id'] = $variant['id_product_variant'];
+                    $idProductVariant = $variant['id_product_variant'];
+                }
+
+                foreach ($variant['variant_child'] as $index=>$child){
+                    $child = (array)$child;
+                    if(empty($child['id_product_variant'])){
+                        $insertChild = ProductVariant::create([
+                            'id_parent' => $idProductVariant,
+                            'product_variant_name' => $child['variant_name'],
+                            'product_variant_visibility' => 'Visible',
+                            'product_variant_order' => $index+1
+                        ]);
+
+                        $dtVariant[$variant['variant_name']][$child['variant_name']] = $insertChild['id_product_variant'];
+                    }else{
+                        ProductVariant::where('id_product_variant', $child['id_product_variant'])->update([
+                            'id_parent' => $idProductVariant,
+                            'product_variant_name' => $child['variant_name'],
+                            'product_variant_order' => $index+1
+                        ]);
+
+                        $dtVariant[$variant['variant_name']][$child['variant_name']] = $child['id_product_variant'];
+                    }
+                }
+            }
+
+            foreach ($post['variants_price'] as $combination){
+                $combination = (array) $combination;
+                if(empty($combination['id_product_variant_group'])){
+                    $idVariants = [];
+                    foreach ($combination['data'] as $dt){
+                        $first = explode('|',$dt)[0]??'';
+                        $second = explode('|',$dt)[1]??'';
+
+                        if(isset($dtVariant[$first][$second])){
+                            $idVariants[] = $dtVariant[$first][$second];
+                        }
+                    }
+
+                    if(!empty($idVariants)){
+                        $variantGroup = ProductVariantGroup::create([
+                            'id_product' => $idProduct,
+                            'product_variant_group_code' => 'PV'.time().'-'.implode('', $idVariants),
+                            'product_variant_group_name' => $combination['name'],
+                            'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible'),
+                            'product_variant_group_price' => $combination['price']
+                        ]);
+                        $idProductVariantGroup = $variantGroup['id_product_variant_group'];
+
+                        $insertPivot = [];
+                        foreach ($idVariants as $id){
+                            $insertPivot[] = [
+                                'id_product_variant' => $id,
+                                'id_product_variant_group' => $variantGroup['id_product_variant_group']
+                            ];
+                        }
+
+                        if(!empty($insertPivot)){
+                            ProductVariantPivot::insert($insertPivot);
+                        }
+
+                        ProductVariantGroupDetail::create([
+                            'id_product_variant_group' => $variantGroup['id_product_variant_group'],
+                            'id_outlet' => $checkMerchant['id_outlet'],
+                            'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible'),
+                            'product_variant_group_stock_status' => (empty($combination['stock']) ? 'Sold Out': 'Available'),
+                            'product_variant_group_stock_item' => $combination['stock']]);
+                    }
+                }else{
+                    ProductVariantGroup::where('id_product_variant_group', $combination['id_product_variant_group'])->update([
+                        'product_variant_group_name' => $combination['name'],
+                        'product_variant_group_price' => $combination['price'],
+                        'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible')
+                    ]);
+
+                    ProductVariantGroupDetail::where('id_product_variant_group', $combination['id_product_variant_group'])->where('id_outlet', $checkMerchant['id_outlet'])
+                        ->update([
+                            'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible'),
+                            'product_variant_group_stock_status' => (empty($combination['stock']) ? 'Sold Out': 'Available'),
+                            'product_variant_group_stock_item' => $combination['stock']]);
+
+                    $idProductVariantGroup = $combination['id_product_variant_group'];
+                }
+
+                ProductVariantGroupWholesaler::where('id_product_variant_group', $idProductVariantGroup)->delete();
+                if(!empty($combination['wholesaler_price'])){
+                    $insertWholesalerVariant = [];
+                    foreach ($combination['wholesaler_price'] as $wholesaler){
+                        $wholesaler = (array)$wholesaler;
+                        if($wholesaler['minimum'] <= 1){
+                            DB::rollback();
+                            return response()->json(['status' => 'fail', 'messages' => ['Jumlah unit harus lebih dari satu']]);
+                        }
+                        $insertWholesalerVariant[] = [
+                            'id_product_variant_group' => $idProductVariantGroup,
+                            'variant_wholesaler_minimum' => $wholesaler['minimum']??0,
+                            'variant_wholesaler_unit_price' => $wholesaler['unit_price']??0,
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ];
+                    }
+
+                    $arrayColumn = array_column($insertWholesalerVariant, 'variant_wholesaler_minimum');
+                    $withoutDuplicates = array_unique($arrayColumn);
+                    $duplicates = array_diff_assoc($arrayColumn, $withoutDuplicates);
+                    if(!empty($duplicates)){
+                        DB::rollback();
+                        return response()->json(['status' => 'fail', 'messages' => ['Minimum tidak boleh sama']]);
+                    }
+
+                    ProductVariantGroupWholesaler::insert($insertWholesalerVariant);
+                }
+
+                $priceVariant[] = $combination['price'];
+            }
+
+            $price = min($priceVariant);
+            ProductGlobalPrice::where('id_product', $post['id_product'])->update(['product_global_price' => $price]);
+            DB::commit();
+            return response()->json(['status' => 'success']);
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Variants can not be empty']]);
         }
     }
 }
