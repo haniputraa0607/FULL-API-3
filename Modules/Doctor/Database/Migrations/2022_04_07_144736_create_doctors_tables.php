@@ -27,6 +27,7 @@ class CreateDoctorsTables extends Migration
             $table->string('is_active');
             $table->string('doctor_service');
             $table->string('doctor_photo');
+            $table->string('sms_increment');
 
             $table->timestamps();
         });

@@ -2549,6 +2549,36 @@ Message :
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ),
+            80 =>
+                array (
+                    'id_autocrm' => 81,
+                    'autocrm_type' => 'Response',
+                    'autocrm_trigger' => 'Daily',
+                    'autocrm_cron_reference' => NULL,
+                    'autocrm_title' => 'Pin Sent',
+                    'autocrm_email_toogle' => '0',
+                    'autocrm_sms_toogle' => '1',
+                    'autocrm_push_toogle' => '0',
+                    'autocrm_inbox_toogle' => '0',
+                    'autocrm_forward_toogle' => '0',
+                    'autocrm_email_subject' => 'Hello, Bro Your OTP is %otp%',
+                    'autocrm_email_content' => 'Hello, Your OTP is %otp%',
+                    'autocrm_sms_content' => 'Hello, Your OTP is %otp%',
+                    'autocrm_push_subject' => NULL,
+                    'autocrm_push_content' => NULL,
+                    'autocrm_push_image' => NULL,
+                    'autocrm_push_clickto' => NULL,
+                    'autocrm_push_link' => NULL,
+                    'autocrm_push_id_reference' => NULL,
+                    'autocrm_inbox_subject' => NULL,
+                    'autocrm_inbox_content' => NULL,
+                    'autocrm_forward_email' => NULL,
+                    'autocrm_forward_email_subject' => NULL,
+                    'autocrm_forward_email_content' => NULL,
+                    'custom_text_replace'=>'%otp%;%date_sent%;%expired_time%;',
+                    'created_at' => '2018-03-12 13:53:17',
+                    'updated_at' => '2018-05-03 15:02:05',
+                ),
         );
 
         foreach ($rows as $row) {

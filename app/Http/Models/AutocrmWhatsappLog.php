@@ -21,6 +21,7 @@ class AutocrmWhatsappLog extends Model
 	protected $fillable = [
 		'id_user',
 		'whatsapp_log_to',
+		'user_type',
 	];
 
 	public function autocrm()

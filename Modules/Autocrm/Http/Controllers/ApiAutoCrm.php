@@ -31,6 +31,7 @@ use App\Lib\apiwha;
 use App\Lib\ValueFirst;
 use Modules\Franchise\Entities\UserFranchise;
 use Modules\Franchise\Entities\FranchiseEmailLog;
+use Modules\Doctor\Entities\Doctor;
 use Validator;
 use Hash;
 use DB;
@@ -49,7 +50,7 @@ class ApiAutoCrm extends Controller
 		$this->apiwha = new apiwha();
     }
 
-	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null, $forward_only = false, $outlet = false, $recipient_type = null, $franchise = null, $save_log=true, $otp_type = null){
+	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null, $forward_only = false, $outlet = false, $recipient_type = null, $franchise = null, $save_log=true, $otp_type = null, $doctor = null){
 		$query = Autocrm::where('autocrm_title','=',$autocrm_title)->with('whatsapp_content')->get()->toArray();
 
 		if (!isset($recipient_type)) {
@@ -57,6 +58,8 @@ class ApiAutoCrm extends Controller
                 $users = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('username','=',$receipient)->get()->toArray();
             }elseif($outlet){
                 $users = UserOutlet::select('id_user_outlet as id', 'user_outlets.*')->where('phone','=',$receipient)->get()->toArray();
+			}elseif($doctor){
+                $users = Doctor::select('id_doctor as id', 'doctors.*')->where('doctor_phone','=',$receipient)->get()->toArray();
 			}else{
                 $users = User::where('phone','=',$receipient)->get()->toArray();
 			}
@@ -75,14 +78,23 @@ class ApiAutoCrm extends Controller
 				$query[0]['autocrm_forward_email_content'] = MyHelper::simpleReplace($query[0]['autocrm_forward_email_content'] ,$variables);
 			}elseif($recipient_type == 'franchise'){
                 $users = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('username','=',$receipient)->get()->toArray();
-            }
+            }elseif($recipient_type == 'doctor'){
+                $users = Doctor::select('id_doctor as id', 'doctors.*')->where('doctor_phone','=',$receipient)->get()->toArray();
+			}
 		}
+
 		if(empty($users)){
 			return true;
 		}
 		if($query){
 			$crm 	= $query[0];
 			$user 	= $users[0];
+			if($recipient_type = 'doctor'){
+				$user['id'] = $user['id'];
+				$user['name'] = $user['doctor_name'];
+				$user['phone'] = $user['doctor_phone'];
+			}
+
 			if($crm['autocrm_email_toogle'] == 1 && !$forward_only){
 				if(!empty($user['email'])){
 					if($user['name'] != "")
@@ -304,9 +316,14 @@ class ApiAutoCrm extends Controller
 							}else{
 								$logData = [];
 								$logData['id_user'] = $user['id'];
+								$logData['user_type'] = 'user';
 								$logData['email_log_to'] = $email;
 								$logData['email_log_subject'] = $subject;
 								$logData['email_log_message'] = $content;
+
+								if($recipient_type = 'doctor') {
+									$logData['user_type'] = 'doctor';
+								}
 
 								$logs = AutocrmEmailLog::create($logData);
 							}
@@ -330,6 +347,14 @@ class ApiAutoCrm extends Controller
 							}
 							User::where('id', $user['id'])->update(['sms_increment' => $user['sms_increment']+1]);
 						}
+
+						if (in_array($autocrm_title, ['Doctor Pin Sent'])) {
+								// if user not 0 and even, send using alternative
+							if ($user['sms_increment'] % 2) {
+								$gateway = env('SMS_GATEWAY_ALT');
+							}
+							Doctor::where('id_doctor', $user['id'])->update(['sms_increment' => $user['sms_increment']+1]);
+						}
 					}
 
 					switch ($gateway) {
@@ -344,7 +369,7 @@ class ApiAutoCrm extends Controller
 								'uploadby'	=> env('SMS_UPLOADBY')
 							];
 
-							if($crm['autocrm_title'] == 'Pin Sent' || $crm['autocrm_title'] == 'Pin Forgot'){
+							if($crm['autocrm_title'] == 'Pin Sent' || $crm['autocrm_title'] == 'Pin Forgot' || $crm['autocrm_title'] == 'Doctor Pin Sent'){
 								if($useragent && $useragent == "Android"){
 									$crm['autocrm_sms_content'] = '<#> '.$crm['autocrm_sms_content'].' '.ENV('HASH_KEY_'.ENV('HASH_KEY_TYPE'));
 								}
@@ -367,7 +392,7 @@ class ApiAutoCrm extends Controller
 							);
 
 							//add <#> and Hash Key in pin sms content
-							if($crm['autocrm_title'] == 'Pin Sent' || $crm['autocrm_title'] == 'Pin Forgot'){
+							if($crm['autocrm_title'] == 'Pin Sent' || $crm['autocrm_title'] == 'Pin Forgot' || $crm['autocrm_title'] == 'Doctor Pin Sent'){
 								if($useragent && $useragent == "Android"){
 									$crm['autocrm_sms_content'] = '<#> '.$crm['autocrm_sms_content'].' '.ENV('HASH_KEY_'.ENV('HASH_KEY_TYPE'));
 								}
@@ -383,7 +408,7 @@ class ApiAutoCrm extends Controller
 							$send = $this->rajasms->send();
 							break;
 						case 'ValueFirst':
-							if($crm['autocrm_title'] == 'Pin Sent' || $crm['autocrm_title'] == 'Pin Forgot'){
+							if($crm['autocrm_title'] == 'Pin Sent' || $crm['autocrm_title'] == 'Pin Forgot' || $crm['autocrm_title'] == 'Doctor Pin Sent'){
 								if($useragent && $useragent == "Android"){
 									$crm['autocrm_sms_content'] = '<#> '.$crm['autocrm_sms_content'].' '.ENV('HASH_KEY_'.ENV('HASH_KEY_TYPE'));
 								}
@@ -407,7 +432,7 @@ class ApiAutoCrm extends Controller
                             );
 
                             //add <#> and Hash Key in pin sms content
-                            if($crm['autocrm_title'] == 'Pin Sent' || $crm['autocrm_title'] == 'Pin Forgot'){
+                            if($crm['autocrm_title'] == 'Pin Sent' || $crm['autocrm_title'] == 'Pin Forgot' || $crm['autocrm_title'] == 'Doctor Pin Sent'){
                                 if($useragent && $useragent == "Android"){
                                     $crm['autocrm_sms_content'] = '<#> '.$crm['autocrm_sms_content'].' '.ENV('HASH_KEY_'.ENV('HASH_KEY_TYPE'));
                                 }
@@ -430,7 +455,7 @@ class ApiAutoCrm extends Controller
 							);
 
 							//add <#> and Hash Key in pin sms content
-							if($crm['autocrm_title'] == 'Pin Sent' || $crm['autocrm_title'] == 'Pin Forgot'){
+							if($crm['autocrm_title'] == 'Pin Sent' || $crm['autocrm_title'] == 'Pin Forgot' || $crm['autocrm_title'] == 'Doctor Pin Sent'){
 								if($useragent && $useragent == "Android"){
 									$crm['autocrm_sms_content'] = '<#> '.$crm['autocrm_sms_content'].' '.ENV('HASH_KEY_'.ENV('HASH_KEY_TYPE'));
 								}
@@ -450,8 +475,13 @@ class ApiAutoCrm extends Controller
 					$logData['id_user'] = $user['id'];
 					$logData['sms_log_to'] = $user['phone'];
 					$logData['sms_log_content'] = $content;
+					$logData['user_type'] = 'user';
 
-					$logs = AutocrmSmsLog::create($logData);
+					if($recipient_type = 'doctor') {
+						$logData['user_type'] = 'doctor';
+					}
+
+					$logs = AutocrmSmsLog::create($logData);	
 				}
 			}
 
@@ -487,15 +517,20 @@ class ApiAutoCrm extends Controller
 
 							}
 
-							// insert to whatsapp log
-							$outbox = [];
-							if(isset($user['id'])){
-								$outbox['id_user'] = $user['id'];
-							}
-							$outbox['whatsapp_log_to'] = $user['phone'];
-
-							$logs = AutocrmWhatsappLog::create($outbox);
 							if($logs){
+								// insert to whatsapp log
+								$outbox = [];
+								if(isset($user['id'])){
+									$outbox['id_user'] = $user['id'];
+								}
+								$outbox['whatsapp_log_to'] = $user['phone'];
+								$outbox['user_type'] = 'user';
+
+								if($recipient_type = 'doctor') {
+									$outbox['user_type'] = 'doctor';
+								}
+								$logs = AutocrmWhatsappLog::create($outbox);
+
 								// insert to whatsapp log content
 								foreach($contentWaSent as $data){
 									$dataContentWhatsapp['content'] = $data['content'];
@@ -651,11 +686,11 @@ class ApiAutoCrm extends Controller
 							$dataOptional['header_label'] = $variables['header_label'];
 						}
 
-						$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $user['phone']);
+						$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $user['phone'], $recipient_type);
 						// print_r($deviceToken);exit;
 						$subject = $this->TextReplace($crm['autocrm_push_subject'], $receipient, $variables);
 						$content = $this->TextReplace($crm['autocrm_push_content'], $receipient, $variables);
-						$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $user['phone']);
+						$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $user['phone'], $recipient_type);
 
 						if (!empty($deviceToken)) {
 							if (isset($deviceToken['token']) && !empty($deviceToken['token'])) {
@@ -667,6 +702,11 @@ class ApiAutoCrm extends Controller
 									$logData['push_log_to'] = $user['phone'];
 									$logData['push_log_subject'] = $subject;
 									$logData['push_log_content'] = $content;
+									$logData['user_type'] = 'user';
+
+									if($recipient_type = 'doctor') {
+										$logData['user_type'] = 'doctor';
+									}
 
 									$logs = AutocrmPushLog::create($logData);
 								}
@@ -684,6 +724,11 @@ class ApiAutoCrm extends Controller
 					$inbox['id_user'] 	  	  = $user['id'];
 					$inbox['inboxes_subject'] = $this->TextReplace($crm['autocrm_inbox_subject'], $user['id'], $variables, 'id');
 					$inbox['inboxes_clickto'] = $crm['autocrm_inbox_clickto'];
+					$inbox['user_type'] = 'user';
+
+					if($recipient_type = 'doctor') {
+						$inbox['user_type'] = 'doctor';
+					}
 
 					if($crm['autocrm_inbox_clickto'] == 'Content'){
 						$inbox['inboxes_content'] = $this->TextReplace($crm['autocrm_inbox_content'], $user['id'], $variables, 'id');

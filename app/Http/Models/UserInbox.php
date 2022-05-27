@@ -42,6 +42,7 @@ class UserInbox extends Model
 	protected $fillable = [
 		'id_campaign',
 		'id_user',
+		'user_type',
 		'inboxes_subject',
 		'inboxes_clickto',
 		'inboxes_link',
