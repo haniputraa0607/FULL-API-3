@@ -348,7 +348,7 @@ class SettingsTableSeeder extends Seeder
                 'id_setting' => 38,
                 'key' => 'text_menu_main',
                 'value' => NULL,
-                'value_text' => '{"menu1":{"text_menu":"Home","text_header":"Home","icon1":"","icon2":""},"menu2":{"text_menu":"Promo","text_header":"Promo","icon1":"","icon2":""},"menu3":{"text_menu":"Order","text_header":"Order","icon1":"","icon2":""},"menu4":{"text_menu":"Riwayat","text_header":"Riwayat","icon1":"","icon2":""},"menu5":{"text_menu":"Other","text_header":"Other","icon1":"","icon2":""}}',
+                'value_text' => '{"menu1":{"text_menu":"Beranda","text_header":"Beranda","text_color":"","icon1":"","icon2":""},"menu2":{"text_menu":"Notifikasi","text_header":"Notifikasi","text_color":"","icon1":"","icon2":""},"menu3":{"text_menu":"Riwayat","text_header":"Riwayat","text_color":"","icon1":"","icon2":""},"menu4":{"text_menu":"Profil","text_header":"Profil","text_color":"","icon1":"","icon2":""}}',
                 'created_at' => '2019-10-08 09:03:16',
                 'updated_at' => '2019-10-08 09:03:19',
             ),
@@ -357,7 +357,7 @@ class SettingsTableSeeder extends Seeder
                 'id_setting' => 39,
                 'key' => 'text_menu_other',
                 'value' => NULL,
-                'value_text' => '{"menu1":{"text_menu":"Profile","text_header":"Profile","icon":""},"menu2":{"text_menu":"Membership","text_header":"Membership","icon":""},"menu3":{"text_menu":"Outlet","text_header":"Outlet","icon":""},"menu4":{"text_menu":"Kabar","text_header":"Kabar","icon":""},"menu5":{"text_menu":"Lokasi Favorit","text_header":"LOKASI FAVORIT","icon":""},"menu6":{"text_menu":"Tentang","text_header":"Tentang","icon":""},"menu7":{"text_menu":"FAQ","text_header":"FAQ","icon":""},"menu8":{"text_menu":"Ketentuan","text_header":"Ketentuan","icon":""},"menu9":{"text_menu":"Kontak","text_header":"Kontak","icon":""}}',
+                'value_text' => '{"menu1":{"text_menu":"Toko Saya","text_header":"Toko Saya","text_color":"","icon":""},"menu2":{"text_menu":"Wishlist","text_header":"Wishlist","text_color":"","icon":""},"menu3":{"text_menu":"Kebijakan Privasi","text_header":"Kebijakan Privasi","text_color":"","icon":""},"menu4":{"text_menu":"FAQ","text_header":"FAQ","text_color":"","icon":""},"menu5":{"text_menu":"Bantuan","text_header":"Bantuan","text_color":"","icon":""},"menu6":{"text_menu":"Logout","text_header":"Logout","text_color":"","icon":""}}',
                 'created_at' => '2019-10-08 09:04:01',
                 'updated_at' => '2019-10-08 09:04:02',
             ),
@@ -1019,6 +1019,15 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            113 =>
+                array (
+                    'id_setting' => 112,
+                    'key' => 'text_menu_home',
+                    'value' => NULL,
+                    'value_text' => '{"menu1":{"text_menu":"Store","text_color":"","container_type":"","container_color":"","icon":"","visible":true},"menu2":{"text_menu":"Konsultasi","text_color":"","container_type":"","container_color":"","icon":"","visible":true},"menu3":{"text_menu":"E-Learning","text_color":"","container_type":"","container_color":"","icon":"","visible":true},"menu4":{"text_menu":"Skin Analyzer","text_color":"","container_type":"","container_color":"","icon":"","visible":true}}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                )
         );
 
         foreach ($settings as $setting) {

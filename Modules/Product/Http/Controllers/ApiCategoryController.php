@@ -118,8 +118,17 @@ class ApiCategoryController extends Controller
             DB::beginTransaction();
             $data_request = $post['data'];
 
+            $imageParent = null;
+            if(!empty($data_request[0]['product_category_image'])){
+                $uploadParent = MyHelper::uploadPhoto($data_request[0]['product_category_image'], $path = 'img/product_category/');
+                if($uploadParent['status'] == "success"){
+                    $imageParent = $uploadParent['path'];
+                }
+            }
             $store = ProductCategory::create([
-                'product_category_name' => $data_request[0]['product_category_name']]);
+                'product_category_name' => $data_request[0]['product_category_name'],
+                'product_category_photo' => $imageParent
+                ]);
 
             if($store){
                 if(isset($data_request['child'])){
@@ -133,8 +142,17 @@ class ApiCategoryController extends Controller
                             $id_parent = $data_request['child'][(int)$child['parent']]['id'];
                         }
 
+                        $image = null;
+                        if(!empty($child['product_category_image'])){
+                            $upload = MyHelper::uploadPhoto($child['product_category_image'], $path = 'img/product_category/');
+                            if($upload['status'] == "success"){
+                                $image = $upload['path'];
+                            }
+                        }
+
                         $store = ProductCategory::create([
                             'product_category_name' => $child['product_category_name'],
+                            'product_category_photo' => $image,
                             'id_parent_category' => $id_parent]);
 
                         if($store){
@@ -202,14 +220,29 @@ class ApiCategoryController extends Controller
                 $data_update['id_parent'] = $post['id_parent'];
             }
 
+            if(!empty($post['product_category_image'])){
+                $uploadParent = MyHelper::uploadPhoto($post['product_category_image'], $path = 'img/product_category/');
+                if($uploadParent['status'] == "success"){
+                    $data_update['product_category_photo'] = $uploadParent['path'];
+                }
+            }
+
             $update = ProductCategory::where('id_product_category', $post['id_product_category'])->update($data_update);
 
             if($update){
                 if(isset($post['child']) && !empty($post['child'])){
                     foreach ($post['child'] as $child){
+                        $data_update_child = [];
                         $data_update_child['id_parent_category'] = $post['id_product_category'];
                         if(isset($child['product_category_name'])){
                             $data_update_child['product_category_name'] = $child['product_category_name'];
+                        }
+
+                        if(!empty($child['product_category_image'])){
+                            $upload = MyHelper::uploadPhoto($child['product_category_image'], $path = 'img/product_category/');
+                            if($upload['status'] == "success"){
+                                $data_update_child['product_category_photo'] = $upload['path'];
+                            }
                         }
 
                         $update = ProductCategory::updateOrCreate(['id_product_category' => $child['id_product_category']], $data_update_child);

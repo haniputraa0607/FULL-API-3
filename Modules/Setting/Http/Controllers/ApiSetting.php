@@ -1251,8 +1251,10 @@ class ApiSetting extends Controller
         try{
             $textMenuMain = Setting::where('key', 'text_menu_main')->first()->value_text;
             $textMenuOther = Setting::where('key', 'text_menu_other')->first()->value_text;
+            $textMenuHome = Setting::where('key', 'text_menu_home')->first()->value_text;
             $menuOther = (array)json_decode($textMenuOther);
             $menuMain = (array)json_decode($textMenuMain);
+            $menuHome = (array)json_decode($textMenuHome);
 
             foreach ($menuOther as $key=>$value){
                 $val = (array)$value;
@@ -1271,6 +1273,13 @@ class ApiSetting extends Controller
                 }
             }
 
+            foreach ($menuHome as $key=>$value){
+                $val = (array)$value;
+                if($val['icon'] != ''){
+                    $menuHome[$key]->icon = config('url.storage_url_api').$val['icon'];
+                }
+            }
+
             if(!isset($post['webview'])){
                 $count = count($menuOther);
                 $row = $count / 2;
@@ -1282,7 +1291,8 @@ class ApiSetting extends Controller
                     'status' => 'success',
                     'result' => [
                         'main_menu' => array_values($menuMain),
-                        'other_menu' => $arr
+                        'other_menu' => $arr,
+                        'home_menu' => array_values($menuHome)
                     ]
                 ];
             }else{
@@ -1290,7 +1300,8 @@ class ApiSetting extends Controller
                     'status' => 'success',
                     'result' => [
                         'main_menu' => $menuMain,
-                        'other_menu' => $menuOther
+                        'other_menu' => $menuOther,
+                        'home_menu' => $menuHome
                     ]
                 ];
             }
@@ -1325,6 +1336,7 @@ class ApiSetting extends Controller
 
                         $mainMenu[$key]->text_menu = $menu[$key.'_text_menu'];
                         $mainMenu[$key]->text_header = $menu[$key.'_text_header'];
+                        $mainMenu[$key]->text_color = $menu[$key.'_text_color'];
                         if(isset($menu['images'][$nameIcon1])){
                             if($val['icon1'] != ''){
                                 //Delete old icon
@@ -1382,6 +1394,51 @@ class ApiSetting extends Controller
                         return response()->json(['status' => 'fail', 'messages' => ['There is an error']]);
                     }
 
+                }elseif($category == 'home-menu'){
+                    $gethomeMenu = Setting::where('key', 'text_menu_home')->first()->value_text;
+                    $homeMenu = (array)json_decode($gethomeMenu);
+
+                    foreach ($homeMenu as $key=>$value){
+                        $nameIcon = 'icon_home'.$key;
+                        $val = (array)$value;
+
+                        $homeMenu[$key]->text_menu = $menu[$key.'_text_menu'];
+                        $homeMenu[$key]->text_color = $menu[$key.'_text_color'];
+                        $homeMenu[$key]->container_type = $menu[$key.'_container_type'];
+                        $homeMenu[$key]->container_color = $menu[$key.'_container_color'];
+                        $homeMenu[$key]->visible = (isset($menu[$key.'_visible']) ? true : false);
+
+                        if(isset($menu['images'][$nameIcon])){
+                            if($val['icon'] != ''){
+                                //Delete old icon
+                                MyHelper::deletePhoto($val['icon']);
+                            }
+                            $imgEncode = $menu['images'][$nameIcon];
+
+                            $decoded = base64_decode($imgEncode);
+                            $img    = Image::make($decoded);
+                            $width  = $img->width();
+                            $height = $img->height();
+
+                            if($width == $height){
+                                $upload = MyHelper::uploadPhoto($imgEncode, $path = 'img/icon/');
+
+                                if ($upload['status'] == "success") {
+                                    $homeMenu[$key]->icon = $upload['path'];
+                                } else {
+                                    array_push($arrFailedUploadImage, $key);
+                                }
+                            }else{
+                                array_push($arrFailedUploadImage, $key.'[dimensions not allowed]');
+                            }
+                        }
+                    }
+                    $update = Setting::where('key','text_menu_home')->update(['value_text' => json_encode($homeMenu), 'updated_at' => date('Y-m-d H:i:s')]);
+
+                    if(!$update){
+                        return response()->json(['status' => 'fail', 'messages' => ['There is an error']]);
+                    }
+
                 }elseif($category == 'other-menu'){
                     $textOtherMenu = Setting::where('key', 'text_menu_other')->first()->value_text;
                     $otherMenu = (array)json_decode($textOtherMenu);
@@ -1392,6 +1449,7 @@ class ApiSetting extends Controller
 
                         $otherMenu[$key]->text_menu = $menu[$key.'_text_menu'];
                         $otherMenu[$key]->text_header = $menu[$key.'_text_header'];
+                        $otherMenu[$key]->text_color = $menu[$key.'_text_color'];
                         if(isset($menu['images'][$nameIcon])){
                             if($val['icon'] != ''){
                                 //Delete old icon
