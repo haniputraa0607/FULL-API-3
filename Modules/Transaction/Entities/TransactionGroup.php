@@ -77,6 +77,16 @@ class TransactionGroup extends Model
             'transaction_void_date' => date('Y-m-d H:i:s')
         ]);
 
+        //reversal balance
+        $logBalance = LogBalance::where('id_reference', $this->id_transaction_group)->whereIn('source', ['Online Transaction', 'Transaction'])->where('balance', '<', 0)->get();
+        foreach($logBalance as $logB){
+            $reversal = app('\Modules\Balance\Http\Controllers\BalanceController')->addLogBalance( $this->id_user, abs($logB['balance']), $this->id_transaction_group, 'Reversal', $this->transaction_grandtotal);
+            if (!$reversal) {
+                \DB::rollBack();
+                return false;
+            }
+        }
+
         $getTransactions = Transaction::where('id_transaction_group', $this->id_transaction_group)->get();
         foreach ($getTransactions as $transaction){
             $transaction->triggerPaymentCancelled();

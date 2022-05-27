@@ -31,11 +31,14 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::group(['prefix' => 'management'], function () {
             Route::post('product/variant/create-combination', 'ApiMerchantManagementController@variantCombination');
             Route::post('product/variant/delete', 'ApiMerchantManagementController@variantDelete');
+            Route::post('product/variant/update', 'ApiMerchantManagementController@variantGroupUpdate');
             Route::any('product/list', 'ApiMerchantManagementController@productList');
             Route::post('product/create', 'ApiMerchantManagementController@productCreate');
             Route::post('product/detail', 'ApiMerchantManagementController@productDetail');
             Route::post('product/update', 'ApiMerchantManagementController@productUpdate');
             Route::post('product/delete', 'ApiMerchantManagementController@productDelete');
+            Route::post('product/stock/detail', 'ApiMerchantManagementController@productStockDetail');
+            Route::post('product/stock/update', 'ApiMerchantManagementController@productStockUpdate');
             Route::post('product/photo/delete', 'ApiMerchantManagementController@productPhotoDelete');
 
             //holiday
@@ -70,6 +73,11 @@ Route::group(['prefix' => 'merchant'], function () {
 
             //action
             Route::post('accept', 'ApiMerchantTransactionController@acceptTransaction');
+            Route::post('reject', 'ApiMerchantTransactionController@rejectTransaction');
+            Route::post('delivery/request', 'ApiMerchantTransactionController@requestDeliveryTransaction');
+            Route::post('delivery/confirm', 'ApiMerchantTransactionController@confirmDeliveryTransaction');
+            Route::post('delivery/update-status', 'ApiMerchantTransactionController@dummyUpdateStatusDelivery');
+            Route::post('delivery/tracking', 'ApiMerchantTransactionController@deliveryTracking');
         });
     });
 

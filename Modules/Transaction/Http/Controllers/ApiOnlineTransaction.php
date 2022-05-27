@@ -4,8 +4,11 @@ namespace Modules\Transaction\Http\Controllers;
 
 use App\Http\Models\DailyTransactions;
 use App\Http\Models\ProductPhoto;
+use App\Http\Models\TransactionPaymentBalance;
+use App\Http\Models\TransactionPaymentOvo;
 use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
+use App\Lib\Ovo;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -23,12 +26,15 @@ use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionProductModifier;
+use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\Merchant\Entities\Merchant;
+use Modules\Product\Entities\ProductWholesaler;
 use Modules\ProductBundling\Entities\BundlingOutlet;
 use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
+use Modules\ProductVariant\Entities\ProductVariantGroupWholesaler;
 use Modules\ProductVariant\Entities\TransactionProductVariant;
 use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
@@ -57,6 +63,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignReferral;
 use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
 use Modules\PromoCampaign\Entities\UserReferralCode;
 use Modules\PromoCampaign\Entities\UserPromo;
+use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use Modules\Subscription\Entities\TransactionPaymentSubscription;
 use Modules\Subscription\Entities\Subscription;
 use Modules\Subscription\Entities\SubscriptionUser;
@@ -193,8 +200,6 @@ class ApiOnlineTransaction extends Controller
         $paymentStatus = 'Pending';
         if(isset($post['point_use']) && $post['point_use']){
             $paymentType = 'Balance';
-            $paymentStatus = 'Completed';
-            $transactionStatus = 'Pending';
         }
 
         DB::beginTransaction();
@@ -297,6 +302,7 @@ class ApiOnlineTransaction extends Controller
 
                 $idBrand = BrandProduct::where('id_product', $checkProduct['id_product'])->first()['id_brand']??null;
 
+                $variantSubtotal = $valueProduct['product_variant_price'] - $valueProduct['product_base_price'];
                 $dataProduct = [
                     'id_transaction'               => $insertTransaction['id_transaction'],
                     'id_product'                   => $checkProduct['id_product'],
@@ -310,8 +316,9 @@ class ApiOnlineTransaction extends Controller
                     'transaction_product_price_base' => $valueProduct['product_price'],
                     'transaction_product_subtotal' => $valueProduct['product_price_subtotal'],
                     'transaction_product_net' => $valueProduct['product_price_subtotal'],
-                    'transaction_variant_subtotal' => $valueProduct['product_variant_price'] - $valueProduct['product_base_price'],
+                    'transaction_variant_subtotal' => ($variantSubtotal < 0 ? 0:$variantSubtotal),
                     'transaction_product_note'     => $valueProduct['note'],
+                    'transaction_product_wholesaler_minimum_qty'  => $valueProduct['wholesaler_minimum']??null,
                     'created_at'                   => date('Y-m-d', strtotime($insertTransaction['transaction_date'])).' '.date('H:i:s'),
                     'updated_at'                   => date('Y-m-d H:i:s')
                 ];
@@ -408,6 +415,11 @@ class ApiOnlineTransaction extends Controller
         }
 
         $grandtotal = $subtotal+$deliveryTotal;
+        TransactionGroup::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->update([
+            'transaction_subtotal' => $subtotal,
+            'transaction_shipment' => $deliveryTotal,
+            'transaction_grandtotal' => $grandtotal
+        ]);
 
         $currentBalance = LogBalance::where('id_user', $user->id)->sum('balance');
         if(isset($post['point_use']) && $post['point_use']){
@@ -418,14 +430,10 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-        TransactionGroup::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->update([
-            'transaction_subtotal' => $subtotal,
-            'transaction_shipment' => $deliveryTotal,
-            'transaction_grandtotal' => $grandtotal
-        ]);
+        $trxGroup = TransactionGroup::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->first();
         if ($paymentType == 'Balance') {
 
-            $save = app($this->balance)->topUpGroup($user->id, $insertTransactionGroup);
+            $save = app($this->balance)->topUpGroup($user->id, $trxGroup);
 
             if (!isset($save['status'])) {
                 DB::rollBack();
@@ -438,7 +446,7 @@ class ApiOnlineTransaction extends Controller
             }
 
             if($grandtotal == 0){
-                $insertTransactionGroup->triggerPaymentCompleted();
+                $trxGroup->triggerPaymentCompleted();
             }
         }
 
@@ -2304,6 +2312,7 @@ class ApiOnlineTransaction extends Controller
                 $productSubtotal = 0;
                 $weightProduct = 0;
                 foreach ($value['items'] as $key=>$item){
+                    $error = '';
                     $product = Product::select('product_weight', 'id_merchant', 'product_category_name', 'products.id_product_category', 'id_product','product_code','product_name','product_description','product_code', 'product_variant_status')
                         ->leftJoin('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
                         ->where('product_visibility', 'Visible')
@@ -2345,15 +2354,36 @@ class ApiOnlineTransaction extends Controller
                         $product['stock_item'] = $check['product_variant_group_stock_item']??0;
                         $variantPrice = ProductVariantGroup::where('id_product_variant_group', $item['id_product_variant_group'])->first()['product_variant_group_price']??0;
                         $product['product_price'] = $variantPrice;
+
+                        //check wholesaler
+                        $wholesalerVariant = ProductVariantGroupWholesaler::where('id_product_variant_group_wholesaler', $item['id_product_variant_group_wholesaler'])->first();
+                        if(!empty($wholesalerVariant)){
+                            if($item['qty'] < $wholesalerVariant['variant_wholesaler_minimum']){
+                                $error = 'Jumlah quantity tidak sesuai dengan harga grosir minimum '.$wholesalerVariant['variant_wholesaler_minimum'];
+                            }
+                            $variantPrice = $wholesalerVariant['variant_wholesaler_unit_price'];
+                            $product['product_price'] = $wholesalerVariant['variant_wholesaler_unit_price'];
+                            $product['wholesaler_minimum'] = $wholesalerVariant['variant_wholesaler_minimum'];
+                        }
                     }else{
                         $product['stock_item'] = ProductDetail::where('id_product', $item['id_product'])->where('id_outlet', $value['id_outlet'])->first()['product_detail_stock_item']??0;
                     }
 
+                    if (!$product['product_variant_status'] && !empty($item['id_product_wholesaler'])){
+                        //check wholesaler
+                        $wholesaler = ProductWholesaler::where('id_product_wholesaler', $item['id_product_wholesaler'])->first();
+                        if(!empty($wholesaler)){
+                            if($item['qty'] < $wholesaler['product_wholesaler_minimum']){
+                                $error = 'Jumlah quantity tidak sesuai dengan harga grosir minimum '.$wholesaler['product_wholesaler_minimum'];
+                            }
+                            $product['product_price'] = $wholesaler['product_wholesaler_unit_price'];
+                            $product['wholesaler_minimum'] = $wholesaler['product_wholesaler_minimum'];
+                        }
+                    }
+
                     $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first()['product_photo']??null;
                     $product['image'] = (empty($image) ? config('url.storage_url_api').'img/default.jpg': config('url.storage_url_api').$image);
-                    $subtotal = $subtotal + (int)$product['product_price'];
 
-                    $error = '';
                     if(empty($productGlobalPrice['product_global_price'])){
                         $error = 'Harga produk tidak valid';
                     }
@@ -2395,6 +2425,9 @@ class ApiOnlineTransaction extends Controller
                         "qty" => $item['qty'],
                         "current_stock" => $product['stock_item'],
                         "id_custom" => $item['id_custom'],
+                        "id_product_wholesaler" => $item['id_product_wholesaler']??null,
+                        "id_product_variant_group_wholesaler" => $item['id_product_variant_group_wholesaler']??null,
+                        "wholesaler_minimum" => $product['wholesaler_minimum']??null,
                         "image" => $product['image'],
                         "error_message" => $error
                     ];
@@ -2406,9 +2439,15 @@ class ApiOnlineTransaction extends Controller
                     if($item['qty'] > $product['stock_item']){
                         $availableCheckout = false;
                     }
+
+                    if($from_check == 1 && !empty($error)){
+                        unset($value['items'][$key]);
+                        continue;
+                    }
                 }
 
                 if(!empty($value['items'])){
+                    $subtotal = $subtotal + $productSubtotal;
                     $items[$index]['delivery_code'] = $value['delivery_code']??'';
                     $items[$index]['delivery_service'] = $value['delivery_service']??'';
                     $items[$index]['items_total_weight'] = $weightProduct;
@@ -2461,6 +2500,8 @@ class ApiOnlineTransaction extends Controller
                 $new_item = [
                     'id_product' => $item['id_product'],
                     'id_product_variant_group' => $item['id_product_variant_group']??null,
+                    'id_product_variant_group_wholesaler' => $item['id_product_variant_group_wholesaler']??null,
+                    'id_product_wholesaler' => $item['id_product_wholesaler']??null,
                     'note' => $item['note']
                 ];
                 $pos = array_search($new_item, $new_items);
@@ -2521,5 +2562,90 @@ class ApiOnlineTransaction extends Controller
                     ->update(['product_detail_stock_status' => $statusStock, 'product_detail_stock_item' => $stockItem]);
             }
         }
+    }
+
+    public function rejectPayment($data){
+        $user = User::where('id', $data['id_user'])->first();
+        $multiple = TransactionMultiplePayment::where('id_transaction_group', $data['id_transaction_group'])->get()->toArray();
+        $trxGroup = TransactionGroup::where('id_transaction_group', $data['id_transaction_group'])->first();
+        if ($multiple) {
+            foreach ($multiple as $pay) {
+                if ($pay['type'] == 'Balance') {
+                    $payBalance = TransactionPaymentBalance::find($pay['id_payment']);
+                    if ($payBalance) {
+                        $refund = app($this->balance)->addLogBalance( $user->id, (int)$payBalance['balance_nominal'], $trxGroup['id_transaction_group'], 'Rejected Order Group', $payBalance['balance_nominal']);
+                        if ($refund == false) {
+                            return false;
+                        }
+                    }
+                } else {
+                    $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
+                    if ($payMidtrans) {
+                        $doRefundPayment = MyHelper::setting('refund_midtrans');
+                        if ($doRefundPayment) {
+                            $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
+
+                            if ($refund['status'] != 'success') {
+                                $data->update(['failed_void_reason' => $refund['messages'] ?? []]);
+                                $data->update(['need_manual_void' => 1]);
+                                $order2 = clone $data;
+                                $order2->payment_method = 'Midtrans';
+                                $order2->payment_detail = $payMidtrans['payment_type'];
+                                $order2->manual_refund = $payMidtrans['gross_amount'];
+                                $order2->payment_reference_number = $payMidtrans['vt_transaction_id'];
+                                if ($shared['reject_batch'] ?? false) {
+                                    $shared['void_failed'][] = $order2;
+                                } else {
+                                    $variables = [
+                                        'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                                    ];
+                                    app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $user->phone, $variables, null, true);
+                                }
+
+                                return false;
+                            }
+                        }
+                    }
+                }
+
+            }
+        } else {
+            $payMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $data['id_transaction_group'])->first();
+            if ($payMidtrans) {
+                $doRefundPayment = MyHelper::setting('refund_midtrans');
+                if ($doRefundPayment) {
+                    $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
+                    if ($refund['status'] != 'success') {
+                        $data->update(['need_manual_void' => 1]);
+                        $order2 = clone $data;
+                        $order2->payment_method = 'Midtrans';
+                        $order2->payment_detail = $payMidtrans['payment_type'];
+                        $order2->manual_refund = $payMidtrans['gross_amount'];
+                        $order2->payment_reference_number = $payMidtrans['vt_transaction_id'];
+                        if ($shared['reject_batch'] ?? false) {
+                            $shared['void_failed'][] = $order2;
+                        } else {
+                            $variables = [
+                                'detail' => view('emails.failed_refund', ['transaction' => $order2])->render()
+                            ];
+                            app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Payment Void Failed', $user->phone, $variables, null, true);
+                        }
+
+                        return false;
+                    }
+                }
+            } else {
+                $payBalance = TransactionPaymentBalance::where('id_transaction_group', $data['id_transaction_group'])->first();
+                if ($payBalance) {
+                    $refund = app($this->balance)->addLogBalance( $user->id, (int)$payBalance['balance_nominal'], $trxGroup['id_transaction_group'], 'Rejected Order Group', $payBalance['balance_nominal']);
+                    if ($refund == false) {
+                        return false;
+                    }
+                }
+            }
+
+        }
+
+        return true;
     }
 }

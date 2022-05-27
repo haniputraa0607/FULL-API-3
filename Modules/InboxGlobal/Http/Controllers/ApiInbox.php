@@ -130,7 +130,7 @@ class ApiInbox extends Controller
 			}
 		}
 
-		$privates = UserInbox::where('id_user','=',$user['id'])->whereDate('inboxes_send_at','>',$max_date)->get()->toArray();
+		$privates = UserInbox::where('id_user','=',$user['id'])->where('inboxes_promotion_status', 0)->whereDate('inboxes_send_at','>',$max_date)->get()->toArray();
 
 		foreach($privates as $private){
 			$content = [];
@@ -218,6 +218,17 @@ class ApiInbox extends Controller
 					$t2 = strtotime($b['created']);
 					return $t2 - $t1;
 				});
+
+				foreach ($arrInbox as $key=>$data){
+                    $currentDate = date('d/m/Y');
+                    $dateConvert = date('d/m/Y', strtotime($data['created']));
+                    if($currentDate == $dateConvert){
+                        $date =  'Hari ini';
+                    }else{
+                        $date = $dateConvert;
+                    }
+                    $arrInbox[$key]['created'] = $date;
+                }
 			}
 
 			$result = [
@@ -227,13 +238,156 @@ class ApiInbox extends Controller
 					'count_unread' => $countUnread,
 				];
 		} else {
-			$result = [
-					'status'  => 'fail',
-					'messages'  => ['Belum ada pesan']
-				];
+            $result = [
+                'status'  => 'success',
+                'result'  => [],
+                'count'  => 0,
+                'count_unread' => 0,
+            ];
 		}
 		return response()->json($result);
 	}
+
+    public function listInboxUserPromotion(Request $request){
+        if(is_numeric($phone=$request->json('phone'))){
+            $user=User::where('phone',$phone)->first();
+        }else{
+            $user = $request->user();
+        }
+
+        $arrInbox = [];
+        $countUnread = 0;
+        $countInbox = 0;
+        $arrDate = [];
+        $max_date = date('Y-m-d',time() - ((Setting::select('value')->where('key','inbox_max_days')->pluck('value')->first()?:30) * 86400));
+        $privates = UserInbox::where('id_user','=',$user['id'])->where('inboxes_promotion_status', 1)->whereDate('inboxes_send_at','>',$max_date)->get()->toArray();
+
+        foreach($privates as $private){
+            $content = [];
+            $content['type'] 		 = 'private';
+            $content['id_inbox'] 	 = $private['id_user_inboxes'];
+            $content['subject'] 	 = $private['inboxes_subject'];
+            $content['clickto'] 	 = $private['inboxes_clickto'];
+
+            if($private['inboxes_id_reference']){
+                $content['id_reference'] = $private['inboxes_id_reference'];
+            }else{
+                $content['id_reference'] = 0;
+            }
+
+            if($content['clickto']=='Deals Detail'){
+                $content['id_brand'] = $private['id_brand'];
+            }
+
+            if($content['clickto'] == 'News'){
+                $news = News::find($private['inboxes_id_reference']);
+                if($news){
+                    $content['news_title'] = $news->news_title;
+                    $content['url'] = config('url.app_url').'news/webview/'.$news->id_news;
+                }
+
+            }
+
+            if($content['clickto'] == 'Content'){
+                $content['content'] = $private['inboxes_content'];
+            }else{
+                $content['content']	= null;
+            }
+
+            if($content['clickto'] == 'Link'){
+                $content['link'] = $private['inboxes_link'];
+            }else{
+                $content['link'] = null;
+            }
+
+            $content['created_at'] 	 = $private['inboxes_send_at'];
+
+            if($private['read'] === '0'){
+                $content['status'] = 'unread';
+                $countUnread++;
+            }else{
+                $content['status'] = 'read';
+            }
+            if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
+                $arrDate[] = date('Y-m-d', strtotime($content['created_at']));
+                $temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
+                $temp['list'][0] =  $content;
+                $arrInbox[] = $temp;
+            }else{
+                $position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
+                $arrInbox[$position]['list'][] = $content;
+            }
+
+            $countInbox++;
+        }
+
+        if(isset($arrInbox) && !empty($arrInbox)) {
+            foreach ($arrInbox as $key => $value) {
+                usort($arrInbox[$key]['list'], function($a, $b){
+                    $t1 = strtotime($a['created_at']);
+                    $t2 = strtotime($b['created_at']);
+                    return $t2 - $t1;
+                });
+            }
+
+            usort($arrInbox, function($a, $b){
+                $t1 = strtotime($a['created']);
+                $t2 = strtotime($b['created']);
+                return $t2 - $t1;
+            });
+
+            foreach ($arrInbox as $key=>$data){
+                $currentDate = date('d/m/Y');
+                $dateConvert = date('d/m/Y', strtotime($data['created']));
+                if($currentDate == $dateConvert){
+                    $date =  'Hari ini';
+                }else{
+                    $date = $dateConvert;
+                }
+                $arrInbox[$key]['created'] = $date;
+            }
+
+            $result = [
+                'status'  => 'success',
+                'result'  => $arrInbox,
+                'count'  => $countInbox,
+                'count_unread' => $countUnread,
+            ];
+        } else {
+            $result = [
+                'status'  => 'success',
+                'result'  => [],
+                'count'  => 0,
+                'count_unread' => 0,
+            ];
+        }
+        return response()->json($result);
+    }
+
+    public function markedAllInbox(Request $request){
+        $user = $request->user();
+        $post = $request->json()->all();
+
+        if(empty($post['notif_type'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Type can not be empty']]);
+        }
+
+        if($post['notif_type'] == 'notification'){
+            $today = date("Y-m-d H:i:s");
+            $max_date = date('Y-m-d',time() - ((Setting::select('value')->where('key','inbox_max_days')->pluck('value')->first()?:30) * 86400));
+            $globals = InboxGlobal::where('inbox_global_start', '<=', $today)
+                ->where('inbox_global_end', '>=', $today)
+                ->whereDate('inbox_global_start','>',$max_date)
+                ->pluck('id_inbox_global')->toArray();
+
+            foreach ($globals as $id_global){
+                InboxGlobalRead::updateOrCreate(['id_inbox_global' => $id_global, 'id_user' => $user['id']], ['created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s')]);
+            }
+        }
+
+        $update = UserInbox::where('id_user', $user->id)->update(['read' => 1]);
+        return response()->json(MyHelper::checkUpdate($update));
+    }
 
 	public function markedInbox(MarkedInbox $request){
 		$user = $request->user();
@@ -248,10 +402,8 @@ class ApiInbox extends Controller
 				// 		'messages'  => ['Failed marked inbox']
 				// 	];
 				// }else{
-					$countUnread = $this->listInboxUnread( $user['id']);
 					$result = [
-						'status'  => 'success',
-						'result'  => ['count_unread' => $countUnread]
+						'status'  => 'success'
 					];
 				// }
 			}else{
@@ -275,10 +427,8 @@ class ApiInbox extends Controller
 					}
 				}
 
-				$countUnread = $this->listInboxUnread( $user['id']);
 				$result = [
-					'status'  => 'success',
-					'result'  => ['count_unread' => $countUnread]
+					'status'  => 'success'
 				];
 
 			}else{

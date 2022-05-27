@@ -13,6 +13,7 @@ use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use App\Lib\MyHelper;
 use Modules\Product\Entities\ProductModifierGroup;
+use Modules\ProductVariant\Entities\ProductVariantGroupWholesaler;
 
 /**
  * Class Product
@@ -302,7 +303,13 @@ class Product extends Model
             $id_variants = array_column($variant_group['id_product_variants'], 'id_product_variant');
             $slug = MyHelper::slugMaker($id_variants); // '2.5.7'
 
+            $wholesaler = ProductVariantGroupWholesaler::where('id_product_variant_group', $variant_group['id_product_variant_group'])->select('id_product_variant_group_wholesaler', 'variant_wholesaler_minimum as minimum', 'variant_wholesaler_unit_price as unit_price')->get()->toArray();
+            foreach ($wholesaler as $key=>$w){
+                $wholesaler[$key]['unit_price'] = (int)$w['unit_price'];
+            }
+
             $variant_groups[$slug] = $variant_group;
+            $variant_groups[$slug]['wholesaler_price'] = $wholesaler;
         }
 
         // merge product variant tree and product's product variant group
@@ -460,6 +467,7 @@ class Product extends Model
             if ($variant_group = ($variant_groups[$slug] ?? false)) { // it has
                 // assigning product_variant_group_price and id_product_variant_group to this variant
                 $variant['stock_item']    = $variant_group['product_variant_group_stock_item'];
+                $variant['wholesaler_price']    = $variant_group['wholesaler_price'];
                 $variant['id_product_variant_group']    = $variant_group['id_product_variant_group'];
                 $variant['product_variant_group_price'] = (double) $variant_group['product_variant_group_price'];
                 $variant['product_variant_stock_status'] = $variant_group['product_variant_group_stock_status'];
@@ -495,6 +503,7 @@ class Product extends Model
 
             if ($variant['id_product_variant_group'] ?? false) {
                 $new_order['stock_item']    = $variant['stock_item']??0;
+                $new_order['wholesaler_price']    = $variant['wholesaler_price'];
                 $new_order['id_product_variant_group']    = $variant['id_product_variant_group'];
                 $new_order['product_variant_group_price'] = $variant['product_variant_group_price'];
                 $new_order['extra_modifiers'] = [];
@@ -751,7 +760,13 @@ class Product extends Model
             $id_variants = array_column($variant_group['id_product_variants'], 'id_product_variant');
             $slug = MyHelper::slugMaker($id_variants); // '2.5.7'
 
+            $wholesaler = ProductVariantGroupWholesaler::where('id_product_variant_group', $variant_group['id_product_variant_group'])->select('id_product_variant_group_wholesaler', 'variant_wholesaler_minimum as minimum', 'variant_wholesaler_unit_price as unit_price')->get()->toArray();
+            foreach ($wholesaler as $key=>$w){
+                $wholesaler[$key]['unit_price'] = (int)$w['unit_price'];
+            }
+
             $variant_groups[$slug] = $variant_group;
+            $variant_groups[$slug]['wholesaler_price'] = $wholesaler;
         }
 
         // merge product variant tree and product's product variant group
