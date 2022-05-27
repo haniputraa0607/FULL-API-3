@@ -37,6 +37,7 @@ class Doctor extends Authenticatable
     protected $fillable   = [
         'doctor_name',
         'doctor_phone',
+        'phone_verified',
         'password',
         'id_doctor_clinic',
         'id_doctor_specialist',
@@ -44,7 +45,8 @@ class Doctor extends Authenticatable
         'doctor_session_price',
         'is_active',
         'doctor_sevice',
-        'doctor_photo'
+        'doctor_photo',
+        'sms_increment'
     ];
 
     public function clinic()
@@ -60,6 +62,11 @@ class Doctor extends Authenticatable
     public function scopeOnlyActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeOnlyVerified($query)
+    {
+        return $query->where('phone_verified', true);
     }
 
     public function schedules()

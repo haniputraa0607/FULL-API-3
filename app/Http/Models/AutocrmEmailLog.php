@@ -38,6 +38,7 @@ class AutocrmEmailLog extends Model
 
 	protected $fillable = [
 		'id_user',
+		'user_type',
 		'email_log_to',
 		'email_log_subject',
 		'email_log_message',

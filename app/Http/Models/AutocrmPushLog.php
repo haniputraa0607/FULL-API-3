@@ -34,6 +34,7 @@ class AutocrmPushLog extends Model
 
 	protected $fillable = [
 		'id_user',
+		'user_type',
 		'push_log_to',
 		'push_log_subject',
 		'push_log_content'

@@ -5,6 +5,7 @@ namespace Modules\Doctor\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use App\Lib\MyHelper;
 
 use Modules\Doctor\Entities\Doctor;
 use Modules\Doctor\Entities\Otp;
@@ -14,13 +15,40 @@ use DB;
 class AuthDoctorController extends Controller
 {
     /**
+     * Create a new job instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+    }
+
+
+    /**
      * Display a listing of the resource.
      * @return Response
      */
     public function checkPhoneNumber(Request $request)
     {
         $post = $request->json()->all();
-        $check = Doctor::where('doctor_phone', $post['phone'])->first();
+
+        //cek phone format
+        $phone = preg_replace("/[^0-9]/", "", $post['phone']);
+
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($post['phone']);
+
+        if (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail') {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [$checkPhoneFormat['messages']]
+            ]);
+        } elseif (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success') {
+            $phone = $checkPhoneFormat['phone'];
+        }
+
+        //cek account
+        $check = Doctor::where('doctor_phone', $post['phone'])->OnlyVerified()->first();
 
         if(isset($check)) {
             $check = $check->toArray();
@@ -28,7 +56,24 @@ class AuthDoctorController extends Controller
             return response()->json(['status'  => 'success', 'result' => ['phone_status' => 'registered', 'phone_number' => $check['doctor_phone']]]);    
         }
 
-        $sendOtp = $this->sendOtp($request);
+        //save phone to database
+        DB::beginTransaction(); 
+        try {
+            //create new doctor account
+            $newDoctor = Doctor::create(['doctor_phone' => $post['phone']]);
+        } catch (\Exception $e) {
+            $result = [
+                'status'  => 'fail',
+                'message' => 'Create Account Failed'
+            ];
+            DB::rollBack();
+            return response()->json($result);
+        }
+        DB::commit();
+
+        $request['doctor'] = $newDoctor;
+
+        $sendOtp = $this->sendOtp($request, $phone);
 
         if($sendOtp['status'] == 'fail') {
             return response()->json([
@@ -119,14 +164,14 @@ class AuthDoctorController extends Controller
      * Display a listing of the resource.
      * @return Response
      */
-    public function sendOtp(Request $request)
+    public function sendOtp(Request $request, $phone = null)
     {
         $post = $request->json()->all();
 
         $now = new DateTime();
         $expired = $now->modify('+5 minutes');
 
-        $post['otp'] = "1234";
+        $post['otp'] = rand(100000, 999999);
         $post['phone_number'] = $post['phone'];
         $post['expired_at'] =  $expired;
         $post['purpose'] = $post['purpose'];
@@ -140,6 +185,8 @@ class AuthDoctorController extends Controller
             //create new OTP
             unset($post['phone']);
             $otp = OTP::create($post);
+
+            $send 	= app($this->autocrm)->SendAutoCRM('Doctor Pin Sent', $phone, null, null, false, false, 'doctor');
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
@@ -189,11 +236,11 @@ class AuthDoctorController extends Controller
 
         switch ($post['purpose']) {
             case "registration":
-                //create new account
+                //verified phone
                 DB::beginTransaction(); 
                 try {
                     //create new doctor account
-                    $newDoctor = Doctor::create(['doctor_phone' => $post['phone']]);
+                    $updateDoctor = Doctor::where('doctor_phone', $post['phone'])->update(['phone_verified' => true]);
 
                     $expiredOTP = OTP::where('id_otp', $otp['id_otp'])->update(['is_expired' => 1]);
                 } catch (\Exception $e) {
