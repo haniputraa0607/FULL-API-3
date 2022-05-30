@@ -805,7 +805,7 @@ class ConfigsTableSeeder extends Seeder
                     'id_config' => 89,
                     'config_name' => 'icon other menu',
                     'description' => '',
-                    'is_active' => 0,
+                    'is_active' => 1,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
