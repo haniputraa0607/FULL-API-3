@@ -365,6 +365,19 @@ class Transaction extends Model
         $trx->load('productTransaction');
 
         //app('\Modules\Transaction\Http\Controllers\ApiNotification')->notification($mid, $trx);
+        $idMerchant = Merchant::where('id_outlet', $this->id_outlet)->first()['id_merchant']??null;
+        $user = User::where('id', $this->id_user)->first();
+        app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM(
+            'Merchant Transaction New',
+            $idMerchant,
+            [
+                'customer_name' => $user['name']??'',
+                'customer_email' =>  $user['email']??'',
+                'customer_phone' =>  $user['phone']??'',
+                'transaction_receipt_number' => $this->transaction_receipt_number
+            ],
+            null, false, false, 'merchant'
+        );
 
         \DB::commit();
     	return true;
@@ -480,16 +493,16 @@ class Transaction extends Model
 
     	// send notification
     	// TODO write notification logic here
-    	app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM(
-        	'Transaction Rejected', 
-        	$this->user->phone, 
-        	[
-	            'date' => $this->transaction_date,
-            	'outlet_name' => $this->outlet['outlet_name'],
-            	'detail' => $detail ?? null,
-            	'receipt_number' => $this->transaction_receipt_number
-	        ]
-	    );
+        $user = User::where('id', $this->id_user)->first();
+        $outlet = Outlet::where('id_outlet', $this->id_outlet)->first();
+        app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Order Reject', $user['phone'], [
+            "outlet_name"      => $outlet['outlet_name'],
+            "id_reference"     => $this->transaction_receipt_number . ',' . $this->id_outlet,
+            "transaction_date" => $this->transaction_date,
+            'id_transaction'   => $this->id_transaction,
+            'receipt_number'   => $this->transaction_receipt_number,
+            'reject_reason'    => $data['reject_reason'] ?? null
+        ]);
 
     	\DB::commit();
     	return true;
