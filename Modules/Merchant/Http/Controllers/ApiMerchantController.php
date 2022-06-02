@@ -2,11 +2,14 @@
 
 namespace Modules\Merchant\Http\Controllers;
 
+use App\Http\Models\InboxGlobal;
+use App\Http\Models\InboxGlobalRead;
 use App\Http\Models\MonthlyReportTrx;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPhoto;
 use App\Http\Models\TransactionProduct;
+use App\Http\Models\UserInbox;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -15,7 +18,9 @@ use App\Lib\MyHelper;
 use Modules\Disburse\Entities\BankAccount;
 use Modules\Disburse\Entities\BankAccountOutlet;
 use Modules\Disburse\Entities\BankName;
+use Modules\InboxGlobal\Http\Requests\MarkedInbox;
 use Modules\Merchant\Entities\Merchant;
+use Modules\Merchant\Entities\MerchantInbox;
 use Modules\Merchant\Http\Requests\MerchantCreateStep1;
 use Modules\Merchant\Http\Requests\MerchantCreateStep2;
 use Modules\Outlet\Entities\DeliveryOutlet;
@@ -924,5 +929,143 @@ class ApiMerchantController extends Controller
         ];
 
         return $result;
+    }
+
+    public function inboxList(Request $request){
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        $arrInbox = [];
+        $countUnread = 0;
+        $countInbox = 0;
+        $arrDate = [];
+        $max_date = date('Y-m-d',time() - ((Setting::select('value')->where('key','inbox_max_days')->pluck('value')->first()?:30) * 86400));
+        $privates = MerchantInbox::where('id_merchant','=',$checkMerchant['id_merchant'])->whereDate('inboxes_send_at','>',$max_date)->get()->toArray();
+
+        foreach($privates as $private){
+            $content = [];
+            $content['id_inbox'] 	 = $private['id_merchant_inboxes'];
+            $content['subject'] 	 = $private['inboxes_subject'];
+            $content['clickto'] 	 = $private['inboxes_clickto'];
+
+            if($private['inboxes_id_reference']){
+                $content['id_reference'] = $private['inboxes_id_reference'];
+            }else{
+                $content['id_reference'] = 0;
+            }
+
+            if($content['clickto']=='Deals Detail'){
+                $content['id_brand'] = $private['id_brand'];
+            }
+
+            if($content['clickto'] == 'News'){
+                $news = News::find($private['inboxes_id_reference']);
+                if($news){
+                    $content['news_title'] = $news->news_title;
+                    $content['url'] = config('url.app_url').'news/webview/'.$news->id_news;
+                }
+
+            }
+
+            if($content['clickto'] == 'Content'){
+                $content['content'] = $private['inboxes_content'];
+            }else{
+                $content['content']	= null;
+            }
+
+            if($content['clickto'] == 'Link'){
+                $content['link'] = $private['inboxes_link'];
+            }else{
+                $content['link'] = null;
+            }
+
+            $content['created_at'] 	 = $private['inboxes_send_at'];
+
+            if($private['read'] === '0'){
+                $content['status'] = 'unread';
+                $countUnread++;
+            }else{
+                $content['status'] = 'read';
+            }
+
+            if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
+                $arrDate[] = date('Y-m-d', strtotime($content['created_at']));
+                $temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
+                $temp['list'][0] =  $content;
+                $arrInbox[] = $temp;
+            }else{
+                $position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
+                $arrInbox[$position]['list'][] = $content;
+            }
+
+            $countInbox++;
+        }
+
+        if(isset($arrInbox) && !empty($arrInbox)) {
+            foreach ($arrInbox as $key => $value) {
+                usort($arrInbox[$key]['list'], function($a, $b){
+                    $t1 = strtotime($a['created_at']);
+                    $t2 = strtotime($b['created_at']);
+                    return $t2 - $t1;
+                });
+            }
+
+            usort($arrInbox, function($a, $b){
+                $t1 = strtotime($a['created']);
+                $t2 = strtotime($b['created']);
+                return $t2 - $t1;
+            });
+
+            foreach ($arrInbox as $key=>$data){
+                $currentDate = date('d/m/Y');
+                $dateConvert = date('d/m/Y', strtotime($data['created']));
+                if($currentDate == $dateConvert){
+                    $date =  'Hari ini';
+                }else{
+                    $date = $dateConvert;
+                }
+                $arrInbox[$key]['created'] = $date;
+            }
+
+            $result = [
+                'status'  => 'success',
+                'result'  => $arrInbox,
+                'count'  => $countInbox,
+                'count_unread' => $countUnread,
+            ];
+        } else {
+            $result = [
+                'status'  => 'success',
+                'result'  => [],
+                'count'  => 0,
+                'count_unread' => 0,
+            ];
+        }
+        return response()->json($result);
+    }
+
+    public function inboxMarked(Request $request){
+        $post = $request->json()->all();
+        $inbox = MerchantInbox::where('id_merchant_inboxes', $post['id_inbox'])->first();
+        if(!empty($inbox)){
+            MerchantInbox::where('id_merchant_inboxes', $post['id_inbox'])->update(['read' => '1']);
+            $result = [
+                'status'  => 'success'
+            ];
+        }else{
+            $result = [
+                'status'  => 'fail',
+                'messages'  => ['Inbox not found']
+            ];
+        }
+        return response()->json($result);
+    }
+
+    public function inboxMarkedAll(Request $request){
+        $update = MerchantInbox::where('id_merchant', $request->id_merchant)->update(['read' => 1]);
+        return response()->json(MyHelper::checkUpdate($update));
     }
 }
