@@ -21,6 +21,7 @@ use Modules\Disburse\Entities\BankName;
 use Modules\InboxGlobal\Http\Requests\MarkedInbox;
 use Modules\Merchant\Entities\Merchant;
 use Modules\Merchant\Entities\MerchantInbox;
+use Modules\Merchant\Entities\MerchantLogBalance;
 use Modules\Merchant\Http\Requests\MerchantCreateStep1;
 use Modules\Merchant\Http\Requests\MerchantCreateStep2;
 use Modules\Outlet\Entities\DeliveryOutlet;
@@ -1067,5 +1068,90 @@ class ApiMerchantController extends Controller
     public function inboxMarkedAll(Request $request){
         $update = MerchantInbox::where('id_merchant', $request->id_merchant)->update(['read' => 1]);
         return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function balanceDetail(Request $request){
+        $post = $request->json()->all();
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        $currentBalance = MerchantLogBalance::where('id_merchant', $checkMerchant['id_merchant'])->sum('merchant_balance');
+        $history = MerchantLogBalance::where('id_merchant', $checkMerchant['id_merchant'])->orderBy('created_at', 'desc');
+
+        if(!empty($post['history_date'])){
+            $history = $history->whereDate('created_at', date('Y-m-d', strtotime($post['history_date'])));
+        }
+
+        $history = $history->paginate($post['pagination_total_row']??15)->toArray();
+
+        foreach ($history['data']??[] as $key=>$dt){
+            if($dt['merchant_balance'] < 0){
+                $title = 'Penarikan Saldo';
+                $des = 'Total saldo terpakai';
+                $nominal = '-Rp '.number_format(abs($dt['merchant_balance']),0,",",".");
+            }else{
+                $title = 'Saldo Masuk';
+                $des = 'Total saldo didapat';
+                $nominal = 'Rp '.number_format($dt['merchant_balance'],0,",",".");
+            }
+            $history['data'][$key] = [
+                'date' => MyHelper::dateFormatInd($dt['created_at'], false),
+                'title' => $title,
+                'description' => $des,
+                'nominal' => $dt['merchant_balance'],
+                'nominal_text' => $nominal,
+            ];
+        }
+
+        $res = [
+            'current_balance' => 'Rp '.number_format($currentBalance,0,",","."),
+            'history' => $history
+        ];
+
+        return response()->json(MyHelper::checkGet($res));
+    }
+
+    public function balanceWithdrawal(Request $request){
+        $post = $request->json()->all();
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        if(empty($post['id_bank_account']) || empty($post['amount_withdrawal'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Imcompleted data']]);
+        }
+
+        if($post['amount_withdrawal'] <= 0){
+            return response()->json(['status' => 'fail', 'messages' => ['Jumlah penarikan tidak valid']]);
+        }
+
+        $currentBalance = MerchantLogBalance::where('id_merchant', $checkMerchant['id_merchant'])->sum('merchant_balance');
+
+        if($post['amount_withdrawal'] > $currentBalance){
+            return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo saat ini tidak mencukupi']]);
+        }
+
+        $checkBankAccount = BankAccount::join('bank_account_outlets', 'bank_account_outlets.id_bank_account', 'bank_accounts.id_bank_account')
+                            ->where('bank_accounts.id_bank_account', $post['id_bank_account'])
+                            ->where('id_outlet', $checkMerchant['id_outlet'])
+                            ->first();
+
+        if(empty($checkBankAccount)){
+            return response()->json(['status' => 'fail', 'messages' => ['Bank account tidak ditemukan']]);
+        }
+
+        $dt = [
+            'id_merchant' => $checkMerchant['id_merchant'],
+            'balance_nominal' => -$post['amount_withdrawal'],
+            'id_transaction' => $post['id_bank_account'],
+            'source' => 'Withdrawal'
+        ];
+        $saveBalanceMerchant = app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dt);
+        return response()->json(MyHelper::checkUpdate($saveBalanceMerchant));
     }
 }
