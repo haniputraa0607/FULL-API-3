@@ -96,7 +96,7 @@ class ApiAutoCrm extends Controller
 		if($query){
 			$crm 	= $query[0];
 			$user 	= $users[0];
-			if($recipient_type = 'doctor'){
+			if($recipient_type == 'doctor'){
 				$user['id'] = $user['id'];
 				$user['name'] = $user['doctor_name'];
 				$user['phone'] = $user['doctor_phone'];

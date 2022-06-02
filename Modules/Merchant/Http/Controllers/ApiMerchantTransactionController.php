@@ -655,7 +655,12 @@ class ApiMerchantTransactionController extends Controller
             'merchant_balance_source'        => $data['source']
         ];
 
-        $create = MerchantLogBalance::updateOrCreate(['id_merchant' => $data['id_merchant'], 'merchant_balance_id_reference' => $data['id_transaction'], 'merchant_balance_source' => $data['source']], $LogBalance);
+        if($balance_nominal < 0){
+            $create = MerchantLogBalance::updateOrCreate($LogBalance);
+        }else{
+            $create = MerchantLogBalance::updateOrCreate(['id_merchant' => $data['id_merchant'], 'merchant_balance_id_reference' => $data['id_transaction'], 'merchant_balance_source' => $data['source']], $LogBalance);
+        }
+
 
         return $create;
     }

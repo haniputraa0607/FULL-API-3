@@ -1826,7 +1826,7 @@ class ApiProductController extends Controller
         foreach ($imageDetail as $dt){
             $imagesDetail[] = $dt['url_product_photo'];
         }
-        $product['image_detail'] = (empty($imagesDetail) ? [config('url.storage_url_api').'img/default.jpg'] : $imagesDetail);
+        $product['image_detail'] = (empty($imagesDetail) ? [config('url.storage_url_api').'img/product/item/detail/default.png'] : $imagesDetail);
 
         return MyHelper::checkGet($product);
     }

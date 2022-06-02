@@ -10,7 +10,7 @@ class MerchantLogBalance extends Model
 	protected $primaryKey = 'id_merchant_log_balance';
 
 	protected $fillable = [
-	    'id_user',
+	    'id_merchant',
 		'merchant_balance',
         'merchant_balance_before',
         'merchant_balance_after',

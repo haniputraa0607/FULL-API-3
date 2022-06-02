@@ -32,6 +32,9 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::post('register/submit/step-2', 'ApiMerchantController@registerSubmitStep2');
         Route::get('register/detail', 'ApiMerchantController@registerDetail');
 
+        Route::post('balance/detail', 'ApiMerchantController@balanceDetail');
+        Route::post('balance/withdrawal', 'ApiMerchantController@balanceWithdrawal');
+
         Route::group(['prefix' => 'management'], function () {
             Route::post('product/variant/create-combination', 'ApiMerchantManagementController@variantCombination');
             Route::post('product/variant/delete', 'ApiMerchantManagementController@variantDelete');
