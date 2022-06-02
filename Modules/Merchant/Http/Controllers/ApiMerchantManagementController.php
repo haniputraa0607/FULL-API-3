@@ -960,6 +960,7 @@ class ApiMerchantManagementController extends Controller
                 }
                 $result['wholesaler_price'] =$wholesaler;
                 $result['wholesaler_status'] =$wholesalerStatus;
+                $result['stock'] = ProductDetail::where('id_product', $detail['id_product'])->where('id_outlet', $checkMerchant['id_outlet'])->first()['product_detail_stock_item']??0;
             }
             $result['variants'] = $variants;
             return response()->json(MyHelper::checkGet($result));
