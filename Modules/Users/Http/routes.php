@@ -20,6 +20,9 @@ Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent'
 
 	Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 	{
+        Route::post('social/check', 'ApiLoginRegisterV2@socialCheck');
+        Route::post('social/create', 'ApiLoginRegisterV2@socialCreate')->middleware(['decrypt_pin:user_password']);
+        Route::post('social/bearer', 'ApiLoginRegisterV2@socialGetBearer');
         Route::post('pin/verify', 'ApiLoginRegisterV2@verifyPin')->middleware('decrypt_pin');
         Route::post('pin/check', 'ApiLoginRegisterV2@checkPin')->middleware('decrypt_pin');
         Route::post('pin/resend', 'ApiLoginRegisterV2@resendPin');

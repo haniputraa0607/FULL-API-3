@@ -17,6 +17,7 @@ use App\Http\Models\OauthAccessToken;
 use Modules\Balance\Http\Controllers\BalanceController;
 use Modules\SettingFraud\Entities\FraudSetting;
 use Modules\Users\Entities\OldMember;
+use Modules\Users\Entities\UserSocialLogin;
 use Modules\Users\Http\Requests\users_forgot;
 use Modules\Users\Http\Requests\users_phone;
 use Modules\Users\Http\Requests\users_phone_pin;
@@ -30,6 +31,12 @@ use Hash;
 use DB;
 use Mail;
 use Auth;
+
+use Socialite;
+use GuzzleHttp\Exception\BadResponseException;
+use Illuminate\Support\Facades\Crypt;
+use GuzzleHttp\Client as GuzzleHttpClient;
+use Laravel\Passport\Client;
 
 class ApiLoginRegisterV2 extends Controller
 {
@@ -753,7 +760,13 @@ class ApiLoginRegisterV2 extends Controller
                 }
             }
 
-            $update = User::where('id', '=', $data[0]['id'])->update(['otp_valid_time' => NULL]);
+            $dtUpdate['otp_valid_time'] = NULL;
+            if(!empty($data[0]['temporary_password'])){
+                $dtUpdate['password'] = $data[0]['temporary_password'];
+                $dtUpdate['temporary_password'] = NULL;
+            }
+
+            $update = User::where('id', '=', $data[0]['id'])->update($dtUpdate);
             if ($update) {
                 $profile = User::select('phone', 'email', 'name', 'id_city', 'gender', 'phone_verified', 'email_verified')
                     ->where('phone', '=', $phone)
@@ -1258,5 +1271,258 @@ class ApiLoginRegisterV2 extends Controller
         return [
             'status' => 'success'
         ];
+    }
+
+    public function socialCheck(Request $request)
+    {
+        $validate = Validator::make($request->json()->all(), [
+            'provider' => ['required'],
+            'provider_id' => ['required'],
+            'provider_name' => ['required'],
+            'provider_email' => ['required', 'email'],
+            'provider_token' => ['required'],
+        ]);
+
+        if ($validate->fails()) {
+            return response()->json([
+                'status' => 'fail',
+                'message' => $validate->errors()
+            ]);
+        } else {
+            $post = $validate->validated();
+        }
+
+        try {
+            $verified = Socialite::driver($post['provider'])->userFromToken($post['provider_token']);
+        } catch (BadResponseException $error) {
+            return response()->json([
+                'status' => 'fail',
+                'message' => json_decode($error->getResponse()->getBody()->getContents(), true) ?? null
+            ]);
+        }
+
+        if (
+            $verified->id == $post['provider_id'] &&
+            $verified->token == $post['provider_token'] &&
+            $verified->name == $post['provider_name']
+        ) {
+            $check = User::where('email', $post['provider_email'])->first();
+
+            // create if only user does not registered in DB
+            if (empty($check)) {
+                $new_user = User::create([
+                    'email' => $post['provider_email'],
+                    'phone' => ' '
+                ]);
+
+                $idUser = $new_user->id;
+                $result['register'] = true;
+            } elseif(!empty($check) && $check['phone'] == ' '){
+                $idUser = $check['id'];
+                $result['register'] = true;
+            }else {
+                $idUser = $check['id'];
+                $result['register'] = false;
+            }
+
+            $user = User::select('password',\DB::raw('0 as challenge_key'))->where('id', $idUser)->first();
+            $result['challenge_key'] = $user->challenge_key;
+            return response()->json([
+                'status' => 'success',
+                'result' => $result
+            ]);
+
+        } else {
+            return response()->json([
+                'status' => 'fail',
+                'message' => 'invalid credentials'
+            ]);
+        }
+    }
+
+    public function socialCreate(Request $request){
+
+        $validate = Validator::make($request->json()->all(), [
+            'provider' => ['required'],
+            'provider_id' => ['required'],
+            'provider_token' => ['required'],
+            'user_name' => ['required'],
+            'user_email' => ['required', 'email'],
+            'user_password' => ['required'],
+            'user_phone' => ['required']
+        ]);
+
+        if ($validate->fails()) {
+            return response()->json([
+                'status' => 'fail',
+                'message' => $validate->errors()
+            ]);
+        } else {
+            $post = $validate->validated();
+        }
+
+        $phone = preg_replace("/[^0-9]/", "", $request->json('user_phone'));
+
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
+
+        if (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail') {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [$checkPhoneFormat['messages']]
+            ]);
+        } elseif (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success') {
+            $phone = $checkPhoneFormat['phone'];
+        }
+
+        try {
+            $verified = Socialite::driver($post['provider'])->userFromToken($post['provider_token']);
+        } catch (BadResponseException $error) {
+            return response()->json([
+                'status' => 'fail',
+                'message' => json_decode($error->getResponse()->getBody()->getContents(), true) ?? null
+            ]);
+        }
+
+        if (
+            $verified->id == $post['provider_id'] &&
+            $verified->token == $post['provider_token'] &&
+            $verified->name == $post['user_name']
+        ) {
+            $check = User::where('email', $post['user_email'])->first();
+
+            // create if only user does not registered in DB
+            if (empty($check)) {
+                $checkPhone = User::where('phone', $phone)->first();
+                if(!empty($checkPhone)){
+                    return response()->json([
+                        'status' => 'fail',
+                        'message' => ['Nomor telepon sudah digunakan']
+                    ]);
+                }
+                $new_user = User::create([
+                    'name' => $post['user_name'],
+                    'email' => $post['user_email'],
+                    'phone' => $phone,
+                    'temporary_password' => bcrypt($post['user_password']),
+                    'email_verified' => 1
+                ]);
+
+                $idUser = $new_user->id;
+            } else {
+                $checkPhone = User::where('phone', $phone)->whereNotIn('email', [$post['user_email']])->first();
+                if(!empty($checkPhone)){
+                    return response()->json([
+                        'status' => 'fail',
+                        'message' => ['Nomor telepon sudah digunakan']
+                    ]);
+                }
+
+                User::where('id', $check['id'])->update([
+                    'name' => $post['user_name'],
+                    'phone' => $phone,
+                    'temporary_password' => bcrypt($post['user_password']),
+                    'email_verified' => 1
+                ]);
+
+                $idUser = $check['id'];
+            }
+
+            UserSocialLogin::updateOrCreate([
+                'id_user' => $idUser,
+                'provider' => $post['provider'],
+                'provider_user_id' => $post['provider_id'],
+            ],[
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+
+            return response()->json(['status' => 'success']);
+        } else {
+            return response()->json([
+                'status' => 'fail',
+                'message' => 'invalid credentials'
+            ]);
+        }
+    }
+
+    public function socialGetBearer(Request  $request){
+        $validate = Validator::make($request->json()->all(), [
+            'provider' => ['required'],
+            'provider_id' => ['required'],
+            'provider_name' => ['required'],
+            'provider_email' => ['required', 'email'],
+            'provider_token' => ['required'],
+        ]);
+
+        if ($validate->fails()) {
+            return response()->json([
+                'status' => 'fail',
+                'message' => $validate->errors()
+            ]);
+        } else {
+            $post = $validate->validated();
+        }
+
+        try {
+            $verified = Socialite::driver($post['provider'])->userFromToken($post['provider_token']);
+        } catch (BadResponseException $error) {
+            return response()->json([
+                'status' => 'fail',
+                'message' => json_decode($error->getResponse()->getBody()->getContents(), true) ?? null
+            ]);
+        }
+
+        if (
+            $verified->id == $post['provider_id'] &&
+            $verified->token == $post['provider_token'] &&
+            $verified->name == $post['provider_name']
+        ) {
+            $getUser = User::where('email', $post['provider_email'])->first();
+            if(empty($getUser)){
+                return response()->json([
+                    'status' => 'fail',
+                    'message' => ['User tidak ditemukan']
+                ]);
+            }
+
+            $user_social = UserSocialLogin::where('id_user', $getUser['id'])->where('provider_user_id', $post['provider_id'])->first();
+
+            if(empty($user_social)){
+                return response()->json([
+                    'status' => 'fail',
+                    'message' => ['User tidak ditemukan']
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'result' => $this->passwordLoginSocialMedia($getUser['phone'])
+            ]);
+        } else {
+            return response()->json([
+                'status' => 'fail',
+                'message' => 'invalid credentials'
+            ]);
+        }
+    }
+
+    private function passwordLoginSocialMedia($phone = null)
+    {
+        $oclient = Client::where('password_client', 1)->first();
+
+        $http = new GuzzleHttpClient();
+
+        $response = $http->request('POST', url('oauth/token'), [
+            'form_params' => [
+                'grant_type' => 'password',
+                'client_id' => $oclient->id,
+                'client_secret' => $oclient->secret,
+                'username' => $phone,
+                'password' => Crypt::encryptString(MyHelper::createRandomPIN(8, 'kecil')),
+                'scope' => 'apps'
+            ],
+        ]);
+
+        return json_decode((string) $response->getBody(), true);
     }
 }
