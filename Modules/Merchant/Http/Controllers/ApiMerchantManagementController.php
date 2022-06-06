@@ -11,6 +11,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Http\Models\Setting;
 use App\Lib\MyHelper;
+use Modules\Brand\Entities\Brand;
 use Modules\Brand\Entities\BrandProduct;
 use Modules\Merchant\Entities\Merchant;
 use Modules\Merchant\Http\Requests\MerchantCreateStep1;
@@ -362,7 +363,10 @@ class ApiMerchantManagementController extends Controller
 
         $defaultBrand = Setting::where('key', 'default_brand')->first()['value']??null;
         if(!empty($defaultBrand)){
-            BrandProduct::create(['id_product' => $idProduct, 'id_brand' => $defaultBrand]);
+            $checkBrand = Brand::where('id_brand', $defaultBrand)->first();
+            if(!empty($checkBrand)){
+                BrandProduct::create(['id_product' => $idProduct, 'id_brand' => $defaultBrand]);
+            }
         }
 
         $img = [];
@@ -608,7 +612,10 @@ class ApiMerchantManagementController extends Controller
             if(empty($checkBrand)){
                 $defaultBrand = Setting::where('key', 'default_brand')->first()['value']??null;
                 if(!empty($defaultBrand)){
-                    BrandProduct::create(['id_product' => $idProduct, 'id_brand' => $defaultBrand]);
+                    $checkBrand = Brand::where('id_brand', $defaultBrand)->first();
+                    if(!empty($checkBrand)){
+                        BrandProduct::create(['id_product' => $idProduct, 'id_brand' => $defaultBrand]);
+                    }
                 }
             }
 

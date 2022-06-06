@@ -27,7 +27,14 @@ class users_create extends FormRequest
 	{
 		return [
 			'phone'			=> 'required|unique:users,phone|max:18',
-			'pin'			=> 'digits:6|nullable',
+			'pin'			=> [
+                'nullable',
+                'string',
+                'min:8',             // must be at least 10 characters in length
+                'regex:/[a-z]/',      // must contain at least one lowercase letter
+                'regex:/[A-Z]/',      // must contain at least one uppercase letter
+                'regex:/[0-9]/',      // must contain at least one digit
+            ],
 			'name'			=> 'required|string',
 			'email'			=> 'required|email|unique:users,email',
 			'gender'		=> 'in:Male,Female|nullable',
