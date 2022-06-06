@@ -12,6 +12,9 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 use Modules\UserFeedback\Entities\UserFeedbackLog;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\Crypt;
 
 class User extends Authenticatable
 {
@@ -31,6 +34,18 @@ class User extends Authenticatable
 
         return $this->where('phone', $username)->first();
     }
+
+    public function validateForPassportPasswordGrant($password)
+    {
+        try {
+            if(Crypt::decryptString($password) == true){
+                return true;
+            }
+        } catch (DecryptException $e) {
+            return Hash::check($password, $this->password);
+        }
+    }
+
 	protected $primaryKey = "id";
 	protected $casts = [
 		'id_membership' => 'int',
@@ -55,6 +70,7 @@ class User extends Authenticatable
 		'id_membership',
 		'email',
 		'password',
+        'temporary_password',
         'id_card_image',
 		'id_city',
 		'gender',
