@@ -913,7 +913,7 @@ class ApiProductController extends Controller
                                             ->select('product_detail.id_product')->get();
                     $product = Product::whereNotIn('products.id_product', $idVisible)->with(['category', 'discount']);
                 }else{
-                    $product = $product->whereNotNull('id_product_category');
+                    $product = $product->whereNotNull('id_product_category')->select('products.*');
                 }
 
                 unset($post['id_outlet']);
