@@ -4020,4 +4020,21 @@ class ApiTransaction extends Controller
             ];
         }
     }
+
+    public function listPaymentDetailOutlet(Request $request){
+        $post = $request->json()->all();
+
+        if(empty($post['id_outlet'])){
+            return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
+        }
+
+        $listTransaction = Transaction::join('transaction_payment_midtrans', 'transaction_payment_midtrans.id_transaction_group', 'transactions.id_transaction_group')
+                        ->where('id_outlet', $post['id_outlet']);
+
+        if(!empty($post['search_key'])){
+            $listTransaction = $listTransaction->where('transaction_receipt_number', 'like', '%'.$post['search_key'].'%');
+        }
+        $listTransaction = $listTransaction->orderBy('transaction_date', 'desc')->paginate(15);
+        return response()->json(MyHelper::checkGet($listTransaction));
+    }
 }

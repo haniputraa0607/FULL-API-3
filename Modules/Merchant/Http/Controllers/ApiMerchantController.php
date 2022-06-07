@@ -1154,4 +1154,53 @@ class ApiMerchantController extends Controller
         $saveBalanceMerchant = app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dt);
         return response()->json(MyHelper::checkUpdate($saveBalanceMerchant));
     }
+
+    public function balanceList(Request $request){
+        $post = $request->json()->all();
+
+        if(empty($post['id_outlet'])){
+            return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
+        }
+        $checkMerchant = Merchant::where('id_outlet', $post['id_outlet'])->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        $list1 = MerchantLogBalance::join('transactions', 'transactions.id_transaction', 'merchant_log_balances.merchant_balance_id_reference')
+                    ->where('id_merchant', $checkMerchant['id_merchant'])->select('merchant_log_balances.*');
+        $list2 = MerchantLogBalance::join('bank_accounts', 'bank_accounts.id_bank_account', 'merchant_log_balances.merchant_balance_id_reference')
+                ->where('id_merchant', $checkMerchant['id_merchant'])->select('merchant_log_balances.*');
+
+        if(!empty($post['search_key'])){
+            $list1 = $list1->where('transaction_receipt_number', 'like', '%'.$post['search_key'].'%');
+            $list2 = $list2->where(function ($q) use($post){
+                $q->where('beneficiary_name', 'like', '%'.$post['search_key'].'%')
+                    ->orWhere('beneficiary_account', 'like', '%'.$post['search_key'].'%');
+            });
+        }
+
+        $list = $list1->unionAll($list2)->orderBy('created_at', 'desc')->paginate(15)->toArray();
+
+        foreach ($list['data']??[] as $key=>$dt){
+            $transaction = [];
+            $bankAccount = [];
+            if($dt['merchant_balance_source'] == 'Transaction Completed'){
+                $transaction = Transaction::where('id_transaction', $dt['merchant_balance_id_reference'])->first();
+            }elseif($dt['merchant_balance_source'] == 'Withdrawal'){
+                $bankAccount =  BankAccount::join('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
+                    ->where('bank_accounts.id_bank_account', $dt['merchant_balance_id_reference'])
+                    ->first();
+            }
+
+            $list['data'][$key] = [
+                'date' => $dt['created_at'],
+                'source' => $dt['merchant_balance_source'],
+                'nominal' => $dt['merchant_balance'],
+                'data_transaction' => $transaction,
+                'data_bank_account' => $bankAccount
+            ];
+        }
+
+        return response()->json(MyHelper::checkGet($list));
+    }
 }
