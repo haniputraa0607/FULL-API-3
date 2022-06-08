@@ -73,6 +73,7 @@ use Modules\PromoCampaign\Lib\PromoCampaignTools;
 use App\Http\Models\Transaction;
 
 use App\Jobs\SendOutletJob;
+use Image;
 
 class ApiOutletController extends Controller
 {
@@ -170,6 +171,10 @@ class ApiOutletController extends Controller
 
         if (isset($post['outlet_license_number'])) {
             $data['outlet_license_number'] = $post['outlet_license_number'];
+        }
+
+        if (isset($post['outlet_postal_code'])) {
+            $data['outlet_postal_code'] = $post['outlet_postal_code'];
         }
 
         return $data;
@@ -348,8 +353,37 @@ class ApiOutletController extends Controller
         if(!empty($checkLicense)){
             return response()->json(['status' => 'fail', 'messages' => ['License number already use with outlet : '.$checkLicense['outlet_name']]]);
         }
+
+        if(!empty($request->json('outlet_image_logo_portrait'))){
+            $upload = MyHelper::uploadPhotoStrict($request->json('outlet_image_logo_portrait'), 'img/outlet/'.$request->json('id_outlet').'/', 300, 300);
+
+            if (isset($upload['status']) && $upload['status'] == "success") {
+                $post['outlet_image_logo_portrait'] = $upload['path'];
+            }
+        }
+
+        if(!empty($request->json('outlet_image_logo_landscape'))){
+            $decoded = base64_decode($request->json('outlet_image_logo_landscape'));
+            $img = Image::make($decoded);
+            $imgwidth = $img->width();
+            $imgheight = $img->height();
+            $uploadDetail = MyHelper::uploadPhotoStrict($request->json('outlet_image_logo_landscape'), 'img/outlet/'.$request->json('id_outlet').'/', $imgwidth, $imgheight);
+
+            if (isset($uploadDetail['status']) && $uploadDetail['status'] == "success") {
+                $post['outlet_image_logo_landscape'] = $uploadDetail['path'];
+            }
+        }
+
+        if(!empty($request->json('outlet_image_cover'))){
+            $uploadCover = MyHelper::uploadPhotoStrict($request->json('outlet_image_cover'), 'img/outlet/'.$request->json('id_outlet').'/', 720, 360);
+
+            if (isset($uploadCover['status']) && $uploadCover['status'] == "success") {
+                $post['outlet_image_cover'] = $uploadCover['path'];
+            }
+        }
+
         $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update($post);
-        // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
+
         if($save){
             DB::commit();
             SyncronPlasticTypeOutlet::dispatch([])->onQueue('high')->allOnConnection('database');
@@ -656,7 +690,7 @@ class ApiOutletController extends Controller
         }
 
         if (isset($post['outlet_code'])) {
-            $outlet->with(['holidays', 'holidays.date_holidays','brands', 'delivery_outlet'])->where('outlet_code', $post['outlet_code']);
+            $outlet->with(['holidays', 'holidays.date_holidays','brands', 'delivery_outlet', 'merchant'])->where('outlet_code', $post['outlet_code']);
         }
 
         if (isset($post['id_outlet'])) {

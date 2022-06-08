@@ -104,5 +104,7 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::post('delete', 'ApiMerchantManagementController@delete');
         Route::any('candidate/list', 'ApiMerchantManagementController@canditateList');
         Route::post('candidate/update', 'ApiMerchantManagementController@canditateUpdate');
+
+        Route::post('balance/list', 'ApiMerchantController@balanceList');
     });
 });

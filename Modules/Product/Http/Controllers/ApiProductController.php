@@ -928,6 +928,11 @@ class ApiProductController extends Controller
             }
 		}
 
+        if(!empty($post['outlet_detail'])){
+            $product = Product::join('product_detail','product_detail.id_product','=','products.id_product')
+                ->where('product_detail.id_outlet','=',$post['id_outlet'])->with('category')->select('products.*');
+        }
+
 		if(isset($post['rule'])){
             foreach ($post['rule'] as $rule){
                 if($rule[0] !== 'all_product'){
@@ -1202,6 +1207,8 @@ class ApiProductController extends Controller
                 ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']],
                     ['product_global_price' => (int)$globalPrice]);
             }
+
+            ProductDetail::where('id_product', $post['id_product'])->update(['product_detail_visibility' => $post['product_visibility']]);
         }
         if($save){
             DB::commit();
