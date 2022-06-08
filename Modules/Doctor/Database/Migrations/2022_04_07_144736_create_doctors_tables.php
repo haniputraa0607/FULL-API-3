@@ -24,10 +24,12 @@ class CreateDoctorsTables extends Migration
             $table->string('alumni');
             $table->string('registrasion_certificate_number');
             $table->string('doctor_session_price');
-            $table->string('is_active');
+            $table->boolean('is_active');
             $table->string('doctor_service');
             $table->string('doctor_photo');
-            $table->string('sms_increment');
+            $table->boolean('sms_increment');
+            $table->boolean('schedule_toogle');
+            $table->boolean('notification_toogle');
 
             $table->timestamps();
         });

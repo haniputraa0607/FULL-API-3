@@ -18,7 +18,7 @@ class TimeSchedule extends Model
         'status_session'
     ];
 
-    public function scopeOnlyAvailabile($query)
+    public function scopeOnlyAvailable($query)
     {
         return $query->where('status_session', "available");
     }

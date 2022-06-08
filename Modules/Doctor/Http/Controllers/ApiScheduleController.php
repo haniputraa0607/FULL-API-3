@@ -8,6 +8,7 @@ use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
 
 use Modules\Doctor\Entities\DoctorSchedule;
+use Modules\Doctor\Entities\TimeSchedule;
 use Validator;
 use DB;
 
@@ -131,6 +132,90 @@ class ApiScheduleController extends Controller
             }
         }
 
+        return response()->json(['status'  => 'success', 'result' => $schedule]);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     * @param int $id
+     * @return Response
+     */
+    public function getMySchedule(Request $request)
+    {
+        $user = $request->user();
+
+        $doctor_schedule = DoctorSchedule::where('id_doctor', $user['id_doctor'])->with('schedule_time');
+
+        $doctor_schedule = $doctor_schedule->get()->toArray();
+
+        return response()->json(['status'  => 'success', 'result' => $doctor_schedule]);
+    }
+    
+    /**
+     * Remove the specified resource from storage.
+     * @param int $id
+     * @return Response
+     */
+    public function storeMySchedule(Request $request)
+    {
+        $posts = $request->json()->all();
+
+        $user = $request->user();
+ 
+        DB::beginTransaction();
+        foreach($posts as $key => $post) {
+            if (isset($post['id_doctor_schedule'])) {
+                try {
+                    //try update schedule
+                    $postSchedule = [
+                        'id_doctor' => $user['id_doctor'],
+                        'day' => $post['day'],
+                        'is_active' => $post['is_active']
+                    ];
+                    $updateSchedule = DoctorSchedule::where('id_doctor_schedule', $post['id_doctor_schedule'])->update($postSchedule); 
+
+                    $schedule = DoctorSchedule::where('id_doctor_schedule', $post['id_doctor_schedule'])->first();
+                    //drop and save schedule time
+                    if (isset($post['session_time'])) {
+                        $oldTime = TimeSchedule::where('id_doctor_schedule', $post['id_doctor_schedule'])->delete();
+                        $schedule->schedule_time()->createMany($post['session_time']);
+                    }
+                } catch (\Exception $e) {
+                    $result = [
+                        'status'  => 'fail',
+                        'message' => 'Update Doctor Schedule Failed'
+                    ];
+                    DB::rollBack();
+                    return response()->json($result);
+                }
+            } else {
+                try {
+                    //try create schedule
+                    $postSchedule = [
+                        'id_doctor' => $user['id_doctor'],
+                        'day' => $post['day'],
+                        'is_active' => $post['is_active']
+                    ];
+
+                    $saveSchedule = DoctorSchedule::create($postSchedule);
+
+                    //try create schedule time
+                    if (isset($post['session_time'])) {
+                        $saveSchedule->schedule_time()->createMany($post['session_time']);
+                    }
+
+                    $schedule = $saveSchedule;
+                } catch (\Exception $e) {
+                    $result = [
+                        'status'  => 'fail',
+                        'message' => 'Create Doctor Schedule Failed'
+                    ];
+                    DB::rollBack();
+                    return response()->json($result);
+                }
+            }
+        }
+        DB::commit();
         return response()->json(['status'  => 'success', 'result' => $schedule]);
     }
 }

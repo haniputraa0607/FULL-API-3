@@ -28,3 +28,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix
         Route::get('/history/list', 'ApiTransactionConsultationController@getHistoryConsultationList');
     });
 });
+
+Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-apps'], 'prefix' => 'doctor'], function () {
+    Route::post('/consultation', 'ApiTransactionConsultationController@getHandledConsultation');
+});

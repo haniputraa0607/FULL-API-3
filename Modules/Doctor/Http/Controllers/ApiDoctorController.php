@@ -10,6 +10,7 @@ use App\Lib\MyHelper;
 use Modules\Doctor\Entities\Doctor;
 use Modules\Doctor\Entities\DoctorSpecialist;
 use Modules\Doctor\Entities\DoctorSchedule;
+use Modules\Doctor\Entities\SubmissionChangeDoctorData;
 use Modules\Doctor\Http\Requests\DoctorCreate;
 use Validator;
 use Image;
@@ -285,5 +286,79 @@ class ApiDoctorController extends Controller
                 'messages' => ['Doctor has been used.']
             ]);
         }
+    }
+
+    public function mySettings(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $user = $request->user();
+
+        DB::beginTransaction();
+        try {
+            //initialize value
+            $value = 1; //on
+            if($post['value'] == "off") {
+                $value = 0;
+            }
+
+            Doctor::where('id_doctor', $user['id_doctor'])->update([$post['action'] => $value]); 
+        } catch (\Exception $e) {
+            $result = [
+                'status'  => 'fail',
+                'message' => 'Update Settings Schedule Failed'
+            ];
+            DB::rollBack();
+            return response()->json($result);
+        }
+        DB::commit();
+
+        //if off value case
+        if($post['value'] == "off") {
+            return response()->json(['status'  => 'success', 'result' => $post['action']." Successfully Deactivated"]);
+        }
+
+        //default for on value case
+        return response()->json(['status'  => 'success', 'result' => $post['action']." Has Been Activated Successfully"]);
+    }
+
+    public function myProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $doctor = Doctor::where('id_doctor', $user['id_doctor'])->with('clinic')->with('specialists')->orderBy('created_at', 'DESC');
+
+        if(empty($doctor)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Doctor not found']
+            ]);
+        }
+
+        $doctor = $doctor->get()->toArray();
+
+        return response()->json(['status'  => 'success', 'result' => $doctor]);
+    }
+
+    public function submissionChangeDataStore(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $user = $request->user();
+
+        DB::beginTransaction();
+        try {
+            $submission = SubmissionChangeDoctorData::create($post); 
+        } catch (\Exception $e) {
+            $result = [
+                'status'  => 'fail',
+                'message' => 'Create Submission Change Data Failed'
+            ];
+            DB::rollBack();
+            return response()->json($result);
+        }
+        DB::commit();
+
+        return response()->json(['status'  => 'success', 'result' => $submission]);
     }
 }
