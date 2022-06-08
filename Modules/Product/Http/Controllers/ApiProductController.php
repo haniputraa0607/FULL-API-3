@@ -913,7 +913,7 @@ class ApiProductController extends Controller
                                             ->select('product_detail.id_product')->get();
                     $product = Product::whereNotIn('products.id_product', $idVisible)->with(['category', 'discount']);
                 }else{
-                    $product = $product->whereNotNull('id_product_category');
+                    $product = $product->whereNotNull('id_product_category')->select('products.*');
                 }
 
                 unset($post['id_outlet']);
@@ -1826,7 +1826,7 @@ class ApiProductController extends Controller
         foreach ($imageDetail as $dt){
             $imagesDetail[] = $dt['url_product_photo'];
         }
-        $product['image_detail'] = (empty($imagesDetail) ? [config('url.storage_url_api').'img/default.jpg'] : $imagesDetail);
+        $product['image_detail'] = (empty($imagesDetail) ? [config('url.storage_url_api').'img/product/item/detail/default.png'] : $imagesDetail);
 
         return MyHelper::checkGet($product);
     }
@@ -2066,6 +2066,52 @@ class ApiProductController extends Controller
             }
             $list = array_values($list);
         }
+
+        return response()->json(MyHelper::checkGet($list));
+    }
+
+    public function productRecommendation(Request $request){
+        $post = $request->json()->all();
+
+        $update = Product::whereNotNull('id_product')->update(['product_recommendation_status' => 0]);
+        if($update){
+            $update = Product::whereIn('id_product', $post['id_product'])->update(['product_recommendation_status' => 1]);
+        }
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function listProducRecommendation(){
+        $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
+            'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'product_categories.product_category_name')
+            ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
+            ->leftJoin('product_categories', 'product_categories.id_product_category', '=', 'products.id_product_category')
+            ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
+            ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
+            ->where('outlet_is_closed', 0)
+            ->where('product_global_price', '>', 0)
+            ->where('product_global_price', '>', 0)
+            ->where('product_visibility', 'Visible')
+            ->where('product_recommendation_status', 1)
+            ->groupBy('products.id_product')->get()->toArray();
+
+        foreach ($list as $key=>$product){
+            if ($product['product_variant_status']) {
+                $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
+                $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                if(empty($variantTree['base_price'])){
+                    $list[$key]['stock_status'] = 'Sold Out';
+                }
+                $list[$key]['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
+            }
+
+            unset($list[$key]['id_outlet']);
+            unset($list[$key]['product_variant_status']);
+            $list[$key]['product_price'] = (int)$list[$key]['product_price'];
+            $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+            $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
+        }
+        $list = array_values($list);
 
         return response()->json(MyHelper::checkGet($list));
     }

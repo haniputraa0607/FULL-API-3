@@ -69,7 +69,8 @@ class Product extends Model
         'product_length',
         'product_width',
         'product_height',
-        'product_count_transaction'
+        'product_count_transaction',
+        'product_recommendation_status'
     ];
     
 

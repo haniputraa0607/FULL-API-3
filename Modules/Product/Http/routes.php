@@ -13,6 +13,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     Route::post('detail', 'ApiProductController@detail');
     Route::any('sync', 'ApiSyncProductController@sync');
     Route::get('next/{id}', 'ApiProductController@getNextID');
+    Route::get('recommendation', 'ApiProductController@listProducRecommendation');
 
     /* category */
     Route::group(['prefix' => 'category'], function() {
@@ -47,6 +48,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     Route::post('ajax-product-brand', 'ApiProductController@ajaxProductBrand');
     Route::post('product-brand', 'ApiProductController@getProductByBrand');
     Route::get('list/ajax', 'ApiProductController@listProductAjaxSimple');
+    Route::post('recommendation/save', 'ApiProductController@productRecommendation');
 
     /* photo */
     Route::group(['prefix' => 'photo'], function() {

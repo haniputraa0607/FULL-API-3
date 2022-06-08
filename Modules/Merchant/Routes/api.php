@@ -15,6 +15,10 @@ use Illuminate\Http\Request;
 
 Route::group(['prefix' => 'merchant'], function () {
     Route::group(['middleware' => ['auth:api', 'user_agent', 'log_activities', 'scopes:apps']], function () {
+        Route::get('inbox', 'ApiMerchantController@inboxList');
+        Route::post('inbox/marked', 'ApiMerchantController@inboxMarked');
+        Route::post('inbox/marked-all', 'ApiMerchantController@inboxMarkedAll');
+
         Route::get('summary', 'ApiMerchantController@summaryOrder');
         Route::post('statistics', 'ApiMerchantController@statisticsOrder');
         Route::get('share-message', 'ApiMerchantController@shareMessage');
@@ -27,6 +31,9 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::post('register/submit/step-1', 'ApiMerchantController@registerSubmitStep1');
         Route::post('register/submit/step-2', 'ApiMerchantController@registerSubmitStep2');
         Route::get('register/detail', 'ApiMerchantController@registerDetail');
+
+        Route::post('balance/detail', 'ApiMerchantController@balanceDetail');
+        Route::post('balance/withdrawal', 'ApiMerchantController@balanceWithdrawal');
 
         Route::group(['prefix' => 'management'], function () {
             Route::post('product/variant/create-combination', 'ApiMerchantManagementController@variantCombination');

@@ -328,7 +328,7 @@ class ApiMerchantTransactionController extends Controller
 
         $transaction = Transaction::where('id_outlet', $idOutlet)
                         ->where('id_transaction', $post['id_transaction'])
-                        ->where('transaction_status', 'Pending')->first();
+                        ->where('transaction_status', 'Pending')->with(['outlet', 'user'])->first();
         if(empty($transaction)){
             return response()->json(['status' => 'fail', 'messages' => ['Data order tidak ditemukan']]);
         }
@@ -341,6 +341,16 @@ class ApiMerchantTransactionController extends Controller
                 'id_transaction' => $transaction['id_transaction'],
                 'tracking_description' => 'Paket sedang dikemas oleh penjual dan akan dikirim',
                 'tracking_date_time' => date('Y-m-d H:i:s')
+            ]);
+
+            $user = User::where('id', $transaction['id_user'])->first();
+            $outlet = Outlet::where('id_outlet', $transaction['id_outlet'])->first();
+            app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], [
+                "outlet_name"      => $outlet['outlet_name'],
+                'id_transaction'   => $transaction['id_transaction'],
+                "id_reference"     => $transaction['transaction_receipt_number'] . ',' . $transaction['id_outlet'],
+                "transaction_date" => $transaction['transaction_date'],
+                'receipt_number'   => $transaction['transaction_receipt_number'],
             ]);
         }
 
@@ -645,7 +655,12 @@ class ApiMerchantTransactionController extends Controller
             'merchant_balance_source'        => $data['source']
         ];
 
-        $create = MerchantLogBalance::updateOrCreate(['id_merchant' => $data['id_merchant'], 'merchant_balance_id_reference' => $data['id_transaction'], 'merchant_balance_source' => $data['source']], $LogBalance);
+        if($balance_nominal < 0){
+            $create = MerchantLogBalance::updateOrCreate($LogBalance);
+        }else{
+            $create = MerchantLogBalance::updateOrCreate(['id_merchant' => $data['id_merchant'], 'merchant_balance_id_reference' => $data['id_transaction'], 'merchant_balance_source' => $data['source']], $LogBalance);
+        }
+
 
         return $create;
     }

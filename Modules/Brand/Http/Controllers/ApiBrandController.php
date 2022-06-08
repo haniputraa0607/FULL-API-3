@@ -113,6 +113,17 @@ class ApiBrandController extends Controller
                 'name_brand'    => 'required',
                 'code_brand'    => 'required'
             ]);
+
+            $checkCode = Brand::where('code_brand', $post['code_brand'])->first();
+            if(!empty($checkCode)){
+                $result = [
+                    'status'  => 'fail',
+                    'messages' => ['Failed create brand. Code already use.']
+                ];
+                DB::rollBack();
+                return response()->json($result);
+            }
+
             try {
                 $defaultBrand = $post['default_brand_status']??null;
                 unset($post['default_brand_status']);
