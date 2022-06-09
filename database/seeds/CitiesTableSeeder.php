@@ -10,4019 +10,5597 @@ class CitiesTableSeeder extends Seeder
 
         \DB::table('cities')->delete();
         
-        \DB::table('cities')->insert(array (
-            0 => 
-            array (
-                'id_city' => 1,
-                'id_province' => 21,
-                'city_name' => 'Aceh Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '23681',
-            ),
-            1 => 
-            array (
-                'id_city' => 2,
-                'id_province' => 21,
-                'city_name' => 'Aceh Barat Daya',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '23764',
-            ),
-            2 => 
-            array (
-                'id_city' => 3,
-                'id_province' => 21,
-                'city_name' => 'Aceh Besar',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '23951',
-            ),
-            3 => 
-            array (
-                'id_city' => 4,
-                'id_province' => 21,
-                'city_name' => 'Aceh Jaya',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '23654',
-            ),
-            4 => 
-            array (
-                'id_city' => 5,
-                'id_province' => 21,
-                'city_name' => 'Aceh Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '23719',
-            ),
-            5 => 
-            array (
-                'id_city' => 6,
-                'id_province' => 21,
-                'city_name' => 'Aceh Singkil',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '24785',
-            ),
-            6 => 
-            array (
-                'id_city' => 7,
-                'id_province' => 21,
-                'city_name' => 'Aceh Tamiang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '24476',
-            ),
-            7 => 
-            array (
-                'id_city' => 8,
-                'id_province' => 21,
-                'city_name' => 'Aceh Tengah',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '24511',
-            ),
-            8 => 
-            array (
-                'id_city' => 9,
-                'id_province' => 21,
-                'city_name' => 'Aceh Tenggara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '24611',
-            ),
-            9 => 
-            array (
-                'id_city' => 10,
-                'id_province' => 21,
-                'city_name' => 'Aceh Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '24454',
-            ),
-            10 => 
-            array (
-                'id_city' => 11,
-                'id_province' => 21,
-                'city_name' => 'Aceh Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '24382',
-            ),
-            11 => 
-            array (
-                'id_city' => 12,
-                'id_province' => 32,
-                'city_name' => 'Agam',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '26411',
-            ),
-            12 => 
-            array (
-                'id_city' => 13,
-                'id_province' => 23,
-                'city_name' => 'Alor',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '85811',
-            ),
-            13 => 
-            array (
-                'id_city' => 14,
-                'id_province' => 19,
-                'city_name' => 'Ambon',
-                'city_type' => 'Kota',
-                'city_postal_code' => '97222',
-            ),
-            14 => 
-            array (
-                'id_city' => 15,
-                'id_province' => 34,
-                'city_name' => 'Asahan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '21214',
-            ),
-            15 => 
-            array (
-                'id_city' => 16,
-                'id_province' => 24,
-                'city_name' => 'Asmat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99777',
-            ),
-            16 => 
-            array (
-                'id_city' => 17,
-                'id_province' => 1,
-                'city_name' => 'Badung',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '80351',
-            ),
-            17 => 
-            array (
-                'id_city' => 18,
-                'id_province' => 13,
-                'city_name' => 'Balangan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '71611',
-            ),
-            18 => 
-            array (
-                'id_city' => 19,
-                'id_province' => 15,
-                'city_name' => 'Balikpapan',
-                'city_type' => 'Kota',
-                'city_postal_code' => '76111',
-            ),
-            19 => 
-            array (
-                'id_city' => 20,
-                'id_province' => 21,
-                'city_name' => 'Banda Aceh',
-                'city_type' => 'Kota',
-                'city_postal_code' => '23238',
-            ),
-            20 => 
-            array (
-                'id_city' => 21,
-                'id_province' => 18,
-                'city_name' => 'Bandar Lampung',
-                'city_type' => 'Kota',
-                'city_postal_code' => '35139',
-            ),
-            21 => 
-            array (
-                'id_city' => 22,
-                'id_province' => 9,
-                'city_name' => 'Bandung',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '40311',
-            ),
-            22 => 
-            array (
-                'id_city' => 23,
-                'id_province' => 9,
-                'city_name' => 'Bandung',
-                'city_type' => 'Kota',
-                'city_postal_code' => '40111',
-            ),
-            23 => 
-            array (
-                'id_city' => 24,
-                'id_province' => 9,
-                'city_name' => 'Bandung Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '40721',
-            ),
-            24 => 
-            array (
-                'id_city' => 25,
-                'id_province' => 29,
-                'city_name' => 'Banggai',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '94711',
-            ),
-            25 => 
-            array (
-                'id_city' => 26,
-                'id_province' => 29,
-                'city_name' => 'Banggai Kepulauan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '94881',
-            ),
-            26 => 
-            array (
-                'id_city' => 27,
-                'id_province' => 2,
-                'city_name' => 'Bangka',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '33212',
-            ),
-            27 => 
-            array (
-                'id_city' => 28,
-                'id_province' => 2,
-                'city_name' => 'Bangka Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '33315',
-            ),
-            28 => 
-            array (
-                'id_city' => 29,
-                'id_province' => 2,
-                'city_name' => 'Bangka Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '33719',
-            ),
-            29 => 
-            array (
-                'id_city' => 30,
-                'id_province' => 2,
-                'city_name' => 'Bangka Tengah',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '33613',
-            ),
-            30 => 
-            array (
-                'id_city' => 31,
-                'id_province' => 11,
-                'city_name' => 'Bangkalan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '69118',
-            ),
-            31 => 
-            array (
-                'id_city' => 32,
-                'id_province' => 1,
-                'city_name' => 'Bangli',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '80619',
-            ),
-            32 => 
-            array (
-                'id_city' => 33,
-                'id_province' => 13,
-                'city_name' => 'Banjar',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '70619',
-            ),
-            33 => 
-            array (
-                'id_city' => 34,
-                'id_province' => 9,
-                'city_name' => 'Banjar',
-                'city_type' => 'Kota',
-                'city_postal_code' => '46311',
-            ),
-            34 => 
-            array (
-                'id_city' => 35,
-                'id_province' => 13,
-                'city_name' => 'Banjarbaru',
-                'city_type' => 'Kota',
-                'city_postal_code' => '70712',
-            ),
-            35 => 
-            array (
-                'id_city' => 36,
-                'id_province' => 13,
-                'city_name' => 'Banjarmasin',
-                'city_type' => 'Kota',
-                'city_postal_code' => '70117',
-            ),
-            36 => 
-            array (
-                'id_city' => 37,
-                'id_province' => 10,
-                'city_name' => 'Banjarnegara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '53419',
-            ),
-            37 => 
-            array (
-                'id_city' => 38,
-                'id_province' => 28,
-                'city_name' => 'Bantaeng',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '92411',
-            ),
-            38 => 
-            array (
-                'id_city' => 39,
-                'id_province' => 5,
-                'city_name' => 'Bantul',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '55715',
-            ),
-            39 => 
-            array (
-                'id_city' => 40,
-                'id_province' => 33,
-                'city_name' => 'Banyuasin',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '30911',
-            ),
-            40 => 
-            array (
-                'id_city' => 41,
-                'id_province' => 10,
-                'city_name' => 'Banyumas',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '53114',
-            ),
-            41 => 
-            array (
-                'id_city' => 42,
-                'id_province' => 11,
-                'city_name' => 'Banyuwangi',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '68416',
-            ),
-            42 => 
-            array (
-                'id_city' => 43,
-                'id_province' => 13,
-                'city_name' => 'Barito Kuala',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '70511',
-            ),
-            43 => 
-            array (
-                'id_city' => 44,
-                'id_province' => 14,
-                'city_name' => 'Barito Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '73711',
-            ),
-            44 => 
-            array (
-                'id_city' => 45,
-                'id_province' => 14,
-                'city_name' => 'Barito Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '73671',
-            ),
-            45 => 
-            array (
-                'id_city' => 46,
-                'id_province' => 14,
-                'city_name' => 'Barito Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '73881',
-            ),
-            46 => 
-            array (
-                'id_city' => 47,
-                'id_province' => 28,
-                'city_name' => 'Barru',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '90719',
-            ),
-            47 => 
-            array (
-                'id_city' => 48,
-                'id_province' => 17,
-                'city_name' => 'Batam',
-                'city_type' => 'Kota',
-                'city_postal_code' => '29413',
-            ),
-            48 => 
-            array (
-                'id_city' => 49,
-                'id_province' => 10,
-                'city_name' => 'Batang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '51211',
-            ),
-            49 => 
-            array (
-                'id_city' => 50,
-                'id_province' => 8,
-                'city_name' => 'Batang Hari',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '36613',
-            ),
-            50 => 
-            array (
-                'id_city' => 51,
-                'id_province' => 11,
-                'city_name' => 'Batu',
-                'city_type' => 'Kota',
-                'city_postal_code' => '65311',
-            ),
-            51 => 
-            array (
-                'id_city' => 52,
-                'id_province' => 34,
-                'city_name' => 'Batu Bara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '21655',
-            ),
-            52 => 
-            array (
-                'id_city' => 53,
-                'id_province' => 30,
-                'city_name' => 'Bau-Bau',
-                'city_type' => 'Kota',
-                'city_postal_code' => '93719',
-            ),
-            53 => 
-            array (
-                'id_city' => 54,
-                'id_province' => 9,
-                'city_name' => 'Bekasi',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '17837',
-            ),
-            54 => 
-            array (
-                'id_city' => 55,
-                'id_province' => 9,
-                'city_name' => 'Bekasi',
-                'city_type' => 'Kota',
-                'city_postal_code' => '17121',
-            ),
-            55 => 
-            array (
-                'id_city' => 56,
-                'id_province' => 2,
-                'city_name' => 'Belitung',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '33419',
-            ),
-            56 => 
-            array (
-                'id_city' => 57,
-                'id_province' => 2,
-                'city_name' => 'Belitung Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '33519',
-            ),
-            57 => 
-            array (
-                'id_city' => 58,
-                'id_province' => 23,
-                'city_name' => 'Belu',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '85711',
-            ),
-            58 => 
-            array (
-                'id_city' => 59,
-                'id_province' => 21,
-                'city_name' => 'Bener Meriah',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '24581',
-            ),
-            59 => 
-            array (
-                'id_city' => 60,
-                'id_province' => 26,
-                'city_name' => 'Bengkalis',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '28719',
-            ),
-            60 => 
-            array (
-                'id_city' => 61,
-                'id_province' => 12,
-                'city_name' => 'Bengkayang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '79213',
-            ),
-            61 => 
-            array (
-                'id_city' => 62,
-                'id_province' => 4,
-                'city_name' => 'Bengkulu',
-                'city_type' => 'Kota',
-                'city_postal_code' => '38229',
-            ),
-            62 => 
-            array (
-                'id_city' => 63,
-                'id_province' => 4,
-                'city_name' => 'Bengkulu Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '38519',
-            ),
-            63 => 
-            array (
-                'id_city' => 64,
-                'id_province' => 4,
-                'city_name' => 'Bengkulu Tengah',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '38319',
-            ),
-            64 => 
-            array (
-                'id_city' => 65,
-                'id_province' => 4,
-                'city_name' => 'Bengkulu Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '38619',
-            ),
-            65 => 
-            array (
-                'id_city' => 66,
-                'id_province' => 15,
-                'city_name' => 'Berau',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '77311',
-            ),
-            66 => 
-            array (
-                'id_city' => 67,
-                'id_province' => 24,
-                'city_name' => 'Biak Numfor',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98119',
-            ),
-            67 => 
-            array (
-                'id_city' => 68,
-                'id_province' => 22,
-                'city_name' => 'Bima',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '84171',
-            ),
-            68 => 
-            array (
-                'id_city' => 69,
-                'id_province' => 22,
-                'city_name' => 'Bima',
-                'city_type' => 'Kota',
-                'city_postal_code' => '84139',
-            ),
-            69 => 
-            array (
-                'id_city' => 70,
-                'id_province' => 34,
-                'city_name' => 'Binjai',
-                'city_type' => 'Kota',
-                'city_postal_code' => '20712',
-            ),
-            70 => 
-            array (
-                'id_city' => 71,
-                'id_province' => 17,
-                'city_name' => 'Bintan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '29135',
-            ),
-            71 => 
-            array (
-                'id_city' => 72,
-                'id_province' => 21,
-                'city_name' => 'Bireuen',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '24219',
-            ),
-            72 => 
-            array (
-                'id_city' => 73,
-                'id_province' => 31,
-                'city_name' => 'Bitung',
-                'city_type' => 'Kota',
-                'city_postal_code' => '95512',
-            ),
-            73 => 
-            array (
-                'id_city' => 74,
-                'id_province' => 11,
-                'city_name' => 'Blitar',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '66171',
-            ),
-            74 => 
-            array (
-                'id_city' => 75,
-                'id_province' => 11,
-                'city_name' => 'Blitar',
-                'city_type' => 'Kota',
-                'city_postal_code' => '66124',
-            ),
-            75 => 
-            array (
-                'id_city' => 76,
-                'id_province' => 10,
-                'city_name' => 'Blora',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '58219',
-            ),
-            76 => 
-            array (
-                'id_city' => 77,
-                'id_province' => 7,
-                'city_name' => 'Boalemo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '96319',
-            ),
-            77 => 
-            array (
-                'id_city' => 78,
-                'id_province' => 9,
-                'city_name' => 'Bogor',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '16911',
-            ),
-            78 => 
-            array (
-                'id_city' => 79,
-                'id_province' => 9,
-                'city_name' => 'Bogor',
-                'city_type' => 'Kota',
-                'city_postal_code' => '16119',
-            ),
-            79 => 
-            array (
-                'id_city' => 80,
-                'id_province' => 11,
-                'city_name' => 'Bojonegoro',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '62119',
-            ),
-            80 => 
-            array (
-                'id_city' => 81,
-                'id_province' => 31,
-            'city_name' => 'Bolaang Mongondow (Bolmong)',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '95755',
-            ),
-            81 => 
-            array (
-                'id_city' => 82,
-                'id_province' => 31,
-                'city_name' => 'Bolaang Mongondow Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '95774',
-            ),
-            82 => 
-            array (
-                'id_city' => 83,
-                'id_province' => 31,
-                'city_name' => 'Bolaang Mongondow Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '95783',
-            ),
-            83 => 
-            array (
-                'id_city' => 84,
-                'id_province' => 31,
-                'city_name' => 'Bolaang Mongondow Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '95765',
-            ),
-            84 => 
-            array (
-                'id_city' => 85,
-                'id_province' => 30,
-                'city_name' => 'Bombana',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '93771',
-            ),
-            85 => 
-            array (
-                'id_city' => 86,
-                'id_province' => 11,
-                'city_name' => 'Bondowoso',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '68219',
-            ),
-            86 => 
-            array (
-                'id_city' => 87,
-                'id_province' => 28,
-                'city_name' => 'Bone',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '92713',
-            ),
-            87 => 
-            array (
-                'id_city' => 88,
-                'id_province' => 7,
-                'city_name' => 'Bone Bolango',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '96511',
-            ),
-            88 => 
-            array (
-                'id_city' => 89,
-                'id_province' => 15,
-                'city_name' => 'Bontang',
-                'city_type' => 'Kota',
-                'city_postal_code' => '75313',
-            ),
-            89 => 
-            array (
-                'id_city' => 90,
-                'id_province' => 24,
-                'city_name' => 'Boven Digoel',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99662',
-            ),
-            90 => 
-            array (
-                'id_city' => 91,
-                'id_province' => 10,
-                'city_name' => 'Boyolali',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '57312',
-            ),
-            91 => 
-            array (
-                'id_city' => 92,
-                'id_province' => 10,
-                'city_name' => 'Brebes',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '52212',
-            ),
-            92 => 
-            array (
-                'id_city' => 93,
-                'id_province' => 32,
-                'city_name' => 'Bukittinggi',
-                'city_type' => 'Kota',
-                'city_postal_code' => '26115',
-            ),
-            93 => 
-            array (
-                'id_city' => 94,
-                'id_province' => 1,
-                'city_name' => 'Buleleng',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '81111',
-            ),
-            94 => 
-            array (
-                'id_city' => 95,
-                'id_province' => 28,
-                'city_name' => 'Bulukumba',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '92511',
-            ),
-            95 => 
-            array (
-                'id_city' => 96,
-                'id_province' => 16,
-            'city_name' => 'Bulungan (Bulongan)',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '77211',
-            ),
-            96 => 
-            array (
-                'id_city' => 97,
-                'id_province' => 8,
-                'city_name' => 'Bungo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '37216',
-            ),
-            97 => 
-            array (
-                'id_city' => 98,
-                'id_province' => 29,
-                'city_name' => 'Buol',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '94564',
-            ),
-            98 => 
-            array (
-                'id_city' => 99,
-                'id_province' => 19,
-                'city_name' => 'Buru',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97371',
-            ),
-            99 => 
-            array (
-                'id_city' => 100,
-                'id_province' => 19,
-                'city_name' => 'Buru Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97351',
-            ),
-            100 => 
-            array (
-                'id_city' => 101,
-                'id_province' => 30,
-                'city_name' => 'Buton',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '93754',
-            ),
-            101 => 
-            array (
-                'id_city' => 102,
-                'id_province' => 30,
-                'city_name' => 'Buton Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '93745',
-            ),
-            102 => 
-            array (
-                'id_city' => 103,
-                'id_province' => 9,
-                'city_name' => 'Ciamis',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '46211',
-            ),
-            103 => 
-            array (
-                'id_city' => 104,
-                'id_province' => 9,
-                'city_name' => 'Cianjur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '43217',
-            ),
-            104 => 
-            array (
-                'id_city' => 105,
-                'id_province' => 10,
-                'city_name' => 'Cilacap',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '53211',
-            ),
-            105 => 
-            array (
-                'id_city' => 106,
-                'id_province' => 3,
-                'city_name' => 'Cilegon',
-                'city_type' => 'Kota',
-                'city_postal_code' => '42417',
-            ),
-            106 => 
-            array (
-                'id_city' => 107,
-                'id_province' => 9,
-                'city_name' => 'Cimahi',
-                'city_type' => 'Kota',
-                'city_postal_code' => '40512',
-            ),
-            107 => 
-            array (
-                'id_city' => 108,
-                'id_province' => 9,
-                'city_name' => 'Cirebon',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '45611',
-            ),
-            108 => 
-            array (
-                'id_city' => 109,
-                'id_province' => 9,
-                'city_name' => 'Cirebon',
-                'city_type' => 'Kota',
-                'city_postal_code' => '45116',
-            ),
-            109 => 
-            array (
-                'id_city' => 110,
-                'id_province' => 34,
-                'city_name' => 'Dairi',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22211',
-            ),
-            110 => 
-            array (
-                'id_city' => 111,
-                'id_province' => 24,
-            'city_name' => 'Deiyai (Deliyai)',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98784',
-            ),
-            111 => 
-            array (
-                'id_city' => 112,
-                'id_province' => 34,
-                'city_name' => 'Deli Serdang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '20511',
-            ),
-            112 => 
-            array (
-                'id_city' => 113,
-                'id_province' => 10,
-                'city_name' => 'Demak',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '59519',
-            ),
-            113 => 
-            array (
-                'id_city' => 114,
-                'id_province' => 1,
-                'city_name' => 'Denpasar',
-                'city_type' => 'Kota',
-                'city_postal_code' => '80227',
-            ),
-            114 => 
-            array (
-                'id_city' => 115,
-                'id_province' => 9,
-                'city_name' => 'Depok',
-                'city_type' => 'Kota',
-                'city_postal_code' => '16416',
-            ),
-            115 => 
-            array (
-                'id_city' => 116,
-                'id_province' => 32,
-                'city_name' => 'Dharmasraya',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '27612',
-            ),
-            116 => 
-            array (
-                'id_city' => 117,
-                'id_province' => 24,
-                'city_name' => 'Dogiyai',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98866',
-            ),
-            117 => 
-            array (
-                'id_city' => 118,
-                'id_province' => 22,
-                'city_name' => 'Dompu',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '84217',
-            ),
-            118 => 
-            array (
-                'id_city' => 119,
-                'id_province' => 29,
-                'city_name' => 'Donggala',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '94341',
-            ),
-            119 => 
-            array (
-                'id_city' => 120,
-                'id_province' => 26,
-                'city_name' => 'Dumai',
-                'city_type' => 'Kota',
-                'city_postal_code' => '28811',
-            ),
-            120 => 
-            array (
-                'id_city' => 121,
-                'id_province' => 33,
-                'city_name' => 'Empat Lawang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '31811',
-            ),
-            121 => 
-            array (
-                'id_city' => 122,
-                'id_province' => 23,
-                'city_name' => 'Ende',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '86351',
-            ),
-            122 => 
-            array (
-                'id_city' => 123,
-                'id_province' => 28,
-                'city_name' => 'Enrekang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '91719',
-            ),
-            123 => 
-            array (
-                'id_city' => 124,
-                'id_province' => 25,
-                'city_name' => 'Fakfak',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98651',
-            ),
-            124 => 
-            array (
-                'id_city' => 125,
-                'id_province' => 23,
-                'city_name' => 'Flores Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '86213',
-            ),
-            125 => 
-            array (
-                'id_city' => 126,
-                'id_province' => 9,
-                'city_name' => 'Garut',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '44126',
-            ),
-            126 => 
-            array (
-                'id_city' => 127,
-                'id_province' => 21,
-                'city_name' => 'Gayo Lues',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '24653',
-            ),
-            127 => 
-            array (
-                'id_city' => 128,
-                'id_province' => 1,
-                'city_name' => 'Gianyar',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '80519',
-            ),
-            128 => 
-            array (
-                'id_city' => 129,
-                'id_province' => 7,
-                'city_name' => 'Gorontalo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '96218',
-            ),
-            129 => 
-            array (
-                'id_city' => 130,
-                'id_province' => 7,
-                'city_name' => 'Gorontalo',
-                'city_type' => 'Kota',
-                'city_postal_code' => '96115',
-            ),
-            130 => 
-            array (
-                'id_city' => 131,
-                'id_province' => 7,
-                'city_name' => 'Gorontalo Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '96611',
-            ),
-            131 => 
-            array (
-                'id_city' => 132,
-                'id_province' => 28,
-                'city_name' => 'Gowa',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '92111',
-            ),
-            132 => 
-            array (
-                'id_city' => 133,
-                'id_province' => 11,
-                'city_name' => 'Gresik',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '61115',
-            ),
-            133 => 
-            array (
-                'id_city' => 134,
-                'id_province' => 10,
-                'city_name' => 'Grobogan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '58111',
-            ),
-            134 => 
-            array (
-                'id_city' => 135,
-                'id_province' => 5,
-                'city_name' => 'Gunung Kidul',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '55812',
-            ),
-            135 => 
-            array (
-                'id_city' => 136,
-                'id_province' => 14,
-                'city_name' => 'Gunung Mas',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '74511',
-            ),
-            136 => 
-            array (
-                'id_city' => 137,
-                'id_province' => 34,
-                'city_name' => 'Gunungsitoli',
-                'city_type' => 'Kota',
-                'city_postal_code' => '22813',
-            ),
-            137 => 
-            array (
-                'id_city' => 138,
-                'id_province' => 20,
-                'city_name' => 'Halmahera Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97757',
-            ),
-            138 => 
-            array (
-                'id_city' => 139,
-                'id_province' => 20,
-                'city_name' => 'Halmahera Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97911',
-            ),
-            139 => 
-            array (
-                'id_city' => 140,
-                'id_province' => 20,
-                'city_name' => 'Halmahera Tengah',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97853',
-            ),
-            140 => 
-            array (
-                'id_city' => 141,
-                'id_province' => 20,
-                'city_name' => 'Halmahera Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97862',
-            ),
-            141 => 
-            array (
-                'id_city' => 142,
-                'id_province' => 20,
-                'city_name' => 'Halmahera Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97762',
-            ),
-            142 => 
-            array (
-                'id_city' => 143,
-                'id_province' => 13,
-                'city_name' => 'Hulu Sungai Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '71212',
-            ),
-            143 => 
-            array (
-                'id_city' => 144,
-                'id_province' => 13,
-                'city_name' => 'Hulu Sungai Tengah',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '71313',
-            ),
-            144 => 
-            array (
-                'id_city' => 145,
-                'id_province' => 13,
-                'city_name' => 'Hulu Sungai Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '71419',
-            ),
-            145 => 
-            array (
-                'id_city' => 146,
-                'id_province' => 34,
-                'city_name' => 'Humbang Hasundutan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22457',
-            ),
-            146 => 
-            array (
-                'id_city' => 147,
-                'id_province' => 26,
-                'city_name' => 'Indragiri Hilir',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '29212',
-            ),
-            147 => 
-            array (
-                'id_city' => 148,
-                'id_province' => 26,
-                'city_name' => 'Indragiri Hulu',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '29319',
-            ),
-            148 => 
-            array (
-                'id_city' => 149,
-                'id_province' => 9,
-                'city_name' => 'Indramayu',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '45214',
-            ),
-            149 => 
-            array (
-                'id_city' => 150,
-                'id_province' => 24,
-                'city_name' => 'Intan Jaya',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98771',
-            ),
-            150 => 
-            array (
-                'id_city' => 151,
-                'id_province' => 6,
-                'city_name' => 'Jakarta Barat',
-                'city_type' => 'Kota',
-                'city_postal_code' => '11220',
-            ),
-            151 => 
-            array (
-                'id_city' => 152,
-                'id_province' => 6,
-                'city_name' => 'Jakarta Pusat',
-                'city_type' => 'Kota',
-                'city_postal_code' => '10540',
-            ),
-            152 => 
-            array (
-                'id_city' => 153,
-                'id_province' => 6,
-                'city_name' => 'Jakarta Selatan',
-                'city_type' => 'Kota',
-                'city_postal_code' => '12230',
-            ),
-            153 => 
-            array (
-                'id_city' => 154,
-                'id_province' => 6,
-                'city_name' => 'Jakarta Timur',
-                'city_type' => 'Kota',
-                'city_postal_code' => '13330',
-            ),
-            154 => 
-            array (
-                'id_city' => 155,
-                'id_province' => 6,
-                'city_name' => 'Jakarta Utara',
-                'city_type' => 'Kota',
-                'city_postal_code' => '14140',
-            ),
-            155 => 
-            array (
-                'id_city' => 156,
-                'id_province' => 8,
-                'city_name' => 'Jambi',
-                'city_type' => 'Kota',
-                'city_postal_code' => '36111',
-            ),
-            156 => 
-            array (
-                'id_city' => 157,
-                'id_province' => 24,
-                'city_name' => 'Jayapura',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99352',
-            ),
-            157 => 
-            array (
-                'id_city' => 158,
-                'id_province' => 24,
-                'city_name' => 'Jayapura',
-                'city_type' => 'Kota',
-                'city_postal_code' => '99114',
-            ),
-            158 => 
-            array (
-                'id_city' => 159,
-                'id_province' => 24,
-                'city_name' => 'Jayawijaya',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99511',
-            ),
-            159 => 
-            array (
-                'id_city' => 160,
-                'id_province' => 11,
-                'city_name' => 'Jember',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '68113',
-            ),
-            160 => 
-            array (
-                'id_city' => 161,
-                'id_province' => 1,
-                'city_name' => 'Jembrana',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '82251',
-            ),
-            161 => 
-            array (
-                'id_city' => 162,
-                'id_province' => 28,
-                'city_name' => 'Jeneponto',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '92319',
-            ),
-            162 => 
-            array (
-                'id_city' => 163,
-                'id_province' => 10,
-                'city_name' => 'Jepara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '59419',
-            ),
-            163 => 
-            array (
-                'id_city' => 164,
-                'id_province' => 11,
-                'city_name' => 'Jombang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '61415',
-            ),
-            164 => 
-            array (
-                'id_city' => 165,
-                'id_province' => 25,
-                'city_name' => 'Kaimana',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98671',
-            ),
-            165 => 
-            array (
-                'id_city' => 166,
-                'id_province' => 26,
-                'city_name' => 'Kampar',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '28411',
-            ),
-            166 => 
-            array (
-                'id_city' => 167,
-                'id_province' => 14,
-                'city_name' => 'Kapuas',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '73583',
-            ),
-            167 => 
-            array (
-                'id_city' => 168,
-                'id_province' => 12,
-                'city_name' => 'Kapuas Hulu',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '78719',
-            ),
-            168 => 
-            array (
-                'id_city' => 169,
-                'id_province' => 10,
-                'city_name' => 'Karanganyar',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '57718',
-            ),
-            169 => 
-            array (
-                'id_city' => 170,
-                'id_province' => 1,
-                'city_name' => 'Karangasem',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '80819',
-            ),
-            170 => 
-            array (
-                'id_city' => 171,
-                'id_province' => 9,
-                'city_name' => 'Karawang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '41311',
-            ),
-            171 => 
-            array (
-                'id_city' => 172,
-                'id_province' => 17,
-                'city_name' => 'Karimun',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '29611',
-            ),
-            172 => 
-            array (
-                'id_city' => 173,
-                'id_province' => 34,
-                'city_name' => 'Karo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22119',
-            ),
-            173 => 
-            array (
-                'id_city' => 174,
-                'id_province' => 14,
-                'city_name' => 'Katingan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '74411',
-            ),
-            174 => 
-            array (
-                'id_city' => 175,
-                'id_province' => 4,
-                'city_name' => 'Kaur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '38911',
-            ),
-            175 => 
-            array (
-                'id_city' => 176,
-                'id_province' => 12,
-                'city_name' => 'Kayong Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '78852',
-            ),
-            176 => 
-            array (
-                'id_city' => 177,
-                'id_province' => 10,
-                'city_name' => 'Kebumen',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '54319',
-            ),
-            177 => 
-            array (
-                'id_city' => 178,
-                'id_province' => 11,
-                'city_name' => 'Kediri',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '64184',
-            ),
-            178 => 
-            array (
-                'id_city' => 179,
-                'id_province' => 11,
-                'city_name' => 'Kediri',
-                'city_type' => 'Kota',
-                'city_postal_code' => '64125',
-            ),
-            179 => 
-            array (
-                'id_city' => 180,
-                'id_province' => 24,
-                'city_name' => 'Keerom',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99461',
-            ),
-            180 => 
-            array (
-                'id_city' => 181,
-                'id_province' => 10,
-                'city_name' => 'Kendal',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '51314',
-            ),
-            181 => 
-            array (
-                'id_city' => 182,
-                'id_province' => 30,
-                'city_name' => 'Kendari',
-                'city_type' => 'Kota',
-                'city_postal_code' => '93126',
-            ),
-            182 => 
-            array (
-                'id_city' => 183,
-                'id_province' => 4,
-                'city_name' => 'Kepahiang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '39319',
-            ),
-            183 => 
-            array (
-                'id_city' => 184,
-                'id_province' => 17,
-                'city_name' => 'Kepulauan Anambas',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '29991',
-            ),
-            184 => 
-            array (
-                'id_city' => 185,
-                'id_province' => 19,
-                'city_name' => 'Kepulauan Aru',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97681',
-            ),
-            185 => 
-            array (
-                'id_city' => 186,
-                'id_province' => 32,
-                'city_name' => 'Kepulauan Mentawai',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '25771',
-            ),
-            186 => 
-            array (
-                'id_city' => 187,
-                'id_province' => 26,
-                'city_name' => 'Kepulauan Meranti',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '28791',
-            ),
-            187 => 
-            array (
-                'id_city' => 188,
-                'id_province' => 31,
-                'city_name' => 'Kepulauan Sangihe',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '95819',
-            ),
-            188 => 
-            array (
-                'id_city' => 189,
-                'id_province' => 6,
-                'city_name' => 'Kepulauan Seribu',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '14550',
-            ),
-            189 => 
-            array (
-                'id_city' => 190,
-                'id_province' => 31,
-            'city_name' => 'Kepulauan Siau Tagulandang Biaro (Sitaro)',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '95862',
-            ),
-            190 => 
-            array (
-                'id_city' => 191,
-                'id_province' => 20,
-                'city_name' => 'Kepulauan Sula',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97995',
-            ),
-            191 => 
-            array (
-                'id_city' => 192,
-                'id_province' => 31,
-                'city_name' => 'Kepulauan Talaud',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '95885',
-            ),
-            192 => 
-            array (
-                'id_city' => 193,
-                'id_province' => 24,
-            'city_name' => 'Kepulauan Yapen (Yapen Waropen)',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98211',
-            ),
-            193 => 
-            array (
-                'id_city' => 194,
-                'id_province' => 8,
-                'city_name' => 'Kerinci',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '37167',
-            ),
-            194 => 
-            array (
-                'id_city' => 195,
-                'id_province' => 12,
-                'city_name' => 'Ketapang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '78874',
-            ),
-            195 => 
-            array (
-                'id_city' => 196,
-                'id_province' => 10,
-                'city_name' => 'Klaten',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '57411',
-            ),
-            196 => 
-            array (
-                'id_city' => 197,
-                'id_province' => 1,
-                'city_name' => 'Klungkung',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '80719',
-            ),
-            197 => 
-            array (
-                'id_city' => 198,
-                'id_province' => 30,
-                'city_name' => 'Kolaka',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '93511',
-            ),
-            198 => 
-            array (
-                'id_city' => 199,
-                'id_province' => 30,
-                'city_name' => 'Kolaka Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '93911',
-            ),
-            199 => 
-            array (
-                'id_city' => 200,
-                'id_province' => 30,
-                'city_name' => 'Konawe',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '93411',
-            ),
-            200 => 
-            array (
-                'id_city' => 201,
-                'id_province' => 30,
-                'city_name' => 'Konawe Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '93811',
-            ),
-            201 => 
-            array (
-                'id_city' => 202,
-                'id_province' => 30,
-                'city_name' => 'Konawe Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '93311',
-            ),
-            202 => 
-            array (
-                'id_city' => 203,
-                'id_province' => 13,
-                'city_name' => 'Kotabaru',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '72119',
-            ),
-            203 => 
-            array (
-                'id_city' => 204,
-                'id_province' => 31,
-                'city_name' => 'Kotamobagu',
-                'city_type' => 'Kota',
-                'city_postal_code' => '95711',
-            ),
-            204 => 
-            array (
-                'id_city' => 205,
-                'id_province' => 14,
-                'city_name' => 'Kotawaringin Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '74119',
-            ),
-            205 => 
-            array (
-                'id_city' => 206,
-                'id_province' => 14,
-                'city_name' => 'Kotawaringin Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '74364',
-            ),
-            206 => 
-            array (
-                'id_city' => 207,
-                'id_province' => 26,
-                'city_name' => 'Kuantan Singingi',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '29519',
-            ),
-            207 => 
-            array (
-                'id_city' => 208,
-                'id_province' => 12,
-                'city_name' => 'Kubu Raya',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '78311',
-            ),
-            208 => 
-            array (
-                'id_city' => 209,
-                'id_province' => 10,
-                'city_name' => 'Kudus',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '59311',
-            ),
-            209 => 
-            array (
-                'id_city' => 210,
-                'id_province' => 5,
-                'city_name' => 'Kulon Progo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '55611',
-            ),
-            210 => 
-            array (
-                'id_city' => 211,
-                'id_province' => 9,
-                'city_name' => 'Kuningan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '45511',
-            ),
-            211 => 
-            array (
-                'id_city' => 212,
-                'id_province' => 23,
-                'city_name' => 'Kupang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '85362',
-            ),
-            212 => 
-            array (
-                'id_city' => 213,
-                'id_province' => 23,
-                'city_name' => 'Kupang',
-                'city_type' => 'Kota',
-                'city_postal_code' => '85119',
-            ),
-            213 => 
-            array (
-                'id_city' => 214,
-                'id_province' => 15,
-                'city_name' => 'Kutai Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '75711',
-            ),
-            214 => 
-            array (
-                'id_city' => 215,
-                'id_province' => 15,
-                'city_name' => 'Kutai Kartanegara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '75511',
-            ),
-            215 => 
-            array (
-                'id_city' => 216,
-                'id_province' => 15,
-                'city_name' => 'Kutai Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '75611',
-            ),
-            216 => 
-            array (
-                'id_city' => 217,
-                'id_province' => 34,
-                'city_name' => 'Labuhan Batu',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '21412',
-            ),
-            217 => 
-            array (
-                'id_city' => 218,
-                'id_province' => 34,
-                'city_name' => 'Labuhan Batu Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '21511',
-            ),
-            218 => 
-            array (
-                'id_city' => 219,
-                'id_province' => 34,
-                'city_name' => 'Labuhan Batu Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '21711',
-            ),
-            219 => 
-            array (
-                'id_city' => 220,
-                'id_province' => 33,
-                'city_name' => 'Lahat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '31419',
-            ),
-            220 => 
-            array (
-                'id_city' => 221,
-                'id_province' => 14,
-                'city_name' => 'Lamandau',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '74611',
-            ),
-            221 => 
-            array (
-                'id_city' => 222,
-                'id_province' => 11,
-                'city_name' => 'Lamongan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '64125',
-            ),
-            222 => 
-            array (
-                'id_city' => 223,
-                'id_province' => 18,
-                'city_name' => 'Lampung Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '34814',
-            ),
-            223 => 
-            array (
-                'id_city' => 224,
-                'id_province' => 18,
-                'city_name' => 'Lampung Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '35511',
-            ),
-            224 => 
-            array (
-                'id_city' => 225,
-                'id_province' => 18,
-                'city_name' => 'Lampung Tengah',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '34212',
-            ),
-            225 => 
-            array (
-                'id_city' => 226,
-                'id_province' => 18,
-                'city_name' => 'Lampung Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '34319',
-            ),
-            226 => 
-            array (
-                'id_city' => 227,
-                'id_province' => 18,
-                'city_name' => 'Lampung Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '34516',
-            ),
-            227 => 
-            array (
-                'id_city' => 228,
-                'id_province' => 12,
-                'city_name' => 'Landak',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '78319',
-            ),
-            228 => 
-            array (
-                'id_city' => 229,
-                'id_province' => 34,
-                'city_name' => 'Langkat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '20811',
-            ),
-            229 => 
-            array (
-                'id_city' => 230,
-                'id_province' => 21,
-                'city_name' => 'Langsa',
-                'city_type' => 'Kota',
-                'city_postal_code' => '24412',
-            ),
-            230 => 
-            array (
-                'id_city' => 231,
-                'id_province' => 24,
-                'city_name' => 'Lanny Jaya',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99531',
-            ),
-            231 => 
-            array (
-                'id_city' => 232,
-                'id_province' => 3,
-                'city_name' => 'Lebak',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '42319',
-            ),
-            232 => 
-            array (
-                'id_city' => 233,
-                'id_province' => 4,
-                'city_name' => 'Lebong',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '39264',
-            ),
-            233 => 
-            array (
-                'id_city' => 234,
-                'id_province' => 23,
-                'city_name' => 'Lembata',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '86611',
-            ),
-            234 => 
-            array (
-                'id_city' => 235,
-                'id_province' => 21,
-                'city_name' => 'Lhokseumawe',
-                'city_type' => 'Kota',
-                'city_postal_code' => '24352',
-            ),
-            235 => 
-            array (
-                'id_city' => 236,
-                'id_province' => 32,
-                'city_name' => 'Lima Puluh Koto/Kota',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '26671',
-            ),
-            236 => 
-            array (
-                'id_city' => 237,
-                'id_province' => 17,
-                'city_name' => 'Lingga',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '29811',
-            ),
-            237 => 
-            array (
-                'id_city' => 238,
-                'id_province' => 22,
-                'city_name' => 'Lombok Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '83311',
-            ),
-            238 => 
-            array (
-                'id_city' => 239,
-                'id_province' => 22,
-                'city_name' => 'Lombok Tengah',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '83511',
-            ),
-            239 => 
-            array (
-                'id_city' => 240,
-                'id_province' => 22,
-                'city_name' => 'Lombok Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '83612',
-            ),
-            240 => 
-            array (
-                'id_city' => 241,
-                'id_province' => 22,
-                'city_name' => 'Lombok Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '83711',
-            ),
-            241 => 
-            array (
-                'id_city' => 242,
-                'id_province' => 33,
-                'city_name' => 'Lubuk Linggau',
-                'city_type' => 'Kota',
-                'city_postal_code' => '31614',
-            ),
-            242 => 
-            array (
-                'id_city' => 243,
-                'id_province' => 11,
-                'city_name' => 'Lumajang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '67319',
-            ),
-            243 => 
-            array (
-                'id_city' => 244,
-                'id_province' => 28,
-                'city_name' => 'Luwu',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '91994',
-            ),
-            244 => 
-            array (
-                'id_city' => 245,
-                'id_province' => 28,
-                'city_name' => 'Luwu Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '92981',
-            ),
-            245 => 
-            array (
-                'id_city' => 246,
-                'id_province' => 28,
-                'city_name' => 'Luwu Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '92911',
-            ),
-            246 => 
-            array (
-                'id_city' => 247,
-                'id_province' => 11,
-                'city_name' => 'Madiun',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '63153',
-            ),
-            247 => 
-            array (
-                'id_city' => 248,
-                'id_province' => 11,
-                'city_name' => 'Madiun',
-                'city_type' => 'Kota',
-                'city_postal_code' => '63122',
-            ),
-            248 => 
-            array (
-                'id_city' => 249,
-                'id_province' => 10,
-                'city_name' => 'Magelang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '56519',
-            ),
-            249 => 
-            array (
-                'id_city' => 250,
-                'id_province' => 10,
-                'city_name' => 'Magelang',
-                'city_type' => 'Kota',
-                'city_postal_code' => '56133',
-            ),
-            250 => 
-            array (
-                'id_city' => 251,
-                'id_province' => 11,
-                'city_name' => 'Magetan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '63314',
-            ),
-            251 => 
-            array (
-                'id_city' => 252,
-                'id_province' => 9,
-                'city_name' => 'Majalengka',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '45412',
-            ),
-            252 => 
-            array (
-                'id_city' => 253,
-                'id_province' => 27,
-                'city_name' => 'Majene',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '91411',
-            ),
-            253 => 
-            array (
-                'id_city' => 254,
-                'id_province' => 28,
-                'city_name' => 'Makassar',
-                'city_type' => 'Kota',
-                'city_postal_code' => '90111',
-            ),
-            254 => 
-            array (
-                'id_city' => 255,
-                'id_province' => 11,
-                'city_name' => 'Malang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '65163',
-            ),
-            255 => 
-            array (
-                'id_city' => 256,
-                'id_province' => 11,
-                'city_name' => 'Malang',
-                'city_type' => 'Kota',
-                'city_postal_code' => '65112',
-            ),
-            256 => 
-            array (
-                'id_city' => 257,
-                'id_province' => 16,
-                'city_name' => 'Malinau',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '77511',
-            ),
-            257 => 
-            array (
-                'id_city' => 258,
-                'id_province' => 19,
-                'city_name' => 'Maluku Barat Daya',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97451',
-            ),
-            258 => 
-            array (
-                'id_city' => 259,
-                'id_province' => 19,
-                'city_name' => 'Maluku Tengah',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97513',
-            ),
-            259 => 
-            array (
-                'id_city' => 260,
-                'id_province' => 19,
-                'city_name' => 'Maluku Tenggara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97651',
-            ),
-            260 => 
-            array (
-                'id_city' => 261,
-                'id_province' => 19,
-                'city_name' => 'Maluku Tenggara Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97465',
-            ),
-            261 => 
-            array (
-                'id_city' => 262,
-                'id_province' => 27,
-                'city_name' => 'Mamasa',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '91362',
-            ),
-            262 => 
-            array (
-                'id_city' => 263,
-                'id_province' => 24,
-                'city_name' => 'Mamberamo Raya',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99381',
-            ),
-            263 => 
-            array (
-                'id_city' => 264,
-                'id_province' => 24,
-                'city_name' => 'Mamberamo Tengah',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99553',
-            ),
-            264 => 
-            array (
-                'id_city' => 265,
-                'id_province' => 27,
-                'city_name' => 'Mamuju',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '91519',
-            ),
-            265 => 
-            array (
-                'id_city' => 266,
-                'id_province' => 27,
-                'city_name' => 'Mamuju Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '91571',
-            ),
-            266 => 
-            array (
-                'id_city' => 267,
-                'id_province' => 31,
-                'city_name' => 'Manado',
-                'city_type' => 'Kota',
-                'city_postal_code' => '95247',
-            ),
-            267 => 
-            array (
-                'id_city' => 268,
-                'id_province' => 34,
-                'city_name' => 'Mandailing Natal',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22916',
-            ),
-            268 => 
-            array (
-                'id_city' => 269,
-                'id_province' => 23,
-                'city_name' => 'Manggarai',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '86551',
-            ),
-            269 => 
-            array (
-                'id_city' => 270,
-                'id_province' => 23,
-                'city_name' => 'Manggarai Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '86711',
-            ),
-            270 => 
-            array (
-                'id_city' => 271,
-                'id_province' => 23,
-                'city_name' => 'Manggarai Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '86811',
-            ),
-            271 => 
-            array (
-                'id_city' => 272,
-                'id_province' => 25,
-                'city_name' => 'Manokwari',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98311',
-            ),
-            272 => 
-            array (
-                'id_city' => 273,
-                'id_province' => 25,
-                'city_name' => 'Manokwari Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98355',
-            ),
-            273 => 
-            array (
-                'id_city' => 274,
-                'id_province' => 24,
-                'city_name' => 'Mappi',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99853',
-            ),
-            274 => 
-            array (
-                'id_city' => 275,
-                'id_province' => 28,
-                'city_name' => 'Maros',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '90511',
-            ),
-            275 => 
-            array (
-                'id_city' => 276,
-                'id_province' => 22,
-                'city_name' => 'Mataram',
-                'city_type' => 'Kota',
-                'city_postal_code' => '83131',
-            ),
-            276 => 
-            array (
-                'id_city' => 277,
-                'id_province' => 25,
-                'city_name' => 'Maybrat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98051',
-            ),
-            277 => 
-            array (
-                'id_city' => 278,
-                'id_province' => 34,
-                'city_name' => 'Medan',
-                'city_type' => 'Kota',
-                'city_postal_code' => '20228',
-            ),
-            278 => 
-            array (
-                'id_city' => 279,
-                'id_province' => 12,
-                'city_name' => 'Melawi',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '78619',
-            ),
-            279 => 
-            array (
-                'id_city' => 280,
-                'id_province' => 8,
-                'city_name' => 'Merangin',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '37319',
-            ),
-            280 => 
-            array (
-                'id_city' => 281,
-                'id_province' => 24,
-                'city_name' => 'Merauke',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99613',
-            ),
-            281 => 
-            array (
-                'id_city' => 282,
-                'id_province' => 18,
-                'city_name' => 'Mesuji',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '34911',
-            ),
-            282 => 
-            array (
-                'id_city' => 283,
-                'id_province' => 18,
-                'city_name' => 'Metro',
-                'city_type' => 'Kota',
-                'city_postal_code' => '34111',
-            ),
-            283 => 
-            array (
-                'id_city' => 284,
-                'id_province' => 24,
-                'city_name' => 'Mimika',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99962',
-            ),
-            284 => 
-            array (
-                'id_city' => 285,
-                'id_province' => 31,
-                'city_name' => 'Minahasa',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '95614',
-            ),
-            285 => 
-            array (
-                'id_city' => 286,
-                'id_province' => 31,
-                'city_name' => 'Minahasa Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '95914',
-            ),
-            286 => 
-            array (
-                'id_city' => 287,
-                'id_province' => 31,
-                'city_name' => 'Minahasa Tenggara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '95995',
-            ),
-            287 => 
-            array (
-                'id_city' => 288,
-                'id_province' => 31,
-                'city_name' => 'Minahasa Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '95316',
-            ),
-            288 => 
-            array (
-                'id_city' => 289,
-                'id_province' => 11,
-                'city_name' => 'Mojokerto',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '61382',
-            ),
-            289 => 
-            array (
-                'id_city' => 290,
-                'id_province' => 11,
-                'city_name' => 'Mojokerto',
-                'city_type' => 'Kota',
-                'city_postal_code' => '61316',
-            ),
-            290 => 
-            array (
-                'id_city' => 291,
-                'id_province' => 29,
-                'city_name' => 'Morowali',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '94911',
-            ),
-            291 => 
-            array (
-                'id_city' => 292,
-                'id_province' => 33,
-                'city_name' => 'Muara Enim',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '31315',
-            ),
-            292 => 
-            array (
-                'id_city' => 293,
-                'id_province' => 8,
-                'city_name' => 'Muaro Jambi',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '36311',
-            ),
-            293 => 
-            array (
-                'id_city' => 294,
-                'id_province' => 4,
-                'city_name' => 'Muko Muko',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '38715',
-            ),
-            294 => 
-            array (
-                'id_city' => 295,
-                'id_province' => 30,
-                'city_name' => 'Muna',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '93611',
-            ),
-            295 => 
-            array (
-                'id_city' => 296,
-                'id_province' => 14,
-                'city_name' => 'Murung Raya',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '73911',
-            ),
-            296 => 
-            array (
-                'id_city' => 297,
-                'id_province' => 33,
-                'city_name' => 'Musi Banyuasin',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '30719',
-            ),
-            297 => 
-            array (
-                'id_city' => 298,
-                'id_province' => 33,
-                'city_name' => 'Musi Rawas',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '31661',
-            ),
-            298 => 
-            array (
-                'id_city' => 299,
-                'id_province' => 24,
-                'city_name' => 'Nabire',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98816',
-            ),
-            299 => 
-            array (
-                'id_city' => 300,
-                'id_province' => 21,
-                'city_name' => 'Nagan Raya',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '23674',
-            ),
-            300 => 
-            array (
-                'id_city' => 301,
-                'id_province' => 23,
-                'city_name' => 'Nagekeo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '86911',
-            ),
-            301 => 
-            array (
-                'id_city' => 302,
-                'id_province' => 17,
-                'city_name' => 'Natuna',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '29711',
-            ),
-            302 => 
-            array (
-                'id_city' => 303,
-                'id_province' => 24,
-                'city_name' => 'Nduga',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99541',
-            ),
-            303 => 
-            array (
-                'id_city' => 304,
-                'id_province' => 23,
-                'city_name' => 'Ngada',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '86413',
-            ),
-            304 => 
-            array (
-                'id_city' => 305,
-                'id_province' => 11,
-                'city_name' => 'Nganjuk',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '64414',
-            ),
-            305 => 
-            array (
-                'id_city' => 306,
-                'id_province' => 11,
-                'city_name' => 'Ngawi',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '63219',
-            ),
-            306 => 
-            array (
-                'id_city' => 307,
-                'id_province' => 34,
-                'city_name' => 'Nias',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22876',
-            ),
-            307 => 
-            array (
-                'id_city' => 308,
-                'id_province' => 34,
-                'city_name' => 'Nias Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22895',
-            ),
-            308 => 
-            array (
-                'id_city' => 309,
-                'id_province' => 34,
-                'city_name' => 'Nias Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22865',
-            ),
-            309 => 
-            array (
-                'id_city' => 310,
-                'id_province' => 34,
-                'city_name' => 'Nias Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22856',
-            ),
-            310 => 
-            array (
-                'id_city' => 311,
-                'id_province' => 16,
-                'city_name' => 'Nunukan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '77421',
-            ),
-            311 => 
-            array (
-                'id_city' => 312,
-                'id_province' => 33,
-                'city_name' => 'Ogan Ilir',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '30811',
-            ),
-            312 => 
-            array (
-                'id_city' => 313,
-                'id_province' => 33,
-                'city_name' => 'Ogan Komering Ilir',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '30618',
-            ),
-            313 => 
-            array (
-                'id_city' => 314,
-                'id_province' => 33,
-                'city_name' => 'Ogan Komering Ulu',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '32112',
-            ),
-            314 => 
-            array (
-                'id_city' => 315,
-                'id_province' => 33,
-                'city_name' => 'Ogan Komering Ulu Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '32211',
-            ),
-            315 => 
-            array (
-                'id_city' => 316,
-                'id_province' => 33,
-                'city_name' => 'Ogan Komering Ulu Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '32312',
-            ),
-            316 => 
-            array (
-                'id_city' => 317,
-                'id_province' => 11,
-                'city_name' => 'Pacitan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '63512',
-            ),
-            317 => 
-            array (
-                'id_city' => 318,
-                'id_province' => 32,
-                'city_name' => 'Padang',
-                'city_type' => 'Kota',
-                'city_postal_code' => '25112',
-            ),
-            318 => 
-            array (
-                'id_city' => 319,
-                'id_province' => 34,
-                'city_name' => 'Padang Lawas',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22763',
-            ),
-            319 => 
-            array (
-                'id_city' => 320,
-                'id_province' => 34,
-                'city_name' => 'Padang Lawas Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22753',
-            ),
-            320 => 
-            array (
-                'id_city' => 321,
-                'id_province' => 32,
-                'city_name' => 'Padang Panjang',
-                'city_type' => 'Kota',
-                'city_postal_code' => '27122',
-            ),
-            321 => 
-            array (
-                'id_city' => 322,
-                'id_province' => 32,
-                'city_name' => 'Padang Pariaman',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '25583',
-            ),
-            322 => 
-            array (
-                'id_city' => 323,
-                'id_province' => 34,
-                'city_name' => 'Padang Sidempuan',
-                'city_type' => 'Kota',
-                'city_postal_code' => '22727',
-            ),
-            323 => 
-            array (
-                'id_city' => 324,
-                'id_province' => 33,
-                'city_name' => 'Pagar Alam',
-                'city_type' => 'Kota',
-                'city_postal_code' => '31512',
-            ),
-            324 => 
-            array (
-                'id_city' => 325,
-                'id_province' => 34,
-                'city_name' => 'Pakpak Bharat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22272',
-            ),
-            325 => 
-            array (
-                'id_city' => 326,
-                'id_province' => 14,
-                'city_name' => 'Palangka Raya',
-                'city_type' => 'Kota',
-                'city_postal_code' => '73112',
-            ),
-            326 => 
-            array (
-                'id_city' => 327,
-                'id_province' => 33,
-                'city_name' => 'Palembang',
-                'city_type' => 'Kota',
-                'city_postal_code' => '31512',
-            ),
-            327 => 
-            array (
-                'id_city' => 328,
-                'id_province' => 28,
-                'city_name' => 'Palopo',
-                'city_type' => 'Kota',
-                'city_postal_code' => '91911',
-            ),
-            328 => 
-            array (
-                'id_city' => 329,
-                'id_province' => 29,
-                'city_name' => 'Palu',
-                'city_type' => 'Kota',
-                'city_postal_code' => '94111',
-            ),
-            329 => 
-            array (
-                'id_city' => 330,
-                'id_province' => 11,
-                'city_name' => 'Pamekasan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '69319',
-            ),
-            330 => 
-            array (
-                'id_city' => 331,
-                'id_province' => 3,
-                'city_name' => 'Pandeglang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '42212',
-            ),
-            331 => 
-            array (
-                'id_city' => 332,
-                'id_province' => 9,
-                'city_name' => 'Pangandaran',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '46511',
-            ),
-            332 => 
-            array (
-                'id_city' => 333,
-                'id_province' => 28,
-                'city_name' => 'Pangkajene Kepulauan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '90611',
-            ),
-            333 => 
-            array (
-                'id_city' => 334,
-                'id_province' => 2,
-                'city_name' => 'Pangkal Pinang',
-                'city_type' => 'Kota',
-                'city_postal_code' => '33115',
-            ),
-            334 => 
-            array (
-                'id_city' => 335,
-                'id_province' => 24,
-                'city_name' => 'Paniai',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98765',
-            ),
-            335 => 
-            array (
-                'id_city' => 336,
-                'id_province' => 28,
-                'city_name' => 'Parepare',
-                'city_type' => 'Kota',
-                'city_postal_code' => '91123',
-            ),
-            336 => 
-            array (
-                'id_city' => 337,
-                'id_province' => 32,
-                'city_name' => 'Pariaman',
-                'city_type' => 'Kota',
-                'city_postal_code' => '25511',
-            ),
-            337 => 
-            array (
-                'id_city' => 338,
-                'id_province' => 29,
-                'city_name' => 'Parigi Moutong',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '94411',
-            ),
-            338 => 
-            array (
-                'id_city' => 339,
-                'id_province' => 32,
-                'city_name' => 'Pasaman',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '26318',
-            ),
-            339 => 
-            array (
-                'id_city' => 340,
-                'id_province' => 32,
-                'city_name' => 'Pasaman Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '26511',
-            ),
-            340 => 
-            array (
-                'id_city' => 341,
-                'id_province' => 15,
-                'city_name' => 'Paser',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '76211',
-            ),
-            341 => 
-            array (
-                'id_city' => 342,
-                'id_province' => 11,
-                'city_name' => 'Pasuruan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '67153',
-            ),
-            342 => 
-            array (
-                'id_city' => 343,
-                'id_province' => 11,
-                'city_name' => 'Pasuruan',
-                'city_type' => 'Kota',
-                'city_postal_code' => '67118',
-            ),
-            343 => 
-            array (
-                'id_city' => 344,
-                'id_province' => 10,
-                'city_name' => 'Pati',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '59114',
-            ),
-            344 => 
-            array (
-                'id_city' => 345,
-                'id_province' => 32,
-                'city_name' => 'Payakumbuh',
-                'city_type' => 'Kota',
-                'city_postal_code' => '26213',
-            ),
-            345 => 
-            array (
-                'id_city' => 346,
-                'id_province' => 25,
-                'city_name' => 'Pegunungan Arfak',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98354',
-            ),
-            346 => 
-            array (
-                'id_city' => 347,
-                'id_province' => 24,
-                'city_name' => 'Pegunungan Bintang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99573',
-            ),
-            347 => 
-            array (
-                'id_city' => 348,
-                'id_province' => 10,
-                'city_name' => 'Pekalongan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '51161',
-            ),
-            348 => 
-            array (
-                'id_city' => 349,
-                'id_province' => 10,
-                'city_name' => 'Pekalongan',
-                'city_type' => 'Kota',
-                'city_postal_code' => '51122',
-            ),
-            349 => 
-            array (
-                'id_city' => 350,
-                'id_province' => 26,
-                'city_name' => 'Pekanbaru',
-                'city_type' => 'Kota',
-                'city_postal_code' => '28112',
-            ),
-            350 => 
-            array (
-                'id_city' => 351,
-                'id_province' => 26,
-                'city_name' => 'Pelalawan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '28311',
-            ),
-            351 => 
-            array (
-                'id_city' => 352,
-                'id_province' => 10,
-                'city_name' => 'Pemalang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '52319',
-            ),
-            352 => 
-            array (
-                'id_city' => 353,
-                'id_province' => 34,
-                'city_name' => 'Pematang Siantar',
-                'city_type' => 'Kota',
-                'city_postal_code' => '21126',
-            ),
-            353 => 
-            array (
-                'id_city' => 354,
-                'id_province' => 15,
-                'city_name' => 'Penajam Paser Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '76311',
-            ),
-            354 => 
-            array (
-                'id_city' => 355,
-                'id_province' => 18,
-                'city_name' => 'Pesawaran',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '35312',
-            ),
-            355 => 
-            array (
-                'id_city' => 356,
-                'id_province' => 18,
-                'city_name' => 'Pesisir Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '35974',
-            ),
-            356 => 
-            array (
-                'id_city' => 357,
-                'id_province' => 32,
-                'city_name' => 'Pesisir Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '25611',
-            ),
-            357 => 
-            array (
-                'id_city' => 358,
-                'id_province' => 21,
-                'city_name' => 'Pidie',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '24116',
-            ),
-            358 => 
-            array (
-                'id_city' => 359,
-                'id_province' => 21,
-                'city_name' => 'Pidie Jaya',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '24186',
-            ),
-            359 => 
-            array (
-                'id_city' => 360,
-                'id_province' => 28,
-                'city_name' => 'Pinrang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '91251',
-            ),
-            360 => 
-            array (
-                'id_city' => 361,
-                'id_province' => 7,
-                'city_name' => 'Pohuwato',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '96419',
-            ),
-            361 => 
-            array (
-                'id_city' => 362,
-                'id_province' => 27,
-                'city_name' => 'Polewali Mandar',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '91311',
-            ),
-            362 => 
-            array (
-                'id_city' => 363,
-                'id_province' => 11,
-                'city_name' => 'Ponorogo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '63411',
-            ),
-            363 => 
-            array (
-                'id_city' => 364,
-                'id_province' => 12,
-                'city_name' => 'Pontianak',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '78971',
-            ),
-            364 => 
-            array (
-                'id_city' => 365,
-                'id_province' => 12,
-                'city_name' => 'Pontianak',
-                'city_type' => 'Kota',
-                'city_postal_code' => '78112',
-            ),
-            365 => 
-            array (
-                'id_city' => 366,
-                'id_province' => 29,
-                'city_name' => 'Poso',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '94615',
-            ),
-            366 => 
-            array (
-                'id_city' => 367,
-                'id_province' => 33,
-                'city_name' => 'Prabumulih',
-                'city_type' => 'Kota',
-                'city_postal_code' => '31121',
-            ),
-            367 => 
-            array (
-                'id_city' => 368,
-                'id_province' => 18,
-                'city_name' => 'Pringsewu',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '35719',
-            ),
-            368 => 
-            array (
-                'id_city' => 369,
-                'id_province' => 11,
-                'city_name' => 'Probolinggo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '67282',
-            ),
-            369 => 
-            array (
-                'id_city' => 370,
-                'id_province' => 11,
-                'city_name' => 'Probolinggo',
-                'city_type' => 'Kota',
-                'city_postal_code' => '67215',
-            ),
-            370 => 
-            array (
-                'id_city' => 371,
-                'id_province' => 14,
-                'city_name' => 'Pulang Pisau',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '74811',
-            ),
-            371 => 
-            array (
-                'id_city' => 372,
-                'id_province' => 20,
-                'city_name' => 'Pulau Morotai',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97771',
-            ),
-            372 => 
-            array (
-                'id_city' => 373,
-                'id_province' => 24,
-                'city_name' => 'Puncak',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98981',
-            ),
-            373 => 
-            array (
-                'id_city' => 374,
-                'id_province' => 24,
-                'city_name' => 'Puncak Jaya',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98979',
-            ),
-            374 => 
-            array (
-                'id_city' => 375,
-                'id_province' => 10,
-                'city_name' => 'Purbalingga',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '53312',
-            ),
-            375 => 
-            array (
-                'id_city' => 376,
-                'id_province' => 9,
-                'city_name' => 'Purwakarta',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '41119',
-            ),
-            376 => 
-            array (
-                'id_city' => 377,
-                'id_province' => 10,
-                'city_name' => 'Purworejo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '54111',
-            ),
-            377 => 
-            array (
-                'id_city' => 378,
-                'id_province' => 25,
-                'city_name' => 'Raja Ampat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98489',
-            ),
-            378 => 
-            array (
-                'id_city' => 379,
-                'id_province' => 4,
-                'city_name' => 'Rejang Lebong',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '39112',
-            ),
-            379 => 
-            array (
-                'id_city' => 380,
-                'id_province' => 10,
-                'city_name' => 'Rembang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '59219',
-            ),
-            380 => 
-            array (
-                'id_city' => 381,
-                'id_province' => 26,
-                'city_name' => 'Rokan Hilir',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '28992',
-            ),
-            381 => 
-            array (
-                'id_city' => 382,
-                'id_province' => 26,
-                'city_name' => 'Rokan Hulu',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '28511',
-            ),
-            382 => 
-            array (
-                'id_city' => 383,
-                'id_province' => 23,
-                'city_name' => 'Rote Ndao',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '85982',
-            ),
-            383 => 
-            array (
-                'id_city' => 384,
-                'id_province' => 21,
-                'city_name' => 'Sabang',
-                'city_type' => 'Kota',
-                'city_postal_code' => '23512',
-            ),
-            384 => 
-            array (
-                'id_city' => 385,
-                'id_province' => 23,
-                'city_name' => 'Sabu Raijua',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '85391',
-            ),
-            385 => 
-            array (
-                'id_city' => 386,
-                'id_province' => 10,
-                'city_name' => 'Salatiga',
-                'city_type' => 'Kota',
-                'city_postal_code' => '50711',
-            ),
-            386 => 
-            array (
-                'id_city' => 387,
-                'id_province' => 15,
-                'city_name' => 'Samarinda',
-                'city_type' => 'Kota',
-                'city_postal_code' => '75133',
-            ),
-            387 => 
-            array (
-                'id_city' => 388,
-                'id_province' => 12,
-                'city_name' => 'Sambas',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '79453',
-            ),
-            388 => 
-            array (
-                'id_city' => 389,
-                'id_province' => 34,
-                'city_name' => 'Samosir',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22392',
-            ),
-            389 => 
-            array (
-                'id_city' => 390,
-                'id_province' => 11,
-                'city_name' => 'Sampang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '69219',
-            ),
-            390 => 
-            array (
-                'id_city' => 391,
-                'id_province' => 12,
-                'city_name' => 'Sanggau',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '78557',
-            ),
-            391 => 
-            array (
-                'id_city' => 392,
-                'id_province' => 24,
-                'city_name' => 'Sarmi',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99373',
-            ),
-            392 => 
-            array (
-                'id_city' => 393,
-                'id_province' => 8,
-                'city_name' => 'Sarolangun',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '37419',
-            ),
-            393 => 
-            array (
-                'id_city' => 394,
-                'id_province' => 32,
-                'city_name' => 'Sawah Lunto',
-                'city_type' => 'Kota',
-                'city_postal_code' => '27416',
-            ),
-            394 => 
-            array (
-                'id_city' => 395,
-                'id_province' => 12,
-                'city_name' => 'Sekadau',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '79583',
-            ),
-            395 => 
-            array (
-                'id_city' => 396,
-                'id_province' => 28,
-            'city_name' => 'Selayar (Kepulauan Selayar)',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '92812',
-            ),
-            396 => 
-            array (
-                'id_city' => 397,
-                'id_province' => 4,
-                'city_name' => 'Seluma',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '38811',
-            ),
-            397 => 
-            array (
-                'id_city' => 398,
-                'id_province' => 10,
-                'city_name' => 'Semarang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '50511',
-            ),
-            398 => 
-            array (
-                'id_city' => 399,
-                'id_province' => 10,
-                'city_name' => 'Semarang',
-                'city_type' => 'Kota',
-                'city_postal_code' => '50135',
-            ),
-            399 => 
-            array (
-                'id_city' => 400,
-                'id_province' => 19,
-                'city_name' => 'Seram Bagian Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97561',
-            ),
-            400 => 
-            array (
-                'id_city' => 401,
-                'id_province' => 19,
-                'city_name' => 'Seram Bagian Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '97581',
-            ),
-            401 => 
-            array (
-                'id_city' => 402,
-                'id_province' => 3,
-                'city_name' => 'Serang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '42182',
-            ),
-            402 => 
-            array (
-                'id_city' => 403,
-                'id_province' => 3,
-                'city_name' => 'Serang',
-                'city_type' => 'Kota',
-                'city_postal_code' => '42111',
-            ),
-            403 => 
-            array (
-                'id_city' => 404,
-                'id_province' => 34,
-                'city_name' => 'Serdang Bedagai',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '20915',
-            ),
-            404 => 
-            array (
-                'id_city' => 405,
-                'id_province' => 14,
-                'city_name' => 'Seruyan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '74211',
-            ),
-            405 => 
-            array (
-                'id_city' => 406,
-                'id_province' => 26,
-                'city_name' => 'Siak',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '28623',
-            ),
-            406 => 
-            array (
-                'id_city' => 407,
-                'id_province' => 34,
-                'city_name' => 'Sibolga',
-                'city_type' => 'Kota',
-                'city_postal_code' => '22522',
-            ),
-            407 => 
-            array (
-                'id_city' => 408,
-                'id_province' => 28,
-                'city_name' => 'Sidenreng Rappang/Rapang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '91613',
-            ),
-            408 => 
-            array (
-                'id_city' => 409,
-                'id_province' => 11,
-                'city_name' => 'Sidoarjo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '61219',
-            ),
-            409 => 
-            array (
-                'id_city' => 410,
-                'id_province' => 29,
-                'city_name' => 'Sigi',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '94364',
-            ),
-            410 => 
-            array (
-                'id_city' => 411,
-                'id_province' => 32,
-            'city_name' => 'Sijunjung (Sawah Lunto Sijunjung)',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '27511',
-            ),
-            411 => 
-            array (
-                'id_city' => 412,
-                'id_province' => 23,
-                'city_name' => 'Sikka',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '86121',
-            ),
-            412 => 
-            array (
-                'id_city' => 413,
-                'id_province' => 34,
-                'city_name' => 'Simalungun',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '21162',
-            ),
-            413 => 
-            array (
-                'id_city' => 414,
-                'id_province' => 21,
-                'city_name' => 'Simeulue',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '23891',
-            ),
-            414 => 
-            array (
-                'id_city' => 415,
-                'id_province' => 12,
-                'city_name' => 'Singkawang',
-                'city_type' => 'Kota',
-                'city_postal_code' => '79117',
-            ),
-            415 => 
-            array (
-                'id_city' => 416,
-                'id_province' => 28,
-                'city_name' => 'Sinjai',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '92615',
-            ),
-            416 => 
-            array (
-                'id_city' => 417,
-                'id_province' => 12,
-                'city_name' => 'Sintang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '78619',
-            ),
-            417 => 
-            array (
-                'id_city' => 418,
-                'id_province' => 11,
-                'city_name' => 'Situbondo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '68316',
-            ),
-            418 => 
-            array (
-                'id_city' => 419,
-                'id_province' => 5,
-                'city_name' => 'Sleman',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '55513',
-            ),
-            419 => 
-            array (
-                'id_city' => 420,
-                'id_province' => 32,
-                'city_name' => 'Solok',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '27365',
-            ),
-            420 => 
-            array (
-                'id_city' => 421,
-                'id_province' => 32,
-                'city_name' => 'Solok',
-                'city_type' => 'Kota',
-                'city_postal_code' => '27315',
-            ),
-            421 => 
-            array (
-                'id_city' => 422,
-                'id_province' => 32,
-                'city_name' => 'Solok Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '27779',
-            ),
-            422 => 
-            array (
-                'id_city' => 423,
-                'id_province' => 28,
-                'city_name' => 'Soppeng',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '90812',
-            ),
-            423 => 
-            array (
-                'id_city' => 424,
-                'id_province' => 25,
-                'city_name' => 'Sorong',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98431',
-            ),
-            424 => 
-            array (
-                'id_city' => 425,
-                'id_province' => 25,
-                'city_name' => 'Sorong',
-                'city_type' => 'Kota',
-                'city_postal_code' => '98411',
-            ),
-            425 => 
-            array (
-                'id_city' => 426,
-                'id_province' => 25,
-                'city_name' => 'Sorong Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98454',
-            ),
-            426 => 
-            array (
-                'id_city' => 427,
-                'id_province' => 10,
-                'city_name' => 'Sragen',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '57211',
-            ),
-            427 => 
-            array (
-                'id_city' => 428,
-                'id_province' => 9,
-                'city_name' => 'Subang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '41215',
-            ),
-            428 => 
-            array (
-                'id_city' => 429,
-                'id_province' => 21,
-                'city_name' => 'Subulussalam',
-                'city_type' => 'Kota',
-                'city_postal_code' => '24882',
-            ),
-            429 => 
-            array (
-                'id_city' => 430,
-                'id_province' => 9,
-                'city_name' => 'Sukabumi',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '43311',
-            ),
-            430 => 
-            array (
-                'id_city' => 431,
-                'id_province' => 9,
-                'city_name' => 'Sukabumi',
-                'city_type' => 'Kota',
-                'city_postal_code' => '43114',
-            ),
-            431 => 
-            array (
-                'id_city' => 432,
-                'id_province' => 14,
-                'city_name' => 'Sukamara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '74712',
-            ),
-            432 => 
-            array (
-                'id_city' => 433,
-                'id_province' => 10,
-                'city_name' => 'Sukoharjo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '57514',
-            ),
-            433 => 
-            array (
-                'id_city' => 434,
-                'id_province' => 23,
-                'city_name' => 'Sumba Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '87219',
-            ),
-            434 => 
-            array (
-                'id_city' => 435,
-                'id_province' => 23,
-                'city_name' => 'Sumba Barat Daya',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '87453',
-            ),
-            435 => 
-            array (
-                'id_city' => 436,
-                'id_province' => 23,
-                'city_name' => 'Sumba Tengah',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '87358',
-            ),
-            436 => 
-            array (
-                'id_city' => 437,
-                'id_province' => 23,
-                'city_name' => 'Sumba Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '87112',
-            ),
-            437 => 
-            array (
-                'id_city' => 438,
-                'id_province' => 22,
-                'city_name' => 'Sumbawa',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '84315',
-            ),
-            438 => 
-            array (
-                'id_city' => 439,
-                'id_province' => 22,
-                'city_name' => 'Sumbawa Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '84419',
-            ),
-            439 => 
-            array (
-                'id_city' => 440,
-                'id_province' => 9,
-                'city_name' => 'Sumedang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '45326',
-            ),
-            440 => 
-            array (
-                'id_city' => 441,
-                'id_province' => 11,
-                'city_name' => 'Sumenep',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '69413',
-            ),
-            441 => 
-            array (
-                'id_city' => 442,
-                'id_province' => 8,
-                'city_name' => 'Sungaipenuh',
-                'city_type' => 'Kota',
-                'city_postal_code' => '37113',
-            ),
-            442 => 
-            array (
-                'id_city' => 443,
-                'id_province' => 24,
-                'city_name' => 'Supiori',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98164',
-            ),
-            443 => 
-            array (
-                'id_city' => 444,
-                'id_province' => 11,
-                'city_name' => 'Surabaya',
-                'city_type' => 'Kota',
-                'city_postal_code' => '60119',
-            ),
-            444 => 
-            array (
-                'id_city' => 445,
-                'id_province' => 10,
-            'city_name' => 'Surakarta (Solo)',
-                'city_type' => 'Kota',
-                'city_postal_code' => '57113',
-            ),
-            445 => 
-            array (
-                'id_city' => 446,
-                'id_province' => 13,
-                'city_name' => 'Tabalong',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '71513',
-            ),
-            446 => 
-            array (
-                'id_city' => 447,
-                'id_province' => 1,
-                'city_name' => 'Tabanan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '82119',
-            ),
-            447 => 
-            array (
-                'id_city' => 448,
-                'id_province' => 28,
-                'city_name' => 'Takalar',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '92212',
-            ),
-            448 => 
-            array (
-                'id_city' => 449,
-                'id_province' => 25,
-                'city_name' => 'Tambrauw',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98475',
-            ),
-            449 => 
-            array (
-                'id_city' => 450,
-                'id_province' => 16,
-                'city_name' => 'Tana Tidung',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '77611',
-            ),
-            450 => 
-            array (
-                'id_city' => 451,
-                'id_province' => 28,
-                'city_name' => 'Tana Toraja',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '91819',
-            ),
-            451 => 
-            array (
-                'id_city' => 452,
-                'id_province' => 13,
-                'city_name' => 'Tanah Bumbu',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '72211',
-            ),
-            452 => 
-            array (
-                'id_city' => 453,
-                'id_province' => 32,
-                'city_name' => 'Tanah Datar',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '27211',
-            ),
-            453 => 
-            array (
-                'id_city' => 454,
-                'id_province' => 13,
-                'city_name' => 'Tanah Laut',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '70811',
-            ),
-            454 => 
-            array (
-                'id_city' => 455,
-                'id_province' => 3,
-                'city_name' => 'Tangerang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '15914',
-            ),
-            455 => 
-            array (
-                'id_city' => 456,
-                'id_province' => 3,
-                'city_name' => 'Tangerang',
-                'city_type' => 'Kota',
-                'city_postal_code' => '15111',
-            ),
-            456 => 
-            array (
-                'id_city' => 457,
-                'id_province' => 3,
-                'city_name' => 'Tangerang Selatan',
-                'city_type' => 'Kota',
-                'city_postal_code' => '15332',
-            ),
-            457 => 
-            array (
-                'id_city' => 458,
-                'id_province' => 18,
-                'city_name' => 'Tanggamus',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '35619',
-            ),
-            458 => 
-            array (
-                'id_city' => 459,
-                'id_province' => 34,
-                'city_name' => 'Tanjung Balai',
-                'city_type' => 'Kota',
-                'city_postal_code' => '21321',
-            ),
-            459 => 
-            array (
-                'id_city' => 460,
-                'id_province' => 8,
-                'city_name' => 'Tanjung Jabung Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '36513',
-            ),
-            460 => 
-            array (
-                'id_city' => 461,
-                'id_province' => 8,
-                'city_name' => 'Tanjung Jabung Timur',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '36719',
-            ),
-            461 => 
-            array (
-                'id_city' => 462,
-                'id_province' => 17,
-                'city_name' => 'Tanjung Pinang',
-                'city_type' => 'Kota',
-                'city_postal_code' => '29111',
-            ),
-            462 => 
-            array (
-                'id_city' => 463,
-                'id_province' => 34,
-                'city_name' => 'Tapanuli Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22742',
-            ),
-            463 => 
-            array (
-                'id_city' => 464,
-                'id_province' => 34,
-                'city_name' => 'Tapanuli Tengah',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22611',
-            ),
-            464 => 
-            array (
-                'id_city' => 465,
-                'id_province' => 34,
-                'city_name' => 'Tapanuli Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22414',
-            ),
-            465 => 
-            array (
-                'id_city' => 466,
-                'id_province' => 13,
-                'city_name' => 'Tapin',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '71119',
-            ),
-            466 => 
-            array (
-                'id_city' => 467,
-                'id_province' => 16,
-                'city_name' => 'Tarakan',
-                'city_type' => 'Kota',
-                'city_postal_code' => '77114',
-            ),
-            467 => 
-            array (
-                'id_city' => 468,
-                'id_province' => 9,
-                'city_name' => 'Tasikmalaya',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '46411',
-            ),
-            468 => 
-            array (
-                'id_city' => 469,
-                'id_province' => 9,
-                'city_name' => 'Tasikmalaya',
-                'city_type' => 'Kota',
-                'city_postal_code' => '46116',
-            ),
-            469 => 
-            array (
-                'id_city' => 470,
-                'id_province' => 34,
-                'city_name' => 'Tebing Tinggi',
-                'city_type' => 'Kota',
-                'city_postal_code' => '20632',
-            ),
-            470 => 
-            array (
-                'id_city' => 471,
-                'id_province' => 8,
-                'city_name' => 'Tebo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '37519',
-            ),
-            471 => 
-            array (
-                'id_city' => 472,
-                'id_province' => 10,
-                'city_name' => 'Tegal',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '52419',
-            ),
-            472 => 
-            array (
-                'id_city' => 473,
-                'id_province' => 10,
-                'city_name' => 'Tegal',
-                'city_type' => 'Kota',
-                'city_postal_code' => '52114',
-            ),
-            473 => 
-            array (
-                'id_city' => 474,
-                'id_province' => 25,
-                'city_name' => 'Teluk Bintuni',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98551',
-            ),
-            474 => 
-            array (
-                'id_city' => 475,
-                'id_province' => 25,
-                'city_name' => 'Teluk Wondama',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98591',
-            ),
-            475 => 
-            array (
-                'id_city' => 476,
-                'id_province' => 10,
-                'city_name' => 'Temanggung',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '56212',
-            ),
-            476 => 
-            array (
-                'id_city' => 477,
-                'id_province' => 20,
-                'city_name' => 'Ternate',
-                'city_type' => 'Kota',
-                'city_postal_code' => '97714',
-            ),
-            477 => 
-            array (
-                'id_city' => 478,
-                'id_province' => 20,
-                'city_name' => 'Tidore Kepulauan',
-                'city_type' => 'Kota',
-                'city_postal_code' => '97815',
-            ),
-            478 => 
-            array (
-                'id_city' => 479,
-                'id_province' => 23,
-                'city_name' => 'Timor Tengah Selatan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '85562',
-            ),
-            479 => 
-            array (
-                'id_city' => 480,
-                'id_province' => 23,
-                'city_name' => 'Timor Tengah Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '85612',
-            ),
-            480 => 
-            array (
-                'id_city' => 481,
-                'id_province' => 34,
-                'city_name' => 'Toba Samosir',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '22316',
-            ),
-            481 => 
-            array (
-                'id_city' => 482,
-                'id_province' => 29,
-                'city_name' => 'Tojo Una-Una',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '94683',
-            ),
-            482 => 
-            array (
-                'id_city' => 483,
-                'id_province' => 29,
-                'city_name' => 'Toli-Toli',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '94542',
-            ),
-            483 => 
-            array (
-                'id_city' => 484,
-                'id_province' => 24,
-                'city_name' => 'Tolikara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99411',
-            ),
-            484 => 
-            array (
-                'id_city' => 485,
-                'id_province' => 31,
-                'city_name' => 'Tomohon',
-                'city_type' => 'Kota',
-                'city_postal_code' => '95416',
-            ),
-            485 => 
-            array (
-                'id_city' => 486,
-                'id_province' => 28,
-                'city_name' => 'Toraja Utara',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '91831',
-            ),
-            486 => 
-            array (
-                'id_city' => 487,
-                'id_province' => 11,
-                'city_name' => 'Trenggalek',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '66312',
-            ),
-            487 => 
-            array (
-                'id_city' => 488,
-                'id_province' => 19,
-                'city_name' => 'Tual',
-                'city_type' => 'Kota',
-                'city_postal_code' => '97612',
-            ),
-            488 => 
-            array (
-                'id_city' => 489,
-                'id_province' => 11,
-                'city_name' => 'Tuban',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '62319',
-            ),
-            489 => 
-            array (
-                'id_city' => 490,
-                'id_province' => 18,
-                'city_name' => 'Tulang Bawang',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '34613',
-            ),
-            490 => 
-            array (
-                'id_city' => 491,
-                'id_province' => 18,
-                'city_name' => 'Tulang Bawang Barat',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '34419',
-            ),
-            491 => 
-            array (
-                'id_city' => 492,
-                'id_province' => 11,
-                'city_name' => 'Tulungagung',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '66212',
-            ),
-            492 => 
-            array (
-                'id_city' => 493,
-                'id_province' => 28,
-                'city_name' => 'Wajo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '90911',
-            ),
-            493 => 
-            array (
-                'id_city' => 494,
-                'id_province' => 30,
-                'city_name' => 'Wakatobi',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '93791',
-            ),
-            494 => 
-            array (
-                'id_city' => 495,
-                'id_province' => 24,
-                'city_name' => 'Waropen',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '98269',
-            ),
-            495 => 
-            array (
-                'id_city' => 496,
-                'id_province' => 18,
-                'city_name' => 'Way Kanan',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '34711',
-            ),
-            496 => 
-            array (
-                'id_city' => 497,
-                'id_province' => 10,
-                'city_name' => 'Wonogiri',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '57619',
-            ),
-            497 => 
-            array (
-                'id_city' => 498,
-                'id_province' => 10,
-                'city_name' => 'Wonosobo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '56311',
-            ),
-            498 => 
-            array (
-                'id_city' => 499,
-                'id_province' => 24,
-                'city_name' => 'Yahukimo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99041',
-            ),
-            499 => 
-            array (
-                'id_city' => 500,
-                'id_province' => 24,
-                'city_name' => 'Yalimo',
-                'city_type' => 'Kabupaten',
-                'city_postal_code' => '99481',
-            ),
-        ));
-        \DB::table('cities')->insert(array (
-            0 => 
-            array (
-                'id_city' => 501,
-                'id_province' => 5,
-                'city_name' => 'Yogyakarta',
-                'city_type' => 'Kota',
-                'city_postal_code' => '55222',
-            ),
-        ));
-        
-        
+        \DB::table('cities')->insert(
+            array (
+                0 =>
+                    array (
+                        'id_city' => 1,
+                        'id_province' => 1,
+                        'id_city_external' => 1,
+                        'city_name' => 'Jembrana',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.3233438',
+                        'city_longitude' => '114.6667939',
+                    ),
+                1 =>
+                    array (
+                        'id_city' => 2,
+                        'id_province' => 1,
+                        'id_city_external' => 2,
+                        'city_name' => 'Tabanan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.4595561',
+                        'city_longitude' => '115.0465991',
+                    ),
+                2 =>
+                    array (
+                        'id_city' => 3,
+                        'id_province' => 1,
+                        'id_city_external' => 3,
+                        'city_name' => 'Buleleng',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.2238968',
+                        'city_longitude' => '114.9516869',
+                    ),
+                3 =>
+                    array (
+                        'id_city' => 4,
+                        'id_province' => 1,
+                        'id_city_external' => 4,
+                        'city_name' => 'Karangasem',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.3465933',
+                        'city_longitude' => '115.5207358',
+                    ),
+                4 =>
+                    array (
+                        'id_city' => 5,
+                        'id_province' => 1,
+                        'id_city_external' => 5,
+                        'city_name' => 'Klungkung',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.727807',
+                        'city_longitude' => '115.5444231',
+                    ),
+                5 =>
+                    array (
+                        'id_city' => 6,
+                        'id_province' => 1,
+                        'id_city_external' => 6,
+                        'city_name' => 'Bangli',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.2975884',
+                        'city_longitude' => '115.3548713',
+                    ),
+                6 =>
+                    array (
+                        'id_city' => 7,
+                        'id_province' => 1,
+                        'id_city_external' => 7,
+                        'city_name' => 'Gianyar',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.4248244',
+                        'city_longitude' => '115.2600506',
+                    ),
+                7 =>
+                    array (
+                        'id_city' => 8,
+                        'id_province' => 1,
+                        'id_city_external' => 8,
+                        'city_name' => 'Badung',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.5819296',
+                        'city_longitude' => '115.1770586',
+                    ),
+                8 =>
+                    array (
+                        'id_city' => 9,
+                        'id_province' => 1,
+                        'id_city_external' => 9,
+                        'city_name' => 'Denpasar',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.6704582',
+                        'city_longitude' => '115.2126293',
+                    ),
+                9 =>
+                    array (
+                        'id_city' => 11,
+                        'id_province' => 2,
+                        'id_city_external' => 10,
+                        'city_name' => 'Bangka Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.7410513',
+                        'city_longitude' => '106.4405872',
+                    ),
+                10 =>
+                    array (
+                        'id_city' => 12,
+                        'id_province' => 2,
+                        'id_city_external' => 11,
+                        'city_name' => 'Bangka Tengah',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.4007823',
+                        'city_longitude' => '106.2051484',
+                    ),
+                11 =>
+                    array (
+                        'id_city' => 13,
+                        'id_province' => 2,
+                        'id_city_external' => 12,
+                        'city_name' => 'Belitung Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.8678037',
+                        'city_longitude' => '108.1428669',
+                    ),
+                12 =>
+                    array (
+                        'id_city' => 14,
+                        'id_province' => 2,
+                        'id_city_external' => 13,
+                        'city_name' => 'Belitung',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.7216743',
+                        'city_longitude' => '107.763621',
+                    ),
+                13 =>
+                    array (
+                        'id_city' => 15,
+                        'id_province' => 2,
+                        'id_city_external' => 14,
+                        'city_name' => 'Bangka Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.8405046',
+                        'city_longitude' => '105.5005483',
+                    ),
+                14 =>
+                    array (
+                        'id_city' => 16,
+                        'id_province' => 2,
+                        'id_city_external' => 15,
+                        'city_name' => 'Bangka',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.874294',
+                        'city_longitude' => '105.92299',
+                    ),
+                15 =>
+                    array (
+                        'id_city' => 17,
+                        'id_province' => 2,
+                        'id_city_external' => 16,
+                        'city_name' => 'Pangkal Pinang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.1172623',
+                        'city_longitude' => '106.1345705',
+                    ),
+                16 =>
+                    array (
+                        'id_city' => 18,
+                        'id_province' => 3,
+                        'id_city_external' => 17,
+                        'city_name' => 'Serang, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.1397339',
+                        'city_longitude' => '106.040506',
+                    ),
+                17 =>
+                    array (
+                        'id_city' => 19,
+                        'id_province' => 3,
+                        'id_city_external' => 18,
+                        'city_name' => 'Cilegon',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.0421999',
+                        'city_longitude' => '106.0351629',
+                    ),
+                18 =>
+                    array (
+                        'id_city' => 20,
+                        'id_province' => 3,
+                        'id_city_external' => 19,
+                        'city_name' => 'Lebak',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.5643956',
+                        'city_longitude' => '106.2522143',
+                    ),
+                19 =>
+                    array (
+                        'id_city' => 21,
+                        'id_province' => 3,
+                        'id_city_external' => 20,
+                        'city_name' => 'Pandeglang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.7482706',
+                        'city_longitude' => '105.6881788',
+                    ),
+                20 =>
+                    array (
+                        'id_city' => 22,
+                        'id_province' => 3,
+                        'id_city_external' => 21,
+                        'city_name' => 'Tangerang, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.1872101',
+                        'city_longitude' => '106.4877072',
+                    ),
+                21 =>
+                    array (
+                        'id_city' => 23,
+                        'id_province' => 3,
+                        'id_city_external' => 22,
+                        'city_name' => 'Tangerang Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.2826944',
+                        'city_longitude' => '106.6998767',
+                    ),
+                22 =>
+                    array (
+                        'id_city' => 24,
+                        'id_province' => 3,
+                        'id_city_external' => 476,
+                        'city_name' => 'Tangerang, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.1872101',
+                        'city_longitude' => '106.4877072',
+                    ),
+                23 =>
+                    array (
+                        'id_city' => 25,
+                        'id_province' => 3,
+                        'id_city_external' => 477,
+                        'city_name' => 'Serang, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.1397339',
+                        'city_longitude' => '106.040506',
+                    ),
+                24 =>
+                    array (
+                        'id_city' => 26,
+                        'id_province' => 4,
+                        'id_city_external' => 23,
+                        'city_name' => 'Kepahiang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.6130091',
+                        'city_longitude' => '102.6675575',
+                    ),
+                25 =>
+                    array (
+                        'id_city' => 27,
+                        'id_province' => 4,
+                        'id_city_external' => 24,
+                        'city_name' => 'Lebong',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.1455094',
+                        'city_longitude' => '102.2090224',
+                    ),
+                26 =>
+                    array (
+                        'id_city' => 28,
+                        'id_province' => 4,
+                        'id_city_external' => 25,
+                        'city_name' => 'Rejang Lebong',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.4548154',
+                        'city_longitude' => '102.6675575',
+                    ),
+                27 =>
+                    array (
+                        'id_city' => 29,
+                        'id_province' => 4,
+                        'id_city_external' => 26,
+                        'city_name' => 'Kaur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.5215978',
+                        'city_longitude' => '103.2663479',
+                    ),
+                28 =>
+                    array (
+                        'id_city' => 30,
+                        'id_province' => 4,
+                        'id_city_external' => 27,
+                        'city_name' => 'Seluma',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.0499387',
+                        'city_longitude' => '102.7135121',
+                    ),
+                29 =>
+                    array (
+                        'id_city' => 31,
+                        'id_province' => 4,
+                        'id_city_external' => 28,
+                        'city_name' => 'Muko Muko',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.6449114',
+                        'city_longitude' => '101.4339148',
+                    ),
+                30 =>
+                    array (
+                        'id_city' => 32,
+                        'id_province' => 4,
+                        'id_city_external' => 29,
+                        'city_name' => 'Bengkulu Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.2663246',
+                        'city_longitude' => '101.9804613',
+                    ),
+                31 =>
+                    array (
+                        'id_city' => 33,
+                        'id_province' => 4,
+                        'id_city_external' => 30,
+                        'city_name' => 'Bengkulu Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.3248409',
+                        'city_longitude' => '103.035694',
+                    ),
+                32 =>
+                    array (
+                        'id_city' => 34,
+                        'id_province' => 4,
+                        'id_city_external' => 31,
+                        'city_name' => 'Bengkulu Tengah',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.6962324',
+                        'city_longitude' => '102.3922135',
+                    ),
+                33 =>
+                    array (
+                        'id_city' => 35,
+                        'id_province' => 4,
+                        'id_city_external' => 32,
+                        'city_name' => 'Bengkulu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.7928451',
+                        'city_longitude' => '102.2607641',
+                    ),
+                34 =>
+                    array (
+                        'id_city' => 36,
+                        'id_province' => 5,
+                        'id_city_external' => 33,
+                        'city_name' => 'Gunung Kidul',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.0305091',
+                        'city_longitude' => '110.6168921',
+                    ),
+                35 =>
+                    array (
+                        'id_city' => 37,
+                        'id_province' => 5,
+                        'id_city_external' => 34,
+                        'city_name' => 'Bantul',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.9190169',
+                        'city_longitude' => '110.3785438',
+                    ),
+                36 =>
+                    array (
+                        'id_city' => 38,
+                        'id_province' => 5,
+                        'id_city_external' => 35,
+                        'city_name' => 'Kulon Progo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.8266798',
+                        'city_longitude' => '110.1640846',
+                    ),
+                37 =>
+                    array (
+                        'id_city' => 39,
+                        'id_province' => 5,
+                        'id_city_external' => 36,
+                        'city_name' => 'Sleman',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.7325213',
+                        'city_longitude' => '110.402376',
+                    ),
+                38 =>
+                    array (
+                        'id_city' => 40,
+                        'id_province' => 5,
+                        'id_city_external' => 37,
+                        'city_name' => 'Yogyakarta',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.7974565',
+                        'city_longitude' => '110.370697',
+                    ),
+                39 =>
+                    array (
+                        'id_city' => 41,
+                        'id_province' => 6,
+                        'id_city_external' => 38,
+                        'city_name' => 'Kepulauan Seribu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.7985265',
+                        'city_longitude' => '106.5071981',
+                    ),
+                40 =>
+                    array (
+                        'id_city' => 42,
+                        'id_province' => 6,
+                        'id_city_external' => 39,
+                        'city_name' => 'Jakarta Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.1384145',
+                        'city_longitude' => '106.863956',
+                    ),
+                41 =>
+                    array (
+                        'id_city' => 43,
+                        'id_province' => 6,
+                        'id_city_external' => 40,
+                        'city_name' => 'Jakarta Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.2250138',
+                        'city_longitude' => '106.9004472',
+                    ),
+                42 =>
+                    array (
+                        'id_city' => 44,
+                        'id_province' => 6,
+                        'id_city_external' => 41,
+                        'city_name' => 'Jakarta Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.2614927',
+                        'city_longitude' => '106.8105998',
+                    ),
+                43 =>
+                    array (
+                        'id_city' => 45,
+                        'id_province' => 6,
+                        'id_city_external' => 42,
+                        'city_name' => 'Jakarta Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.1683295',
+                        'city_longitude' => '106.7588494',
+                    ),
+                44 =>
+                    array (
+                        'id_city' => 46,
+                        'id_province' => 6,
+                        'id_city_external' => 43,
+                        'city_name' => 'Jakarta Pusat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.1864864',
+                        'city_longitude' => '106.8340911',
+                    ),
+                45 =>
+                    array (
+                        'id_city' => 47,
+                        'id_province' => 7,
+                        'id_city_external' => 44,
+                        'city_name' => 'Bone Bolango',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.5657885',
+                        'city_longitude' => '123.3486147',
+                    ),
+                46 =>
+                    array (
+                        'id_city' => 48,
+                        'id_province' => 7,
+                        'id_city_external' => 45,
+                        'city_name' => 'Gorontalo Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.9252647',
+                        'city_longitude' => '122.4920088',
+                    ),
+                47 =>
+                    array (
+                        'id_city' => 49,
+                        'id_province' => 7,
+                        'id_city_external' => 46,
+                        'city_name' => 'Pohuwato',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.7055278',
+                        'city_longitude' => '121.7195459',
+                    ),
+                48 =>
+                    array (
+                        'id_city' => 50,
+                        'id_province' => 7,
+                        'id_city_external' => 47,
+                        'city_name' => 'Gorontalo, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.5435442',
+                        'city_longitude' => '123.0567693',
+                    ),
+                49 =>
+                    array (
+                        'id_city' => 51,
+                        'id_province' => 7,
+                        'id_city_external' => 48,
+                        'city_name' => 'Boalemo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.7013419',
+                        'city_longitude' => '122.2653887',
+                    ),
+                50 =>
+                    array (
+                        'id_city' => 52,
+                        'id_province' => 7,
+                        'id_city_external' => 498,
+                        'city_name' => 'Gorontalo, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.5435442',
+                        'city_longitude' => '123.0567693',
+                    ),
+                51 =>
+                    array (
+                        'id_city' => 53,
+                        'id_province' => 8,
+                        'id_city_external' => 49,
+                        'city_name' => 'Tebo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.2592999',
+                        'city_longitude' => '102.3463875',
+                    ),
+                52 =>
+                    array (
+                        'id_city' => 54,
+                        'id_province' => 8,
+                        'id_city_external' => 50,
+                        'city_name' => 'Sarolangun',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.3230422',
+                        'city_longitude' => '102.7135121',
+                    ),
+                53 =>
+                    array (
+                        'id_city' => 55,
+                        'id_province' => 8,
+                        'id_city_external' => 51,
+                        'city_name' => 'Merangin',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.1752789',
+                        'city_longitude' => '101.9804613',
+                    ),
+                54 =>
+                    array (
+                        'id_city' => 56,
+                        'id_province' => 8,
+                        'id_city_external' => 52,
+                        'city_name' => 'Bungo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.6401338',
+                        'city_longitude' => '101.8891721',
+                    ),
+                55 =>
+                    array (
+                        'id_city' => 57,
+                        'id_province' => 8,
+                        'id_city_external' => 53,
+                        'city_name' => 'Kerinci',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.8720467',
+                        'city_longitude' => '101.4339148',
+                    ),
+                56 =>
+                    array (
+                        'id_city' => 58,
+                        'id_province' => 8,
+                        'id_city_external' => 54,
+                        'city_name' => 'Sungaipenuh',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.0689345',
+                        'city_longitude' => '101.4168819',
+                    ),
+                57 =>
+                    array (
+                        'id_city' => 59,
+                        'id_province' => 8,
+                        'id_city_external' => 55,
+                        'city_name' => 'Tanjung Jabung Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.1024367',
+                        'city_longitude' => '103.8216261',
+                    ),
+                58 =>
+                    array (
+                        'id_city' => 60,
+                        'id_province' => 8,
+                        'id_city_external' => 56,
+                        'city_name' => 'Batang Hari',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.7083922',
+                        'city_longitude' => '103.0817903',
+                    ),
+                59 =>
+                    array (
+                        'id_city' => 61,
+                        'id_province' => 8,
+                        'id_city_external' => 57,
+                        'city_name' => 'Tanjung Jabung Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.105846',
+                        'city_longitude' => '103.0817903',
+                    ),
+                60 =>
+                    array (
+                        'id_city' => 62,
+                        'id_province' => 8,
+                        'id_city_external' => 58,
+                        'city_name' => 'Muaro Jambi',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.552136',
+                        'city_longitude' => '103.8216261',
+                    ),
+                61 =>
+                    array (
+                        'id_city' => 63,
+                        'id_province' => 8,
+                        'id_city_external' => 59,
+                        'city_name' => 'Jambi',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.6101229',
+                        'city_longitude' => '103.6131203',
+                    ),
+                62 =>
+                    array (
+                        'id_city' => 64,
+                        'id_province' => 9,
+                        'id_city_external' => 60,
+                        'city_name' => 'Tasikmalaya, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.6513306',
+                        'city_longitude' => '108.1428669',
+                    ),
+                63 =>
+                    array (
+                        'id_city' => 65,
+                        'id_province' => 9,
+                        'id_city_external' => 61,
+                        'city_name' => 'Pangandaran',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.6150611',
+                        'city_longitude' => '108.4988269',
+                    ),
+                64 =>
+                    array (
+                        'id_city' => 66,
+                        'id_province' => 9,
+                        'id_city_external' => 62,
+                        'city_name' => 'Ciamis',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.3320773',
+                        'city_longitude' => '108.3492543',
+                    ),
+                65 =>
+                    array (
+                        'id_city' => 67,
+                        'id_province' => 9,
+                        'id_city_external' => 63,
+                        'city_name' => 'Banjar',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.3745849',
+                        'city_longitude' => '108.5581899',
+                    ),
+                66 =>
+                    array (
+                        'id_city' => 68,
+                        'id_province' => 9,
+                        'id_city_external' => 64,
+                        'city_name' => 'Cirebon, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.6898876',
+                        'city_longitude' => '108.4750846',
+                    ),
+                67 =>
+                    array (
+                        'id_city' => 69,
+                        'id_province' => 9,
+                        'id_city_external' => 65,
+                        'city_name' => 'Kuningan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.0138053',
+                        'city_longitude' => '108.5700636',
+                    ),
+                68 =>
+                    array (
+                        'id_city' => 70,
+                        'id_province' => 9,
+                        'id_city_external' => 66,
+                        'city_name' => 'Majalengka',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.7790605',
+                        'city_longitude' => '108.2852049',
+                    ),
+                69 =>
+                    array (
+                        'id_city' => 71,
+                        'id_province' => 9,
+                        'id_city_external' => 67,
+                        'city_name' => 'Sumedang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.832858',
+                        'city_longitude' => '107.9531836',
+                    ),
+                70 =>
+                    array (
+                        'id_city' => 72,
+                        'id_province' => 9,
+                        'id_city_external' => 68,
+                        'city_name' => 'Indramayu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.33731',
+                        'city_longitude' => '108.3258329',
+                    ),
+                71 =>
+                    array (
+                        'id_city' => 73,
+                        'id_province' => 9,
+                        'id_city_external' => 69,
+                        'city_name' => 'Garut',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.5012204',
+                        'city_longitude' => '107.763621',
+                    ),
+                72 =>
+                    array (
+                        'id_city' => 74,
+                        'id_province' => 9,
+                        'id_city_external' => 70,
+                        'city_name' => 'Sukabumi, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.2134052',
+                        'city_longitude' => '106.6291304',
+                    ),
+                73 =>
+                    array (
+                        'id_city' => 75,
+                        'id_province' => 9,
+                        'id_city_external' => 71,
+                        'city_name' => 'Cianjur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.3579773',
+                        'city_longitude' => '107.1957203',
+                    ),
+                74 =>
+                    array (
+                        'id_city' => 76,
+                        'id_province' => 9,
+                        'id_city_external' => 72,
+                        'city_name' => 'Karawang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.3227303',
+                        'city_longitude' => '107.3375791',
+                    ),
+                75 =>
+                    array (
+                        'id_city' => 77,
+                        'id_province' => 9,
+                        'id_city_external' => 73,
+                        'city_name' => 'Subang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.3487617',
+                        'city_longitude' => '107.763621',
+                    ),
+                76 =>
+                    array (
+                        'id_city' => 78,
+                        'id_province' => 9,
+                        'id_city_external' => 74,
+                        'city_name' => 'Purwakarta',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.5649241',
+                        'city_longitude' => '107.4321959',
+                    ),
+                77 =>
+                    array (
+                        'id_city' => 79,
+                        'id_province' => 9,
+                        'id_city_external' => 75,
+                        'city_name' => 'Bandung, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.1340702',
+                        'city_longitude' => '107.6215321',
+                    ),
+                78 =>
+                    array (
+                        'id_city' => 80,
+                        'id_province' => 9,
+                        'id_city_external' => 76,
+                        'city_name' => 'Bandung Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.8652214',
+                        'city_longitude' => '107.4919767',
+                    ),
+                79 =>
+                    array (
+                        'id_city' => 81,
+                        'id_province' => 9,
+                        'id_city_external' => 77,
+                        'city_name' => 'Cimahi',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.8794209',
+                        'city_longitude' => '107.5386809',
+                    ),
+                80 =>
+                    array (
+                        'id_city' => 82,
+                        'id_province' => 9,
+                        'id_city_external' => 78,
+                        'city_name' => 'Bekasi, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.2474466',
+                        'city_longitude' => '107.1484521',
+                    ),
+                81 =>
+                    array (
+                        'id_city' => 83,
+                        'id_province' => 9,
+                        'id_city_external' => 79,
+                        'city_name' => 'Bogor, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.5517758',
+                        'city_longitude' => '106.6291304',
+                    ),
+                82 =>
+                    array (
+                        'id_city' => 84,
+                        'id_province' => 9,
+                        'id_city_external' => 80,
+                        'city_name' => 'Depok',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.4024844',
+                        'city_longitude' => '106.7942405',
+                    ),
+                83 =>
+                    array (
+                        'id_city' => 85,
+                        'id_province' => 9,
+                        'id_city_external' => 478,
+                        'city_name' => 'Bandung, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.1340702',
+                        'city_longitude' => '107.6215321',
+                    ),
+                84 =>
+                    array (
+                        'id_city' => 86,
+                        'id_province' => 9,
+                        'id_city_external' => 479,
+                        'city_name' => 'Sukabumi, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.2134052',
+                        'city_longitude' => '106.6291304',
+                    ),
+                85 =>
+                    array (
+                        'id_city' => 87,
+                        'id_province' => 9,
+                        'id_city_external' => 480,
+                        'city_name' => 'Bekasi, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.2474466',
+                        'city_longitude' => '107.1484521',
+                    ),
+                86 =>
+                    array (
+                        'id_city' => 88,
+                        'id_province' => 9,
+                        'id_city_external' => 481,
+                        'city_name' => 'Bogor, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.5517758',
+                        'city_longitude' => '106.6291304',
+                    ),
+                87 =>
+                    array (
+                        'id_city' => 89,
+                        'id_province' => 9,
+                        'id_city_external' => 482,
+                        'city_name' => 'Cirebon, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.6898876',
+                        'city_longitude' => '108.4750846',
+                    ),
+                88 =>
+                    array (
+                        'id_city' => 90,
+                        'id_province' => 9,
+                        'id_city_external' => 483,
+                        'city_name' => 'Tasikmalaya, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.6513306',
+                        'city_longitude' => '108.1428669',
+                    ),
+                89 =>
+                    array (
+                        'id_city' => 91,
+                        'id_province' => 10,
+                        'id_city_external' => 81,
+                        'city_name' => 'Demak',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.9238879',
+                        'city_longitude' => '110.6645683',
+                    ),
+                90 =>
+                    array (
+                        'id_city' => 92,
+                        'id_province' => 10,
+                        'id_city_external' => 82,
+                        'city_name' => 'Jepara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.582711',
+                        'city_longitude' => '110.6786933',
+                    ),
+                91 =>
+                    array (
+                        'id_city' => 93,
+                        'id_province' => 10,
+                        'id_city_external' => 83,
+                        'city_name' => 'Kudus',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.7726186',
+                        'city_longitude' => '110.8791343',
+                    ),
+                92 =>
+                    array (
+                        'id_city' => 94,
+                        'id_province' => 10,
+                        'id_city_external' => 84,
+                        'city_name' => 'Rembang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.8082115',
+                        'city_longitude' => '111.4275888',
+                    ),
+                93 =>
+                    array (
+                        'id_city' => 95,
+                        'id_province' => 10,
+                        'id_city_external' => 85,
+                        'city_name' => 'Pati',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.7449635',
+                        'city_longitude' => '111.0460407',
+                    ),
+                94 =>
+                    array (
+                        'id_city' => 96,
+                        'id_province' => 10,
+                        'id_city_external' => 86,
+                        'city_name' => 'Blora',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.012244',
+                        'city_longitude' => '111.3798928',
+                    ),
+                95 =>
+                    array (
+                        'id_city' => 97,
+                        'id_province' => 10,
+                        'id_city_external' => 87,
+                        'city_name' => 'Grobogan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.1541672',
+                        'city_longitude' => '110.9506636',
+                    ),
+                96 =>
+                    array (
+                        'id_city' => 98,
+                        'id_province' => 10,
+                        'id_city_external' => 88,
+                        'city_name' => 'Karanganyar',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.6387228',
+                        'city_longitude' => '111.0460407',
+                    ),
+                97 =>
+                    array (
+                        'id_city' => 99,
+                        'id_province' => 10,
+                        'id_city_external' => 89,
+                        'city_name' => 'Wonogiri',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.8846484',
+                        'city_longitude' => '111.0460407',
+                    ),
+                98 =>
+                    array (
+                        'id_city' => 100,
+                        'id_province' => 10,
+                        'id_city_external' => 90,
+                        'city_name' => 'Sukoharjo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.6483506',
+                        'city_longitude' => '110.8552919',
+                    ),
+                99 =>
+                    array (
+                        'id_city' => 101,
+                        'id_province' => 10,
+                        'id_city_external' => 91,
+                        'city_name' => 'Klaten',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.739967',
+                        'city_longitude' => '110.6645683',
+                    ),
+                100 =>
+                    array (
+                        'id_city' => 102,
+                        'id_province' => 10,
+                        'id_city_external' => 92,
+                        'city_name' => 'Boyolali',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.4317773',
+                        'city_longitude' => '110.6883536',
+                    ),
+                101 =>
+                    array (
+                        'id_city' => 103,
+                        'id_province' => 10,
+                        'id_city_external' => 93,
+                        'city_name' => 'Sragen',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.43027',
+                        'city_longitude' => '111.0091855',
+                    ),
+                102 =>
+                    array (
+                        'id_city' => 104,
+                        'id_province' => 10,
+                        'id_city_external' => 94,
+                        'city_name' => 'Surakarta (Solo)',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.5695177',
+                        'city_longitude' => '110.8250266',
+                    ),
+                103 =>
+                    array (
+                        'id_city' => 105,
+                        'id_province' => 10,
+                        'id_city_external' => 95,
+                        'city_name' => 'Magelang, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.4305237',
+                        'city_longitude' => '110.2832217',
+                    ),
+                104 =>
+                    array (
+                        'id_city' => 106,
+                        'id_province' => 10,
+                        'id_city_external' => 96,
+                        'city_name' => 'Wonosobo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.3632094',
+                        'city_longitude' => '109.9001796',
+                    ),
+                105 =>
+                    array (
+                        'id_city' => 107,
+                        'id_province' => 10,
+                        'id_city_external' => 97,
+                        'city_name' => 'Temanggung',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.2748721',
+                        'city_longitude' => '110.0891894',
+                    ),
+                106 =>
+                    array (
+                        'id_city' => 108,
+                        'id_province' => 10,
+                        'id_city_external' => 98,
+                        'city_name' => 'Kebumen',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.6680559',
+                        'city_longitude' => '109.6524575',
+                    ),
+                107 =>
+                    array (
+                        'id_city' => 109,
+                        'id_province' => 10,
+                        'id_city_external' => 99,
+                        'city_name' => 'Purworejo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.6964509',
+                        'city_longitude' => '109.9989416',
+                    ),
+                108 =>
+                    array (
+                        'id_city' => 110,
+                        'id_province' => 10,
+                        'id_city_external' => 100,
+                        'city_name' => 'Banjarnegara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.3794368',
+                        'city_longitude' => '109.6163185',
+                    ),
+                109 =>
+                    array (
+                        'id_city' => 111,
+                        'id_province' => 10,
+                        'id_city_external' => 101,
+                        'city_name' => 'Purbalingga',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.3058578',
+                        'city_longitude' => '109.4259114',
+                    ),
+                110 =>
+                    array (
+                        'id_city' => 112,
+                        'id_province' => 10,
+                        'id_city_external' => 102,
+                        'city_name' => 'Cilacap',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.6178096',
+                        'city_longitude' => '108.902683',
+                    ),
+                111 =>
+                    array (
+                        'id_city' => 113,
+                        'id_province' => 10,
+                        'id_city_external' => 103,
+                        'city_name' => 'Banyumas',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.4832133',
+                        'city_longitude' => '109.140438',
+                    ),
+                112 =>
+                    array (
+                        'id_city' => 114,
+                        'id_province' => 10,
+                        'id_city_external' => 104,
+                        'city_name' => 'Tegal, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.9902371',
+                        'city_longitude' => '109.140438',
+                    ),
+                113 =>
+                    array (
+                        'id_city' => 115,
+                        'id_province' => 10,
+                        'id_city_external' => 105,
+                        'city_name' => 'Pemalang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.0599422',
+                        'city_longitude' => '109.4259114',
+                    ),
+                114 =>
+                    array (
+                        'id_city' => 116,
+                        'id_province' => 10,
+                        'id_city_external' => 106,
+                        'city_name' => 'Brebes',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.9591793',
+                        'city_longitude' => '108.902683',
+                    ),
+                115 =>
+                    array (
+                        'id_city' => 117,
+                        'id_province' => 10,
+                        'id_city_external' => 107,
+                        'city_name' => 'Kendal',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.0265442',
+                        'city_longitude' => '110.1879106',
+                    ),
+                116 =>
+                    array (
+                        'id_city' => 118,
+                        'id_province' => 10,
+                        'id_city_external' => 108,
+                        'city_name' => 'Batang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.0392183',
+                        'city_longitude' => '109.9020509',
+                    ),
+                117 =>
+                    array (
+                        'id_city' => 119,
+                        'id_province' => 10,
+                        'id_city_external' => 109,
+                        'city_name' => 'Pekalongan, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.0517128',
+                        'city_longitude' => '109.6163185',
+                    ),
+                118 =>
+                    array (
+                        'id_city' => 120,
+                        'id_province' => 10,
+                        'id_city_external' => 110,
+                        'city_name' => 'Semarang, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.1764785',
+                        'city_longitude' => '110.4738762',
+                    ),
+                119 =>
+                    array (
+                        'id_city' => 121,
+                        'id_province' => 10,
+                        'id_city_external' => 111,
+                        'city_name' => 'Salatiga',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.3306417',
+                        'city_longitude' => '110.5001357',
+                    ),
+                120 =>
+                    array (
+                        'id_city' => 122,
+                        'id_province' => 10,
+                        'id_city_external' => 484,
+                        'city_name' => 'Magelang, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.4305237',
+                        'city_longitude' => '110.2832217',
+                    ),
+                121 =>
+                    array (
+                        'id_city' => 123,
+                        'id_province' => 10,
+                        'id_city_external' => 485,
+                        'city_name' => 'Pekalongan, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.0517128',
+                        'city_longitude' => '109.6163185',
+                    ),
+                122 =>
+                    array (
+                        'id_city' => 124,
+                        'id_province' => 10,
+                        'id_city_external' => 486,
+                        'city_name' => 'Semarang, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.1764785',
+                        'city_longitude' => '110.4738762',
+                    ),
+                123 =>
+                    array (
+                        'id_city' => 125,
+                        'id_province' => 10,
+                        'id_city_external' => 487,
+                        'city_name' => 'Tegal, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.9902371',
+                        'city_longitude' => '109.140438',
+                    ),
+                124 =>
+                    array (
+                        'id_city' => 126,
+                        'id_province' => 11,
+                        'id_city_external' => 112,
+                        'city_name' => 'Sumenep',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.9253999',
+                        'city_longitude' => '113.9060624',
+                    ),
+                125 =>
+                    array (
+                        'id_city' => 127,
+                        'id_province' => 11,
+                        'id_city_external' => 113,
+                        'city_name' => 'Pamekasan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.1050857',
+                        'city_longitude' => '113.5252319',
+                    ),
+                126 =>
+                    array (
+                        'id_city' => 128,
+                        'id_province' => 11,
+                        'id_city_external' => 114,
+                        'city_name' => 'Sampang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.0402326',
+                        'city_longitude' => '113.2394452',
+                    ),
+                127 =>
+                    array (
+                        'id_city' => 129,
+                        'id_province' => 11,
+                        'id_city_external' => 115,
+                        'city_name' => 'Bangkalan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.038375',
+                        'city_longitude' => '112.9136695',
+                    ),
+                128 =>
+                    array (
+                        'id_city' => 130,
+                        'id_province' => 11,
+                        'id_city_external' => 116,
+                        'city_name' => 'Banyuwangi',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.2190944',
+                        'city_longitude' => '114.3691416',
+                    ),
+                129 =>
+                    array (
+                        'id_city' => 131,
+                        'id_province' => 11,
+                        'id_city_external' => 117,
+                        'city_name' => 'Situbondo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.7888522',
+                        'city_longitude' => '114.1914951',
+                    ),
+                130 =>
+                    array (
+                        'id_city' => 132,
+                        'id_province' => 11,
+                        'id_city_external' => 118,
+                        'city_name' => 'Bondowoso',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.9673906',
+                        'city_longitude' => '113.9060624',
+                    ),
+                131 =>
+                    array (
+                        'id_city' => 133,
+                        'id_province' => 11,
+                        'id_city_external' => 119,
+                        'city_name' => 'Jember',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.1844859',
+                        'city_longitude' => '113.6680747',
+                    ),
+                132 =>
+                    array (
+                        'id_city' => 134,
+                        'id_province' => 11,
+                        'id_city_external' => 120,
+                        'city_name' => 'Lumajang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.0943571',
+                        'city_longitude' => '113.1441558',
+                    ),
+                133 =>
+                    array (
+                        'id_city' => 135,
+                        'id_province' => 11,
+                        'id_city_external' => 121,
+                        'city_name' => 'Probolinggo, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.8717562',
+                        'city_longitude' => '113.4776098',
+                    ),
+                134 =>
+                    array (
+                        'id_city' => 136,
+                        'id_province' => 11,
+                        'id_city_external' => 122,
+                        'city_name' => 'Pasuruan, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.7859961',
+                        'city_longitude' => '112.858217',
+                    ),
+                135 =>
+                    array (
+                        'id_city' => 137,
+                        'id_province' => 11,
+                        'id_city_external' => 123,
+                        'city_name' => 'Trenggalek',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.1824112',
+                        'city_longitude' => '111.6183755',
+                    ),
+                136 =>
+                    array (
+                        'id_city' => 138,
+                        'id_province' => 11,
+                        'id_city_external' => 124,
+                        'city_name' => 'Tulungagung',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.091221',
+                        'city_longitude' => '111.9641728',
+                    ),
+                137 =>
+                    array (
+                        'id_city' => 139,
+                        'id_province' => 11,
+                        'id_city_external' => 125,
+                        'city_name' => 'Blitar, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.0954627',
+                        'city_longitude' => '112.1609056',
+                    ),
+                138 =>
+                    array (
+                        'id_city' => 140,
+                        'id_province' => 11,
+                        'id_city_external' => 126,
+                        'city_name' => 'Malang, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.242209',
+                        'city_longitude' => '112.7152125',
+                    ),
+                139 =>
+                    array (
+                        'id_city' => 141,
+                        'id_province' => 11,
+                        'id_city_external' => 127,
+                        'city_name' => 'Batu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.8345797',
+                        'city_longitude' => '112.5364292',
+                    ),
+                140 =>
+                    array (
+                        'id_city' => 142,
+                        'id_province' => 11,
+                        'id_city_external' => 128,
+                        'city_name' => 'Nganjuk',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.5943507',
+                        'city_longitude' => '111.9045541',
+                    ),
+                141 =>
+                    array (
+                        'id_city' => 143,
+                        'id_province' => 11,
+                        'id_city_external' => 129,
+                        'city_name' => 'Kediri, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.8232397',
+                        'city_longitude' => '112.1907122',
+                    ),
+                142 =>
+                    array (
+                        'id_city' => 144,
+                        'id_province' => 11,
+                        'id_city_external' => 130,
+                        'city_name' => 'Pacitan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.126331',
+                        'city_longitude' => '111.1414226',
+                    ),
+                143 =>
+                    array (
+                        'id_city' => 145,
+                        'id_province' => 11,
+                        'id_city_external' => 131,
+                        'city_name' => 'Ponorogo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.8650759',
+                        'city_longitude' => '111.4696322',
+                    ),
+                144 =>
+                    array (
+                        'id_city' => 146,
+                        'id_province' => 11,
+                        'id_city_external' => 132,
+                        'city_name' => 'Magetan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.6433138',
+                        'city_longitude' => '111.356045',
+                    ),
+                145 =>
+                    array (
+                        'id_city' => 147,
+                        'id_province' => 11,
+                        'id_city_external' => 133,
+                        'city_name' => 'Ngawi',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.460987',
+                        'city_longitude' => '111.3321974',
+                    ),
+                146 =>
+                    array (
+                        'id_city' => 148,
+                        'id_province' => 11,
+                        'id_city_external' => 134,
+                        'city_name' => 'Madiun, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.6093306',
+                        'city_longitude' => '111.6183755',
+                    ),
+                147 =>
+                    array (
+                        'id_city' => 149,
+                        'id_province' => 11,
+                        'id_city_external' => 135,
+                        'city_name' => 'Tuban',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.8949099',
+                        'city_longitude' => '112.0416754',
+                    ),
+                148 =>
+                    array (
+                        'id_city' => 150,
+                        'id_province' => 11,
+                        'id_city_external' => 136,
+                        'city_name' => 'Lamongan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.1269261',
+                        'city_longitude' => '112.3337769',
+                    ),
+                149 =>
+                    array (
+                        'id_city' => 151,
+                        'id_province' => 11,
+                        'id_city_external' => 137,
+                        'city_name' => 'Bojonegoro',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.3174629',
+                        'city_longitude' => '111.7614661',
+                    ),
+                150 =>
+                    array (
+                        'id_city' => 152,
+                        'id_province' => 11,
+                        'id_city_external' => 138,
+                        'city_name' => 'Jombang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.5740867',
+                        'city_longitude' => '112.28609',
+                    ),
+                151 =>
+                    array (
+                        'id_city' => 153,
+                        'id_province' => 11,
+                        'id_city_external' => 139,
+                        'city_name' => 'Mojokerto, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.563831',
+                        'city_longitude' => '112.4768287',
+                    ),
+                152 =>
+                    array (
+                        'id_city' => 154,
+                        'id_province' => 11,
+                        'id_city_external' => 140,
+                        'city_name' => 'Sidoarjo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.4726134',
+                        'city_longitude' => '112.6675398',
+                    ),
+                153 =>
+                    array (
+                        'id_city' => 155,
+                        'id_province' => 11,
+                        'id_city_external' => 141,
+                        'city_name' => 'Gresik',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.1550291',
+                        'city_longitude' => '112.5721881',
+                    ),
+                154 =>
+                    array (
+                        'id_city' => 156,
+                        'id_province' => 11,
+                        'id_city_external' => 142,
+                        'city_name' => 'Surabaya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.2651026',
+                        'city_longitude' => '112.7450001',
+                    ),
+                155 =>
+                    array (
+                        'id_city' => 157,
+                        'id_province' => 11,
+                        'id_city_external' => 488,
+                        'city_name' => 'Blitar, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.0954627',
+                        'city_longitude' => '112.1609056',
+                    ),
+                156 =>
+                    array (
+                        'id_city' => 158,
+                        'id_province' => 11,
+                        'id_city_external' => 489,
+                        'city_name' => 'Kediri, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.8232397',
+                        'city_longitude' => '112.1907122',
+                    ),
+                157 =>
+                    array (
+                        'id_city' => 159,
+                        'id_province' => 11,
+                        'id_city_external' => 490,
+                        'city_name' => 'Madiun, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.6093306',
+                        'city_longitude' => '111.6183755',
+                    ),
+                158 =>
+                    array (
+                        'id_city' => 160,
+                        'id_province' => 11,
+                        'id_city_external' => 491,
+                        'city_name' => 'Malang, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.242209',
+                        'city_longitude' => '112.7152125',
+                    ),
+                159 =>
+                    array (
+                        'id_city' => 161,
+                        'id_province' => 11,
+                        'id_city_external' => 492,
+                        'city_name' => 'Mojokerto, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.563831',
+                        'city_longitude' => '112.4768287',
+                    ),
+                160 =>
+                    array (
+                        'id_city' => 162,
+                        'id_province' => 11,
+                        'id_city_external' => 493,
+                        'city_name' => 'Pasuruan, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.7859961',
+                        'city_longitude' => '112.858217',
+                    ),
+                161 =>
+                    array (
+                        'id_city' => 163,
+                        'id_province' => 11,
+                        'id_city_external' => 494,
+                        'city_name' => 'Probolinggo, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.8717562',
+                        'city_longitude' => '113.4776098',
+                    ),
+                162 =>
+                    array (
+                        'id_city' => 164,
+                        'id_province' => 12,
+                        'id_city_external' => 143,
+                        'city_name' => 'Melawi',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.7000681',
+                        'city_longitude' => '111.6660725',
+                    ),
+                163 =>
+                    array (
+                        'id_city' => 165,
+                        'id_province' => 12,
+                        'id_city_external' => 144,
+                        'city_name' => 'Sekadau',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.0697175',
+                        'city_longitude' => '110.9983515',
+                    ),
+                164 =>
+                    array (
+                        'id_city' => 166,
+                        'id_province' => 12,
+                        'id_city_external' => 145,
+                        'city_name' => 'Sambas',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.3625191',
+                        'city_longitude' => '109.2831531',
+                    ),
+                165 =>
+                    array (
+                        'id_city' => 167,
+                        'id_province' => 12,
+                        'id_city_external' => 146,
+                        'city_name' => 'Landak',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.4237287',
+                        'city_longitude' => '109.7591675',
+                    ),
+                166 =>
+                    array (
+                        'id_city' => 168,
+                        'id_province' => 12,
+                        'id_city_external' => 147,
+                        'city_name' => 'Bengkayang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.06911',
+                        'city_longitude' => '109.6639309',
+                    ),
+                167 =>
+                    array (
+                        'id_city' => 169,
+                        'id_province' => 12,
+                        'id_city_external' => 148,
+                        'city_name' => 'Singkawang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.9103805',
+                        'city_longitude' => '109.0215438',
+                    ),
+                168 =>
+                    array (
+                        'id_city' => 170,
+                        'id_province' => 12,
+                        'id_city_external' => 149,
+                        'city_name' => 'Mempawah',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.3897139',
+                        'city_longitude' => '109.140438',
+                    ),
+                169 =>
+                    array (
+                        'id_city' => 171,
+                        'id_province' => 12,
+                        'id_city_external' => 150,
+                        'city_name' => 'Ketapang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.5697615',
+                        'city_longitude' => '110.5215459',
+                    ),
+                170 =>
+                    array (
+                        'id_city' => 172,
+                        'id_province' => 12,
+                        'id_city_external' => 151,
+                        'city_name' => 'Kayong Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.9225877',
+                        'city_longitude' => '110.0449662',
+                    ),
+                171 =>
+                    array (
+                        'id_city' => 173,
+                        'id_province' => 12,
+                        'id_city_external' => 152,
+                        'city_name' => 'Kapuas Hulu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.8336697',
+                        'city_longitude' => '113.0011989',
+                    ),
+                172 =>
+                    array (
+                        'id_city' => 174,
+                        'id_province' => 12,
+                        'id_city_external' => 153,
+                        'city_name' => 'Sintang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.1378068',
+                        'city_longitude' => '112.8105512',
+                    ),
+                173 =>
+                    array (
+                        'id_city' => 175,
+                        'id_province' => 12,
+                        'id_city_external' => 154,
+                        'city_name' => 'Sanggau',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.1400117',
+                        'city_longitude' => '110.5215459',
+                    ),
+                174 =>
+                    array (
+                        'id_city' => 176,
+                        'id_province' => 12,
+                        'id_city_external' => 155,
+                        'city_name' => 'Kubu Raya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.3533938',
+                        'city_longitude' => '109.4735066',
+                    ),
+                175 =>
+                    array (
+                        'id_city' => 177,
+                        'id_province' => 12,
+                        'id_city_external' => 501,
+                        'city_name' => 'Pontianak, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.3897139',
+                        'city_longitude' => '109.140438',
+                    ),
+                176 =>
+                    array (
+                        'id_city' => 178,
+                        'id_province' => 13,
+                        'id_city_external' => 156,
+                        'city_name' => 'Tanah Bumbu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.4512244',
+                        'city_longitude' => '115.5681084',
+                    ),
+                177 =>
+                    array (
+                        'id_city' => 179,
+                        'id_province' => 13,
+                        'id_city_external' => 157,
+                        'city_name' => 'Kotabaru',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.0029841',
+                        'city_longitude' => '115.9467997',
+                    ),
+                178 =>
+                    array (
+                        'id_city' => 180,
+                        'id_province' => 13,
+                        'id_city_external' => 158,
+                        'city_name' => 'Tabalong',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.864302',
+                        'city_longitude' => '115.5681084',
+                    ),
+                179 =>
+                    array (
+                        'id_city' => 181,
+                        'id_province' => 13,
+                        'id_city_external' => 159,
+                        'city_name' => 'Balangan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.3260425',
+                        'city_longitude' => '115.6154732',
+                    ),
+                180 =>
+                    array (
+                        'id_city' => 182,
+                        'id_province' => 13,
+                        'id_city_external' => 160,
+                        'city_name' => 'Hulu Sungai Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.4421225',
+                        'city_longitude' => '115.188916',
+                    ),
+                181 =>
+                    array (
+                        'id_city' => 183,
+                        'id_province' => 13,
+                        'id_city_external' => 161,
+                        'city_name' => 'Hulu Sungai Tengah',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.6153162',
+                        'city_longitude' => '115.5207358',
+                    ),
+                182 =>
+                    array (
+                        'id_city' => 184,
+                        'id_province' => 13,
+                        'id_city_external' => 162,
+                        'city_name' => 'Hulu Sungai Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.7662681',
+                        'city_longitude' => '115.2363408',
+                    ),
+                183 =>
+                    array (
+                        'id_city' => 185,
+                        'id_province' => 13,
+                        'id_city_external' => 163,
+                        'city_name' => 'Banjar',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.3200228',
+                        'city_longitude' => '114.9991464',
+                    ),
+                184 =>
+                    array (
+                        'id_city' => 186,
+                        'id_province' => 13,
+                        'id_city_external' => 164,
+                        'city_name' => 'Tapin',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.9160746',
+                        'city_longitude' => '115.0465991',
+                    ),
+                185 =>
+                    array (
+                        'id_city' => 187,
+                        'id_province' => 13,
+                        'id_city_external' => 165,
+                        'city_name' => 'Tanah Laut',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.7694047',
+                        'city_longitude' => '114.8092691',
+                    ),
+                186 =>
+                    array (
+                        'id_city' => 188,
+                        'id_province' => 13,
+                        'id_city_external' => 166,
+                        'city_name' => 'Banjarbaru',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.4667033',
+                        'city_longitude' => '114.7490673',
+                    ),
+                187 =>
+                    array (
+                        'id_city' => 189,
+                        'id_province' => 13,
+                        'id_city_external' => 167,
+                        'city_name' => 'Barito Kuala',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.0714738',
+                        'city_longitude' => '114.6667939',
+                    ),
+                188 =>
+                    array (
+                        'id_city' => 190,
+                        'id_province' => 13,
+                        'id_city_external' => 168,
+                        'city_name' => 'Banjarmasin',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.3167073',
+                        'city_longitude' => '114.5901236',
+                    ),
+                189 =>
+                    array (
+                        'id_city' => 191,
+                        'id_province' => 14,
+                        'id_city_external' => 169,
+                        'city_name' => 'Pulang Pisau',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.6849607',
+                        'city_longitude' => '113.9536466',
+                    ),
+                190 =>
+                    array (
+                        'id_city' => 192,
+                        'id_province' => 14,
+                        'id_city_external' => 170,
+                        'city_name' => 'Lamandau',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.8526377',
+                        'city_longitude' => '111.2845025',
+                    ),
+                191 =>
+                    array (
+                        'id_city' => 193,
+                        'id_province' => 14,
+                        'id_city_external' => 171,
+                        'city_name' => 'Kapuas',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.8116445',
+                        'city_longitude' => '114.3341432',
+                    ),
+                192 =>
+                    array (
+                        'id_city' => 194,
+                        'id_province' => 14,
+                        'id_city_external' => 172,
+                        'city_name' => 'Gunung Mas',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.2522464',
+                        'city_longitude' => '113.5728501',
+                    ),
+                193 =>
+                    array (
+                        'id_city' => 195,
+                        'id_province' => 14,
+                        'id_city_external' => 173,
+                        'city_name' => 'Katingan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.9758379',
+                        'city_longitude' => '112.8105512',
+                    ),
+                194 =>
+                    array (
+                        'id_city' => 196,
+                        'id_province' => 14,
+                        'id_city_external' => 174,
+                        'city_name' => 'Kotawaringin Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.1225475',
+                        'city_longitude' => '112.8105512',
+                    ),
+                195 =>
+                    array (
+                        'id_city' => 197,
+                        'id_province' => 14,
+                        'id_city_external' => 175,
+                        'city_name' => 'Seruyan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.0123467',
+                        'city_longitude' => '112.4291464',
+                    ),
+                196 =>
+                    array (
+                        'id_city' => 198,
+                        'id_province' => 14,
+                        'id_city_external' => 176,
+                        'city_name' => 'Kotawaringin Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.5063419',
+                        'city_longitude' => '111.7614661',
+                    ),
+                197 =>
+                    array (
+                        'id_city' => 199,
+                        'id_province' => 14,
+                        'id_city_external' => 177,
+                        'city_name' => 'Sukamara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.6267517',
+                        'city_longitude' => '111.2368084',
+                    ),
+                198 =>
+                    array (
+                        'id_city' => 200,
+                        'id_province' => 14,
+                        'id_city_external' => 178,
+                        'city_name' => 'Murung Raya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.1362171',
+                        'city_longitude' => '114.3341432',
+                    ),
+                199 =>
+                    array (
+                        'id_city' => 201,
+                        'id_province' => 14,
+                        'id_city_external' => 179,
+                        'city_name' => 'Barito Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.9587136',
+                        'city_longitude' => '115.094045',
+                    ),
+                200 =>
+                    array (
+                        'id_city' => 202,
+                        'id_province' => 14,
+                        'id_city_external' => 180,
+                        'city_name' => 'Barito Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.875943',
+                        'city_longitude' => '114.8092691',
+                    ),
+                201 =>
+                    array (
+                        'id_city' => 203,
+                        'id_province' => 14,
+                        'id_city_external' => 181,
+                        'city_name' => 'Barito Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.0123999',
+                        'city_longitude' => '115.188916',
+                    ),
+                202 =>
+                    array (
+                        'id_city' => 204,
+                        'id_province' => 14,
+                        'id_city_external' => 182,
+                        'city_name' => 'Palangka Raya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.7493777',
+                        'city_longitude' => '113.6680747',
+                    ),
+                203 =>
+                    array (
+                        'id_city' => 205,
+                        'id_province' => 15,
+                        'id_city_external' => 183,
+                        'city_name' => 'Berau',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.0450883',
+                        'city_longitude' => '117.3616476',
+                    ),
+                204 =>
+                    array (
+                        'id_city' => 206,
+                        'id_province' => 15,
+                        'id_city_external' => 184,
+                        'city_name' => 'Samarinda',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.5016166',
+                        'city_longitude' => '117.1264753',
+                    ),
+                205 =>
+                    array (
+                        'id_city' => 207,
+                        'id_province' => 15,
+                        'id_city_external' => 185,
+                        'city_name' => 'Penajam Paser Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.2917094',
+                        'city_longitude' => '116.5137964',
+                    ),
+                206 =>
+                    array (
+                        'id_city' => 208,
+                        'id_province' => 15,
+                        'id_city_external' => 186,
+                        'city_name' => 'Paser',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.7175266',
+                        'city_longitude' => '115.9467997',
+                    ),
+                207 =>
+                    array (
+                        'id_city' => 209,
+                        'id_province' => 15,
+                        'id_city_external' => 187,
+                        'city_name' => 'Balikpapan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.1487418',
+                        'city_longitude' => '116.8715474',
+                    ),
+                208 =>
+                    array (
+                        'id_city' => 210,
+                        'id_province' => 15,
+                        'id_city_external' => 188,
+                        'city_name' => 'Kutai Kartanegara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.1336655',
+                        'city_longitude' => '116.6081653',
+                    ),
+                209 =>
+                    array (
+                        'id_city' => 211,
+                        'id_province' => 15,
+                        'id_city_external' => 189,
+                        'city_name' => 'Kutai Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.4051796',
+                        'city_longitude' => '115.8521764',
+                    ),
+                210 =>
+                    array (
+                        'id_city' => 212,
+                        'id_province' => 15,
+                        'id_city_external' => 190,
+                        'city_name' => 'Kutai Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.9433774',
+                        'city_longitude' => '116.9852422',
+                    ),
+                211 =>
+                    array (
+                        'id_city' => 213,
+                        'id_province' => 15,
+                        'id_city_external' => 191,
+                        'city_name' => 'Bontang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.0496978',
+                        'city_longitude' => '117.4321452',
+                    ),
+                212 =>
+                    array (
+                        'id_city' => 214,
+                        'id_province' => 15,
+                        'id_city_external' => 502,
+                        'city_name' => 'Mahakam Ulu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0',
+                        'city_longitude' => '0',
+                    ),
+                213 =>
+                    array (
+                        'id_city' => 215,
+                        'id_province' => 16,
+                        'id_city_external' => 192,
+                        'city_name' => 'Malinau',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.0730929',
+                        'city_longitude' => '116.0413889',
+                    ),
+                214 =>
+                    array (
+                        'id_city' => 216,
+                        'id_province' => 16,
+                        'id_city_external' => 193,
+                        'city_name' => 'Nunukan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '4.0809649',
+                        'city_longitude' => '116.6081653',
+                    ),
+                215 =>
+                    array (
+                        'id_city' => 217,
+                        'id_province' => 16,
+                        'id_city_external' => 194,
+                        'city_name' => 'Tana Tidung',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.551869',
+                        'city_longitude' => '117.0794082',
+                    ),
+                216 =>
+                    array (
+                        'id_city' => 218,
+                        'id_province' => 16,
+                        'id_city_external' => 195,
+                        'city_name' => 'Bulungan (Bulongan)',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.9042476',
+                        'city_longitude' => '116.9852422',
+                    ),
+                217 =>
+                    array (
+                        'id_city' => 219,
+                        'id_province' => 16,
+                        'id_city_external' => 196,
+                        'city_name' => 'Tarakan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.3546795',
+                        'city_longitude' => '117.5965403',
+                    ),
+                218 =>
+                    array (
+                        'id_city' => 220,
+                        'id_province' => 17,
+                        'id_city_external' => 197,
+                        'city_name' => 'Lingga',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.4726065',
+                        'city_longitude' => '104.4257533',
+                    ),
+                219 =>
+                    array (
+                        'id_city' => 221,
+                        'id_province' => 17,
+                        'id_city_external' => 198,
+                        'city_name' => 'Kepulauan Anambas',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.923624',
+                        'city_longitude' => '105.7585908',
+                    ),
+                220 =>
+                    array (
+                        'id_city' => 222,
+                        'id_province' => 17,
+                        'id_city_external' => 199,
+                        'city_name' => 'Natuna',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.9456514',
+                        'city_longitude' => '108.1428669',
+                    ),
+                221 =>
+                    array (
+                        'id_city' => 223,
+                        'id_province' => 17,
+                        'id_city_external' => 200,
+                        'city_name' => 'Karimun',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.7697665',
+                        'city_longitude' => '103.4049445',
+                    ),
+                222 =>
+                    array (
+                        'id_city' => 224,
+                        'id_province' => 17,
+                        'id_city_external' => 201,
+                        'city_name' => 'Batam',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.0458378',
+                        'city_longitude' => '103.98402',
+                    ),
+                223 =>
+                    array (
+                        'id_city' => 225,
+                        'id_province' => 17,
+                        'id_city_external' => 202,
+                        'city_name' => 'Bintan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.1367041',
+                        'city_longitude' => '104.4257533',
+                    ),
+                224 =>
+                    array (
+                        'id_city' => 226,
+                        'id_province' => 17,
+                        'id_city_external' => 203,
+                        'city_name' => 'Tanjung Pinang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.9046081',
+                        'city_longitude' => '104.4839765',
+                    ),
+                225 =>
+                    array (
+                        'id_city' => 227,
+                        'id_province' => 18,
+                        'id_city_external' => 204,
+                        'city_name' => 'Tanggamus',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.3027489',
+                        'city_longitude' => '104.5655273',
+                    ),
+                226 =>
+                    array (
+                        'id_city' => 228,
+                        'id_province' => 18,
+                        'id_city_external' => 205,
+                        'city_name' => 'Pringsewu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.3331186',
+                        'city_longitude' => '104.9856176',
+                    ),
+                227 =>
+                    array (
+                        'id_city' => 229,
+                        'id_province' => 18,
+                        'id_city_external' => 206,
+                        'city_name' => 'Lampung Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.5622614',
+                        'city_longitude' => '105.5474373',
+                    ),
+                228 =>
+                    array (
+                        'id_city' => 230,
+                        'id_province' => 18,
+                        'id_city_external' => 207,
+                        'city_name' => 'Lampung Tengah',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.8008086',
+                        'city_longitude' => '105.3131185',
+                    ),
+                229 =>
+                    array (
+                        'id_city' => 231,
+                        'id_province' => 18,
+                        'id_city_external' => 208,
+                        'city_name' => 'Pesawaran',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.493245',
+                        'city_longitude' => '105.0791228',
+                    ),
+                230 =>
+                    array (
+                        'id_city' => 232,
+                        'id_province' => 18,
+                        'id_city_external' => 209,
+                        'city_name' => 'Bandar Lampung',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.4478789',
+                        'city_longitude' => '105.2652871',
+                    ),
+                231 =>
+                    array (
+                        'id_city' => 233,
+                        'id_province' => 18,
+                        'id_city_external' => 210,
+                        'city_name' => 'Lampung Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.1095293',
+                        'city_longitude' => '104.1466046',
+                    ),
+                232 =>
+                    array (
+                        'id_city' => 234,
+                        'id_province' => 18,
+                        'id_city_external' => 211,
+                        'city_name' => 'Pesisir Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.2928191',
+                        'city_longitude' => '104.1233667',
+                    ),
+                233 =>
+                    array (
+                        'id_city' => 235,
+                        'id_province' => 18,
+                        'id_city_external' => 212,
+                        'city_name' => 'Way Kanan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.4963689',
+                        'city_longitude' => '104.5655273',
+                    ),
+                234 =>
+                    array (
+                        'id_city' => 236,
+                        'id_province' => 18,
+                        'id_city_external' => 213,
+                        'city_name' => 'Mesuji',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.0044783',
+                        'city_longitude' => '105.3131185',
+                    ),
+                235 =>
+                    array (
+                        'id_city' => 237,
+                        'id_province' => 18,
+                        'id_city_external' => 214,
+                        'city_name' => 'Tulang Bawang Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.5256967',
+                        'city_longitude' => '105.0791228',
+                    ),
+                236 =>
+                    array (
+                        'id_city' => 238,
+                        'id_province' => 18,
+                        'id_city_external' => 215,
+                        'city_name' => 'Tulang Bawang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.3176576',
+                        'city_longitude' => '105.5005483',
+                    ),
+                237 =>
+                    array (
+                        'id_city' => 239,
+                        'id_province' => 18,
+                        'id_city_external' => 216,
+                        'city_name' => 'Lampung Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.8133905',
+                        'city_longitude' => '104.7520939',
+                    ),
+                238 =>
+                    array (
+                        'id_city' => 240,
+                        'id_province' => 18,
+                        'id_city_external' => 217,
+                        'city_name' => 'Lampung Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.1134995',
+                        'city_longitude' => '105.6881788',
+                    ),
+                239 =>
+                    array (
+                        'id_city' => 241,
+                        'id_province' => 18,
+                        'id_city_external' => 218,
+                        'city_name' => 'Metro',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.1331187',
+                        'city_longitude' => '105.3014109',
+                    ),
+                240 =>
+                    array (
+                        'id_city' => 242,
+                        'id_province' => 19,
+                        'id_city_external' => 219,
+                        'city_name' => 'Halmahera Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.3121235',
+                        'city_longitude' => '128.4849923',
+                    ),
+                241 =>
+                    array (
+                        'id_city' => 243,
+                        'id_province' => 19,
+                        'id_city_external' => 220,
+                        'city_name' => 'Halmahera Tengah',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.4419543',
+                        'city_longitude' => '128.3587174',
+                    ),
+                242 =>
+                    array (
+                        'id_city' => 244,
+                        'id_province' => 19,
+                        'id_city_external' => 221,
+                        'city_name' => 'Tidore Kepulauan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.5060207',
+                        'city_longitude' => '127.681228',
+                    ),
+                243 =>
+                    array (
+                        'id_city' => 245,
+                        'id_province' => 19,
+                        'id_city_external' => 222,
+                        'city_name' => 'Kepulauan Sula',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.8321222',
+                        'city_longitude' => '125.958777',
+                    ),
+                244 =>
+                    array (
+                        'id_city' => 246,
+                        'id_province' => 19,
+                        'id_city_external' => 223,
+                        'city_name' => 'Halmahera Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.5109015',
+                        'city_longitude' => '127.7237678',
+                    ),
+                245 =>
+                    array (
+                        'id_city' => 247,
+                        'id_province' => 19,
+                        'id_city_external' => 224,
+                        'city_name' => 'Pulau Morotai',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.3656672',
+                        'city_longitude' => '128.4008357',
+                    ),
+                246 =>
+                    array (
+                        'id_city' => 248,
+                        'id_province' => 19,
+                        'id_city_external' => 225,
+                        'city_name' => 'Halmahera Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.5074308',
+                        'city_longitude' => '127.8936663',
+                    ),
+                247 =>
+                    array (
+                        'id_city' => 249,
+                        'id_province' => 19,
+                        'id_city_external' => 226,
+                        'city_name' => 'Halmahera Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.3589663',
+                        'city_longitude' => '127.5960704',
+                    ),
+                248 =>
+                    array (
+                        'id_city' => 250,
+                        'id_province' => 19,
+                        'id_city_external' => 227,
+                        'city_name' => 'Ternate',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.7957999',
+                        'city_longitude' => '127.3613533',
+                    ),
+                249 =>
+                    array (
+                        'id_city' => 251,
+                        'id_province' => 19,
+                        'id_city_external' => 506,
+                        'city_name' => 'Pulau Taliabu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0',
+                        'city_longitude' => '0',
+                    ),
+                250 =>
+                    array (
+                        'id_city' => 252,
+                        'id_province' => 20,
+                        'id_city_external' => 228,
+                        'city_name' => 'Kepulauan Aru',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.1946502',
+                        'city_longitude' => '134.5501935',
+                    ),
+                251 =>
+                    array (
+                        'id_city' => 253,
+                        'id_province' => 20,
+                        'id_city_external' => 229,
+                        'city_name' => 'Maluku Tenggara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.7512455',
+                        'city_longitude' => '132.7271587',
+                    ),
+                252 =>
+                    array (
+                        'id_city' => 254,
+                        'id_province' => 20,
+                        'id_city_external' => 230,
+                        'city_name' => 'Tual',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.5680317',
+                        'city_longitude' => '132.3446399',
+                    ),
+                253 =>
+                    array (
+                        'id_city' => 255,
+                        'id_province' => 20,
+                        'id_city_external' => 231,
+                        'city_name' => 'Maluku Barat Daya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.7851588',
+                        'city_longitude' => '126.3498097',
+                    ),
+                254 =>
+                    array (
+                        'id_city' => 256,
+                        'id_province' => 20,
+                        'id_city_external' => 232,
+                        'city_name' => 'Seram Bagian Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.4233267',
+                        'city_longitude' => '130.2271243',
+                    ),
+                255 =>
+                    array (
+                        'id_city' => 257,
+                        'id_province' => 20,
+                        'id_city_external' => 233,
+                        'city_name' => 'Maluku Tengah',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.0166501',
+                        'city_longitude' => '129.4864411',
+                    ),
+                256 =>
+                    array (
+                        'id_city' => 258,
+                        'id_province' => 20,
+                        'id_city_external' => 234,
+                        'city_name' => 'Buru',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.3307379',
+                        'city_longitude' => '126.6957216',
+                    ),
+                257 =>
+                    array (
+                        'id_city' => 259,
+                        'id_province' => 20,
+                        'id_city_external' => 235,
+                        'city_name' => 'Buru Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.7273972',
+                        'city_longitude' => '126.6957216',
+                    ),
+                258 =>
+                    array (
+                        'id_city' => 260,
+                        'id_province' => 20,
+                        'id_city_external' => 236,
+                        'city_name' => 'Seram Bagian Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.1271575',
+                        'city_longitude' => '128.4008357',
+                    ),
+                259 =>
+                    array (
+                        'id_city' => 261,
+                        'id_province' => 20,
+                        'id_city_external' => 237,
+                        'city_name' => 'Maluku Tenggara Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.5322642',
+                        'city_longitude' => '131.3611121',
+                    ),
+                260 =>
+                    array (
+                        'id_city' => 262,
+                        'id_province' => 20,
+                        'id_city_external' => 238,
+                        'city_name' => 'Ambon',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.6386665',
+                        'city_longitude' => '128.1688559',
+                    ),
+                261 =>
+                    array (
+                        'id_city' => 263,
+                        'id_province' => 21,
+                        'id_city_external' => 239,
+                        'city_name' => 'Aceh Singkil',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.3589459',
+                        'city_longitude' => '97.87216',
+                    ),
+                262 =>
+                    array (
+                        'id_city' => 264,
+                        'id_province' => 21,
+                        'id_city_external' => 240,
+                        'city_name' => 'Subulussalam',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.6449927',
+                        'city_longitude' => '98.0165205',
+                    ),
+                263 =>
+                    array (
+                        'id_city' => 265,
+                        'id_province' => 21,
+                        'id_city_external' => 241,
+                        'city_name' => 'Aceh Tenggara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.3088666',
+                        'city_longitude' => '97.6982272',
+                    ),
+                264 =>
+                    array (
+                        'id_city' => 266,
+                        'id_province' => 21,
+                        'id_city_external' => 242,
+                        'city_name' => 'Gayo Lues',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.955165',
+                        'city_longitude' => '97.3516558',
+                    ),
+                265 =>
+                    array (
+                        'id_city' => 267,
+                        'id_province' => 21,
+                        'id_city_external' => 243,
+                        'city_name' => 'Bener Meriah',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '4.7513606',
+                        'city_longitude' => '96.9525224',
+                    ),
+                266 =>
+                    array (
+                        'id_city' => 268,
+                        'id_province' => 21,
+                        'id_city_external' => 244,
+                        'city_name' => 'Aceh Tengah',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '4.4482641',
+                        'city_longitude' => '96.8350999',
+                    ),
+                267 =>
+                    array (
+                        'id_city' => 269,
+                        'id_province' => 21,
+                        'id_city_external' => 245,
+                        'city_name' => 'Aceh Tamiang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '4.2328871',
+                        'city_longitude' => '98.0028892',
+                    ),
+                268 =>
+                    array (
+                        'id_city' => 270,
+                        'id_province' => 21,
+                        'id_city_external' => 246,
+                        'city_name' => 'Aceh Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '4.5224111',
+                        'city_longitude' => '97.6114217',
+                    ),
+                269 =>
+                    array (
+                        'id_city' => 271,
+                        'id_province' => 21,
+                        'id_city_external' => 247,
+                        'city_name' => 'Langsa',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '4.4980034',
+                        'city_longitude' => '97.9810845',
+                    ),
+                270 =>
+                    array (
+                        'id_city' => 272,
+                        'id_province' => 21,
+                        'id_city_external' => 248,
+                        'city_name' => 'Aceh Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '4.9786331',
+                        'city_longitude' => '97.2221421',
+                    ),
+                271 =>
+                    array (
+                        'id_city' => 273,
+                        'id_province' => 21,
+                        'id_city_external' => 249,
+                        'city_name' => 'Lhokseumawe',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '5.1556921',
+                        'city_longitude' => '97.1036396',
+                    ),
+                272 =>
+                    array (
+                        'id_city' => 274,
+                        'id_province' => 21,
+                        'id_city_external' => 250,
+                        'city_name' => 'Bireuen',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '5.1086446',
+                        'city_longitude' => '96.663812',
+                    ),
+                273 =>
+                    array (
+                        'id_city' => 275,
+                        'id_province' => 21,
+                        'id_city_external' => 251,
+                        'city_name' => 'Pidie Jaya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '5.1548063',
+                        'city_longitude' => '96.195132',
+                    ),
+                274 =>
+                    array (
+                        'id_city' => 276,
+                        'id_province' => 21,
+                        'id_city_external' => 252,
+                        'city_name' => 'Pidie',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '5.0742659',
+                        'city_longitude' => '95.940971',
+                    ),
+                275 =>
+                    array (
+                        'id_city' => 277,
+                        'id_province' => 21,
+                        'id_city_external' => 253,
+                        'city_name' => 'Aceh Besar',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '5.4529168',
+                        'city_longitude' => '95.4777811',
+                    ),
+                276 =>
+                    array (
+                        'id_city' => 278,
+                        'id_province' => 21,
+                        'id_city_external' => 254,
+                        'city_name' => 'Simeulue',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.6439724',
+                        'city_longitude' => '96.0255738',
+                    ),
+                277 =>
+                    array (
+                        'id_city' => 279,
+                        'id_province' => 21,
+                        'id_city_external' => 255,
+                        'city_name' => 'Aceh Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.3115056',
+                        'city_longitude' => '97.3516558',
+                    ),
+                278 =>
+                    array (
+                        'id_city' => 280,
+                        'id_province' => 21,
+                        'id_city_external' => 256,
+                        'city_name' => 'Aceh Barat Daya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.7963426',
+                        'city_longitude' => '97.0068393',
+                    ),
+                279 =>
+                    array (
+                        'id_city' => 281,
+                        'id_province' => 21,
+                        'id_city_external' => 257,
+                        'city_name' => 'Aceh Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '4.4542745',
+                        'city_longitude' => '96.1526985',
+                    ),
+                280 =>
+                    array (
+                        'id_city' => 282,
+                        'id_province' => 21,
+                        'id_city_external' => 258,
+                        'city_name' => 'Nagan Raya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '4.1248406',
+                        'city_longitude' => '96.4929797',
+                    ),
+                281 =>
+                    array (
+                        'id_city' => 283,
+                        'id_province' => 21,
+                        'id_city_external' => 259,
+                        'city_name' => 'Aceh Jaya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '4.7873684',
+                        'city_longitude' => '95.6457951',
+                    ),
+                282 =>
+                    array (
+                        'id_city' => 284,
+                        'id_province' => 21,
+                        'id_city_external' => 260,
+                        'city_name' => 'Sabang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '5.8419361',
+                        'city_longitude' => '95.3207069',
+                    ),
+                283 =>
+                    array (
+                        'id_city' => 285,
+                        'id_province' => 21,
+                        'id_city_external' => 261,
+                        'city_name' => 'Banda Aceh',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '5.5483705',
+                        'city_longitude' => '95.3207069',
+                    ),
+                284 =>
+                    array (
+                        'id_city' => 286,
+                        'id_province' => 22,
+                        'id_city_external' => 262,
+                        'city_name' => 'Sumbawa Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.9292907',
+                        'city_longitude' => '116.8910342',
+                    ),
+                285 =>
+                    array (
+                        'id_city' => 287,
+                        'id_province' => 22,
+                        'id_city_external' => 263,
+                        'city_name' => 'Sumbawa',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.738072',
+                        'city_longitude' => '118.1171082',
+                    ),
+                286 =>
+                    array (
+                        'id_city' => 288,
+                        'id_province' => 22,
+                        'id_city_external' => 264,
+                        'city_name' => 'Dompu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.5363958',
+                        'city_longitude' => '118.3461948',
+                    ),
+                287 =>
+                    array (
+                        'id_city' => 289,
+                        'id_province' => 22,
+                        'id_city_external' => 265,
+                        'city_name' => 'Bima, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.4813594',
+                        'city_longitude' => '118.7897558',
+                    ),
+                288 =>
+                    array (
+                        'id_city' => 290,
+                        'id_province' => 22,
+                        'id_city_external' => 266,
+                        'city_name' => 'Lombok Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.5134471',
+                        'city_longitude' => '116.5609857',
+                    ),
+                289 =>
+                    array (
+                        'id_city' => 291,
+                        'id_province' => 22,
+                        'id_city_external' => 267,
+                        'city_name' => 'Lombok Tengah',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.694623',
+                        'city_longitude' => '116.2777073',
+                    ),
+                290 =>
+                    array (
+                        'id_city' => 292,
+                        'id_province' => 22,
+                        'id_city_external' => 268,
+                        'city_name' => 'Mataram',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.5970808',
+                        'city_longitude' => '116.1004894',
+                    ),
+                291 =>
+                    array (
+                        'id_city' => 293,
+                        'id_province' => 22,
+                        'id_city_external' => 269,
+                        'city_name' => 'Lombok Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.6464599',
+                        'city_longitude' => '116.1123078',
+                    ),
+                292 =>
+                    array (
+                        'id_city' => 294,
+                        'id_province' => 22,
+                        'id_city_external' => 270,
+                        'city_name' => 'Lombok Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.3739076',
+                        'city_longitude' => '116.2777073',
+                    ),
+                293 =>
+                    array (
+                        'id_city' => 295,
+                        'id_province' => 22,
+                        'id_city_external' => 495,
+                        'city_name' => 'Bima, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.4813594',
+                        'city_longitude' => '118.7897558',
+                    ),
+                294 =>
+                    array (
+                        'id_city' => 296,
+                        'id_province' => 23,
+                        'id_city_external' => 271,
+                        'city_name' => 'Sumba Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-9.6548326',
+                        'city_longitude' => '119.3947135',
+                    ),
+                295 =>
+                    array (
+                        'id_city' => 297,
+                        'id_province' => 23,
+                        'id_city_external' => 272,
+                        'city_name' => 'Sumba Tengah',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-9.4879226',
+                        'city_longitude' => '119.6962677',
+                    ),
+                296 =>
+                    array (
+                        'id_city' => 298,
+                        'id_province' => 23,
+                        'id_city_external' => 273,
+                        'city_name' => 'Sumba Barat Daya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-9.539139',
+                        'city_longitude' => '119.1390642',
+                    ),
+                297 =>
+                    array (
+                        'id_city' => 299,
+                        'id_province' => 23,
+                        'id_city_external' => 274,
+                        'city_name' => 'Sumba Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-9.9802103',
+                        'city_longitude' => '120.3435506',
+                    ),
+                298 =>
+                    array (
+                        'id_city' => 300,
+                        'id_province' => 23,
+                        'id_city_external' => 275,
+                        'city_name' => 'Manggarai Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.6688149',
+                        'city_longitude' => '120.0665236',
+                    ),
+                299 =>
+                    array (
+                        'id_city' => 301,
+                        'id_province' => 23,
+                        'id_city_external' => 276,
+                        'city_name' => 'Lembata',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.4719075',
+                        'city_longitude' => '123.4831906',
+                    ),
+                300 =>
+                    array (
+                        'id_city' => 302,
+                        'id_province' => 23,
+                        'id_city_external' => 277,
+                        'city_name' => 'Manggarai',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.6796987',
+                        'city_longitude' => '120.3896651',
+                    ),
+                301 =>
+                    array (
+                        'id_city' => 303,
+                        'id_province' => 23,
+                        'id_city_external' => 278,
+                        'city_name' => 'Manggarai Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.6206712',
+                        'city_longitude' => '120.6199895',
+                    ),
+                302 =>
+                    array (
+                        'id_city' => 304,
+                        'id_province' => 23,
+                        'id_city_external' => 279,
+                        'city_name' => 'Nagekeo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.6753545',
+                        'city_longitude' => '121.3084088',
+                    ),
+                303 =>
+                    array (
+                        'id_city' => 305,
+                        'id_province' => 23,
+                        'id_city_external' => 280,
+                        'city_name' => 'Ngada',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.7430424',
+                        'city_longitude' => '120.9876321',
+                    ),
+                304 =>
+                    array (
+                        'id_city' => 306,
+                        'id_province' => 23,
+                        'id_city_external' => 281,
+                        'city_name' => 'Ende',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.6762912',
+                        'city_longitude' => '121.7195459',
+                    ),
+                305 =>
+                    array (
+                        'id_city' => 307,
+                        'id_province' => 23,
+                        'id_city_external' => 282,
+                        'city_name' => 'Flores Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.3130942',
+                        'city_longitude' => '122.9663018',
+                    ),
+                306 =>
+                    array (
+                        'id_city' => 308,
+                        'id_province' => 23,
+                        'id_city_external' => 283,
+                        'city_name' => 'Sikka',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.6766175',
+                        'city_longitude' => '122.1291843',
+                    ),
+                307 =>
+                    array (
+                        'id_city' => 309,
+                        'id_province' => 23,
+                        'id_city_external' => 284,
+                        'city_name' => 'Rote Ndao',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-10.7386421',
+                        'city_longitude' => '123.1239049',
+                    ),
+                308 =>
+                    array (
+                        'id_city' => 310,
+                        'id_province' => 23,
+                        'id_city_external' => 285,
+                        'city_name' => 'Alor',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-8.2928427',
+                        'city_longitude' => '124.5528387',
+                    ),
+                309 =>
+                    array (
+                        'id_city' => 311,
+                        'id_province' => 23,
+                        'id_city_external' => 286,
+                        'city_name' => 'Belu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-9.1538978',
+                        'city_longitude' => '124.906551',
+                    ),
+                310 =>
+                    array (
+                        'id_city' => 312,
+                        'id_province' => 23,
+                        'id_city_external' => 287,
+                        'city_name' => 'Timor Tengah Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-9.4522647',
+                        'city_longitude' => '124.597132',
+                    ),
+                311 =>
+                    array (
+                        'id_city' => 313,
+                        'id_province' => 23,
+                        'id_city_external' => 288,
+                        'city_name' => 'Timor Tengah Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-9.7762816',
+                        'city_longitude' => '124.4198243',
+                    ),
+                312 =>
+                    array (
+                        'id_city' => 314,
+                        'id_province' => 23,
+                        'id_city_external' => 289,
+                        'city_name' => 'Sabu Raijua',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-10.5541116',
+                        'city_longitude' => '121.8334868',
+                    ),
+                313 =>
+                    array (
+                        'id_city' => 315,
+                        'id_province' => 23,
+                        'id_city_external' => 290,
+                        'city_name' => 'Kupang, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-9.9906166',
+                        'city_longitude' => '123.8857747',
+                    ),
+                314 =>
+                    array (
+                        'id_city' => 316,
+                        'id_province' => 23,
+                        'id_city_external' => 496,
+                        'city_name' => 'Kupang, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-9.9906166',
+                        'city_longitude' => '123.8857747',
+                    ),
+                315 =>
+                    array (
+                        'id_city' => 317,
+                        'id_province' => 23,
+                        'id_city_external' => 504,
+                        'city_name' => 'Malaka',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0',
+                        'city_longitude' => '0',
+                    ),
+                316 =>
+                    array (
+                        'id_city' => 318,
+                        'id_province' => 24,
+                        'id_city_external' => 291,
+                        'city_name' => 'Fakfak',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.097706',
+                        'city_longitude' => '133.0194897',
+                    ),
+                317 =>
+                    array (
+                        'id_city' => 319,
+                        'id_province' => 24,
+                        'id_city_external' => 292,
+                        'city_name' => 'Kaimana',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.288406',
+                        'city_longitude' => '133.9436788',
+                    ),
+                318 =>
+                    array (
+                        'id_city' => 320,
+                        'id_province' => 24,
+                        'id_city_external' => 293,
+                        'city_name' => 'Maybrat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.2970979',
+                        'city_longitude' => '132.3150993',
+                    ),
+                319 =>
+                    array (
+                        'id_city' => 321,
+                        'id_province' => 24,
+                        'id_city_external' => 294,
+                        'city_name' => 'Raja Ampat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.0915151',
+                        'city_longitude' => '130.8778586',
+                    ),
+                320 =>
+                    array (
+                        'id_city' => 322,
+                        'id_province' => 24,
+                        'id_city_external' => 295,
+                        'city_name' => 'Tambrauw',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.781856',
+                        'city_longitude' => '132.3938375',
+                    ),
+                321 =>
+                    array (
+                        'id_city' => 323,
+                        'id_province' => 24,
+                        'id_city_external' => 296,
+                        'city_name' => 'Sorong, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.8819986',
+                        'city_longitude' => '131.2954834',
+                    ),
+                322 =>
+                    array (
+                        'id_city' => 324,
+                        'id_province' => 24,
+                        'id_city_external' => 297,
+                        'city_name' => 'Sorong Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.7657744',
+                        'city_longitude' => '132.1572702',
+                    ),
+                323 =>
+                    array (
+                        'id_city' => 325,
+                        'id_province' => 24,
+                        'id_city_external' => 298,
+                        'city_name' => 'Teluk Bintuni',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.9056848',
+                        'city_longitude' => '133.329466',
+                    ),
+                324 =>
+                    array (
+                        'id_city' => 326,
+                        'id_province' => 24,
+                        'id_city_external' => 299,
+                        'city_name' => 'Teluk Wondama',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.8551699',
+                        'city_longitude' => '134.3236557',
+                    ),
+                325 =>
+                    array (
+                        'id_city' => 327,
+                        'id_province' => 24,
+                        'id_city_external' => 300,
+                        'city_name' => 'Manokwari Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.5721232',
+                        'city_longitude' => '133.981812',
+                    ),
+                326 =>
+                    array (
+                        'id_city' => 328,
+                        'id_province' => 24,
+                        'id_city_external' => 301,
+                        'city_name' => 'Pegunungan Arfak',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.1554562',
+                        'city_longitude' => '133.7142484',
+                    ),
+                327 =>
+                    array (
+                        'id_city' => 329,
+                        'id_province' => 24,
+                        'id_city_external' => 302,
+                        'city_name' => 'Manokwari',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.8614531',
+                        'city_longitude' => '134.0620421',
+                    ),
+                328 =>
+                    array (
+                        'id_city' => 330,
+                        'id_province' => 24,
+                        'id_city_external' => 500,
+                        'city_name' => 'Sorong, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.8819986',
+                        'city_longitude' => '131.2954834',
+                    ),
+                329 =>
+                    array (
+                        'id_city' => 331,
+                        'id_province' => 25,
+                        'id_city_external' => 303,
+                        'city_name' => 'Mimika',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.4553223',
+                        'city_longitude' => '137.1362125',
+                    ),
+                330 =>
+                    array (
+                        'id_city' => 332,
+                        'id_province' => 25,
+                        'id_city_external' => 304,
+                        'city_name' => 'Mappi',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.7606468',
+                        'city_longitude' => '139.6911374',
+                    ),
+                331 =>
+                    array (
+                        'id_city' => 333,
+                        'id_province' => 25,
+                        'id_city_external' => 305,
+                        'city_name' => 'Asmat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.0573958',
+                        'city_longitude' => '138.3988186',
+                    ),
+                332 =>
+                    array (
+                        'id_city' => 334,
+                        'id_province' => 25,
+                        'id_city_external' => 306,
+                        'city_name' => 'Boven Digoel',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.7400018',
+                        'city_longitude' => '140.3481835',
+                    ),
+                333 =>
+                    array (
+                        'id_city' => 335,
+                        'id_province' => 25,
+                        'id_city_external' => 307,
+                        'city_name' => 'Merauke',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-7.7838334',
+                        'city_longitude' => '139.041312',
+                    ),
+                334 =>
+                    array (
+                        'id_city' => 336,
+                        'id_province' => 25,
+                        'id_city_external' => 308,
+                        'city_name' => 'Yalimo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.7852847',
+                        'city_longitude' => '139.4466005',
+                    ),
+                335 =>
+                    array (
+                        'id_city' => 337,
+                        'id_province' => 25,
+                        'id_city_external' => 309,
+                        'city_name' => 'Yahukimo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.4939717',
+                        'city_longitude' => '139.5279996',
+                    ),
+                336 =>
+                    array (
+                        'id_city' => 338,
+                        'id_province' => 25,
+                        'id_city_external' => 310,
+                        'city_name' => 'Pegunungan Bintang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.5589872',
+                        'city_longitude' => '140.5135589',
+                    ),
+                337 =>
+                    array (
+                        'id_city' => 339,
+                        'id_province' => 25,
+                        'id_city_external' => 311,
+                        'city_name' => 'Nduga',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.4069496',
+                        'city_longitude' => '138.2393528',
+                    ),
+                338 =>
+                    array (
+                        'id_city' => 340,
+                        'id_province' => 25,
+                        'id_city_external' => 312,
+                        'city_name' => 'Tolikara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.481132',
+                        'city_longitude' => '138.4787258',
+                    ),
+                339 =>
+                    array (
+                        'id_city' => 341,
+                        'id_province' => 25,
+                        'id_city_external' => 313,
+                        'city_name' => 'Lanny Jaya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.971033',
+                        'city_longitude' => '138.3190276',
+                    ),
+                340 =>
+                    array (
+                        'id_city' => 342,
+                        'id_province' => 25,
+                        'id_city_external' => 314,
+                        'city_name' => 'Jayawijaya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.0004481',
+                        'city_longitude' => '138.7995122',
+                    ),
+                341 =>
+                    array (
+                        'id_city' => 343,
+                        'id_province' => 25,
+                        'id_city_external' => 315,
+                        'city_name' => 'Mamberamo Tengah',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.6321083',
+                        'city_longitude' => '138.9605972',
+                    ),
+                342 =>
+                    array (
+                        'id_city' => 344,
+                        'id_province' => 25,
+                        'id_city_external' => 316,
+                        'city_name' => 'Keerom',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.3449536',
+                        'city_longitude' => '140.7624493',
+                    ),
+                343 =>
+                    array (
+                        'id_city' => 345,
+                        'id_province' => 25,
+                        'id_city_external' => 317,
+                        'city_name' => 'Mamberamo Raya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.5331255',
+                        'city_longitude' => '137.7637565',
+                    ),
+                344 =>
+                    array (
+                        'id_city' => 346,
+                        'id_province' => 25,
+                        'id_city_external' => 318,
+                        'city_name' => 'Sarmi',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.4678144',
+                        'city_longitude' => '139.2030851',
+                    ),
+                345 =>
+                    array (
+                        'id_city' => 347,
+                        'id_province' => 25,
+                        'id_city_external' => 319,
+                        'city_name' => 'Jayapura, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.987923',
+                        'city_longitude' => '139.8547266',
+                    ),
+                346 =>
+                    array (
+                        'id_city' => 348,
+                        'id_province' => 25,
+                        'id_city_external' => 320,
+                        'city_name' => 'Puncak',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.8649098',
+                        'city_longitude' => '137.6061625',
+                    ),
+                347 =>
+                    array (
+                        'id_city' => 349,
+                        'id_province' => 25,
+                        'id_city_external' => 321,
+                        'city_name' => 'Puncak Jaya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.4467891',
+                        'city_longitude' => '137.8427298',
+                    ),
+                348 =>
+                    array (
+                        'id_city' => 350,
+                        'id_province' => 25,
+                        'id_city_external' => 322,
+                        'city_name' => 'Dogiyai',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.0454139',
+                        'city_longitude' => '135.6763443',
+                    ),
+                349 =>
+                    array (
+                        'id_city' => 351,
+                        'id_province' => 25,
+                        'id_city_external' => 323,
+                        'city_name' => 'Nabire',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.5095462',
+                        'city_longitude' => '135.7520985',
+                    ),
+                350 =>
+                    array (
+                        'id_city' => 352,
+                        'id_province' => 25,
+                        'id_city_external' => 324,
+                        'city_name' => 'Intan Jaya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.5076422',
+                        'city_longitude' => '136.7478493',
+                    ),
+                351 =>
+                    array (
+                        'id_city' => 353,
+                        'id_province' => 25,
+                        'id_city_external' => 325,
+                        'city_name' => 'Paniai',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.7876441',
+                        'city_longitude' => '136.3624686',
+                    ),
+                352 =>
+                    array (
+                        'id_city' => 354,
+                        'id_province' => 25,
+                        'id_city_external' => 326,
+                        'city_name' => 'Deiyai (Deliyai)',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.0974893',
+                        'city_longitude' => '136.4393054',
+                    ),
+                353 =>
+                    array (
+                        'id_city' => 355,
+                        'id_province' => 25,
+                        'id_city_external' => 327,
+                        'city_name' => 'Waropen',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.8435717',
+                        'city_longitude' => '136.670534',
+                    ),
+                354 =>
+                    array (
+                        'id_city' => 356,
+                        'id_province' => 25,
+                        'id_city_external' => 328,
+                        'city_name' => 'Kepulauan Yapen (Yapen Waropen)',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.7469359',
+                        'city_longitude' => '136.1709012',
+                    ),
+                355 =>
+                    array (
+                        'id_city' => 357,
+                        'id_province' => 25,
+                        'id_city_external' => 329,
+                        'city_name' => 'Biak Numfor',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.0381022',
+                        'city_longitude' => '135.9800848',
+                    ),
+                356 =>
+                    array (
+                        'id_city' => 358,
+                        'id_province' => 25,
+                        'id_city_external' => 330,
+                        'city_name' => 'Supiori',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.7295099',
+                        'city_longitude' => '135.6385125',
+                    ),
+                357 =>
+                    array (
+                        'id_city' => 359,
+                        'id_province' => 25,
+                        'id_city_external' => 499,
+                        'city_name' => 'Jayapura, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.987923',
+                        'city_longitude' => '139.8547266',
+                    ),
+                358 =>
+                    array (
+                        'id_city' => 360,
+                        'id_province' => 26,
+                        'id_city_external' => 331,
+                        'city_name' => 'Kuantan Singingi',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.4411596',
+                        'city_longitude' => '101.5248055',
+                    ),
+                359 =>
+                    array (
+                        'id_city' => 361,
+                        'id_province' => 26,
+                        'id_city_external' => 332,
+                        'city_name' => 'Indragiri Hulu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.7361181',
+                        'city_longitude' => '102.2547919',
+                    ),
+                360 =>
+                    array (
+                        'id_city' => 362,
+                        'id_province' => 26,
+                        'id_city_external' => 333,
+                        'city_name' => 'Indragiri Hilir',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.1456733',
+                        'city_longitude' => '102.989615',
+                    ),
+                361 =>
+                    array (
+                        'id_city' => 363,
+                        'id_province' => 26,
+                        'id_city_external' => 334,
+                        'city_name' => 'Rokan Hilir',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.6463978',
+                        'city_longitude' => '100.8000051',
+                    ),
+                362 =>
+                    array (
+                        'id_city' => 364,
+                        'id_province' => 26,
+                        'id_city_external' => 335,
+                        'city_name' => 'Dumai',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.8346335',
+                        'city_longitude' => '101.2977322',
+                    ),
+                363 =>
+                    array (
+                        'id_city' => 365,
+                        'id_province' => 26,
+                        'id_city_external' => 336,
+                        'city_name' => 'Bengkalis',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.4139187',
+                        'city_longitude' => '101.6157773',
+                    ),
+                364 =>
+                    array (
+                        'id_city' => 366,
+                        'id_province' => 26,
+                        'id_city_external' => 337,
+                        'city_name' => 'Siak',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.8118812',
+                        'city_longitude' => '101.7979613',
+                    ),
+                365 =>
+                    array (
+                        'id_city' => 367,
+                        'id_province' => 26,
+                        'id_city_external' => 338,
+                        'city_name' => 'Kepulauan Meranti',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.9208765',
+                        'city_longitude' => '102.6675575',
+                    ),
+                366 =>
+                    array (
+                        'id_city' => 368,
+                        'id_province' => 26,
+                        'id_city_external' => 339,
+                        'city_name' => 'Rokan Hulu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.0410934',
+                        'city_longitude' => '100.439656',
+                    ),
+                367 =>
+                    array (
+                        'id_city' => 369,
+                        'id_province' => 26,
+                        'id_city_external' => 340,
+                        'city_name' => 'Kampar',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.146671',
+                        'city_longitude' => '101.1617356',
+                    ),
+                368 =>
+                    array (
+                        'id_city' => 370,
+                        'id_province' => 26,
+                        'id_city_external' => 341,
+                        'city_name' => 'Pelalawan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.5139797',
+                        'city_longitude' => '102.1632718',
+                    ),
+                369 =>
+                    array (
+                        'id_city' => 371,
+                        'id_province' => 26,
+                        'id_city_external' => 342,
+                        'city_name' => 'Pekanbaru',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.5335837',
+                        'city_longitude' => '101.4474323',
+                    ),
+                370 =>
+                    array (
+                        'id_city' => 372,
+                        'id_province' => 27,
+                        'id_city_external' => 343,
+                        'city_name' => 'Polewali Mandar',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.3419323',
+                        'city_longitude' => '119.1390642',
+                    ),
+                371 =>
+                    array (
+                        'id_city' => 373,
+                        'id_province' => 27,
+                        'id_city_external' => 344,
+                        'city_name' => 'Mamuju Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.5264542',
+                        'city_longitude' => '119.5107708',
+                    ),
+                372 =>
+                    array (
+                        'id_city' => 374,
+                        'id_province' => 27,
+                        'id_city_external' => 345,
+                        'city_name' => 'Mamuju',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.7293364',
+                        'city_longitude' => '118.9295737',
+                    ),
+                373 =>
+                    array (
+                        'id_city' => 375,
+                        'id_province' => 27,
+                        'id_city_external' => 346,
+                        'city_name' => 'Majene',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.0297251',
+                        'city_longitude' => '118.9062794',
+                    ),
+                374 =>
+                    array (
+                        'id_city' => 376,
+                        'id_province' => 27,
+                        'id_city_external' => 347,
+                        'city_name' => 'Mamasa',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.9118209',
+                        'city_longitude' => '119.3250347',
+                    ),
+                375 =>
+                    array (
+                        'id_city' => 377,
+                        'id_province' => 28,
+                        'id_city_external' => 348,
+                        'city_name' => 'Luwu Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.5825518',
+                        'city_longitude' => '121.1710389',
+                    ),
+                376 =>
+                    array (
+                        'id_city' => 378,
+                        'id_province' => 28,
+                        'id_city_external' => 349,
+                        'city_name' => 'Luwu Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.2690446',
+                        'city_longitude' => '119.9740534',
+                    ),
+                377 =>
+                    array (
+                        'id_city' => 379,
+                        'id_province' => 28,
+                        'id_city_external' => 350,
+                        'city_name' => 'Selayar (Kepulauan Selayar)',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-6.2869786',
+                        'city_longitude' => '120.5048792',
+                    ),
+                378 =>
+                    array (
+                        'id_city' => 380,
+                        'id_province' => 28,
+                        'id_city_external' => 351,
+                        'city_name' => 'Bone',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.7443383',
+                        'city_longitude' => '120.0665236',
+                    ),
+                379 =>
+                    array (
+                        'id_city' => 381,
+                        'id_province' => 28,
+                        'id_city_external' => 352,
+                        'city_name' => 'Maros',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.0549145',
+                        'city_longitude' => '119.6962677',
+                    ),
+                380 =>
+                    array (
+                        'id_city' => 382,
+                        'id_province' => 28,
+                        'id_city_external' => 353,
+                        'city_name' => 'Sinjai',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.2171961',
+                        'city_longitude' => '120.112735',
+                    ),
+                381 =>
+                    array (
+                        'id_city' => 383,
+                        'id_province' => 28,
+                        'id_city_external' => 354,
+                        'city_name' => 'Bulukumba',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.4329368',
+                        'city_longitude' => '120.2051096',
+                    ),
+                382 =>
+                    array (
+                        'id_city' => 384,
+                        'id_province' => 28,
+                        'id_city_external' => 355,
+                        'city_name' => 'Jeneponto',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.554579',
+                        'city_longitude' => '119.6730939',
+                    ),
+                383 =>
+                    array (
+                        'id_city' => 385,
+                        'id_province' => 28,
+                        'id_city_external' => 356,
+                        'city_name' => 'Bantaeng',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.5169316',
+                        'city_longitude' => '120.0202964',
+                    ),
+                384 =>
+                    array (
+                        'id_city' => 386,
+                        'id_province' => 28,
+                        'id_city_external' => 357,
+                        'city_name' => 'Takalar',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.4162493',
+                        'city_longitude' => '119.4875668',
+                    ),
+                385 =>
+                    array (
+                        'id_city' => 387,
+                        'id_province' => 28,
+                        'id_city_external' => 358,
+                        'city_name' => 'Gowa',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.3102888',
+                        'city_longitude' => '119.742604',
+                    ),
+                386 =>
+                    array (
+                        'id_city' => 388,
+                        'id_province' => 28,
+                        'id_city_external' => 359,
+                        'city_name' => 'Toraja Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.8621942',
+                        'city_longitude' => '119.8352303',
+                    ),
+                387 =>
+                    array (
+                        'id_city' => 389,
+                        'id_province' => 28,
+                        'id_city_external' => 360,
+                        'city_name' => 'Luwu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.3052214',
+                        'city_longitude' => '120.2512728',
+                    ),
+                388 =>
+                    array (
+                        'id_city' => 390,
+                        'id_province' => 28,
+                        'id_city_external' => 361,
+                        'city_name' => 'Palopo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.9757159',
+                        'city_longitude' => '120.1358346',
+                    ),
+                389 =>
+                    array (
+                        'id_city' => 391,
+                        'id_province' => 28,
+                        'id_city_external' => 362,
+                        'city_name' => 'Tana Toraja',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.0753003',
+                        'city_longitude' => '119.742604',
+                    ),
+                390 =>
+                    array (
+                        'id_city' => 392,
+                        'id_province' => 28,
+                        'id_city_external' => 363,
+                        'city_name' => 'Enrekang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.4590744',
+                        'city_longitude' => '119.8815203',
+                    ),
+                391 =>
+                    array (
+                        'id_city' => 393,
+                        'id_province' => 28,
+                        'id_city_external' => 364,
+                        'city_name' => 'Sidenreng Rappang/Rapang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.7738981',
+                        'city_longitude' => '120.0202964',
+                    ),
+                392 =>
+                    array (
+                        'id_city' => 394,
+                        'id_province' => 28,
+                        'id_city_external' => 365,
+                        'city_name' => 'Pinrang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.6483486',
+                        'city_longitude' => '119.5571677',
+                    ),
+                393 =>
+                    array (
+                        'id_city' => 395,
+                        'id_province' => 28,
+                        'id_city_external' => 366,
+                        'city_name' => 'Parepare',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.0096221',
+                        'city_longitude' => '119.6290617',
+                    ),
+                394 =>
+                    array (
+                        'id_city' => 396,
+                        'id_province' => 28,
+                        'id_city_external' => 367,
+                        'city_name' => 'Wajo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.022229',
+                        'city_longitude' => '120.0665236',
+                    ),
+                395 =>
+                    array (
+                        'id_city' => 397,
+                        'id_province' => 28,
+                        'id_city_external' => 368,
+                        'city_name' => 'Soppeng',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.3518541',
+                        'city_longitude' => '119.9277947',
+                    ),
+                396 =>
+                    array (
+                        'id_city' => 398,
+                        'id_province' => 28,
+                        'id_city_external' => 369,
+                        'city_name' => 'Barru',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.436417',
+                        'city_longitude' => '119.6499162',
+                    ),
+                397 =>
+                    array (
+                        'id_city' => 399,
+                        'id_province' => 28,
+                        'id_city_external' => 370,
+                        'city_name' => 'Pangkajene Kepulauan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.805035',
+                        'city_longitude' => '119.5571677',
+                    ),
+                398 =>
+                    array (
+                        'id_city' => 400,
+                        'id_province' => 28,
+                        'id_city_external' => 371,
+                        'city_name' => 'Makassar',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.1205733',
+                        'city_longitude' => '119.4875668',
+                    ),
+                399 =>
+                    array (
+                        'id_city' => 401,
+                        'id_province' => 29,
+                        'id_city_external' => 372,
+                        'city_name' => 'Morowali',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.6987231',
+                        'city_longitude' => '121.9017954',
+                    ),
+                400 =>
+                    array (
+                        'id_city' => 402,
+                        'id_province' => 29,
+                        'id_city_external' => 373,
+                        'city_name' => 'Banggai Kepulauan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.3075939',
+                        'city_longitude' => '123.0338767',
+                    ),
+                401 =>
+                    array (
+                        'id_city' => 403,
+                        'id_province' => 29,
+                        'id_city_external' => 374,
+                        'city_name' => 'Banggai',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.956178',
+                        'city_longitude' => '122.6277455',
+                    ),
+                402 =>
+                    array (
+                        'id_city' => 404,
+                        'id_province' => 29,
+                        'id_city_external' => 375,
+                        'city_name' => 'Tojo Una-Una',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.098757',
+                        'city_longitude' => '121.5370003',
+                    ),
+                403 =>
+                    array (
+                        'id_city' => 405,
+                        'id_province' => 29,
+                        'id_city_external' => 376,
+                        'city_name' => 'Poso',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.6468883',
+                        'city_longitude' => '120.4357631',
+                    ),
+                404 =>
+                    array (
+                        'id_city' => 406,
+                        'id_province' => 29,
+                        'id_city_external' => 377,
+                        'city_name' => 'Buol',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.9695452',
+                        'city_longitude' => '121.3541631',
+                    ),
+                405 =>
+                    array (
+                        'id_city' => 407,
+                        'id_province' => 29,
+                        'id_city_external' => 378,
+                        'city_name' => 'Toli-Toli',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.8768231',
+                        'city_longitude' => '120.7579834',
+                    ),
+                406 =>
+                    array (
+                        'id_city' => 408,
+                        'id_province' => 29,
+                        'id_city_external' => 379,
+                        'city_name' => 'Parigi Moutong',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.5817607',
+                        'city_longitude' => '120.8039474',
+                    ),
+                407 =>
+                    array (
+                        'id_city' => 409,
+                        'id_province' => 29,
+                        'id_city_external' => 380,
+                        'city_name' => 'Sigi',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.3859904',
+                        'city_longitude' => '119.8815203',
+                    ),
+                408 =>
+                    array (
+                        'id_city' => 410,
+                        'id_province' => 29,
+                        'id_city_external' => 381,
+                        'city_name' => 'Donggala',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.4233155',
+                        'city_longitude' => '119.8352303',
+                    ),
+                409 =>
+                    array (
+                        'id_city' => 411,
+                        'id_province' => 29,
+                        'id_city_external' => 382,
+                        'city_name' => 'Palu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.8679099',
+                        'city_longitude' => '119.9046594',
+                    ),
+                410 =>
+                    array (
+                        'id_city' => 412,
+                        'id_province' => 30,
+                        'id_city_external' => 383,
+                        'city_name' => 'Kolaka Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.1347227',
+                        'city_longitude' => '121.1710389',
+                    ),
+                411 =>
+                    array (
+                        'id_city' => 413,
+                        'id_province' => 30,
+                        'id_city_external' => 384,
+                        'city_name' => 'Kolaka',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.9946988',
+                        'city_longitude' => '121.5826642',
+                    ),
+                412 =>
+                    array (
+                        'id_city' => 414,
+                        'id_province' => 30,
+                        'id_city_external' => 385,
+                        'city_name' => 'Konawe Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.2027915',
+                        'city_longitude' => '122.4467238',
+                    ),
+                413 =>
+                    array (
+                        'id_city' => 415,
+                        'id_province' => 30,
+                        'id_city_external' => 386,
+                        'city_name' => 'Wakatobi',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.3264442',
+                        'city_longitude' => '123.5951925',
+                    ),
+                414 =>
+                    array (
+                        'id_city' => 416,
+                        'id_province' => 30,
+                        'id_city_external' => 387,
+                        'city_name' => 'Bombana',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.6543462',
+                        'city_longitude' => '121.9017954',
+                    ),
+                415 =>
+                    array (
+                        'id_city' => 417,
+                        'id_province' => 30,
+                        'id_city_external' => 388,
+                        'city_name' => 'Buton',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.3096355',
+                        'city_longitude' => '122.9888319',
+                    ),
+                416 =>
+                    array (
+                        'id_city' => 418,
+                        'id_province' => 30,
+                        'id_city_external' => 389,
+                        'city_name' => 'Konawe',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.9380432',
+                        'city_longitude' => '122.0837445',
+                    ),
+                417 =>
+                    array (
+                        'id_city' => 419,
+                        'id_province' => 30,
+                        'id_city_external' => 390,
+                        'city_name' => 'Bau-Bau',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-5.4169964',
+                        'city_longitude' => '122.695547',
+                    ),
+                418 =>
+                    array (
+                        'id_city' => 420,
+                        'id_province' => 30,
+                        'id_city_external' => 391,
+                        'city_name' => 'Muna',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.901629',
+                        'city_longitude' => '122.6277455',
+                    ),
+                419 =>
+                    array (
+                        'id_city' => 421,
+                        'id_province' => 30,
+                        'id_city_external' => 392,
+                        'city_name' => 'Buton Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.7023424',
+                        'city_longitude' => '123.0338767',
+                    ),
+                420 =>
+                    array (
+                        'id_city' => 422,
+                        'id_province' => 30,
+                        'id_city_external' => 393,
+                        'city_name' => 'Konawe Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.3803291',
+                        'city_longitude' => '122.0837445',
+                    ),
+                421 =>
+                    array (
+                        'id_city' => 423,
+                        'id_province' => 30,
+                        'id_city_external' => 394,
+                        'city_name' => 'Kendari',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.0397687',
+                        'city_longitude' => '122.5598994',
+                    ),
+                422 =>
+                    array (
+                        'id_city' => 424,
+                        'id_province' => 30,
+                        'id_city_external' => 507,
+                        'city_name' => 'Buton Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0',
+                        'city_longitude' => '0',
+                    ),
+                423 =>
+                    array (
+                        'id_city' => 425,
+                        'id_province' => 30,
+                        'id_city_external' => 508,
+                        'city_name' => 'Buton Tengah',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0',
+                        'city_longitude' => '0',
+                    ),
+                424 =>
+                    array (
+                        'id_city' => 426,
+                        'id_province' => 31,
+                        'id_city_external' => 395,
+                        'city_name' => 'Minahasa Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.0946773',
+                        'city_longitude' => '124.4641848',
+                    ),
+                425 =>
+                    array (
+                        'id_city' => 427,
+                        'id_province' => 31,
+                        'id_city_external' => 396,
+                        'city_name' => 'Minahasa Tenggara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.0278551',
+                        'city_longitude' => '124.7298765',
+                    ),
+                426 =>
+                    array (
+                        'id_city' => 428,
+                        'id_province' => 31,
+                        'id_city_external' => 397,
+                        'city_name' => 'Kepulauan Talaud',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '4.3066741',
+                        'city_longitude' => '126.8034921',
+                    ),
+                427 =>
+                    array (
+                        'id_city' => 429,
+                        'id_province' => 31,
+                        'id_city_external' => 398,
+                        'city_name' => 'Kepulauan Siau Tagulandang Biaro (Sitaro)',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.345964',
+                        'city_longitude' => '125.4124355',
+                    ),
+                428 =>
+                    array (
+                        'id_city' => 430,
+                        'id_province' => 31,
+                        'id_city_external' => 399,
+                        'city_name' => 'Kepulauan Sangihe',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.6329172',
+                        'city_longitude' => '125.5000999',
+                    ),
+                429 =>
+                    array (
+                        'id_city' => 431,
+                        'id_province' => 31,
+                        'id_city_external' => 400,
+                        'city_name' => 'Bolaang Mongondow Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.7152651',
+                        'city_longitude' => '124.4641848',
+                    ),
+                430 =>
+                    array (
+                        'id_city' => 432,
+                        'id_province' => 31,
+                        'id_city_external' => 401,
+                        'city_name' => 'Bolaang Mongondow Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.4053215',
+                        'city_longitude' => '123.8411288',
+                    ),
+                431 =>
+                    array (
+                        'id_city' => 433,
+                        'id_province' => 31,
+                        'id_city_external' => 402,
+                        'city_name' => 'Bolaang Mongondow (Bolmong)',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.6870994',
+                        'city_longitude' => '124.0641419',
+                    ),
+                432 =>
+                    array (
+                        'id_city' => 434,
+                        'id_province' => 31,
+                        'id_city_external' => 403,
+                        'city_name' => 'Bolaang Mongondow Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.9070359',
+                        'city_longitude' => '123.2657311',
+                    ),
+                433 =>
+                    array (
+                        'id_city' => 435,
+                        'id_province' => 31,
+                        'id_city_external' => 404,
+                        'city_name' => 'Kotamobagu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.7243733',
+                        'city_longitude' => '124.3199316',
+                    ),
+                434 =>
+                    array (
+                        'id_city' => 436,
+                        'id_province' => 31,
+                        'id_city_external' => 405,
+                        'city_name' => 'Minahasa',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.2168837',
+                        'city_longitude' => '124.8182593',
+                    ),
+                435 =>
+                    array (
+                        'id_city' => 437,
+                        'id_province' => 31,
+                        'id_city_external' => 406,
+                        'city_name' => 'Bitung',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.4820335',
+                        'city_longitude' => '125.148879',
+                    ),
+                436 =>
+                    array (
+                        'id_city' => 438,
+                        'id_province' => 31,
+                        'id_city_external' => 407,
+                        'city_name' => 'Tomohon',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.3286328',
+                        'city_longitude' => '124.7961722',
+                    ),
+                437 =>
+                    array (
+                        'id_city' => 439,
+                        'id_province' => 31,
+                        'id_city_external' => 408,
+                        'city_name' => 'Minahasa Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.5327973',
+                        'city_longitude' => '124.994751',
+                    ),
+                438 =>
+                    array (
+                        'id_city' => 440,
+                        'id_province' => 31,
+                        'id_city_external' => 409,
+                        'city_name' => 'Manado',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.5188421',
+                        'city_longitude' => '124.8844867',
+                    ),
+                439 =>
+                    array (
+                        'id_city' => 441,
+                        'id_province' => 32,
+                        'id_city_external' => 410,
+                        'city_name' => 'Solok Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.4157329',
+                        'city_longitude' => '101.2523792',
+                    ),
+                440 =>
+                    array (
+                        'id_city' => 442,
+                        'id_province' => 32,
+                        'id_city_external' => 411,
+                        'city_name' => 'Dharmasraya',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.1120568',
+                        'city_longitude' => '101.6157773',
+                    ),
+                441 =>
+                    array (
+                        'id_city' => 443,
+                        'id_province' => 32,
+                        'id_city_external' => 412,
+                        'city_name' => 'Sijunjung (Sawah Lunto Sijunjung)',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.6881586',
+                        'city_longitude' => '100.997658',
+                    ),
+                442 =>
+                    array (
+                        'id_city' => 444,
+                        'id_province' => 32,
+                        'id_city_external' => 413,
+                        'city_name' => 'Sawah Lunto',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.6841069',
+                        'city_longitude' => '100.7323332',
+                    ),
+                443 =>
+                    array (
+                        'id_city' => 445,
+                        'id_province' => 32,
+                        'id_city_external' => 414,
+                        'city_name' => 'Solok, Kab.',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.9643838',
+                        'city_longitude' => '100.8903099',
+                    ),
+                444 =>
+                    array (
+                        'id_city' => 446,
+                        'id_province' => 32,
+                        'id_city_external' => 415,
+                        'city_name' => 'Tanah Datar',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.4797043',
+                        'city_longitude' => '100.5746224',
+                    ),
+                445 =>
+                    array (
+                        'id_city' => 447,
+                        'id_province' => 32,
+                        'id_city_external' => 416,
+                        'city_name' => 'Padang Panjang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.470679',
+                        'city_longitude' => '100.4059456',
+                    ),
+                446 =>
+                    array (
+                        'id_city' => 448,
+                        'id_province' => 32,
+                        'id_city_external' => 417,
+                        'city_name' => 'Pasaman Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.2213005',
+                        'city_longitude' => '99.634135',
+                    ),
+                447 =>
+                    array (
+                        'id_city' => 449,
+                        'id_province' => 32,
+                        'id_city_external' => 418,
+                        'city_name' => 'Agam',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.2209392',
+                        'city_longitude' => '100.1703257',
+                    ),
+                448 =>
+                    array (
+                        'id_city' => 450,
+                        'id_province' => 32,
+                        'id_city_external' => 419,
+                        'city_name' => 'Pasaman',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.1288752',
+                        'city_longitude' => '99.7901781',
+                    ),
+                449 =>
+                    array (
+                        'id_city' => 451,
+                        'id_province' => 32,
+                        'id_city_external' => 420,
+                        'city_name' => 'Lima Puluh Koto/Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.0734192',
+                        'city_longitude' => '100.5296115',
+                    ),
+                450 =>
+                    array (
+                        'id_city' => 452,
+                        'id_province' => 32,
+                        'id_city_external' => 421,
+                        'city_name' => 'Payakumbuh',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.2298336',
+                        'city_longitude' => '100.6309169',
+                    ),
+                451 =>
+                    array (
+                        'id_city' => 453,
+                        'id_province' => 32,
+                        'id_city_external' => 422,
+                        'city_name' => 'Bukittinggi',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.3012035',
+                        'city_longitude' => '100.3732191',
+                    ),
+                452 =>
+                    array (
+                        'id_city' => 454,
+                        'id_province' => 32,
+                        'id_city_external' => 423,
+                        'city_name' => 'Pesisir Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.7223147',
+                        'city_longitude' => '100.8903099',
+                    ),
+                453 =>
+                    array (
+                        'id_city' => 455,
+                        'id_province' => 32,
+                        'id_city_external' => 424,
+                        'city_name' => 'Padang Pariaman',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.5546757',
+                        'city_longitude' => '100.2151578',
+                    ),
+                454 =>
+                    array (
+                        'id_city' => 456,
+                        'id_province' => 32,
+                        'id_city_external' => 425,
+                        'city_name' => 'Pariaman',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.6014072',
+                        'city_longitude' => '100.1367166',
+                    ),
+                455 =>
+                    array (
+                        'id_city' => 457,
+                        'id_province' => 32,
+                        'id_city_external' => 426,
+                        'city_name' => 'Kepulauan Mentawai',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-1.426001',
+                        'city_longitude' => '98.9245343',
+                    ),
+                456 =>
+                    array (
+                        'id_city' => 458,
+                        'id_province' => 32,
+                        'id_city_external' => 427,
+                        'city_name' => 'Padang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.853278',
+                        'city_longitude' => '100.3947116',
+                    ),
+                457 =>
+                    array (
+                        'id_city' => 459,
+                        'id_province' => 32,
+                        'id_city_external' => 497,
+                        'city_name' => 'Solok, Kota',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-0.9643838',
+                        'city_longitude' => '100.8903099',
+                    ),
+                458 =>
+                    array (
+                        'id_city' => 460,
+                        'id_province' => 33,
+                        'id_city_external' => 428,
+                        'city_name' => 'Ogan Komering Ulu Timur',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.8567934',
+                        'city_longitude' => '104.7520939',
+                    ),
+                459 =>
+                    array (
+                        'id_city' => 461,
+                        'id_province' => 33,
+                        'id_city_external' => 429,
+                        'city_name' => 'Ogan Komering Ulu Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.6681951',
+                        'city_longitude' => '104.0072348',
+                    ),
+                460 =>
+                    array (
+                        'id_city' => 462,
+                        'id_province' => 33,
+                        'id_city_external' => 430,
+                        'city_name' => 'Ogan Komering Ulu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.0283486',
+                        'city_longitude' => '104.0072348',
+                    ),
+                461 =>
+                    array (
+                        'id_city' => 463,
+                        'id_province' => 33,
+                        'id_city_external' => 431,
+                        'city_name' => 'Muara Enim',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.7114163',
+                        'city_longitude' => '104.0072348',
+                    ),
+                462 =>
+                    array (
+                        'id_city' => 464,
+                        'id_province' => 33,
+                        'id_city_external' => 432,
+                        'city_name' => 'Musi Rawas',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.0956537',
+                        'city_longitude' => '103.0817903',
+                    ),
+                463 =>
+                    array (
+                        'id_city' => 465,
+                        'id_province' => 33,
+                        'id_city_external' => 433,
+                        'city_name' => 'Lubuk Linggau',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.274786',
+                        'city_longitude' => '102.8744945',
+                    ),
+                464 =>
+                    array (
+                        'id_city' => 466,
+                        'id_province' => 33,
+                        'id_city_external' => 434,
+                        'city_name' => 'Empat Lawang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.7286029',
+                        'city_longitude' => '102.8975098',
+                    ),
+                465 =>
+                    array (
+                        'id_city' => 467,
+                        'id_province' => 33,
+                        'id_city_external' => 435,
+                        'city_name' => 'Lahat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.8008893',
+                        'city_longitude' => '103.3587288',
+                    ),
+                466 =>
+                    array (
+                        'id_city' => 468,
+                        'id_province' => 33,
+                        'id_city_external' => 436,
+                        'city_name' => 'Pagar Alam',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-4.0816169',
+                        'city_longitude' => '103.2201828',
+                    ),
+                467 =>
+                    array (
+                        'id_city' => 469,
+                        'id_province' => 33,
+                        'id_city_external' => 437,
+                        'city_name' => 'Prabumulih',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.4322664',
+                        'city_longitude' => '104.2395942',
+                    ),
+                468 =>
+                    array (
+                        'id_city' => 470,
+                        'id_province' => 33,
+                        'id_city_external' => 438,
+                        'city_name' => 'Banyuasin',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.6095639',
+                        'city_longitude' => '104.7520939',
+                    ),
+                469 =>
+                    array (
+                        'id_city' => 471,
+                        'id_province' => 33,
+                        'id_city_external' => 439,
+                        'city_name' => 'Ogan Ilir',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.426544',
+                        'city_longitude' => '104.6121475',
+                    ),
+                470 =>
+                    array (
+                        'id_city' => 472,
+                        'id_province' => 33,
+                        'id_city_external' => 440,
+                        'city_name' => 'Musi Banyuasin',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.5442029',
+                        'city_longitude' => '103.7289167',
+                    ),
+                471 =>
+                    array (
+                        'id_city' => 473,
+                        'id_province' => 33,
+                        'id_city_external' => 441,
+                        'city_name' => 'Ogan Komering Ilir',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-3.4559744',
+                        'city_longitude' => '105.2194808',
+                    ),
+                472 =>
+                    array (
+                        'id_city' => 474,
+                        'id_province' => 33,
+                        'id_city_external' => 442,
+                        'city_name' => 'Palembang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '-2.9767107',
+                        'city_longitude' => '104.7287607',
+                    ),
+                473 =>
+                    array (
+                        'id_city' => 475,
+                        'id_province' => 33,
+                        'id_city_external' => 503,
+                        'city_name' => 'Penukal Abab Lematang Ilir',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0',
+                        'city_longitude' => '0',
+                    ),
+                474 =>
+                    array (
+                        'id_city' => 476,
+                        'id_province' => 33,
+                        'id_city_external' => 505,
+                        'city_name' => 'Musi Rawas Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0',
+                        'city_longitude' => '0',
+                    ),
+                475 =>
+                    array (
+                        'id_city' => 477,
+                        'id_province' => 34,
+                        'id_city_external' => 443,
+                        'city_name' => 'Mandailing Natal',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.7432372',
+                        'city_longitude' => '99.3673084',
+                    ),
+                476 =>
+                    array (
+                        'id_city' => 478,
+                        'id_province' => 34,
+                        'id_city_external' => 444,
+                        'city_name' => 'Nias Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '0.7086091',
+                        'city_longitude' => '97.8286368',
+                    ),
+                477 =>
+                    array (
+                        'id_city' => 479,
+                        'id_province' => 34,
+                        'id_city_external' => 445,
+                        'city_name' => 'Nias',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.1255279',
+                        'city_longitude' => '97.5247243',
+                    ),
+                478 =>
+                    array (
+                        'id_city' => 480,
+                        'id_province' => 34,
+                        'id_city_external' => 446,
+                        'city_name' => 'Nias Barat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.0116383',
+                        'city_longitude' => '97.4814163',
+                    ),
+                479 =>
+                    array (
+                        'id_city' => 481,
+                        'id_province' => 34,
+                        'id_city_external' => 447,
+                        'city_name' => 'Gunungsitoli',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.335263',
+                        'city_longitude' => '97.5463885',
+                    ),
+                480 =>
+                    array (
+                        'id_city' => 482,
+                        'id_province' => 34,
+                        'id_city_external' => 448,
+                        'city_name' => 'Nias Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.3166036',
+                        'city_longitude' => '97.394882',
+                    ),
+                481 =>
+                    array (
+                        'id_city' => 483,
+                        'id_province' => 34,
+                        'id_city_external' => 449,
+                        'city_name' => 'Padang Lawas',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.1186977',
+                        'city_longitude' => '99.8124935',
+                    ),
+                482 =>
+                    array (
+                        'id_city' => 484,
+                        'id_province' => 34,
+                        'id_city_external' => 450,
+                        'city_name' => 'Tapanuli Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.5774933',
+                        'city_longitude' => '99.2785583',
+                    ),
+                483 =>
+                    array (
+                        'id_city' => 485,
+                        'id_province' => 34,
+                        'id_city_external' => 451,
+                        'city_name' => 'Padang Lawas Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.5758644',
+                        'city_longitude' => '99.634135',
+                    ),
+                484 =>
+                    array (
+                        'id_city' => 486,
+                        'id_province' => 34,
+                        'id_city_external' => 452,
+                        'city_name' => 'Padang Sidempuan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.3721801',
+                        'city_longitude' => '99.2730146',
+                    ),
+                485 =>
+                    array (
+                        'id_city' => 487,
+                        'id_province' => 34,
+                        'id_city_external' => 453,
+                        'city_name' => 'Tapanuli Tengah',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.8493299',
+                        'city_longitude' => '98.704075',
+                    ),
+                486 =>
+                    array (
+                        'id_city' => 488,
+                        'id_province' => 34,
+                        'id_city_external' => 454,
+                        'city_name' => 'Sibolga',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.7477449',
+                        'city_longitude' => '98.7866738',
+                    ),
+                487 =>
+                    array (
+                        'id_city' => 489,
+                        'id_province' => 34,
+                        'id_city_external' => 455,
+                        'city_name' => 'Tapanuli Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.0405246',
+                        'city_longitude' => '99.1013498',
+                    ),
+                488 =>
+                    array (
+                        'id_city' => 490,
+                        'id_province' => 34,
+                        'id_city_external' => 456,
+                        'city_name' => 'Humbang Hasundutan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.1988508',
+                        'city_longitude' => '98.5721016',
+                    ),
+                489 =>
+                    array (
+                        'id_city' => 491,
+                        'id_province' => 34,
+                        'id_city_external' => 457,
+                        'city_name' => 'Samosir',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.6274431',
+                        'city_longitude' => '98.7921836',
+                    ),
+                490 =>
+                    array (
+                        'id_city' => 492,
+                        'id_province' => 34,
+                        'id_city_external' => 458,
+                        'city_name' => 'Toba Samosir',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.3502398',
+                        'city_longitude' => '99.2785583',
+                    ),
+                491 =>
+                    array (
+                        'id_city' => 493,
+                        'id_province' => 34,
+                        'id_city_external' => 459,
+                        'city_name' => 'Dairi',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.8675801',
+                        'city_longitude' => '98.265058',
+                    ),
+                492 =>
+                    array (
+                        'id_city' => 494,
+                        'id_province' => 34,
+                        'id_city_external' => 460,
+                        'city_name' => 'Pakpak Bharat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.5135376',
+                        'city_longitude' => '98.2212979',
+                    ),
+                493 =>
+                    array (
+                        'id_city' => 495,
+                        'id_province' => 34,
+                        'id_city_external' => 461,
+                        'city_name' => 'Karo',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.1052909',
+                        'city_longitude' => '98.265058',
+                    ),
+                494 =>
+                    array (
+                        'id_city' => 496,
+                        'id_province' => 34,
+                        'id_city_external' => 462,
+                        'city_name' => 'Labuhan Batu Utara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.3465638',
+                        'city_longitude' => '99.8124935',
+                    ),
+                495 =>
+                    array (
+                        'id_city' => 497,
+                        'id_province' => 34,
+                        'id_city_external' => 463,
+                        'city_name' => 'Labuhan Batu',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.3439863',
+                        'city_longitude' => '100.1703257',
+                    ),
+                496 =>
+                    array (
+                        'id_city' => 498,
+                        'id_province' => 34,
+                        'id_city_external' => 464,
+                        'city_name' => 'Labuhan Batu Selatan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '1.8799353',
+                        'city_longitude' => '100.1703257',
+                    ),
+                497 =>
+                    array (
+                        'id_city' => 499,
+                        'id_province' => 34,
+                        'id_city_external' => 465,
+                        'city_name' => 'Asahan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.8174722',
+                        'city_longitude' => '99.634135',
+                    ),
+                498 =>
+                    array (
+                        'id_city' => 500,
+                        'id_province' => 34,
+                        'id_city_external' => 466,
+                        'city_name' => 'Tanjung Balai',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.9440272',
+                        'city_longitude' => '99.8013351',
+                    ),
+                499 =>
+                    array (
+                        'id_city' => 501,
+                        'id_province' => 34,
+                        'id_city_external' => 467,
+                        'city_name' => 'Batu Bara',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.1740979',
+                        'city_longitude' => '99.5006143',
+                    ),
+                500 =>
+                    array (
+                        'id_city' => 502,
+                        'id_province' => 34,
+                        'id_city_external' => 468,
+                        'city_name' => 'Simalungun',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.9781612',
+                        'city_longitude' => '99.2785583',
+                    ),
+                501 =>
+                    array (
+                        'id_city' => 503,
+                        'id_province' => 34,
+                        'id_city_external' => 469,
+                        'city_name' => 'Pematang Siantar',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '2.970042',
+                        'city_longitude' => '99.0681668',
+                    ),
+                502 =>
+                    array (
+                        'id_city' => 504,
+                        'id_province' => 34,
+                        'id_city_external' => 470,
+                        'city_name' => 'Serdang Bedagai',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.3371694',
+                        'city_longitude' => '99.0571089',
+                    ),
+                503 =>
+                    array (
+                        'id_city' => 505,
+                        'id_province' => 34,
+                        'id_city_external' => 471,
+                        'city_name' => 'Langkat',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.8653916',
+                        'city_longitude' => '98.3088441',
+                    ),
+                504 =>
+                    array (
+                        'id_city' => 506,
+                        'id_province' => 34,
+                        'id_city_external' => 472,
+                        'city_name' => 'Binjai',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.5921693',
+                        'city_longitude' => '98.4952228',
+                    ),
+                505 =>
+                    array (
+                        'id_city' => 507,
+                        'id_province' => 34,
+                        'id_city_external' => 473,
+                        'city_name' => 'Tebing Tinggi',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.3262879',
+                        'city_longitude' => '99.1566855',
+                    ),
+                506 =>
+                    array (
+                        'id_city' => 508,
+                        'id_province' => 34,
+                        'id_city_external' => 474,
+                        'city_name' => 'Deli Serdang',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.4201802',
+                        'city_longitude' => '98.704075',
+                    ),
+                507 =>
+                    array (
+                        'id_city' => 509,
+                        'id_province' => 34,
+                        'id_city_external' => 475,
+                        'city_name' => 'Medan',
+                        'city_type' => 'Kota',
+                        'city_postal_code' => '',
+                        'city_latitude' => '3.6004249',
+                        'city_longitude' => '98.6820636',
+                    ),
+            )
+        );
     }
 }

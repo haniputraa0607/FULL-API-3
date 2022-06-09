@@ -4,11 +4,13 @@ namespace Modules\Transaction\Http\Controllers;
 
 use App\Http\Models\DailyTransactions;
 use App\Http\Models\ProductPhoto;
+use App\Http\Models\Subdistricts;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentOvo;
 use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use App\Lib\Ovo;
+use App\Lib\Shipper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -472,17 +474,22 @@ class ApiOnlineTransaction extends Controller
         }
 
         $errorMsg = [];
-        $itemsCheck = $this->checkDataTransaction($post['items'], 0, 0, 1);
+        $address = UserAddress::leftJoin('cities', 'cities.id_city', 'user_addresses.id_city')
+            ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
+            ->where('id_user', $user->id)->orderBy('main_address', 'desc')
+            ->select('user_addresses.*', 'city_name', 'provinces.id_province', 'province_name')
+            ->limit(2)->get()->toArray();
+        $mainAddress = $address[0]??null;
+
+        $itemsCheck = $this->checkDataTransaction($post['items'], 0, 0, 1, $mainAddress);
         $items = $itemsCheck['items'];
         $subtotal = $itemsCheck['subtotal'];
         $checkOutStatus = $itemsCheck['available_checkout'];
+        if(!empty($itemsCheck['error_messages'])){
+            $checkOutStatus = false;
+        }
         $errorMsg[] = $itemsCheck['error_messages'];
-        $address = UserAddress::leftJoin('cities', 'cities.id_city', 'user_addresses.id_city')
-                    ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
-                    ->where('id_user', $user->id)->orderBy('main_address', 'desc')
-                    ->select('user_addresses.*', 'city_name', 'provinces.id_province', 'province_name')
-                    ->limit(2)->get()->toArray();
-        $mainAddress = $address[0]??null;
+
         if(!empty($mainAddress)){
             $mainAddress = [
                 "id_user_address" => $mainAddress['id_user_address'],
@@ -2073,16 +2080,14 @@ class ApiOnlineTransaction extends Controller
             if(!empty($post['all'])){
                 if(!empty($value['logo'])){
                     $value['logo'] = config('url.storage_url_api').$value['logo'].'?='.time();
-                }elseif(!empty($setting_default)){
-                    $value['logo'] = config('url.storage_url_api').$setting_default.'?='.time();
                 }
+
                 $delivery[] = $value;
             }elseif($value['show_status'] == 1){
                 if(!empty($value['logo'])){
                     $value['logo'] = config('url.storage_url_api').$value['logo'].'?='.time();
-                }elseif(!empty($setting_default)){
-                    $value['logo'] = config('url.storage_url_api').$setting_default.'?='.time();
                 }
+
                 $delivery[] = $value;
             }
         }
@@ -2299,7 +2304,7 @@ class ApiOnlineTransaction extends Controller
         }
     }
 
-    function checkDataTransaction($post, $from_new = 0, $from_cart = 0, $from_check = 0){
+    function checkDataTransaction($post, $from_new = 0, $from_cart = 0, $from_check = 0, $dtAddress = []){
         $items = $this->mergeProducts($post);
 
         $availableCheckout = true;
@@ -2307,13 +2312,17 @@ class ApiOnlineTransaction extends Controller
         $errorMsg = [];
         $weight = [];
         foreach ($items as $index=>$value){
+            $errorMsgSubgroup = [];
             $checkOutlet = Outlet::where('id_outlet', $value['id_outlet'])->where('outlet_status', 'Active')->where('outlet_is_closed', 0)->first();
             if(!empty($checkOutlet)){
                 $productSubtotal = 0;
                 $weightProduct = 0;
+                $heightProduct = 0;
+                $widthProduct = 0;
+                $lengthProduct = 0;
                 foreach ($value['items'] as $key=>$item){
                     $error = '';
-                    $product = Product::select('product_weight', 'id_merchant', 'product_category_name', 'products.id_product_category', 'id_product','product_code','product_name','product_description','product_code', 'product_variant_status')
+                    $product = Product::select('product_weight', 'product_width', 'product_length', 'product_height', 'id_merchant', 'product_category_name', 'products.id_product_category', 'id_product','product_code','product_name','product_description','product_code', 'product_variant_status')
                         ->leftJoin('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
                         ->where('product_visibility', 'Visible')
                         ->where('id_product',$item['id_product'])->first();
@@ -2403,6 +2412,9 @@ class ApiOnlineTransaction extends Controller
                     if(!empty($product['product_weight'])){
                         $weight[] = $product['product_weight'];
                         $weightProduct = $weightProduct+$product['product_weight'];
+                        $heightProduct = $heightProduct+$product['product_height'];
+                        $widthProduct = $widthProduct+$product['product_width'];
+                        $lengthProduct = $lengthProduct+$product['product_length'];
                     }else{
                         $error = 'Produk tidak valid';
                     }
@@ -2455,8 +2467,62 @@ class ApiOnlineTransaction extends Controller
                     $items[$index]['items_subtotal_text'] = 'Rp '.number_format($productSubtotal,0,",",".");
                     $items[$index]['items'] = array_values($value['items']);
                     if($from_check == 1){
+                        $subdistrictOutlet = Subdistricts::where('id_subdistrict', $checkOutlet['id_subdistrict'])
+                            ->join('districts', 'districts.id_district', 'subdistricts.id_district')->first();
+                        if(empty($subdistrictOutlet)){
+                            $errorMsg[] = 'Address toko tidak valid';
+                            $errorMsgSubgroup[] = 'Address toko tidak valid';
+                        }
+                        $latOutlet = $subdistrictOutlet['subdistrict_latitude'];
+                        $lngOutlet = $subdistrictOutlet['subdistrict_longitude'];
+
+                        $subdistrictCustomer = Subdistricts::where('id_subdistrict', $dtAddress['id_subdistrict'])
+                                    ->join('districts', 'districts.id_district', 'subdistricts.id_district')->first();
+                        if(empty($subdistrictCustomer)){
+                            $errorMsg[] = 'Address tidak valid';
+                            $errorMsgSubgroup[] = 'Address tidak valid';
+                        }
+                        $latCustomer = $subdistrictCustomer['subdistrict_latitude'];
+                        $lngCustomer = $subdistrictCustomer['subdistrict_longitude'];
+
+                        $dtDeliveryPrice = [
+                            "cod" =>  false,
+                            "for_order" => true,
+                            "destination" => [
+                                "area_id" => $subdistrictCustomer['id_subdistrict_external'],
+                                "lat" => $latCustomer,
+                                "lng" => $lngCustomer,
+                                "suburb_id" => $subdistrictCustomer['id_district_external']
+                            ],
+                            "origin"=> [
+                                "area_id" => $subdistrictOutlet['id_subdistrict_external'],
+                                "lat" => $latOutlet,
+                                "lng" => $lngOutlet,
+                                "suburb_id" => $subdistrictOutlet['id_district_external']
+                            ],
+                            "weight" => $weightProduct,
+                            "height" => (int)$heightProduct,
+                            "width" => (int)$widthProduct,
+                            "length" => (int)$lengthProduct,
+                            "item_value" => $productSubtotal,
+                            "limit" => 100,
+                            "sort_by" => [
+                                "final_price"
+                            ],
+                        ];
+
                         $availableDelivery = app($this->merchant)->availableDelivery($value['id_outlet'], 1);
-                        $items[$index]['available_delivery'] = $availableDelivery;
+                        $shipper = new Shipper();
+                        $getDeliveryPrice = $shipper->sendRequest('Get Price', 'POST', 'pricing/domestic', $dtDeliveryPrice);
+                        $deliveryPrice = $shipper->listPrice($getDeliveryPrice['response']['data']??[], $availableDelivery);
+
+                        $items[$index]['available_delivery'] = $deliveryPrice;
+
+                        if(empty($deliveryPrice)){
+                            $errorMsg[] = 'Kurir tidak available';
+                            $errorMsgSubgroup[] = 'Kurir tidak available';
+                        }
+                        $items[$index]['error_messages'] = implode('. ', array_unique($errorMsgSubgroup));
                     }
                 }else{
                     $errorMsg[] = 'Stock produk habis';
