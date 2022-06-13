@@ -4,11 +4,13 @@ namespace Modules\Transaction\Http\Controllers;
 
 use App\Http\Models\DailyTransactions;
 use App\Http\Models\ProductPhoto;
+use App\Http\Models\Subdistricts;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentOvo;
 use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use App\Lib\Ovo;
+use App\Lib\Shipper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -170,11 +172,6 @@ class ApiOnlineTransaction extends Controller
             $post['membership_promo_id'] = null;
         }
 
-        $itemsCheck = $this->checkDataTransaction($post['items'], 'new');
-        if(!empty($itemsCheck['error_messages'])){
-            return response()->json(['status'    => 'fail', 'messages'  => [$itemsCheck['error_messages']]]);
-        }
-
         if(empty($post['id_user_address'])){
             return response()->json(['status'    => 'fail', 'messages'  => ['Alamat tidak boleh kosong, silahkan pilih alamat pengiriman.']]);
         }
@@ -187,6 +184,11 @@ class ApiOnlineTransaction extends Controller
 
         if(empty($address)){
             return response()->json(['status'    => 'fail', 'messages'  => ['Alamat tidak ditemukan.']]);
+        }
+
+        $itemsCheck = $this->checkDataTransaction($post['items'], 1, 0, 0, $address);
+        if(!empty($itemsCheck['error_messages'])){
+            return response()->json(['status'    => 'fail', 'messages'  => [$itemsCheck['error_messages']]]);
         }
 
         $deliveryTotal = 0;
@@ -235,8 +237,6 @@ class ApiOnlineTransaction extends Controller
                 ]);
             }
 
-            $delivery = 0;
-            $deliveryTotal = $deliveryTotal + $delivery;
             $subtotal = $subtotal + $data['items_subtotal'];
             $earnedPoint = $this->countTranscationPoint(['subtotal' => (int)$data['items_subtotal']], $user);
             $cashback = $earnedPoint['cashback'] ?? 0;
@@ -251,8 +251,8 @@ class ApiOnlineTransaction extends Controller
                 'trasaction_type'             => $transactionType,
                 'transaction_subtotal'        => $data['items_subtotal'],
                 'transaction_gross'  		  => $data['items_subtotal'],
-                'transaction_shipment'        => $delivery,
-                'transaction_grandtotal'      => $data['items_subtotal'] + $delivery,
+                'transaction_shipment'        => 0,
+                'transaction_grandtotal'      => $data['items_subtotal'],
                 'transaction_point_earned'    => 0,
                 'transaction_cashback_earned' => $cashback,
                 'trasaction_payment_type'     => $paymentType,
@@ -373,21 +373,72 @@ class ApiOnlineTransaction extends Controller
                 }
             }
 
+            if(empty($data['delivery'])){
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Data delivery can not be empty']
+                ]);
+            }
+
+            $shipmentCourier = null;
+            $shipmentCourierService = null;
+            $shipmentInsuranceStatus = 0;
+            $shipmentInsurancePrice = 0;
+            $shipmentPrice = 0;
+            $shipmentRateID = null;
+            //checkking shipment
+            foreach ($data['available_delivery'] as $shipmentCheck){
+                foreach ($shipmentCheck['service'] as $service){
+                    if($service['rate_id'] == $data['delivery']['rate_id']){
+                        $shipmentRateID = $service['rate_id'];
+                        $shipmentCourier = $shipmentCheck['delivery_method'];
+                        $shipmentCourierService = $shipmentCheck['delivery_name'].' '.$service['service_name'];
+                        $shipmentInsuranceStatus = ($data['delivery']['insurance_status'] == true ? 1 : 0);
+                        $shipmentInsurancePrice = $service['insurance_fee'];
+                        $shipmentPrice = $service['price'];
+                        if($shipmentInsuranceStatus == 1){
+                            $shipmentPrice = $shipmentPrice + $shipmentInsurancePrice;
+                        }
+                    }
+                }
+            }
+
+            if(empty($shipmentRateID)){
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Delivery not available']
+                ]);
+            }
+
             $dataShipment = [
                 'id_transaction'           => $insertTransaction['id_transaction'],
                 'depart_name'              => $outlet['outlet_name'],
                 'depart_phone'             => $outlet['outlet_phone'],
                 'depart_address'           => $outlet['outlet_address'],
                 'depart_id_city'           => $outlet['id_city'],
+                'depart_id_subdistrict'    => $outlet['id_subdistrict'],
                 'destination_name'         => $address['receiver_name']??$user['name'],
                 'destination_phone'        => $address['receiver_phone']??$user['phone'],
                 'destination_address'      => $address['address'],
                 'destination_id_city'      => $address['id_city'],
+                'destination_id_subdistrict' => $address['id_subdistrict'],
                 'destination_description'  => $address['description'],
                 'shipment_total_weight'    => $data['items_total_weight']??0,
-                'shipment_courier'         => $data['delivery_code']??null,
-                'shipment_courier_service' => $data['delivery_service']??null
+                'shipment_total_height'    => $data['items_total_height']??0,
+                'shipment_total_width'    => $data['items_total_width']??0,
+                'shipment_total_length'    => $data['items_total_length']??0,
+                'shipment_courier'         => $shipmentCourier,
+                'shipment_courier_service' => $shipmentCourierService,
+                'shipment_insurance_price' => $shipmentInsurancePrice,
+                'shipment_insurance_use_status' => $shipmentInsuranceStatus,
+                'shipment_rate_id' => $shipmentRateID,
+                'shipment_price' => $shipmentPrice,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
             ];
+            $deliveryTotal = $deliveryTotal + $shipmentPrice;
 
             $insertShipment = TransactionShipment::create($dataShipment);
             if (!$insertShipment) {
@@ -397,6 +448,11 @@ class ApiOnlineTransaction extends Controller
                     'messages'  => ['Insert Shipment Transaction Failed']
                 ]);
             }
+
+            Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
+                'transaction_shipment' => $shipmentPrice,
+                'transaction_grandtotal' => $insertTransaction['transaction_grandtotal']+$shipmentPrice
+            ]);
 
             $dataDailyTrx = [
                 'id_transaction'    => $insertTransaction['id_transaction'],
@@ -472,17 +528,22 @@ class ApiOnlineTransaction extends Controller
         }
 
         $errorMsg = [];
-        $itemsCheck = $this->checkDataTransaction($post['items'], 0, 0, 1);
+        $address = UserAddress::leftJoin('cities', 'cities.id_city', 'user_addresses.id_city')
+            ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
+            ->where('id_user', $user->id)->orderBy('main_address', 'desc')
+            ->select('user_addresses.*', 'city_name', 'provinces.id_province', 'province_name')
+            ->limit(2)->get()->toArray();
+        $mainAddress = $address[0]??null;
+
+        $itemsCheck = $this->checkDataTransaction($post['items'], 0, 0, 1, $mainAddress);
         $items = $itemsCheck['items'];
         $subtotal = $itemsCheck['subtotal'];
         $checkOutStatus = $itemsCheck['available_checkout'];
+        if(!empty($itemsCheck['error_messages'])){
+            $checkOutStatus = false;
+        }
         $errorMsg[] = $itemsCheck['error_messages'];
-        $address = UserAddress::leftJoin('cities', 'cities.id_city', 'user_addresses.id_city')
-                    ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
-                    ->where('id_user', $user->id)->orderBy('main_address', 'desc')
-                    ->select('user_addresses.*', 'city_name', 'provinces.id_province', 'province_name')
-                    ->limit(2)->get()->toArray();
-        $mainAddress = $address[0]??null;
+
         if(!empty($mainAddress)){
             $mainAddress = [
                 "id_user_address" => $mainAddress['id_user_address'],
@@ -2073,16 +2134,14 @@ class ApiOnlineTransaction extends Controller
             if(!empty($post['all'])){
                 if(!empty($value['logo'])){
                     $value['logo'] = config('url.storage_url_api').$value['logo'].'?='.time();
-                }elseif(!empty($setting_default)){
-                    $value['logo'] = config('url.storage_url_api').$setting_default.'?='.time();
                 }
+
                 $delivery[] = $value;
             }elseif($value['show_status'] == 1){
                 if(!empty($value['logo'])){
                     $value['logo'] = config('url.storage_url_api').$value['logo'].'?='.time();
-                }elseif(!empty($setting_default)){
-                    $value['logo'] = config('url.storage_url_api').$setting_default.'?='.time();
                 }
+
                 $delivery[] = $value;
             }
         }
@@ -2299,7 +2358,7 @@ class ApiOnlineTransaction extends Controller
         }
     }
 
-    function checkDataTransaction($post, $from_new = 0, $from_cart = 0, $from_check = 0){
+    function checkDataTransaction($post, $from_new = 0, $from_cart = 0, $from_check = 0, $dtAddress = []){
         $items = $this->mergeProducts($post);
 
         $availableCheckout = true;
@@ -2307,13 +2366,15 @@ class ApiOnlineTransaction extends Controller
         $errorMsg = [];
         $weight = [];
         foreach ($items as $index=>$value){
+            $errorMsgSubgroup = [];
             $checkOutlet = Outlet::where('id_outlet', $value['id_outlet'])->where('outlet_status', 'Active')->where('outlet_is_closed', 0)->first();
             if(!empty($checkOutlet)){
                 $productSubtotal = 0;
                 $weightProduct = 0;
+                $dimentionProduct = 0;
                 foreach ($value['items'] as $key=>$item){
                     $error = '';
-                    $product = Product::select('product_weight', 'id_merchant', 'product_category_name', 'products.id_product_category', 'id_product','product_code','product_name','product_description','product_code', 'product_variant_status')
+                    $product = Product::select('product_weight', 'product_width', 'product_length', 'product_height', 'id_merchant', 'product_category_name', 'products.id_product_category', 'id_product','product_code','product_name','product_description','product_code', 'product_variant_status')
                         ->leftJoin('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
                         ->where('product_visibility', 'Visible')
                         ->where('id_product',$item['id_product'])->first();
@@ -2401,8 +2462,9 @@ class ApiOnlineTransaction extends Controller
                     }
 
                     if(!empty($product['product_weight'])){
-                        $weight[] = $product['product_weight'];
-                        $weightProduct = $weightProduct+$product['product_weight'];
+                        $weight[] = $product['product_weight'] * $item['qty'];
+                        $weightProduct = $weightProduct + ($product['product_weight'] * $item['qty']);
+                        $dimentionProduct = $dimentionProduct+($product['product_width'] * $product['product_height'] * $product['product_length'] * $item['qty']);
                     }else{
                         $error = 'Produk tidak valid';
                     }
@@ -2448,15 +2510,84 @@ class ApiOnlineTransaction extends Controller
 
                 if(!empty($value['items'])){
                     $subtotal = $subtotal + $productSubtotal;
-                    $items[$index]['delivery_code'] = $value['delivery_code']??'';
-                    $items[$index]['delivery_service'] = $value['delivery_service']??'';
+                    $s = round($dimentionProduct ** (1/3), 0);
+                    $items[$index]['items_total_height'] = (int)$s;
+                    $items[$index]['items_total_width'] = (int) $s;
+                    $items[$index]['items_total_length'] = (int) $s;
                     $items[$index]['items_total_weight'] = $weightProduct;
                     $items[$index]['items_subtotal'] = $productSubtotal;
                     $items[$index]['items_subtotal_text'] = 'Rp '.number_format($productSubtotal,0,",",".");
                     $items[$index]['items'] = array_values($value['items']);
-                    if($from_check == 1){
+                    if($from_cart == 0){
+                        $subdistrictOutlet = Subdistricts::where('id_subdistrict', $checkOutlet['id_subdistrict'])
+                            ->join('districts', 'districts.id_district', 'subdistricts.id_district')->first();
+                        if(empty($subdistrictOutlet)){
+                            $errorMsg[] = 'Address toko tidak valid';
+                            $errorMsgSubgroup[] = 'Address toko tidak valid';
+                            if($from_new == 1){
+                                unset($value['items'][$key]);
+                                continue;
+                            }
+                        }
+                        $latOutlet = $subdistrictOutlet['subdistrict_latitude'];
+                        $lngOutlet = $subdistrictOutlet['subdistrict_longitude'];
+
+                        $subdistrictCustomer = Subdistricts::where('id_subdistrict', $dtAddress['id_subdistrict'])
+                                    ->join('districts', 'districts.id_district', 'subdistricts.id_district')->first();
+                        if(empty($subdistrictCustomer)){
+                            $errorMsg[] = 'Address tidak valid';
+                            $errorMsgSubgroup[] = 'Address tidak valid';
+                            if($from_new == 1){
+                                unset($value['items'][$key]);
+                                continue;
+                            }
+                        }
+                        $latCustomer = $subdistrictCustomer['subdistrict_latitude'];
+                        $lngCustomer = $subdistrictCustomer['subdistrict_longitude'];
+
+                        $dtDeliveryPrice = [
+                            "cod" =>  false,
+                            "for_order" => true,
+                            "destination" => [
+                                "area_id" => $subdistrictCustomer['id_subdistrict_external'],
+                                "lat" => $latCustomer,
+                                "lng" => $lngCustomer,
+                                "suburb_id" => $subdistrictCustomer['id_district_external']
+                            ],
+                            "origin"=> [
+                                "area_id" => $subdistrictOutlet['id_subdistrict_external'],
+                                "lat" => $latOutlet,
+                                "lng" => $lngOutlet,
+                                "suburb_id" => $subdistrictOutlet['id_district_external']
+                            ],
+                            "weight" => $weightProduct,
+                            "height" => (int)$s,
+                            "width" => (int)$s,
+                            "length" => (int)$s,
+                            "item_value" => $productSubtotal,
+                            "limit" => 100,
+                            "sort_by" => [
+                                "final_price"
+                            ],
+                        ];
+
                         $availableDelivery = app($this->merchant)->availableDelivery($value['id_outlet'], 1);
-                        $items[$index]['available_delivery'] = $availableDelivery;
+                        $shipper = new Shipper();
+                        $getDeliveryPrice = $shipper->sendRequest('Get Price', 'POST', 'pricing/domestic', $dtDeliveryPrice);
+                        $deliveryPrice = $shipper->listPrice($getDeliveryPrice['response']['data']??[], $availableDelivery);
+
+                        $items[$index]['available_delivery'] = $deliveryPrice;
+                        $items[$index]['delivery'] = $value['delivery']??[];
+
+                        if(empty($deliveryPrice)){
+                            $errorMsg[] = 'Kurir tidak available';
+                            $errorMsgSubgroup[] = 'Kurir tidak available';
+                            if($from_new == 1){
+                                unset($value['items'][$key]);
+                                continue;
+                            }
+                        }
+                        $items[$index]['error_messages'] = implode('. ', array_unique($errorMsgSubgroup));
                     }
                 }else{
                     $errorMsg[] = 'Stock produk habis';
@@ -2484,8 +2615,7 @@ class ApiOnlineTransaction extends Controller
         $tmp = [];
         foreach ($items as $value){
             $tmp[$value['id_outlet']]['id_outlet'] = $value['id_outlet'];
-            $tmp[$value['id_outlet']]['delivery_code'] = $value['delivery_code']??'';
-            $tmp[$value['id_outlet']]['delivery_service'] = $value['delivery_service']??'';
+            $tmp[$value['id_outlet']]['delivery'] = $value['delivery']??'';
             $tmp[$value['id_outlet']]['items'] = array_merge($tmp[$value['id_outlet']]['items']??[], $value['items']);
         }
         $items = array_values($tmp);

@@ -77,6 +77,7 @@ class Outlet extends Authenticatable
         'outlet_license_number',
 		'outlet_address',
 		'id_city',
+        'id_subdistrict',
 		'outlet_postal_code',
 		'outlet_phone',
 		'outlet_email',
