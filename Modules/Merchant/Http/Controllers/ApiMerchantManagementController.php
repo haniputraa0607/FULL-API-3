@@ -349,6 +349,7 @@ class ApiMerchantManagementController extends Controller
             'product_weight' => (!empty($post['product_weight']) ? $post['product_weight'] : 0),
             'product_height' => (!empty($post['product_height']) ? $post['product_height'] : 0),
             'product_width' => (!empty($post['product_width']) ? $post['product_width'] : 0),
+            'product_length' => (!empty($post['product_length']) ? $post['product_length'] : 0),
             'product_variant_status' => (empty($post['variants']) ? 0 : 1)
         ];
 
@@ -596,6 +597,7 @@ class ApiMerchantManagementController extends Controller
                 'product_weight' => (!empty($post['product_weight']) ? $post['product_weight'] : 0),
                 'product_height' => (!empty($post['product_height']) ? $post['product_height'] : 0),
                 'product_width' => (!empty($post['product_width']) ? $post['product_width'] : 0),
+                'product_length' => (!empty($post['product_length']) ? $post['product_length'] : 0),
                 'product_variant_status' => (empty($post['variants']) ? 0 : 1)
             ];
 
@@ -913,7 +915,8 @@ class ApiMerchantManagementController extends Controller
                 'image_detail' => $imagesDetail,
                 'product_weight' => $detail['product_weight'],
                 'product_height' => $detail['product_height'],
-                'product_width' => $detail['product_width']
+                'product_width' => $detail['product_width'],
+                'product_length' => $detail['product_length']
             ];
 
             $wholesalerStatus = false;
@@ -1063,6 +1066,7 @@ class ApiMerchantManagementController extends Controller
             $result['variants'] = $variants;
         }else{
             $productDetail = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $checkMerchant['id_outlet'])->first();
+            $result['name'] = $product['product_name'];
             $result['visibility'] = (($productDetail['product_detail_visibility']??'Visible') == 'Hidden' ? 0 : 1);
             $result['stock'] = $productDetail['product_detail_stock_item']??0;
         }

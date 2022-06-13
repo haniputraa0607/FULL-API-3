@@ -17,6 +17,7 @@ class TransactionShipmentTrackingUpdate extends Model
     protected $fillable   = [
         'id_transaction',
         'shipment_order_id',
+        'tracking_code',
         'tracking_description',
         'tracking_location',
         'tracking_date_time'

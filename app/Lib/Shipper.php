@@ -71,7 +71,8 @@ class Shipper {
             $rateType = strtolower($value['rate']['type']);
             $dtRate[$logisticCode.'_'.$rateType] = [
                 'price' => $value['final_price'],
-                'rate_id' => $value['rate']['id']
+                'rate_id' => $value['rate']['id'],
+                'insurance_fee' => $value['insurance_fee']
             ];
             $logo[$logisticCode] = $value['logistic']['logo_url'];
         }
@@ -89,6 +90,7 @@ class Shipper {
                             "active_status" => $s['active_status'],
                             "price" => $dtRate[$codeSearch]['price'],
                             "rate_id" => $dtRate[$codeSearch]['rate_id'],
+                            "insurance_fee" => $dtRate[$codeSearch]['insurance_fee']
                         ];
                     }
                 }
