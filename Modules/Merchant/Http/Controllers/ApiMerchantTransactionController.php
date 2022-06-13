@@ -308,7 +308,10 @@ class ApiMerchantTransactionController extends Controller
                 'delivery_method' => strtoupper($transaction['shipment_courier']),
                 'delivery_service' => ucfirst($transaction['shipment_courier_service']),
                 'delivery_price' => 'Rp '. number_format((int)$transaction['transaction_shipment'],0,",","."),
-                'delivery_tracking' => $tracking
+                'delivery_tracking' => $tracking,
+                'pickup_code' => $transaction['shipment_pickup_code'],
+                'pickup_time_start' => date('Y-m-d H:i:s', strtotime($transaction['shipment_pickup_time_start'])),
+                'pickup_time_end' => date('Y-m-d H:i:s', strtotime($transaction['shipment_pickup_time_end']))
             ],
             'payment' => $paymentMethod,
             'payment_detail' => $paymentDetail,
@@ -506,11 +509,11 @@ class ApiMerchantTransactionController extends Controller
         }
         $idOutlet = $checkMerchant['id_outlet'];
 
-        if(empty($post['id_transaction'])){
-            return response()->json(['status' => 'fail', 'messages' => ['ID transaction can not be empty']]);
+        if(empty($post['id_transaction']) || !isset($post['pickup_status'])){
+            return response()->json(['status' => 'fail', 'messages' => ['ID transaction and pickup status can not be empty']]);
         }
 
-        if(empty($post['pickup_time_start']) || empty($post['pickup_time_end'])){
+        if($post['pickup_status'] == true && (empty($post['pickup_time_start']) || empty($post['pickup_time_end']))){
             return response()->json(['status' => 'fail', 'messages' => ['Pickup time can not be empty']]);
         }
 
@@ -520,7 +523,8 @@ class ApiMerchantTransactionController extends Controller
             ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
             ->where('transactions.id_outlet', $idOutlet)
             ->where('transactions.id_transaction', $post['id_transaction'])
-            ->where('transaction_status', 'On Progress')->first();
+            ->where('transaction_status', 'On Progress')
+            ->first();
         if(empty($detail)){
             return response()->json(['status' => 'fail', 'messages' => ['Data order tidak ditemukan']]);
         }
@@ -622,44 +626,47 @@ class ApiMerchantTransactionController extends Controller
             $orderID = $detail['order_id'];
         }
 
-        //pickup request
-        $timeZoneOutlet = City::join('provinces', 'provinces.id_province', 'cities.id_province')
-                        ->where('id_city', $detail['id_city'])->first()['time_zone_utc']??null;
-        if(empty($timeZoneOutlet)){
-            return response()->json(['status' => 'fail', 'messages' => ['Data timezone can not be empty']]);
-        }
+        if($post['pickup_status'] == true){
+            //pickup request
+            $timeZoneOutlet = City::join('provinces', 'provinces.id_province', 'cities.id_province')
+                    ->where('id_city', $detail['id_city'])->first()['time_zone_utc']??null;
+            if(empty($timeZoneOutlet)){
+                return response()->json(['status' => 'fail', 'messages' => ['Data timezone can not be empty']]);
+            }
 
-        $timeZone = [
-            7 => 'Asia/Jakarta',
-            8 => 'Asia/Makassar',
-            9 => 'Asia/Jayapura'
-        ];
-        $dtPickupShipment = [
-            "data" => [
-                "order_activation" => [
+            $timeZone = [
+                7 => 'Asia/Jakarta',
+                8 => 'Asia/Makassar',
+                9 => 'Asia/Jayapura'
+            ];
+            $dtPickupShipment = [
+                "data" => [
+                    "order_activation" => [
                         "order_id" => [
                             $orderID
                         ],
-                    "timezone" => $timeZone[$timeZoneOutlet],
-                    "start_time" => date("c", strtotime($post['pickup_time_start'])),
-                    "end_time" => date("c", strtotime($post['pickup_time_end']))
+                        "timezone" => $timeZone[$timeZoneOutlet],
+                        "start_time" => date("c", strtotime($post['pickup_time_start'])),
+                        "end_time" => date("c", strtotime($post['pickup_time_end']))
+                    ]
                 ]
-            ]
-        ];
+            ];
 
-        $pickupDelivery = $shipper->sendRequest('Request Pickup', 'POST', 'pickup/timeslot', $dtPickupShipment);
-        if(empty($pickupDelivery['response']['data']['order_activations'][0]['pickup_code'])){
-            return response()->json(['status' => 'fail', 'messages' => ['Failed request pickup to third party']]);
-        }
-        $devPickup = $pickupDelivery['response']['data'];
+            $pickupDelivery = $shipper->sendRequest('Request Pickup', 'POST', 'pickup/timeslot', $dtPickupShipment);
+            if(empty($pickupDelivery['response']['data']['order_activations'][0]['pickup_code'])){
+                return response()->json(['status' => 'fail', 'messages' => ['Failed request pickup to third party']]);
+            }
+            $devPickup = $pickupDelivery['response']['data'];
 
-        $pickupCode = $devPickup['order_activations'][0]['pickup_code'];
-        $update = TransactionShipment::where('id_transaction', $detail['id_transaction'])
-            ->update([
+            $pickupCode = $devPickup['order_activations'][0]['pickup_code'];
+            $update = TransactionShipment::where('id_transaction', $detail['id_transaction'])
+                ->update([
                     'shipment_pickup_time_start' => date('Y-m-d H:i:s', strtotime($post['pickup_time_start'])),
                     'shipment_pickup_time_end' => date('Y-m-d H:i:s', strtotime($post['pickup_time_end'])),
                     'shipment_pickup_code' => $pickupCode
                 ]);
+        }
+
         $deliveryList = app($this->merchant)->availableDelivery($detail['id_outlet']);
         $deliveryName = '';
         $deliveryLogo = '';
@@ -683,7 +690,7 @@ class ApiMerchantTransactionController extends Controller
             'postal_code' => $detail['outlet_postal_code']
         ];
 
-        if($update){
+        if($update ?? true){
             return response()->json(['status' => 'success', 'result' => [
                 'delivery_id' => $orderID,
                 'delivery_name' => $deliveryName,
