@@ -224,8 +224,10 @@ class ApiNews extends Controller
             $data['news_type'] = $post['news_type'];
         }
 
-        if (isset($post['news_by'])) {
+        if (!empty($post['news_by'])) {
             $data['news_by'] = $post['news_by'];
+        }else{
+            $data['news_by'] = " ";
         }
 
         if ($post['news_type'] == 'video' && isset($post['link_video'])) {
