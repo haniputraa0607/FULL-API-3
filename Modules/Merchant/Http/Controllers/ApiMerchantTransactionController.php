@@ -850,7 +850,9 @@ class ApiMerchantTransactionController extends Controller
             'merchant_balance_before'        => $balance_before,
             'merchant_balance_after'         => $balance_after,
             'merchant_balance_id_reference'  => $data['id_transaction'],
-            'merchant_balance_source'        => $data['source']
+            'merchant_balance_source'        => $data['source'],
+            'created_at'                     => date('Y-m-d H:i:s'),
+            'updated_at'                     => date('Y-m-d H:i:s')
         ];
 
         if($balance_nominal < 0){
