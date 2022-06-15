@@ -573,6 +573,7 @@ class ApiMerchantTransactionController extends Controller
             $lngCustomer = $subdistrictCustomer['subdistrict_longitude'];
 
             $dtOrderShipment = [
+                "external_id" => $detail['transaction_receipt_number'],
                 "consignee" => [
                     "name" => $detail['destination_name'],
                     "phone_number" => substr_replace($detail['destination_phone'], '62', 0, 1)

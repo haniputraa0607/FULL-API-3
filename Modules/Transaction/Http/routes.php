@@ -1,4 +1,6 @@
 <?php
+Route::any('api/shipment/notification', 'Modules\Transaction\Http\Controllers\ApiShipperController@updateStatuShipment');
+
 Route::group(['middleware' => ['auth:api'],'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::any('available-payment', 'ApiOnlineTransaction@availablePayment');
     Route::any('available-payment/update', 'ApiOnlineTransaction@availablePaymentUpdate')->middleware('scopes:be');
