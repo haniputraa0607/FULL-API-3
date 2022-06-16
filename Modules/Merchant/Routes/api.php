@@ -106,9 +106,9 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::any('candidate/list', 'ApiMerchantManagementController@canditateList');
         Route::post('candidate/update', 'ApiMerchantManagementController@canditateUpdate');
 
-        //withdrawl
-        Route::any('withdrawl/list', 'ApiMerchantManagementController@withdrawlList');
-        Route::post('withdrawl/completed', 'ApiMerchantManagementController@withdrawlChangeStatus');
+        //withdrawal
+        Route::any('withdrawal/list', 'ApiMerchantManagementController@withdrawalList');
+        Route::post('withdrawal/completed', 'ApiMerchantManagementController@withdrawalChangeStatus');
 
         Route::post('balance/list', 'ApiMerchantController@balanceList');
     });

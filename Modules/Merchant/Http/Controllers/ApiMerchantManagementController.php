@@ -1290,7 +1290,7 @@ class ApiMerchantManagementController extends Controller
         }
     }
 
-    public function withdrawlList(Request  $request){
+    public function withdrawalList(Request  $request){
         $post = $request->json()->all();
 
         $list = MerchantLogBalance::join('merchants', 'merchants.id_merchant', 'merchant_log_balances.id_merchant')
@@ -1365,7 +1365,7 @@ class ApiMerchantManagementController extends Controller
         return response()->json(MyHelper::checkGet($list));
     }
 
-    public function withdrawlChangeStatus(Request $request){
+    public function withdrawalChangeStatus(Request $request){
         $post = $request->json()->all();
         $update = MerchantLogBalance::where('id_merchant_log_balance', $post['id_merchant_log_balance'])->update(['merchant_balance_status' => 'Completed']);
         return response()->json(MyHelper::checkUpdate($update));
