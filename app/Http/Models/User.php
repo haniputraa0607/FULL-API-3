@@ -257,4 +257,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserDevice::class, 'id_user');
     }
+
+	public function log_popup_user_rating()
+    {
+    	return $this->hasMany(\Modules\UserRating\Entities\UserRatingLog::class,'id_user')->orderBy('last_popup')->orderBy('id_user_rating_log');
+    }
 }

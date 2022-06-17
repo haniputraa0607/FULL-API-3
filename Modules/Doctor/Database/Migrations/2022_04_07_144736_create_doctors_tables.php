@@ -30,6 +30,7 @@ class CreateDoctorsTables extends Migration
             $table->boolean('sms_increment');
             $table->boolean('schedule_toogle');
             $table->boolean('notification_toogle');
+            $table->integer('total_rating');
 
             $table->timestamps();
         });

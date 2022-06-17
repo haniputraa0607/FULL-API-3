@@ -48,7 +48,8 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
 		'consultation_start_time',
 		'consultation_end_time',
 		'consultation_session_price',
-		'consultation_status'
+		'consultation_status',
+		'completed_at'
 	];
 
 	public function scopeOnlySoon($query)
@@ -61,4 +62,9 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
         return $query->where('consultation_status', "done");
     }
 	
+	public function doctor()
+	{
+		return $this->belongsTo(\Modules\Doctor\Entities\Doctor::class, 'id_doctor');
+	}
+
 }

@@ -50,7 +50,7 @@ class ApiHomeController extends Controller
             "name" => $doctor['doctor_name'],
             "specialist" => $specialist_name,
             "status" => $doctor['doctor_status'],
-            "statisfaction_rating" => $doctor['satisfaction_rating']
+            "total_rating" => $doctor['total_rating']
         ];
 
         //get doctor consultation

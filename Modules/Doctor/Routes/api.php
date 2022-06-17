@@ -76,4 +76,9 @@ Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-
     Route::get('my/profile', ['uses' => 'ApiDoctorController@myProfile']);
 
     Route::post('submission/store', ['uses' => 'ApiDoctorController@submissionChangeDataStore']);
+
+    Route::group(['prefix' => 'rating'], function () {
+        Route::get('summary', 'ApiDoctorController@ratingSummary');
+        Route::get('comment', 'ApiDoctorController@ratingComment');
+    });
 });

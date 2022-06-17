@@ -46,7 +46,7 @@ class Doctor extends Authenticatable
         'is_active',
         'doctor_sevice',
         'doctor_photo',
-        'satisfaction_rating',
+        'total_rating',
         'sms_increment',
         'schedule_toogle',
         'notification_toogle'

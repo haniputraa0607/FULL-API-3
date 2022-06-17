@@ -854,6 +854,71 @@ class ApiTransactionConsultationController extends Controller
      * @param  GetTransaction $request [description]
      * @return View                    [description]
      */
+    public function doneConsultation(Request $request) {
+        $post = $request->json()->all();
+
+        if (!isset($post['id_user'])) {
+            $id = $request->user()->id;
+        } else {
+            $id = $post['id_user'];
+        }
+
+        //cek id transaction
+        if(!isset($post['id_transaction'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Id transaction tidak boleh kosong']
+            ]);
+        }
+
+        //get Transaction
+        $transaction = Transaction::with('consultation')->where('id_transaction', $post['id_transaction'])->first()->toArray();
+
+        if(empty($transaction)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaksi tidak ditemukan']
+            ]);
+        }
+
+        //get Doctor
+        $doctor = Doctor::where('id_doctor', $transaction['consultation']['id_doctor'])->first();
+
+        if(empty($doctor)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Doctor tidak ditemukan']
+            ]);
+        }
+
+        DB::beginTransaction();
+        try {
+            $result = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])
+            ->update([
+                'consultation_status' => "done",
+                'consultation_start_at' => new DateTime
+            ]);
+    
+            $doctor->update(['doctor_status' => "online"]);
+            $doctor->save();
+        } catch (\Exception $e) {
+            $result = [
+                'status'  => 'fail',
+                'message' => 'Done Consultation Failed'
+            ];
+            DB::rollBack();
+            return response()->json($result);
+        }
+        DB::commit();
+
+        return response()->json(['status'  => 'success', 'result' => $result]);
+    }
+
+    /**
+     * Get info from given cart data
+     * @param  GetTransaction $request [description]
+     * @return View                    [description]
+     */
     public function getHistoryConsultationList(Request $request) {
         $post = $request->json()->all();
 
