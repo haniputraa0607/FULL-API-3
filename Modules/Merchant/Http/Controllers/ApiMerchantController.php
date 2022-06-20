@@ -246,7 +246,7 @@ class ApiMerchantController extends Controller
                 "outlet_email" => (empty($post['merchant_email']) ? null : $post['merchant_email']),
                 "outlet_phone" => $phone,
                 "id_city" => $post['id_city'],
-                "id_subdistrict" => $post['id_subdistrict'],
+                "id_subdistrict" => $post['id_subdistrict']??null,
                 "outlet_address" => $post['merchant_address'],
                 "outlet_postal_code" => (empty($post['merchant_postal_code']) ? null : $post['merchant_postal_code'])
             ];
@@ -268,7 +268,7 @@ class ApiMerchantController extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['Nomor telepon sudah terdaftar']]);
             }
 
-            $getPostalCode = Subdistricts::where('id_subdistrict', $post['id_subdistrict'])->first()['subdistrict_postal_code']??null;
+            $getPostalCode = Subdistricts::where('id_subdistrict', $post['id_subdistrict']??null)->first()['subdistrict_postal_code']??null;
 
             $dataUpdateOutlet = [
                 "outlet_name" => $post['merchant_name'],
@@ -276,7 +276,7 @@ class ApiMerchantController extends Controller
                 "outlet_email" => (empty($post['merchant_email']) ? null : $post['merchant_email']),
                 "outlet_phone" => $phone,
                 "id_city" => $post['id_city'],
-                "id_subdistrict" => $post['id_subdistrict'],
+                "id_subdistrict" => $post['id_subdistrict']??null,
                 "outlet_address" => $post['merchant_address'],
                 "outlet_postal_code" => $getPostalCode
             ];
@@ -583,7 +583,7 @@ class ApiMerchantController extends Controller
 
             return response()->json(MyHelper::checkGet($detail));
         }else{
-            $getPostalCode = Subdistricts::where('id_subdistrict', $post['id_subdistrict'])->first()['subdistrict_postal_code']??null;
+            $getPostalCode = Subdistricts::where('id_subdistrict', $post['id_subdistrict']??null)->first()['subdistrict_postal_code']??null;
 
             $dataUpdate = [
                 'outlet_latitude' => $post['latitude']??null,
