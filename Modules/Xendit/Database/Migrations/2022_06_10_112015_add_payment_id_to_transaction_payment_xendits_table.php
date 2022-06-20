@@ -22,9 +22,6 @@ class AddPaymentIdToTransactionPaymentXenditsTable extends Migration
         Schema::table('subscription_payment_xendits', function (Blueprint $table) {
             $table->string('payment_id')->after('xendit_id')->nullable();
         });
-        Schema::table('transaction_academy_installment_payment_xendits', function (Blueprint $table) {
-            $table->string('payment_id')->after('xendit_id')->nullable();
-        });
     }
 
     /**
@@ -41,9 +38,6 @@ class AddPaymentIdToTransactionPaymentXenditsTable extends Migration
             $table->dropColumn('payment_id');
         });
         Schema::table('subscription_payment_xendits', function (Blueprint $table) {
-            $table->dropColumn('payment_id');
-        });
-        Schema::table('transaction_academy_installment_payment_xendits', function (Blueprint $table) {
             $table->dropColumn('payment_id');
         });
     }
