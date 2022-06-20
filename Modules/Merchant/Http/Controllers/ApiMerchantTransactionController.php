@@ -37,6 +37,7 @@ use Modules\ProductVariant\Entities\ProductVariantPivot;
 use Modules\Transaction\Entities\TransactionGroup;
 use Modules\Transaction\Entities\TransactionShipmentTrackingUpdate;
 use Modules\Transaction\Http\Requests\TransactionDetail;
+use Modules\Xendit\Entities\TransactionPaymentXendit;
 
 class ApiMerchantTransactionController extends Controller
 {
@@ -270,8 +271,15 @@ class ApiMerchantTransactionController extends Controller
             ]
         ];
 
-        $trxPayment = TransactionPaymentMidtran::where('id_transaction_group', $transaction['id_transaction_group'])->first();
-        $paymentMethod = $trxPayment['payment_type'].(!empty($trxPayment['bank']) ? ' ('.$trxPayment['bank'].')':'');
+        $trxPaymentMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $transaction['id_transaction_group'])->first();
+        $trxPaymentXendit = TransactionPaymentXendit::where('id_transaction_group', $transaction['id_transaction_group'])->first();
+
+        if(!empty($trxPaymentMidtrans)){
+            $paymentMethod = $trxPaymentMidtrans['payment_type'].(!empty($trxPaymentMidtrans['bank']) ? ' ('.$trxPaymentMidtrans['bank'].')':'');
+        }elseif(!empty($trxPaymentXendit)){
+            $paymentMethod = $trxPaymentXendit['type'];
+        }
+
         $address = [
             'destination_name' => $transaction['destination_name'],
             'destination_phone' => $transaction['destination_phone'],

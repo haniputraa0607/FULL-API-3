@@ -86,6 +86,7 @@ use Modules\Transaction\Http\Requests\ShippingGoSend;
 
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
+use Modules\Xendit\Entities\TransactionPaymentXendit;
 
 use App\Lib\MyHelper;
 use App\Lib\GoSend;
@@ -2659,8 +2660,15 @@ class ApiTransaction extends Controller
             ];
         }
 
-        $trxPayment = TransactionPaymentMidtran::where('id_transaction_group', $transaction['id_transaction_group'])->first();
-        $paymentMethod = $trxPayment['payment_type'].(!empty($trxPayment['bank']) ? ' ('.$trxPayment['bank'].')':'');
+        $trxPaymentMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $transaction['id_transaction_group'])->first();
+        $trxPaymentXendit = TransactionPaymentXendit::where('id_transaction_group', $transaction['id_transaction_group'])->first();
+
+        if(!empty($trxPaymentMidtrans)){
+            $paymentMethod = $trxPaymentMidtrans['payment_type'].(!empty($trxPaymentMidtrans['bank']) ? ' ('.$trxPaymentMidtrans['bank'].')':'');
+        }elseif(!empty($trxPaymentXendit)){
+            $paymentMethod = $trxPaymentXendit['type'];
+        }
+
         $address = [
             'destination_name' => $transaction['destination_name'],
             'destination_phone' => $transaction['destination_phone'],
