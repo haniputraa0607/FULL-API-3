@@ -173,6 +173,9 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
         Route::post('reorder', 'ApiFeaturedSubscription@reorder');
         Route::post('delete', 'ApiFeaturedSubscription@destroy');
     });
+
+    //max consultation quota
+    Route::post('/max-consultation/update', 'ApiSetting@maxConsultationQuota');
 });
 
 Route::group(['prefix' => 'api/timesetting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()

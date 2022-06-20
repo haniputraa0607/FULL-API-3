@@ -10,6 +10,7 @@ use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionConsultation;
 use App\Http\Models\User;
+use App\Http\Models\Setting;
 
 use Modules\UserFeedback\Entities\UserFeedbackLog;
 use Modules\Doctor\Entities\DoctorSchedule;
@@ -83,22 +84,18 @@ class ApiTransactionConsultationController extends Controller
         if($post['consultation_type'] != "now") {
             $picked_date = $post['date'];
             $picked_day = strtolower(date('l', strtotime($picked_date)));
-
-            $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
-            ->whereHas('schedule_time', function($query) use ($post){
-                $query->where('start_time', '=', $post['time'])->onlyAvailable();
-            })->first();
         } else {
             $picked_date = $post['date'];
             $picked_day = strtolower(date('l', strtotime($picked_date)));
-
-            $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
-            ->whereHas('schedule_time', function($query) use ($post){
-                $query->whereTime('start_time', '<', $post['time'])->whereTime('end_time', '>', $post['time'])->onlyAvailable();
-            })->first();
         }
 
-        if(empty($schedule_session)){
+        //get doctor consultation
+        $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
+                                ->where('schedule_start_time', $post['time'])->count();
+        $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
+        $quota = $getSetting['value'];
+
+        if($quota <= $doctor_constultation){
             return response()->json([
                 'status'    => 'fail',
                 'messages'  => ['Jadwal penuh / tidak tersedia']
@@ -121,7 +118,10 @@ class ApiTransactionConsultationController extends Controller
         ];
 
         //selected session
-        $schedule_session = $schedule_session->toArray();
+        $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
+            ->whereHas('schedule_time', function($query) use ($post){
+                $query->where('start_time', '=', $post['time']);
+            })->first()->toArray();
 
         $result['selected_schedule'] = [
             'date' => $post['date'],
@@ -230,22 +230,20 @@ class ApiTransactionConsultationController extends Controller
         if($post['consultation_type'] != "now") {
             $picked_date = $post['date'];
             $picked_day = strtolower(date('l', strtotime($picked_date)));
-
-            $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
-            ->whereHas('schedule_time', function($query) use ($post){
-                $query->where('start_time', '=', $post['time'])->onlyAvailable();
-            })->first();
         } else {
             $picked_date = $post['date'];
             $picked_day = strtolower(date('l', strtotime($picked_date)));
-
-            $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
-            ->whereHas('schedule_time', function($query) use ($post){
-                $query->whereTime('start_time', '<', $post['time'])->whereTime('end_time', '>', $post['time'])->onlyAvailable();
-            })->first();
         }
 
-        if(empty($schedule_session)){
+        //get doctor consultation
+        $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
+                                ->where('schedule_start_time', $post['time'])->count();
+        $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
+        $quota = $getSetting['value'];
+
+        //dd($doctor_constultation);
+
+        if($quota <= $doctor_constultation){
             return response()->json([
                 'status'    => 'fail',
                 'messages'  => ['Jadwal penuh / tidak tersedia']
@@ -533,23 +531,6 @@ class ApiTransactionConsultationController extends Controller
         if(strtotime($insertTransaction['transaction_date'])){
             $trx_consultation->created_at = strtotime($insertTransaction['transaction_date']);
         }
-
-        //update remaining slot and status
-        $newRemainingSlot = (int)$picked_schedule['remaining_quota_session'] - 1;
-        $statusSession = $picked_schedule['status_session'];
-        if($newRemainingSlot <= 0){
-            $statusSession = "full";
-        }
-        
-        $updateDataTimeSchedule = TimeSchedule::where('id_time_schedule', $picked_schedule['id_time_schedule'])->update(['remaining_quota_session' => $newRemainingSlot, 'status_session' => $statusSession]);
-        if (!$updateDataTimeSchedule) {
-            DB::rollback();
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => ['Update Data Schedule Failed']
-            ]);
-        }
-        
 
         // $insertUserTrxProduct = app($this->transaction)->insertUserTrxProduct($userTrxProduct);
         // if ($insertUserTrxProduct == 'fail') {

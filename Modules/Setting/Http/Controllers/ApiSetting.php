@@ -1773,4 +1773,12 @@ class ApiSetting extends Controller
 
         return response()->json(MyHelper::checkDelete($delete));
     }
+
+    public function maxConsultationQuota(Request $request) {
+        $post = $request->json()->all();
+
+        $update = Setting::where('key','max_consultation_quota')->update($post);
+
+        return response()->json(MyHelper::checkUpdate($update));
+	}
 }
