@@ -66,3 +66,19 @@ Route::group(['prefix' => 'doctor/auth'], function () {
     Route::post('forgot-password', ['uses' => 'AuthDoctorController@forgotPassword']);
     Route::post('change-password', ['uses' => 'AuthDoctorController@changePassword']);
 });
+
+Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-apps'], 'prefix' => 'doctor'], function () {
+    Route::get('home', ['uses' => 'ApiHomeController@home']);
+    Route::get('schedule/my', ['uses' => 'ApiScheduleController@getMySchedule']);
+    Route::post('schedule/my/store', ['uses' => 'ApiScheduleController@storeMySchedule']);
+
+    Route::post('my/settings', ['uses' => 'ApiDoctorController@mySettings']);
+    Route::get('my/profile', ['uses' => 'ApiDoctorController@myProfile']);
+
+    Route::post('submission/store', ['uses' => 'ApiDoctorController@submissionChangeDataStore']);
+
+    Route::group(['prefix' => 'rating'], function () {
+        Route::get('summary', 'ApiDoctorController@ratingSummary');
+        Route::get('comment', 'ApiDoctorController@ratingComment');
+    });
+});

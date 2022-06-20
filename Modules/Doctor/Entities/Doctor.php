@@ -46,7 +46,10 @@ class Doctor extends Authenticatable
         'is_active',
         'doctor_sevice',
         'doctor_photo',
-        'sms_increment'
+        'total_rating',
+        'sms_increment',
+        'schedule_toogle',
+        'notification_toogle'
     ];
 
     public function clinic()

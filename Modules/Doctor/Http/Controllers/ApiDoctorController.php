@@ -10,7 +10,10 @@ use App\Lib\MyHelper;
 use Modules\Doctor\Entities\Doctor;
 use Modules\Doctor\Entities\DoctorSpecialist;
 use Modules\Doctor\Entities\DoctorSchedule;
+use Modules\Doctor\Entities\SubmissionChangeDoctorData;
 use Modules\Doctor\Http\Requests\DoctorCreate;
+use Modules\UserRating\Entities\RatingOption;
+use Modules\UserRating\Entities\UserRating;
 use Validator;
 use Image;
 use DB;
@@ -286,4 +289,166 @@ class ApiDoctorController extends Controller
             ]);
         }
     }
+
+    public function mySettings(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $user = $request->user();
+
+        DB::beginTransaction();
+        try {
+            //initialize value
+            $value = 1; //on
+            if($post['value'] == "off") {
+                $value = 0;
+            }
+
+            Doctor::where('id_doctor', $user['id_doctor'])->update([$post['action'] => $value]); 
+        } catch (\Exception $e) {
+            $result = [
+                'status'  => 'fail',
+                'message' => 'Update Settings Schedule Failed'
+            ];
+            DB::rollBack();
+            return response()->json($result);
+        }
+        DB::commit();
+
+        //if off value case
+        if($post['value'] == "off") {
+            return response()->json(['status'  => 'success', 'result' => $post['action']." Successfully Deactivated"]);
+        }
+
+        //default for on value case
+        return response()->json(['status'  => 'success', 'result' => $post['action']." Has Been Activated Successfully"]);
+    }
+
+    public function myProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $doctor = Doctor::where('id_doctor', $user['id_doctor'])->with('clinic')->with('specialists')->orderBy('created_at', 'DESC');
+
+        if(empty($doctor)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Doctor not found']
+            ]);
+        }
+
+        $doctor = $doctor->get()->toArray();
+
+        return response()->json(['status'  => 'success', 'result' => $doctor]);
+    }
+
+    public function submissionChangeDataStore(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $user = $request->user();
+
+        DB::beginTransaction();
+        try {
+            $submission = SubmissionChangeDoctorData::create($post); 
+        } catch (\Exception $e) {
+            $result = [
+                'status'  => 'fail',
+                'message' => 'Create Submission Change Data Failed'
+            ];
+            DB::rollBack();
+            return response()->json($result);
+        }
+        DB::commit();
+
+        return response()->json(['status'  => 'success', 'result' => $submission]);
+    }
+
+    public function ratingSummary(Request $request)
+	{
+		$user = $request->user();
+		$ratingDc = Doctor::where('doctors.id_doctor',$user->id_doctor)
+		->leftJoin('user_ratings','user_ratings.id_doctor','doctors.id_doctor')
+		->select(
+			DB::raw('
+				doctors.id_doctor,
+				doctors.doctor_phone,
+				doctors.doctor_name,
+				doctors.total_rating,
+				COUNT(DISTINCT user_ratings.id_user) as total_customer
+				')
+		)
+		->first();
+
+		$summary = Doctor::where('id_doctor', $user->id_doctor)->get();
+		$summaryRating = [];
+		$summaryOption = [];
+		foreach ($summary as $val) {
+			if ($val['summary_type'] == 'rating_value') {
+				$summaryRating[$val['key']] = $val['value'];
+			} else {
+				$summaryOption[$val['key']] = $val['value'];
+			}
+		}
+
+		$settingOptions = RatingOption::select('star','question','options')->where('rating_target', 'doctor')->get();
+		$options = [];
+		foreach ($settingOptions as $val) {
+			$temp = explode(',', $val['options']);
+			$options = array_merge($options, $temp);
+		}
+
+		$options = array_keys(array_flip($options));
+		$resOption = [];
+		foreach ($options as $val) {
+			$resOption[] = [
+				"name" => $val,
+				"value" => $summaryOption[$val] ?? 0
+			];
+		}
+
+		$res = [
+			'doctor_name' => $ratingDc['doctor_name'] ?? null,
+			'doctor_phone' => $ratingDc['doctor_phone'] ?? null,
+			'total_customer' => (int) ($ratingDc['total_customer'] ?? null),
+			'total_rating' => (float) ($ratingDc['total_rating'] ?? null),
+			'rating_value' => [
+				'5' => (int) ($summaryRating['5'] ?? null),
+				'4' => (int) ($summaryRating['4'] ?? null),
+				'3' => (int) ($summaryRating['3'] ?? null),
+				'2' => (int) ($summaryRating['2'] ?? null),
+				'1' => (int) ($summaryRating['1'] ?? null)
+			],
+			'rating_option' => $resOption
+		];
+		
+		return MyHelper::checkGet($res);
+	}
+
+	public function ratingComment(Request $request)
+	{
+		$user = $request->user();
+		$comment = UserRating::where('user_ratings.id_doctor', $user->id_doctor)
+		->leftJoin('transaction_consultations','user_ratings.id_transaction_consultation','transaction_consultations.id_transaction_consultation')
+		->whereNotNull('suggestion')
+		->where('suggestion', '!=', "")
+		->select(
+			'transaction_consultations.order_id',
+            'user_ratings.id_user_rating',
+			'user_ratings.suggestion',
+			'user_ratings.created_at'
+		)
+		->paginate($request->per_page ?? 10)
+		->toArray();
+
+		$resData = [];
+		foreach ($comment['data'] ?? [] as $val) {
+			$val['created_at_indo'] = MyHelper::dateFormatInd($val['created_at'], true, false);
+			$resData[] = $val;
+		}
+
+		$comment['data'] = $resData;
+
+		return MyHelper::checkGet($comment);
+	}
 }

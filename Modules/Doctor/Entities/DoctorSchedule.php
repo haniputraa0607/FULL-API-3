@@ -13,7 +13,7 @@ class DoctorSchedule extends Model
 
     protected $fillable   = [
         'id_doctor',
-        'date',
+        'day',
         'is_active'
     ];
 

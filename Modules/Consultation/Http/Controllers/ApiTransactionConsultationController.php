@@ -9,6 +9,7 @@ use App\Lib\MyHelper;
 use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionConsultation;
+use App\Http\Models\User;
 
 use Modules\UserFeedback\Entities\UserFeedbackLog;
 use Modules\Doctor\Entities\DoctorSchedule;
@@ -85,7 +86,7 @@ class ApiTransactionConsultationController extends Controller
 
             $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
             ->whereHas('schedule_time', function($query) use ($post){
-                $query->where('start_time', '=', $post['time'])->onlyAvailabile();
+                $query->where('start_time', '=', $post['time'])->onlyAvailable();
             })->first();
         } else {
             $picked_date = $post['date'];
@@ -93,7 +94,7 @@ class ApiTransactionConsultationController extends Controller
 
             $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
             ->whereHas('schedule_time', function($query) use ($post){
-                $query->whereTime('start_time', '<', $post['time'])->whereTime('end_time', '>', $post['time'])->onlyAvailabile();
+                $query->whereTime('start_time', '<', $post['time'])->whereTime('end_time', '>', $post['time'])->onlyAvailable();
             })->first();
         }
 
@@ -232,7 +233,7 @@ class ApiTransactionConsultationController extends Controller
 
             $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
             ->whereHas('schedule_time', function($query) use ($post){
-                $query->where('start_time', '=', $post['time'])->onlyAvailabile();
+                $query->where('start_time', '=', $post['time'])->onlyAvailable();
             })->first();
         } else {
             $picked_date = $post['date'];
@@ -240,7 +241,7 @@ class ApiTransactionConsultationController extends Controller
 
             $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
             ->whereHas('schedule_time', function($query) use ($post){
-                $query->whereTime('start_time', '<', $post['time'])->whereTime('end_time', '>', $post['time'])->onlyAvailabile();
+                $query->whereTime('start_time', '<', $post['time'])->whereTime('end_time', '>', $post['time'])->onlyAvailable();
             })->first();
         }
 
@@ -533,9 +534,14 @@ class ApiTransactionConsultationController extends Controller
             $trx_consultation->created_at = strtotime($insertTransaction['transaction_date']);
         }
 
-        //update remaining slot
+        //update remaining slot and status
         $newRemainingSlot = (int)$picked_schedule['remaining_quota_session'] - 1;
-        $updateDataTimeSchedule = TimeSchedule::where('id_time_schedule', $picked_schedule['id_time_schedule'])->update(['remaining_quota_session' => $newRemainingSlot]);
+        $statusSession = $picked_schedule['status_session'];
+        if($newRemainingSlot <= 0){
+            $statusSession = "full";
+        }
+        
+        $updateDataTimeSchedule = TimeSchedule::where('id_time_schedule', $picked_schedule['id_time_schedule'])->update(['remaining_quota_session' => $newRemainingSlot, 'status_session' => $statusSession]);
         if (!$updateDataTimeSchedule) {
             DB::rollback();
             return response()->json([
@@ -677,11 +683,22 @@ class ApiTransactionConsultationController extends Controller
         $result = array();
         foreach($transaction as $key => $value) {
             $doctor = Doctor::where('id_doctor', $value['consultation']['id_doctor'])->first()->toArray();
-            $schedule_date_time = $value['consultation']['schedule_date'] .' '. $value['consultation']['schedule_start_time'];
-            $schedule_date_time =new DateTime($schedule_date_time);
-            $diff_date = "missed";
-            if($schedule_date_time > $now) {
-                $diff_date = $now->diff($schedule_date_time)->format("%d days, %h hours and %i minuts");
+
+            //get diff datetime
+            $now = new DateTime();
+            $schedule_date_start_time = $value['consultation']['schedule_date'] .' '. $value['consultation']['schedule_start_time'];
+            $schedule_date_start_time =new DateTime($schedule_date_start_time);
+            $schedule_date_end_time = $value['consultation']['schedule_date'] .' '. $value['consultation']['schedule_end_time'];
+            $schedule_date_end_time =new DateTime($schedule_date_end_time);
+            $diff_date = null;
+
+            //logic schedule diff date
+            if($schedule_date_start_time > $now && $schedule_date_end_time > $now) {
+                $diff_date = $now->diff($schedule_date_start_time)->format("%d days, %h hours and %i minutes");
+            } elseif($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
+                $diff_date = "now";
+            } else {
+                $diff_date = "missed";
             }
 
             $result[$key]['id_transaction'] = $value['id_transaction'];
@@ -837,6 +854,71 @@ class ApiTransactionConsultationController extends Controller
      * @param  GetTransaction $request [description]
      * @return View                    [description]
      */
+    public function doneConsultation(Request $request) {
+        $post = $request->json()->all();
+
+        if (!isset($post['id_user'])) {
+            $id = $request->user()->id;
+        } else {
+            $id = $post['id_user'];
+        }
+
+        //cek id transaction
+        if(!isset($post['id_transaction'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Id transaction tidak boleh kosong']
+            ]);
+        }
+
+        //get Transaction
+        $transaction = Transaction::with('consultation')->where('id_transaction', $post['id_transaction'])->first()->toArray();
+
+        if(empty($transaction)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaksi tidak ditemukan']
+            ]);
+        }
+
+        //get Doctor
+        $doctor = Doctor::where('id_doctor', $transaction['consultation']['id_doctor'])->first();
+
+        if(empty($doctor)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Doctor tidak ditemukan']
+            ]);
+        }
+
+        DB::beginTransaction();
+        try {
+            $result = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])
+            ->update([
+                'consultation_status' => "done",
+                'consultation_start_at' => new DateTime
+            ]);
+    
+            $doctor->update(['doctor_status' => "online"]);
+            $doctor->save();
+        } catch (\Exception $e) {
+            $result = [
+                'status'  => 'fail',
+                'message' => 'Done Consultation Failed'
+            ];
+            DB::rollBack();
+            return response()->json($result);
+        }
+        DB::commit();
+
+        return response()->json(['status'  => 'success', 'result' => $result]);
+    }
+
+    /**
+     * Get info from given cart data
+     * @param  GetTransaction $request [description]
+     * @return View                    [description]
+     */
     public function getHistoryConsultationList(Request $request) {
         $post = $request->json()->all();
 
@@ -879,6 +961,72 @@ class ApiTransactionConsultationController extends Controller
             $result[$key]['doctor_name'] = $doctor['doctor_name'];
             $result[$key]['doctor_photo'] = $doctor['doctor_photo'];
             $result[$key]['schedule_date'] = $value['consultation']['schedule_date'];
+        }
+
+        return response()->json([
+            'status'   => 'success',
+            'result'   => $result
+        ]);
+    }
+
+    /**
+     * Get info from given cart data
+     * @param  GetHandledConsultation $request [description]
+     * @return View                    [description]
+     */
+    public function getHandledConsultation(Request $request) {
+        $post = $request->json()->all();
+
+        if (!isset($post['id_user'])) {
+            $id = $request->user()->id_doctor;
+        } else {
+            $id = $post['id_doctor'];
+        }
+
+        $transaction = Transaction::with('consultation');
+
+        if(isset($post['consultation_status'])) {
+            $transaction = $transaction->whereHas('consultation', function($query) use ($post, $id){
+                $query->where('id_doctor', $id)->where('consultation_status', $post['consultation_status']);
+            });
+        }
+
+        $transaction = $transaction->get()->toArray();
+
+        if(empty($transaction)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['History transaksi konsultasi tidak ditemukan']
+            ]);
+        }
+
+        $result = array();
+        foreach($transaction as $key => $value) {
+            $user = User::where('id', $value['consultation']['id_user'])->first()->toArray();
+
+            //get diff datetime
+            $now = new DateTime();
+            $schedule_date_start_time = $value['consultation']['schedule_date'] .' '. $value['consultation']['schedule_start_time'];
+            $schedule_date_start_time =new DateTime($schedule_date_start_time);
+            $schedule_date_end_time = $value['consultation']['schedule_date'] .' '. $value['consultation']['schedule_end_time'];
+            $schedule_date_end_time =new DateTime($schedule_date_end_time);
+            $diff_date = null;
+
+            //logic schedule diff date
+            if($schedule_date_start_time > $now && $schedule_date_end_time > $now) {
+                $diff_date = $now->diff($schedule_date_start_time)->format("%d days, %h hours and %i minutes");
+            } elseif($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
+                $diff_date = "now";
+            } else {
+                $diff_date = "missed";
+            }
+
+            //set response result
+            $result[$key]['id_transaction'] = $value['id_transaction'];
+            $result[$key]['customer_name'] = $user['name'];
+            $result[$key]['schedule_date'] = $value['consultation']['schedule_date'];
+            $result[$key]['schedule_start_time'] = $value['consultation']['schedule_start_time'];
+            $result[$key]['schedule_diff_date'] = $diff_date;
         }
 
         return response()->json([
