@@ -1161,6 +1161,71 @@ class MyHelper{
 		return $result;
 	}
 
+    public static function uploadPhotoProduct($foto, $path, $name=null, $forceextension=null) {
+        // kalo ada foto1
+        $decoded = base64_decode($foto);
+        if($forceextension != null)
+            $ext = $forceextension;
+        else
+            $ext = MyHelper::checkExtensionImageBase64($decoded);
+        // set picture name
+        if($name != null)
+            $pictName = $name.$ext;
+        else
+            $pictName = mt_rand(0, 1000).''.time().''.$ext;
+
+        // path
+        $upload = $path.$pictName;
+
+        $img = Image::make($decoded);
+        $imgwidth = $img->width();
+        $imgheight = $img->height();
+
+        if($imgwidth > $imgheight && $imgwidth > 1000){
+            $img->resize(1000, null, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            });
+        } elseif($imgheight > $imgwidth && $imgheight > 1000) {
+            $img->resize(null, 1000, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            });
+        }
+
+        if(env('STORAGE')){
+            $resource = $img->stream()->detach();
+
+            $save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
+            if ($save) {
+                $result = [
+                    'status' => 'success',
+                    'path'  => $upload
+                ];
+            }
+            else {
+                $result = [
+                    'status' => 'fail'
+                ];
+            }
+        }else{
+            if ($img->save($upload)) {
+                $result = [
+                    'status' => 'success',
+                    'path'  => $upload
+                ];
+            }
+            else {
+                $result = [
+                    'status' => 'fail'
+                ];
+            }
+        }
+
+
+        return $result;
+    }
+
 	public static function uploadFile($file, $path, $ext="apk", $name=null) {
 		// kalo ada file
 		$decoded = base64_decode($file);

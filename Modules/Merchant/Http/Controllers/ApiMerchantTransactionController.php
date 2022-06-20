@@ -2,15 +2,19 @@
 
 namespace Modules\Merchant\Http\Controllers;
 
+use App\Http\Models\City;
 use App\Http\Models\LogBalance;
 use App\Http\Models\MonthlyReportTrx;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPhoto;
+use App\Http\Models\Province;
+use App\Http\Models\Subdistricts;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\User;
+use App\Lib\Shipper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -21,6 +25,7 @@ use Modules\Disburse\Entities\BankAccount;
 use Modules\Disburse\Entities\BankAccountOutlet;
 use Modules\Disburse\Entities\BankName;
 use App\Http\Models\TransactionShipment;
+use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\Merchant\Entities\Merchant;
 use Modules\Merchant\Entities\MerchantLogBalance;
 use Modules\Merchant\Http\Requests\MerchantCreateStep1;
@@ -32,6 +37,7 @@ use Modules\ProductVariant\Entities\ProductVariantPivot;
 use Modules\Transaction\Entities\TransactionGroup;
 use Modules\Transaction\Entities\TransactionShipmentTrackingUpdate;
 use Modules\Transaction\Http\Requests\TransactionDetail;
+use Modules\Xendit\Entities\TransactionPaymentXendit;
 
 class ApiMerchantTransactionController extends Controller
 {
@@ -265,8 +271,15 @@ class ApiMerchantTransactionController extends Controller
             ]
         ];
 
-        $trxPayment = TransactionPaymentMidtran::where('id_transaction_group', $transaction['id_transaction_group'])->first();
-        $paymentMethod = $trxPayment['payment_type'].(!empty($trxPayment['bank']) ? ' ('.$trxPayment['bank'].')':'');
+        $trxPaymentMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $transaction['id_transaction_group'])->first();
+        $trxPaymentXendit = TransactionPaymentXendit::where('id_transaction_group', $transaction['id_transaction_group'])->first();
+
+        if(!empty($trxPaymentMidtrans)){
+            $paymentMethod = $trxPaymentMidtrans['payment_type'].(!empty($trxPaymentMidtrans['bank']) ? ' ('.$trxPaymentMidtrans['bank'].')':'');
+        }elseif(!empty($trxPaymentXendit)){
+            $paymentMethod = $trxPaymentXendit['type'];
+        }
+
         $address = [
             'destination_name' => $transaction['destination_name'],
             'destination_phone' => $transaction['destination_phone'],
@@ -277,7 +290,7 @@ class ApiMerchantTransactionController extends Controller
         ];
 
         $tracking = [];
-        $trxTracking = TransactionShipmentTrackingUpdate::where('id_transaction', $id)->orderBy('tracking_date_time', 'desc')->get()->toArray();
+        $trxTracking = TransactionShipmentTrackingUpdate::where('id_transaction', $id)->orderBy('tracking_date_time', 'desc')->orderBy('id_transaction_shipment_tracking_update', 'desc')->get()->toArray();
         foreach ($trxTracking as $value){
             $tracking[] = [
                 'date' => MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($value['tracking_date_time'])), true),
@@ -303,7 +316,10 @@ class ApiMerchantTransactionController extends Controller
                 'delivery_method' => strtoupper($transaction['shipment_courier']),
                 'delivery_service' => ucfirst($transaction['shipment_courier_service']),
                 'delivery_price' => 'Rp '. number_format((int)$transaction['transaction_shipment'],0,",","."),
-                'delivery_tracking' => $tracking
+                'delivery_tracking' => $tracking,
+                'pickup_code' => $transaction['shipment_pickup_code'],
+                'pickup_time_start' => date('Y-m-d H:i:s', strtotime($transaction['shipment_pickup_time_start'])),
+                'pickup_time_end' => date('Y-m-d H:i:s', strtotime($transaction['shipment_pickup_time_end']))
             ],
             'payment' => $paymentMethod,
             'payment_detail' => $paymentDetail,
@@ -426,18 +442,15 @@ class ApiMerchantTransactionController extends Controller
             'postal_code' => $detail['outlet_postal_code']
         ];
 
-        $datePickup = MyHelper::dateFormatInd(date('Y-m-d H:i:s', strtotime(date('Y-m-d '.'14:00:00'). ' + 2 days')));
-        $pickUpDescription = 'Penjemputan akan dilakukan '.$datePickup.'';
         $description = Setting::where('key', 'delivery_request_description')->first()['value_text']??'';
 
         return response()->json(['status' => 'success', 'result' => [
             'address' => $address,
-            'pickup_description' => $pickUpDescription,
             'description' => $description
         ]]);
     }
 
-    public function confirmDeliveryTransaction(Request $request){
+    public function listTimePickupDelivery(Request $request){
         $post = $request->json()->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
@@ -452,8 +465,6 @@ class ApiMerchantTransactionController extends Controller
 
         $detail = Transaction::join('transaction_shipments', 'transaction_shipments.id_transaction', 'transactions.id_transaction')
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-            ->leftJoin('cities', 'cities.id_city', 'outlets.id_city')
-            ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
             ->where('transactions.id_outlet', $idOutlet)
             ->where('transactions.id_transaction', $post['id_transaction'])
             ->where('transaction_status', 'On Progress')->first();
@@ -461,12 +472,210 @@ class ApiMerchantTransactionController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Data order tidak ditemukan']]);
         }
 
-        if(!empty($detail['order_id'])){
+        $timeZoneOutlet = City::join('provinces', 'provinces.id_province', 'cities.id_province')
+                ->where('id_city', $detail['id_city'])->first()['time_zone_utc']??null;
+        if(empty($timeZoneOutlet)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data timezone can not be empty']]);
+        }
+
+        $timeZone = [
+            7 => 'Asia/Jakarta',
+            8 => 'Asia/Makassar',
+            9 => 'Asia/Jayapura'
+        ];
+
+        $dtRequestTimezone = $timeZone[$timeZoneOutlet];
+        $shipper = new Shipper();
+        $listTime = $shipper->sendRequest('Pickup Time List', 'GET', 'pickup/timeslot?time_zone='.$dtRequestTimezone, []);
+
+        if(empty($listTime['response']['data']['time_slots'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Timeslot not available']]);
+        }
+
+        $res = $listTime['response']['data']['time_slots'];
+        $result = [];
+        foreach ($res as $value){
+            $start = date('Y-m-d H:i:s', strtotime($value['start_time']));
+            $end = date('Y-m-d H:i:s', strtotime($value['end_time']));
+
+            $result[] = [
+                "start_time" => $start,
+                "end_time" => $end
+            ];
+        }
+
+        return response()->json(MyHelper::checkGet($result));
+    }
+
+
+    public function confirmDeliveryTransaction(Request $request){
+        $post = $request->json()->all();
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+        $idOutlet = $checkMerchant['id_outlet'];
+
+        if(empty($post['id_transaction']) || !isset($post['pickup_status'])){
+            return response()->json(['status' => 'fail', 'messages' => ['ID transaction and pickup status can not be empty']]);
+        }
+
+        if($post['pickup_status'] == true && (empty($post['pickup_time_start']) || empty($post['pickup_time_end']))){
+            return response()->json(['status' => 'fail', 'messages' => ['Pickup time can not be empty']]);
+        }
+
+        $detail = Transaction::join('transaction_shipments', 'transaction_shipments.id_transaction', 'transactions.id_transaction')
+            ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+            ->leftJoin('cities', 'cities.id_city', 'outlets.id_city')
+            ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
+            ->where('transactions.id_outlet', $idOutlet)
+            ->where('transactions.id_transaction', $post['id_transaction'])
+            ->where('transaction_status', 'On Progress')
+            ->first();
+        if(empty($detail)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data order tidak ditemukan']]);
+        }
+
+        if(!empty($detail['order_id']) && !empty($detail['shipment_pickup_code'])){
             return response()->json(['status' => 'fail', 'messages' => ['Sedang menunggu pickup']]);
         }
 
-        $orderID = 'D-'.MyHelper::createrandom(7,'Angka').$detail['id_outlet'].MyHelper::createrandom(5,'Angka');
-        $update = TransactionShipment::where('id_transaction', $detail['id_transaction'])->update(['order_id' => $orderID]);
+        $items = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
+                ->where('id_transaction', $detail['id_transaction'])
+                ->get()->toArray();
+
+        $products = [];
+        foreach ($items as $value){
+            $productName = $value['product_name'];
+            if(!empty($value['id_product_variant_group'])){
+                $variants = ProductVariant::join('product_variant_pivot', 'product_variant_pivot.id_product_variant', 'product_variants.id_product_variant')
+                            ->where('id_product_variant_group', $value['id_product_variant_group'])->pluck('product_variant_name')->toArray();
+                $productName = $productName.'('.implode(" ", $variants).')';
+            }
+
+            $products[] = [
+                "name" => $productName,
+                "price" => (int)$value['transaction_product_price'],
+                "qty" => $value['transaction_product_qty']
+            ];
+        }
+
+        $subdistrictOutlet = Subdistricts::where('id_subdistrict', $detail['depart_id_subdistrict'])
+            ->join('districts', 'districts.id_district', 'subdistricts.id_district')->first();
+        if(empty($subdistrictOutlet)){
+            return response()->json(['status' => 'fail', 'messages' => ['Empty district outlet']]);
+        }
+
+        $shipper = new Shipper();
+        if(empty($detail['order_id'])){
+            $latOutlet = $subdistrictOutlet['subdistrict_latitude'];
+            $lngOutlet = $subdistrictOutlet['subdistrict_longitude'];
+
+            $subdistrictCustomer = Subdistricts::where('id_subdistrict', $detail['destination_id_subdistrict'])
+                ->join('districts', 'districts.id_district', 'subdistricts.id_district')->first();
+            if(empty($subdistrictCustomer)){
+                return response()->json(['status' => 'fail', 'messages' => ['Empty district customer']]);
+            }
+            $latCustomer = $subdistrictCustomer['subdistrict_latitude'];
+            $lngCustomer = $subdistrictCustomer['subdistrict_longitude'];
+
+            $dtOrderShipment = [
+                "external_id" => $detail['transaction_receipt_number'],
+                "consignee" => [
+                    "name" => $detail['destination_name'],
+                    "phone_number" => substr_replace($detail['destination_phone'], '62', 0, 1)
+                ],
+                "consigner" => [
+                    "name" => $detail['depart_name'],
+                    "phone_number" => substr_replace($detail['depart_phone'], '62', 0, 1)
+                ],
+                "courier" => [
+                    "cod" => false,
+                    "rate_id" => $detail['shipment_rate_id'],
+                    "use_insurance" => ($detail['shipment_insurance_use_status'] == 1 ? true : false)
+                ],
+                "coverage" => "domestic",
+                "destination" => [
+                    "address" => $detail['destination_address'],
+                    "area_id" => $subdistrictCustomer['id_subdistrict_external'],
+                    "lat" => $latCustomer,
+                    "lng" => $lngCustomer
+                ],
+                "origin" => [
+                    "address" => $detail['depart_address'],
+                    "area_id" => $subdistrictOutlet['id_subdistrict_external'],
+                    "lat" => $latOutlet,
+                    "lng" => $lngOutlet
+                ],
+                "package" => [
+                    "height" => $detail['shipment_total_height'],
+                    "width" => $detail['shipment_total_width'],
+                    "length" => $detail['shipment_total_length'],
+                    "weight" => $detail['shipment_total_weight'],
+                    "items" => $products,
+                    "price" => $detail['transaction_subtotal'],
+                    "package_type" => (int)Setting::where('key', 'default_package_type_delivery')->first()['value']??3
+                ],
+                "payment_type" => "postpay"
+            ];
+
+            $orderDelivery = $shipper->sendRequest('Order', 'POST', 'order', $dtOrderShipment);
+            if(empty($orderDelivery['response']['data']['order_id'])){
+                return response()->json(['status' => 'fail', 'messages' => ['Failed request to third party']]);
+            }
+
+            $devOrder = $orderDelivery['response']['data'];
+            $orderID = $devOrder['order_id'];
+            TransactionShipment::where('id_transaction', $detail['id_transaction'])
+                ->update([
+                    'order_id' => $orderID
+                ]);
+        }else{
+            $orderID = $detail['order_id'];
+        }
+
+        if($post['pickup_status'] == true){
+            //pickup request
+            $timeZoneOutlet = City::join('provinces', 'provinces.id_province', 'cities.id_province')
+                    ->where('id_city', $detail['id_city'])->first()['time_zone_utc']??null;
+            if(empty($timeZoneOutlet)){
+                return response()->json(['status' => 'fail', 'messages' => ['Data timezone can not be empty']]);
+            }
+
+            $timeZone = [
+                7 => 'Asia/Jakarta',
+                8 => 'Asia/Makassar',
+                9 => 'Asia/Jayapura'
+            ];
+            $dtPickupShipment = [
+                "data" => [
+                    "order_activation" => [
+                        "order_id" => [
+                            $orderID
+                        ],
+                        "timezone" => $timeZone[$timeZoneOutlet],
+                        "start_time" => date("c", strtotime($post['pickup_time_start'])),
+                        "end_time" => date("c", strtotime($post['pickup_time_end']))
+                    ]
+                ]
+            ];
+
+            $pickupDelivery = $shipper->sendRequest('Request Pickup', 'POST', 'pickup/timeslot', $dtPickupShipment);
+            if(empty($pickupDelivery['response']['data']['order_activations'][0]['pickup_code'])){
+                return response()->json(['status' => 'fail', 'messages' => ['Failed request pickup to third party']]);
+            }
+            $devPickup = $pickupDelivery['response']['data'];
+
+            $pickupCode = $devPickup['order_activations'][0]['pickup_code'];
+            $update = TransactionShipment::where('id_transaction', $detail['id_transaction'])
+                ->update([
+                    'shipment_pickup_time_start' => date('Y-m-d H:i:s', strtotime($post['pickup_time_start'])),
+                    'shipment_pickup_time_end' => date('Y-m-d H:i:s', strtotime($post['pickup_time_end'])),
+                    'shipment_pickup_code' => $pickupCode
+                ]);
+        }
+
         $deliveryList = app($this->merchant)->availableDelivery($detail['id_outlet']);
         $deliveryName = '';
         $deliveryLogo = '';
@@ -482,18 +691,15 @@ class ApiMerchantTransactionController extends Controller
             'province_name' => $detail['province_name'],
             'id_city' => $detail['id_city'],
             'city_name' => $detail['city_name'],
+            'id_district' => $subdistrictOutlet['id_district'],
+            'district_name' => $subdistrictOutlet['district_name'],
+            'id_subdistrict' => $subdistrictOutlet['id_subdistrict'],
+            'subdistrict_name' => $subdistrictOutlet['subdistrict_name'],
             'address' => $detail['outlet_address'],
             'postal_code' => $detail['outlet_postal_code']
         ];
 
-        if($update){
-            TransactionShipmentTrackingUpdate::create([
-                'id_transaction' => $detail['id_transaction'],
-                'shipment_order_id' => $orderID,
-                'tracking_description' => 'Menunggu paket di ambil oleh kurir',
-                'tracking_date_time' => date('Y-m-d H:i:s')
-            ]);
-
+        if($update ?? true){
             return response()->json(['status' => 'success', 'result' => [
                 'delivery_id' => $orderID,
                 'delivery_name' => $deliveryName,
@@ -613,7 +819,7 @@ class ApiMerchantTransactionController extends Controller
         }
 
         $tracking = [];
-        $trxTracking = TransactionShipmentTrackingUpdate::where('id_transaction', $id)->orderBy('tracking_date_time', 'desc')->get()->toArray();
+        $trxTracking = TransactionShipmentTrackingUpdate::where('id_transaction', $id)->orderBy('tracking_date_time', 'desc')->orderBy('id_transaction_shipment_tracking_update', 'desc')->get()->toArray();
         foreach ($trxTracking as $value){
             $tracking[] = [
                 'date' => MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($value['tracking_date_time'])), true),
@@ -652,7 +858,9 @@ class ApiMerchantTransactionController extends Controller
             'merchant_balance_before'        => $balance_before,
             'merchant_balance_after'         => $balance_after,
             'merchant_balance_id_reference'  => $data['id_transaction'],
-            'merchant_balance_source'        => $data['source']
+            'merchant_balance_source'        => $data['source'],
+            'created_at'                     => date('Y-m-d H:i:s'),
+            'updated_at'                     => date('Y-m-d H:i:s')
         ];
 
         if($balance_nominal < 0){

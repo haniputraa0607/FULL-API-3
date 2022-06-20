@@ -5,6 +5,7 @@ namespace Modules\Transaction\Http\Controllers;
 use App\Http\Models\Deal;
 use App\Http\Models\ProductPhoto;
 use App\Http\Models\TransactionProductModifier;
+use App\Lib\Shipper;
 use Illuminate\Pagination\Paginator;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
@@ -49,6 +50,7 @@ use App\Http\Models\UserTrxProduct;
 use Modules\Brand\Entities\Brand;
 use Modules\Product\Entities\ProductGlobalPrice;
 use Modules\Product\Entities\ProductSpecialPrice;
+use Modules\Transaction\Entities\TransactionShipmentTrackingUpdate;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -57,7 +59,6 @@ use Illuminate\Routing\Controller;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use Modules\Transaction\Entities\LogInvalidTransaction;
 use Modules\Transaction\Entities\TransactionBundlingProduct;
-use Modules\Transaction\Entities\TransactionShipmentTrackingUpdate;
 use Modules\Transaction\Http\Requests\RuleUpdate;
 
 use Modules\Transaction\Http\Requests\TransactionDetail;
@@ -85,6 +86,7 @@ use Modules\Transaction\Http\Requests\ShippingGoSend;
 
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
+use Modules\Xendit\Entities\TransactionPaymentXendit;
 
 use App\Lib\MyHelper;
 use App\Lib\GoSend;
@@ -2658,8 +2660,15 @@ class ApiTransaction extends Controller
             ];
         }
 
-        $trxPayment = TransactionPaymentMidtran::where('id_transaction_group', $transaction['id_transaction_group'])->first();
-        $paymentMethod = $trxPayment['payment_type'].(!empty($trxPayment['bank']) ? ' ('.$trxPayment['bank'].')':'');
+        $trxPaymentMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $transaction['id_transaction_group'])->first();
+        $trxPaymentXendit = TransactionPaymentXendit::where('id_transaction_group', $transaction['id_transaction_group'])->first();
+
+        if(!empty($trxPaymentMidtrans)){
+            $paymentMethod = $trxPaymentMidtrans['payment_type'].(!empty($trxPaymentMidtrans['bank']) ? ' ('.$trxPaymentMidtrans['bank'].')':'');
+        }elseif(!empty($trxPaymentXendit)){
+            $paymentMethod = $trxPaymentXendit['type'];
+        }
+
         $address = [
             'destination_name' => $transaction['destination_name'],
             'destination_phone' => $transaction['destination_phone'],
@@ -2670,7 +2679,7 @@ class ApiTransaction extends Controller
         ];
 
         $tracking = [];
-        $trxTracking = TransactionShipmentTrackingUpdate::where('id_transaction', $id)->orderBy('tracking_date_time', 'desc')->get()->toArray();
+        $trxTracking = TransactionShipmentTrackingUpdate::where('id_transaction', $id)->orderBy('tracking_date_time', 'desc')->orderBy('id_transaction_shipment_tracking_update', 'desc')->get()->toArray();
         foreach ($trxTracking as $value){
             $tracking[] = [
                 'date' => MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($value['tracking_date_time'])), true),
@@ -4019,5 +4028,22 @@ class ApiTransaction extends Controller
                 'messages' => $errors ?? ['Something went wrong']
             ];
         }
+    }
+
+    public function listPaymentDetailOutlet(Request $request){
+        $post = $request->json()->all();
+
+        if(empty($post['id_outlet'])){
+            return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
+        }
+
+        $listTransaction = Transaction::join('transaction_payment_midtrans', 'transaction_payment_midtrans.id_transaction_group', 'transactions.id_transaction_group')
+                        ->where('id_outlet', $post['id_outlet']);
+
+        if(!empty($post['search_key'])){
+            $listTransaction = $listTransaction->where('transaction_receipt_number', 'like', '%'.$post['search_key'].'%');
+        }
+        $listTransaction = $listTransaction->orderBy('transaction_date', 'desc')->paginate(15);
+        return response()->json(MyHelper::checkGet($listTransaction));
     }
 }
