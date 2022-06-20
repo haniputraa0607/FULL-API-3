@@ -1004,7 +1004,7 @@ class SettingsTableSeeder extends Seeder
             111 =>
                 array(
                     'id_setting' => 112,
-                    'key' => 'about-doctor-apps',
+                    'key' => 'about_doctor_apps',
                     'value' => null,
                     'value_text' => '<h1> About Doctor Apps </h1>',
                     'created_at' => date('Y-m-d H:i:s'),
@@ -1013,7 +1013,7 @@ class SettingsTableSeeder extends Seeder
             112 =>
                 array(
                     'id_setting' => 113,
-                    'key' => 'tos-doctor-apps',
+                    'key' => 'tos_doctor_apps',
                     'value' => null,
                     'value_text' => '<h1>Terms of Service Doctor Apps</h1>',
                     'created_at' => date('Y-m-d H:i:s'),
@@ -1027,7 +1027,25 @@ class SettingsTableSeeder extends Seeder
                     'value_text' => '{"menu1":{"text_menu":"Store","text_color":"","container_type":"","container_color":"","icon":"","visible":true},"menu2":{"text_menu":"Konsultasi","text_color":"","container_type":"","container_color":"","icon":"","visible":true},"menu3":{"text_menu":"E-Learning","text_color":"","container_type":"","container_color":"","icon":"","visible":true},"menu4":{"text_menu":"Skin Analyzer","text_color":"","container_type":"","container_color":"","icon":"","visible":true}}',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
-                )
+                ),
+            114 =>
+                array(
+                    'id_setting' => 113,
+                    'key' => 'default_doctor_home_splash_screen',
+                    'value' => 'img/splash.jpg',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            115 =>
+                array(
+                    'id_setting' => 114,
+                    'key' => 'max_consultation_quota',
+                    'value' => null,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         );
 
         foreach ($settings as $setting) {
