@@ -18,7 +18,6 @@ class CreateTimeSchedulesTable extends Migration
             $table->integer('id_doctor_schedule');
             $table->time('start_time');
             $table->time('end_time');
-            $table->integer('remaining_quota_session');
             $table->enum('status_session', ['available', 'full'])->default('available');
 
             $table->timestamps();

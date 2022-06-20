@@ -14,12 +14,6 @@ class TimeSchedule extends Model
         'id_doctor_schedule',
         'start_time',
         'end_time',
-        'remaining_quota_session',
         'status_session'
     ];
-
-    public function scopeOnlyAvailable($query)
-    {
-        return $query->where('status_session', "available");
-    }
 }

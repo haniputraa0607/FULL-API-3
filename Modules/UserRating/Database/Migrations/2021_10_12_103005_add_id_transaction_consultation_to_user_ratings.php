@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class AddApproveByUserHs extends Migration
+class AddIdTransactionConsultationToUserRatings extends Migration
 {
     /**
      * Run the migrations.
@@ -13,8 +13,8 @@ class AddApproveByUserHs extends Migration
      */
     public function up()
     {
-        Schema::table('user_hair_stylist', function (Blueprint $table) {
-            $table->unsignedInteger('approve_by')->nullable()->after('join_date');
+        Schema::table('user_ratings', function (Blueprint $table) {
+        	$table->unsignedInteger('id_transaction_consultation')->nullable()->after('id_transaction');
         });
     }
 
@@ -25,8 +25,8 @@ class AddApproveByUserHs extends Migration
      */
     public function down()
     {
-        Schema::table('user_hair_stylist', function (Blueprint $table) {
-            $table->dropColumn('approve_by');
+        Schema::table('user_ratings', function (Blueprint $table) {
+        	$table->dropColumn('id_transaction_consultation');
         });
     }
 }

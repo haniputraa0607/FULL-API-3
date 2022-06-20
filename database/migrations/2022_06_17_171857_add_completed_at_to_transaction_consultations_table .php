@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class AddIdOutletBoxToHairstylistScheduleDatesTable extends Migration
+class AddCompletedAtToTransactionConsultationsTable extends Migration 
 {
     /**
      * Run the migrations.
@@ -13,9 +13,8 @@ class AddIdOutletBoxToHairstylistScheduleDatesTable extends Migration
      */
     public function up()
     {
-        Schema::table('hairstylist_schedule_dates', function (Blueprint $table) {
-        	$table->unsignedInteger('id_outlet_box')->nullable()->after('request_by');
-
+        Schema::table('transaction_consultations', function (Blueprint $table) {
+            $table->timestamp('completed_at')->after('consultation_status');
         });
     }
 
@@ -26,8 +25,8 @@ class AddIdOutletBoxToHairstylistScheduleDatesTable extends Migration
      */
     public function down()
     {
-        Schema::table('hairstylist_schedule_dates', function (Blueprint $table) {
-        	$table->dropColumn('id_outlet_box');
+        Schema::table('transaction_consultations', function (Blueprint $table) {
+            $table->dropColumn('completed_at');
         });
     }
 }

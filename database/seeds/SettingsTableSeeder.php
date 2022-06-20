@@ -1004,7 +1004,7 @@ class SettingsTableSeeder extends Seeder
             111 =>
                 array(
                     'id_setting' => 112,
-                    'key' => 'about-doctor-apps',
+                    'key' => 'about_doctor_apps',
                     'value' => null,
                     'value_text' => '<h1> About Doctor Apps </h1>',
                     'created_at' => date('Y-m-d H:i:s'),
@@ -1013,7 +1013,7 @@ class SettingsTableSeeder extends Seeder
             112 =>
                 array(
                     'id_setting' => 113,
-                    'key' => 'tos-doctor-apps',
+                    'key' => 'tos_doctor_apps',
                     'value' => null,
                     'value_text' => '<h1>Terms of Service Doctor Apps</h1>',
                     'created_at' => date('Y-m-d H:i:s'),
@@ -1031,8 +1031,26 @@ class SettingsTableSeeder extends Seeder
             114 =>
                 array(
                     'id_setting' => 113,
-                    'key' => 'default_package_type_delivery',
+                     'key' => 'default_package_type_delivery',
                     'value' => 3,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            115 =>
+                array(
+                    'id_setting' => 114,
+                    'key' => 'default_doctor_home_splash_screen',
+                    'value' => 'img/splash.jpg',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            116 =>
+                array(
+                    'id_setting' => 115,
+                    'key' => 'max_consultation_quota',
+                    'value' => null,
                     'value_text' => null,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
