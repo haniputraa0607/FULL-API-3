@@ -2163,20 +2163,21 @@ class ApiOnlineTransaction extends Controller
         $availableDelivery  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
         $dtDelivery = $post['delivery']??[];
         foreach ($availableDelivery as $key => $value) {
-            $check = array_search($value['code'], array_column($dtDelivery, 'code'));
+            $check = array_search($value['delivery_method'], array_column($dtDelivery, 'delivery_method'));
             if($check !== false){
                 $availableDelivery[$key]['delivery_name'] = $dtDelivery[$check]['delivery_name'];
-                $availableDelivery[$key]['show_status'] = $dtDelivery[$check]['show_status'];
-                $availableDelivery[$key]['available_status'] = $dtDelivery[$check]['available_status'];
-                $availableDelivery[$key]['position'] = $check;
-                $availableDelivery[$key]['description'] = $dtDelivery[$check]['description'];
+
+                foreach ($value['service'] as $index => $s){
+                    $checkService = array_search($s['code'], array_column($dtDelivery[$check]['service'], 'code'));
+                    if($checkService !== false){
+                        $availableDelivery[$key]['service'][$index]['service_name'] = $dtDelivery[$check]['service'][$checkService]['service_name'];
+                        $availableDelivery[$key]['service'][$index]['available_status'] = $dtDelivery[$check]['service'][$checkService]['available_status'];
+                    }
+                }
             }
         }
 
         $update = Setting::where('key', 'available_delivery')->update(['value_text' => json_encode($availableDelivery)]);
-        if($update){
-            $update = Setting::updateOrCreate(['key' => 'default_delivery'], ['value' => $post['default_delivery']]);
-        }
         return MyHelper::checkUpdate($update);
     }
 

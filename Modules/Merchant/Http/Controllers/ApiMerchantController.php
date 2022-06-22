@@ -729,9 +729,9 @@ class ApiMerchantController extends Controller
             foreach ($val['service'] as $s){
                 $check = array_search($s['code'], array_column($deliveryOutlet,'code'));
                 $available = 0;
-                if($check === false){
+                if($check === false && $s['available_status'] == 1){
                     $available = 1;
-                }else if($val['available_status'] == 1){
+                }else if($s['available_status'] == 1){
                     $available = 1;
                 }
 
