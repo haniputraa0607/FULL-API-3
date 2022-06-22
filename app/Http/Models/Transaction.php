@@ -374,7 +374,7 @@ class Transaction extends Model
                 'customer_name' => $user['name']??'',
                 'customer_email' =>  $user['email']??'',
                 'customer_phone' =>  $user['phone']??'',
-                'transaction_receipt_number' => $this->transaction_receipt_number
+                'receipt_number' => $this->transaction_receipt_number
             ],
             null, false, false, 'merchant'
         );

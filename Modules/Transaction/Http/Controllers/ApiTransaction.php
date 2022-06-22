@@ -2,6 +2,8 @@
 
 namespace Modules\Transaction\Http\Controllers;
 
+use App\Http\Models\Subdistricts;
+use App\Http\Models\Districts;
 use App\Http\Models\Deal;
 use App\Http\Models\ProductPhoto;
 use App\Http\Models\TransactionProductModifier;
@@ -39,6 +41,7 @@ use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPaymentMidtran;
 use Modules\ProductVariant\Entities\ProductVariant;
+use Modules\ProductVariant\Entities\ProductVariantPivot;
 use Modules\ProductVariant\Entities\TransactionProductVariant;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use App\Http\Models\DealsUser;
@@ -83,6 +86,7 @@ use Modules\Transaction\Http\Requests\MethodSave;
 use Modules\Transaction\Http\Requests\MethodDelete;
 use Modules\Transaction\Http\Requests\ManualPaymentConfirm;
 use Modules\Transaction\Http\Requests\ShippingGoSend;
+use Modules\Transaction\Entities\TransactionGroup;
 
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
@@ -1317,28 +1321,133 @@ class ApiTransaction extends Controller
         return response()->json(MyHelper::checkGet($list));
     }
 
-    public function transactionList($key){
-        $start = date('Y-m-01 00:00:00');
-        $end = date('Y-m-d 23:59:59');
-        $delivery = false;
-        if(strtolower($key) == 'delivery'){
-            $key = 'pickup order';
-            $delivery = true;
+    public function transactionList(Request $request){
+        $post = $request->json()->all();
+
+        $filterCode = [
+            1 => 'Rejected',
+            2 => 'Unpaid',
+            3 => 'Pending',
+            4 => 'On Progress',
+            5 => 'On Delivery',
+            6 => 'Completed'
+        ];
+
+        $codeIndo = [
+            'Rejected' => [
+                'code' => 1,
+                'text' => 'Dibatalkan'
+            ],
+            'Unpaid' => [
+                'code' => 2,
+                'text' => 'Belum dibayar'
+            ],
+            'Pending' => [
+                'code' => 3,
+                'text' => 'Pending'
+            ],
+            'On Progress' => [
+                'code' => 4,
+                'text' => 'Diproses'
+            ],
+            'On Delivery' => [
+                'code' => 5,
+                'text' => 'Dikirim'
+            ],
+            'Completed' => [
+                'code' => 6,
+                'text' => 'Selesai'
+            ]
+        ];
+
+        $list = Transaction::join('transaction_groups', 'transaction_groups.id_transaction_group', 'transactions.id_transaction_group')
+            ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+            ->leftJoin('users', 'users.id', 'transactions.id_user')
+            ->orderBy('transaction_date', 'desc')
+            ->select('transaction_groups.transaction_receipt_number as transaction_receipt_number_group', 'transactions.*', 'outlets.*', 'users.*');
+
+        if(isset($post['date_start']) && !empty($post['date_start']) &&
+            isset($post['date_end']) && !empty($post['date_end'])){
+            $start_date = date('Y-m-d', strtotime($post['date_start']));
+            $end_date = date('Y-m-d', strtotime($post['date_end']));
+
+            $list->whereDate('transactions.transaction_date', '>=', $start_date)
+                ->whereDate('transactions.transaction_date', '<=', $end_date);
         }
-        $list = Transaction::leftJoin('outlets','outlets.id_outlet','=','transactions.id_outlet')
-            ->join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
-            ->leftJoin('transaction_pickup_go_sends','transaction_pickups.id_transaction_pickup','=','transaction_pickup_go_sends.id_transaction_pickup')
-            ->orderBy('transactions.id_transaction', 'DESC')->with('user', 'productTransaction.product.product_category')
-            ->where('transactions.transaction_date', '>=', $start)->where('transactions.transaction_date', '<=', $end);
-        if (strtolower($key) !== 'all') {
-            $list->where('trasaction_type', ucwords($key));
-            if($delivery){
-                $list->where('pickup_by','<>','Customer');
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(($row['operator'] == '=' || $row['operator'] == 'like') && empty($row['parameter'])){
+                        continue;
+                    }
+
+                    if(isset($row['subject'])){
+                        $subject = $row['subject'];
+                        if($subject == 'transaction_receipt_number'){
+                            $subject = 'transactions.transaction_receipt_number';
+                        }elseif($subject == 'transaction_group_receipt_number'){
+                            $subject = 'transaction_groups.transaction_receipt_number';
+                        }
+
+                        if($row['operator'] == '=' || empty($row['parameter'])){
+                            $list->where($subject, (empty($row['parameter']) ? $row['operator'] : $row['parameter']));
+                        }else{
+                            $list->where($subject, 'like', '%'.$row['parameter'].'%');
+                        }
+                    }
+                }
             }else{
-                $list->where('pickup_by','Customer');
+                $list->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(($row['operator'] == '=' || $row['operator'] == 'like') && empty($row['parameter'])){
+                            continue;
+                        }
+
+                        if(isset($row['subject'])){
+                            $subject = $row['subject'];
+                            if($subject == 'transaction_receipt_number'){
+                                $subject = 'transactions.transaction_receipt_number';
+                            }elseif($subject == 'transaction_group_receipt_number'){
+                                $subject = 'transaction_groups.transaction_receipt_number';
+                            }
+
+                            if($row['operator'] == '=' || empty($row['parameter'])){
+                                $subquery->orWhere($subject, (empty($row['parameter']) ? $row['operator'] : $row['parameter']));
+                            }else{
+                                $subquery->orWhere($subject, 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+                    }
+                });
             }
         }
-        $list = $list->paginate(10);
+
+        $list = $list->paginate(25)->toArray();
+
+        foreach ($list['data']??[] as $key=>$value){
+            $list['data'][$key] = [
+                'id_outlet' => $value['id_outlet'],
+                'outlet_code' => $value['outlet_code'],
+                'outlet_name' => $value['outlet_name'],
+                'user_name' => $value['name'],
+                'user_phone' => $value['phone'],
+                'user_email' => $value['email'],
+                'id_transaction' => $value['id_transaction'],
+                'id_transaction_group' => $value['id_transaction_group'],
+                'transaction_date' => $value['transaction_date'],
+                'transaction_group_receipt_number' => $value['transaction_receipt_number_group'],
+                'transaction_receipt_number' => $value['transaction_receipt_number'],
+                'transaction_status_code' => $codeIndo[$value['transaction_status']]['code']??'',
+                'transaction_status_text' => $codeIndo[$value['transaction_status']]['text']??'',
+                'transaction_grandtotal' => $value['transaction_grandtotal']
+            ];
+        }
 
         return response()->json(MyHelper::checkGet($list));
     }
@@ -2630,6 +2739,7 @@ class ApiTransaction extends Controller
                 'id_product' => $value['id_product'],
                 'product_name' => $value['product_name'],
                 'product_qty' => $value['transaction_product_qty'],
+                'product_base_price' => 'Rp '. number_format((int)$value['transaction_product_price'],0,",","."),
                 'product_total_price' => 'Rp '. number_format((int)$value['transaction_product_subtotal'],0,",","."),
                 'note' => $value['transaction_product_note'],
                 'variants' => implode(', ', array_column($value['variants'], 'product_variant_name')),
@@ -2698,11 +2808,15 @@ class ApiTransaction extends Controller
             'transaction_grandtotal' => 'Rp '. number_format($grandTotal,0,",","."),
             'delivery' => [
                 'delivery_id' => $transaction['order_id'],
+                'pickup_code' => $transaction['shipment_pickup_code'],
+                'pickup_date_start' => $transaction['shipment_pickup_time_start'],
+                'pickup_date_end' => $transaction['shipment_pickup_time_end'],
                 'delivery_method' => strtoupper($transaction['shipment_courier']),
                 'delivery_service' => ucfirst($transaction['shipment_courier_service']),
                 'delivery_price' => 'Rp '. number_format((int)$transaction['transaction_shipment'],0,",","."),
                 'delivery_tracking' => $tracking
             ],
+            'user' => User::where('id', $transaction['id_user'])->first(),
             'payment' => $paymentMethod,
             'payment_detail' => $paymentDetail,
             'point_receive' => 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini'
@@ -3113,56 +3227,6 @@ class ApiTransaction extends Controller
         return response()->json(MyHelper::checkGet($subdistrict));
     }
 
-    public function getAddress(GetAddress $request) {
-        $id = $request->user()->id;
-
-        if (!$id) {
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => ['User Not Found']
-            ]);
-        }
-
-        $address = UserAddress::select('id_user_address','name','short_address','address','type','latitude','longitude','description')->where('id_user', $id)->orderBy('id_user_address', 'DESC');
-        if(is_numeric($request->json('favorite'))){
-            $address->where('favorite',$request->json('favorite'));
-            if(!$request->json('favorite')){
-                $address->whereNull('type');
-            }
-        }
-        $address = $address->get()->toArray();
-        $result = [
-        ];
-        $misc = [];
-        foreach ($address as $key => $adr) {
-            switch (strtolower($adr['type'])) {
-                case 'home':
-                    $adr['position'] = 1;
-                    $result[] = $adr;
-                    break;
-
-                case 'work':
-                    $adr['position'] = 2;
-                    $result[] = $adr;
-                    break;
-
-                case 'other':
-                    $adr['position'] = 3;
-                    $result[] = $adr;
-                    break;
-
-                default:
-                    $adr['position'] = $key+3;
-                    $result[] = $adr;
-                    break;
-            }
-        }
-        usort($result, function ($a, $b){
-            return $a['position'] <=> $b['position'];
-        });
-        return response()->json(MyHelper::checkGet($result));
-    }
-
     public function getNearbyAddress(GetNearbyAddress $request) {
         $id = $request->user()->id;
         $distance = Setting::select('value')->where('key','history_address_max_distance')->pluck('value')->first()?:50;
@@ -3396,60 +3460,88 @@ class ApiTransaction extends Controller
         return $gmaps;
     }
 
-    public function detailAddress(GetAddress $request) {
+    public function getAddress(GetAddress $request) {
         $id = $request->user()->id;
 
-        $address = UserAddress::where(['id_user'=> $id,'id_user_address'=>$request->id_user_address])->orderBy('id_user_address', 'DESC')->get()->toArray();
+        if (!$id) {
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['User Not Found']
+            ]);
+        }
+
+        $address = UserAddress::join('subdistricts', 'subdistricts.id_subdistrict', 'user_addresses.id_subdistrict')
+            ->join('districts', 'districts.id_district', 'subdistricts.id_district')
+            ->join('cities', 'cities.id_city', 'districts.id_city')
+            ->join('provinces', 'provinces.id_province', 'cities.id_province')
+            ->select('id_user_address', 'receiver_name', 'receiver_phone', 'receiver_email',
+                'provinces.id_province', 'province_name',
+                'cities.id_city', 'city_name',
+                'districts.id_district', 'district_name',
+                'subdistricts.id_subdistrict', 'subdistrict_name',
+                'address', 'postal_code', 'favorite as main_address')
+            ->where('id_user', $id)
+            ->orderBy('id_user_address', 'DESC')->get()->toArray();
+
+        return response()->json(MyHelper::checkGet($address));
+    }
+
+
+    public function detailAddress(GetAddress $request) {
+        $id = $request->user()->id;
+        $address = UserAddress::join('subdistricts', 'subdistricts.id_subdistrict', 'user_addresses.id_subdistrict')
+            ->join('districts', 'districts.id_district', 'subdistricts.id_district')
+            ->join('cities', 'cities.id_city', 'districts.id_city')
+            ->join('provinces', 'provinces.id_province', 'cities.id_province')
+            ->select('id_user_address', 'receiver_name', 'receiver_phone', 'receiver_email',
+                'provinces.id_province', 'province_name',
+                'cities.id_city', 'city_name',
+                'districts.id_district', 'district_name',
+                'subdistricts.id_subdistrict', 'subdistrict_name',
+                'address', 'postal_code', 'favorite as main_address')
+            ->where(['id_user'=> $id,'id_user_address'=>$request->id_user_address])->first();
+
         return response()->json(MyHelper::checkGet($address));
     }
 
     public function addAddress(AddAddress $request) {
         $post = $request->json()->all();
 
-        $data['id_user'] = $request->user()->id;
-        $data['name']        = isset($post['name']) ? $post['name'] : $post['short_address'];
-        $data['short_address'] = $post['short_address'] ?? null;
-        $data['address']     = isset($post['address']) ? $post['address'] : null;
-        $data['description'] = isset($post['description']) ? $post['description'] : null;
-        $data['latitude'] = number_format($post['latitude'],8);
-        $data['longitude'] = number_format($post['longitude'],8);
-        $type = ucfirst($post['type'] ?? 'Other');
-        $data['name'] = $type != 'Other'?$type:$data['name'];
-        $exists = UserAddress::where('id_user',$request->user()->id)
-            ->where('name',$data['name'])
-            ->where('favorite',1)
-            ->where(function($q) use ($type){
-                $q->where('type',$type);
-                if($type == 'Other'){
-                    $q->orWhereNull('type');
-                }
-            })
-            ->exists();
-        if($exists){
-            return ['status'=>'fail','messages'=>['Alamat dengan nama yang sama sudah ada']];
-        }
-        if(in_array($type, ['Home','Work'])){
-            UserAddress::where('type',$type)->delete();
-        }
-        $toMatch = $data;
-        unset($toMatch['name']);
-        $found = UserAddress::where($toMatch+['type'=>$type])->first();
-        if($found){
-            if($found->favorite){
-                return ['status'=>'fail','messages'=>['Alamat sudah disimpan sebagai '.(in_array($found->type,['Work','Home'])?$found->type:$found->name)]];
-            }
-            $found->update([
-                'name' => $data['name'],
-                'type' => $type?:$found->type,
-                'favorite' => 1,
+        $phone = $post['receiver_phone'];
+        $phone = preg_replace("/[^0-9]/", "", $phone);
+
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
+
+        if (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail') {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Format nomor telepon tidak valid']
             ]);
-        }else{
-            $data['type'] = $type;
-            $data['favorite'] = 1;
-            $found = UserAddress::create($data);
+        } elseif (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success') {
+            $phone = $checkPhoneFormat['phone'];
         }
 
-        return response()->json(MyHelper::checkCreate($found));
+        if(!empty($post['main_address'])){
+            UserAddress::where('id_user', $request->user()->id)->update(['favorite' => 0]);
+        }
+
+        $subdis = Subdistricts::where('id_subdistrict', $post['id_subdistrict'])->first();
+        $idCity = Districts::where('id_district',$subdis['id_district']??null)->first()['id_city']??null;
+
+        $create = UserAddress::create([
+            'id_user' => $request->user()->id,
+            'name' => isset($post['name']) ? $post['name'] : " ",
+            'receiver_name' => $post['receiver_name'],
+            'receiver_phone' => $phone,
+            'receiver_email' => $post['receiver_email'],
+            'address' => $post['address'],
+            "id_city" => (empty($idCity) ? $post['id_city'] : $idCity),
+            "id_subdistrict" => $post['id_subdistrict'],
+            'postal_code' => (empty($subdis['subdistrict_postal_code']) ? $post['postal_code'] : $subdis['subdistrict_postal_code']),
+            'favorite' => $post['main_address']??0
+        ]);
+
+        return response()->json(MyHelper::checkCreate($create));
     }
 
     public function updateAddress (UpdateAddress $request) {
@@ -3463,20 +3555,36 @@ class ApiTransaction extends Controller
             ]);
         }
 
-        $data['name']        = isset($post['name']) ? $post['name'] : null;
-        $data['address']     = isset($post['address']) ? $post['address'] : null;
-        $data['short_address'] = $post['short_address'] ?? null;
-        $data['description'] = isset($post['description']) ? $post['description'] : null;
-        $data['latitude'] = $post['latitude']??null;
-        $data['longitude'] = $post['longitude']??null;
-        $type = ($post['type']??null)?ucfirst($post['type']):null;
-        if($type){
-            UserAddress::where('type',$type)->update(['type'=>null]);
-        }
-        $data['type'] = $type;
-        $data['favorite'] = 1;
+        $phone = $post['receiver_phone'];
+        $phone = preg_replace("/[^0-9]/", "", $phone);
 
-        $update = UserAddress::where('id_user_address', $post['id_user_address'])->update($data);
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
+
+        if (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail') {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Format nomor telepon tidak valid']
+            ]);
+        } elseif (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success') {
+            $phone = $checkPhoneFormat['phone'];
+        }
+
+        if(!empty($post['main_address'])){
+            UserAddress::where('id_user', $request->user()->id)->update(['favorite' => 0]);
+        }
+
+        $dtUpdate = [
+            'receiver_name' => $post['receiver_name'],
+            'receiver_phone' => $phone,
+            'receiver_email' => $post['receiver_email'],
+            'address' => $post['address'],
+            "id_city" => (empty($idCity) ? $post['id_city'] : $idCity),
+            "id_subdistrict" => $post['id_subdistrict'],
+            'postal_code' => (empty($subdis['subdistrict_postal_code']) ? $post['postal_code'] : $subdis['subdistrict_postal_code']),
+            'favorite' => $post['main_address']??0
+        ];
+
+        $update = UserAddress::where('id_user_address', $post['id_user_address'])->update($dtUpdate);
         return response()->json(MyHelper::checkUpdate($update));
     }
 

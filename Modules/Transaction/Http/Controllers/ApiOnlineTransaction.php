@@ -214,7 +214,7 @@ class ApiOnlineTransaction extends Controller
             'transaction_grandtotal' => 0,
             'transaction_payment_status' => $paymentStatus,
             'transaction_payment_type' => $paymentType,
-            'transaction_transaction_date' => $currentDate
+            'transaction_group_date' => $currentDate
         ];
 
         $insertTransactionGroup = TransactionGroup::create($dataTransactionGroup);
@@ -607,7 +607,7 @@ class ApiOnlineTransaction extends Controller
             'available_checkout' => $checkOutStatus,
             'error_messages' => implode('. ', array_unique($errorMsg))
         ];
-        $fake_request = new Request(['show_all' => 1]);
+        $fake_request = new Request(['show_all' => 0]);
         $result['available_payment'] = $this->availablePayment($fake_request)['result'] ?? [];
 
         return response()->json($result);
@@ -2462,8 +2462,9 @@ class ApiOnlineTransaction extends Controller
                     }
 
                     if(!empty($product['product_weight'])){
-                        $weight[] = $product['product_weight'] * $item['qty'];
-                        $weightProduct = $weightProduct + ($product['product_weight'] * $item['qty']);
+                        $w = ($product['product_weight'] * $item['qty']) / 1000;
+                        $weight[] = $w;
+                        $weightProduct = $weightProduct + $w;
                         $dimentionProduct = $dimentionProduct+($product['product_width'] * $product['product_height'] * $product['product_length'] * $item['qty']);
                     }else{
                         $error = 'Produk tidak valid';
@@ -2514,7 +2515,7 @@ class ApiOnlineTransaction extends Controller
                     $items[$index]['items_total_height'] = (int)$s;
                     $items[$index]['items_total_width'] = (int) $s;
                     $items[$index]['items_total_length'] = (int) $s;
-                    $items[$index]['items_total_weight'] = $weightProduct;
+                    $items[$index]['items_total_weight'] = (int) ceil($weightProduct);
                     $items[$index]['items_subtotal'] = $productSubtotal;
                     $items[$index]['items_subtotal_text'] = 'Rp '.number_format($productSubtotal,0,",",".");
                     $items[$index]['items'] = array_values($value['items']);
@@ -2560,7 +2561,7 @@ class ApiOnlineTransaction extends Controller
                                 "lng" => $lngOutlet,
                                 "suburb_id" => $subdistrictOutlet['id_district_external']
                             ],
-                            "weight" => $weightProduct,
+                            "weight" => (int) ceil($weightProduct),
                             "height" => (int)$s,
                             "width" => (int)$s,
                             "length" => (int)$s,
