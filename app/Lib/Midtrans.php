@@ -162,7 +162,7 @@ class Midtrans {
     {
         if(!$transaction_status) {
             // $url    = env('BASE_MIDTRANS_PRO').'/v2/'.$order_id.'/expire';
-            $trx = Transaction::join('transaction_payment_midtrans','transaction_payment_midtrans.id_transaction', '=', 'transactions.id_transaction')->where('vt_transaction_id',$order_id)->orWhere('transaction_receipt_number', $order_id)->first();
+            $trx = Transaction::join('transaction_payment_midtrans','transaction_payment_midtrans.id_transaction_group', '=', 'transactions.id_transaction_group')->where('vt_transaction_id',$order_id)->orWhere('transaction_receipt_number', $order_id)->first();
             if (!$trx) {
                 return ['status'=>'fail','messages'=>'Midtrans payment not found'];
             }
@@ -188,6 +188,56 @@ class Midtrans {
             }
             $id_reference = $order_id;
         }
+        $status = MyHelper::post($url, Self::bearer(), $param);
+        try {
+            LogMidtrans::create([
+                'type'                 => 'refund',
+                'id_reference'         => $id_reference,
+                'request'              => json_encode($param),
+                'request_url'          => $url,
+                'request_header'       => json_encode(['Authorization' => Self::bearer()]),
+                'response'             => json_encode($status),
+                'response_status_code' => $status['status_code']??null,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed write log to LogMidtrans: ' . $e->getMessage());
+        }
+        if (($status['status_code']??false)!=200) {
+            // check status saa seperti ipay88
+            $midtransStatus = static::status($order_id);
+            if (($midtransStatus['transaction_status'] ?? ($midtransStatus['response']['transaction_status'] ?? false)) == 'refund') {
+                return [
+                    'status' => 'success',
+                    'messages' => [
+                        'Refund already processed'
+                    ]
+                ];
+            }
+        }
+        return [
+            'status' => ($status['status_code']??false)==200?'success':'fail',
+            'messages' => [$status['status_message']??'Something went wrong','Refund failed']
+        ];
+    }
+
+    static function refundPartial($order_id,$param = null)
+    {
+        $trx = Transaction::join('transaction_payment_midtrans','transaction_payment_midtrans.id_transaction_group', '=', 'transactions.id_transaction_group')->where('vt_transaction_id',$order_id)->orWhere('transaction_receipt_number', $order_id)->first();
+        if (!$trx) {
+            return ['status'=>'fail','messages'=>'Midtrans payment not found'];
+        }
+
+        $url    = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$trx->vt_transaction_id.'/refund';
+        if ($trx->transaction_status == 'capture') {
+            $url = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$trx->vt_transaction_id.'/cancel';
+        } else {
+            $param['reason'] = 'Pengembalian dana';
+        }
+        if(!$param){
+            $param = [];
+        }
+        $id_reference = $trx->id_transaction;
+
         $status = MyHelper::post($url, Self::bearer(), $param);
         try {
             LogMidtrans::create([

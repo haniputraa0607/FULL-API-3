@@ -112,6 +112,7 @@ class Transaction extends Model
 		'transaction_discount_item',
 		'transaction_discount_bill',
 		'need_manual_void',
+        'refund_requirement',
 		'failed_void_reason',
 		'shipment_method',
 		'shipment_courier',
@@ -148,8 +149,13 @@ class Transaction extends Model
 
 	public function transaction_payment_midtrans()
 	{
-		return $this->hasOne(\App\Http\Models\TransactionPaymentMidtran::class, 'id_transaction');
+        return $this->belongsTo(\App\Http\Models\TransactionPaymentMidtran::class, 'id_transaction_group', 'id_transaction_group');
 	}
+
+    public function transaction_payment_xendit()
+    {
+        return $this->belongsTo(\Modules\Xendit\Entities\TransactionPaymentXendit::class, 'id_transaction_group', 'id_transaction_group');
+    }
 
 	public function transaction_payment_offlines()
 	{
@@ -461,14 +467,21 @@ class Transaction extends Model
 
     	$checkCountTrxGroup = TransactionGroup::where('id_transaction_group', $this->id_transaction_group)->count();
     	if($checkCountTrxGroup > 1){
-            $refund = app('Modules\Balance\Http\Controllers\BalanceController')->addLogBalance( $this->id_user, (int)$this->transaction_grandtotal, $this->id_transaction, 'Rejected Order', $this->transaction_grandtotal);
-            if ($refund == false) {
+            $refund = app('\Modules\Transaction\Http\Controllers\ApiTransactionRefund')->refundPayment([
+                'id_transaction_group' => $this->id_transaction_group,
+                'id_transaction' => $this->id_transaction,
+                'refund_partial' => $this->transaction_grandtotal
+            ]);
+            if ($refund['status'] == 'fail') {
                 DB::rollback();
                 return false;
             }
     	}else{
-            $refund = app('Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->rejectPayment($this);
-            if ($refund == false) {
+            $refund = app('\Modules\Transaction\Http\Controllers\ApiTransactionRefund')->refundPayment([
+                'id_transaction_group' => $this->id_transaction_group,
+                'id_transaction' => $this->id_transaction
+            ]);
+            if ($refund['status'] == 'fail') {
                 DB::rollback();
                 return false;
             }
