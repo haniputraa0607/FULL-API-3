@@ -1828,6 +1828,7 @@ class ApiProductController extends Controller
         $product['id_outlet'] = $post['id_outlet'];
 
         $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+        $product['image'] = (empty($image['url_product_photo']) ? config('url.storage_url_api').'img/product/item/default.png' : $image['url_product_photo']);
         $imageDetail = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->whereNotIn('id_product_photo', [$image['id_product_photo']??null])->get()->toArray();
         $imagesDetail = [];
         foreach ($imageDetail as $dt){

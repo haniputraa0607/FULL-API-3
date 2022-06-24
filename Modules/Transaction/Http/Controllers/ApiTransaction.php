@@ -110,6 +110,7 @@ class ApiTransaction extends Controller
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
         $this->shopeepay      = 'Modules\ShopeePay\Http\Controllers\ShopeePayController';
+        $this->xendit         = 'Modules\Xendit\Http\Controllers\XenditController';
     }
 
     public function transactionRule() {
@@ -4076,9 +4077,10 @@ class ApiTransaction extends Controller
 
     public function retryRefund($id_transaction, &$errors = [], $manualRetry = false)
     {
-        $trx = Transaction::where('transactions.id_transaction', $id_transaction)->join('transaction_multiple_payments', function($join) {
-            $join->on('transaction_multiple_payments.id_transaction', 'transactions.id_transaction')
-                ->whereIn('type', ['Midtrans', 'Shopeepay']);
+        $trx = Transaction::where('transactions.id_transaction', $id_transaction)
+            ->join('transaction_multiple_payments', function($join) {
+            $join->on('transaction_multiple_payments.id_transaction_group', 'transactions.id_transaction_group')
+                ->whereIn('type', ['Midtrans', 'Shopeepay', 'Xendit']);
         })->first();
         if (!$trx) {
             $errors[] = 'Transaction Not Found';
@@ -4087,12 +4089,17 @@ class ApiTransaction extends Controller
         $result = true;
         switch ($trx->type) {
             case 'Midtrans':
-                $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $id_transaction)->first();
+                $payMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $trx['id_transaction_group'])->first();
                 if (!$payMidtrans) {
                     $errors[] = 'Model TransactionPaymentMidtran not found';
                     return false;
                 }
-                $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => 'refund transaksi']);
+                if($trx['refund_requirement'] > 0){
+                    $refund = Midtrans::refundPartial($payMidtrans['vt_transaction_id'],['reason' => 'refund transaksi', 'amount' => (int)$trx['refund_requirement']]);
+                }else{
+                    $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => 'refund transaksi']);
+                }
+
                 if ($refund['status'] != 'success') {
                     Transaction::where('id_transaction', $id_transaction)->update(['failed_void_reason' => implode(', ', $refund['messages'] ?? [])]);
                     $errors = $refund['messages'] ?? [];
@@ -4101,13 +4108,21 @@ class ApiTransaction extends Controller
                     Transaction::where('id_transaction', $id_transaction)->update(['need_manual_void' => 0]);
                 }
                 break;
-            case 'Shopeepay':
-                $payShopeepay = TransactionPaymentShopeePay::where('id_transaction', $id_transaction)->first();
-                if (!$payShopeepay) {
-                    $errors[] = 'Model TransactionPaymentShopeePay not found';
+            case 'Xendit':
+                $payXendit = TransactionPaymentXendit::where('id_transaction_group', $trx['id_transaction_group'])->first();
+                if (!$payXendit) {
+                    $errors[] = 'Model TransactionPaymentXendit not found';
                     return false;
                 }
-                $refund = app($this->shopeepay)->refund($id_transaction, 'trx', $errors2);
+                if($trx['refund_requirement'] > 0){
+                    $refund = app($this->xendit)->refund($trx['id_transaction_group'], 'trx', [
+                        'amount' => (int) $trx['refund_requirement'],
+                        'reason' => 'Retry rejected from merchant'
+                    ], $errors2);
+                }else{
+                    $refund = app($this->xendit)->refund($trx['id_transaction_group'], 'trx', [], $errors2);
+                }
+
                 if (!$refund) {
                     Transaction::where('id_transaction', $id_transaction)->update(['failed_void_reason' => implode(', ', $errors2 ?: [])]);
                     $errors = $errors2;
@@ -4116,6 +4131,7 @@ class ApiTransaction extends Controller
                     Transaction::where('id_transaction', $id_transaction)->update(['need_manual_void' => 0]);
                 }
                 break;
+
             default:
                 $errors[] = 'Unkown payment type '.$trx->type;
                 return false;

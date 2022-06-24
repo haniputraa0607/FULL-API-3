@@ -517,7 +517,7 @@ class XenditController extends Controller
         }
     }
 
-    public function refund($reference, $type = 'trx', &$errors = null, &$refund_reference_id = null)
+    public function refund($reference, $type = 'trx', $partial = [], &$errors = null, &$refund_reference_id = null)
     {
         $data = [
             'payment_reference_id' => '',
@@ -525,10 +525,15 @@ class XenditController extends Controller
         $params = [
             'for-user-id'  => null,
         ];
+
+        if(!empty($partial)){
+            $params['amount'] = $partial['amount'];
+            $params['reason'] = $partial['reason'];
+        }
         switch ($type) {
             case 'trx':
                 if (is_numeric($reference)) {
-                    $reference = Transaction::where('id_transaction', $reference)->with('outlet')->first();
+                    $reference = TransactionGroup::where('id_transaction_group', $reference)->first();
                     if (!$reference) {
                         $errors = ['Transaction not found'];
                         return false;
@@ -539,8 +544,8 @@ class XenditController extends Controller
                         return false;
                     }
                 }
-                $params['for-user-id'] = optional($reference->outlet->xendit_account)->xendit_id;
-                $payment = TransactionPaymentXendit::where('id_transaction', $reference['id_transaction'])->first();
+
+                $payment = TransactionPaymentXendit::where('id_transaction_group', $reference['id_transaction_group'])->first();
                 if (!in_array(strtolower($payment->type), ['ovo', 'dana', 'shopeepay', 'linkaja'])) {
                     $errors = ['Refund not supported dor this payment type'];
                     return false;
