@@ -458,8 +458,7 @@ class ApiMerchantController extends Controller
                 "merchant_phone" => $detail['outlet_phone'],
                 "city_name" => $detail['city_name'],
                 "image_cover" => (!empty($detail['outlet_image_cover']) ? config('url.storage_url_api').$detail['outlet_image_cover']: ''),
-                "image_logo_portrait" => (!empty($detail['outlet_image_logo_portrait']) ? config('url.storage_url_api').$detail['outlet_image_logo_portrait']: ''),
-                "image_logo_landscape" => (!empty($detail['outlet_image_logo_landscape']) ? config('url.storage_url_api').$detail['outlet_image_logo_landscape']: '')
+                "image_logo_portrait" => (!empty($detail['outlet_image_logo_portrait']) ? config('url.storage_url_api').$detail['outlet_image_logo_portrait']: '')
             ],
             'pic' => [
                 'merchant_pic_name' => $detail['merchant_pic_name'],
@@ -506,18 +505,6 @@ class ApiMerchantController extends Controller
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $dataUpdate['outlet_image_logo_portrait'] = $upload['path'];
-            }
-        }
-
-        if(!empty($post['image_logo_landscape'])){
-            $image = $post['image_logo_landscape'];
-            $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-            $imgGet = Image::make($image);
-            $imgwidth = $imgGet->width();
-            $upload = MyHelper::uploadPhotoStrict($encode, 'img/outlet/'.$checkMerchant['id_outlet'].'/', $imgwidth, 300);
-
-            if (isset($upload['status']) && $upload['status'] == "success") {
-                $dataUpdate['outlet_image_logo_landscape'] = $upload['path'];
             }
         }
 

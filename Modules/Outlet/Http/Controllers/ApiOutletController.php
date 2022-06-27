@@ -3753,7 +3753,7 @@ class ApiOutletController extends Controller
             ->where('outlet_status', 'Active')
             ->where('outlet_is_closed', 0)
             ->where('merchant_status', 'Active')
-            ->select('outlets.id_outlet', 'id_merchant');
+            ->select('outlets.id_outlet', 'id_merchant', 'outlet_name');
 
         if(!empty($post['search_key'])){
             $list = $list->where('outlet_name', 'like', '%'.$post['search_key'].'%');
@@ -3763,7 +3763,7 @@ class ApiOutletController extends Controller
             $list = $list->paginate($post['pagination_total_row']??10)->toArray();
 
             foreach ($list['data'] as $key=>$dt){
-                $list['data'][$key]['outlet_image_logo_portrait'] = $dt['url_outlet_image_logo_portrait'];
+                $list['data'][$key]['outlet_name'] = $dt['outlet_name'];
                 $list['data'][$key]['outlet_image_logo_landscape'] = $dt['url_outlet_image_logo_landscape'];
                 unset($list['data'][$key]['url_outlet_image_logo_landscape']);
                 unset($list['data'][$key]['url_outlet_image_logo_portrait']);
@@ -3775,7 +3775,7 @@ class ApiOutletController extends Controller
             $list = $list->get()->toArray();
 
             foreach ($list as $key=>$dt){
-                $list[$key]['outlet_image_logo_portrait'] = $dt['url_outlet_image_logo_portrait'];
+                $list[$key]['outlet_name'] = $dt['outlet_name'];
                 $list[$key]['outlet_image_logo_landscape'] = $dt['url_outlet_image_logo_landscape'];
                 unset($list[$key]['url_outlet_image_logo_landscape']);
                 unset($list[$key]['url_outlet_image_logo_portrait']);
@@ -3801,7 +3801,7 @@ class ApiOutletController extends Controller
             $top[] = [
                 'id_outlet' => $dt['id_outlet'],
                 'id_merchant' => $dt['id_merchant'],
-                'outlet_image_logo_landscape' => $dt['url_outlet_image_logo_portrait'],
+                'outlet_name' => $dt['outlet_name'],
                 'outlet_image_logo_portrait' => $dt['url_outlet_image_logo_portrait']
             ];
         }
