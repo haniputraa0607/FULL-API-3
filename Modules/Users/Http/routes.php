@@ -36,6 +36,9 @@ Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent'
     Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
     {
         Route::post('logout', 'ApiLoginRegisterV2@logout');
+        Route::get('profile/detail', 'ApiUser@profileDetail');
+        Route::post('profile/update-info', 'ApiUser@profileUpdateInfo');
+        Route::post('profile/update-personal', 'ApiUser@profileUpdatePersonal');
         Route::post('profile/update', 'ApiUser@profileUpdate');
     });
 

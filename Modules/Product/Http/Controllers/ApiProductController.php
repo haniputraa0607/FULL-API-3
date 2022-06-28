@@ -1932,6 +1932,7 @@ class ApiProductController extends Controller
                 ->where('id_outlet', $query['id_outlet'])
                 ->where('product_global_price', '>', 0)
                 ->where('product_visibility', 'Visible')
+                ->where('product_detail_visibility', 'Visible')
                 ->where('product_detail_stock_status', 'Available')
                 ->where('product_count_transaction', '>', 0)
                 ->orderBy('product_count_transaction', 'desc')
@@ -1972,6 +1973,7 @@ class ApiProductController extends Controller
             ->where('id_outlet', $query['id_outlet'])
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
+            ->where('product_detail_visibility', 'Visible')
             ->where('product_detail_stock_status', 'Available')
             ->orderBy('products.created_at', 'desc');
 
@@ -2018,6 +2020,7 @@ class ApiProductController extends Controller
             ->where('outlet_is_closed', 0)
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
+            ->where('product_detail_visibility', 'Visible')
             ->orderBy('product_count_transaction', 'desc')
             ->groupBy('products.id_product');
 
