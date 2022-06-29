@@ -25,6 +25,12 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('get-rated', 'ApiUserRatingController@getRated');
 });
 
+Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'user-rating/transaction'], function () {
+    Route::post('create', 'ApiUserRatingController@transactionStore');
+    Route::post('get-detail', 'ApiUserRatingController@transactionGetDetail');
+    Route::post('get-rated', 'ApiUserRatingController@transactionGetRated');
+});
+
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'user-rating'], function () {
     Route::post('/', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@index']);
     Route::post('detail', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@show']);

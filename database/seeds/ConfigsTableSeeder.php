@@ -1225,6 +1225,30 @@ class ConfigsTableSeeder extends Seeder
                 'created_at'  => '2021-09-29 10:57:33',
                 'updated_at'  => '2021-09-29 10:57:33',
             ),
+            137 => array(
+                'id_config'   => 138,
+                'config_name' => 'rating_outlet',
+                'description' => '',
+                'is_active'   => '0',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            137 => array(
+                'id_config'   => 138,
+                'config_name' => 'rating_product',
+                'description' => '',
+                'is_active'   => '1',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            137 => array(
+                'id_config'   => 138,
+                'config_name' => 'rating_doctor',
+                'description' => '',
+                'is_active'   => '1',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
         );
 
         foreach ($rows as $row) {

@@ -37,6 +37,8 @@ use Modules\ProductVariant\Entities\ProductVariantPivot;
 use Modules\Transaction\Entities\TransactionGroup;
 use Modules\Transaction\Entities\TransactionShipmentTrackingUpdate;
 use Modules\Transaction\Http\Requests\TransactionDetail;
+use Modules\UserRating\Entities\UserRating;
+use Modules\UserRating\Http\Controllers\ApiUserRatingController;
 use Modules\Xendit\Entities\TransactionPaymentXendit;
 
 class ApiMerchantTransactionController extends Controller
@@ -164,13 +166,24 @@ class ApiMerchantTransactionController extends Controller
                 'reject_at' => (!empty($value['transaction_reject_at'])? MyHelper::dateFormatInd($value['transaction_reject_at'], false, false):''),
                 'reject_reason' => (!empty($value['transaction_reject_reason'])? $value['transaction_reject_reason']:''),
             ];
+            $ratings = [];
 
-            if(!empty($status) && $status == 'completed'){
+            if($value['transaction_status'] == 'Completed' && $value['show_rate_popup'] == 1){
                 $transactions['data'][$key]['transaction_status_code'] = $codeIndo['Unreview']['code']??'';
                 $transactions['data'][$key]['transaction_status_text'] = $codeIndo['Unreview']['text']??'';
-                $transactions['data'][$key]['rating_value'] = null;
-                $transactions['data'][$key]['rating_description'] = null;
+
+                $getRatings = UserRating::where('id_transaction', $value['id_transaction'])->get()->toArray();
+                foreach ($getRatings as $rating){
+                    $currentOption = explode(',', $rating['option_value']);
+                    $ratings[] = [
+                        "rating_value" => $rating['rating_value'],
+                        "suggestion" => $rating['suggestion'],
+                        "option_value" => $currentOption
+                    ];
+                }
             }
+
+            $transactions['data'][$key]['ratings'] = $ratings;
         }
         return response()->json(MyHelper::checkGet($transactions));
     }
