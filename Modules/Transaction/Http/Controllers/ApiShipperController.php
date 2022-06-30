@@ -9,6 +9,7 @@ use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\TransactionMultiplePayment;
+use App\Http\Models\TransactionProduct;
 use App\Http\Models\User;
 use App\Lib\GoSend;
 use App\Lib\Shipper;
@@ -20,6 +21,7 @@ use App\Lib\MyHelper;
 use DB;
 use Modules\Transaction\Entities\LogShipper;
 use Modules\Transaction\Entities\TransactionShipmentTrackingUpdate;
+use Modules\UserRating\Entities\UserRatingLog;
 
 class ApiShipperController extends Controller
 {
@@ -70,7 +72,22 @@ class ApiShipperController extends Controller
                     }
 
                     if(in_array($dtShipper['code'], [2000, 3000, 2010])){
-                        Transaction::where('id_transaction', $data['id_transaction'])->update(['transaction_status' => 'Completed']);
+                        $updateCompleted = Transaction::where('id_transaction', $data['id_transaction'])->update(['transaction_status' => 'Completed', 'show_rate_popup' => '1']);
+
+                        if($updateCompleted){
+                            $trxProduct = TransactionProduct::where('id_transaction', $data['id_transaction'])->pluck('id_product')->toArray();
+
+                            foreach ($trxProduct as $id_product){
+                                UserRatingLog::updateOrCreate([
+                                    'id_user' => $data['id_user'],
+                                    'id_transaction' => $data['id_transaction'],
+                                    'id_product' => $id_product
+                                ],[
+                                    'refuse_count' => 0,
+                                    'last_popup' => date('Y-m-d H:i:s', time() - MyHelper::setting('popup_min_interval', 'value', 900))
+                                ]);
+                            }
+                        }
                     }
                 }
             }
@@ -129,7 +146,22 @@ class ApiShipperController extends Controller
             }
 
             if(in_array($shipper['code'], [2000, 3000, 2010])){
-                Transaction::where('id_transaction', $transaction['id_transaction'])->update(['transaction_status' => 'Completed']);
+                $updateCompleted = Transaction::where('id_transaction', $transaction['id_transaction'])->update(['transaction_status' => 'Completed', 'show_rate_popup' => '1']);
+
+                if($updateCompleted){
+                    $trxProduct = TransactionProduct::where('id_transaction', $transaction['id_transaction'])->pluck('id_product')->toArray();
+
+                    foreach ($trxProduct as $id_product){
+                        UserRatingLog::updateOrCreate([
+                            'id_user' => $transaction['id_user'],
+                            'id_transaction' => $transaction['id_transaction'],
+                            'id_product' => $id_product
+                        ],[
+                            'refuse_count' => 0,
+                            'last_popup' => date('Y-m-d H:i:s', time() - MyHelper::setting('popup_min_interval', 'value', 900))
+                        ]);
+                    }
+                }
             }
         }
 

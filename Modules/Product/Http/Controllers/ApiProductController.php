@@ -33,6 +33,8 @@ use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\ProductVariant\Entities\ProductVariantPivot;
+use Modules\UserRating\Entities\UserRating;
+use Modules\UserRating\Entities\UserRatingPhoto;
 use Validator;
 use Hash;
 use DB;
@@ -1855,6 +1857,23 @@ class ApiProductController extends Controller
             $imagesDetail[] = $dt['url_product_photo'];
         }
         $product['image_detail'] = $imagesDetail;
+        $ratings = [];
+        $getRatings = UserRating::where('id_product', $product['id_product'])->get()->toArray();
+        foreach ($getRatings as $rating){
+            $getPhotos = UserRatingPhoto::where('id_user_rating', $rating['id_user_rating'])->get()->toArray();
+            $photos = [];
+            foreach ($getPhotos as $dt){
+                $photos[] = $dt['url_user_rating_photo'];
+            }
+            $currentOption = explode(',', $rating['option_value']);
+            $ratings[] = [
+                "rating_value" => $rating['rating_value'],
+                "suggestion" => $rating['suggestion'],
+                "option_value" => $currentOption,
+                "photos" => $photos
+            ];
+        }
+        $product['ratings'] = $ratings;
 
         return MyHelper::checkGet($product);
     }

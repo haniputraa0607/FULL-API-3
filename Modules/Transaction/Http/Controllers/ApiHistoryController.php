@@ -1545,6 +1545,7 @@ class ApiHistoryController extends Controller
             $resultDate[$trxDate][] = [
                 'id_transaction' => $value['id_transaction'],
                 'id_transaction_group' => $value['id_transaction_group'],
+                'show_rate_popup' => $value['show_rate_popup'],
                 'transaction_receipt_number' => $value['transaction_receipt_number'],
                 'transaction_status_code' => $codeIndo[$value['transaction_status']]['code']??'',
                 'transaction_status_text' => $codeIndo[$value['transaction_status']]['text']??'',
