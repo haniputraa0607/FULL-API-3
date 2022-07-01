@@ -722,7 +722,12 @@ class ApiMerchantController extends Controller
                     $available = 1;
                 }
 
-                if ($available == 1 && ($available_check == 0 || $available_check == 1 && $deliveryOutlet[$check]['available_status'] == 1)){
+                $outletVisibility = 1;
+                if($check !== false){
+                    $outletVisibility = $deliveryOutlet[$check]['available_status'];
+                }
+
+                if ($available == 1 && ($available_check == 0 || ($available_check == 1 && $outletVisibility == 1))){
                     $service[] = [
                         "code" => $s['code'],
                         "service_name" => $s['service_name'],
