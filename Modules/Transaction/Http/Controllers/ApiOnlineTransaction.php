@@ -240,13 +240,21 @@ class ApiOnlineTransaction extends Controller
             $subtotal = $subtotal + $data['items_subtotal'];
             $earnedPoint = $this->countTranscationPoint(['subtotal' => (int)$data['items_subtotal']], $user);
             $cashback = $earnedPoint['cashback'] ?? 0;
+            $receiptNumber = rand().time().'-'.substr($data['id_outlet'], 0, 4).rand(1000,9999);
+            if(!empty($data['image_recipe'])){
+                $upload = MyHelper::uploadPhotoProduct($data['image_recipe'], 'img/recipe/', $receiptNumber);
+
+                if (isset($upload['status']) && $upload['status'] == "success") {
+                    $imageRecipe = $upload['path'];
+                }
+            }
 
             $transaction = [
                 'id_transaction_group'        => $insertTransactionGroup['id_transaction_group'],
                 'id_outlet'                   => $data['id_outlet'],
                 'id_user'                     => $user->id,
                 'transaction_date'            => $currentDate,
-                'transaction_receipt_number'  => rand().time().'-'.substr($data['id_outlet'], 0, 4).rand(1000,9999),
+                'transaction_receipt_number'  => $receiptNumber,
                 'transaction_status'          => $transactionStatus,
                 'trasaction_type'             => $transactionType,
                 'transaction_subtotal'        => $data['items_subtotal'],
@@ -257,7 +265,8 @@ class ApiOnlineTransaction extends Controller
                 'transaction_cashback_earned' => $cashback,
                 'trasaction_payment_type'     => $paymentType,
                 'transaction_payment_status'  => $paymentStatus,
-                'membership_level'            => $post['membership_level']
+                'membership_level'            => $post['membership_level'],
+                'image_recipe'                => $imageRecipe??null
             ];
 
             $newTopupController = new NewTopupController();
@@ -530,10 +539,25 @@ class ApiOnlineTransaction extends Controller
         $errorMsg = [];
         $address = UserAddress::leftJoin('cities', 'cities.id_city', 'user_addresses.id_city')
             ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
-            ->where('id_user', $user->id)->orderBy('main_address', 'desc')
-            ->select('user_addresses.*', 'city_name', 'provinces.id_province', 'province_name')
-            ->limit(2)->get()->toArray();
-        $mainAddress = $address[0]??null;
+            ->where('id_user', $user->id)
+            ->orderBy('main_address', 'desc')
+            ->select('user_addresses.*', 'city_name', 'provinces.id_province', 'province_name');
+
+        if(!empty($post['id_user_address'])){
+            $address = $address->where('id_user_address', $post['id_user_address']);
+        }else{
+            $address = $address->where('favorite', 1);
+        }
+
+        $address = $address->first();
+        if(empty($address)){
+            $address = UserAddress::leftJoin('cities', 'cities.id_city', 'user_addresses.id_city')
+                ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
+                ->where('id_user', $user->id)
+                ->orderBy('main_address', 'desc')
+                ->select('user_addresses.*', 'city_name', 'provinces.id_province', 'province_name')->first();
+        }
+        $mainAddress = $address;
 
         $itemsCheck = $this->checkDataTransaction($post['items'], 0, 0, 1, $mainAddress);
         $items = $itemsCheck['items'];
@@ -2366,6 +2390,7 @@ class ApiOnlineTransaction extends Controller
         $subtotal = 0;
         $errorMsg = [];
         $weight = [];
+        $needRecipeStatus = 0;
         foreach ($items as $index=>$value){
             $errorMsgSubgroup = [];
             $checkOutlet = Outlet::where('id_outlet', $value['id_outlet'])->where('outlet_status', 'Active')->where('outlet_is_closed', 0)->first();
@@ -2375,7 +2400,7 @@ class ApiOnlineTransaction extends Controller
                 $dimentionProduct = 0;
                 foreach ($value['items'] as $key=>$item){
                     $error = '';
-                    $product = Product::select('product_weight', 'product_width', 'product_length', 'product_height', 'id_merchant', 'product_category_name', 'products.id_product_category', 'id_product','product_code','product_name','product_description','product_code', 'product_variant_status')
+                    $product = Product::select('need_recipe_status', 'product_weight', 'product_width', 'product_length', 'product_height', 'id_merchant', 'product_category_name', 'products.id_product_category', 'id_product','product_code','product_name','product_description','product_code', 'product_variant_status')
                         ->leftJoin('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
                         ->where('product_visibility', 'Visible')
                         ->where('id_product',$item['id_product'])->first();
@@ -2389,6 +2414,10 @@ class ApiOnlineTransaction extends Controller
                         continue;
                     }else{
                         $product = $product->toArray();
+                    }
+
+                    if($product['need_recipe_status']){
+                        $needRecipeStatus = 1;
                     }
 
                     $product['product_price'] = 0;
@@ -2469,6 +2498,10 @@ class ApiOnlineTransaction extends Controller
                         $dimentionProduct = $dimentionProduct+($product['product_width'] * $product['product_height'] * $product['product_length'] * $item['qty']);
                     }else{
                         $error = 'Produk tidak valid';
+                    }
+
+                    if($needRecipeStatus == 1 && empty($value['image_recipe'])){
+                        $error = 'Produk membutuhkan resep, silahkan unggah foto resep Anda';
                     }
 
                     $totalPrice = (int)$product['product_price'] * $item['qty'];
@@ -2619,6 +2652,7 @@ class ApiOnlineTransaction extends Controller
             $tmp[$value['id_outlet']]['id_outlet'] = $value['id_outlet'];
             $tmp[$value['id_outlet']]['delivery'] = $value['delivery']??'';
             $tmp[$value['id_outlet']]['items'] = array_merge($tmp[$value['id_outlet']]['items']??[], $value['items']);
+            $tmp[$value['id_outlet']]['image_recipe'] = $value['image_recipe']??null;
         }
         $items = array_values($tmp);
 

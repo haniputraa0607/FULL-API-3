@@ -340,6 +340,13 @@ class ApiMerchantManagementController extends Controller
             ];
         }
 
+        if(!empty($post['variant_status']) && empty($post['variants'])){
+            return [
+                'status' => 'fail',
+                'messages' => ['Variant can not be empty if status variant 1']
+            ];
+        }
+
         $product = [
             'id_merchant' => $checkMerchant['id_merchant'],
             'product_code' => 'P'.rand().'-'.$checkMerchant['id_merchant'],
@@ -352,7 +359,8 @@ class ApiMerchantManagementController extends Controller
             'product_height' => (!empty($post['product_height']) ? $post['product_height'] : 0),
             'product_width' => (!empty($post['product_width']) ? $post['product_width'] : 0),
             'product_length' => (!empty($post['product_length']) ? $post['product_length'] : 0),
-            'product_variant_status' => (empty($post['variants']) ? 0 : 1)
+            'product_variant_status' => $post['variant_status']??0,
+            'need_recipe_status' => $post['need_recipe_status']??0
         ];
 
         DB::beginTransaction();
@@ -415,11 +423,11 @@ class ApiMerchantManagementController extends Controller
             'id_outlet' => $checkMerchant['id_outlet'],
             'product_detail_visibility' => 'Visible',
             'product_detail_stock_status' => (empty($post['variants']) && empty($stockProduct)? 'Sold Out' : 'Available'),
-            'product_detail_stock_item' => (empty($post['variants'])? $stockProduct : 0)
+            'product_detail_stock_item' => (empty($post['variants'])? $stockProduct : 0),
         ]);
 
         $priceVariant = [];
-        if(!empty($post['variants'])){
+        if(!empty($post['variants']) && !empty($post['variant_status'])){
             $variants = (array)json_decode($post['variants']);
 
             $dtVariant = [];
@@ -554,7 +562,7 @@ class ApiMerchantManagementController extends Controller
 
         DB::commit();
         $price = $post['base_price']??0;
-        if(!empty($post['variants'])){
+        if(!empty($post['variants']) && !empty($post['variant_status'])){
             $price = min($priceVariant);
         }
         ProductGlobalPrice::where('id_product', $idProduct)->update(['product_global_price' => $price]);
@@ -592,6 +600,13 @@ class ApiMerchantManagementController extends Controller
                 ];
             }
 
+            if(!empty($post['variant_status']) && empty($post['variants'])){
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Variant can not be empty if status variant 1']
+                ];
+            }
+
             $product = [
                 'product_name' => $post['product_name'],
                 'product_description' => $post['product_description'],
@@ -600,7 +615,8 @@ class ApiMerchantManagementController extends Controller
                 'product_height' => (!empty($post['product_height']) ? $post['product_height'] : 0),
                 'product_width' => (!empty($post['product_width']) ? $post['product_width'] : 0),
                 'product_length' => (!empty($post['product_length']) ? $post['product_length'] : 0),
-                'product_variant_status' => (empty($post['variants']) ? 0 : 1)
+                'product_variant_status' => $post['variant_status']??0,
+                'need_recipe_status' => $post['need_recipe_status']??0
             ];
 
             DB::beginTransaction();
@@ -677,7 +693,7 @@ class ApiMerchantManagementController extends Controller
             }
 
             $priceVariant = [];
-            if(!empty($post['variants'])){
+            if(!empty($post['variants']) && !empty($post['variant_status'])){
                 $variants = (array)json_decode($post['variants']);
 
                 $dtVariant = [];
@@ -817,7 +833,7 @@ class ApiMerchantManagementController extends Controller
             DB::commit();
 
             $price = $post['base_price']??0;
-            if(!empty($post['variants'])){
+            if(!empty($post['variants']) && !empty($post['variant_status'])){
                 $price = min($priceVariant);
             }
 
@@ -918,7 +934,9 @@ class ApiMerchantManagementController extends Controller
                 'product_weight' => $detail['product_weight'],
                 'product_height' => $detail['product_height'],
                 'product_width' => $detail['product_width'],
-                'product_length' => $detail['product_length']
+                'product_length' => $detail['product_length'],
+                'product_variant_status' => $detail['product_variant_status'],
+                'need_recipe_status' => $detail['need_recipe_status']
             ];
 
             $wholesalerStatus = false;

@@ -71,7 +71,8 @@ class Product extends Model
         'product_height',
         'product_count_transaction',
         'product_recommendation_status',
-        'total_rating'
+        'total_rating',
+        'need_recipe_status'
     ];
     
 
