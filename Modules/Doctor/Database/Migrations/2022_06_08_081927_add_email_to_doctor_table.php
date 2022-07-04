@@ -18,9 +18,6 @@ class AddEmailToDoctorTable extends Migration
             $table->boolean('birthday')->after('doctor_email');
             $table->boolean('gender')->after('birthday');
             $table->boolean('celebrate')->after('gender');
-            $table->boolean('province')->after('celebrate');
-            $table->boolean('city')->after('province');
-            $table->boolean('address')->after('city');
         });
     }
 
@@ -37,9 +34,6 @@ class AddEmailToDoctorTable extends Migration
             $table->dropColumn('birthday');
             $table->dropColumn('gender');
             $table->dropColumn('celebrate');
-            $table->dropColumn('province');
-            $table->dropColumn('city');
-            $table->dropColumn('address');
         });
     }
 }

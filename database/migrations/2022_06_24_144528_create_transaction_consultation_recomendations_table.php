@@ -17,7 +17,6 @@ class CreateTransactionConsultationRecomendationsTable extends Migration
             $table->bigIncrements('id_transaction_consultation_recomendation');
             $table->unsignedInteger('id_transaction_consultation');
             $table->unsignedInteger('id_product');
-            $table->string('product_type');
             $table->enum('product_type', array('Product','Drug'));
             $table->string('qty_product');
             $table->unsignedInteger('id_outlet');
