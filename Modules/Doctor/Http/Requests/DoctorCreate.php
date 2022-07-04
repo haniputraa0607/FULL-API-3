@@ -13,8 +13,14 @@ class DoctorCreate extends FormRequest
         return [
             'doctor_name'=>'required|string',
             'doctor_phone'=>'required|string',
-            'id_doctor_clinic'=>'required|integer',
-            'doctor_session_price'=>'required|string'
+            'gender'=>'required|string',
+            'birthday'=>'required|string',
+            'pin'=>'required|string',
+            'id_outlet'=>'required|integer',
+            'doctor_session_price'=>'required|string',
+            'practical experience'=>'required|string',
+            'alumni'=>'required|string',
+            'registration_certificate_number'=>'required|string',
         ];
     }
 
