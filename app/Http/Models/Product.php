@@ -70,7 +70,9 @@ class Product extends Model
         'product_width',
         'product_height',
         'product_count_transaction',
-        'product_recommendation_status'
+        'product_recommendation_status',
+        'total_rating',
+        'need_recipe_status'
     ];
     
 
@@ -107,7 +109,7 @@ class Product extends Model
 
 	 public function category()
     {
-        return $this->belongsToMany(ProductCategory::class,'brand_product', 'id_product', 'id_product_category');
+        return $this->belongsToMany(ProductCategory::class,'products', 'id_product', 'id_product_category');
     }
 
     public function photos() {
@@ -146,6 +148,11 @@ class Product extends Model
     public function product_detail()
     {
         return $this->hasMany(\Modules\Product\Entities\ProductDetail::class, 'id_product')->where('product_detail_visibility', 'Visible');
+    }
+
+    public function product_wholesaler()
+    {
+        return $this->hasMany(\Modules\Product\Entities\ProductWholesaler::class, 'id_product');
     }
 
 	public function prices()

@@ -8,8 +8,10 @@ use App\Http\Models\MonthlyReportTrx;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPhoto;
+use App\Http\Models\Subdistricts;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\UserInbox;
+use App\Lib\Shipper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -244,6 +246,7 @@ class ApiMerchantController extends Controller
                 "outlet_email" => (empty($post['merchant_email']) ? null : $post['merchant_email']),
                 "outlet_phone" => $phone,
                 "id_city" => $post['id_city'],
+                "id_subdistrict" => $post['id_subdistrict']??null,
                 "outlet_address" => $post['merchant_address'],
                 "outlet_postal_code" => (empty($post['merchant_postal_code']) ? null : $post['merchant_postal_code'])
             ];
@@ -265,14 +268,17 @@ class ApiMerchantController extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['Nomor telepon sudah terdaftar']]);
             }
 
+            $getPostalCode = Subdistricts::where('id_subdistrict', $post['id_subdistrict']??null)->first()['subdistrict_postal_code']??null;
+
             $dataUpdateOutlet = [
                 "outlet_name" => $post['merchant_name'],
                 "outlet_license_number" => $post['merchant_license_number'],
                 "outlet_email" => (empty($post['merchant_email']) ? null : $post['merchant_email']),
                 "outlet_phone" => $phone,
                 "id_city" => $post['id_city'],
+                "id_subdistrict" => $post['id_subdistrict']??null,
                 "outlet_address" => $post['merchant_address'],
-                "outlet_postal_code" => (empty($post['merchant_postal_code']) ? null : $post['merchant_postal_code'])
+                "outlet_postal_code" => $getPostalCode
             ];
 
             $update = Outlet::where('id_outlet', $checkData['id_outlet'])->update($dataUpdateOutlet);
@@ -358,7 +364,9 @@ class ApiMerchantController extends Controller
         $detail['merchant_status'] = $checkData['merchant_status'];
 
         $outlet = Outlet::leftJoin('cities', 'outlets.id_city', 'cities.id_city')
-                ->where('id_outlet', $checkData['id_outlet'])->select('outlets.*', 'cities.id_province')->first();
+                ->leftJoin('subdistricts', 'outlets.id_subdistrict', 'subdistricts.id_subdistrict')
+                ->leftJoin('districts', 'subdistricts.id_district', 'districts.id_district')
+                ->where('id_outlet', $checkData['id_outlet'])->select('outlets.*', 'cities.id_province', 'districts.id_district')->first();
 
         $detail['step_1'] = [
             "merchant_name" => $outlet['outlet_name'],
@@ -367,6 +375,8 @@ class ApiMerchantController extends Controller
             "merchant_phone" => $outlet['outlet_phone'],
             "id_province" => $outlet['id_province'],
             "id_city" => $outlet['id_city'],
+            "id_district" => $outlet['id_district'],
+            "id_subdistrict" => $outlet['id_subdistrict'],
             "merchant_address" => $outlet['outlet_address'],
             "merchant_postal_code" => $outlet['outlet_postal_code']
         ];
@@ -411,10 +421,12 @@ class ApiMerchantController extends Controller
 
         $detail = Merchant::leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
             ->leftJoin('cities', 'cities.id_city', 'outlets.id_city')
+            ->leftJoin('subdistricts', 'outlets.id_subdistrict', 'subdistricts.id_subdistrict')
+            ->leftJoin('districts', 'subdistricts.id_district', 'districts.id_district')
             ->where('id_merchant', $checkMerchant['id_merchant'])
             ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
             ->where('id_merchant', $checkMerchant['id_merchant'])
-            ->select('merchants.*', 'provinces.id_province', 'outlets.*', 'city_name', 'province_name')
+            ->select('merchants.*', 'provinces.id_province', 'outlets.*', 'city_name', 'province_name', 'districts.*', 'subdistrict_name')
             ->first();
 
         if(empty($detail)){
@@ -428,6 +440,10 @@ class ApiMerchantController extends Controller
             'province_name' => $detail['province_name'],
             'id_city' => $detail['id_city'],
             'city_name' => $detail['city_name'],
+            'id_district' => $detail['id_district'],
+            'district_name' => $detail['district_name'],
+            'id_subdistrict' => $detail['id_subdistrict'],
+            'subdistrict_name' => $detail['subdistrict_name'],
             'address' => $detail['outlet_address'],
             'postal_code' => $detail['outlet_postal_code']
         ];
@@ -442,8 +458,7 @@ class ApiMerchantController extends Controller
                 "merchant_phone" => $detail['outlet_phone'],
                 "city_name" => $detail['city_name'],
                 "image_cover" => (!empty($detail['outlet_image_cover']) ? config('url.storage_url_api').$detail['outlet_image_cover']: ''),
-                "image_logo_portrait" => (!empty($detail['outlet_image_logo_portrait']) ? config('url.storage_url_api').$detail['outlet_image_logo_portrait']: ''),
-                "image_logo_landscape" => (!empty($detail['outlet_image_logo_landscape']) ? config('url.storage_url_api').$detail['outlet_image_logo_landscape']: '')
+                "image_logo_portrait" => (!empty($detail['outlet_image_logo_portrait']) ? config('url.storage_url_api').$detail['outlet_image_logo_portrait']: '')
             ],
             'pic' => [
                 'merchant_pic_name' => $detail['merchant_pic_name'],
@@ -493,18 +508,6 @@ class ApiMerchantController extends Controller
             }
         }
 
-        if(!empty($post['image_logo_landscape'])){
-            $image = $post['image_logo_landscape'];
-            $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-            $imgGet = Image::make($image);
-            $imgwidth = $imgGet->width();
-            $upload = MyHelper::uploadPhotoStrict($encode, 'img/outlet/'.$checkMerchant['id_outlet'].'/', $imgwidth, 300);
-
-            if (isset($upload['status']) && $upload['status'] == "success") {
-                $dataUpdate['outlet_image_logo_landscape'] = $upload['path'];
-            }
-        }
-
         $dataUpdate['outlet_name'] = $post['merchant_name'];
         $dataUpdate['outlet_description'] = $post['merchant_description'];
         $dataUpdate['outlet_license_number'] = $post['merchant_license_number']??null;
@@ -545,8 +548,10 @@ class ApiMerchantController extends Controller
             $data = Merchant::leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
                 ->leftJoin('cities', 'outlets.id_city', 'cities.id_city')
                 ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
+                ->leftJoin('subdistricts', 'outlets.id_subdistrict', 'subdistricts.id_subdistrict')
+                ->leftJoin('districts', 'subdistricts.id_district', 'districts.id_district')
                 ->where('id_merchant', $checkMerchant['id_merchant'])
-                ->select('merchants.*', 'provinces.id_province', 'outlets.*')
+                ->select('merchants.*', 'provinces.id_province', 'outlets.*', 'districts.id_district')
                 ->first();
             if(empty($data)){
                 return response()->json(['status' => 'fail', 'messages' => ['Data tidak ditemukan']]);
@@ -557,18 +562,23 @@ class ApiMerchantController extends Controller
                 'longitude' => $data['outlet_longitude'],
                 'id_province' => $data['id_province'],
                 'id_city' => $data['id_city'],
+                'id_district' => $data['id_district'],
+                'id_subdistrict' => $data['id_subdistrict'],
                 'address' => $data['outlet_address'],
                 'postal_code' => $data['outlet_postal_code']
             ];
 
             return response()->json(MyHelper::checkGet($detail));
         }else{
+            $getPostalCode = Subdistricts::where('id_subdistrict', $post['id_subdistrict']??null)->first()['subdistrict_postal_code']??null;
+
             $dataUpdate = [
                 'outlet_latitude' => $post['latitude']??null,
                 'outlet_longitude' => $post['longitude']??null,
                 'id_city' => $post['id_city']??null,
+                'id_subdistrict' => $post['id_subdistrict']??null,
                 'outlet_address' => $post['address']??null,
-                'outlet_postal_code' => $post['postal_code']??null
+                'outlet_postal_code' => $getPostalCode
             ];
 
             $update = Outlet::where('id_outlet', $checkMerchant['id_outlet'])->update($dataUpdate);
@@ -706,13 +716,18 @@ class ApiMerchantController extends Controller
             foreach ($val['service'] as $s){
                 $check = array_search($s['code'], array_column($deliveryOutlet,'code'));
                 $available = 0;
-                if($check === false){
+                if($check === false && $s['available_status'] == 1){
                     $available = 1;
-                }else if($val['available_status'] == 1){
+                }else if($s['available_status'] == 1){
                     $available = 1;
                 }
 
-                if ($available == 1 && ($available_check == 0 || $available_check == 1 && $deliveryOutlet[$check]['available_status'] == 1)){
+                $outletVisibility = 1;
+                if($check !== false){
+                    $outletVisibility = $deliveryOutlet[$check]['available_status'];
+                }
+
+                if ($available == 1 && ($available_check == 0 || ($available_check == 1 && $outletVisibility == 1))){
                     $service[] = [
                         "code" => $s['code'],
                         "service_name" => $s['service_name'],
@@ -1153,5 +1168,54 @@ class ApiMerchantController extends Controller
         ];
         $saveBalanceMerchant = app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dt);
         return response()->json(MyHelper::checkUpdate($saveBalanceMerchant));
+    }
+
+    public function balanceList(Request $request){
+        $post = $request->json()->all();
+
+        if(empty($post['id_outlet'])){
+            return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
+        }
+        $checkMerchant = Merchant::where('id_outlet', $post['id_outlet'])->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        $list1 = MerchantLogBalance::join('transactions', 'transactions.id_transaction', 'merchant_log_balances.merchant_balance_id_reference')
+                    ->where('id_merchant', $checkMerchant['id_merchant'])->select('merchant_log_balances.*');
+        $list2 = MerchantLogBalance::join('bank_accounts', 'bank_accounts.id_bank_account', 'merchant_log_balances.merchant_balance_id_reference')
+                ->where('id_merchant', $checkMerchant['id_merchant'])->select('merchant_log_balances.*');
+
+        if(!empty($post['search_key'])){
+            $list1 = $list1->where('transaction_receipt_number', 'like', '%'.$post['search_key'].'%');
+            $list2 = $list2->where(function ($q) use($post){
+                $q->where('beneficiary_name', 'like', '%'.$post['search_key'].'%')
+                    ->orWhere('beneficiary_account', 'like', '%'.$post['search_key'].'%');
+            });
+        }
+
+        $list = $list1->unionAll($list2)->orderBy('created_at', 'desc')->paginate(15)->toArray();
+
+        foreach ($list['data']??[] as $key=>$dt){
+            $transaction = [];
+            $bankAccount = [];
+            if($dt['merchant_balance_source'] == 'Transaction Completed'){
+                $transaction = Transaction::where('id_transaction', $dt['merchant_balance_id_reference'])->first();
+            }elseif($dt['merchant_balance_source'] == 'Withdrawal'){
+                $bankAccount =  BankAccount::join('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
+                    ->where('bank_accounts.id_bank_account', $dt['merchant_balance_id_reference'])
+                    ->first();
+            }
+
+            $list['data'][$key] = [
+                'date' => $dt['created_at'],
+                'source' => $dt['merchant_balance_source'],
+                'nominal' => $dt['merchant_balance'],
+                'data_transaction' => $transaction,
+                'data_bank_account' => $bankAccount
+            ];
+        }
+
+        return response()->json(MyHelper::checkGet($list));
     }
 }

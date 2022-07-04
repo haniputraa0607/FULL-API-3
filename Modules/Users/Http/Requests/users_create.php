@@ -48,7 +48,16 @@ class users_create extends FormRequest
 
     protected function failedValidation(Validator $validator)
     {
-        throw new HttpResponseException(response()->json(['status' => 'fail', 'messages'  => $validator->errors()->all()], 200));
+        $messages = $validator->errors()->all();
+
+        foreach ($messages as $key=>$message){
+            $messages[$key] = str_replace('pin', 'password', $message);
+            if($message == 'The pin format is invalid.'){
+                $messages[$key] = 'Password must contain at least 1 uppercase letter, 1 lowercase letter, and a number';
+            }
+        }
+
+        throw new HttpResponseException(response()->json(['status' => 'fail', 'messages'  => $messages], 200));
     }
 
     protected function validationData()

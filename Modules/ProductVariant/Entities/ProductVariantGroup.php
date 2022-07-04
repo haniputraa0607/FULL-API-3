@@ -43,4 +43,14 @@ class ProductVariantGroup extends Model
         }
         return $value;
     }
+
+    public function product_variant_group_wholesaler()
+    {
+        return $this->hasMany(ProductVariantGroupWholesaler::class, 'id_product_variant_group', 'id_product_variant_group');
+    }
+
+    public function variant_detail()
+    {
+        return $this->hasOne(ProductVariantGroupDetail::class, 'id_product_variant_group', 'id_product_variant_group');
+    }
 }
