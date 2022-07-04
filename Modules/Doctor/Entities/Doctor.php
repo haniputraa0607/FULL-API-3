@@ -40,7 +40,6 @@ class Doctor extends Authenticatable
         'phone_verified',
         'password',
         'doctor_email',
-        'is_pin_sent',
         'birthday',
         'gender',
         'celebrate',
@@ -50,7 +49,7 @@ class Doctor extends Authenticatable
         'alumni',
         'practical_experience',
         'registration_certificate_number',
-        'id_doctor_clinic',
+        'id_outlet',
         'id_doctor_specialist',
         'doctor_status',
         'doctor_session_price',
@@ -60,7 +59,9 @@ class Doctor extends Authenticatable
         'total_rating',
         'sms_increment',
         'schedule_toogle',
-        'notification_toogle'
+        'notification_toogle',
+        'count_login_failed',
+        'pin_changed'
     ];
 
     public function clinic()
