@@ -9,6 +9,7 @@ use App\Lib\MyHelper;
 use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionConsultation;
+use App\Http\Models\TransactionConsultationRecomendation;
 use App\Http\Models\User;
 use App\Http\Models\Setting;
 
@@ -1014,5 +1015,157 @@ class ApiTransactionConsultationController extends Controller
             'status'   => 'success',
             'result'   => $result
         ]);
+    }
+
+    public function getDetailSummary(Request $request)
+    {
+        $post = $request->json()->all();
+        $user = $request->user();
+        $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first()->toArray();
+
+        $diseaseComplaints = !empty($transactionConsultation['disease_complaint']) ? explode(', ', $transactionConsultation['disease_complaint']) : null;
+        $diseaseAnalysis = !empty($transactionConsultation['disease_complaint']) ? explode(', ', $transactionConsultation['disease_analysis']) : null;
+
+        $result = [];
+        $result['disease_complaint'] = $diseaseComplaints;
+        $result['disease_analysis'] = $diseaseAnalysis;
+        $result['treatment_recomendation'] = $transactionConsultation['treatment_recomendation'];
+
+        return MyHelper::checkGet($result);
+    }
+
+    public function updateConsultationDetail(Request $request)
+    {
+        $post = $request->json()->all();
+        $user = $request->user();
+
+        $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first();
+
+        if(empty($transactionConsultation)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaction Consultation Not Found']
+            ]);
+        }
+
+        $transactionConsultation = $transactionConsultation->toArray();
+
+        $diseaseComplaint = implode(", ",$post['disease_complaint']);
+        $diseaseAnalysis = implode(", ",$post['disease_analysis']);
+
+        DB::beginTransaction();
+        try {
+            $result = TransactionConsultation::where('id_transaction', $post['id_transaction'])
+            ->update([
+                'disease_complaint' => $diseaseComplaint,
+                'disease_analysis' => $diseaseAnalysis,
+                'treatment_recomendation' => $post['treatment_recomendation']
+            ]);
+        } catch (\Exception $e) {
+            $result = [
+                'status'  => 'fail',
+                'message' => 'Update disease and treatement failed'
+            ];
+            DB::rollBack();
+            return response()->json($result);
+        }
+        DB::commit();
+
+        return response()->json(['status'  => 'success', 'result' => $result]);
+    }
+
+    public function getProductRecomendation(Request $request)
+    {
+        $post = $request->json()->all();
+        $user = $request->user();
+        $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first()->toArray();
+
+        if(empty($transactionConsultation)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaction Consultation Not Found']
+            ]);
+        }
+
+        //get recomendation
+        $recomendations = TransactionConsultationRecomendation::with('product')->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->onlyProduct()->get();
+
+        $result = [];
+        if(!empty($recomendations)) {
+            foreach($recomendations as $key => $recomendation){
+                $result['product_name'] = $recomendation->product->product_name ?? null;
+                $result['product_price'] = $recomendation->product->price->product_price ?? null;
+                $result['product_photo'] = $recomendation->product->product_photos ?? null;
+                $result['product_rating'] = null;
+                $result['qty'] = $recomendation->qty ?? null;
+            }
+        }
+
+        return MyHelper::checkGet($result);
+    }
+
+    public function getDrugRecomendation(Request $request)
+    {
+        $post = $request->json()->all();
+        $user = $request->user();
+        $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first()->toArray();
+
+        if(empty($transactionConsultation)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaction Consultation Not Found']
+            ]);
+        }
+
+        //get recomendation
+        $recomendations = TransactionConsultationRecomendation::with('product')->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->onlyDrug()->get();
+
+        $result = [];
+        if(!empty($recomendations)) {
+            foreach($recomendations as $key => $recomendation){
+                $result['product_name'] = $recomendation->product->product_name ?? null;
+                $result['product_price'] = $recomendation->product->price->product_price ?? null;
+                $result['product_photo'] = $recomendation->product->product_photos ?? null;
+                $result['product_rating'] = null;
+                $result['qty'] = $recomendation->qty ?? null;
+            }
+        }
+
+        return MyHelper::checkGet($result);
+    }
+
+    public function updateRecomendation(Request $request)
+    {
+        $post = $request->json()->all();
+        $user = $request->user();
+        $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first();
+
+        if(empty($transactionConsultation)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaction Consultation Not Found']
+            ]);
+        }
+
+        foreach($post['items'] as $key => $item){
+            $post['items'][$key]['product_type'] = $post['type'];
+        }
+
+        DB::beginTransaction();
+        try {
+            //drop old recomendation 
+            $oldRecomendation = TransactionConsultationRecomendation::where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->delete();
+            $result = $transactionConsultation->recomendation()->createMany($post['items']);
+        } catch (\Exception $e) {
+            $result = [
+                'status'  => 'fail',
+                'message' => 'Update disease and treatement failed'
+            ];
+            DB::rollBack();
+            return response()->json($result);
+        }
+        DB::commit();
+
+        return response()->json(['status'  => 'success', 'result' => $result]);
     }
 }

@@ -3476,7 +3476,17 @@ class FeaturesTableSeeder extends Seeder
                     'feature_type' => 'Update',
                     'feature_module' => 'Merchant Withdrawl',
                     'show_hide' => 1,
-                    'order' => 121,
+                    'order' => 121
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
+             348 =>
+                array(
+                    'id_feature' => 349,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Settings Max Quota Consultations',
+                    'show_hide' => 1,
+                    'order' => 127,
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
                 ),

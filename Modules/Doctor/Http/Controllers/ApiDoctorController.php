@@ -117,6 +117,7 @@ class ApiDoctorController extends Controller
     public function store(DoctorCreate $request)
     {
         $post = $request->json()->all();
+        unset($post['_token']);
 
         DB::beginTransaction();
         if (isset($post['id_doctor'])) {    
@@ -146,9 +147,9 @@ class ApiDoctorController extends Controller
     
                 //set password
                 if ($post['pin'] == null) {
-                    $pin = MyHelper::createRandomPIN(6, 'angka');
+                    $pin = MyHelper::createRandomPIN(6, 'kecil');
                     if(env('APP_ENV') != "production"){
-                        $pin = '777777';
+                        $pin = '77777777';
                     }
                 } else {
                     $pin = $post['pin'];
@@ -159,7 +160,6 @@ class ApiDoctorController extends Controller
 
                 //get specialist id
                 $specialist_id = $post['doctor_specialist'];
-
                 unset($post['doctor_specialist']);
     
                 Doctor::where('id_doctor', $post['id_doctor'])->update($post);
@@ -227,7 +227,7 @@ class ApiDoctorController extends Controller
                 return response()->json($result);
             }
             DB::commit();
-            return response()->json(['status'  => 'success', 'result' => ['doctor_name' => $post['doctor_name'], 'created_at' => $save->doctor_service]]);
+            return response()->json(['status'  => 'success', 'result' => ['doctor_name' => $post['doctor_name'], 'created_at' => $post]]);
         }
     }
 
@@ -244,26 +244,28 @@ class ApiDoctorController extends Controller
 
         $doctor_schedule = $doctor_schedule->get()->toArray();
 
+        //problems hereee
         $schedule = array();
-        $i = 0;
-        while(count($schedule) < 4){
-            if($i > 0) {
-                $date = date("Y-m-d", strtotime("+$i day"));
-                $day = strtolower(date("l", strtotime($date)));
-            } else {
-                $date = date("Y-m-d");
-                $day = strtolower(date("l", strtotime($date)));
-            }
-            $i += 1;
+        if(!empty($doctor_schedule)){
+            $i = 0;
+            while(count($schedule) < 4){
+                if($i > 0) {
+                    $date = date("Y-m-d", strtotime("+$i day"));
+                    $day = strtolower(date("l", strtotime($date)));
+                } else {
+                    $date = date("Y-m-d");
+                    $day = strtolower(date("l", strtotime($date)));
+                }
+                $i += 1;
 
-            foreach($doctor_schedule as $row) {
-                if($row['day'] == $day) {
-                    $row['date'] = $date;
-                    $schedule[] = $row;
+                foreach($doctor_schedule as $row) {
+                    if($row['day'] == $day) {
+                        $row['date'] = $date;
+                        $schedule[] = $row;
+                    }
                 }
             }
         }
-
         $doctor['schedules'] = $schedule;
 
         return response()->json(['status'  => 'success', 'result' => $doctor]);
