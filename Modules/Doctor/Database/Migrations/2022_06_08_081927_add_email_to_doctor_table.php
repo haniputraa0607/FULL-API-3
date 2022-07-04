@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class AddCountAndLastOfferingToUsersTable extends Migration
+class AddEmailToDoctorTable extends Migration
 {
     /**
      * Run the migrations.
@@ -15,8 +15,7 @@ class AddCountAndLastOfferingToUsersTable extends Migration
     {
         Schema::table('doctors', function (Blueprint $table) {
             $table->string('doctor_email')->after('password');
-            $table->boolean('is_pin_sent')->nullable()->after('doctor_email');
-            $table->boolean('birthday')->after('is_pin_sent');
+            $table->boolean('birthday')->after('doctor_email');
             $table->boolean('gender')->after('birthday');
             $table->boolean('celebrate')->after('gender');
             $table->boolean('province')->after('celebrate');
