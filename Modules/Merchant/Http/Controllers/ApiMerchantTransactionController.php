@@ -266,6 +266,7 @@ class ApiMerchantTransactionController extends Controller
                 'id_product' => $value['id_product'],
                 'product_name' => $value['product_name'],
                 'product_qty' => $value['transaction_product_qty'],
+                'need_recipe_status' =>  $value['transaction_product_recipe_status'],
                 'product_total_price' => 'Rp '. number_format((int)$value['transaction_product_subtotal'],0,",","."),
                 'note' => $value['transaction_product_note'],
                 'variants' => implode(', ', array_column($value['variants'], 'product_variant_name')),
@@ -334,7 +335,8 @@ class ApiMerchantTransactionController extends Controller
                 'pickup_time_start' => date('Y-m-d H:i:s', strtotime($transaction['shipment_pickup_time_start'])),
                 'pickup_time_end' => date('Y-m-d H:i:s', strtotime($transaction['shipment_pickup_time_end']))
             ],
-            'payment' => $paymentMethod,
+            'image_recipe' => (empty($transaction['image_recipe']) ? '': config('url.storage_url_api').$transaction['image_recipe']),
+            'payment' => $paymentMethod??'',
             'payment_detail' => $paymentDetail,
             'point_receive' => 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini'
         ];

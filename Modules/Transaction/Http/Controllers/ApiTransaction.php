@@ -2740,6 +2740,7 @@ class ApiTransaction extends Controller
                 'id_product' => $value['id_product'],
                 'product_name' => $value['product_name'],
                 'product_qty' => $value['transaction_product_qty'],
+                'need_recipe_status' =>  $value['transaction_product_recipe_status'],
                 'product_base_price' => 'Rp '. number_format((int)$value['transaction_product_price'],0,",","."),
                 'product_total_price' => 'Rp '. number_format((int)$value['transaction_product_subtotal'],0,",","."),
                 'note' => $value['transaction_product_note'],
@@ -2817,8 +2818,9 @@ class ApiTransaction extends Controller
                 'delivery_price' => 'Rp '. number_format((int)$transaction['transaction_shipment'],0,",","."),
                 'delivery_tracking' => $tracking
             ],
-            'user' => User::where('id', $transaction['id_user'])->first(),
-            'payment' => $paymentMethod,
+            'image_recipe' => (empty($transaction['image_recipe']) ? '': config('url.storage_url_api').$transaction['image_recipe']),
+            'user' => User::where('id', $transaction['id_user'])->select('name', 'email', 'phone')->first(),
+            'payment' => $paymentMethod??'',
             'payment_detail' => $paymentDetail,
             'point_receive' => 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini'
         ];
