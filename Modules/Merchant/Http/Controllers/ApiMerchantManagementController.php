@@ -1118,6 +1118,9 @@ class ApiMerchantManagementController extends Controller
         }
 
         if(!empty($post['variants'])){
+            $sumStock = 0;
+            $visibility = 'Hidden';
+
             DB::beginTransaction();
             foreach ($post['variants'] as $variant){
                 $stock = $variant['stock']??0;
@@ -1132,9 +1135,26 @@ class ApiMerchantManagementController extends Controller
                     DB::rollback();
                     return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan stock']]);
                 }
+
+                if($variant['visibility'] == 1 && !empty($stock)){
+                    $sumStock = $sumStock + $stock;
+                }
+
+                if($variant['visibility'] == 1){
+                    $visibility = 'Visible';
+                }
+
+                $idProduct = ProductVariantGroup::where('id_product_variant_group', $variant['id_product_variant_group'])->first()['id_product']??null;
             }
 
             DB::commit();
+            if(!empty($idProduct)){
+                ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $checkMerchant['id_outlet'])
+                    ->update([
+                        'product_detail_visibility' => $visibility,
+                        'product_detail_stock_status' => ($sumStock <= 0 ? 'Sold Out' : 'Available')
+                    ]);
+            }
             return response()->json(['status' => 'success']);
         }else{
             $stock = $post['stock']??0;

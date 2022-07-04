@@ -48,6 +48,7 @@ class TransactionProduct extends Model
 		'id_outlet',
 		'id_brand',
 		'id_user',
+        'transaction_product_recipe_status',
 		'transaction_product_qty',
         'transaction_product_bundling_qty',
         'transaction_product_wholesaler_minimum_qty',

@@ -124,6 +124,12 @@ class ApiProductController extends Controller
             $data['product_variant_status'] = 0;
         }
 
+        if (isset($post['need_recipe_status'])) {
+            $data['need_recipe_status'] = $post['need_recipe_status'];
+        }else{
+            $data['need_recipe_status'] = 0;
+        }
+
         if (isset($post['product_brands'])) {
             if(($post['product_brands'][0]??false) == '*') {
                 $data['product_brands'] = Brand::select('id_brand')->pluck('id_brand')->toArray();
@@ -1786,7 +1792,7 @@ class ApiProductController extends Controller
         $post = $request->json()->all();
         //get product
         $product = Product::join('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
-                    ->select('id_merchant', 'products.id_product_category', 'product_categories.product_category_name', 'id_product','product_code','product_name','product_description','product_code', 'product_variant_status')
+                    ->select('id_merchant', 'products.id_product_category', 'product_categories.product_category_name', 'id_product','product_code','product_name','product_description','product_code', 'product_variant_status', 'need_recipe_status')
                     ->where('id_product',$post['id_product'])->first();
 
         if(!$product){
@@ -1963,12 +1969,12 @@ class ApiProductController extends Controller
         $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $query['id_outlet'])->first();
 
         $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
-                    'product_detail_stock_status as stock_status')
+                    'product_detail_stock_status as stock_status', 'need_recipe_status')
                 ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
                 ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
                 ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
                 ->where('outlet_is_closed', 0)
-                ->where('id_outlet', $query['id_outlet'])
+                ->where('product_detail.id_outlet', $query['id_outlet'])
                 ->where('product_global_price', '>', 0)
                 ->where('product_visibility', 'Visible')
                 ->where('product_detail_visibility', 'Visible')
@@ -2004,12 +2010,12 @@ class ApiProductController extends Controller
         $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $query['id_outlet'])->first();
 
         $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
-            'product_detail_stock_status as stock_status')
+            'product_detail_stock_status as stock_status', 'need_recipe_status')
             ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
             ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
             ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
             ->where('outlet_is_closed', 0)
-            ->where('id_outlet', $query['id_outlet'])
+            ->where('product_detail.id_outlet', $query['id_outlet'])
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
             ->where('product_detail_visibility', 'Visible')
@@ -2052,7 +2058,7 @@ class ApiProductController extends Controller
         }
 
         $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
-            'product_detail_stock_status as stock_status', 'product_detail.id_outlet')
+            'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'need_recipe_status')
             ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
             ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
             ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
@@ -2060,6 +2066,7 @@ class ApiProductController extends Controller
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
             ->where('product_detail_visibility', 'Visible')
+            ->where('product_detail_stock_status', 'Available')
             ->orderBy('product_count_transaction', 'desc')
             ->groupBy('products.id_product');
 
@@ -2133,7 +2140,7 @@ class ApiProductController extends Controller
 
     public function listProducRecommendation(){
         $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
-            'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'product_categories.product_category_name')
+            'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'product_categories.product_category_name', 'need_recipe_status')
             ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
             ->leftJoin('product_categories', 'product_categories.id_product_category', '=', 'products.id_product_category')
             ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
@@ -2142,6 +2149,8 @@ class ApiProductController extends Controller
             ->where('product_global_price', '>', 0)
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
+            ->where('product_detail_visibility', 'Visible')
+            ->where('product_detail_stock_status', 'Available')
             ->where('product_recommendation_status', 1)
             ->groupBy('products.id_product')->get()->toArray();
 

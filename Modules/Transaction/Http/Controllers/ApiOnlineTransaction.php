@@ -316,6 +316,7 @@ class ApiOnlineTransaction extends Controller
                     'id_transaction'               => $insertTransaction['id_transaction'],
                     'id_product'                   => $checkProduct['id_product'],
                     'type'                         => $checkProduct['product_type'],
+                    'transaction_product_recipe_status' => $checkProduct['need_recipe_status'],
                     'id_product_variant_group'     => $valueProduct['id_product_variant_group']??null,
                     'id_brand'                     => $idBrand,
                     'id_outlet'                    => $insertTransaction['id_outlet'],
@@ -2525,6 +2526,7 @@ class ApiOnlineTransaction extends Controller
                         "id_product_wholesaler" => $item['id_product_wholesaler']??null,
                         "id_product_variant_group_wholesaler" => $item['id_product_variant_group_wholesaler']??null,
                         "wholesaler_minimum" => $product['wholesaler_minimum']??null,
+                        "need_recipe_status" => $product['need_recipe_status'],
                         "image" => $product['image'],
                         "error_message" => $error
                     ];
