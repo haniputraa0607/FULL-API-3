@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Models\Districts;
+use App\Http\Models\Subdistricts;
 use Illuminate\Http\Request;
 
 use App\Http\Models\Feature;
@@ -164,5 +166,29 @@ class Controller extends BaseController
             }
         }
         return view('webview.maintenance_mode', $data);
+    }
+
+    function listDistrict(Request $request){
+        $post = $request->json()->all();
+
+        $query = Districts::select('*');
+        if (isset($post['id_city'])) {
+            $query->where('id_city', $post['id_city']);
+        }
+
+        $query = $query->get()->toArray();
+        return MyHelper::checkGet($query);
+    }
+
+    function listSubdistrict(Request $request){
+        $post = $request->json()->all();
+
+        $query = Subdistricts::select('*');
+        if (isset($post['id_district'])) {
+            $query->where('id_district', $post['id_district']);
+        }
+
+        $query = $query->get()->toArray();
+        return MyHelper::checkGet($query);
     }
 }

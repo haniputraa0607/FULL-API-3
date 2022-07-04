@@ -2605,7 +2605,7 @@ Message :
                     'autocrm_forward_email' => NULL,
                     'autocrm_forward_email_subject' => NULL,
                     'autocrm_forward_email_content' => NULL,
-                    'custom_text_replace'=>'%customer_name%;%customer_email%;%customer_phone%;%transaction_receipt_number%;',
+                    'custom_text_replace'=>'%customer_name%;%customer_email%;%customer_phone%;%receipt_number%;',
                     'created_at' => '2018-03-12 13:53:17',
                     'updated_at' => '2018-05-03 15:02:05',
                 ),
@@ -2638,7 +2638,37 @@ Message :
                     'custom_text_replace'=>'%otp%;',
                     'created_at' => '2018-03-12 13:53:17',
                     'updated_at' => '2018-05-03 15:02:05',
-                )
+                ),
+            83 =>
+                array (
+                    'id_autocrm' => 84,
+                    'autocrm_type' => 'Response',
+                    'autocrm_trigger' => 'Daily',
+                    'autocrm_cron_reference' => NULL,
+                    'autocrm_title' => 'User Rating Product',
+                    'autocrm_email_toogle' => '0',
+                    'autocrm_sms_toogle' => '0',
+                    'autocrm_push_toogle' => '0',
+                    'autocrm_inbox_toogle' => '0',
+                    'autocrm_forward_toogle' => '0',
+                    'autocrm_email_subject' => NULL,
+                    'autocrm_email_content' => NULL,
+                    'autocrm_sms_content' => NULL,
+                    'autocrm_push_subject' => NULL,
+                    'autocrm_push_content' => NULL,
+                    'autocrm_push_image' => NULL,
+                    'autocrm_push_clickto' => NULL,
+                    'autocrm_push_link' => NULL,
+                    'autocrm_push_id_reference' => NULL,
+                    'autocrm_inbox_subject' => NULL,
+                    'autocrm_inbox_content' => NULL,
+                    'autocrm_forward_email' => NULL,
+                    'autocrm_forward_email_subject' => NULL,
+                    'autocrm_forward_email_content' => NULL,
+                    'custom_text_replace'=>'%product_name%;%receipt_number%;%outlet_name%;%transaction_date%;%rating_value%;%suggestion%;%question%;%selected_option%',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                ),
         );
 
         foreach ($rows as $row) {

@@ -27,6 +27,7 @@ use App\Http\Models\Feature;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\LogBalance;
 use Modules\Favorite\Entities\Favorite;
+use App\Http\Models\Subdistricts;
 
 use Modules\Users\Http\Requests\users_list;
 use Modules\Users\Http\Requests\users_forgot;
@@ -3800,5 +3801,92 @@ class ApiUser extends Controller
 
     	return ['status' => 'success'];
     	// return MyHelper::checkDelete($del);
+    }
+
+    public function profileDetail(Request $request){
+        $idUser = $request->user()->id;
+        $dataUser = User::where('id', $idUser)->first();
+
+        if(empty($dataUser)){
+            return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
+        }
+
+        $dtSubdisctrict = Subdistricts::join('districts', 'districts.id_district', 'subdistricts.id_district')
+                            ->leftJoin('cities', 'cities.id_city', 'districts.id_city')
+                            ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
+                            ->where('subdistricts.id_subdistrict', $dataUser['id_subdistrict'])
+                            ->select('provinces.id_province', 'cities.id_city', 'districts.id_district', 'subdistricts.id_subdistrict', 'subdistrict_postal_code')->first();
+
+        $detail = [
+            'info' => [
+                'name' => $dataUser['name'],
+                'phone' => $dataUser['phone'],
+                'email' => $dataUser['email']
+            ],
+            'personal_data' => [
+                'birth_date' => $dataUser['birthday'],
+                'gender' => $dataUser['gender'],
+                'address' => $dataUser['address'],
+                'address_postal_code' => $dataUser['subdistrict_postal_code'],
+                'id_province' => $dtSubdisctrict['id_province']??null,
+                'id_city' => $dtSubdisctrict['id_city']??null,
+                'id_district' => $dtSubdisctrict['id_district']??null,
+                'id_subdistrict' => $dtSubdisctrict['id_subdistrict']??null,
+             ]
+        ];
+
+        return response()->json(MyHelper::checkGet($detail));
+    }
+
+    public function profileUpdateInfo(Request $request){
+        $idUser = $request->user()->id;
+        $post = $request->json()->all();
+
+        $domain = substr($request->json('email'), strpos($request->json('email'), "@") + 1);
+        if (!filter_var($request->json('email'), FILTER_VALIDATE_EMAIL) ||  checkdnsrr($domain, 'MX') === false) {
+            $result = [
+                'status'    => 'fail',
+                'messages'    => ['The email must be a valid email address.']
+            ];
+            return response()->json($result);
+        }
+
+        $checkEmail = User::where('email', $post['email'])->whereNotIn('id', [$idUser])->first();
+        if(!empty($checkEmail)){
+            return response()->json(['status' => 'fail', 'messages' => ['Email already use']]);
+        }
+
+        $update = User::where('id', $idUser)->update([
+            'name' => $post['name'],
+            'email' => $post['email']
+        ]);
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function profileUpdatePersonal(Request $request){
+        $idUser = $request->user()->id;
+        $post = $request->json()->all();
+
+        if(empty($post['id_subdistrict'])){
+            return response()->json(['status' => 'fail', 'messages' => ['ID subdistrict can not be empty']]);
+        }
+
+        $dtSubdisctrict = Subdistricts::join('districts', 'districts.id_district', 'subdistricts.id_district')
+            ->leftJoin('cities', 'cities.id_city', 'districts.id_city')
+            ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
+            ->where('subdistricts.id_subdistrict', $post['id_subdistrict'])
+            ->select('provinces.id_province', 'cities.id_city', 'districts.id_district', 'subdistricts.id_subdistrict', 'subdistrict_postal_code')->first();
+
+        $update = User::where('id', $idUser)->update([
+            'birthday' => date('Y-m-d', strtotime($post['birth_date'])),
+            'gender' => $post['gender'],
+            'address' => $post['address'],
+            'address_postal_code' => $dtSubdisctrict['subdistrict_postal_code'],
+            'id_city' => $dtSubdisctrict['id_city']??null,
+            'id_subdistrict' => $dtSubdisctrict['id_subdistrict']??null,
+        ]);
+
+        return response()->json(MyHelper::checkUpdate($update));
     }
 }

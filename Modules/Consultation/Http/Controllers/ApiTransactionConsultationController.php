@@ -405,7 +405,7 @@ class ApiTransactionConsultationController extends Controller
             'transaction_grandtotal' => 0,
             'transaction_payment_status' => $paymentStatus,
             'transaction_payment_type' => $paymentType,
-            'transaction_transaction_date' => $currentDate
+            'transaction_group_date' => $currentDate
         ];
 
         $insertTransactionGroup = TransactionGroup::create($dataTransactionGroup);

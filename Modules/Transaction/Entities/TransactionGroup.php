@@ -23,7 +23,7 @@ class TransactionGroup extends Model
         'transaction_payment_status',
         'transaction_payment_type',
         'transaction_void_date',
-        'transaction_transaction_date',
+        'transaction_group_date',
         'transaction_completed_at'
     ];
 

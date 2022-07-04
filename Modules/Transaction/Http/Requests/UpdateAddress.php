@@ -12,9 +12,12 @@ class UpdateAddress extends FormRequest
     {
         return [
             'id_user_address' => 'required|integer',
-            'name'            => 'required|string',
-            'short_address'   => 'required|string',
-            'address'         => 'required|string',
+            'receiver_name'  => 'required|string',
+            'receiver_phone'  => 'required|string',
+            'receiver_email'  => 'required|string',
+            'id_city'   => 'required|integer',
+            'id_subdistrict'  => 'required|integer',
+            'address'   => 'required|string'
         ];
     }
 

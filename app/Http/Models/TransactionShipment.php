@@ -65,7 +65,21 @@ class TransactionShipment extends Model
 		'receive_at',
 		'id_admin_outlet_receive',
 		'send_at',
-		'id_admin_outlet_send'
+		'id_admin_outlet_send',
+        'depart_id_subdistrict',
+        'destination_id_subdistrict',
+        'shipment_insurance_price',
+        'shipment_insurance_use_status',
+        'shipment_rate_id',
+        'shipment_price',
+        'shipment_total_height',
+        'shipment_total_width',
+        'shipment_total_length',
+        'shipment_pickup_time_start',
+        'shipment_pickup_time_end',
+        'shipment_pickup_code',
+        'created_at',
+        'updated_at'
 	];
 
 	public function city()

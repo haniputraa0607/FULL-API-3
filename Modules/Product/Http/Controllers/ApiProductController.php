@@ -33,6 +33,8 @@ use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\ProductVariant\Entities\ProductVariantPivot;
+use Modules\UserRating\Entities\UserRating;
+use Modules\UserRating\Entities\UserRatingPhoto;
 use Validator;
 use Hash;
 use DB;
@@ -82,7 +84,7 @@ class ApiProductController extends Controller
         }
 
         if(isset($post['product_photo_detail'])){
-            $upload = MyHelper::uploadPhotoStrict($post['product_photo_detail'], 'img/product/item/detail/', 720, 360, $data['product_code'].'-'.strtotime("now"));
+            $upload = MyHelper::uploadPhotoProduct($post['product_photo_detail'], 'img/product/item/detail/', $data['product_code'].'-'.strtotime("now"));
 
     	    if (isset($upload['status']) && $upload['status'] == "success") {
     	        $data['product_photo_detail'] = $upload['path'];
@@ -896,26 +898,13 @@ class ApiProductController extends Controller
                                             ->where('product_special_price.id_outlet','=',$post['id_outlet']);
                                     })
 									->where('product_detail.id_outlet','=',$post['id_outlet'])
-									->where('product_detail.product_detail_visibility','=','Visible')
+									->where('product_detail.product_detail_visibility','=', $post['visibility'])
                                     ->where('product_detail.product_detail_status','=','Active')
                                     ->where('products.product_type', 'product')
                                     ->with(['category', 'discount']);
 
             if (isset($post['visibility'])) {
-
-                if($post['visibility'] == 'Hidden'){
-                    $idVisible = ProductDetail::join('products', 'products.id_product','=', 'product_detail.id_product')
-                                            ->where('product_detail.product_detail_visibility', 'Visible')
-                                            ->where('product_detail.product_detail_status', 'Active')
-                                            ->whereNotNull('id_product_category')
-                                            ->where('id_outlet', $post['id_outlet'])
-                                            ->where('products.product_type', 'product')
-                                            ->select('product_detail.id_product')->get();
-                    $product = Product::whereNotIn('products.id_product', $idVisible)->with(['category', 'discount']);
-                }else{
-                    $product = $product->whereNotNull('id_product_category')->select('products.*');
-                }
-
+                $product = $product->whereNotNull('id_product_category')->select('products.*');
                 unset($post['id_outlet']);
             }
 		} else {
@@ -924,9 +913,14 @@ class ApiProductController extends Controller
             }elseif(isset($post['product_setting_type']) && $post['product_setting_type'] == 'outlet_product_detail'){
                 $product = Product::with(['category', 'discount', 'product_detail'])->where('products.product_type', 'product');
             }else{
-                $product = Product::with(['category', 'discount'])->where('products.product_type', 'product');
+                $product = Product::with(['category', 'discount', 'product_detail', 'product_wholesaler'])->where('products.product_type', 'product');
             }
 		}
+
+        if(!empty($post['outlet_detail'])){
+            $product = Product::join('product_detail','product_detail.id_product','=','products.id_product')
+                ->where('product_detail.id_outlet','=',$post['id_outlet'])->with('category')->select('products.*');
+        }
 
 		if(isset($post['rule'])){
             foreach ($post['rule'] as $rule){
@@ -1162,9 +1156,41 @@ class ApiProductController extends Controller
             }
         }
 
+        $data['product_visibility'] = 'Visible';
     	$save = Product::where('id_product', $post['id_product'])->update($data);
 
     	if($save){
+            //update wholesaler
+            ProductWholesaler::where('id_product', $post['id_product'])->delete();
+            if(empty($data['product_variant_status']) && !empty($post['product_wholesaler'])){
+                $post['wholesaler_price'] = $post['product_wholesaler'];
+                $insertWholesaler = [];
+
+                foreach ($post['wholesaler_price'] as $wholesaler){
+                    if($wholesaler['minimum'] <= 1){
+                        return response()->json(['status' => 'fail', 'messages' => ['Minimum wholesaler must be more than one']]);
+                    }
+
+                    $insertWholesaler[] = [
+                        'id_product' => $post['id_product'],
+                        'product_wholesaler_minimum' => $wholesaler['minimum']??0,
+                        'product_wholesaler_unit_price' => str_replace('.', '', $wholesaler['unit_price'])??0,
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+                }
+
+
+                $arrayColumn = array_column($insertWholesaler, 'product_wholesaler_minimum');
+                $withoutDuplicates = array_unique($arrayColumn);
+                $duplicates = array_diff_assoc($arrayColumn, $withoutDuplicates);
+                if(!empty($duplicates)){
+                    return response()->json(['status' => 'fail', 'messages' => ["minimum can't be the same"]]);
+                }
+
+                ProductWholesaler::insert($insertWholesaler);
+            }
+
             if(isset($post['photo'])){
                 //delete all photo
                 $delete = $this->deletePhoto($post['id_product']);
@@ -1202,6 +1228,8 @@ class ApiProductController extends Controller
                 ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']],
                     ['product_global_price' => (int)$globalPrice]);
             }
+
+            ProductDetail::where('id_product', $post['id_product'])->update(['product_detail_visibility' => $post['product_visibility']]);
         }
         if($save){
             DB::commit();
@@ -1731,7 +1759,7 @@ class ApiProductController extends Controller
             ];
         }
         // update visibility
-        $update = Product::find($post['id_product'])->update(['product_visibility'=>$post['product_visibility']]);
+        $update = ProductDetail::find($post['id_product'])->update(['product_detail_visibility'=>$post['product_visibility']]);
 
         return response()->json(MyHelper::checkUpdate($update));
     }
@@ -1757,7 +1785,8 @@ class ApiProductController extends Controller
     public function detail(Request $request) {
         $post = $request->json()->all();
         //get product
-        $product = Product::select('id_merchant', 'id_product_category', 'id_product','product_code','product_name','product_description','product_code', 'product_variant_status')
+        $product = Product::join('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
+                    ->select('id_merchant', 'products.id_product_category', 'product_categories.product_category_name', 'id_product','product_code','product_name','product_description','product_code', 'product_variant_status')
                     ->where('id_product',$post['id_product'])->first();
 
         if(!$product){
@@ -1779,8 +1808,8 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([]);
         }
 
+        $product['outlet_name'] = $outlet['outlet_name'];
         $product['outlet_is_closed'] = (empty($outlet['outlet_is_closed']) ?false:true);
-        $product['stock_item'] = 0;
         $product['product_price'] = 0;
         $productGlobalPrice = ProductGlobalPrice::where('id_product',$post['id_product'])->first();
         if($productGlobalPrice){
@@ -1821,12 +1850,30 @@ class ApiProductController extends Controller
         $product['id_outlet'] = $post['id_outlet'];
 
         $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+        $product['image'] = (empty($image['url_product_photo']) ? config('url.storage_url_api').'img/product/item/default.png' : $image['url_product_photo']);
         $imageDetail = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->whereNotIn('id_product_photo', [$image['id_product_photo']??null])->get()->toArray();
         $imagesDetail = [];
         foreach ($imageDetail as $dt){
             $imagesDetail[] = $dt['url_product_photo'];
         }
-        $product['image_detail'] = (empty($imagesDetail) ? [config('url.storage_url_api').'img/product/item/detail/default.png'] : $imagesDetail);
+        $product['image_detail'] = $imagesDetail;
+        $ratings = [];
+        $getRatings = UserRating::where('id_product', $product['id_product'])->get()->toArray();
+        foreach ($getRatings as $rating){
+            $getPhotos = UserRatingPhoto::where('id_user_rating', $rating['id_user_rating'])->get()->toArray();
+            $photos = [];
+            foreach ($getPhotos as $dt){
+                $photos[] = $dt['url_user_rating_photo'];
+            }
+            $currentOption = explode(',', $rating['option_value']);
+            $ratings[] = [
+                "rating_value" => $rating['rating_value'],
+                "suggestion" => $rating['suggestion'],
+                "option_value" => $currentOption,
+                "photos" => $photos
+            ];
+        }
+        $product['ratings'] = $ratings;
 
         return MyHelper::checkGet($product);
     }
@@ -1924,6 +1971,7 @@ class ApiProductController extends Controller
                 ->where('id_outlet', $query['id_outlet'])
                 ->where('product_global_price', '>', 0)
                 ->where('product_visibility', 'Visible')
+                ->where('product_detail_visibility', 'Visible')
                 ->where('product_detail_stock_status', 'Available')
                 ->where('product_count_transaction', '>', 0)
                 ->orderBy('product_count_transaction', 'desc')
@@ -1964,6 +2012,7 @@ class ApiProductController extends Controller
             ->where('id_outlet', $query['id_outlet'])
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
+            ->where('product_detail_visibility', 'Visible')
             ->where('product_detail_stock_status', 'Available')
             ->orderBy('products.created_at', 'desc');
 
@@ -2010,6 +2059,7 @@ class ApiProductController extends Controller
             ->where('outlet_is_closed', 0)
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
+            ->where('product_detail_visibility', 'Visible')
             ->orderBy('product_count_transaction', 'desc')
             ->groupBy('products.id_product');
 

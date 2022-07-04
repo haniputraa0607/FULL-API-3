@@ -13,7 +13,9 @@ use App\Http\Models\Setting;
 use App\Lib\MyHelper;
 use Modules\Brand\Entities\Brand;
 use Modules\Brand\Entities\BrandProduct;
+use Modules\Disburse\Entities\BankAccount;
 use Modules\Merchant\Entities\Merchant;
+use Modules\Merchant\Entities\MerchantLogBalance;
 use Modules\Merchant\Http\Requests\MerchantCreateStep1;
 use Modules\Merchant\Http\Requests\MerchantCreateStep2;
 use Modules\Product\Entities\ProductDetail;
@@ -63,8 +65,8 @@ class ApiMerchantManagementController extends Controller
             if($rule == 'and'){
                 foreach ($post['conditions'] as $row){
                     if(isset($row['subject'])){
-                        if($row['operator'] == '='){
-                            $data->where($row['subject'], $row['parameter']);
+                        if($row['operator'] == '=' || empty($row['parameter'])){
+                            $data->where($row['subject'], (empty($row['parameter']) ? $row['operator'] : $row['parameter']));
                         }else{
                             $data->where($row['subject'], 'like', '%'.$row['parameter'].'%');
                         }
@@ -74,8 +76,8 @@ class ApiMerchantManagementController extends Controller
                 $data->where(function ($subquery) use ($post){
                     foreach ($post['conditions'] as $row){
                         if(isset($row['subject'])){
-                            if($row['operator'] == '='){
-                                $subquery->orWhere($row['subject'], $row['parameter']);
+                            if($row['operator'] == '=' || empty($row['parameter'])){
+                                $subquery->orWhere($row['subject'], (empty($row['parameter']) ? $row['operator'] : $row['parameter']));
                             }else{
                                 $subquery->orWhere($row['subject'], 'like', '%'.$row['parameter'].'%');
                             }
@@ -338,6 +340,13 @@ class ApiMerchantManagementController extends Controller
             ];
         }
 
+        if(!empty($post['variant_status']) && empty($post['variants'])){
+            return [
+                'status' => 'fail',
+                'messages' => ['Variant can not be empty if status variant 1']
+            ];
+        }
+
         $product = [
             'id_merchant' => $checkMerchant['id_merchant'],
             'product_code' => 'P'.rand().'-'.$checkMerchant['id_merchant'],
@@ -349,7 +358,9 @@ class ApiMerchantManagementController extends Controller
             'product_weight' => (!empty($post['product_weight']) ? $post['product_weight'] : 0),
             'product_height' => (!empty($post['product_height']) ? $post['product_height'] : 0),
             'product_width' => (!empty($post['product_width']) ? $post['product_width'] : 0),
-            'product_variant_status' => (empty($post['variants']) ? 0 : 1)
+            'product_length' => (!empty($post['product_length']) ? $post['product_length'] : 0),
+            'product_variant_status' => $post['variant_status']??0,
+            'need_recipe_status' => $post['need_recipe_status']??0
         ];
 
         DB::beginTransaction();
@@ -373,7 +384,7 @@ class ApiMerchantManagementController extends Controller
         if(!empty($post['image'])){
             $image = $post['image'];
             $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-            $upload = MyHelper::uploadPhotoStrict($encode, 'img/product/'.$idProduct.'/', 300, 300);
+            $upload = MyHelper::uploadPhotoProduct($encode, 'img/product/'.$idProduct.'/');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $img[] = $upload['path'];
@@ -382,7 +393,7 @@ class ApiMerchantManagementController extends Controller
 
         foreach ($post['image_detail']??[] as $image){
             $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-            $upload = MyHelper::uploadPhotoStrict($encode, 'img/product/'.$idProduct.'/', 720, 360);
+            $upload = MyHelper::uploadPhotoProduct($encode, 'img/product/'.$idProduct.'/');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $img[] = $upload['path'];
@@ -412,11 +423,11 @@ class ApiMerchantManagementController extends Controller
             'id_outlet' => $checkMerchant['id_outlet'],
             'product_detail_visibility' => 'Visible',
             'product_detail_stock_status' => (empty($post['variants']) && empty($stockProduct)? 'Sold Out' : 'Available'),
-            'product_detail_stock_item' => (empty($post['variants'])? $stockProduct : 0)
+            'product_detail_stock_item' => (empty($post['variants'])? $stockProduct : 0),
         ]);
 
         $priceVariant = [];
-        if(!empty($post['variants'])){
+        if(!empty($post['variants']) && !empty($post['variant_status'])){
             $variants = (array)json_decode($post['variants']);
 
             $dtVariant = [];
@@ -551,7 +562,7 @@ class ApiMerchantManagementController extends Controller
 
         DB::commit();
         $price = $post['base_price']??0;
-        if(!empty($post['variants'])){
+        if(!empty($post['variants']) && !empty($post['variant_status'])){
             $price = min($priceVariant);
         }
         ProductGlobalPrice::where('id_product', $idProduct)->update(['product_global_price' => $price]);
@@ -589,6 +600,13 @@ class ApiMerchantManagementController extends Controller
                 ];
             }
 
+            if(!empty($post['variant_status']) && empty($post['variants'])){
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Variant can not be empty if status variant 1']
+                ];
+            }
+
             $product = [
                 'product_name' => $post['product_name'],
                 'product_description' => $post['product_description'],
@@ -596,7 +614,9 @@ class ApiMerchantManagementController extends Controller
                 'product_weight' => (!empty($post['product_weight']) ? $post['product_weight'] : 0),
                 'product_height' => (!empty($post['product_height']) ? $post['product_height'] : 0),
                 'product_width' => (!empty($post['product_width']) ? $post['product_width'] : 0),
-                'product_variant_status' => (empty($post['variants']) ? 0 : 1)
+                'product_length' => (!empty($post['product_length']) ? $post['product_length'] : 0),
+                'product_variant_status' => $post['variant_status']??0,
+                'need_recipe_status' => $post['need_recipe_status']??0
             ];
 
             DB::beginTransaction();
@@ -629,7 +649,7 @@ class ApiMerchantManagementController extends Controller
             if(!empty($post['image'])){
                 $image = $post['image'];
                 $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-                $upload = MyHelper::uploadPhotoStrict($encode, 'img/product/'.$idProduct.'/', 300, 300);
+                $upload = MyHelper::uploadPhotoProduct($encode, 'img/product/'.$idProduct.'/');
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
                     $checkPhoto = ProductPhoto::where('id_product', $post['id_product'])->orderBy('product_photo_order', 'asc')->first();
@@ -646,7 +666,7 @@ class ApiMerchantManagementController extends Controller
 
             foreach ($post['image_detail']??[] as $image){
                 $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-                $upload = MyHelper::uploadPhotoStrict($encode, 'img/product/'.$idProduct.'/', 720, 360);
+                $upload = MyHelper::uploadPhotoProduct($encode, 'img/product/'.$idProduct.'/');
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
                     $img[] = $upload['path'];
@@ -673,7 +693,7 @@ class ApiMerchantManagementController extends Controller
             }
 
             $priceVariant = [];
-            if(!empty($post['variants'])){
+            if(!empty($post['variants']) && !empty($post['variant_status'])){
                 $variants = (array)json_decode($post['variants']);
 
                 $dtVariant = [];
@@ -813,7 +833,7 @@ class ApiMerchantManagementController extends Controller
             DB::commit();
 
             $price = $post['base_price']??0;
-            if(!empty($post['variants'])){
+            if(!empty($post['variants']) && !empty($post['variant_status'])){
                 $price = min($priceVariant);
             }
 
@@ -913,7 +933,10 @@ class ApiMerchantManagementController extends Controller
                 'image_detail' => $imagesDetail,
                 'product_weight' => $detail['product_weight'],
                 'product_height' => $detail['product_height'],
-                'product_width' => $detail['product_width']
+                'product_width' => $detail['product_width'],
+                'product_length' => $detail['product_length'],
+                'product_variant_status' => $detail['product_variant_status'],
+                'need_recipe_status' => $detail['need_recipe_status']
             ];
 
             $wholesalerStatus = false;
@@ -1063,6 +1086,7 @@ class ApiMerchantManagementController extends Controller
             $result['variants'] = $variants;
         }else{
             $productDetail = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $checkMerchant['id_outlet'])->first();
+            $result['name'] = $product['product_name'];
             $result['visibility'] = (($productDetail['product_detail_visibility']??'Visible') == 'Hidden' ? 0 : 1);
             $result['stock'] = $productDetail['product_detail_stock_item']??0;
         }
@@ -1282,5 +1306,86 @@ class ApiMerchantManagementController extends Controller
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['Variants can not be empty']]);
         }
+    }
+
+    public function withdrawalList(Request  $request){
+        $post = $request->json()->all();
+
+        $list = MerchantLogBalance::join('merchants', 'merchants.id_merchant', 'merchant_log_balances.id_merchant')
+            ->join('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+            ->leftJoin('bank_accounts', 'bank_accounts.id_bank_account', 'merchant_log_balances.merchant_balance_id_reference')
+            ->where('merchant_balance_source', 'Withdrawal')
+            ->select('merchant_log_balances.*', 'outlets.*', 'merchant_log_balances.created_at as request_at');
+
+        if(isset($post['date_start']) && !empty($post['date_start']) &&
+            isset($post['date_end']) && !empty($post['date_end'])){
+            $start_date = date('Y-m-d', strtotime($post['date_start']));
+            $end_date = date('Y-m-d', strtotime($post['date_end']));
+
+            $list->whereDate('merchant_log_balances.created_at', '>=', $start_date)
+                ->whereDate('merchant_log_balances.created_at', '<=', $end_date);
+        }
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['operator'] == '=' || empty($row['parameter'])){
+                            $list->where($row['subject'], (empty($row['parameter']) ? $row['operator'] : $row['parameter']));
+                        }else{
+                            $list->where($row['subject'], 'like', '%'.$row['parameter'].'%');
+                        }
+                    }
+                }
+            }else{
+                $list->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['operator'] == '=' || empty($row['parameter'])){
+                                $subquery->orWhere($row['subject'], (empty($row['parameter']) ? $row['operator'] : $row['parameter']));
+                            }else{
+                                $subquery->orWhere($row['subject'], 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        $list = $list->orderBy('merchant_log_balances.created_at', 'desc')->paginate(30)->toArray();
+
+        foreach ($list['data']??[] as $key=>$dt){
+            $bankAccount =  BankAccount::join('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
+                ->where('bank_accounts.id_bank_account', $dt['merchant_balance_id_reference'])
+                ->first();
+
+            $list['data'][$key] = [
+                'id_merchant_log_balance' => $dt['id_merchant_log_balance'],
+                'date' => $dt['request_at'],
+                'nominal' => $dt['merchant_balance'],
+                'status' => $dt['merchant_balance_status'],
+                'data_bank_account' => $bankAccount,
+                'outlet' => $dt['outlet_code'].'-'.$dt['outlet_name'],
+                'data_outlet' => [
+                    'outlet_code' => $dt['outlet_code'],
+                    'outlet_name' => $dt['outlet_name'],
+                    'outlet_phone' => $dt['outlet_phone'],
+                    'outlet_email' => $dt['outlet_email']
+                ]
+            ];
+        }
+
+        return response()->json(MyHelper::checkGet($list));
+    }
+
+    public function withdrawalChangeStatus(Request $request){
+        $post = $request->json()->all();
+        $update = MerchantLogBalance::where('id_merchant_log_balance', $post['id_merchant_log_balance'])->update(['merchant_balance_status' => 'Completed']);
+        return response()->json(MyHelper::checkUpdate($update));
     }
 }

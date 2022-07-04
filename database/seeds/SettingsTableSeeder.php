@@ -943,7 +943,7 @@ class SettingsTableSeeder extends Seeder
                     'id_setting' => 105,
                     'key' => 'available_delivery',
                     'value' => null,
-                    'value_text' => '[{"code":"gosend","delivery_name":"GoSend","delivery_method":"GoSend","show_status":1,"available_status":"1","logo":"","position":0,"description":""},{"code":"wehelpyou_grabexpress","delivery_name":"Grab Express","delivery_method":"wehelpyou","show_status":1,"available_status":"1","logo":"","position":1,"description":""},{"code":"wehelpyou_mrspeedy","delivery_name":"Mrspeedy","delivery_method":"wehelpyou","show_status":1,"available_status":"1","logo":"","position":2,"description":""},{"code":"wehelpyou_lalamove","delivery_name":"Lalamove","delivery_method":"wehelpyou","show_status":1,"available_status":"1","logo":"","position":3,"description":""}]',
+                    'value_text' => '[{"delivery_name":"Anteraja","delivery_method":"ant","show_status":"1","available_status":"1","logo":"","position":0,"service":[{"code":"ant_regular","service_name":"Regular","show_status":"1","available_status":0},{"code":"ant_same_day","service_name":"Same Day","show_status":"1","available_status":0},{"code":"ant_express","service_name":"Next Day","show_status":"1","available_status":0}]},{"delivery_name":"Dakota Cargo","delivery_method":"dakota","show_status":"1","available_status":"1","logo":"","position":0,"service":[{"code":"dakota_trucking","service_name":"Reguler","show_status":"1","available_status":0},{"code":"dakota_express","service_name":"Two Days Service","show_status":"1","available_status":0}]},{"delivery_name":"GO-SEND","delivery_method":"gsn","show_status":"1","available_status":"1","logo":"","position":0,"service":[{"code":"gsn_instant","service_name":"Instant","show_status":"1","available_status":0},{"code":"gsn_same_day","service_name":"Same Day","show_status":"1","available_status":0}]},{"delivery_name":"Grab Express","delivery_method":"grb","show_status":"1","available_status":"1","logo":"","position":0,"service":[{"code":"grb_instant","service_name":"Instant","show_status":"1","available_status":0},{"code":"grb_same_day","service_name":"Same Day","show_status":"1","available_status":0}]},{"delivery_name":"J&T","delivery_method":"jnt","show_status":"1","available_status":"1","logo":"","position":0,"service":[{"code":"jnt_regular","service_name":"Express","show_status":"1","available_status":0}]},{"delivery_name":"JNE","delivery_method":"jne","show_status":"1","available_status":"1","logo":"","position":0,"service":[{"code":"jne_regular","service_name":"Regular","show_status":"1","available_status":0},{"code":"jne_express","service_name":"Express","show_status":"1","available_status":0}]},{"delivery_name":"Lion Parcel","delivery_method":"lpa","show_status":"1","available_status":"1","logo":"","position":0,"service":[{"code":"lpa_express","service_name":"Express","show_status":"1","available_status":0},{"code":"lpa_regular","service_name":"Reguler","show_status":"1","available_status":0}]},{"delivery_name":"Ninja Xpress","delivery_method":"nin","show_status":"1","available_status":"1","logo":"","position":0,"service":[{"code":"nin_express","service_name":"Next Day","show_status":"1","available_status":0},{"code":"nin_regular","service_name":"Standard","show_status":"1","available_status":0}]},{"delivery_name":"SAP","delivery_method":"sap","show_status":"1","available_status":"1","logo":"","position":0,"service":[{"code":"sap_regular","service_name":"Reguler","show_status":"1","available_status":0},{"code":"sap_express","service_name":"One Day Service","show_status":"1","available_status":0}]},{"delivery_name":"Shopee Express","delivery_method":"shopex","show_status":"1","available_status":"1","logo":"","position":0,"service":[{"code":"shopex_regular","service_name":"Shopee Express","show_status":"1","available_status":0}]},{"delivery_name":"SiCepat","delivery_method":"scp","show_status":"1","available_status":"1","logo":"","position":0,"service":[{"code":"scp_regular","service_name":"REG","show_status":"1","available_status":0},{"code":"scp_express","service_name":"BEST","show_status":"1","available_status":0},{"code":"scp_trucking","service_name":"GOKIL","show_status":"1","available_status":0},{"code":"scp_regular_halu","service_name":"HALU","show_status":"1","available_status":0}]},{"delivery_name":"Tiki","delivery_method":"tik","show_status":"1","available_status":"1","logo":"","position":0,"service":[{"code":"tik_express","service_name":"Express","show_status":"1","available_status":0},{"code":"tik_regular","service_name":"Reguler","show_status":"1","available_status":0}]}]',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
@@ -1031,8 +1031,8 @@ class SettingsTableSeeder extends Seeder
             114 =>
                 array(
                     'id_setting' => 113,
-                    'key' => 'default_doctor_home_splash_screen',
-                    'value' => 'img/splash.jpg',
+                     'key' => 'default_package_type_delivery',
+                    'value' => 3,
                     'value_text' => null,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
@@ -1040,8 +1040,26 @@ class SettingsTableSeeder extends Seeder
             115 =>
                 array(
                     'id_setting' => 114,
+                    'key' => 'default_doctor_home_splash_screen',
+                    'value' => 'img/splash.jpg',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            116 =>
+                array(
+                    'id_setting' => 115,
                     'key' => 'max_consultation_quota',
                     'value' => null,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            117 =>
+                array(
+                    'id_setting' => 116,
+                    'key' => 'response_max_rating_value_product',
+                    'value' => 0,
                     'value_text' => null,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),

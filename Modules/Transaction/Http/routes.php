@@ -1,4 +1,6 @@
 <?php
+Route::any('api/shipment/notification', 'Modules\Transaction\Http\Controllers\ApiShipperController@updateStatuShipment');
+
 Route::group(['middleware' => ['auth:api'],'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::any('available-payment', 'ApiOnlineTransaction@availablePayment');
     Route::any('available-payment/update', 'ApiOnlineTransaction@availablePaymentUpdate')->middleware('scopes:be');
@@ -15,6 +17,11 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
         Route::post('mark-as-invalid/add', ['uses' => 'ApiInvalidTransactionController@markAsInvalidAdd']);
         Route::post('mark-as-pending-invalid/add', ['uses' => 'ApiInvalidTransactionController@markAsPendingInvalidAdd']);
     });
+
+    Route::get('list-all', 'ApiTransaction@transactionList');
+    Route::post('list-all', 'ApiTransaction@transactionList');
+
+    Route::post('outlet/list-payment', 'ApiTransaction@listPaymentDetailOutlet');
 
     Route::post('/outlet', 'ApiNotification@adminOutlet');
     Route::post('/admin/confirm', 'ApiNotification@adminOutletComfirm');
@@ -92,12 +99,14 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
 
     Route::post('/shipping', 'ApiTransaction@getShippingFee');
     Route::any('/address', 'ApiTransaction@getAddress');
-    Route::post('/address/nearby', 'ApiTransaction@getNearbyAddress');
-    Route::post('/address/default', 'ApiTransaction@getDefaultAddress');
-    Route::post('/address/detail', 'ApiTransaction@detailAddress');
+    Route::any('/address', 'ApiTransaction@getAddress');
     Route::post('/address/add', 'ApiTransaction@addAddress');
     Route::post('/address/update', 'ApiTransaction@updateAddress');
     Route::post('/address/delete', 'ApiTransaction@deleteAddress');
+
+    Route::post('/address/nearby', 'ApiTransaction@getNearbyAddress');
+    Route::post('/address/default', 'ApiTransaction@getDefaultAddress');
+    Route::post('/address/detail', 'ApiTransaction@detailAddress');
     Route::post('/void', 'ApiTransaction@transactionVoid');
 
     Route::post('cart', 'ApiOnlineTransaction@cartTransaction');

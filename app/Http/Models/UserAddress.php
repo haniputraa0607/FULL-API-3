@@ -51,6 +51,7 @@ class UserAddress extends Model
 		'type',
         'main_address',
         'id_city',
+        'id_subdistrict',
         'receiver_name',
         'receiver_phone',
         'receiver_email'

@@ -205,6 +205,12 @@ class Kernel extends ConsoleKernel
         $schedule->call('Modules\Transaction\Http\Controllers\ApiWehelpyouController@cronCancelDelivery')->cron('*/1 * * * *');
 
         /**
+         * Get Tracking status
+         * run every 15 minutes
+         */
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiShipperController@updateTrackingTransaction')->cron('*/20 * * * *');
+
+        /**
          * To backup and truncate log database
          */
         $schedule->command('backup:logdb --table=log_activities_apps --table=log_activities_be --table=log_activities_outlet_apps --table=log_activities_pos --table=log_activities_pos_transaction --truncate --chunk=10000')->dailyAt('00:20');

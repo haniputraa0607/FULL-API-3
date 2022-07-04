@@ -15,6 +15,7 @@ class MerchantLogBalance extends Model
         'merchant_balance_before',
         'merchant_balance_after',
         'merchant_balance_id_reference',
-        'merchant_balance_source'
+        'merchant_balance_source',
+        'merchant_balance_status'
 	];
 }

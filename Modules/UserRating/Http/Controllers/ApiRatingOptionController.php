@@ -22,7 +22,9 @@ class ApiRatingOptionController extends Controller
     		$ratingData = RatingOption::where('rating_target','outlet')->get()->toArray();
     	} elseif ($request->hairstylist) {
     		$ratingData = RatingOption::where('rating_target','hairstylist')->get()->toArray();
-    	}	
+    	} elseif ($request->product) {
+            $ratingData = RatingOption::where('rating_target','product')->get()->toArray();
+        }
 
         $ratings = array_map(function($var){
             $var['value'] = explode(',',$var['star']);

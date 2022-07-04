@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class UserRating extends Model
 {
     protected $primaryKey = 'id_user_rating';
-    protected $fillable = ['id_user','id_transaction','id_transaction_product_service','id_outlet','id_doctor','option_question','rating_value','suggestion','option_value'];
+    protected $fillable = ['id_user','id_transaction','id_transaction_product_service','id_outlet','id_product','id_doctor','option_question','rating_value','suggestion','option_value'];
     public function transaction() {
     	return $this->belongsTo(\App\Http\Models\Transaction::class,'id_transaction','id_transaction');
     }

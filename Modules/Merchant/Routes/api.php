@@ -82,6 +82,7 @@ Route::group(['prefix' => 'merchant'], function () {
             Route::post('accept', 'ApiMerchantTransactionController@acceptTransaction');
             Route::post('reject', 'ApiMerchantTransactionController@rejectTransaction');
             Route::post('delivery/request', 'ApiMerchantTransactionController@requestDeliveryTransaction');
+            Route::post('delivery/time-pickup', 'ApiMerchantTransactionController@listTimePickupDelivery');
             Route::post('delivery/confirm', 'ApiMerchantTransactionController@confirmDeliveryTransaction');
             Route::post('delivery/update-status', 'ApiMerchantTransactionController@dummyUpdateStatusDelivery');
             Route::post('delivery/tracking', 'ApiMerchantTransactionController@deliveryTracking');
@@ -104,5 +105,11 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::post('delete', 'ApiMerchantManagementController@delete');
         Route::any('candidate/list', 'ApiMerchantManagementController@canditateList');
         Route::post('candidate/update', 'ApiMerchantManagementController@canditateUpdate');
+
+        //withdrawal
+        Route::any('withdrawal/list', 'ApiMerchantManagementController@withdrawalList');
+        Route::post('withdrawal/completed', 'ApiMerchantManagementController@withdrawalChangeStatus');
+
+        Route::post('balance/list', 'ApiMerchantController@balanceList');
     });
 });

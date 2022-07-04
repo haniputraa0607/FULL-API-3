@@ -37,6 +37,7 @@ class City extends Model
 
 	protected $fillable = [
 		'id_province',
+        'id_city_external',
 		'city_name',
 		'city_type',
 		'city_postal_code',

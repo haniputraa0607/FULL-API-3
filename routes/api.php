@@ -35,6 +35,8 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be'] ], fun
 Route::get('maintenance-mode', 'Controller@maintenance');
 Route::any('city/list', 'Controller@listCity');
 Route::get('province/list', 'Controller@listProvince');
+Route::any('district/list', 'Controller@listDistrict');
+Route::any('subdistrict/list', 'Controller@listSubdistrict');
 Route::get('courier/list', 'Controller@listCourier');
 Route::get('time', function() {
 	date_default_timezone_set('Asia/Jakarta');

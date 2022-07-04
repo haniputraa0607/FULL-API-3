@@ -9,6 +9,7 @@ namespace App\Http\Models;
 
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Modules\Merchant\Entities\Merchant;
 use Modules\Product\Entities\ProductDetail;
 use SMartins\PassportMultiauth\HasMultiAuthApiTokens;
 use Hash;
@@ -76,6 +77,7 @@ class Outlet extends Authenticatable
         'outlet_license_number',
 		'outlet_address',
 		'id_city',
+        'id_subdistrict',
 		'outlet_postal_code',
 		'outlet_phone',
 		'outlet_email',
@@ -120,11 +122,11 @@ class Outlet extends Authenticatable
     }
 
     public function getUrlOutletImageLogoPortraitAttribute() {
-        if (empty($this->url_outlet_image_logo_portrait)) {
+        if (empty($this->outlet_image_logo_portrait)) {
             return 'img/default.jpg';
         }
         else {
-            return config('url.storage_url_api').$this->url_outlet_image_logo_portrait;
+            return config('url.storage_url_api').$this->outlet_image_logo_portrait;
         }
     }
 
@@ -253,5 +255,10 @@ class Outlet extends Authenticatable
 
     public function delivery_outlet(){
         return $this->hasMany(\Modules\Outlet\Entities\DeliveryOutlet::class, 'id_outlet');
+    }
+
+    public function merchant()
+    {
+        return $this->hasOne(Merchant::class, 'id_outlet');
     }
 }
