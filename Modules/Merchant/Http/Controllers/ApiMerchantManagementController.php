@@ -295,13 +295,43 @@ class ApiMerchantManagementController extends Controller
                             ->havingRaw('COUNT(id_product_variant_group) = '.count($idVariant))->first()['id_product_variant_group']??0;
                 }
 
+                $wholesaler = [];
+                $visibility = 'Hidden';
+                $combinationName = implode(' ', $name);
+                $databaseName = '';
+                $stock = 0;
+                $price = 0;
+                if(!empty($idProductVariantGroup)){
+                    $wholesaler = ProductVariantGroupWholesaler::where('id_product_variant_group', $idProductVariantGroup)->select('id_product_variant_group_wholesaler', 'variant_wholesaler_minimum as minimum', 'variant_wholesaler_unit_price as unit_price')->get()->toArray();
+                    foreach ($wholesaler as $key=>$w){
+                        $wholesaler[$key]['unit_price'] = (int)$w['unit_price'];
+                    }
+
+                    $detail = ProductVariantGroupDetail::where('id_product_variant_group', $idProductVariantGroup)->first();
+                    $visibility = $detail['product_variant_group_visibility']??'Hidden';
+                    $stock = $detail['product_variant_group_stock_item']??0;
+
+                    $group = ProductVariantGroup::where('id_product_variant_group', $idProductVariantGroup)->first();
+                    $databaseName = $group['product_variant_group_name']??'';
+                    $price = (int)($group['product_variant_group_price']??0);
+                }
+
+                if($combinationName != $databaseName){
+                    $idProductVariantGroup = 0;
+                    $visibility = 'Hidden';
+                    $wholesaler = [];
+                    $stock = 0;
+                    $price = 0;
+                }
+
                 $res[] = [
                     'id_product_variant_group' => $idProductVariantGroup,
                     'name' => implode(' ', $name),
-                    'price' => 0,
-                    'stock' => 0,
+                    'visibility' => ($visibility == 'Hidden' ? 0 : 1),
+                    'price' => $price,
+                    'stock' => $stock,
                     'data' => $combination,
-                    'wholesaler_price' => []
+                    'wholesaler_price' => $wholesaler
                 ];
             }
 
@@ -1285,6 +1315,36 @@ class ApiMerchantManagementController extends Controller
                             'product_variant_group_stock_item' => $combination['stock']]);
 
                     $idProductVariantGroup = $combination['id_product_variant_group'];
+
+                    $idVariants = [];
+                    foreach ($combination['data'] as $dt){
+                        $first = explode('|',$dt)[0]??'';
+                        $second = explode('|',$dt)[1]??'';
+
+                        if(isset($dtVariant[$first][$second])){
+                            $idVariants[] = $dtVariant[$first][$second];
+                        }
+                    }
+
+                    if(!empty($idVariants)){
+                        $insertPivot = [];
+                        foreach ($idVariants as $id){
+                            $checkExist = ProductVariantPivot::where([
+                                'id_product_variant' => $id,
+                                'id_product_variant_group' => $idProductVariantGroup
+                            ])->first();
+                            if(empty($checkExist)){
+                                $insertPivot[] = [
+                                    'id_product_variant' => $id,
+                                    'id_product_variant_group' => $idProductVariantGroup
+                                ];
+                            }
+                        }
+
+                        if(!empty($insertPivot)){
+                            ProductVariantPivot::insert($insertPivot);
+                        }
+                    }
                 }
 
                 ProductVariantGroupWholesaler::where('id_product_variant_group', $idProductVariantGroup)->delete();
