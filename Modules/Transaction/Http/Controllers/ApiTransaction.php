@@ -4172,4 +4172,94 @@ class ApiTransaction extends Controller
         $listTransaction = $listTransaction->orderBy('transaction_date', 'desc')->paginate(15);
         return response()->json(MyHelper::checkGet($listTransaction));
     }
+
+    public function transactionGroupDetail(Request $request){
+        $trxGroup = TransactionGroup::where(['transaction_receipt_number' => $request->json('transaction_receipt_number')])->first();
+
+        $idtransaction = Transaction::where('id_transaction_group', $trxGroup['id_transaction_group'])->pluck('id_transaction')->toArray();
+
+        if(empty($idtransaction)){
+            return response()->json(MyHelper::checkGet([]));
+        }
+        $transactionProducts = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
+            ->whereIn('id_transaction', $idtransaction)
+            ->with(['variants'=> function($query){
+                $query->select('id_transaction_product','transaction_product_variants.id_product_variant','transaction_product_variants.id_product_variant','product_variants.product_variant_name', 'transaction_product_variant_price')
+                    ->join('product_variants','product_variants.id_product_variant','=','transaction_product_variants.id_product_variant');
+            }])
+            ->select('transaction_products.*', 'products.product_name')->get()->toArray();
+
+        $products = [];
+        foreach ($transactionProducts as $value){
+            $image = ProductPhoto::where('id_product', $value['id_product'])->orderBy('product_photo_order', 'asc')->first()['url_product_photo']??config('url.storage_url_api').'img/default.jpg';
+            $products[] = [
+                'id_product' => $value['id_product'],
+                'product_name' => $value['product_name'],
+                'product_qty' => $value['transaction_product_qty'],
+                'need_recipe_status' =>  $value['transaction_product_recipe_status'],
+                'product_base_price' => 'Rp '. number_format((int)$value['transaction_product_price'],0,",","."),
+                'product_total_price' => 'Rp '. number_format((int)$value['transaction_product_subtotal'],0,",","."),
+                'note' => $value['transaction_product_note'],
+                'variants' => implode(', ', array_column($value['variants'], 'product_variant_name')),
+                'image' => $image
+            ];
+        }
+
+        $paymentDetail = [
+            [
+                'text' => 'Subtotal',
+                'value' => 'Rp '. number_format((int)$trxGroup['transaction_subtotal'],0,",",".")
+            ],
+            [
+                'text' => 'Biaya Kirim',
+                'value' => 'Rp '. number_format((int)$trxGroup['transaction_shipment'],0,",",".")
+            ]
+        ];
+
+        $grandTotal = $trxGroup['transaction_grandtotal'];
+        $trxPaymentBalance = TransactionPaymentBalance::where('id_transaction_group', $trxGroup['id_transaction_group'])->first()['balance_nominal']??0;
+        $trxCount = Transaction::where('id_transaction_group', $trxGroup['id_transaction_group'])->count();
+        $balance = (int)$trxPaymentBalance/$trxCount;
+        if(!empty($trxPaymentBalance)){
+            $grandTotal = $grandTotal - $balance;
+            $paymentDetail[] = [
+                'text' => 'Point yang digunakan',
+                'value' => '-'.number_format($balance,0,",",".")
+            ];
+        }
+
+        $trxPaymentMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $trxGroup['id_transaction_group'])->first();
+        $trxPaymentXendit = TransactionPaymentXendit::where('id_transaction_group', $trxGroup['id_transaction_group'])->first();
+
+        if(!empty($trxPaymentMidtrans)){
+            $paymentMethod = $trxPaymentMidtrans['payment_type'].(!empty($trxPaymentMidtrans['bank']) ? ' ('.$trxPaymentMidtrans['bank'].')':'');
+        }elseif(!empty($trxPaymentXendit)){
+            $paymentMethod = $trxPaymentXendit['type'];
+        }
+
+        $transaction = Transaction::where(['transactions.id_transaction' => $idtransaction[0]])
+            ->leftJoin('transaction_shipments','transaction_shipments.id_transaction','=','transactions.id_transaction')
+            ->leftJoin('cities','transaction_shipments.destination_id_city','=','cities.id_city')
+            ->leftJoin('provinces','provinces.id_province','=','cities.id_province')->first();
+
+        $address = [
+            'destination_name' => $transaction['destination_name'],
+            'destination_phone' => $transaction['destination_phone'],
+            'destination_address' => $transaction['destination_address'],
+            'destination_description' => $transaction['destination_description'],
+            'destination_province' => $transaction['province_name'],
+            'destination_city' => $transaction['city_name'],
+        ];
+
+        $result = [
+            'receipt_number_group' => $transaction['transaction_receipt_number'],
+            'transaction_products' => $products,
+            'payment_detail' => $paymentDetail,
+            'address' => $address,
+            'transaction_grandtotal' => 'Rp '. number_format($grandTotal,0,",","."),
+            'payment' => $paymentMethod??''
+        ];
+
+        return response()->json(MyHelper::checkGet($result));
+    }
 }
