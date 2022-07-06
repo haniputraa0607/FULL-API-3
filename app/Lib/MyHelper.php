@@ -1191,6 +1191,11 @@ class MyHelper{
                 $constraint->aspectRatio();
                 $constraint->upsize();
             });
+        } elseif ($imgheight == $imgwidth){
+            $img->resize(1000, 1000, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            });
         }
 
         if(env('STORAGE')){
