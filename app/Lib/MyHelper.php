@@ -1161,7 +1161,7 @@ class MyHelper{
 		return $result;
 	}
 
-    public static function uploadPhotoProduct($foto, $path, $name=null, $forceextension=null) {
+    public static function uploadPhotoAllSize($foto, $path, $name=null, $forceextension=null) {
         // kalo ada foto1
         $decoded = base64_decode($foto);
         if($forceextension != null)

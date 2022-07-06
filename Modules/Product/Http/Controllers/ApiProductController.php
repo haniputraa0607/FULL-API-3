@@ -84,7 +84,7 @@ class ApiProductController extends Controller
         }
 
         if(isset($post['product_photo_detail'])){
-            $upload = MyHelper::uploadPhotoProduct($post['product_photo_detail'], 'img/product/item/detail/', $data['product_code'].'-'.strtotime("now"));
+            $upload = MyHelper::uploadPhotoAllSize($post['product_photo_detail'], 'img/product/item/detail/', $data['product_code'].'-'.strtotime("now"));
 
     	    if (isset($upload['status']) && $upload['status'] == "success") {
     	        $data['product_photo_detail'] = $upload['path'];
@@ -1203,7 +1203,7 @@ class ApiProductController extends Controller
 
 
                     //create photo
-                    $upload = MyHelper::uploadPhotoProduct($post['photo'], $this->saveImage);
+                    $upload = MyHelper::uploadPhotoAllSize($post['photo'], $this->saveImage);
 
                     if (isset($upload['status']) && $upload['status'] == "success") {
                         $dataPhoto['product_photo'] = $upload['path'];

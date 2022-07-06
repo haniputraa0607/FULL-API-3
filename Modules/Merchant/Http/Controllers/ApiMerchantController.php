@@ -491,7 +491,7 @@ class ApiMerchantController extends Controller
         if(!empty($post['image_cover'])){
             $image = $post['image_cover'];
             $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-            $upload = MyHelper::uploadPhotoStrict($encode, 'img/outlet/'.$checkMerchant['id_outlet'].'/', 720, 360);
+            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/outlet/'.$checkMerchant['id_outlet'].'/');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $dataUpdate['outlet_image_cover'] = $upload['path'];
@@ -501,7 +501,7 @@ class ApiMerchantController extends Controller
         if(!empty($post['image_logo_portrait'])){
             $image = $post['image_logo_portrait'];
             $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-            $upload = MyHelper::uploadPhotoStrict($encode, 'img/outlet/'.$checkMerchant['id_outlet'].'/', 300, 300);
+            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/outlet/'.$checkMerchant['id_outlet'].'/');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $dataUpdate['outlet_image_logo_portrait'] = $upload['path'];

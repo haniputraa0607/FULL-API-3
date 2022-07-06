@@ -254,7 +254,7 @@ class ApiOnlineTransaction extends Controller
             $cashback = $earnedPoint['cashback'] ?? 0;
             $receiptNumber = rand().time().'-'.substr($data['id_outlet'], 0, 4).rand(1000,9999);
             if(!empty($data['image_recipe'])){
-                $upload = MyHelper::uploadPhotoProduct($data['image_recipe'], 'img/recipe/', $receiptNumber);
+                $upload = MyHelper::uploadPhotoAllSize($data['image_recipe'], 'img/recipe/', $receiptNumber);
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
                     $imageRecipe = $upload['path'];

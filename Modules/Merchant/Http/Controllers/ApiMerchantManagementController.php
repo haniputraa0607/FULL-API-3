@@ -414,7 +414,7 @@ class ApiMerchantManagementController extends Controller
         if(!empty($post['image'])){
             $image = $post['image'];
             $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-            $upload = MyHelper::uploadPhotoProduct($encode, 'img/product/'.$idProduct.'/');
+            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/product/'.$idProduct.'/');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $img[] = $upload['path'];
@@ -423,7 +423,7 @@ class ApiMerchantManagementController extends Controller
 
         foreach ($post['image_detail']??[] as $image){
             $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-            $upload = MyHelper::uploadPhotoProduct($encode, 'img/product/'.$idProduct.'/');
+            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/product/'.$idProduct.'/');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $img[] = $upload['path'];
@@ -679,7 +679,7 @@ class ApiMerchantManagementController extends Controller
             if(!empty($post['image'])){
                 $image = $post['image'];
                 $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-                $upload = MyHelper::uploadPhotoProduct($encode, 'img/product/'.$idProduct.'/');
+                $upload = MyHelper::uploadPhotoAllSize($encode, 'img/product/'.$idProduct.'/');
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
                     $checkPhoto = ProductPhoto::where('id_product', $post['id_product'])->orderBy('product_photo_order', 'asc')->first();
@@ -696,7 +696,7 @@ class ApiMerchantManagementController extends Controller
 
             foreach ($post['image_detail']??[] as $image){
                 $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-                $upload = MyHelper::uploadPhotoProduct($encode, 'img/product/'.$idProduct.'/');
+                $upload = MyHelper::uploadPhotoAllSize($encode, 'img/product/'.$idProduct.'/');
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
                     $img[] = $upload['path'];
