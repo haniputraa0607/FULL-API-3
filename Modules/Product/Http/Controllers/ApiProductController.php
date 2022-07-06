@@ -1203,7 +1203,7 @@ class ApiProductController extends Controller
 
 
                     //create photo
-                    $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300);
+                    $upload = MyHelper::uploadPhotoProduct($post['photo'], $this->saveImage);
 
                     if (isset($upload['status']) && $upload['status'] == "success") {
                         $dataPhoto['product_photo'] = $upload['path'];
