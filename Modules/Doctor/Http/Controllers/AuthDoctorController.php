@@ -48,16 +48,31 @@ class AuthDoctorController extends Controller
         }
 
         //cek account
-        $check = Doctor::where('doctor_phone', $post['phone'])->OnlyVerified()->first();
+        $check = Doctor::where('doctor_phone', $post['phone'])->first();
 
         if(isset($check)) {
             $check = $check->toArray();
 
-            return response()->json(['status'  => 'success', 'result' => ['phone_status' => 'registered', 'phone_number' => $check['doctor_phone']]]);    
+            $sendOtp = $this->sendOtp($request, $phone);
+            
+            if($sendOtp['status'] == 'fail') {
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => 'OTP failed to send'
+                ]);
+            }
+
+            $result = [
+                'phone_status' => 'registered',
+                'messages' => 'OTP Has been sent',
+                'phone_number' => $check['doctor_phone']
+            ];
+
+            return response()->json(['status'  => 'success', 'result' => $result]);    
         }
 
         //save phone to database
-        DB::beginTransaction(); 
+        /*DB::beginTransaction(); 
         try {
             //create new doctor account
             $newDoctor = Doctor::create(['doctor_phone' => $post['phone']]);
@@ -86,9 +101,14 @@ class AuthDoctorController extends Controller
             'phone_status' => 'not registered',
             'messages' => 'OTP Has been sent',
             'phone_number' => $request['phone']
+        ];*/
+
+        $result = [
+            'phone_status' => 'not registered',
+            'phone_number' => $request['phone']
         ];
 
-        return response()->json(['status'  => 'success', 'result' => $result]);
+        return response()->json(['status'  => 'fail', 'result' => $result]);
     }
 
     /**
@@ -186,6 +206,7 @@ class AuthDoctorController extends Controller
             unset($post['phone']);
             $otp = OTP::create($post);
 
+            //TO DO changes autocrm function name
             $send 	= app($this->autocrm)->SendAutoCRM('Doctor Pin Sent', $phone, null, null, false, false, 'doctor');
         } catch (\Exception $e) {
             $result = [
@@ -235,7 +256,7 @@ class AuthDoctorController extends Controller
         }
 
         switch ($post['purpose']) {
-            case "registration":
+            /*case "registration":
                 //verified phone
                 DB::beginTransaction(); 
                 try {
@@ -253,7 +274,7 @@ class AuthDoctorController extends Controller
                 }
                 DB::commit();
 
-                return response()->json(['status'    => 'success', 'messages'  => 'Account Created Successfully', 'phone' => $post['phone']]);
+                return response()->json(['status'    => 'success', 'messages'  => 'Account Created Successfully', 'phone' => $post['phone']]); */
 
             case "forgot-password":
                 //verified OTP

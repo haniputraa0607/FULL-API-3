@@ -20,6 +20,15 @@ use DB;
 
 class ApiDoctorController extends Controller
 {
+    function __construct()
+    {
+        ini_set('max_execution_time', 0);
+        date_default_timezone_set('Asia/Jakarta');
+        if (\Module::collections()->has('Autocrm')) {
+            $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+        }
+    }
+
     /**
      * Display a listing of the resource.
      * @return Response
@@ -29,7 +38,7 @@ class ApiDoctorController extends Controller
         $post = $request->json()->all();
         $countTotal = null;
 
-        $doctor = Doctor::with('clinic')->with('specialists')->orderBy('created_at', 'DESC');
+        $doctor = Doctor::with('outlet')->with('specialists')->orderBy('created_at', 'DESC');
 
         if ($post['rule']) {
             $countTotal = $doctor->count();
@@ -73,10 +82,10 @@ class ApiDoctorController extends Controller
             }
         }
 
-        if($rules2=$newRule['doctor_clinic_name']??false){
+        if($rules2=$newRule['outlet']??false){
             foreach ($rules2 as $rule) {
-                $query->{$where.'Has'}('clinic', function($query2) use ($rule) {
-                    $query2->where('doctor_clinic_name', $rule[0], $rule[1]);
+                $query->{$where.'Has'}('outlet', function($query2) use ($rule) {
+                    $query2->where('outlet_name', $rule[0], $rule[1]);
                 });
             }
         }
@@ -118,117 +127,109 @@ class ApiDoctorController extends Controller
     {
         $post = $request->json()->all();
         unset($post['_token']);
+        
 
         DB::beginTransaction();
-        if (isset($post['id_doctor'])) {    
-            try {
-                //upload photo id
-                if (isset($post['doctor_photo'])) {
-                    $upload = MyHelper::uploadPhotoStrict($post['doctor_photo'], $path = 'img/doctor/', 300, 300);
-                    if ($upload['status'] == "success") {
-                        $post['doctor_photo'] = $upload['path'];
-                    } else {
-                        $result = [
-                            'status'    => 'fail',
-                            'messages'    => ['fail upload image']
-                        ];
-                        return response()->json($result);
-                    }
-                }
+        //birthday explode
+        $d = explode('/', $post['birthday']);
+        $post['birthday'] = $d[2] . "-" . $d[0] . "-" . $d[1];
 
-                //set active
-                if (isset($post['is_active'])) { 
-                    if($post['is_active'] == "on") {
-                        $post['is_active'] = 1;
-                    } else {
-                        $post['is_active'] = 0;
-                    }
-                }
-    
-                //set password
-                if ($post['pin'] == null) {
-                    $pin = MyHelper::createRandomPIN(6, 'kecil');
-                    if(env('APP_ENV') != "production"){
-                        $pin = '77777777';
-                    }
-                } else {
-                    $pin = $post['pin'];
-                }
-                unset($post['pin']);
-        
-                $post['password'] = bcrypt($pin);
+        //doctor session price
+        $post['doctor_session_price'] = str_replace(".", '', $post['doctor_session_price']);
 
-                //get specialist id
-                $specialist_id = $post['doctor_specialist'];
-                unset($post['doctor_specialist']);
-    
-                Doctor::where('id_doctor', $post['id_doctor'])->update($post);
-            } catch (\Exception $e) {
-                $result = [
-                    'status'  => 'fail',
-                    'message' => 'Update Failed'
-                ];
-                DB::rollBack();
-                return response()->json($result);
+        //set password
+        if ($post['pin'] == null) {
+            $pin = MyHelper::createRandomPIN(8, 'kecil');
+            if(env('APP_ENV') != "production"){
+                $pin = '77777777';
             }
-            DB::commit();
-            return response()->json(['status'  => 'success', 'result' => ['id_doctor' => $post['id_doctor']]]);
         } else {
-            try {
-                //upload photo id
-                if (isset($post['doctor_photo'])) {
-                    $upload = MyHelper::uploadPhotoStrict($post['doctor_photo'], $path = 'img/doctor/', 300, 300);
-                    if ($upload['status'] == "success") {
-                        $post['doctor_photo'] = $upload['path'];
-                    } else {
-                        $result = [
-                            'status'    => 'fail',
-                            'messages'    => ['fail upload image']
-                        ];
-                        return response()->json($result);
-                    }
-                }
+            $pin = $post['pin'];
+        }
+        unset($post['pin']);
 
-                //set active
-                if (isset($post['is_active'])) { 
-                    if($post['is_active'] == "on") {
-                        $post['is_active'] = 1;
-                    } else {
-                        $post['is_active'] = 0;
-                    }
-                }
+        $post['password'] = bcrypt($pin);
+        $post['provider'] = MyHelper::cariOperator($post['doctor_phone']);
 
-                //set password
-                if ($post['pin'] == null) {
-                    $pin = MyHelper::createRandomPIN(6, 'angka');
-                    if(env('APP_ENV') != "production"){
-                        $pin = '777777';
-                    }
-                } else {
-                    $pin = $post['pin'];
-                }
-                unset($post['pin']);
-        
-                $post['password'] = bcrypt($pin);
+        //sentPin
+        $sentPin = $post['sent_pin'];
+        unset($post['sent_pin']);
 
-                //get specialist id
-                $specialist_id = $post['doctor_specialist'];
-
-                unset($post['doctor_specialist']);
-                
-                $save = Doctor::create($post);
-                $specialist = $save->specialists()->attach($specialist_id);
-            } catch (\Exception $e) {
+        //upload photo id doctor
+        if (isset($post['doctor_photo'])) {
+            $upload = MyHelper::uploadPhotoStrict($post['doctor_photo'], $path = 'img/doctor/', 300, 300);
+            if ($upload['status'] == "success") {
+                $post['doctor_photo'] = $upload['path'];
+            } else {
                 $result = [
-                    'status'  => 'fail',
-                    'message' => 'Create Failed'
+                    'status'    => 'fail',
+                    'messages'    => ['fail upload image']
                 ];
-                DB::rollBack();
                 return response()->json($result);
             }
-            DB::commit();
-            return response()->json(['status'  => 'success', 'result' => ['doctor_name' => $post['doctor_name'], 'created_at' => $post]]);
+        } 
+
+        //set active
+        if (isset($post['is_active'])) { 
+            if($post['is_active'] == "on") {
+                $post['is_active'] = 1;
+            } else {
+                $post['is_active'] = 0;
+            }
         }
+
+        //get specialist id
+        $specialist_id = $post['doctor_specialist'];
+        unset($post['doctor_specialist']);
+
+        if(!isset($post['id_doctor'])) {
+            $post['id_doctor'] = null;
+        }
+
+        $save = Doctor::updateOrCreate(['id_doctor' => $post['id_doctor']], $post);
+
+        //save specialists
+        if($post['id_doctor'] != null) {
+            $oldSpecialist = Doctor::find($post['id_doctor'])->specialists()->delete();
+            $specialist = $save->specialists()->attach($specialist_id);
+        } else {
+            $specialist = $save->specialists()->attach($specialist_id);
+        }
+
+        $result = MyHelper::checkGet($save);
+
+        // TO DO Pending Task AutoCRM error 
+        /*if ($result['status'] == "success") {
+            if ($sent_pin == 'Yes') {
+                if (!empty($request->header('user-agent-view'))) {
+                    $useragent = $request->header('user-agent-view');
+                } else {
+                    $useragent = $_SERVER['HTTP_USER_AGENT'];
+                }
+
+                if (stristr($useragent, 'iOS')) $useragent = 'iOS';
+                if (stristr($useragent, 'okhttp')) $useragent = 'Android';
+                if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
+
+                if (\Module::collections()->has('Autocrm')) {
+                    $autocrm = app($this->autocrm)->SendAutoCRM(
+                        'Doctor Pin Sent',
+                        $post['doctor_phone'],
+                        [
+                            'pin' => $pin,
+                            'useragent' => $useragent,
+                            'now' => date('Y-m-d H:i:s'),
+                            'date_sent' => date('d-m-y H:i:s'),
+                            'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
+                        ],
+                        $useragent
+                    );
+                }
+            }
+        }*/
+
+        DB::commit();
+        return response()->json(['status'  => 'success', 'result' => ['id_doctor' => $post['id_doctor']]]);
     }
 
     /**
