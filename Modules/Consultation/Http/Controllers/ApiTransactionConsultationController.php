@@ -12,6 +12,8 @@ use App\Http\Models\TransactionConsultation;
 use App\Http\Models\TransactionConsultationRecomendation;
 use App\Http\Models\User;
 use App\Http\Models\Setting;
+use App\Http\Models\Product;
+use Modules\Merchant\Entities\Merchant;
 
 use Modules\UserFeedback\Entities\UserFeedbackLog;
 use Modules\Doctor\Entities\DoctorSchedule;
@@ -207,7 +209,7 @@ class ApiTransactionConsultationController extends Controller
 
         //cek doctor exists
         $id_doctor = $post['id_doctor'];
-        $doctor = Doctor::with('clinic')->with('specialists')
+        $doctor = Doctor::with('outlet')->with('specialists')
         ->where('id_doctor', $post['id_doctor'])->onlyActive()
         ->first()->toArray();
 
@@ -348,7 +350,7 @@ class ApiTransactionConsultationController extends Controller
         }
 
         if (!isset($post['id_outlet'])) {
-            $post['id_outlet'] = null;
+            $post['id_outlet'] = $doctor['id_outlet'];
         }
 
         if (!isset($post['cashback'])) {
@@ -1167,5 +1169,259 @@ class ApiTransactionConsultationController extends Controller
         DB::commit();
 
         return response()->json(['status'  => 'success', 'result' => $result]);
+    }
+
+    public function getConsultationFromAdmin(Request $request)
+    {
+        $post = $request->json()->all();
+        //get Transaction
+        $transactions = Transaction::where('trasaction_type', 'Consultation')->with('consultation')->with('outlet');
+
+        if ($post['rule']) {
+            $countTotal = $transactions->count();
+            $this->filterList($transactions, $post['rule'], $post['operator'] ?: 'and');
+        }
+
+        if($request['page']) {
+            $result = $transactions->paginate($post['length'] ?: 10);
+        } else {
+            $result = $transactions->get()->toArray();
+        }
+        
+        return response()->json(['status'  => 'success', 'result' => $result]);
+    }
+
+    public function filterList($query,$rules,$operator='and'){
+        $newRule=[];
+        foreach ($rules as $var) {
+            $rule=[$var['operator']??'=',$var['parameter']];
+            if($rule[0]=='like'){
+                $rule[1]='%'.$rule[1].'%';
+            }
+            $newRule[$var['subject']][]=$rule;
+        }
+
+        $where=$operator=='and'?'where':'orWhere';
+        // $subjects=['doctor_name', 'doctor_phone', 'doctor_session_price'];
+        // foreach ($subjects as $subject) {
+        //     if($rules2=$newRule[$subject]??false){
+        //         foreach ($rules2 as $rule) {
+        //             $query->$where($subject,$rule[0],$rule[1]);
+        //         }
+        //     }
+        // }
+
+        if($rules2=$newRule['outlet']??false){
+            foreach ($rules2 as $rule) {
+                $query->{$where.'Has'}('outlet', function($query2) use ($rule) {
+                    $query2->where('outlet_name', $rule[0], $rule[1]);
+                });
+            }
+        }
+    }
+
+    public function getConsultationDetailFromAdmin($id)
+    {
+        //get Transaction detail
+        $transaction = Transaction::where('id_transaction', $id)->where('trasaction_type', 'Consultation')->with('consultation')->first();
+
+        $consultation = $transaction->consultation;
+        
+        $recomendationProduct = TransactionConsultationRecomendation::where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "product")->get();
+
+        $recomendationDrug = TransactionConsultationRecomendation::where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "drug")->get();
+
+        $result = [
+            'transaction' => $transaction,
+            'consultation' => $consultation,
+            'recomendation_product' => $recomendationProduct,
+            'recomendation_drug' => $recomendationDrug
+        ];
+
+        return response()->json(['status'  => 'success', 'result' => $transaction]);
+    }
+
+    public function getProductList(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if(!empty($post['referal_code'])){
+            $idOutlet = Outlet::where('outlet_code', $post['referal_code'])->first()['id_outlet']??null;
+            if(empty($idMerchant)){
+                return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
+            }
+
+            $idMerchant = Merchant::where('id_outlet', $idOutlet)->first()['id_merchant']??null;
+            if(empty($idMerchant)){
+                return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
+            }
+        }
+
+        $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
+            'product_detail_stock_status as stock_status', 'product_detail.id_outlet')
+            ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
+            ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
+            ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
+            ->where('outlet_is_closed', 0)
+            ->where('need_recipe_status', 0)
+            ->where('product_global_price', '>', 0)
+            ->where('product_visibility', 'Visible')
+            ->where('product_detail_visibility', 'Visible')
+            ->orderBy('product_count_transaction', 'desc')
+            ->groupBy('products.id_product');
+        
+        if(!empty($idMerchant)){
+            $list = $list->where('id_merchant', $idMerchant);
+        }
+
+        if(!empty($post['search_key'])){
+            $list = $list->where('product_name', 'like', '%'.$post['search_key'].'%');
+        }
+
+        if(!empty($post['id_product_category'])){
+            $list = $list->where('id_product_category', $post['id_product_category']);
+        }
+
+        if(!empty($post['pagination'])){
+            $list = $list->paginate($post['pagination_total_row']??10)->toArray();
+
+            foreach ($list['data'] as $key=>$product){
+                if ($product['product_variant_status']) {
+                    $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
+                    $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                    if(empty($variantTree['base_price'])){
+                        $list['data'][$key]['stock_status'] = 'Sold Out';
+                    }
+                    $list['data'][$key]['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
+                    //TO DO cek
+                    $list['data'][$key]['variants'] = $variantTree ?? null;
+                }
+
+                unset($list['data'][$key]['id_outlet']);
+                unset($list['data'][$key]['product_variant_status']);
+                $list['data'][$key]['product_price'] = (int)$list['data'][$key]['product_price'];
+                $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+                $list['data'][$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
+            }
+            $list['data'] = array_values($list['data']);
+        }else{
+            $list = $list->get()->toArray();
+
+            foreach ($list as $key=>$product){
+                if ($product['product_variant_status']) {
+                    $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
+                    $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                    if(empty($variantTree['base_price'])){
+                        $list[$key]['stock_status'] = 'Sold Out';
+                    }
+                    $list[$key]['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
+                    //TO DO cek
+                    $list[$key]['variants'] = $variantTree ?? null;
+                }
+
+                unset($list[$key]['id_outlet']);
+                unset($list[$key]['product_variant_status']);
+                $list[$key]['product_price'] = (int)$list[$key]['product_price'];
+                $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+                $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
+            }
+            $list = array_values($list);
+        }
+
+        //dd($list);
+
+        return response()->json(MyHelper::checkGet($list));
+    }
+
+    public function getDrugList(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if(!empty($post['referal_code'])){
+            $idOutlet = Outlet::where('outlet_code', $post['referal_code'])->first()['id_outlet']??null;
+            if(empty($idMerchant)){
+                return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
+            }
+
+            $idMerchant = Merchant::where('id_outlet', $idOutlet)->first()['id_merchant']??null;
+            if(empty($idMerchant)){
+                return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
+            }
+        }
+
+        $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
+            'product_detail_stock_status as stock_status', 'product_detail.id_outlet')
+            ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
+            ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
+            ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
+            ->where('outlet_is_closed', 0)
+            ->where('need_recipe_status', 1)
+            ->where('product_global_price', '>', 0)
+            ->where('product_visibility', 'Visible')
+            ->where('product_detail_visibility', 'Visible')
+            ->orderBy('product_count_transaction', 'desc')
+            ->groupBy('products.id_product');
+        
+        if(!empty($idMerchant)){
+            $list = $list->where('id_merchant', $idMerchant);
+        }
+
+        if(!empty($post['search_key'])){
+            $list = $list->where('product_name', 'like', '%'.$post['search_key'].'%');
+        }
+
+        if(!empty($post['id_product_category'])){
+            $list = $list->where('id_product_category', $post['id_product_category']);
+        }
+
+        if(!empty($post['pagination'])){
+            $list = $list->paginate($post['pagination_total_row']??10)->toArray();
+
+            foreach ($list['data'] as $key=>$product){
+                if ($product['product_variant_status']) {
+                    $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
+                    $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                    if(empty($variantTree['base_price'])){
+                        $list['data'][$key]['stock_status'] = 'Sold Out';
+                    }
+                    $list['data'][$key]['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
+                    //TO DO cek
+                    $list['data'][$key]['variants'] = $variantTree ?? null;
+                }
+
+                unset($list['data'][$key]['id_outlet']);
+                unset($list['data'][$key]['product_variant_status']);
+                $list['data'][$key]['product_price'] = (int)$list['data'][$key]['product_price'];
+                $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+                $list['data'][$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
+            }
+            $list['data'] = array_values($list['data']);
+        }else{
+            $list = $list->get()->toArray();
+
+            foreach ($list as $key=>$product){
+                if ($product['product_variant_status']) {
+                    $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
+                    $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                    if(empty($variantTree['base_price'])){
+                        $list[$key]['stock_status'] = 'Sold Out';
+                    }
+                    $list[$key]['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
+                    //TO DO cek
+                    $list[$key]['variants'] = $variantTree ?? null;
+                }
+
+                unset($list[$key]['id_outlet']);
+                unset($list[$key]['product_variant_status']);
+                $list[$key]['product_price'] = (int)$list[$key]['product_price'];
+                $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+                $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
+            }
+            $list = array_values($list);
+        }
+
+        //dd($list);
+
+        return response()->json(MyHelper::checkGet($list));
     }
 }
