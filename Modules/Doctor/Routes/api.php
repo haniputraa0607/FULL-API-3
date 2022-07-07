@@ -51,6 +51,8 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
         Route::get('{id}', ['uses' => 'ApiDoctorScheduleTimeController@show']);
         Route::post('delete', ['uses' => 'ApiDoctorScheduleTimeController@destroy']);
     });
+
+    Route::post('list/outlet', ['uses' => 'ApiDoctorController@listAllDoctor']);
 });
 
 Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'doctor'], function () {
