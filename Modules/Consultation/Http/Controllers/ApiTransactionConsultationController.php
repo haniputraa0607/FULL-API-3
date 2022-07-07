@@ -14,6 +14,7 @@ use App\Http\Models\User;
 use App\Http\Models\Setting;
 use App\Http\Models\Product;
 use Modules\Merchant\Entities\Merchant;
+use App\Http\Models\ProductPhoto;
 
 use Modules\UserFeedback\Entities\UserFeedbackLog;
 use Modules\Doctor\Entities\DoctorSchedule;
