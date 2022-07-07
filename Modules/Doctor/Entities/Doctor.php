@@ -37,6 +37,7 @@ class Doctor extends Authenticatable
     protected $fillable   = [
         'doctor_name',
         'doctor_phone',
+        'provider',
         'phone_verified',
         'password',
         'doctor_email',
@@ -67,6 +68,10 @@ class Doctor extends Authenticatable
     public function clinic()
     {
         return $this->belongsTo(DoctorClinic::class, 'id_doctor_clinic', 'id_doctor_clinic');
+    }
+
+    public function outlet(){
+        return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet', 'id_outlet');
     }
 
     public function specialists()
