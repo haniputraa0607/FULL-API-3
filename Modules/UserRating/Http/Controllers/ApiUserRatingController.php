@@ -1481,7 +1481,7 @@ class ApiUserRatingController extends Controller
             $img = [];
             foreach ($post['images']??[] as $image){
                 $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-                $upload = MyHelper::uploadPhotoProduct($encode, 'img/user_rating/'.$create['id_user_rating'].'/');
+                $upload = MyHelper::uploadPhotoAllSize($encode, 'img/user_rating/'.$create['id_user_rating'].'/');
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
                     $img[] = [

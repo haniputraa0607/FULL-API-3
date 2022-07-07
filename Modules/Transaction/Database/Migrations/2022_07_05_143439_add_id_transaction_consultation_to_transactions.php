@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class AddProviderToDoctorTable extends Migration
+class AddIdTransactionConsultationToTransactions extends Migration
 {
     /**
      * Run the migrations.
@@ -13,8 +13,8 @@ class AddProviderToDoctorTable extends Migration
      */
     public function up()
     {
-        Schema::table('doctors', function (Blueprint $table) {
-            $table->enum('provider', array('Telkomsel','XL', 'Indosat', 'Tri', 'Axis', 'Smart'))->after('doctor_phone');
+        Schema::table('transactions', function (Blueprint $table) {
+            $table->integer('id_transaction_consultation')->nullable()->after('id_subscription_user_voucher');
         });
     }
 
@@ -25,8 +25,8 @@ class AddProviderToDoctorTable extends Migration
      */
     public function down()
     {
-        Schema::table('doctors', function (Blueprint $table) {
-            $table->dropColumn('provider');
+        Schema::table('transactions', function (Blueprint $table) {
+            $table->dropColumn('id_transaction_consultation');
         });
     }
 }

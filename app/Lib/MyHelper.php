@@ -1161,7 +1161,7 @@ class MyHelper{
 		return $result;
 	}
 
-    public static function uploadPhotoProduct($foto, $path, $name=null, $forceextension=null) {
+    public static function uploadPhotoAllSize($foto, $path, $name=null, $forceextension=null) {
         // kalo ada foto1
         $decoded = base64_decode($foto);
         if($forceextension != null)
@@ -1188,6 +1188,11 @@ class MyHelper{
             });
         } elseif($imgheight > $imgwidth && $imgheight > 1000) {
             $img->resize(null, 1000, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            });
+        } elseif ($imgheight == $imgwidth){
+            $img->resize(1000, 1000, function ($constraint) {
                 $constraint->aspectRatio();
                 $constraint->upsize();
             });

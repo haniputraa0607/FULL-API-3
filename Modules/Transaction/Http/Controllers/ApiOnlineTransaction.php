@@ -5,6 +5,7 @@ namespace Modules\Transaction\Http\Controllers;
 use App\Http\Models\DailyTransactions;
 use App\Http\Models\ProductPhoto;
 use App\Http\Models\Subdistricts;
+use App\Http\Models\TransactionConsultationRecomendation;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentOvo;
 use App\Jobs\DisburseJob;
@@ -131,6 +132,17 @@ class ApiOnlineTransaction extends Controller
     public function newTransaction(Request $request) {
         $post = $request->json()->all();
         $user = $request->user();
+        $fromRecipeDoctor = 0;
+        if(!empty($post['id_transaction_consultation'])){
+            $trxRecipeCheck = $this->checkTransactionRecipe($post);
+
+            if(!empty($trxRecipeCheck['items'])){
+                $fromRecipeDoctor = 1;
+            }else{
+                return response()->json(['status'    => 'fail', 'messages'  => ['Invalid item consultation']]);
+            }
+        }
+
         if(empty($post['items'])){
             return response()->json(['status'    => 'fail', 'messages'  => ['Item can not be empty']]);
         }
@@ -186,7 +198,7 @@ class ApiOnlineTransaction extends Controller
             return response()->json(['status'    => 'fail', 'messages'  => ['Alamat tidak ditemukan.']]);
         }
 
-        $itemsCheck = $this->checkDataTransaction($post['items'], 1, 0, 0, $address);
+        $itemsCheck = $this->checkDataTransaction($post['items'], 1, 0, 0, $address, $fromRecipeDoctor);
         if(!empty($itemsCheck['error_messages'])){
             return response()->json(['status'    => 'fail', 'messages'  => [$itemsCheck['error_messages']]]);
         }
@@ -242,7 +254,7 @@ class ApiOnlineTransaction extends Controller
             $cashback = $earnedPoint['cashback'] ?? 0;
             $receiptNumber = rand().time().'-'.substr($data['id_outlet'], 0, 4).rand(1000,9999);
             if(!empty($data['image_recipe'])){
-                $upload = MyHelper::uploadPhotoProduct($data['image_recipe'], 'img/recipe/', $receiptNumber);
+                $upload = MyHelper::uploadPhotoAllSize($data['image_recipe'], 'img/recipe/', $receiptNumber);
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
                     $imageRecipe = $upload['path'];
@@ -253,6 +265,7 @@ class ApiOnlineTransaction extends Controller
                 'id_transaction_group'        => $insertTransactionGroup['id_transaction_group'],
                 'id_outlet'                   => $data['id_outlet'],
                 'id_user'                     => $user->id,
+                'id_transaction_consultation' => $post['id_transaction_consultation'],
                 'transaction_date'            => $currentDate,
                 'transaction_receipt_number'  => $receiptNumber,
                 'transaction_status'          => $transactionStatus,
@@ -317,7 +330,7 @@ class ApiOnlineTransaction extends Controller
                     'id_product'                   => $checkProduct['id_product'],
                     'type'                         => $checkProduct['product_type'],
                     'transaction_product_recipe_status' => $checkProduct['need_recipe_status'],
-                    'id_product_variant_group'     => $valueProduct['id_product_variant_group']??null,
+                    'id_product_variant_group'     => (empty($valueProduct['id_product_variant_group']) ? null : $valueProduct['id_product_variant_group']),
                     'id_brand'                     => $idBrand,
                     'id_outlet'                    => $insertTransaction['id_outlet'],
                     'id_user'                      => $insertTransaction['id_user'],
@@ -530,6 +543,12 @@ class ApiOnlineTransaction extends Controller
     {
         $post = $request->json()->all();
         $user = $request->user();
+        $fromRecipeDoctor = 0;
+        if(!empty($post['id_transaction_consultation'])){
+            $post = $this->checkTransactionRecipe($post);
+            $fromRecipeDoctor = 1;
+        }
+
         if (empty($post['items'])) {
             return response()->json([
                 'status' => 'fail',
@@ -560,7 +579,7 @@ class ApiOnlineTransaction extends Controller
         }
         $mainAddress = $address;
 
-        $itemsCheck = $this->checkDataTransaction($post['items'], 0, 0, 1, $mainAddress);
+        $itemsCheck = $this->checkDataTransaction($post['items'], 0, 0, 1, $mainAddress, $fromRecipeDoctor);
         $items = $itemsCheck['items'];
         $subtotal = $itemsCheck['subtotal'];
         $checkOutStatus = $itemsCheck['available_checkout'];
@@ -624,6 +643,8 @@ class ApiOnlineTransaction extends Controller
         }
         $result = [
             'address' => $mainAddress,
+            'point_use' => $post['point_use']??false,
+            'id_transaction_consultation' => $post['id_transaction_consultation']??null,
             'items' => $items,
             'current_points' => $currentBalance,
             'summary_order' => $summaryOrder,
@@ -635,7 +656,7 @@ class ApiOnlineTransaction extends Controller
         $fake_request = new Request(['show_all' => 0]);
         $result['available_payment'] = $this->availablePayment($fake_request)['result'] ?? [];
 
-        return response()->json($result);
+        return response()->json(MyHelper::checkGet($result));
     }
 
     public function checkBundlingProduct($post, $outlet, $subtotal_per_brand = []){
@@ -2384,7 +2405,7 @@ class ApiOnlineTransaction extends Controller
         }
     }
 
-    function checkDataTransaction($post, $from_new = 0, $from_cart = 0, $from_check = 0, $dtAddress = []){
+    function checkDataTransaction($post, $from_new = 0, $from_cart = 0, $from_check = 0, $dtAddress = [], $fromRecipeDoctor = 0){
         $items = $this->mergeProducts($post);
 
         $availableCheckout = true;
@@ -2501,7 +2522,7 @@ class ApiOnlineTransaction extends Controller
                         $error = 'Produk tidak valid';
                     }
 
-                    if($needRecipeStatus == 1 && empty($value['image_recipe'])){
+                    if($needRecipeStatus == 1 && empty($value['image_recipe']) && $fromRecipeDoctor == 0){
                         $error = 'Produk membutuhkan resep, silahkan unggah foto resep Anda';
                     }
 
@@ -2815,5 +2836,46 @@ class ApiOnlineTransaction extends Controller
         }
 
         return true;
+    }
+
+    public function checkTransactionRecipe($post)
+    {
+        $dt = [
+            'id_transaction_consultation' => $post['id_transaction_consultation'],
+            'point_use' => $post['point_use']??true,
+        ];
+
+        if($post['id_user_address']){
+            $dt['id_user_address'] = $post['id_user_address'];
+        }
+
+        $consultationProduct = TransactionConsultationRecomendation::where('id_transaction_consultation', $post['id_transaction_consultation'])
+                            ->where('product_type', 'Drug')
+                            ->get()->toArray();
+
+        $productOutlet = [];
+        foreach ($consultationProduct as $product){
+            $productOutlet[$product['id_outlet']][] = [
+                "id_custom" => rand(pow(10, 4-1), pow(10, 4)-1),
+                "id_product" => $product['id_product'],
+                "qty" => (int)$product['qty_product'],
+                "id_product_variant_group" => $product['id_product_variant_group'],
+                "id_product_variant_group_wholesaler" => null,
+                "id_product_wholesaler" => null,
+                "note" => ""
+            ];
+        }
+
+        $items = [];
+        foreach ($productOutlet as $key=>$value){
+            $items[] = [
+                'id_outlet' => $key,
+                'items' => $value
+            ];
+        }
+
+        $dt['items'] = $items;
+
+        return $dt;
     }
 }
