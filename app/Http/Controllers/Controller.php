@@ -191,4 +191,14 @@ class Controller extends BaseController
         $query = $query->get()->toArray();
         return MyHelper::checkGet($query);
     }
+
+    public function getSidebarBadge(Request $request)
+    {
+    	return [
+    		'status' => 'success',
+    		'result' => [
+    			// 'total_home' => 5,
+    		],
+    	];
+    }
 }
