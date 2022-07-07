@@ -14,7 +14,7 @@ class AddProviderToDoctorTable extends Migration
     public function up()
     {
         Schema::table('doctors', function (Blueprint $table) {
-            $table->integer('provider', array('Telkomsel','XL', 'Indosat', 'Tri', 'Axis', 'Smart'))->after('doctor_phone');
+            $table->enum('provider', array('Telkomsel','XL', 'Indosat', 'Tri', 'Axis', 'Smart'))->after('doctor_phone');
         });
     }
 
