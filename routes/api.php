@@ -25,6 +25,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be'] ], fun
 	Route::get('feature-module', 'Controller@getFeatureModule');
 	Route::get('rank/list', 'Controller@listRank');
 	Route::get('config', 'Controller@getConfig');
+	Route::get('sidebar-badge', 'Controller@getSidebarBadge');
 	// Route::any('city/list', 'Controller@listCity');
 	// Route::get('province/list', 'Controller@listProvince');
 	Route::post('summernote/upload/image', 'Controller@uploadImageSummernote');
