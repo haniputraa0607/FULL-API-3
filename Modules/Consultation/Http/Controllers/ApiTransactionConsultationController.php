@@ -75,14 +75,15 @@ class ApiTransactionConsultationController extends Controller
 
         //check doctor availability
         $id_doctor = $post['id_doctor'];
-        $doctor = Doctor::with('clinic')->with('specialists')->where('id_doctor', $post['id_doctor'])->first()->toArray();
+        $doctor = Doctor::with('outlet')->with('specialists')->where('id_doctor', $post['id_doctor'])->first();
 
         if(empty($doctor)){
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['Silahkan pilh dokter terlebih dahulu']
+                'messages'  => ['Silahkan pilh dokter terlebih dahulu / Dokter tidak ditemukan']
             ]);
         }
+        $doctor = $doctor->toArray();
 
         //check session availability
         if($post['consultation_type'] != "now") {
@@ -96,10 +97,24 @@ class ApiTransactionConsultationController extends Controller
         //get doctor consultation
         $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
                                 ->where('schedule_start_time', $post['time'])->count();
+        
         $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
         $quota = $getSetting['value'];
 
         if($quota <= $doctor_constultation){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Jadwal penuh / tidak tersedia']
+            ]);
+        }
+
+        //selected session
+        $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
+        ->whereHas('schedule_time', function($query) use ($post){
+            $query->where('start_time', '=', $post['time']);
+        })->first();
+
+        if(empty($schedule_session)){
             return response()->json([
                 'status'    => 'fail',
                 'messages'  => ['Jadwal penuh / tidak tersedia']
@@ -116,16 +131,10 @@ class ApiTransactionConsultationController extends Controller
             'id_doctor' => $doctor['id_doctor'],
             'doctor_name' => $doctor['doctor_name'],
             'doctor_phone' => $doctor['doctor_phone'],
-            'doctor_clinic_name' => $doctor['clinic']['doctor_clinic_name'],
+            'outlet_name' => $doctor['outlet']['outlet_name'],
             'doctor_specialist_name' => $doctor['specialists'][0]['doctor_specialist_name'],
             'doctor_session_price' => $doctor['doctor_session_price']
         ];
-
-        //selected session
-        $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
-            ->whereHas('schedule_time', function($query) use ($post){
-                $query->where('start_time', '=', $post['time']);
-            })->first()->toArray();
 
         $result['selected_schedule'] = [
             'date' => $post['date'],
@@ -212,7 +221,7 @@ class ApiTransactionConsultationController extends Controller
         $id_doctor = $post['id_doctor'];
         $doctor = Doctor::with('outlet')->with('specialists')
         ->where('id_doctor', $post['id_doctor'])->onlyActive()
-        ->first()->toArray();
+        ->first();
 
         if(empty($doctor)){
             return response()->json([
@@ -220,6 +229,7 @@ class ApiTransactionConsultationController extends Controller
                 'messages'  => ['Silahkan pilh dokter terlebih dahulu']
             ]);
         }
+        $doctor = $doctor->toArray();
 
         //cek doctor active
         if(isset($doctor['is_active']) && $doctor['is_active'] == false){
@@ -340,7 +350,7 @@ class ApiTransactionConsultationController extends Controller
             $post['longitude'] = null;
         }
 
-        $outlet = Outlet::where('id_outlet', $post['id_outlet'])->first();
+        $outlet = Outlet::where('id_outlet', $doctor['id_outlet'])->first();
         $distance = NULL;
         if(isset($post['latitude']) &&  isset($post['longitude'])){
             $distance = (float)app($this->outlet)->distance($post['latitude'], $post['longitude'], $outlet['outlet_latitude'], $outlet['outlet_longitude'], "K");
@@ -428,6 +438,7 @@ class ApiTransactionConsultationController extends Controller
             'transaction_grandtotal' => $grandtotal
         ]);
 
+
         $transaction = [
             'id_transaction_group'        => $insertTransactionGroup['id_transaction_group'],
             'id_outlet'                   => $post['id_outlet'],
@@ -507,6 +518,14 @@ class ApiTransactionConsultationController extends Controller
             $picked_schedule = DoctorSchedule::where('id_doctor', $doctor['id_doctor'])->leftJoin('time_schedules', function($query) {
                 $query->on('time_schedules.id_doctor_schedule', '=' , 'doctor_schedules.id_doctor_schedule');
             })->whereTime('start_time', '<', $post['time'])->whereTime('end_time', '>', $post['time'])->first();
+        }
+
+        if (empty($picked_schedule)) {
+            DB::rollback();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Invalid picked schedule']
+            ]);
         }
 
         $insertTransaction['transaction_receipt_number'] = $receipt;
@@ -1226,20 +1245,72 @@ class ApiTransactionConsultationController extends Controller
         //get Transaction detail
         $transaction = Transaction::where('id_transaction', $id)->where('trasaction_type', 'Consultation')->with('consultation')->first();
 
+        if(empty($transaction)){
+            return response()->json(['status' => 'fail', 'messages' => ['Transaction Not Found']]);
+        }
+
         $consultation = $transaction->consultation;
+
+        $doctor = $transaction->consultation->doctor;
+
+        $customer = $transaction->consultation->user;
         
         $recomendationProduct = TransactionConsultationRecomendation::where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "product")->get();
+        $resRecomendationProduct = [];
+        if(!empty($recomendationProduct)) {
+            foreach($recomendationProduct as $recProduct) {
+                $product = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
+                'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'outlets.outlet_name')
+                ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
+                ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
+                ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
+                ->where('products.id_product', $recProduct->id_product)
+                ->where('need_recipe_status', 0)
+                ->first();
+    
+                $resRecomendationProduct[] = [
+                    'name' => $product->product_name,
+                    'variant' => "-",
+                    'outlet' => $product->outlet_name,
+                    'price' => $product->product_price,
+                    'qty' => $recProduct->qty_product 
+                ];
+            }
+        }
 
-        $recomendationDrug = TransactionConsultationRecomendation::where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "drug")->get();
+        $recomendationDrug = TransactionConsultationRecomendation::with('product')->with('getOutlet')->where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "drug")->get();
+        $resRecomendationDrug = [];
+        if(!empty($recomendationDrug)) {
+            foreach($recomendationDrug as $recDrug) {
+                $product = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
+                'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'outlets.outlet_name')
+                ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
+                ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
+                ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
+                ->where('products.id_product', $recDrug->id_product)
+                ->where('need_recipe_status', 1)
+                ->first();
+    
+                $resRecomendationDrug[] = [
+                    'name' => $product->product_name,
+                    'variant' => "-",
+                    'outlet' => $product->outlet_name,
+                    'price' => $product->product_price,
+                    'qty' => $recProduct->qty_product 
+                ];
+            }
+        }
 
         $result = [
             'transaction' => $transaction,
             'consultation' => $consultation,
-            'recomendation_product' => $recomendationProduct,
-            'recomendation_drug' => $recomendationDrug
+            'doctor' => $doctor,
+            'customer' => $customer,
+            'recomendation_product' => $resRecomendationProduct,
+            'recomendation_drug' => $resRecomendationDrug
         ];
 
-        return response()->json(['status'  => 'success', 'result' => $transaction]);
+        return response()->json(['status'  => 'success', 'result' => $result]);
     }
 
     public function getProductList(Request $request)
