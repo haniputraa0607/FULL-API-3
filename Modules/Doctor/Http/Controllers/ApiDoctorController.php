@@ -454,4 +454,19 @@ class ApiDoctorController extends Controller
 
 		return MyHelper::checkGet($comment);
 	}
+
+    public function listAllDoctor(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $doctor = Doctor::with('clinic')->orderBy('created_at', 'DESC');
+
+        if(!empty($post['id_outlet'])){
+            $doctor = $doctor->where('id_outlet', $post['id_outlet']);
+        }
+
+        $doctor = $doctor->get()->toArray();
+
+        return response()->json(['status'  => 'success', 'result' => $doctor]);
+    }
 }
