@@ -266,7 +266,7 @@ class ApiOnlineTransaction extends Controller
                 'id_transaction_group'        => $insertTransactionGroup['id_transaction_group'],
                 'id_outlet'                   => $data['id_outlet'],
                 'id_user'                     => $user->id,
-                'id_transaction_consultation' => $post['id_transaction_consultation'],
+                'id_transaction_consultation' => $post['id_transaction_consultation']??null,
                 'transaction_date'            => $currentDate,
                 'transaction_receipt_number'  => $receiptNumber,
                 'transaction_status'          => $transactionStatus,
@@ -2661,6 +2661,9 @@ class ApiOnlineTransaction extends Controller
                             $deliveryPrice = $deliveryPrice + ($shipmentPrice??0);
                         }
 
+                        $items[$index]['subtotal'] = $productSubtotal;
+                        $items[$index]['subtotal_text'] = 'Rp '.number_format($productSubtotal,0,",",".");
+
                         if(!empty($shipmentRateID)){
                             $items[$index]['delivery_price'] = [
                                 'rate_id' => $shipmentRateID,
@@ -2672,8 +2675,8 @@ class ApiOnlineTransaction extends Controller
                                 'shipment_price_text' => 'Rp '.number_format($shipmentPrice,0,",",".")
                             ];
 
-                            $items[$index]['items_subtotal'] = $productSubtotal+$shipmentPrice;
-                            $items[$index]['items_subtotal_text'] = 'Rp '.number_format(($productSubtotal+$shipmentPrice),0,",",".");
+                            $items[$index]['subtotal'] = $productSubtotal+$shipmentPrice;
+                            $items[$index]['subtotal_text'] = 'Rp '.number_format(($productSubtotal+$shipmentPrice),0,",",".");
                         }
 
                         if(empty($deliveryPriceList)){
