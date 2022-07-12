@@ -2122,7 +2122,7 @@ class PromoCampaignTools{
 		$total_product = 0;
 		foreach ($trxs as $key => &$trx) {
 
-			if (!in_array($trx['id_brand'], $promo_brand)) {
+			if (!in_array($trx['id_brand']??null, $promo_brand)) {
 				continue;
 			}
 
