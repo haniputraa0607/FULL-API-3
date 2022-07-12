@@ -38,6 +38,9 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be'], 'pref
 
     Route::post('extend-period', 'ApiPromo@extendPeriod');
     Route::post('promo-description', 'ApiPromo@updatePromoDescription');
+
+    Route::get('active-campaign', 'ApiPromoCampaign@activeCampaign');
+    Route::post('update-visibility', 'ApiPromoCampaign@updateVisibility');
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be'], 'prefix' => 'promo-setting'], function () {
@@ -55,6 +58,8 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'pr
 // DEVELOPMENT
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'prefix' => 'promo-campaign'], function () {
     Route::post('validate', 'ApiPromoCampaign@validateCode');
+    Route::post('list-ongoing', 'ApiPromoCampaign@onGoingPromoCampaign');
+    Route::post('list-ongoing/detail', 'ApiPromoCampaign@detailOnGoingPromoCampaign');
 });
 
 // Referral

@@ -174,6 +174,17 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
         Route::post('delete', 'ApiFeaturedSubscription@destroy');
     });
 
+    // featured promo campaign
+    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'featured_promo_campaign'], function()
+    {
+        Route::get('list-merchant', 'ApiFeaturedPromoCampaign@indexMerchant');
+        Route::get('list', 'ApiFeaturedPromoCampaign@index');
+        Route::post('create', 'ApiFeaturedPromoCampaign@create');
+        Route::post('update', 'ApiFeaturedPromoCampaign@update');
+        Route::post('reorder', 'ApiFeaturedPromoCampaign@reorder');
+        Route::post('delete', 'ApiFeaturedPromoCampaign@destroy');
+    });
+
     //max consultation quota
     Route::post('/max-consultation/update', 'ApiSetting@maxConsultationQuota');
 });

@@ -127,6 +127,7 @@ class ApiOnlineTransaction extends Controller
         $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
         $this->bundling      = "Modules\ProductBundling\Http\Controllers\ApiBundlingController";
         $this->merchant = "Modules\Merchant\Http\Controllers\ApiMerchantController";
+        $this->promo_trx 	 = "Modules\Transaction\Http\Controllers\ApiPromoTransaction";
     }
 
     public function newTransaction(Request $request) {
@@ -265,7 +266,7 @@ class ApiOnlineTransaction extends Controller
                 'id_transaction_group'        => $insertTransactionGroup['id_transaction_group'],
                 'id_outlet'                   => $data['id_outlet'],
                 'id_user'                     => $user->id,
-                'id_transaction_consultation' => $post['id_transaction_consultation'],
+                'id_transaction_consultation' => $post['id_transaction_consultation']??null,
                 'transaction_date'            => $currentDate,
                 'transaction_receipt_number'  => $receiptNumber,
                 'transaction_status'          => $transactionStatus,
@@ -557,11 +558,13 @@ class ApiOnlineTransaction extends Controller
         }
 
         $errorMsg = [];
-        $address = UserAddress::leftJoin('cities', 'cities.id_city', 'user_addresses.id_city')
+        $address = UserAddress::leftJoin('subdistricts', 'subdistricts.id_subdistrict', 'user_addresses.id_subdistrict')
+            ->leftJoin('districts', 'districts.id_district', 'subdistricts.id_district')
+            ->leftJoin('cities', 'cities.id_city', 'districts.id_city')
             ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
             ->where('id_user', $user->id)
             ->orderBy('main_address', 'desc')
-            ->select('user_addresses.*', 'city_name', 'provinces.id_province', 'province_name');
+            ->select('user_addresses.*', 'city_name', 'provinces.id_province', 'province_name', 'districts.id_district', 'subdistrict_name', 'district_name');
 
         if(!empty($post['id_user_address'])){
             $address = $address->where('id_user_address', $post['id_user_address']);
@@ -571,17 +574,20 @@ class ApiOnlineTransaction extends Controller
 
         $address = $address->first();
         if(empty($address)){
-            $address = UserAddress::leftJoin('cities', 'cities.id_city', 'user_addresses.id_city')
+            $address = UserAddress::leftJoin('subdistricts', 'subdistricts.id_subdistrict', 'user_addresses.id_subdistrict')
+                ->leftJoin('districts', 'districts.id_district', 'subdistricts.id_district')
+                ->leftJoin('cities', 'cities.id_city', 'districts.id_city')
                 ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
                 ->where('id_user', $user->id)
                 ->orderBy('main_address', 'desc')
-                ->select('user_addresses.*', 'city_name', 'provinces.id_province', 'province_name')->first();
+                ->select('user_addresses.*', 'city_name', 'provinces.id_province', 'province_name', 'districts.id_district', 'subdistrict_name', 'district_name')->first();
         }
         $mainAddress = $address;
 
         $itemsCheck = $this->checkDataTransaction($post['items'], 0, 0, 1, $mainAddress, $fromRecipeDoctor);
         $items = $itemsCheck['items'];
         $subtotal = $itemsCheck['subtotal'];
+        $delivery = $itemsCheck['total_delivery']??0;
         $checkOutStatus = $itemsCheck['available_checkout'];
         if(!empty($itemsCheck['error_messages'])){
             $checkOutStatus = false;
@@ -591,22 +597,20 @@ class ApiOnlineTransaction extends Controller
         if(!empty($mainAddress)){
             $mainAddress = [
                 "id_user_address" => $mainAddress['id_user_address'],
-                "name" => $mainAddress['name'],
-                "type" => $mainAddress['type'],
-                "short_address" => $mainAddress['short_address'],
                 "address" => $mainAddress['address'],
                 "postal_code" => $mainAddress['postal_code'],
-                "description" => $mainAddress['description'],
-                "latitude" => $mainAddress['latitude'],
-                "longitude" => $mainAddress['longitude'],
-                "id_city" => $mainAddress['id_city'],
-                "city_name" => $mainAddress['city_name'],
                 "id_province" => $mainAddress['id_province'],
                 "province_name" => $mainAddress['province_name'],
+                "id_city" => $mainAddress['id_city'],
+                "city_name" => $mainAddress['city_name'],
+                "id_district" => $mainAddress['id_district'],
+                "district_name" => $mainAddress['district_name'],
+                "id_subdistrict" => $mainAddress['id_subdistrict'],
+                "subdistrict_name" => $mainAddress['subdistrict_name'],
                 "receiver_name" => (empty($mainAddress['receiver_name']) ? $user->name: $mainAddress['receiver_name']),
                 "receiver_phone" => (empty($mainAddress['receiver_phone']) ? $user->phone: $mainAddress['receiver_phone']),
                 "receiver_email" => (empty($mainAddress['receiver_email']) ? $user->email: $mainAddress['receiver_email']),
-                "main_address_status" => $mainAddress['main_address']
+                "main_address_status" => $mainAddress['favorite']
             ];
         }else{
             $errorMsg[] = 'Alamat tidak boleh kosong'.
@@ -617,18 +621,14 @@ class ApiOnlineTransaction extends Controller
         $summaryOrder = [
             [
                 'name' => 'Subtotal',
-                'value' => 'Rp '.$subtotal
+                'value' => 'Rp '.number_format($subtotal,0,",",".")
             ],
             [
                 'name' => 'Biaya Kirim',
-                'value' => 'Rp 0'
-            ],
-            [
-                'name' => 'Diskon',
-                'value' => (empty($discount) ? '-' : 'Rp '.number_format((int)$discount,0,",","."))
+                'value' => 'Rp '.number_format($delivery,0,",",".")
             ]
         ];
-        $grandTotal = $subtotal;
+        $grandTotal = $subtotal+$delivery;
 
         if(isset($post['point_use']) && $post['point_use']){
             if($currentBalance >= $grandTotal){
@@ -653,6 +653,8 @@ class ApiOnlineTransaction extends Controller
             'available_checkout' => $checkOutStatus,
             'error_messages' => implode('. ', array_unique($errorMsg))
         ];
+        $result = app($this->promo_trx)->applyPromoCheckout($result);
+
         $fake_request = new Request(['show_all' => 0]);
         $result['available_payment'] = $this->availablePayment($fake_request)['result'] ?? [];
 
@@ -2410,6 +2412,7 @@ class ApiOnlineTransaction extends Controller
 
         $availableCheckout = true;
         $subtotal = 0;
+        $deliveryPrice = 0;
         $errorMsg = [];
         $weight = [];
         $needRecipeStatus = 0;
@@ -2532,7 +2535,7 @@ class ApiOnlineTransaction extends Controller
                         "id_product" => $item['id_product'],
                         "product_category_name" => $product['product_category_name'],
                         "product_name" => $product['product_name'],
-                        "product_base_price" => $productGlobalPrice['product_global_price'],
+                        "product_base_price" => (int)$productGlobalPrice['product_global_price'],
                         "product_price" => (int)$product['product_price'],
                         "product_price_text" => 'Rp '.number_format((int)$product['product_price'],0,",","."),
                         "product_price_subtotal" => (int)$totalPrice,
@@ -2569,6 +2572,7 @@ class ApiOnlineTransaction extends Controller
                 if(!empty($value['items'])){
                     $subtotal = $subtotal + $productSubtotal;
                     $s = round($dimentionProduct ** (1/3), 0);
+                    $items[$index]['outlet_name'] = $checkOutlet['outlet_name'];
                     $items[$index]['items_total_height'] = (int)$s;
                     $items[$index]['items_total_width'] = (int) $s;
                     $items[$index]['items_total_length'] = (int) $s;
@@ -2632,12 +2636,50 @@ class ApiOnlineTransaction extends Controller
                         $availableDelivery = app($this->merchant)->availableDelivery($value['id_outlet'], 1);
                         $shipper = new Shipper();
                         $getDeliveryPrice = $shipper->sendRequest('Get Price', 'POST', 'pricing/domestic', $dtDeliveryPrice);
-                        $deliveryPrice = $shipper->listPrice($getDeliveryPrice['response']['data']??[], $availableDelivery);
+                        $deliveryPriceList = $shipper->listPrice($getDeliveryPrice['response']['data']??[], $availableDelivery);
 
-                        $items[$index]['available_delivery'] = $deliveryPrice;
+                        $items[$index]['available_delivery'] = $deliveryPriceList;
                         $items[$index]['delivery'] = $value['delivery']??[];
 
-                        if(empty($deliveryPrice)){
+                        if($from_check && !empty($value['delivery']['rate_id'])){
+                            foreach ($deliveryPriceList as $shipmentCheck){
+                                foreach ($shipmentCheck['service'] as $service){
+                                    if($service['rate_id'] == $value['delivery']['rate_id']){
+                                        $shipmentRateID = $service['rate_id'];
+                                        $shipmentCode = $service['code'];
+                                        $shipmentCourier = $shipmentCheck['delivery_method'];
+                                        $shipmentCourierService = $shipmentCheck['delivery_name'].' '.$service['service_name'];
+                                        $shipmentInsuranceStatus = ($value['delivery']['insurance_status'] == true ? 1 : 0);
+                                        $shipmentInsurancePrice = $service['insurance_fee'];
+                                        $shipmentPrice = $service['price'];
+                                        if($shipmentInsuranceStatus == 1){
+                                            $shipmentPrice = $shipmentPrice + $shipmentInsurancePrice;
+                                        }
+                                    }
+                                }
+                            }
+                            $deliveryPrice = $deliveryPrice + ($shipmentPrice??0);
+                        }
+
+                        $items[$index]['subtotal'] = $productSubtotal;
+                        $items[$index]['subtotal_text'] = 'Rp '.number_format($productSubtotal,0,",",".");
+
+                        if(!empty($shipmentRateID)){
+                            $items[$index]['delivery_price'] = [
+                                'rate_id' => $shipmentRateID,
+                                'shipment_code' => $shipmentCode,
+                                'shipment_courier' => $shipmentCourier,
+                                'shipment_courier_service' => $shipmentCourierService,
+                                'shipment_insurance_status' => $shipmentInsurancePrice,
+                                'shipment_price' => $shipmentPrice,
+                                'shipment_price_text' => 'Rp '.number_format($shipmentPrice,0,",",".")
+                            ];
+
+                            $items[$index]['subtotal'] = $productSubtotal+$shipmentPrice;
+                            $items[$index]['subtotal_text'] = 'Rp '.number_format(($productSubtotal+$shipmentPrice),0,",",".");
+                        }
+
+                        if(empty($deliveryPriceList)){
                             $errorMsg[] = 'Kurir tidak available';
                             $errorMsgSubgroup[] = 'Kurir tidak available';
                             if($from_new == 1){
@@ -2662,6 +2704,7 @@ class ApiOnlineTransaction extends Controller
         return [
             'subtotal' => $subtotal,
             'items' => array_values($items),
+            'total_delivery' => $deliveryPrice,
             'available_checkout' => $availableCheckout,
             'error_messages' => implode('. ', array_unique($errorMsg)),
             'weight' => array_sum($weight)
