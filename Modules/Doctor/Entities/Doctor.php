@@ -40,16 +40,14 @@ class Doctor extends Authenticatable
         'provider',
         'phone_verified',
         'password',
-        'doctor_email',
         'birthday',
         'gender',
         'celebrate',
-        'province',
-        'city',
         'address',
         'alumni',
         'practical_experience',
         'registration_certificate_number',
+        'id_card_number',
         'id_outlet',
         'id_doctor_specialist',
         'doctor_status',
@@ -62,7 +60,9 @@ class Doctor extends Authenticatable
         'schedule_toogle',
         'notification_toogle',
         'count_login_failed',
-        'pin_changed'
+        'pin_changed',
+        'otp_forgot',
+        'otp_valid_time'
     ];
 
     public function clinic()
