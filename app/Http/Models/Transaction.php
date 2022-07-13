@@ -312,6 +312,11 @@ class Transaction extends Model
             ->join('cities','cities.id_city','outlets.id_city');
     }
 
+    public function transaction_products()
+    {
+        return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction');
+    }
+
     /**
      * Called when payment completed
      * @return [type] [description]

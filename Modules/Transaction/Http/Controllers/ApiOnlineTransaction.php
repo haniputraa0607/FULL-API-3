@@ -204,11 +204,10 @@ class ApiOnlineTransaction extends Controller
             return response()->json(['status'    => 'fail', 'messages'  => [$itemsCheck['error_messages']]]);
         }
 
-        $deliveryTotal = 0;
         $transactionType = 'Delivery';
-        $items = $itemsCheck['items'];
-        $subtotal = 0;
+        $subtotal = $itemsCheck['subtotal'];
         $grandtotal = 0;
+        $deliveryTotal = $itemsCheck['total_delivery']??0;
         $currentDate = date('Y-m-d H:i:s');
         $paymentType = NULL;
         $transactionStatus = 'Unpaid';
@@ -217,14 +216,45 @@ class ApiOnlineTransaction extends Controller
             $paymentType = 'Balance';
         }
 
+        $currentBalance = LogBalance::where('id_user', $user->id)->sum('balance');
+        if(isset($post['point_use']) && $post['point_use']){
+            if($currentBalance >= $grandtotal){
+                $grandtotal = 0;
+            }else{
+                $grandtotal = $grandtotal - $currentBalance;
+            }
+        }
+
+        $grandTotal = $subtotal+$deliveryTotal;
+
+        if(isset($post['point_use']) && $post['point_use']){
+            if($currentBalance >= $grandTotal){
+                $usePoint = $grandTotal;
+                $grandTotal = 0;
+            }else{
+                $usePoint = $currentBalance;
+                $grandTotal = $grandTotal - $currentBalance;
+            }
+
+            $currentBalance -= $usePoint;
+        }
+        $itemsCheck['grandtotal'] = $grandTotal;
+
+        $itemsCheck = app($this->promo_trx)->applyPromoCheckout($itemsCheck);
+        if(!empty($itemsCheck['promo_code']['is_error']) && $itemsCheck['promo_code']['is_error']){
+            return response()->json(['status'    => 'fail', 'messages'  => [$itemsCheck['promo_code']['text']??'Promo tidak bisa digunakan']]);
+        }
+        $items = $itemsCheck['items'];
+
         DB::beginTransaction();
         UserFeedbackLog::where('id_user',$request->user()->id)->delete();
         $dataTransactionGroup = [
             'id_user' => $user->id,
             'transaction_receipt_number' => 'TRX'.time().rand().substr($grandtotal, 0,5),
-            'transaction_subtotal' => 0,
-            'transaction_shipment' => 0,
-            'transaction_grandtotal' => 0,
+            'transaction_subtotal' => $subtotal,
+            'transaction_shipment' => $deliveryTotal,
+            'transaction_grandtotal' => $itemsCheck['grandtotal'],
+            'transaction_discount' => $itemsCheck['total_discount']??0,
             'transaction_payment_status' => $paymentStatus,
             'transaction_payment_type' => $paymentType,
             'transaction_group_date' => $currentDate
@@ -262,8 +292,20 @@ class ApiOnlineTransaction extends Controller
                 }
             }
 
+            $discount = $data['discount']??0;
+            $discountDelivery = $data['discount_delivery']??0;
+            $discountAll = $discount+$discountDelivery;
+
+            $discountItem = $discount;
+            $discountBill = 0;
+            if(!empty($data['discount_bill_status'])){
+                $discountItem = 0;
+                $discountBill = $discount;
+            }
+
             $transaction = [
                 'id_transaction_group'        => $insertTransactionGroup['id_transaction_group'],
+                'id_promo_campaign_promo_code' => $data['id_promo_campaign_promo_code']??null,
                 'id_outlet'                   => $data['id_outlet'],
                 'id_user'                     => $user->id,
                 'id_transaction_consultation' => $post['id_transaction_consultation']??null,
@@ -273,14 +315,18 @@ class ApiOnlineTransaction extends Controller
                 'trasaction_type'             => $transactionType,
                 'transaction_subtotal'        => $data['items_subtotal'],
                 'transaction_gross'  		  => $data['items_subtotal'],
-                'transaction_shipment'        => 0,
-                'transaction_grandtotal'      => $data['items_subtotal'],
+                'transaction_shipment'        => $data['delivery_price']['shipment_price']??0,
+                'transaction_grandtotal'      => $data['subtotal_promo'] ?? $data['subtotal'] ?? 0,
                 'transaction_point_earned'    => 0,
                 'transaction_cashback_earned' => $cashback,
                 'trasaction_payment_type'     => $paymentType,
                 'transaction_payment_status'  => $paymentStatus,
                 'membership_level'            => $post['membership_level'],
-                'image_recipe'                => $imageRecipe??null
+                'image_recipe'                => $imageRecipe??null,
+                'transaction_discount'        => ($discountAll > 0 ? -$discountAll:0),
+                'transaction_discount_item'  => $discountItem,
+                'transaction_discount_bill'  => $discountBill,
+                'transaction_discount_delivery'  => $discountDelivery,
             ];
 
             $newTopupController = new NewTopupController();
@@ -344,7 +390,11 @@ class ApiOnlineTransaction extends Controller
                     'transaction_product_note'     => $valueProduct['note'],
                     'transaction_product_wholesaler_minimum_qty'  => $valueProduct['wholesaler_minimum']??null,
                     'created_at'                   => date('Y-m-d', strtotime($insertTransaction['transaction_date'])).' '.date('H:i:s'),
-                    'updated_at'                   => date('Y-m-d H:i:s')
+                    'updated_at'                   => date('Y-m-d H:i:s'),
+                    'transaction_product_discount' => $valueProduct['total_discount']??0,
+                    'transaction_product_discount_all' => $valueProduct['total_discount']??0,
+                    'transaction_product_qty_discount' => $valueProduct['qty_discount']??0,
+                    'transaction_product_base_discount' => $valueProduct['base_discount_each_item']??0
                 ];
 
                 $trx_product = TransactionProduct::create($dataProduct);
@@ -406,6 +456,7 @@ class ApiOnlineTransaction extends Controller
             }
 
             $shipmentCourier = null;
+            $shipmentCourierCode = null;
             $shipmentCourierService = null;
             $shipmentInsuranceStatus = 0;
             $shipmentInsurancePrice = 0;
@@ -417,6 +468,7 @@ class ApiOnlineTransaction extends Controller
                     if($service['rate_id'] == $data['delivery']['rate_id']){
                         $shipmentRateID = $service['rate_id'];
                         $shipmentCourier = $shipmentCheck['delivery_method'];
+                        $shipmentCourierCode = $service['code'];
                         $shipmentCourierService = $shipmentCheck['delivery_name'].' '.$service['service_name'];
                         $shipmentInsuranceStatus = ($data['delivery']['insurance_status'] == true ? 1 : 0);
                         $shipmentInsurancePrice = $service['insurance_fee'];
@@ -454,6 +506,7 @@ class ApiOnlineTransaction extends Controller
                 'shipment_total_width'    => $data['items_total_width']??0,
                 'shipment_total_length'    => $data['items_total_length']??0,
                 'shipment_courier'         => $shipmentCourier,
+                'shipment_courier_code'    => $shipmentCourierCode,
                 'shipment_courier_service' => $shipmentCourierService,
                 'shipment_insurance_price' => $shipmentInsurancePrice,
                 'shipment_insurance_use_status' => $shipmentInsuranceStatus,
@@ -462,7 +515,6 @@ class ApiOnlineTransaction extends Controller
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
-            $deliveryTotal = $deliveryTotal + $shipmentPrice;
 
             $insertShipment = TransactionShipment::create($dataShipment);
             if (!$insertShipment) {
@@ -472,11 +524,6 @@ class ApiOnlineTransaction extends Controller
                     'messages'  => ['Insert Shipment Transaction Failed']
                 ]);
             }
-
-            Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
-                'transaction_shipment' => $shipmentPrice,
-                'transaction_grandtotal' => $insertTransaction['transaction_grandtotal']+$shipmentPrice
-            ]);
 
             $dataDailyTrx = [
                 'id_transaction'    => $insertTransaction['id_transaction'],
@@ -491,22 +538,6 @@ class ApiOnlineTransaction extends Controller
                     'status'    => 'fail',
                     'messages'  => ['Failed create daily transaction']
                 ]);
-            }
-        }
-
-        $grandtotal = $subtotal+$deliveryTotal;
-        TransactionGroup::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->update([
-            'transaction_subtotal' => $subtotal,
-            'transaction_shipment' => $deliveryTotal,
-            'transaction_grandtotal' => $grandtotal
-        ]);
-
-        $currentBalance = LogBalance::where('id_user', $user->id)->sum('balance');
-        if(isset($post['point_use']) && $post['point_use']){
-            if($currentBalance >= $grandtotal){
-                $grandtotal = 0;
-            }else{
-                $grandtotal = $grandtotal - $currentBalance;
             }
         }
 
@@ -527,6 +558,13 @@ class ApiOnlineTransaction extends Controller
 
             if($grandtotal == 0){
                 $trxGroup->triggerPaymentCompleted();
+            }
+        }
+
+        $transactionPromo = Transaction::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->get()->toArray();
+        foreach ($transactionPromo as $trxPromo){
+            if($trxPromo['id_promo_campaign_promo_code']){
+                app($this->promo_trx)->applyPromoNewTrx($trxPromo);
             }
         }
 
@@ -2555,6 +2593,11 @@ class ApiOnlineTransaction extends Controller
                         "error_message" => $error
                     ];
 
+                    $idBrand = BrandProduct::where('id_product', $item['id_product'])->first()['id_brand']??null;
+                    if(!empty($idBrand)){
+                        $value['items'][$key]['id_brand'] = $idBrand;
+                    }
+
                     if(!empty($error)){
                         $errorMsg[] = $error;
                     }
@@ -2641,7 +2684,7 @@ class ApiOnlineTransaction extends Controller
                         $items[$index]['available_delivery'] = $deliveryPriceList;
                         $items[$index]['delivery'] = $value['delivery']??[];
 
-                        if($from_check && !empty($value['delivery']['rate_id'])){
+                        if(!empty($value['delivery']['rate_id'])){
                             foreach ($deliveryPriceList as $shipmentCheck){
                                 foreach ($shipmentCheck['service'] as $service){
                                     if($service['rate_id'] == $value['delivery']['rate_id']){

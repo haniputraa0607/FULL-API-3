@@ -3747,10 +3747,7 @@ class ApiPromoCampaign extends Controller
 
         $table_shipment::where($id_table, '=', $id_post)->delete();
 
-        if ($post['promo_type'] == 'Discount delivery') {
-        	$post['filter_shipment'] = 'selected_shipment';
-        	$post['shipment_method'] = $post['shipment_method'] ?? [];
-        }
+        $post['shipment_method'] = $post['shipment_method'] ?? [];
 
         if ($post['filter_shipment'] == 'all_shipment') {
             try {
