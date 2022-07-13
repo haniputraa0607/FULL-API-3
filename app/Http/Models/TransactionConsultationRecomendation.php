@@ -69,4 +69,9 @@ class TransactionConsultationRecomendation extends model
     {
         return $query->where('outlet', "id_outlet");
     }
+
+	public function getOutlet()
+    {
+        return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet');
+    }
 }
