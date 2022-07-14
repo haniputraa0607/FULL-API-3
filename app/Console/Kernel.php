@@ -46,13 +46,13 @@ class Kernel extends ConsoleKernel
          * reset all member points / balance
          * run every day at 01:00
          */
-        $schedule->call('Modules\Setting\Http\Controllers\ApiSetting@cronPointReset')->dailyAt('01:00');
+        $schedule->call('Modules\Setting\Http\Controllers\ApiSetting@cronPointReset')->dailyAt(config('app.env') == 'staging' ? '05:15' : '01:00');
 
         /**
          * detect transaction fraud and member balance by comparing the encryption of each data in the log_balances table
          * run every day at 02:00
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@checkSchedule')->dailyAt('04:30');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@checkSchedule')->dailyAt(config('app.env') == 'staging' ? '05:45' : '04:30');
 
         /**
          * cancel all pending transaction that have been more than 5 minutes
@@ -94,7 +94,7 @@ class Kernel extends ConsoleKernel
          * calculate achievement all transaction that have not calculated the achievement
          * run every day at 05:00
          */
-        $schedule->call('Modules\Achievement\Http\Controllers\ApiAchievement@calculateAchievement')->dailyAt('05:00');
+        $schedule->call('Modules\Achievement\Http\Controllers\ApiAchievement@calculateAchievement')->dailyAt(config('app.env') == 'staging' ? '06:00' : '05:00');
 
         /**
          * To process injection point
@@ -118,7 +118,7 @@ class Kernel extends ConsoleKernel
          * To make daily transaction reports (offline and online transactions)
          * Run every day at 03:00
          */
-        $schedule->call('Modules\Report\Http\Controllers\ApiCronReport@transactionCron')->dailyAt('03:00');
+        $schedule->call('Modules\Report\Http\Controllers\ApiCronReport@transactionCron')->dailyAt(config('app.env') == 'staging' ? '05:40' : '03:00');
 
         /**
          * To process fraud
@@ -129,7 +129,7 @@ class Kernel extends ConsoleKernel
          * reset notify outlet flag
          * run every day at 01:00
          */
-        $schedule->call('Modules\Outlet\Http\Controllers\ApiOutletController@resetNotify')->dailyAt('00:30');
+        $schedule->call('Modules\Outlet\Http\Controllers\ApiOutletController@resetNotify')->dailyAt(config('app.env') == 'staging' ? '05:50' : '00:30');
 
         /**
          * To process diburse
@@ -166,7 +166,7 @@ class Kernel extends ConsoleKernel
         /**
          * process refund shopeepay at 06:00
          */
-        $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronRefund')->dailyAt('03:05');
+        $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronRefund')->dailyAt(config('app.env') == 'staging' ? '05:37' : '03:05');
 
         /**
          * Check the status of Gosend which is not updated after 5 minutes
@@ -196,7 +196,7 @@ class Kernel extends ConsoleKernel
          * Sync Bundling
          * run every day at
          */
-        $schedule->call('Modules\ProductBundling\Http\Controllers\ApiBundlingController@bundlingToday')->dailyAt('04:00');
+        $schedule->call('Modules\ProductBundling\Http\Controllers\ApiBundlingController@bundlingToday')->dailyAt(config('app.env') == 'staging' ? '05:16' : '04:00');
 
         /**
          * Auto reject order wehelpyou when driver not found > 10 minutes
@@ -213,9 +213,9 @@ class Kernel extends ConsoleKernel
         /**
          * To backup and truncate log database
          */
-        $schedule->command('backup:logdb --table=log_activities_apps --table=log_activities_be --table=log_activities_outlet_apps --table=log_activities_pos --table=log_activities_pos_transaction --truncate --chunk=10000')->dailyAt('00:20');
+        $schedule->command('backup:logdb --table=log_activities_apps --table=log_activities_be --table=log_activities_outlet_apps --table=log_activities_pos --table=log_activities_pos_transaction --truncate --chunk=10000')->dailyAt(config('app.env') == 'staging' ? '05:17' : '00:20');
 
-        $schedule->command('backup:logdb --table=log_api_gosends --table=log_api_wehelpyou --table=log_backend_errors --table=log_call_outlet_apps --table=log_check_promo_code --table=log_crons --table=log_ipay88s --table=log_iris --table=log_midtrans --table=log_ovo_deals --table=log_ovos --table=log_shopee_pays --table=log_xendits --truncate')->dailyAt('00:25');
+        $schedule->command('backup:logdb --table=log_api_gosends --table=log_api_wehelpyou --table=log_backend_errors --table=log_call_outlet_apps --table=log_check_promo_code --table=log_crons --table=log_ipay88s --table=log_iris --table=log_midtrans --table=log_ovo_deals --table=log_ovos --table=log_shopee_pays --table=log_xendits --truncate')->dailyAt(config('app.env') == 'staging' ? '05:18' : '00:25');
     }
 
     /**
