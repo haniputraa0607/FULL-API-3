@@ -59,6 +59,7 @@ class TransactionShipment extends Model
 		'destination_description',
 		'shipment_total_weight',
 		'shipment_courier',
+        'shipment_courier_code',
 		'shipment_courier_service',
 		'shipment_courier_etd',
 		'short_link',

@@ -20,6 +20,7 @@ class TransactionGroup extends Model
         'transaction_subtotal',
         'transaction_shipment',
         'transaction_grandtotal',
+        'transaction_discount',
         'transaction_payment_status',
         'transaction_payment_type',
         'transaction_void_date',
