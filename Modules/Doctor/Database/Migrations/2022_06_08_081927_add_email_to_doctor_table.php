@@ -18,6 +18,7 @@ class AddEmailToDoctorTable extends Migration
             $table->boolean('birthday')->after('doctor_email');
             $table->boolean('gender')->after('birthday');
             $table->boolean('celebrate')->after('gender');
+            $table->string('address')->after('celebrate');
         });
     }
 
@@ -30,7 +31,6 @@ class AddEmailToDoctorTable extends Migration
     {
         Schema::table('doctors', function (Blueprint $table) {
             $table->dropColumn('doctor_email');
-            $table->dropColumn('is_pin_sent');
             $table->dropColumn('birthday');
             $table->dropColumn('gender');
             $table->dropColumn('celebrate');

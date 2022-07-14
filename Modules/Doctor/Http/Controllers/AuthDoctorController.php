@@ -336,8 +336,6 @@ class AuthDoctorController extends Controller
 
         $doctor = Doctor::where('doctor_phone', '=', $phone)->first();
 
-        dd($doctor->sms_increment);
-
         if (!$doctor) {
             $result = [
                 'status'    => 'fail',
@@ -355,6 +353,7 @@ class AuthDoctorController extends Controller
             ->toArray();
 
         if ($data) {
+            dd($data);
             //First check rule for request otp
             $checkRuleRequest = MyHelper::checkRuleForRequestOTP($data);
             if(isset($checkRuleRequest['status']) && $checkRuleRequest['status'] == 'fail'){

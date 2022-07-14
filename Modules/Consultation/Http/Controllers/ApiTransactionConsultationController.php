@@ -13,6 +13,7 @@ use App\Http\Models\TransactionConsultationRecomendation;
 use App\Http\Models\User;
 use App\Http\Models\Setting;
 use App\Http\Models\Product;
+use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\Merchant\Entities\Merchant;
 
 use Modules\UserFeedback\Entities\UserFeedbackLog;
@@ -1223,22 +1224,56 @@ class ApiTransactionConsultationController extends Controller
     public function getConsultationDetailFromAdmin($id)
     {
         //get Transaction detail
-        $transaction = Transaction::where('id_transaction', $id)->where('trasaction_type', 'Consultation')->with('consultation')->first();
+        $transaction = Transaction::where('id_transaction', $id)->where('trasaction_type', 'Consultation')->first();
+
+        if(empty($transaction)){
+            return response()->json(['status' => 'fail', 'messages' => ['Transaction not found']]);
+        }
 
         $consultation = $transaction->consultation;
-        
-        $recomendationProduct = TransactionConsultationRecomendation::where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "product")->get();
 
-        $recomendationDrug = TransactionConsultationRecomendation::where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "drug")->get();
+        if(empty($consultation)){
+            return response()->json(['status' => 'fail', 'messages' => ['Consultation not found']]);
+        }
+
+        $doctor = $consultation->doctor;
+
+        if(empty($doctor)){
+            return response()->json(['status' => 'fail', 'messages' => ['Doctor not found']]);
+        }
+
+        $user = $transaction->user;
+
+        if(empty($user)){
+            return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
+        }
+        
+        $recomendationProduct = TransactionConsultationRecomendation::with('product')->with('getOutlet')->where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "product")->get();
+
+        foreach ($recomendationProduct as $key => $recP) {
+            $variant = ProductVariantGroup::where('id_product_variant_group', $recP->id_product_variant_group)->first();
+
+            $recomendationProduct[$key]['variant'] = $variant;
+        }
+
+        $recomendationDrug = TransactionConsultationRecomendation::with('product')->with('getOutlet')->where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "drug")->get();
+
+        foreach ($recomendationDrug as $key => $recD) {
+            $variant = ProductVariantGroup::where('id_product_variant_group', $recP->id_product_variant_group)->first();
+
+            $recomendationDrug[$key]['variant'] = $variant;
+        }
 
         $result = [
             'transaction' => $transaction,
             'consultation' => $consultation,
+            'doctor' => $doctor,
+            'customer' => $user,
             'recomendation_product' => $recomendationProduct,
             'recomendation_drug' => $recomendationDrug
         ];
 
-        return response()->json(['status'  => 'success', 'result' => $transaction]);
+        return response()->json(['status'  => 'success', 'result' => $result]);
     }
 
     public function getProductList(Request $request)
