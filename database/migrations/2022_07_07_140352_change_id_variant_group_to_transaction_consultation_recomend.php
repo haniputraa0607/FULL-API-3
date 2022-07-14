@@ -18,9 +18,9 @@ class ChangeIdVariantGroupToTransactionConsultationRecomend extends Migration
      */
     public function up()
     {
-        Schema::table('transaction_consultation_recomendations', function (Blueprint $table) {
-            $table->integer('id_product_variant_group')->nullable()->change();
-        });
+        // Schema::table('transaction_consultation_recomendations', function (Blueprint $table) {
+        //     $table->integer('id_product_variant_group')->nullable();
+        // });
     }
 
     /**
@@ -31,7 +31,7 @@ class ChangeIdVariantGroupToTransactionConsultationRecomend extends Migration
     public function down()
     {
         Schema::table('transaction_consultation_recomendations', function (Blueprint $table) {
-            $table->integer('id_product_variant_group')->change();
+            $table->dropColumn('id_product_variant_group');
         });
     }
 }

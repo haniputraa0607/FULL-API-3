@@ -3500,6 +3500,16 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00')
                 ),
+            350 =>
+                array(
+                    'id_feature' => 351,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Consultation',
+                    'show_hide' => 1,
+                    'order' => 128,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00')
+                ),
         );
 
         foreach ($rows as $row) {

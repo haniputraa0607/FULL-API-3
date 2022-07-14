@@ -18,7 +18,6 @@ class DoctorCreate extends FormRequest
             'pin'=>'required|string',
             'id_outlet'=>'required|integer',
             'doctor_session_price'=>'required|string',
-            'practical_experience'=>'required|string',
             'alumni'=>'required|string',
             'registration_certificate_number'=>'required|string',
         ];
