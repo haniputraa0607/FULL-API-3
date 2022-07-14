@@ -835,14 +835,16 @@ class ApiPromoCampaign extends Controller
 
            	$del_rule 	= false;
            	$brand_now 	= array_column($checkData[0]['promo_campaign_brands'], 'id_brand');
-           	$brand_new	= $post['id_brand'];
-           	unset($post['id_brand']);
+            if(!empty($post['id_brand'])){
+                $brand_new	= $post['id_brand'];
+                unset($post['id_brand']);
 
-           	$check_brand = array_merge(array_diff($brand_now, $brand_new), array_diff($brand_new, $brand_now));
+                $check_brand = array_merge(array_diff($brand_now, $brand_new), array_diff($brand_new, $brand_now));
 
-       		if (!empty($check_brand)) {
-       			$del_rule = true;
-       		}
+                if (!empty($check_brand)) {
+                    $del_rule = true;
+                }
+            }
 
 			if ($del_rule) {
 				$delete_rule = $this->deleteAllProductRule('promo_campaign', $post['id_promo_campaign']);
@@ -855,13 +857,15 @@ class ApiPromoCampaign extends Controller
 	                ]);
 	           	}
 
-	           	$insert_brand = $this->insertPromoCampaignBrand($post['id_promo_campaign'], $brand_new);
-				if (!$insert_brand) {
-	           		return response()->json([
-	                    'status'  => 'fail',
-	                    'messages'  => ['Insert Promo Campaign Brand Failed']
-	                ]);
-	           	}
+                if(!empty($brand_new)){
+                    $insert_brand = $this->insertPromoCampaignBrand($post['id_promo_campaign'], $brand_new);
+                    if (!$insert_brand) {
+                        return response()->json([
+                            'status'  => 'fail',
+                            'messages'  => ['Insert Promo Campaign Brand Failed']
+                        ]);
+                    }
+                }
 			}
 
             if ($checkData[0]['code_type'] == 'Single') {
@@ -885,6 +889,28 @@ class ApiPromoCampaign extends Controller
                 if (isset($post['promo_tag'])) {
                     $insertTag = $this->insertTag('update', $post['id_promo_campaign'], $post['promo_tag']);
                     unset($post['promo_tag']);
+                }
+
+                if (!empty($post['promo_image'])) {
+                    $upload = $this->insertPromoImage($post['promo_image'], 300, 300);
+                    if (empty($upload['promo_image'])) {
+                        return [
+                            'status'  => 'fail',
+                            'messages'  => ['Failed to upload image']
+                        ];
+                    }
+                    $post['promo_image'] = $upload['promo_image'];
+                }
+
+                if (!empty($post['promo_image_detail'])) {
+                    $uploadDetail = $this->insertPromoImage($post['promo_image_detail'], 750, 375);
+                    if (empty($uploadDetail['promo_image'])) {
+                        return [
+                            'status'  => 'fail',
+                            'messages'  => ['Failed to upload image']
+                        ];
+                    }
+                    $post['promo_image_detail'] = $uploadDetail['promo_image'];
                 }
 
                 $promoCampaign = PromoCampaign::where('id_promo_campaign', '=', $post['id_promo_campaign'])->update($post);
@@ -926,6 +952,29 @@ class ApiPromoCampaign extends Controller
                 }
 
                 $promoCampaign = PromoCampaign::where('id_promo_campaign', '=', $post['id_promo_campaign'])->first();
+
+                if (!empty($post['promo_image'])) {
+                    $upload = $this->insertPromoImage($post['promo_image'], 300, 300);
+                    if (empty($upload['promo_image'])) {
+                        return [
+                            'status'  => 'fail',
+                            'messages'  => ['Failed to upload image']
+                        ];
+                    }
+                    $post['promo_image'] = $upload['promo_image'];
+                }
+
+                if (!empty($post['promo_image_detail'])) {
+                    $uploadDetail = $this->insertPromoImage($post['promo_image_detail'], 750, 375);
+                    if (empty($uploadDetail['promo_image'])) {
+                        return [
+                            'status'  => 'fail',
+                            'messages'  => ['Failed to upload image']
+                        ];
+                    }
+                    $post['promo_image_detail'] = $uploadDetail['promo_image'];
+                }
+
                 $promoCampaignUpdate = $promoCampaign->update($post);
                 $generateCode = $this->generateCode('update', $post['id_promo_campaign'], $post['code_type'], $promo_code, $post['prefix_code'], $post['number_last_code'], $post['total_coupon']);
 
@@ -975,21 +1024,48 @@ class ApiPromoCampaign extends Controller
                 $post['date_end']   = $date_end->format('Y-m-d H:i:s');
             }
 
-            $brands = $post['id_brand'];
-            unset($post['id_brand']);
+            if(!empty($post['id_brand'])){
+                $brands = $post['id_brand'];
+                unset($post['id_brand']);
+            }
+
+            if (!empty($post['promo_image'])) {
+                $upload = $this->insertPromoImage($post['promo_image'], 300, 300);
+                if (empty($upload['promo_image'])) {
+                    return [
+                        'status'  => 'fail',
+                        'messages'  => ['Failed to upload image']
+                    ];
+                }
+                $post['promo_image'] = $upload['promo_image'];
+            }
+
+            if (!empty($post['promo_image_detail'])) {
+                $uploadDetail = $this->insertPromoImage($post['promo_image_detail'], 750, 375);
+                if (empty($uploadDetail['promo_image'])) {
+                    return [
+                        'status'  => 'fail',
+                        'messages'  => ['Failed to upload image']
+                    ];
+                }
+                $post['promo_image_detail'] = $uploadDetail['promo_image'];
+            }
+
             $promoCampaign = PromoCampaign::create($post);
             $generateCode = $this->generateCode('insert', $promoCampaign['id_promo_campaign'], $post['code_type'], $post['promo_code'], $post['prefix_code'], $post['number_last_code'], $post['total_coupon']);
             if (isset($post['promo_tag'])) {
                 $insertTag = $this->insertTag(null, $promoCampaign['id_promo_campaign'], $post['promo_tag']);
             }
 
-            $insert_brand = $this->insertPromoCampaignBrand($promoCampaign['id_promo_campaign'], $brands);
-			if (!$insert_brand) {
-           		return response()->json([
-                    'status'  => 'fail',
-                    'messages'  => ['Insert Promo Campaign Brand Failed']
-                ]);
-           	}
+            if(!empty($brands)){
+                $insert_brand = $this->insertPromoCampaignBrand($promoCampaign['id_promo_campaign'], $brands);
+                if (!$insert_brand) {
+                    return response()->json([
+                        'status'  => 'fail',
+                        'messages'  => ['Insert Promo Campaign Brand Failed']
+                    ]);
+                }
+            }
 
             $post['id_promo_campaign'] = $promoCampaign['id_promo_campaign'];
 
@@ -1127,10 +1203,12 @@ class ApiPromoCampaign extends Controller
 
         $update = $table::where($id_table, $id_post)->update($dataPromoCampaign);
 
-        $update_shipment_rule = $this->createShipmentRule($source, $id_table, $id_post, $post);
+        if(isset($post['filter_shipment'])){
+            $update_shipment_rule = $this->createShipmentRule($source, $id_table, $id_post, $post);
 
-        if ($update_shipment_rule['status'] != 'success') {
-        	return $update_shipment_rule;
+            if ($update_shipment_rule['status'] != 'success') {
+                return $update_shipment_rule;
+            }
         }
 
         $update_payment_method_rule = $this->createPaymentRule($source, $id_table, $id_post, $post);
@@ -1178,7 +1256,7 @@ class ApiPromoCampaign extends Controller
                 DB::rollBack();
                 return response()->json($createFilterProduct);
             }
-        } elseif ($post['promo_type'] == 'Discount bill') {
+        } elseif ($post['promo_type'] == 'Discount bill' && isset($post['filter_product_bill'])) {
             try {
                 $createFilterProduct = $this->createDiscountBill($id_post, $post['discount_type'], $post['discount_value'], $post['max_percent_discount'], $source, $table, $id_table, $post['filter_product_bill'], $post['multiple_product']??[], $product_type);
             } catch (Exception $e) {
@@ -2789,7 +2867,7 @@ class ApiPromoCampaign extends Controller
 
     public function getProduct($source, $query, $id_outlet=null)
     {
-    	$default_product = $query['product_rule'] === 'and' ? 'semua produk bertanda khusus' : 'produk bertanda khusus';
+        $default_product = $query['product_rule'] === 'and' ? 'semua produk tertentu' : 'produk tertentu';
 
     	if ($source == 'subscription') 
     	{
@@ -2833,6 +2911,15 @@ class ApiPromoCampaign extends Controller
     	}
     	else
     	{
+            if (!is_array($query)) {
+                $query = $query->load(
+                    $source.'_product_discount.product',
+                    $source.'_tier_discount_product.product',
+                    $source.'_buyxgety_product_requirement.product',
+                    $source.'_discount_bill_products.product'
+                )->toArray();
+            }
+
     		if ( ($query[$source.'_product_discount_rules']['is_all_product']??false) == 1 
     			|| ($query['promo_type']??false) == 'Referral' 
     			|| ($query[$source.'_discount_bill_rules']['is_all_product']??false) == 1
@@ -3660,10 +3747,7 @@ class ApiPromoCampaign extends Controller
 
         $table_shipment::where($id_table, '=', $id_post)->delete();
 
-        if ($post['promo_type'] == 'Discount delivery') {
-        	$post['filter_shipment'] = 'selected_shipment';
-        	$post['shipment_method'] = $post['shipment_method'] ?? [];
-        }
+        $post['shipment_method'] = $post['shipment_method'] ?? [];
 
         if ($post['filter_shipment'] == 'all_shipment') {
             try {
@@ -3710,10 +3794,10 @@ class ApiPromoCampaign extends Controller
 	                'created_at' => date('Y-m-d H:i:s'),
 	                'updated_at' => date('Y-m-d H:i:s')
             	];
-            	
+
             	$data_shipment[] = $delivery_gosend;
             }
-            
+
             try {
             	if ($source == 'deals_promotion') {
             		$id_table = 'id_deals_promotion_template';
@@ -3888,5 +3972,160 @@ class ApiPromoCampaign extends Controller
 		}
 
 		return $data_product;
+    }
+
+    public function insertPromoImage($promoImage, $width = null, $height = null)
+    {
+        if (empty($promoImage)) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Failed to upload image']
+            ];
+        }
+
+        if (!file_exists("img/promo-campaign/")) {
+            mkdir("img/promo-campaign/", 0755, true);
+        }
+
+        $upload = MyHelper::uploadPhotoStrict($promoImage, "img/promo-campaign/", $width, $height);
+
+        if (($upload['status'] ?? false) == "success") {
+            return [
+                'status'  => 'success',
+                'promo_image'  => $upload['path']
+            ];
+        } else {
+            return [
+                'status'  => 'fail',
+                'messages'  => ['Failed to upload image']
+            ];
+        }
+    }
+
+    public function activeCampaign(Request $request)
+    {
+        $campaign = PromoCampaign::select('id_promo_campaign', 'promo_title')
+            ->where('date_end', '>=', date('Y-m-d'))
+            ->where(function($q) {
+                $q->where('promo_type', '!=', 'Referral')
+                    ->orWhereNull('promo_type');
+            })
+            ->OrderBy('id_promo_campaign', 'DESC')
+            ->where('step_complete', '=', 1);
+
+        if ($request->promo_use) {
+            $campaign->where('promo_use_in', $request->promo_use);
+        }
+
+        if ($request->featured) {
+            $campaign->whereDoesntHave('featured_promo_campaign');
+        }
+
+        $res = $campaign->get();
+
+        return MyHelper::checkGet($res);
+    }
+
+    public function updateVisibility(Request $request){
+        $post = $request->all();
+
+        if(!empty($post['id_promo_campaign'])){
+            $update = PromoCampaign::where('id_promo_campaign', $post['id_promo_campaign'])->update(['promo_campaign_visibility' => $post['promo_campaign_visibility']]);
+
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
+        }
+    }
+
+    public function onGoingPromoCampaign(Request $request){
+        $post = $request->all();
+
+        $now = date('Y-m-d H-i-s');
+        $home_text = Setting::whereIn('key',['share_promo_code'])->get()->keyBy('key');
+        $text['share'] = $home_text['share_promo_code']['value_text'] ?? 'Bagikan %promo_code% ke teman-teman'; //dummy
+
+        $promo_campaign = PromoCampaign::select('id_promo_campaign', 'promo_title', 'promo_image', 'date_start', 'date_end', 'code_type', 'promo_description')
+            ->where('date_end','>=',$now)
+            ->where('date_start','<=',$now)
+            ->whereHas('brands',function($query){
+                $query->where('brand_active',1);
+            })
+            ->where('promo_campaign_visibility', 'Visible')
+            ->where('step_complete', 1)
+            ->OrderBy('id_promo_campaign', 'DESC');
+
+        if(isset($post['page'])){
+            $promo_campaign = $promo_campaign->paginate($request->length ?: 10)->toArray();
+            $promo_map = $promo_campaign['data'];
+        }else{
+            $promo_campaign = $promo_campaign->get()->toArray();
+            $promo_map = $promo_campaign;
+        }
+
+        $promo_new = array_map(function($value)use($text){
+            $value['code'] = null;
+            $value['share_promo'] = null;
+            if($value['code_type'] == 'Single'){
+                $promo_code = PromoCampaignPromoCode::where('id_promo_campaign',$value['id_promo_campaign'])->select('promo_code')->first();
+                $value['code'] = $promo_code['promo_code'];
+                $value['share_promo'] = str_replace('%promo_code%',$value['code'],$text['share']);
+            }
+            return $value;
+        },$promo_map);
+
+        if(isset($post['page'])){
+            $promo_campaign['data'] = $promo_new;
+        }else{
+            $promo_campaign = $promo_new;
+        }
+
+        return [
+            'status' => 'success',
+            'result' => $promo_campaign
+        ];
+    }
+
+    public function detailOnGoingPromoCampaign(Request $request){
+        $post = $request->all();
+        $now = date('Y-m-d H-i-s');
+        if(isset($post['id_promo_campaign']) && !empty($post['id_promo_campaign'])){
+            $id_promo = $post['id_promo_campaign'];
+            $home_text = Setting::whereIn('key',['share_promo_code'])->get()->keyBy('key');
+            $text['share'] = $home_text['share_promo_code']['value_text'] ?? 'Bagikan %promo_code% ke teman-teman'; //dummy
+
+            $promo_campaign = PromoCampaign::select('id_promo_campaign', 'promo_title', 'promo_image', 'date_start', 'date_end', 'code_type', 'promo_description')
+                ->where('id_promo_campaign',$id_promo)
+                ->where('date_end','>=',$now)
+                ->where('date_start','<=',$now)
+                ->where(function ($q){
+                    $q->whereHas('brands',function($query){
+                        $query->where('brand_active',1);
+                    })->orWhereDoesntHave('brands');
+                })
+                ->orderBy('id_promo_campaign', 'DESC')
+                ->first();
+
+            if (!$promo_campaign) {
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Promo tidak ditemukan']
+                ];
+            }
+
+            $promo_campaign = $promo_campaign->toArray();
+            if ($promo_campaign['code_type'] == 'Single') {
+                $promo_code = PromoCampaignPromoCode::where('id_promo_campaign',$promo_campaign['id_promo_campaign'])->select('promo_code')->first();
+                $promo_campaign['code'] = $promo_code['promo_code'];
+                $promo_campaign['share_promo'] = str_replace('%promo_code%',$promo_campaign['code'],$text['share']);
+            }
+
+            return [
+                'status' => 'success',
+                'result' => $promo_campaign,
+            ];
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
+        }
     }
 }

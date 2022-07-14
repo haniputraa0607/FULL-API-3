@@ -67,6 +67,11 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
 		return $this->belongsTo(\Modules\Doctor\Entities\Doctor::class, 'id_doctor');
 	}
 
+	public function user()
+	{
+		return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
+	}
+
 	public function recomendation()
 	{
 		return $this->hasMany(\App\Http\Models\TransactionConsultationRecomendation::class, 'id_transaction_consultation', 'id_transaction_consultation');

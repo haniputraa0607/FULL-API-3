@@ -71,7 +71,7 @@ class TransactionConsultationRecomendation extends model
     }
 
 	public function getOutlet()
-	{
-		return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet');
-	}
+    {
+        return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet');
+    }
 }

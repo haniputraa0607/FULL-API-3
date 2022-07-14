@@ -24,6 +24,7 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
 
     Route::post('detail', 'ApiOutletController@detailOutletMerchant');
     Route::get('store-page', 'ApiOutletController@outletMerchantStorePage');
+    Route::any('featured-promo-campaign','ApiOutletController@featuredPromoCampaign');
 });
 
 //Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth_client'],'namespace' => 'Modules\Outlet\Http\Controllers'], function()
