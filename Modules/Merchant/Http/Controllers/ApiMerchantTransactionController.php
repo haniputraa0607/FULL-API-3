@@ -34,6 +34,7 @@ use Modules\Outlet\Entities\DeliveryOutlet;
 use DB;
 use App\Http\Models\Transaction;
 use Modules\ProductVariant\Entities\ProductVariantPivot;
+use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\Transaction\Entities\TransactionGroup;
 use Modules\Transaction\Entities\TransactionShipmentTrackingUpdate;
 use Modules\Transaction\Http\Requests\TransactionDetail;
@@ -268,6 +269,10 @@ class ApiMerchantTransactionController extends Controller
                 'product_qty' => $value['transaction_product_qty'],
                 'need_recipe_status' =>  $value['transaction_product_recipe_status'],
                 'product_total_price' => 'Rp '. number_format((int)$value['transaction_product_subtotal'],0,",","."),
+                'discount_all' => (int)$value['transaction_product_discount_all'],
+                'discount_all_text' => 'Rp '.number_format((int)$value['transaction_product_discount_all'],0,",","."),
+                'discount_each_product' => (int)$value['transaction_product_base_discount'],
+                'discount_each_product_text' => 'Rp '.number_format((int)$value['transaction_product_base_discount'],0,",","."),
                 'note' => $value['transaction_product_note'],
                 'variants' => implode(', ', array_column($value['variants'], 'product_variant_name')),
                 'image' => $image
@@ -284,6 +289,14 @@ class ApiMerchantTransactionController extends Controller
                 'value' => 'Rp '. number_format((int)$transaction['transaction_shipment'],0,",",".")
             ]
         ];
+
+        if(!empty($transaction['transaction_discount'])){
+            $codePromo = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $transaction['id_promo_campaign_promo_code'])->first()['promo_code']??'';
+            $paymentDetail[] = [
+                'text' => 'Discount'.(!empty($transaction['transaction_discount_delivery'])? ' Biaya Kirim':'').(!empty($codePromo) ?' ('.$codePromo.')' : ''),
+                'value' => 'Rp '. number_format((int)$transaction['transaction_discount'],0,",",".")
+            ];
+        }
 
         $trxPaymentMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $transaction['id_transaction_group'])->first();
         $trxPaymentXendit = TransactionPaymentXendit::where('id_transaction_group', $transaction['id_transaction_group'])->first();
@@ -338,7 +351,7 @@ class ApiMerchantTransactionController extends Controller
             'image_recipe' => (empty($transaction['image_recipe']) ? '': config('url.storage_url_api').$transaction['image_recipe']),
             'payment' => $paymentMethod??'',
             'payment_detail' => $paymentDetail,
-            'point_receive' => 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini'
+            'point_receive' => (!empty($transaction['transaction_cashback_earned']) ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : '')
         ];
 
         return response()->json(MyHelper::checkGet($result));

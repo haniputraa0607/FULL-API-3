@@ -12,6 +12,7 @@ use Illuminate\Pagination\Paginator;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionPayment;
+use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\TransactionPickupWehelpyou;
 use App\Http\Models\Province;
@@ -2743,6 +2744,10 @@ class ApiTransaction extends Controller
                 'need_recipe_status' =>  $value['transaction_product_recipe_status'],
                 'product_base_price' => 'Rp '. number_format((int)$value['transaction_product_price'],0,",","."),
                 'product_total_price' => 'Rp '. number_format((int)$value['transaction_product_subtotal'],0,",","."),
+                'discount_all' => (int)$value['transaction_product_discount_all'],
+                'discount_all_text' => 'Rp '.number_format((int)$value['transaction_product_discount_all'],0,",","."),
+                'discount_each_product' => (int)$value['transaction_product_base_discount'],
+                'discount_each_product_text' => 'Rp '.number_format((int)$value['transaction_product_base_discount'],0,",","."),
                 'note' => $value['transaction_product_note'],
                 'variants' => implode(', ', array_column($value['variants'], 'product_variant_name')),
                 'image' => $image
@@ -2759,6 +2764,14 @@ class ApiTransaction extends Controller
                 'value' => 'Rp '. number_format((int)$transaction['transaction_shipment'],0,",",".")
             ]
         ];
+
+        if(!empty($transaction['transaction_discount'])){
+            $codePromo = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $transaction['id_promo_campaign_promo_code'])->first()['promo_code']??'';
+            $paymentDetail[] = [
+                'text' => 'Discount'.(!empty($transaction['transaction_discount_delivery'])? ' Biaya Kirim':'').(!empty($codePromo) ?' ('.$codePromo.')' : ''),
+                'value' => 'Rp '. number_format((int)$transaction['transaction_discount'],0,",",".")
+            ];
+        }
 
         $grandTotal = $transaction['transaction_grandtotal'];
         $trxPaymentBalance = TransactionPaymentBalance::where('id_transaction_group', $transaction['id_transaction_group'])->first()['balance_nominal']??0;
@@ -2822,7 +2835,7 @@ class ApiTransaction extends Controller
             'user' => User::where('id', $transaction['id_user'])->select('name', 'email', 'phone')->first(),
             'payment' => $paymentMethod??'',
             'payment_detail' => $paymentDetail,
-            'point_receive' => 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini'
+            'point_receive' => (!empty($transaction['transaction_cashback_earned']) ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : '')
         ];
 
         return response()->json(MyHelper::checkGet($result));
