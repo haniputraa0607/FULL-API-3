@@ -2462,6 +2462,8 @@ class ApiOnlineTransaction extends Controller
                 $weightProduct = 0;
                 $dimentionProduct = 0;
                 foreach ($value['items'] as $key=>$item){
+                    $idWholesaler = null;
+                    $idWholesalerVariant = null;
                     $error = '';
                     $product = Product::select('need_recipe_status', 'product_weight', 'product_width', 'product_length', 'product_height', 'id_merchant', 'product_category_name', 'products.id_product_category', 'id_product','product_code','product_name','product_description','product_code', 'product_variant_status')
                         ->leftJoin('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
@@ -2510,11 +2512,13 @@ class ApiOnlineTransaction extends Controller
                         $product['product_price'] = $variantPrice;
 
                         //check wholesaler
-                        $wholesalerVariant = ProductVariantGroupWholesaler::where('id_product_variant_group_wholesaler', $item['id_product_variant_group_wholesaler'])->first();
+                        $wholesalerVariant = ProductVariantGroupWholesaler::where('id_product_variant_group', $item['id_product_variant_group'])
+                            ->where('variant_wholesaler_minimum', '<=', $item['qty'])
+                            ->orderBy('variant_wholesaler_minimum', 'desc')
+                            ->first();
+
                         if(!empty($wholesalerVariant)){
-                            if($item['qty'] < $wholesalerVariant['variant_wholesaler_minimum']){
-                                $error = 'Jumlah quantity tidak sesuai dengan harga grosir minimum '.$wholesalerVariant['variant_wholesaler_minimum'];
-                            }
+                            $idWholesalerVariant = $wholesalerVariant['id_product_variant_group_wholesaler'];
                             $variantPrice = $wholesalerVariant['variant_wholesaler_unit_price'];
                             $product['product_price'] = $wholesalerVariant['variant_wholesaler_unit_price'];
                             $product['wholesaler_minimum'] = $wholesalerVariant['variant_wholesaler_minimum'];
@@ -2523,13 +2527,15 @@ class ApiOnlineTransaction extends Controller
                         $product['stock_item'] = ProductDetail::where('id_product', $item['id_product'])->where('id_outlet', $value['id_outlet'])->first()['product_detail_stock_item']??0;
                     }
 
-                    if (!$product['product_variant_status'] && !empty($item['id_product_wholesaler'])){
+                    if (!$product['product_variant_status']){
                         //check wholesaler
-                        $wholesaler = ProductWholesaler::where('id_product_wholesaler', $item['id_product_wholesaler'])->first();
+                        $wholesaler = ProductWholesaler::where('id_product', $product['id_product'])
+                            ->where('product_wholesaler_minimum', '<=', $item['qty'])
+                            ->orderBy('product_wholesaler_minimum', 'desc')
+                            ->first();
+
                         if(!empty($wholesaler)){
-                            if($item['qty'] < $wholesaler['product_wholesaler_minimum']){
-                                $error = 'Jumlah quantity tidak sesuai dengan harga grosir minimum '.$wholesaler['product_wholesaler_minimum'];
-                            }
+                            $idWholesaler = $wholesaler['id_product_wholesaler'];
                             $product['product_price'] = $wholesaler['product_wholesaler_unit_price'];
                             $product['wholesaler_minimum'] = $wholesaler['product_wholesaler_minimum'];
                         }
@@ -2585,8 +2591,8 @@ class ApiOnlineTransaction extends Controller
                         "qty" => $item['qty'],
                         "current_stock" => $product['stock_item'],
                         "id_custom" => $item['id_custom'],
-                        "id_product_wholesaler" => $item['id_product_wholesaler']??null,
-                        "id_product_variant_group_wholesaler" => $item['id_product_variant_group_wholesaler']??null,
+                        "id_product_wholesaler" => $idWholesaler??null,
+                        "id_product_variant_group_wholesaler" => $idWholesalerVariant??null,
                         "wholesaler_minimum" => $product['wholesaler_minimum']??null,
                         "need_recipe_status" => $product['need_recipe_status'],
                         "image" => $product['image'],
