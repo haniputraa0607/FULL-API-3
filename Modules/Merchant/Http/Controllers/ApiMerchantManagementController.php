@@ -228,10 +228,63 @@ class ApiMerchantManagementController extends Controller
         }
     }
 
-    public function productList(Request $request){
-        $post = $request->json()->all();
-        $idUser = $request->user()->id;
+    public function merchantProductList(Request $request){
+        $post = $request->all();
+        $post['id_user'] = $request->user()->id;
+        return $this->productList($post);
+    }
 
+    public function merchantProductCreate(Request $request){
+        $post = $request->all();
+        $post['id_user'] = $request->user()->id;
+        return $this->productCreate($post);
+    }
+
+    public function merchantProductUpdate(Request $request){
+        $post = $request->all();
+        $post['id_user'] = $request->user()->id;
+        return $this->productUpdate($post);
+    }
+
+    public function merchantProductDetail(Request $request){
+        $post = $request->all();
+        $post['id_user'] = $request->user()->id;
+        return $this->productDetail($post);
+    }
+
+    public function merchantProductDelete(Request $request){
+        $post = $request->all();
+        $post['id_user'] = $request->user()->id;
+        return $this->productDelete($post);
+    }
+
+    public function merchantProductPhotoDelete(Request $request){
+        $post = $request->all();
+        $post['id_user'] = $request->user()->id;
+        return $this->productPhotoDelete($post);
+    }
+
+    public function merchantVariantDelete(Request $request){
+        $post = $request->all();
+        $post['id_user'] = $request->user()->id;
+        return $this->variantDelete($post);
+    }
+
+    public function merchantProductStockDetail(Request $request){
+        $post = $request->all();
+        $post['id_user'] = $request->user()->id;
+        return $this->productStockDetail($post);
+    }
+
+    public function merchantProductStockUpdate(Request $request)
+    {
+        $post = $request->all();
+        $post['id_user'] = $request->user()->id;
+        return $this->productStockUpdate($post);
+    }
+
+    public function productList($post){
+        $idUser = $post['id_user'];
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
         if(empty($checkMerchant)){
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
@@ -345,9 +398,8 @@ class ApiMerchantManagementController extends Controller
         }
     }
 
-    public function productCreate(Request $request){
-        $post = $request->all();
-        $idUser = $request->user()->id;
+    public function productCreate($post){
+        $idUser = $post['id_user'];
 
         if(empty($post['product_weight']) || empty($post['product_height']) || empty($post['product_width'])){
             return response()->json(['status' => 'fail', 'messages' => ['Product weight/height/width tidak boleh kosong']]);
@@ -599,9 +651,8 @@ class ApiMerchantManagementController extends Controller
         return response()->json(MyHelper::checkCreate($create));
     }
 
-    public function productUpdate(Request $request){
-        $post = $request->all();
-        $idUser = $request->user()->id;
+    public function productUpdate($post){
+        $idUser = $post['id_user'];
 
         if(!empty($post['id_product'])){
             if(empty($post['product_weight']) || empty($post['product_height']) || empty($post['product_width'])){
@@ -906,9 +957,8 @@ class ApiMerchantManagementController extends Controller
         }
     }
 
-    public function productDetail(Request $request){
-        $post = $request->all();
-        $idUser = $request->user()->id;
+    public function productDetail($post){
+        $idUser = $post['id_user'];
 
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
         if(empty($checkMerchant)){
@@ -1029,8 +1079,7 @@ class ApiMerchantManagementController extends Controller
         }
     }
 
-    public function productDelete(Request $request){
-        $post = $request->all();
+    public function productDelete($post){
         if(!empty($post['id_product'])){
             $check = TransactionProduct::where('id_product', $post['id_product'])->first();
             if(!empty($check)){
@@ -1044,9 +1093,7 @@ class ApiMerchantManagementController extends Controller
         }
     }
 
-    public function productPhotoDelete(Request $request){
-        $post = $request->all();
-
+    public function productPhotoDelete($post){
         if(!empty($post['id_product_photo'])){
             $data = ProductPhoto::where('id_product_photo', $post['id_product_photo'])->first();
             if(empty($data)){
@@ -1063,9 +1110,7 @@ class ApiMerchantManagementController extends Controller
         }
     }
 
-    public function variantDelete(Request $request){
-        $post = $request->all();
-
+    public function variantDelete($post){
         if(!empty($post['id_product_variant'])){
             $delete = ProductVariant::where('id_product_variant', $post['id_product_variant'])->delete();
             return response()->json(MyHelper::checkDelete($delete));
@@ -1074,9 +1119,8 @@ class ApiMerchantManagementController extends Controller
         }
     }
 
-    public function productStockDetail(Request $request){
-        $post = $request->all();
-        $idUser = $request->user()->id;
+    public function productStockDetail($post){
+        $idUser = $post['id_user'];
 
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
         if(empty($checkMerchant)){
@@ -1124,10 +1168,8 @@ class ApiMerchantManagementController extends Controller
         return response()->json(MyHelper::checkGet($result));
     }
 
-    public function productStockUpdate(Request $request)
-    {
-        $post = $request->all();
-        $idUser = $request->user()->id;
+    public function productStockUpdate($post){
+        $idUser = $post['id_user'];
 
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
         if (empty($checkMerchant)) {

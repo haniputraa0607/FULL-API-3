@@ -14,6 +14,19 @@ use Illuminate\Http\Request;
 */
 
 Route::group(['prefix' => 'merchant'], function () {
+    Route::group(['prefix' => 'external/management', 'middleware' => ['auth_client','log_activities_pos', 'scopes:merchant']], function () {
+        Route::get('product/category/list', 'ApiMerchantExternalManagementController@listProductCategory');
+        Route::post('product/variant/delete', 'ApiMerchantExternalManagementController@variantDelete');
+        Route::any('product/list', 'ApiMerchantExternalManagementController@productList');
+        Route::post('product/create', 'ApiMerchantExternalManagementController@productCreate');
+        Route::post('product/detail', 'ApiMerchantExternalManagementController@productDetail');
+        Route::post('product/update', 'ApiMerchantExternalManagementController@productUpdate');
+        Route::post('product/delete', 'ApiMerchantExternalManagementController@productDelete');
+        Route::post('product/stock/detail', 'ApiMerchantExternalManagementController@productStockDetail');
+        Route::post('product/stock/update', 'ApiMerchantExternalManagementController@productStockUpdate');
+        Route::post('product/photo/delete', 'ApiMerchantExternalManagementController@productPhotoDelete');
+    });
+
     Route::group(['middleware' => ['auth:api', 'user_agent', 'log_activities', 'scopes:apps']], function () {
         Route::get('inbox', 'ApiMerchantController@inboxList');
         Route::post('inbox/marked', 'ApiMerchantController@inboxMarked');
@@ -37,16 +50,16 @@ Route::group(['prefix' => 'merchant'], function () {
 
         Route::group(['prefix' => 'management'], function () {
             Route::post('product/variant/create-combination', 'ApiMerchantManagementController@variantCombination');
-            Route::post('product/variant/delete', 'ApiMerchantManagementController@variantDelete');
             Route::post('product/variant/update', 'ApiMerchantManagementController@variantGroupUpdate');
-            Route::any('product/list', 'ApiMerchantManagementController@productList');
-            Route::post('product/create', 'ApiMerchantManagementController@productCreate');
-            Route::post('product/detail', 'ApiMerchantManagementController@productDetail');
-            Route::post('product/update', 'ApiMerchantManagementController@productUpdate');
-            Route::post('product/delete', 'ApiMerchantManagementController@productDelete');
-            Route::post('product/stock/detail', 'ApiMerchantManagementController@productStockDetail');
-            Route::post('product/stock/update', 'ApiMerchantManagementController@productStockUpdate');
-            Route::post('product/photo/delete', 'ApiMerchantManagementController@productPhotoDelete');
+            Route::post('product/variant/delete', 'ApiMerchantManagementController@merchantVariantDelete');
+            Route::any('product/list', 'ApiMerchantManagementController@merchantProductList');
+            Route::post('product/create', 'ApiMerchantManagementController@merchantProductCreate');
+            Route::post('product/detail', 'ApiMerchantManagementController@merchantProductDetail');
+            Route::post('product/update', 'ApiMerchantManagementController@merchantProductUpdate');
+            Route::post('product/delete', 'ApiMerchantManagementController@merchantProductDelete');
+            Route::post('product/stock/detail', 'ApiMerchantManagementController@merchantProductStockDetail');
+            Route::post('product/stock/update', 'ApiMerchantManagementController@merchantProductStockUpdate');
+            Route::post('product/photo/delete', 'ApiMerchantManagementController@merchantProductPhotoDelete');
 
             //holiday
             Route::get('holiday/status', 'ApiMerchantController@holiday');
