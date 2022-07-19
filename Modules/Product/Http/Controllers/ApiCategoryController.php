@@ -1287,7 +1287,7 @@ class ApiCategoryController extends Controller
         // end promo code
     }
 
-    function listCategoryCustomerApps()
+    public function listCategoryCustomerApps()
     {
         $result = [];
         $list = ProductCategory::where('id_parent_category', null)->orderBy('product_category_order')->select('id_product_category', 'product_category_name', 'product_category_photo')->get()->toArray();

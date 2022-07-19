@@ -60,7 +60,7 @@ class CheckScopes extends AddCustomProvider
         }
 
         $arrScope = ['pos', 'be', 'apps', 'franchise-client', 'franchise-super-admin',
-            'franchise-user', 'client', 'doctor-apps'];
+            'franchise-user', 'client', 'doctor-apps', 'merchant'];
         if((in_array($scope, $arrScope) && $scope == $scopeUser)){
             return $next($request);
         }
