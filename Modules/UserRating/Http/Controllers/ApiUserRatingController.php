@@ -40,7 +40,7 @@ class ApiUserRatingController extends Controller
         $post = $request->json()->all();
         $data = UserRating::with([
         	'transaction' => function($query) {
-	            $query->select('id_transaction','transaction_receipt_number','transaction_from','trasaction_type','transaction_grandtotal','id_outlet');
+	            $query->select('id_transaction','transaction_receipt_number','trasaction_type','transaction_grandtotal','id_outlet');
 	        },
 	        'transaction.outlet' => function($query) {
 	            $query->select('id_outlet','outlet_code','outlet_name');
@@ -48,8 +48,11 @@ class ApiUserRatingController extends Controller
 	        'user' => function($query) {
 	            $query->select('id','name','phone');
 	        },
-	        'user_hair_stylist' => function($query) {
-                $query->select('id_user_hair_stylist','nickname','fullname','phone_number');
+	        'product' => function($query) {
+                $query->select('id_product','product_code','product_name');
+            },
+            'doctor' => function($query) {
+                $query->select('id_doctor','doctor_name','doctor_phone');
             }
 	    ])->orderBy('id_user_rating','desc');
 
@@ -143,11 +146,24 @@ class ApiUserRatingController extends Controller
                 });
             }
         }
+
+        if($rules=$newRule['product_name']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('product',function($query) use ($rul){
+                    $query->where('product_name',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
+
         if($rules=$newRule['rating_target']??false){
             foreach ($rules as $rul) {
             	if ($rul['parameter'] == 'hairstylist') {
                 	$model->{$where.'NotNull'}('user_ratings.id_user_hair_stylist');
-            	} else {
+            	} elseif ($rul['parameter'] == 'product') {
+                    $model->{$where.'NotNull'}('user_ratings.id_product');
+                } elseif ($rul['parameter'] == 'doctor') {
+                    $model->{$where.'NotNull'}('doctors.id_doctor');
+                } else {
                 	$model->{$where.'NotNull'}('user_ratings.id_outlet');
             	}
             }
@@ -319,7 +335,7 @@ class ApiUserRatingController extends Controller
         $post = $request->json()->all();
         $data = UserRating::with([
         	'transaction' => function($query) {
-	            $query->select('id_transaction','transaction_receipt_number','transaction_from','trasaction_type','transaction_grandtotal','id_outlet');
+	            $query->select('id_transaction','transaction_receipt_number','trasaction_type','transaction_grandtotal','id_outlet');
 	        },
 	        'transaction.outlet' => function($query) {
 	            $query->select('id_outlet','outlet_code','outlet_name');
@@ -327,6 +343,9 @@ class ApiUserRatingController extends Controller
 	        'user' => function($query) {
 	            $query->select('id','name','phone');
 	        },
+            'product' => function($query) {
+                $query->select('id_product','product_code','product_name');
+            },
 	        'doctor' => function($query) {
                 $query->select('id_doctor','doctor_name','doctor_phone');
             }
@@ -470,7 +489,6 @@ class ApiUserRatingController extends Controller
 			$rating['detail_doctor'] = null;
 	        $rating['transaction_receipt_number'] = $log['transaction']['transaction_receipt_number'];
 	        $rating['transaction_date'] = date('d M Y H:i',strtotime($log['transaction']['transaction_date']));
-	        $rating['transaction_from'] = $log['transaction']['transaction_from'];
 
 	        $trxDate = MyHelper::dateFormatInd($log['transaction']['transaction_date'], true, false, true);
 
@@ -559,13 +577,16 @@ class ApiUserRatingController extends Controller
                 ->join('transactions','transactions.id_transaction','=','user_ratings.id_transaction')
                 ->with([
                 'transaction'=>function($query){
-                    $query->select('id_transaction','transaction_receipt_number','transaction_from','trasaction_type','transaction_grandtotal');
+                    $query->select('id_transaction','transaction_receipt_number','trasaction_type','transaction_grandtotal');
                 },
                 'user'=>function($query){
                     $query->select('id','name','phone');
                 },
-                'user_hair_stylist'=>function($query){
-                    $query->select('id_user_hair_stylist','nickname','fullname','phone_number');
+                'product'=>function($query){
+                    $query->select('id_product','product_code','product_name');
+                },
+                'doctor'=>function($query){
+                    $query->select('id_doctor','doctor_phone','doctor_name');
                 }
             ])->take(10);
             $this->applyFilter($datax,$post);
@@ -607,8 +628,8 @@ class ApiUserRatingController extends Controller
             $model->where('trasaction_type', 'offline');
         }
 
-        if (($rule['rating_target'] ?? false) == 'hairstylist') {
-        	$model->whereNotNull($col.'.id_user_hair_stylist');
+        if (($rule['rating_target'] ?? false) == 'product') {
+        	$model->whereNotNull($col.'.id_product');
         } else {
         	$model->whereNotNull($col.'.id_outlet');
         }
@@ -653,13 +674,13 @@ class ApiUserRatingController extends Controller
             for ($i = 1; $i<=5 ;$i++) {
                 $datax = UserRating::where('rating_value',$i)->with([
                     'transaction'=>function($query){
-                        $query->select('id_transaction','transaction_receipt_number','transaction_from','trasaction_type','transaction_grandtotal');
+                        $query->select('id_transaction','transaction_receipt_number','trasaction_type','transaction_grandtotal');
                     },
                     'user'=>function($query){
                         $query->select('id','name','phone');
                     },
-                    'user_hair_stylist'=>function($query){
-                        $query->select('id_user_hair_stylist','nickname','fullname','phone_number');
+                    'product'=>function($query){
+                        $query->select('id_product','product_code','product_name');
                     }
                 ])
                 ->join('transactions','transactions.id_transaction','=','user_ratings.id_transaction')
@@ -712,66 +733,65 @@ class ApiUserRatingController extends Controller
         }
     }
 
-    public function reportHairstylist(Request $request) {
+    public function reportProduct(Request $request) {
         $post = $request->json()->all();
-        if($post['id_user_hair_stylist'] ?? false){
-            $hs = UserHairStylist::select(\DB::raw('
-            	user_hair_stylist.id_user_hair_stylist,
-            	user_hair_stylist.phone_number,
-            	user_hair_stylist.nickname,
-            	user_hair_stylist.fullname,
+        if($post['id_product'] ?? false){
+            $product = Product::select(\DB::raw('
+            	products.id_product,
+            	products.product_code,
+            	products.product_name,
             	count(f1.id_user_rating) as rating1,
             	count(f2.id_user_rating) as rating2,
             	count(f3.id_user_rating) as rating3,
             	count(f4.id_user_rating) as rating4,
             	count(f5.id_user_rating) as rating5
         	'))
-            ->where('user_hair_stylist.id_user_hair_stylist',$post['id_user_hair_stylist'])
-            ->join('transaction_product_services','user_hair_stylist.id_user_hair_stylist','=','transaction_product_services.id_user_hair_stylist')
+            ->where('products.id_product',$post['id_product'])
+            ->join('transaction_products','transaction_products.id_product','=','products.id_product')
             ->leftJoin('user_ratings as f1',function($join) use ($post){
-                $join->on('f1.id_transaction','=','transaction_product_services.id_transaction')
+                $join->on('f1.id_transaction','=','transaction_products.id_transaction')
                 ->where('f1.rating_value','=','1');
                 $this->applyFilter($join,$post,'f1');
             })
             ->leftJoin('user_ratings as f2',function($join) use ($post){
-                $join->on('f2.id_transaction','=','transaction_product_services.id_transaction')
+                $join->on('f2.id_transaction','=','transaction_products.id_transaction')
                 ->where('f2.rating_value','=','2');
                 $this->applyFilter($join,$post,'f2');
             })
             ->leftJoin('user_ratings as f3',function($join) use ($post){
-                $join->on('f3.id_transaction','=','transaction_product_services.id_transaction')
+                $join->on('f3.id_transaction','=','transaction_products.id_transaction')
                 ->where('f3.rating_value','=','3');
                 $this->applyFilter($join,$post,'f3');
             })
             ->leftJoin('user_ratings as f4',function($join) use ($post){
-                $join->on('f4.id_transaction','=','transaction_product_services.id_transaction')
+                $join->on('f4.id_transaction','=','transaction_products.id_transaction')
                 ->where('f4.rating_value','=','4');
                 $this->applyFilter($join,$post,'f4');
             })
             ->leftJoin('user_ratings as f5',function($join) use ($post){
-                $join->on('f5.id_transaction','=','transaction_product_services.id_transaction')
+                $join->on('f5.id_transaction','=','transaction_products.id_transaction')
                 ->where('f5.rating_value','=','5');
                 $this->applyFilter($join,$post,'f5');
             })->first();
-            if(!$hs){
-                return MyHelper::checkGet($hs);
+            if(!$product){
+                return MyHelper::checkGet($product);
             }
-            $data['rating_data'] = $hs;
+            $data['rating_data'] = $product;
             $counter['data'] = [];
             for ($i = 1; $i<=5 ;$i++) {
                 $datax = UserRating::where('rating_value',$i)->with([
                     'transaction'=>function($query){
-                        $query->select('id_transaction','transaction_receipt_number','transaction_from','trasaction_type','transaction_grandtotal');
+                        $query->select('id_transaction','transaction_receipt_number','trasaction_type','transaction_grandtotal');
                     },
                     'user'=>function($query){
                         $query->select('id','name','phone');
                     },
-                    'user_hair_stylist'=>function($query){
-                        $query->select('id_user_hair_stylist','nickname','fullname','phone_number');
+                    'product'=>function($query){
+                        $query->select('id_product','product_code','product_name');
                     }
                 ])
                 ->join('transactions','transactions.id_transaction','=','user_ratings.id_transaction')
-                ->where('user_ratings.id_user_hair_stylist',$hs->id_user_hair_stylist)
+                ->where('user_ratings.id_product',$product->id_product)
                 ->take(10);
                 $this->applyFilter($datax,$post);
                 $counter['data'][$i] = $datax->get();
@@ -779,54 +799,53 @@ class ApiUserRatingController extends Controller
             $data['rating_item'] = $counter;
             return MyHelper::checkGet($data);
         }else{
-            $dasc = ($post['order'] ?? 'fullname') == 'fullname' ? 'asc' : 'desc';
-            $hs = UserHairStylist::select(\DB::raw('
-            		user_hair_stylist.id_user_hair_stylist,
-            		user_hair_stylist.phone_number,
-            		user_hair_stylist.nickname,
-            		user_hair_stylist.fullname,
-            		count(f1.id_user_rating) as rating1,
-            		count(f2.id_user_rating) as rating2,
-            		count(f3.id_user_rating) as rating3,
-            		count(f4.id_user_rating) as rating4,
-            		count(f5.id_user_rating) as rating5
+            $dasc = ($post['order'] ?? 'product_name') == 'product_name' ? 'asc' : 'desc';
+            $product = Product::select(\DB::raw('
+            		products.id_product,
+                    products.product_code,
+                    products.product_name,
+                    count(f1.id_user_rating) as rating1,
+                    count(f2.id_user_rating) as rating2,
+                    count(f3.id_user_rating) as rating3,
+                    count(f4.id_user_rating) as rating4,
+                    count(f5.id_user_rating) as rating5
         		'))
-            ->join('transaction_product_services','user_hair_stylist.id_user_hair_stylist','=','transaction_product_services.id_user_hair_stylist')
+            ->join('transaction_products','products.id_product','=','transaction_products.id_product')
             ->leftJoin('user_ratings as f1',function($join) use ($post){
-                $join->on('f1.id_transaction','=','transaction_product_services.id_transaction')
+                $join->on('f1.id_transaction','=','transaction_products.id_transaction')
                 ->where('f1.rating_value','=','1');
                 $this->applyFilter($join,$post,'f1');
             })
             ->leftJoin('user_ratings as f2',function($join) use ($post){
-                $join->on('f2.id_transaction','=','transaction_product_services.id_transaction')
+                $join->on('f2.id_transaction','=','transaction_products.id_transaction')
                 ->where('f2.rating_value','=','2');
                 $this->applyFilter($join,$post,'f2');
             })
             ->leftJoin('user_ratings as f3',function($join) use ($post){
-                $join->on('f3.id_transaction','=','transaction_product_services.id_transaction')
+                $join->on('f3.id_transaction','=','transaction_products.id_transaction')
                 ->where('f3.rating_value','=','3');
                 $this->applyFilter($join,$post,'f1');
             })
             ->leftJoin('user_ratings as f4',function($join) use ($post){
-                $join->on('f4.id_transaction','=','transaction_product_services.id_transaction')
+                $join->on('f4.id_transaction','=','transaction_products.id_transaction')
                 ->where('f4.rating_value','=','4');
                 $this->applyFilter($join,$post,'f4');
             })
             ->leftJoin('user_ratings as f5',function($join) use ($post){
-                $join->on('f5.id_transaction','=','transaction_product_services.id_transaction')
+                $join->on('f5.id_transaction','=','transaction_products.id_transaction')
                 ->where('f5.rating_value','=','5');
                 $this->applyFilter($join,$post,'f5');
             })
-            ->orderBy($post['order'] ?? 'fullname',$dasc)
-            ->groupBy('user_hair_stylist.id_user_hair_stylist');
+            ->orderBy($post['order'] ?? 'product_name',$dasc)
+            ->groupBy('products.id_product');
             if($post['search'] ?? false){
-                $hs->where(function($query) use($post){
+                $product->where(function($query) use($post){
                     $param = '%'.$post['search'].'%';
-                    $query->where('fullname','like',$param)
-                    ->orWhere('nickname','like',$param);
+                    $query->where('product_name','like',$param)
+                    ->orWhere('product_code','like',$param);
                 });
             }
-            return MyHelper::checkGet($hs->paginate(15)->toArray());
+            return MyHelper::checkGet($product->paginate(15)->toArray());
         }
     }
 
@@ -1020,7 +1039,6 @@ class ApiUserRatingController extends Controller
 			$rating['detail_hairstylist'] = null;
 	        $rating['transaction_receipt_number'] = $log['transaction']['transaction_receipt_number'];
 	        $rating['transaction_date'] = date('d M Y H:i',strtotime($log['transaction']['transaction_date']));
-	        $rating['transaction_from'] = $log['transaction']['transaction_from'];
 
 	        $trxDate = MyHelper::dateFormatInd($log['transaction']['transaction_date'], true, false, true);
 	        $outletName = $log['transaction']['outlet']['outlet_name'];
@@ -1141,7 +1159,7 @@ class ApiUserRatingController extends Controller
             for ($i = 1; $i<=5 ;$i++) {
                 $datax = UserRating::where('rating_value',$i)->with([
                     'transaction'=>function($query){
-                        $query->select('id_transaction','transaction_receipt_number','transaction_from','trasaction_type','transaction_grandtotal');
+                        $query->select('id_transaction','transaction_receipt_number','trasaction_type','transaction_grandtotal');
                     },
                     'user'=>function($query){
                         $query->select('id','name','phone');

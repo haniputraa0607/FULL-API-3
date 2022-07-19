@@ -20,4 +20,9 @@ class UserRating extends Model
 	{
 		return $this->belongsTo(\Modules\Doctor\Entities\Doctor::class, 'id_doctor');
 	}
+
+    public function product()
+    {
+        return $this->belongsTo(\App\Http\Models\Product::class, 'id_product');
+    }
 }
