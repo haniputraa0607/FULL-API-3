@@ -2712,7 +2712,8 @@ class ApiTransaction extends Controller
             ]
         ];
 
-        $transaction = Transaction::where(['transactions.id_transaction' => $id])
+        $transaction = Transaction::join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+            ->where(['transactions.id_transaction' => $id])
             ->leftJoin('transaction_shipments','transaction_shipments.id_transaction','=','transactions.id_transaction')
             ->leftJoin('cities','transaction_shipments.destination_id_city','=','cities.id_city')
             ->leftJoin('provinces','provinces.id_province','=','cities.id_province');
@@ -2821,6 +2822,8 @@ class ApiTransaction extends Controller
             'transaction_products' => $products,
             'address' => $address,
             'transaction_grandtotal' => 'Rp '. number_format($grandTotal,0,",","."),
+            'outlet_name' => $transaction['outlet_name'],
+            'outlet_logo' => (empty($transaction['outlet_image_logo_portrait']) ? config('url.storage_url_api').'img/default.jpg': config('url.storage_url_api').$transaction['outlet_image_logo_portrait']),
             'delivery' => [
                 'delivery_id' => $transaction['order_id'],
                 'pickup_code' => $transaction['shipment_pickup_code'],
