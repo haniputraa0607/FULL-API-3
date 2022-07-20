@@ -1550,6 +1550,8 @@ class ApiHistoryController extends Controller
                 'transaction_status_code' => $codeIndo[$value['transaction_status']]['code']??'',
                 'transaction_status_text' => $codeIndo[$value['transaction_status']]['text']??'',
                 'transaction_grandtotal' => $value['transaction_grandtotal'],
+                'outlet_name' => $value['outlet_name'],
+                'outlet_logo' => (empty($value['outlet_image_logo_portrait']) ? config('url.storage_url_api').'img/default.jpg': config('url.storage_url_api').$value['outlet_image_logo_portrait']),
                 'product_name' => $product['product_name'],
                 'product_qty' => $product['transaction_product_qty'],
                 'product_image' => (empty($image) ? config('url.storage_url_api').'img/default.jpg': $image),
