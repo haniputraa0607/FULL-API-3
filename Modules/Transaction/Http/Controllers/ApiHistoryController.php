@@ -1565,6 +1565,6 @@ class ApiHistoryController extends Controller
             ];
         }
 
-        return response()->json($result);
+        return response()->json(['status' => 'success', 'result' => $result]);
     }
 }
