@@ -3848,8 +3848,10 @@ class ApiOutletController extends Controller
                 $query->where('promo_use_in', 'Product');
                 $query->where('date_end','>=',$now);
                 $query->where('date_start','<=',$now);
-                $query->whereHas('brands',function($query){
-                    $query->where('brand_active',1);
+                $query->where(function ($q){
+                    $q->whereHas('brands',function($query){
+                        $query->where('brand_active',1);
+                    })->orWhereDoesntHave('brands');
                 });
                 $query->where('promo_campaign_visibility', 'Visible');
                 $query->where('step_complete', 1);

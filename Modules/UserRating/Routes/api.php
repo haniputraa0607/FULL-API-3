@@ -37,7 +37,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('delete', ['middleware' => 'feature_control:357', 'uses' => 'ApiUserRatingController@destroy']);
     Route::post('report', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@report']);
     Route::post('report/outlet', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@reportOutlet']);
-    Route::post('report/hairstylist', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@reportHairstylist']);
+    Route::post('report/product', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@reportProduct']);
     Route::post('report/doctor', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@reportDoctor']);
     Route::group(['prefix'=>'option'],function(){
     	Route::get('/',['middleware' => 'feature_control:358', 'uses' => 'ApiRatingOptionController@index']);

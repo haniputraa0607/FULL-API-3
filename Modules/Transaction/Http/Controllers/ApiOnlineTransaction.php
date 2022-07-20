@@ -102,6 +102,7 @@ use Modules\Transaction\Http\Requests\CheckTransaction;
 use Modules\ProductVariant\Entities\ProductVariant;
 use App\Http\Models\TransactionMultiplePayment;
 use Modules\ProductBundling\Entities\Bundling;
+use Modules\Xendit\Entities\TransactionPaymentXendit;
 
 class ApiOnlineTransaction extends Controller
 {
@@ -1530,6 +1531,22 @@ class ApiOnlineTransaction extends Controller
                     $connectMidtrans = Midtrans::expire($trx['transaction_receipt_number']);
 
                     if($connectMidtrans){
+                        $trx->triggerPaymentCancelled();
+                        return ['status'=>'success', 'result' => ['message' => 'Pembayaran berhasil dibatalkan']];
+                    }
+                }
+                return [
+                    'status'=>'fail',
+                    'messages' => ['Transaksi tidak dapat dibatalkan karena proses pembayaran sedang berlangsung']
+                ];
+            case 'xendit':
+                $dtXendit = TransactionPaymentXendit::where('id_transaction_group', $trx['id_transaction_group'])->first();
+                $status = app('Modules\Xendit\Http\Controllers\XenditController')->checkStatus($dtXendit->xendit_id, $dtXendit->type);
+
+                if ($status && $status['status'] == 'PENDING' && !empty($status['id'])) {
+                    $cancel = app('Modules\Xendit\Http\Controllers\XenditController')->expireInvoice($status['id']);
+
+                    if($cancel){
                         $trx->triggerPaymentCancelled();
                         return ['status'=>'success', 'result' => ['message' => 'Pembayaran berhasil dibatalkan']];
                     }

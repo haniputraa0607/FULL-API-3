@@ -904,7 +904,7 @@ class ApiProductController extends Controller
                                             ->where('product_special_price.id_outlet','=',$post['id_outlet']);
                                     })
 									->where('product_detail.id_outlet','=',$post['id_outlet'])
-									->where('product_detail.product_detail_visibility','=', $post['visibility'])
+									->where('product_detail.product_detail_visibility','=', $post['visibility']??'Visible')
                                     ->where('product_detail.product_detail_status','=','Active')
                                     ->where('products.product_type', 'product')
                                     ->with(['category', 'discount']);
