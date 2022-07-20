@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Models\Districts;
 use App\Http\Models\Subdistricts;
+use App\Http\Models\Transaction;
 use Illuminate\Http\Request;
 
 use App\Http\Models\Feature;
@@ -21,6 +22,7 @@ use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Lib\MyHelper;
+use Modules\Merchant\Entities\Merchant;
 
 class Controller extends BaseController
 {
@@ -197,8 +199,27 @@ class Controller extends BaseController
     	return [
     		'status' => 'success',
     		'result' => [
-    			// 'total_home' => 5,
+                'merchant_register_pending' => $this->merchant_register_pending(),
+    			'transaction_pending' => $this->transaction_pending(),
     		],
     	];
+    }
+
+    public function merchant_register_pending(){
+        $total = Merchant::whereNotIn('merchant_status', ['Active', 'Inactive', 'Rejected'])->count();
+        if($total==0){
+            $total = null;
+        }
+
+        return $total;
+    }
+
+    public function transaction_pending(){
+        $total = Transaction::whereIn('transaction_status', ['Unpaid','Pending'])->count();
+        if($total==0){
+            $total = null;
+        }
+
+        return $total;
     }
 }
