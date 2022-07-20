@@ -30,7 +30,7 @@ class AuthDoctorController extends Controller
      * Display a listing of the resource.
      * @return Response
      */
-    public function checkPhoneNumber(Request $request)
+    public function phoneCheck(Request $request)
     {
         $phone = $request->json('phone');
 
@@ -51,61 +51,25 @@ class AuthDoctorController extends Controller
 
         $data = Doctor::select('*',\DB::raw('0 as challenge_key'))->where('doctor_phone', '=', $phone)->first();
 
-        if (isset($data['is_suspended']) && $data['is_suspended'] == '1') {
-            $emailSender = Setting::where('key', 'email_sender')->first();
-            return response()->json([
-                'status' => 'fail',
-                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
-            ]);
-        }
-
-        switch (env('OTP_TYPE', 'PHONE')) {
-            case 'MISSCALL':
-                $msg_check = str_replace('%phone%', $phoneOld, MyHelper::setting('message_send_otp_miscall', 'value_text', 'Kami akan mengirimkan kode OTP melalui Missed Call ke %phone%.<br/>Anda akan mendapatkan panggilan dari nomor 6 digit.<br/>Nomor panggilan tsb adalah Kode OTP Anda.'));
-                break;
-
-            case 'WA':
-                $msg_check = str_replace('%phone%', $phoneOld, MyHelper::setting('message_send_otp_wa', 'value_text', 'Kami akan mengirimkan kode OTP melalui Whatsapp.<br/>Pastikan nomor %phone% terdaftar di Whatsapp.'));
-                break;
-
-            default:
-                $msg_check = str_replace('%phone%', $phoneOld, MyHelper::setting('message_send_otp_sms', 'value_text', 'Kami akan mengirimkan kode OTP melalui SMS.<br/>Pastikan nomor %phone% aktif.'));
-                break;
-        }
-
         if($data){
-            if ($data['phone_verified'] == 0 && empty($data['pin_changed'])) {
-                $result['register'] = true;
-                $result['forgot'] = false;
-                $result['confirmation_message'] = $msg_check;
-                $result['is_suspended'] = $data[0]['is_suspended'];
+            if (isset($data['is_active']) && $data['is_active'] == '0') {
+                $emailSender = Setting::where('key', 'email_sender')->first();
                 return response()->json([
-                    'status' => 'success',
-                    'result' => $result
-                ]);
-            }else{
-                $result['register'] = false;
-                $result['forgot'] = false;
-                $result['challenge_key'] = $data['challenge_key'];
-                $result['is_suspended'] = $data['is_suspended'];
-                $result['confirmation_message'] = $msg_check;
-                return response()->json([
-                    'status' => 'success',
-                    'result' => $result
+                    'status' => 'fail',
+                    'messages' => ['Akun Anda sudah tidak aktif. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
                 ]);
             }
 
-        }else{
-            return response()->json([
-                'status' => 'success',
-                'result' => [
-                    'register' => true,
-                    'is_suspended' => 0,
-                    'forgot' => false,
-                    'confirmation_message' => $msg_check
-                ]
-            ]);
-        }
+			$result['challenge_key'] = $data[0]['challenge_key'];
+			return response()->json([
+				'status' => 'success',
+				'result' => $result
+			]);
+		}else{
+			return response()->json([
+				'status' => 'fail',
+				'messages' => ['Akun tidak ditemukan']]);
+		}
     }
 
     // /**
@@ -306,7 +270,7 @@ class AuthDoctorController extends Controller
     //     ]);
     // }
 
-    function forgotPassword(Request $request)
+    function forgotPin(Request $request)
     {
         $phone = $request->json('phone');
 
@@ -353,7 +317,6 @@ class AuthDoctorController extends Controller
             ->toArray();
 
         if ($data) {
-            dd($data);
             //First check rule for request otp
             $checkRuleRequest = MyHelper::checkRuleForRequestOTP($data);
             if(isset($checkRuleRequest['status']) && $checkRuleRequest['status'] == 'fail'){
@@ -361,7 +324,8 @@ class AuthDoctorController extends Controller
             }
 
             if(!isset($checkRuleRequest['otp_timer']) && $checkRuleRequest == true){
-                $pin = MyHelper::createRandomPIN(6, 'angka');
+                // $pin = MyHelper::createRandomPIN(6, 'angka');
+                $pin = "777777";
                 $password = bcrypt($pin);
 
                 //get setting to set expired time for otp, if setting not exist expired default is 30 minutes
@@ -372,7 +336,7 @@ class AuthDoctorController extends Controller
                     $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+30 minutes"));
                 }
 
-                $update = Doctor::where('id_doctor', '=', $data['id_doctor'])->update(['otp_forgot' => $password, 'otp_valid_time' => $dateOtpTimeExpired]);
+                $update = Doctor::where('id_doctor', '=', $data[0]['id_doctor'])->update(['otp_forgot' => $password, 'otp_valid_time' => $dateOtpTimeExpired]);
 
                 if (!empty($request->header('user-agent-view'))) {
                     $useragent = $request->header('user-agent-view');
@@ -385,7 +349,7 @@ class AuthDoctorController extends Controller
                 if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
 
                 $autocrm = app($this->autocrm)->SendAutoCRM(
-                    'Pin Forgot',
+                    'Doctor Pin Forgot',
                     $phone,
                     [
                         'pin' => $pin,
@@ -397,6 +361,8 @@ class AuthDoctorController extends Controller
                     $useragent,
                     false, false, null, null, true, $request->request_type
                 );
+
+                dd($autocrm);
             }elseif(isset($checkRuleRequest['otp_timer']) && $checkRuleRequest['otp_timer'] !== false){
                 $holdTime = $checkRuleRequest['otp_timer'];
             }
@@ -444,9 +410,133 @@ class AuthDoctorController extends Controller
         } else {
             $result = [
                 'status'    => 'fail',
-                'messages'  => ['Email yang kamu masukkan kurang tepat']
+                'messages'  => ['Nomor yang kamu masukkan kurang tepat']
             ];
             return response()->json($result);
         }
+    }
+
+    function verifyPin(Request $request)
+    {
+    	$phone = $request->json('phone');
+
+    	$phone = preg_replace("/[^0-9]/", "", $phone);
+
+    	$checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
+
+    	if (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail') {
+    		return response()->json([
+    			'status' => 'fail',
+    			'messages' => [$checkPhoneFormat['messages']]
+    		]);
+    	} elseif (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success') {
+    		$phone = $checkPhoneFormat['phone'];
+    	}
+
+    	$data = Doctor::where('doctor_phone', '=', $phone)->get()->toArray();
+
+    	if ($data) {
+    		if(!password_verify($request->json('pin'), $data[0]['otp_forgot'])){
+    			return response()->json([
+    				'status'    => 'fail',
+    				'messages'    => ['OTP yang kamu masukkan salah']
+    			]);
+    		}
+
+    		/*first if --> check if otp have expired and the current time exceeds the expiration time*/
+    		if(!is_null($data[0]['otp_valid_time']) && strtotime(date('Y-m-d H:i:s')) > strtotime($data[0]['otp_valid_time'])){
+    			return response()->json(['status' => 'fail', 'otp_check'=> 1, 'messages' => ['This OTP is expired, please re-request OTP from apps']]);
+    		}
+
+    		$update = Doctor::where('id_doctor', '=', $data[0]['id_doctor'])->update(['otp_valid_time' => NULL]);
+    		if ($update) {
+    			if (\Module::collections()->has('Autocrm')) {
+    				$autocrm = app($this->autocrm)->SendAutoCRM('Pin Verify', $phone, null, null, false, false, 'doctor');
+    			}
+    			$result = [
+    				'status'    => 'success',
+    				'result'    => [
+    					'phone'    =>    $data[0]['doctor_phone']
+    				]
+    			];
+    		}else{
+    			$result = [
+    				'status'    => 'fail',
+    				'messages'    => ['Failed to Update Data']
+    			];
+    		}
+    	} else {
+    		$result = [
+    			'status'    => 'fail',
+    			'messages'    => ['This phone number isn\'t registered']
+    		];
+    	}
+    	return response()->json($result??['status' => 'fail','messages' => ['No Process']]);
+    }
+
+    function changePin(Request $request)
+    {
+
+    	$phone = $request->json('phone');
+
+    	$phone = preg_replace("/[^0-9]/", "", $phone);
+
+    	$checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
+
+    	if (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail') {
+    		return response()->json([
+    			'status' => 'fail',
+    			'messages' => $checkPhoneFormat['messages']
+    		]);
+    	} elseif (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success') {
+    		$phone = $checkPhoneFormat['phone'];
+    	}
+
+    	$data = Doctor::where('doctor_phone', '=', $phone)->first();
+
+    	if ($data) {
+    		if(!empty($data['otp_forgot']) && !password_verify($request->json('pin_old'), $data['otp_forgot'])){
+    			return response()->json([
+    				'status'    => 'fail',
+    				'messages'    => ['Current PIN doesn\'t match']
+    			]);
+    		}elseif(empty($data['otp_forgot']) && !password_verify($request->json('pin_old'), $data['password'])){
+    			return response()->json([
+    				'status'    => 'fail',
+    				'messages'    => ['Current PIN doesn\'t match']
+    			]);
+    		}
+
+    		$pin     = bcrypt($request->json('pin_new'));
+    		$update = Doctor::where('id_doctor', '=', $data['id_doctor'])->update(['password' => $pin, 'otp_forgot' => null]);
+    		if (\Module::collections()->has('Autocrm')) {
+    			if ($data['first_update_password'] < 1) {
+    				$autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed', $phone, null, null, false, false, 'doctor');
+    				$changepincount = $data['first_update_password'] + 1;
+    				$update = Doctor::where('id_doctor', '=', $data['id_doctor'])->update(['first_update_password' => $changepincount]);
+    			} else {
+    				$autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed Forgot Password', $phone, null, null, false, false, 'doctor');
+
+    				$del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+    				->where('oauth_access_tokens.user_id', $data['id_doctor'])->where('oauth_access_token_providers.provider', 'doctor')->delete();
+    			}
+    		}
+
+    		$user = Doctor::select('password',\DB::raw('0 as challenge_key'))->where('doctor_phone', $phone)->first();
+
+    		$result = [
+    			'status'    => 'success',
+    			'result'    => [
+    				'phone'    =>    $data['doctor_phone'],
+    				'challenge_key' => $user->challenge_key
+    			]
+    		];
+    	} else {
+    		$result = [
+    			'status'    => 'fail',
+    			'messages'    => ['This phone number isn\'t registered']
+    		];
+    	}
+    	return response()->json($result);
     }
 }

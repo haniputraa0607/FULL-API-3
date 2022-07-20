@@ -55,6 +55,7 @@ class ApiAutoCrm extends Controller
 	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null, $forward_only = false, $outlet = false, $recipient_type = null, $franchise = null, $save_log=true, $otp_type = null, $doctor = null){
 		$query = Autocrm::where('autocrm_title','=',$autocrm_title)->with('whatsapp_content')->get()->toArray();
 
+		//get recepient type
 		if (!isset($recipient_type)) {
 			if($franchise){
                 $users = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('username','=',$receipient)->get()->toArray();

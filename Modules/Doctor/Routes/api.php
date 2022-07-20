@@ -62,8 +62,12 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix
     Route::post('schedule/list', ['uses' => 'ApiScheduleController@getSchedule']);
 });
 
-Route::group(['prefix' => 'doctor/auth'], function () {
-    Route::post('check', ['uses' => 'AuthDoctorController@checkPhoneNumber']);
+Route::group(['prefix' => 'doctor'], function () {
+    Route::post('phone/check', ['uses' => 'AuthDoctorController@phoneCheck']);
+    Route::post('pin/forgot', ['uses' => 'AuthDoctorController@forgotPin']);
+    Route::post('pin/verify', 'AuthDoctorController@verifyPin')->middleware('decrypt_pin');
+    Route::post('pin/change', 'AuthDoctorController@changePin')->middleware(['decrypt_pin:pin_new','decrypt_pin:pin_old']);
+
     Route::post('otp-verification', ['uses' => 'AuthDoctorController@otpVerification']);
     Route::post('forgot-password', ['uses' => 'AuthDoctorController@forgotPassword']);
     Route::post('change-password', ['uses' => 'AuthDoctorController@changePassword']);
