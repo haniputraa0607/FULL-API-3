@@ -622,15 +622,15 @@ class ApiConfirm extends Controller
                 array_push($dataDetailProduct, $dataTax);
             }
 
-            if ($check['transaction_discount'] > 0) {
-                $dataDis = [
-                    'id'       => 'transaction_discount',
-                    'price'    => -abs($check['transaction_discount']),
-                    'name'     => 'Discount',
-                    'quantity' => 1,
-                ];
-                array_push($dataDetailProduct, $dataDis);
-            }
+            // if ($check['transaction_discount'] > 0) {
+            //     $dataDis = [
+            //         'id'       => 'transaction_discount',
+            //         'price'    => -abs($check['transaction_discount']),
+            //         'name'     => 'Discount',
+            //         'quantity' => 1,
+            //     ];
+            //     array_push($dataDetailProduct, $dataDis);
+            // }
 
             if ($check['transaction_payment_subscription']) {
                 $dataDis = [
