@@ -31,6 +31,11 @@ use Modules\Favorite\Entities\FavoriteUserHiarStylist;
 
 class ApiUserRatingController extends Controller
 {
+    public function __construct()
+    {
+        $this->getNotif         = "Modules\Transaction\Http\Controllers\ApiNotification";
+    }
+
     /**
      * Display a listing of the resource.
      * @return Response
@@ -1566,6 +1571,20 @@ class ApiUserRatingController extends Controller
             ],[
                 'value' => $countOptionValue
             ]);
+        }
+
+        $countRating = UserRating::where('id_transaction', $trx->id_transaction)->count();
+        $counTrxProduct = TransactionProduct::where('id_transaction', $trx->id_transaction)->count();
+        if($countRating == $counTrxProduct){
+            $newTrx = Transaction::where('id_transaction', $trx->id_transaction)
+                ->with('user.memberships')->first();
+            $savePoint = app($this->getNotif)->savePoint($newTrx);
+            if (!$savePoint) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Failed insert point'],
+                ]);
+            }
         }
 
         return MyHelper::checkCreate($create);
