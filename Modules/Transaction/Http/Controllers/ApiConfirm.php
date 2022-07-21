@@ -317,7 +317,7 @@ class ApiConfirm extends Controller
                     'unit'                => 'second',
                 );
 
-                $connectMidtrans = Midtrans::{$methodPayment}($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $dataShipping, $dataDetailProduct, 'trx', $check['transaction_receipt_number']);
+                $connectMidtrans = Midtrans::{$methodPayment}($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $dataShipping, $dataDetailProduct, 'trx', $check['transaction_receipt_number'], $post['payment_detail']);
 
             } else {
                 $dataMidtrans = array(
@@ -327,7 +327,7 @@ class ApiConfirm extends Controller
                     'unit'                => 'second',
                 );
 
-                $connectMidtrans = Midtrans::{$methodPayment}($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $ship=null, $dataDetailProduct, 'trx', $check['transaction_receipt_number']);
+                $connectMidtrans = Midtrans::{$methodPayment}($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $ship=null, $dataDetailProduct, 'trx', $check['transaction_receipt_number'], $post['payment_detail']);
             }
 
             if (empty($connectMidtrans['token']) && $payment_id != 'SHOPEEPAY') {

@@ -47,7 +47,7 @@ class Midtrans {
         // return 'Basic ' . base64_encode(env('MIDTRANS_SANDBOX_BEARER'));
     }
     
-    static function token($receipt, $grandTotal, $user=null, $shipping=null, $product=null, $type=null, $id=null) {
+    static function token($receipt, $grandTotal, $user=null, $shipping=null, $product=null, $type=null, $id=null, $payment_detail = null) {
         // $url    = env('MIDTRANS_PRO');
         $url    = env('MIDTRANS_SANDBOX');
 
@@ -56,9 +56,14 @@ class Midtrans {
             'gross_amount'  => $grandTotal
         );
 
+        $payment_detail = str_replace(' ', '-', (strtolower($payment_detail)));
         $dataMidtrans = array(
             'transaction_details' => $transaction_details,
         );
+
+        if ($payment_detail) {
+            $dataMidtrans['enabled_payments'] = [$payment_detail];
+        }
 
         if (!is_null($user)) {
             $dataMidtrans['customer_details'] = $user;
