@@ -102,7 +102,7 @@ class ApiTransactionConsultationController extends Controller
         $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
         $quota = $getSetting['value'];
 
-        if($quota <= $doctor_constultation){
+        if($quota <= $doctor_constultation && $quota != null){
             return response()->json([
                 'status'    => 'fail',
                 'messages'  => ['Jadwal penuh / tidak tersedia']
@@ -188,7 +188,7 @@ class ApiTransactionConsultationController extends Controller
         ];
 
         //get available payment
-        $available_payment = app($this->payment)->availablePayment(new Request())['result'];
+        $available_payment = app($this->payment)->availablePayment(new Request())['result']??null;
 
         $result['available_payment'] = $available_payment;
 
@@ -258,7 +258,7 @@ class ApiTransactionConsultationController extends Controller
 
         //dd($doctor_constultation);
 
-        if($quota <= $doctor_constultation){
+        if($quota <= $doctor_constultation && $quota != null){
             return response()->json([
                 'status'    => 'fail',
                 'messages'  => ['Jadwal penuh / tidak tersedia']
@@ -1044,7 +1044,23 @@ class ApiTransactionConsultationController extends Controller
     {
         $post = $request->json()->all();
         $user = $request->user();
-        $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first()->toArray();
+
+        //get transaction
+        $transactionConsultation = null;
+        if(isset($user->id_doctor)){
+            $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first();    
+        } else {
+            $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id)->where('id_transaction', $post['id_transaction'])->first();
+        }
+
+        if(empty($transactionConsultation)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaksi konsultasi tidak ditemukan']
+            ]);
+        }
+
+        $transactionConsultation = $transactionConsultation->toArray();
 
         $diseaseComplaints = !empty($transactionConsultation['disease_complaint']) ? explode(', ', $transactionConsultation['disease_complaint']) : null;
         $diseaseAnalysis = !empty($transactionConsultation['disease_complaint']) ? explode(', ', $transactionConsultation['disease_analysis']) : null;
@@ -1072,6 +1088,13 @@ class ApiTransactionConsultationController extends Controller
         }
 
         $transactionConsultation = $transactionConsultation->toArray();
+
+        if(empty($transactionConsultation['consultation_status'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Anda Tidak Bisa Merubah Data, Transaksi Sudah Ditandai Selesai']
+            ]);
+        }
 
         $diseaseComplaint = implode(", ",$post['disease_complaint']);
         $diseaseAnalysis = implode(", ",$post['disease_analysis']);
@@ -1101,12 +1124,19 @@ class ApiTransactionConsultationController extends Controller
     {
         $post = $request->json()->all();
         $user = $request->user();
-        $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first()->toArray();
+        
+        //get transaction
+        $transactionConsultation = null;
+        if(isset($user->id_doctor)){
+            $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first();    
+        } else {
+            $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id)->where('id_transaction', $post['id_transaction'])->first();
+        }
 
         if(empty($transactionConsultation)){
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['Transaction Consultation Not Found']
+                'messages'  => ['Transaksi konsultasi tidak ditemukan']
             ]);
         }
 
@@ -1131,12 +1161,19 @@ class ApiTransactionConsultationController extends Controller
     {
         $post = $request->json()->all();
         $user = $request->user();
-        $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first()->toArray();
+
+        //get transaction
+        $transactionConsultation = null;
+        if(isset($user->id_doctor)){
+            $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first();    
+        } else {
+            $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id)->where('id_transaction', $post['id_transaction'])->first();
+        }
 
         if(empty($transactionConsultation)){
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['Transaction Consultation Not Found']
+                'messages'  => ['Transaksi konsultasi tidak ditemukan']
             ]);
         }
 

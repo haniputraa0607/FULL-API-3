@@ -30,6 +30,7 @@ use App\Http\Models\LogApiSms;
 use Modules\Product\Entities\ProductStockStatusUpdate;
 use Modules\PointInjection\Entities\PointInjectionRule;
 use Modules\PointInjection\Entities\PointInjectionRuleParent;
+use Modules\Doctor\Entities\Doctor;
 
 use App\Http\Requests;
 use Illuminate\Http\JsonResponse;
@@ -2832,7 +2833,12 @@ class MyHelper{
                     'otp_timer' => $different
                 ];
             }elseif (isset($data_user[0]['otp_increment']) && ($data_user[0]['otp_increment'] + 1) > $maxValueRequest) {
-                $updateFlag = User::where('id', $data_user[0]['id'])->update(['otp_request_status' => 'Can Not Request']);
+				if(!empty($data_user[0]['id'])){
+                	$updateFlag = User::where('id', $data_user[0]['id'])->update(['otp_request_status' => 'Can Not Request']);
+				} else {
+					$updateFlag = Doctor::where('id_doctor', $data_user[0]['id_doctor'])->update(['otp_request_status' => 'Can Not Request']);
+				}
+
                 return [
                     'status' => 'fail',
                     'otp_check' => 1,
@@ -2840,11 +2846,19 @@ class MyHelper{
                 ];
             }elseif ($check == 0){
                 $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
-                $update = User::where('id', $data_user[0]['id'])->update(['otp_available_time_request' => $availebleTime]);
+				if(!empty($data_user[0]['id'])){
+                	$update = User::where('id', $data_user[0]['id'])->update(['otp_available_time_request' => $availebleTime]);
+				} else {
+					$update = Doctor::where('id_doctor', $data_user[0]['id_doctor'])->update(['otp_available_time_request' => $availebleTime]);
+				}
             }
         }elseif($check == 0){
             $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
-            $update = User::where('id', $data_user[0]['id'])->update(['otp_available_time_request' => $availebleTime]);
+			if(!empty($data_user[0]['id'])){
+            	$update = User::where('id', $data_user[0]['id'])->update(['otp_available_time_request' => $availebleTime]);
+			} else {
+				$update = Doctor::where('id_doctor', $data_user[0]['id_doctor'])->update(['otp_available_time_request' => $availebleTime]);
+			}
         }
 
         return true;

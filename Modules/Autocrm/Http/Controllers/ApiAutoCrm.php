@@ -55,6 +55,7 @@ class ApiAutoCrm extends Controller
 	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null, $forward_only = false, $outlet = false, $recipient_type = null, $franchise = null, $save_log=true, $otp_type = null, $doctor = null){
 		$query = Autocrm::where('autocrm_title','=',$autocrm_title)->with('whatsapp_content')->get()->toArray();
 
+		//get recepient type
 		if (!isset($recipient_type)) {
 			if($franchise){
                 $users = UserFranchise::select('id_user_franchise as id', 'user_franchises.*')->where('username','=',$receipient)->get()->toArray();
@@ -360,7 +361,7 @@ class ApiAutoCrm extends Controller
 						}
 
 						if (in_array($autocrm_title, ['Doctor Pin Sent'])) {
-								// if user not 0 and even, send using alternative
+							// if doctor not 0 and even, send using alternative
 							if ($user['sms_increment'] % 2) {
 								$gateway = env('SMS_GATEWAY_ALT');
 							}
@@ -738,6 +739,12 @@ class ApiAutoCrm extends Controller
                         $inboxWherefield = null;
 
                         $inbox['id_merchant'] = $user['id'];
+                    } elseif ($recipient_type == 'doctor') {
+                        $inboxTable = new DoctorInbox;
+                        $inboxRecipient = $receipient;
+                        $inboxWherefield = null;
+
+                        $inbox['id_merchant'] = $user['id'];
                     } else {
                         $inboxTable = new UserInbox;
                         $inboxRecipient = $user['id'];
@@ -749,9 +756,9 @@ class ApiAutoCrm extends Controller
 					$inbox['inboxes_subject'] = $this->TextReplace($crm['autocrm_inbox_subject'], $inboxRecipient, $variables, $inboxWherefield, 0, $recipient_type);
 					$inbox['inboxes_clickto'] = $crm['autocrm_inbox_clickto'];
 
-					if(!empty($recipient_type)) {
-						$inbox['user_type'] = $recipient_type;
-					}
+					// if(!empty($recipient_type)) {
+					// 	$inbox['user_type'] = $recipient_type;
+					// }
 
 					if($crm['autocrm_inbox_clickto'] == 'Content'){
 						$inbox['inboxes_content'] = $this->TextReplace($crm['autocrm_inbox_content'], $user['id'], $variables, 'id', 0, $recipient_type);
