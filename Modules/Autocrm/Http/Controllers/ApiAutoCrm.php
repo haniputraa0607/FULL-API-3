@@ -32,6 +32,7 @@ use App\Lib\ValueFirst;
 use Modules\Franchise\Entities\UserFranchise;
 use Modules\Franchise\Entities\FranchiseEmailLog;
 use Modules\Doctor\Entities\Doctor;
+use Modules\Doctor\Entities\DoctorInbox;
 use Modules\Merchant\Entities\Merchant;
 use Modules\Merchant\Entities\MerchantInbox;
 use Validator;
@@ -732,7 +733,6 @@ class ApiAutoCrm extends Controller
 
 			if($crm['autocrm_inbox_toogle'] == 1 && !$forward_only){
 				if(!empty($user['id'])){
-
                     if ($recipient_type == 'merchant') {
                         $inboxTable = new MerchantInbox;
                         $inboxRecipient = $receipient;
@@ -744,7 +744,7 @@ class ApiAutoCrm extends Controller
                         $inboxRecipient = $receipient;
                         $inboxWherefield = null;
 
-                        $inbox['id_merchant'] = $user['id'];
+                        $inbox['id_doctor'] = $user['id'];
                     } else {
                         $inboxTable = new UserInbox;
                         $inboxRecipient = $user['id'];

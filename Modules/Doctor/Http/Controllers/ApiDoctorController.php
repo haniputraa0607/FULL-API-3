@@ -40,7 +40,7 @@ class ApiDoctorController extends Controller
 
         $doctor = Doctor::with('outlet')->with('specialists')->orderBy('created_at', 'DESC');
 
-        if ($post['rule']) {
+        if (isset($post['rule'])) {
             $countTotal = $doctor->count();
             $this->filterList($doctor, $post['rule'], $post['operator'] ?: 'and');
         }
@@ -51,6 +51,10 @@ class ApiDoctorController extends Controller
                     $query2->where('id_doctor_specialist_category', $post['id_doctor_specialist_category']);
                 });
              });
+        }
+
+        if(isset($post['doctor_recomendation_status'])){
+            $doctor->where('doctor_recomendation_status', $post['doctor_recomendation_status']);
         }
 
         if($request['page']) {
@@ -127,7 +131,6 @@ class ApiDoctorController extends Controller
     {
         $post = $request->json()->all();
         unset($post['_token']);
-        
 
         DB::beginTransaction();
         //birthday explode
@@ -152,7 +155,7 @@ class ApiDoctorController extends Controller
         $post['provider'] = MyHelper::cariOperator($post['doctor_phone']);
 
         //sentPin
-        $sentPin = $post['sent_pin'];
+        $sent_pin = $post['sent_pin'];
         unset($post['sent_pin']);
 
         //upload photo id doctor
@@ -199,7 +202,7 @@ class ApiDoctorController extends Controller
         $result = MyHelper::checkGet($save);
 
         // TO DO Pending Task AutoCRM error 
-        /*if ($result['status'] == "success") {
+        if ($result['status'] == "success") {
             if ($sent_pin == 'Yes') {
                 if (!empty($request->header('user-agent-view'))) {
                     $useragent = $request->header('user-agent-view');
@@ -222,14 +225,19 @@ class ApiDoctorController extends Controller
                             'date_sent' => date('d-m-y H:i:s'),
                             'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
                         ],
-                        $useragent
+                        $useragent,
+                        false,
+                        false,
+                        'doctor'
                     );
+
+                    dd($autocrm);
                 }
             }
-        }*/
+        }
 
         DB::commit();
-        return response()->json(['status'  => 'success', 'result' => ['id_doctor' => $post['id_doctor']]]);
+        return response()->json(['status'  => 'success', 'result' => ['id_doctor' => $post['id_doctor'], 'crm' => $autocrm]]);
     }
 
     /**
@@ -331,7 +339,7 @@ class ApiDoctorController extends Controller
     {
         $user = $request->user();
 
-        $doctor = Doctor::where('id_doctor', $user['id_doctor'])->with('clinic')->with('specialists')->orderBy('created_at', 'DESC');
+        $doctor = Doctor::where('id_doctor', $user['id_doctor'])->with('getOutlet')->with('specialists')->orderBy('created_at', 'DESC');
 
         if(empty($doctor)){
             return response()->json([
@@ -459,11 +467,46 @@ class ApiDoctorController extends Controller
     {
         $post = $request->json()->all();
 
-        $doctor = Doctor::with('clinic')->orderBy('created_at', 'DESC');
+        $doctor = Doctor::with('getOutlet')->orderBy('created_at', 'DESC');
 
         if(!empty($post['id_outlet'])){
             $doctor = $doctor->where('id_outlet', $post['id_outlet']);
         }
+
+        $doctor = $doctor->get()->toArray();
+
+        return response()->json(['status'  => 'success', 'result' => $doctor]);
+    }
+
+    public function updateRecomendationStatus(Request $request)
+    {
+        $post = $request->json()->all();
+
+        DB::beginTransaction();
+        try {
+            //initialize value
+            $ids_doctor = $post['id_doctor'];
+
+            Doctor::whereIn('id_doctor', $ids_doctor)->update(['doctor_recomendation_status' => true]); 
+        } catch (\Exception $e) {
+            $result = [
+                'status'  => 'fail',
+                'message' => 'Update Doctor Recomendation Failed'
+            ];
+            DB::rollBack();
+            return response()->json($result);
+        }
+        DB::commit();
+
+        //default for on value case
+        return response()->json(['status'  => 'success', 'result' => "Doctor Recomendation Has Been Updated Successfully"]);
+    }
+
+    public function getDoctorRecomendation(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $doctor = Doctor::where('doctor_recomendation_status', 1);
 
         $doctor = $doctor->get()->toArray();
 
