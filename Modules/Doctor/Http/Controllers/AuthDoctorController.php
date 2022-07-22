@@ -349,7 +349,7 @@ class AuthDoctorController extends Controller
                 if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
 
                 $autocrm = app($this->autocrm)->SendAutoCRM(
-                    'Doctor Pin Forgot',
+                    'Doctor Pin Forgot', 
                     $phone,
                     [
                         'pin' => $pin,
@@ -359,7 +359,7 @@ class AuthDoctorController extends Controller
                         'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
                     ],
                     $useragent,
-                    false, false, null, null, true, $request->request_type
+                    false, false, 'doctor', null, true, $request->request_type
                 );
 
                 dd($autocrm);
