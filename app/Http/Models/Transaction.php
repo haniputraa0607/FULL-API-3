@@ -120,8 +120,7 @@ class Transaction extends Model
         'transaction_maximum_date_process',
         'transaction_maximum_date_delivery',
         'transaction_reject_reason',
-        'transaction_reject_at',
-        'image_recipe'
+        'transaction_reject_at'
 	];
 
 	public $manual_refund = 0;

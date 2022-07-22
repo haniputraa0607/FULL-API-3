@@ -7,6 +7,7 @@ use App\Http\Models\ProductCategory;
 use App\Http\Models\ProductDiscount;
 use App\Http\Models\ProductPhoto;
 use App\Http\Models\NewsProduct;
+use App\Http\Models\TransactionConsultation;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\ProductModifier;
@@ -1832,6 +1833,18 @@ class ApiProductController extends Controller
             $product['id_product_variant_group'] = $post['id_product_variant_group'];
         }else{
             $product['stock_item'] = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_detail_stock_item']??0;
+        }
+
+        $product['can_buy_status'] = true;
+        if($product['need_recipe_status'] == 1){
+            $idUser = $request->user()->id;
+            $checkRecipe = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
+                ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product'])->first();
+            $maxQty = ($checkRecipe['recipe_redemption_limit']??0) * ($checkRecipe['qty_product']??0);
+
+            if(empty($checkRecipe) || (!empty($checkRecipe) && $checkRecipe['qty_product_redeem'] >= $maxQty)){
+                $product['can_buy_status'] = false;
+            }
         }
 
         $product['variants'] = Product::getVariantTree($product['id_product'], $outlet, false, $product['product_price'], $product['product_variant_status'])['variants_tree']??null;

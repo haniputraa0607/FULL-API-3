@@ -2791,10 +2791,14 @@ class ApiTransaction extends Controller
 
         if(!empty($trxPaymentMidtrans)){
             $paymentMethod = $trxPaymentMidtrans['payment_type'].(!empty($trxPaymentMidtrans['bank']) ? ' ('.$trxPaymentMidtrans['bank'].')':'');
+            $paymentLogo = config('payment_method.midtrans_'.strtolower($paymentMethod).'.logo');
         }elseif(!empty($trxPaymentXendit)){
             $paymentMethod = $trxPaymentXendit['type'];
+            $paymentLogo = config('payment_method.xendit_'.strtolower($paymentMethod).'.logo');
         }
 
+        $district = Districts::join('subdistricts', 'subdistricts.id_district', 'districts.id_district')
+            ->where('id_subdistrict', $transaction['depart_id_subdistrict'])->first();
         $address = [
             'destination_name' => $transaction['destination_name'],
             'destination_phone' => $transaction['destination_phone'],
@@ -2802,6 +2806,8 @@ class ApiTransaction extends Controller
             'destination_description' => $transaction['destination_description'],
             'destination_province' => $transaction['province_name'],
             'destination_city' => $transaction['city_name'],
+            'destination_district' => $district['district_name'],
+            'destination_subdistrict' => $district['subdistrict_name']
         ];
 
         $tracking = [];
@@ -2832,11 +2838,12 @@ class ApiTransaction extends Controller
                 'delivery_method' => strtoupper($transaction['shipment_courier']),
                 'delivery_service' => ucfirst($transaction['shipment_courier_service']),
                 'delivery_price' => 'Rp '. number_format((int)$transaction['transaction_shipment'],0,",","."),
-                'delivery_tracking' => $tracking
+                'delivery_tracking' => $tracking,
+                'estimated' => $transaction['shipment_courier_etd']
             ],
-            'image_recipe' => (empty($transaction['image_recipe']) ? '': config('url.storage_url_api').$transaction['image_recipe']),
             'user' => User::where('id', $transaction['id_user'])->select('name', 'email', 'phone')->first(),
             'payment' => $paymentMethod??'',
+            'payment_logo' => $paymentLogo??'',
             'payment_detail' => $paymentDetail,
             'point_receive' => (!empty($transaction['transaction_cashback_earned']) ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : '')
         ];

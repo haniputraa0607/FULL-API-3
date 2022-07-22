@@ -49,7 +49,9 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
 		'consultation_end_time',
 		'consultation_session_price',
 		'consultation_status',
-		'completed_at'
+		'completed_at',
+        'recipe_redemption_limit',
+        'recipe_redemption_counter'
 	];
 
 	public function scopeOnlySoon($query)

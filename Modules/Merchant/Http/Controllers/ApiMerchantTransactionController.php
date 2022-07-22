@@ -3,6 +3,7 @@
 namespace Modules\Merchant\Http\Controllers;
 
 use App\Http\Models\City;
+use App\Http\Models\Districts;
 use App\Http\Models\LogBalance;
 use App\Http\Models\MonthlyReportTrx;
 use App\Http\Models\Outlet;
@@ -303,10 +304,14 @@ class ApiMerchantTransactionController extends Controller
 
         if(!empty($trxPaymentMidtrans)){
             $paymentMethod = $trxPaymentMidtrans['payment_type'].(!empty($trxPaymentMidtrans['bank']) ? ' ('.$trxPaymentMidtrans['bank'].')':'');
+            $paymentLogo = config('payment_method.midtrans_'.strtolower($paymentMethod).'.logo');
         }elseif(!empty($trxPaymentXendit)){
             $paymentMethod = $trxPaymentXendit['type'];
+            $paymentLogo = config('payment_method.xendit_'.strtolower($paymentMethod).'.logo');
         }
 
+        $district = Districts::join('subdistricts', 'subdistricts.id_district', 'districts.id_district')
+            ->where('id_subdistrict', $transaction['depart_id_subdistrict'])->first();
         $address = [
             'destination_name' => $transaction['destination_name'],
             'destination_phone' => $transaction['destination_phone'],
@@ -314,6 +319,8 @@ class ApiMerchantTransactionController extends Controller
             'destination_description' => $transaction['destination_description'],
             'destination_province' => $transaction['province_name'],
             'destination_city' => $transaction['city_name'],
+            'destination_district' => $district['district_name'],
+            'destination_subdistrict' => $district['subdistrict_name']
         ];
 
         $tracking = [];
@@ -346,10 +353,11 @@ class ApiMerchantTransactionController extends Controller
                 'delivery_tracking' => $tracking,
                 'pickup_code' => $transaction['shipment_pickup_code'],
                 'pickup_time_start' => date('Y-m-d H:i:s', strtotime($transaction['shipment_pickup_time_start'])),
-                'pickup_time_end' => date('Y-m-d H:i:s', strtotime($transaction['shipment_pickup_time_end']))
+                'pickup_time_end' => date('Y-m-d H:i:s', strtotime($transaction['shipment_pickup_time_end'])),
+                'estimated' => $transaction['shipment_courier_etd']
             ],
-            'image_recipe' => (empty($transaction['image_recipe']) ? '': config('url.storage_url_api').$transaction['image_recipe']),
             'payment' => $paymentMethod??'',
+            'payment_logo' => $paymentLogo??'',
             'payment_detail' => $paymentDetail,
             'point_receive' => (!empty($transaction['transaction_cashback_earned']) ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : '')
         ];
@@ -461,18 +469,27 @@ class ApiMerchantTransactionController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Sedang menunggu pickup']]);
         }
 
+        $district = Districts::join('subdistricts', 'subdistricts.id_district', 'districts.id_district')
+            ->where('id_subdistrict', $detail['id_subdistrict'])->first();
+
         $address = [
             'id_province' => $detail['id_province'],
             'province_name' => $detail['province_name'],
             'id_city' => $detail['id_city'],
             'city_name' => $detail['city_name'],
+            'id_district' => $district['id_district'],
+            'destination_district' => $district['district_name'],
+            'id_subdistrict' => $district['id_subdistrict'],
+            'destination_subdistrict' => $district['subdistrict_name'],
             'address' => $detail['outlet_address'],
-            'postal_code' => $detail['outlet_postal_code']
+            'postal_code' => $detail['outlet_postal_code'],
+            'phone_number' => $detail['outlet_phone']
         ];
 
         $description = Setting::where('key', 'delivery_request_description')->first()['value_text']??'';
 
         return response()->json(['status' => 'success', 'result' => [
+            'outlet_name' => $detail['outlet_name'],
             'address' => $address,
             'description' => $description
         ]]);
