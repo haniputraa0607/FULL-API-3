@@ -17,12 +17,12 @@ class UpdateDoctorInboxesColumnToDoctorInboxesTable extends Migration
     public function up()
     {
         Schema::table('doctor_inboxes', function (Blueprint $table) {
-            $table->string('inboxes_clickto');
-			$table->string('inboxes_link');
-			$table->string('inboxes_id_reference');
-			$table->smallinteger('inboxes_promotion_status');
-			$table->boolean('read');
-			$table->integer('id_brand');
+            $table->string('inboxes_clickto')->after('inboxes_content');
+			$table->string('inboxes_link')->after('inboxes_clickto');
+			$table->string('inboxes_id_reference')->after('inboxes_link');
+			$table->smallinteger('inboxes_promotion_status')->after('inboxes_id_reference');
+			$table->boolean('read')->after('inboxes_promotion_status');
+			$table->integer('id_brand')->after('read');
         });
     }
 

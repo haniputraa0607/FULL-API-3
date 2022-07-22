@@ -14,7 +14,7 @@ class UpdateRecipeRedemptionToTransactionConsultation extends Migration
     public function up()
     {
         Schema::table('transaction_consultations', function (Blueprint $table) {
-            $table->integer('recipe_redemption_limit');
+            $table->integer('recipe_redemption_limit')->after('treatment_recomendation');
         });
     }
 

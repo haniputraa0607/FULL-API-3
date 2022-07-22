@@ -14,9 +14,9 @@ class UpdateTransactionRecomendationTableToTransactionRecomendation extends Migr
     public function up()
     {
         Schema::table('transaction_consultation_recomendations', function (Blueprint $table) {
-            $table->string('usage_rules');
-            $table->string('usage_rules_time');
-            $table->string('usage_rules_additional_time');
+            $table->string('usage_rules')->after('id_outlet');
+            $table->string('usage_rules_time')->after('usage_rules');
+            $table->string('usage_rules_additional_time')->after('usage_rules_time');
         });
     }
 
