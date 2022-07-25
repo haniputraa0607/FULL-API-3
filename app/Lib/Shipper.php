@@ -72,7 +72,9 @@ class Shipper {
             $dtRate[$logisticCode.'_'.$rateType] = [
                 'price' => $value['final_price'],
                 'rate_id' => $value['rate']['id'],
-                'insurance_fee' => $value['insurance_fee']
+                'insurance_fee' => $value['insurance_fee'],
+                'min_day' => $value['min_day'],
+                'max_day' => $value['max_day']
             ];
             $logo[$logisticCode] = $value['logistic']['logo_url'];
         }
@@ -84,13 +86,23 @@ class Shipper {
                 foreach ($delivery['service'] as $s){
                     $codeSearch = $s['code'];
                     if(isset($dtRate[$codeSearch])){
+                        $min = $dtRate[$codeSearch]['min_day'];
+                        $max = $dtRate[$codeSearch]['max_day'];
+                        $estimated = '';
+                        if($min == $max){
+                            $estimated = $max.' hari';
+                        }else{
+                            $estimated = $min.'-'.$max.' hari';
+                        }
+
                         $service[] = [
                             "code" => $s['code'],
                             "service_name" => $s['service_name'],
                             "active_status" => $s['active_status'],
                             "price" => $dtRate[$codeSearch]['price'],
                             "rate_id" => $dtRate[$codeSearch]['rate_id'],
-                            "insurance_fee" => $dtRate[$codeSearch]['insurance_fee']
+                            "insurance_fee" => $dtRate[$codeSearch]['insurance_fee'],
+                            "estimated" => $estimated
                         ];
                     }
                 }

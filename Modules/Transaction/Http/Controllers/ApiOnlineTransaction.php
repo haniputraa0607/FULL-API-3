@@ -5,6 +5,7 @@ namespace Modules\Transaction\Http\Controllers;
 use App\Http\Models\DailyTransactions;
 use App\Http\Models\ProductPhoto;
 use App\Http\Models\Subdistricts;
+use App\Http\Models\TransactionConsultation;
 use App\Http\Models\TransactionConsultationRecomendation;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentOvo;
@@ -285,13 +286,6 @@ class ApiOnlineTransaction extends Controller
             $earnedPoint = $this->countTranscationPoint(['subtotal' => (int)$data['items_subtotal']], $user);
             $cashback = $earnedPoint['cashback'] ?? 0;
             $receiptNumber = rand().time().'-'.substr($data['id_outlet'], 0, 4).rand(1000,9999);
-            if(!empty($data['image_recipe'])){
-                $upload = MyHelper::uploadPhotoAllSize($data['image_recipe'], 'img/recipe/', $receiptNumber);
-
-                if (isset($upload['status']) && $upload['status'] == "success") {
-                    $imageRecipe = $upload['path'];
-                }
-            }
 
             $discount = $data['discount']??0;
             $discountDelivery = $data['discount_delivery']??0;
@@ -323,7 +317,6 @@ class ApiOnlineTransaction extends Controller
                 'trasaction_payment_type'     => $paymentType,
                 'transaction_payment_status'  => $paymentStatus,
                 'membership_level'            => $post['membership_level'],
-                'image_recipe'                => $imageRecipe??null,
                 'transaction_discount'        => ($discountAll > 0 ? -$discountAll:0),
                 'transaction_discount_item'  => $discountItem,
                 'transaction_discount_bill'  => $discountBill,
@@ -463,6 +456,8 @@ class ApiOnlineTransaction extends Controller
             $shipmentInsurancePrice = 0;
             $shipmentPrice = 0;
             $shipmentRateID = null;
+            $estimated = null;
+
             //checkking shipment
             foreach ($data['available_delivery'] as $shipmentCheck){
                 foreach ($shipmentCheck['service'] as $service){
@@ -474,6 +469,7 @@ class ApiOnlineTransaction extends Controller
                         $shipmentInsuranceStatus = ($data['delivery']['insurance_status'] == true ? 1 : 0);
                         $shipmentInsurancePrice = $service['insurance_fee'];
                         $shipmentPrice = $service['price'];
+                        $estimated = $service['estimated'];
                         if($shipmentInsuranceStatus == 1){
                             $shipmentPrice = $shipmentPrice + $shipmentInsurancePrice;
                         }
@@ -513,6 +509,7 @@ class ApiOnlineTransaction extends Controller
                 'shipment_insurance_use_status' => $shipmentInsuranceStatus,
                 'shipment_rate_id' => $shipmentRateID,
                 'shipment_price' => $shipmentPrice,
+                'shipment_courier_etd' => $estimated,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
@@ -628,6 +625,7 @@ class ApiOnlineTransaction extends Controller
         $subtotal = $itemsCheck['subtotal'];
         $delivery = $itemsCheck['total_delivery']??0;
         $checkOutStatus = $itemsCheck['available_checkout'];
+        $popupConsultation = $itemsCheck['pupop_need_consultation']??true;
         if(!empty($itemsCheck['error_messages'])){
             $checkOutStatus = false;
         }
@@ -689,6 +687,7 @@ class ApiOnlineTransaction extends Controller
             'summary_order' => $summaryOrder,
             'grandtotal' => $grandTotal,
             'grandtotal_text' => 'Rp '.$grandTotal,
+            'pupop_need_consultation' => $popupConsultation,
             'available_checkout' => $checkOutStatus,
             'error_messages' => implode('. ', array_unique($errorMsg))
         ];
@@ -2466,11 +2465,13 @@ class ApiOnlineTransaction extends Controller
         $items = $this->mergeProducts($post);
 
         $availableCheckout = true;
+        $canBuyStatus = true;
         $subtotal = 0;
         $deliveryPrice = 0;
         $errorMsg = [];
         $weight = [];
         $needRecipeStatus = 0;
+
         foreach ($items as $index=>$value){
             $errorMsgSubgroup = [];
             $checkOutlet = Outlet::where('id_outlet', $value['id_outlet'])->where('outlet_status', 'Active')->where('outlet_is_closed', 0)->first();
@@ -2565,6 +2566,19 @@ class ApiOnlineTransaction extends Controller
                         $error = 'Harga produk tidak valid';
                     }
 
+                    if($product['need_recipe_status'] == 1){
+                        $idUser = request()->user()->id;
+                        $checkRecipe = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
+                            ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product'])->first();
+                        $maxQty = ($checkRecipe['recipe_redemption_limit']??0) * ($checkRecipe['qty_product']??0);
+                        $qtyCanBuy = $maxQty - $checkRecipe['qty_product_redeem'];
+
+                        if(empty($checkRecipe) || (!empty($checkRecipe) && $item['qty'] > $qtyCanBuy)){
+                            $canBuyStatus = false;
+                            $error = 'Produk membutuhkan resep, silahkan lakukan konsultasi terlebih dahulu';
+                        }
+                    }
+
                     if($item['qty'] > $product['stock_item']){
                         $error = 'Jumlah item yang Anda pilih melebihi batas maksimal stock';
                     }
@@ -2584,10 +2598,6 @@ class ApiOnlineTransaction extends Controller
                         $dimentionProduct = $dimentionProduct+($product['product_width'] * $product['product_height'] * $product['product_length'] * $item['qty']);
                     }else{
                         $error = 'Produk tidak valid';
-                    }
-
-                    if($needRecipeStatus == 1 && empty($value['image_recipe']) && $fromRecipeDoctor == 0){
-                        $error = 'Produk membutuhkan resep, silahkan unggah foto resep Anda';
                     }
 
                     $totalPrice = (int)$product['product_price'] * $item['qty'];
@@ -2612,6 +2622,7 @@ class ApiOnlineTransaction extends Controller
                         "id_product_variant_group_wholesaler" => $idWholesalerVariant??null,
                         "wholesaler_minimum" => $product['wholesaler_minimum']??null,
                         "need_recipe_status" => $product['need_recipe_status'],
+                        "can_buy_status" => $canBuyStatus,
                         "image" => $product['image'],
                         "error_message" => $error
                     ];
@@ -2773,7 +2784,8 @@ class ApiOnlineTransaction extends Controller
             'total_delivery' => $deliveryPrice,
             'available_checkout' => $availableCheckout,
             'error_messages' => implode('. ', array_unique($errorMsg)),
-            'weight' => array_sum($weight)
+            'weight' => array_sum($weight),
+            'pupop_need_consultation' => ($canBuyStatus ? false:true)
         ];
     }
 
@@ -2784,7 +2796,6 @@ class ApiOnlineTransaction extends Controller
             $tmp[$value['id_outlet']]['id_outlet'] = $value['id_outlet'];
             $tmp[$value['id_outlet']]['delivery'] = $value['delivery']??'';
             $tmp[$value['id_outlet']]['items'] = array_merge($tmp[$value['id_outlet']]['items']??[], $value['items']);
-            $tmp[$value['id_outlet']]['image_recipe'] = $value['image_recipe']??null;
         }
         $items = array_values($tmp);
 
@@ -2825,6 +2836,7 @@ class ApiOnlineTransaction extends Controller
     }
 
     public function updateStockProduct($id_transaction, $action){
+        $transaction = Transaction::where('id_transaction', $id_transaction)->first();
         $transactionProducts = TransactionProduct::where('id_transaction', $id_transaction)->get()->toArray();
         foreach ($transactionProducts as $product){
             if(!empty($product['id_product_variant_group'])){
@@ -2859,7 +2871,68 @@ class ApiOnlineTransaction extends Controller
                 ProductDetail::where('id_product_detail', $currentStock['id_product_detail'])
                     ->update(['product_detail_stock_status' => $statusStock, 'product_detail_stock_item' => $stockItem]);
             }
+
+            $checkProduct = Product::where('id_product', $product['id_product'])->first();
+            if($action == 'book' && $checkProduct['need_recipe_status'] == 1 && empty($transaction['id_transaction_consultation'])){
+                $getQtyDrug = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
+                    ->where('id_user', $product['id_user'])->where('product_type', 'Drug')
+                    ->where('id_product', $checkProduct['id_product'])->first();
+
+                if(!empty($getQtyDrug)){
+                    $curretQtyDrug = $getQtyDrug['qty_product_redeem'];
+                    $updateReedemQty = $curretQtyDrug + $product['transaction_product_qty'];
+                    TransactionConsultationRecomendation::where('id_transaction_consultation_recomendation', $getQtyDrug['id_transaction_consultation_recomendation'])
+                        ->update(['qty_product_redeem' => $updateReedemQty]);
+                    TransactionProduct::where('id_transaction_product', $product['id_transaction_product'])->update(['id_transaction_consultation_recomendation' => $getQtyDrug['id_transaction_consultation_recomendation']]);
+
+                    //update counter redeem recipe
+                    $dataRecomend = TransactionConsultationRecomendation::where('id_transaction_consultation', $getQtyDrug['id_transaction_consultation'])
+                        ->where('product_type', 'Drug')->get()->toArray();
+                    $redeemStatus = true;
+                    foreach ($dataRecomend as $rec){
+                        $calculate = $updateReedemQty / $rec['qty_product'];
+
+                        if(is_float($calculate)){
+                            $redeemStatus = false;
+                        }
+                    }
+
+                    if($redeemStatus == true && !empty($dataRecomend)){
+                        TransactionConsultation::where('id_transaction_consultation', $getQtyDrug['id_transaction_consultation'])->update(['recipe_redemption_counter' => $getQtyDrug['recipe_redemption_counter']+1]);
+                    }
+                }
+            }elseif($action == 'cancel' && !empty($product['id_transaction_consultation_recomendation'])){
+                $getQtyDrug = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
+                    ->where('id_transaction_consultation_recomendation', $product['id_transaction_consultation_recomendation'])->first();
+
+                if(!empty($getQtyDrug)){
+                    $minusQtyRedeem = $getQtyDrug['qty_product_redeem'] - $product['transaction_product_qty'];
+                    $minusQtyRedeem = ($minusQtyRedeem < 0 ? 0 : $minusQtyRedeem);
+                    TransactionConsultationRecomendation::where('id_transaction_consultation_recomendation', $getQtyDrug['id_transaction_consultation_recomendation'])
+                        ->update(['qty_product_redeem' => $minusQtyRedeem]);
+
+                    $minusRedeem = $getQtyDrug['recipe_redemption_counter'] - 1;
+                    $minusRedeem = ($minusRedeem < 0 ? 0 : $minusRedeem);
+                    TransactionConsultation::where('id_transaction_consultation', $getQtyDrug['id_transaction_consultation'])
+                        ->update(['recipe_redemption_counter' => $minusRedeem]);
+                }
+            }
         }
+
+        if($action == 'book' && !empty($transaction['id_transaction_consultation'])){
+            $consultation = TransactionConsultation::where('id_transaction_consultation', $transaction['id_transaction_consultation'])->first();
+            TransactionConsultation::where('id_transaction_consultation', $transaction['id_transaction_consultation'])
+                ->update(['recipe_redemption_counter' => $consultation['recipe_redemption_counter']+1]);
+        }elseif($action == 'cancel' && !empty($transaction['id_transaction_consultation'])){
+            $consultation = TransactionConsultation::where('id_transaction_consultation', $transaction['id_transaction_consultation'])->first();
+
+            $minusRed = $consultation['recipe_redemption_counter'] - 1;
+            $minusRed = ($minusRed < 0 ? 0 : $minusRed);
+            TransactionConsultation::where('id_transaction_consultation', $transaction['id_transaction_consultation'])
+                ->update(['recipe_redemption_counter' => $minusRed]);
+        }
+
+        return true;
     }
 
     public function rejectPayment($data){

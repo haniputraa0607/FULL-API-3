@@ -33,11 +33,7 @@ class UpdateDoctorInboxesColumnToDoctorInboxesTable extends Migration
      */
     public function down()
     {
-        Schema::table('doctors', function (Blueprint $table) {
-            $table->string('doctor_email')->after('doctor_phone');
-        });
-
-        Schema::table('doctors', function (Blueprint $table) {
+        Schema::table('doctor_inboxes', function (Blueprint $table) {
             $table->dropColumn('inboxes_clickto');
             $table->dropColumn('inboxes_link');
             $table->dropColumn('inboxes_id_reference');

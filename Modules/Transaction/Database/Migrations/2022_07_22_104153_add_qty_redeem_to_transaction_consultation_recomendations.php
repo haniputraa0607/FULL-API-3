@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class UpdateTransactionRecomendationTableToTransactionRecomendation extends Migration
+class AddQtyRedeemToTransactionConsultationRecomendations extends Migration
 {
     /**
      * Run the migrations.
@@ -14,9 +14,7 @@ class UpdateTransactionRecomendationTableToTransactionRecomendation extends Migr
     public function up()
     {
         Schema::table('transaction_consultation_recomendations', function (Blueprint $table) {
-            $table->string('usage_rules')->after('id_outlet');
-            $table->string('usage_rules_time')->after('usage_rules');
-            $table->string('usage_rules_additional_time')->after('usage_rules_time');
+            $table->integer('qty_product_redeem')->default(0)->nullable()->after('qty_product');
         });
     }
 
@@ -28,9 +26,7 @@ class UpdateTransactionRecomendationTableToTransactionRecomendation extends Migr
     public function down()
     {
         Schema::table('transaction_consultation_recomendations', function (Blueprint $table) {
-            $table->dropColumn('usage_rules');
-            $table->dropColumn('usage_rules_time');
-            $table->dropColumn('usage_rules_additional_time');
+            $table->dropColumn('qty_product_redeem');
         });
     }
 }
