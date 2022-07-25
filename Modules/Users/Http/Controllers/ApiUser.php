@@ -384,11 +384,6 @@ class ApiUser extends Controller
                                 unset($cond[$i]);
                             }
 
-                            if ($condition['subject'] == 'trx_outlet') {
-                                array_push($arr_tmp_outlet, $condition);
-                                unset($cond[$i]);
-                            }
-
                             if ($condition['subject'] == 'trx_product' || $condition['subject'] == 'trx_product_count' || $condition['subject'] == 'trx_product_tag' || $condition['subject'] == 'trx_product_tag_count') {
                                 $userTrxProduct = true;
                             } elseif ($condition['subject']  != 'trx_date' && stristr($condition['subject'], 'trx')) {
@@ -506,7 +501,6 @@ class ApiUser extends Controller
                 );
         }
 
-        $resultCount = $finalResult->count(); // get total result
         if ($columns) {
             foreach ($columns as $in=>$c){
                 if($c == 'email' || $c == 'name' || $c == 'phone'){
@@ -524,12 +518,11 @@ class ApiUser extends Controller
             return $finalResult;
         }
 
-        $result = $finalResult->skip($skip)->take($take)->get()->toArray();
+        $result = $finalResult->paginate($take);
         if ($result) {
             $response = [
                 'status'    => 'success',
-                'result'    => $result,
-                'total' => $resultCount
+                'result'    => $result
             ];
         } else {
             $response = [
@@ -738,7 +731,9 @@ class ApiUser extends Controller
                     }
 
                     if ($condition['subject'] == 'trx_outlet') {
-                        $query = $query->where('transactions.id_outlet', '=', $conditionParameter);
+                        $query = $query->where('transactions.id_outlet', '=', $condition['id'])
+                            ->groupBy('transactions.id_user')
+                            ->havingRaw('COUNT(transactions.id_outlet) '.$condition['operatorSpecialCondition'].' '.$condition['parameterSpecialCondition']);
                     }
 
                     if ($condition['subject'] == 'trx_outlet_not') {
@@ -978,7 +973,9 @@ class ApiUser extends Controller
                     }
 
                     if ($condition['subject'] == 'trx_outlet') {
-                        $query = $query->orWhere('transactions.id_outlet', '=', $conditionParameter);
+                        $query = $query->orWhere('transactions.id_outlet', '=', $condition['id'])
+                            ->groupBy('transactions.id_user')
+                            ->havingRaw('COUNT(transactions.id_outlet) '.$condition['operatorSpecialCondition'].' '.$condition['parameterSpecialCondition']);
                     }
 
                     if ($condition['subject'] == 'trx_outlet_not') {
