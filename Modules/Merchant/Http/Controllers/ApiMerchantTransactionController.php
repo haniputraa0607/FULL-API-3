@@ -93,7 +93,7 @@ class ApiMerchantTransactionController extends Controller
         }
         $idOutlet = $checkMerchant['id_outlet'];
         $codeIndo = [
-            'Reject' => [
+            'Rejected' => [
                 'code' => 1,
                 'text' => 'Dibatalkan'
             ],
@@ -210,7 +210,7 @@ class ApiMerchantTransactionController extends Controller
         }
 
         $codeIndo = [
-            'Reject' => [
+            'Rejected' => [
                 'code' => 1,
                 'text' => 'Ditolak'
             ],
@@ -299,6 +299,16 @@ class ApiMerchantTransactionController extends Controller
             ];
         }
 
+        $grandTotal = $transaction['transaction_grandtotal'];
+        $trxPaymentBalance = TransactionPaymentBalance::where('id_transaction', $transaction['id_transaction'])->first()['balance_nominal']??0;
+        if(!empty($trxPaymentBalance)){
+            $paymentDetail[] = [
+                'text' => 'Point yang digunakan',
+                'value' => '-'.number_format($trxPaymentBalance,0,",",".")
+            ];
+            $grandTotal = $grandTotal - $trxPaymentBalance;
+        }
+
         $trxPaymentMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $transaction['id_transaction_group'])->first();
         $trxPaymentXendit = TransactionPaymentXendit::where('id_transaction_group', $transaction['id_transaction_group'])->first();
 
@@ -344,7 +354,7 @@ class ApiMerchantTransactionController extends Controller
             'transaction_date' => MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_date'])), true),
             'transaction_products' => $products,
             'address' => $address,
-            'transaction_grandtotal' => 'Rp '. number_format((int)$transaction['transaction_grandtotal'],0,",","."),
+            'transaction_grandtotal' => 'Rp '. number_format((int)$grandTotal,0,",","."),
             'delivery' => [
                 'delivery_id' => $transaction['order_id'],
                 'delivery_method' => strtoupper($transaction['shipment_courier']),
@@ -374,8 +384,8 @@ class ApiMerchantTransactionController extends Controller
         }
         $idOutlet = $checkMerchant['id_outlet'];
 
-        if(empty($post['id_transaction']) || empty($post['maximum_date_delivery'])){
-            return response()->json(['status' => 'fail', 'messages' => ['Incompleted data']]);
+        if(empty($post['id_transaction'])){
+            return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
 
         $transaction = Transaction::where('id_outlet', $idOutlet)
@@ -386,7 +396,7 @@ class ApiMerchantTransactionController extends Controller
         }
 
         $update = Transaction::where('id_transaction', $transaction['id_transaction'])
-                ->update(['transaction_status' => 'On Progress', 'transaction_maximum_date_delivery' => date('Y-m-d', strtotime($post['maximum_date_delivery']))]);
+                ->update(['transaction_status' => 'On Progress', 'transaction_maximum_date_delivery' => date('Y-m-d', strtotime(date('Y-m-d'). ' + 5 days'))]);
 
         if($update){
             TransactionShipmentTrackingUpdate::create([

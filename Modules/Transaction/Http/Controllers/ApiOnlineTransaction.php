@@ -218,28 +218,7 @@ class ApiOnlineTransaction extends Controller
             $paymentType = 'Balance';
         }
 
-        $currentBalance = LogBalance::where('id_user', $user->id)->sum('balance');
-        if(isset($post['point_use']) && $post['point_use']){
-            if($currentBalance >= $grandtotal){
-                $grandtotal = 0;
-            }else{
-                $grandtotal = $grandtotal - $currentBalance;
-            }
-        }
-
         $grandTotal = $subtotal+$deliveryTotal;
-
-        if(isset($post['point_use']) && $post['point_use']){
-            if($currentBalance >= $grandTotal){
-                $usePoint = $grandTotal;
-                $grandTotal = 0;
-            }else{
-                $usePoint = $currentBalance;
-                $grandTotal = $grandTotal - $currentBalance;
-            }
-
-            $currentBalance -= $usePoint;
-        }
         $itemsCheck['grandtotal'] = $grandTotal;
 
         $itemsCheck = app($this->promo_trx)->applyPromoCheckout($itemsCheck);
@@ -321,6 +300,7 @@ class ApiOnlineTransaction extends Controller
                 'transaction_discount_item'  => $discountItem,
                 'transaction_discount_bill'  => $discountBill,
                 'transaction_discount_delivery'  => $discountDelivery,
+                'transaction_maximum_date_process' => date('Y-m-d', strtotime($currentDate. ' + 3 days'))
             ];
 
             $newTopupController = new NewTopupController();
@@ -540,7 +520,15 @@ class ApiOnlineTransaction extends Controller
         }
 
         $trxGroup = TransactionGroup::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->first();
-        if ($paymentType == 'Balance') {
+        if ($paymentType == 'Balance' && isset($post['point_use']) && $post['point_use']) {
+
+            $currentBalance = LogBalance::where('id_user', $user->id)->sum('balance');
+            $grandTotalNew = $trxGroup['transaction_grandtotal'];
+            if($currentBalance >= $grandTotalNew){
+                $grandTotalNew = 0;
+            }else{
+                $grandTotalNew = $grandTotalNew - $currentBalance;
+            }
 
             $save = app($this->balance)->topUpGroup($user->id, $trxGroup);
 
@@ -554,7 +542,7 @@ class ApiOnlineTransaction extends Controller
                 return response()->json($save);
             }
 
-            if($grandtotal == 0){
+            if($grandTotalNew == 0){
                 $trxGroup->triggerPaymentCompleted();
             }
         }
@@ -667,17 +655,6 @@ class ApiOnlineTransaction extends Controller
         ];
         $grandTotal = $subtotal+$delivery;
 
-        if(isset($post['point_use']) && $post['point_use']){
-            if($currentBalance >= $grandTotal){
-                $usePoint = $grandTotal;
-                $grandTotal = 0;
-            }else{
-                $usePoint = $currentBalance;
-                $grandTotal = $grandTotal - $currentBalance;
-            }
-
-            $currentBalance -= $usePoint;
-        }
         $result = [
             'address' => $mainAddress,
             'point_use' => $post['point_use']??false,
@@ -695,6 +672,28 @@ class ApiOnlineTransaction extends Controller
 
         $fake_request = new Request(['show_all' => 0]);
         $result['available_payment'] = $this->availablePayment($fake_request)['result'] ?? [];
+
+        $grandTotalNew = $result['grandtotal'];
+        if(isset($post['point_use']) && $post['point_use']){
+            if($currentBalance >= $grandTotalNew){
+                $usePoint = $grandTotalNew;
+                $grandTotalNew = 0;
+            }else{
+                $usePoint = $currentBalance;
+                $grandTotalNew = $grandTotalNew - $currentBalance;
+            }
+
+            $currentBalance -= $usePoint;
+
+            $result['summary_order'][] = [
+                'name' => 'Point yang digunakan',
+                'value' => 'Rp - '.number_format($usePoint,0,",",".")
+            ];
+        }
+
+        $result['grandtotal'] = $grandTotalNew;
+        $result['grandtotal_text'] = 'Rp '.number_format($grandTotalNew,0,",",".");
+        $result['current_points'] = $currentBalance;
 
         return response()->json(MyHelper::checkGet($result));
     }
