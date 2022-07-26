@@ -721,6 +721,10 @@ class ApiMerchantTransactionController extends Controller
                 ]);
         }
 
+        if(!empty($orderID)){
+            Transaction::where('id_transaction', $detail['id_transaction'])->update(['transaction_status' => 'On Delivery']);
+        }
+
         $deliveryList = app($this->merchant)->availableDelivery($detail['id_outlet']);
         $deliveryName = '';
         $deliveryLogo = '';
