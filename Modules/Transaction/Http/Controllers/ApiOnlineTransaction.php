@@ -2235,13 +2235,13 @@ class ApiOnlineTransaction extends Controller
         foreach ($setting as $value) {
             if(!empty($post['all'])){
                 if(!empty($value['logo'])){
-                    $value['logo'] = config('url.storage_url_api').$value['logo'].'?='.time();
+                    $value['logo'] = $value['logo'];
                 }
 
                 $delivery[] = $value;
             }elseif($value['show_status'] == 1){
                 if(!empty($value['logo'])){
-                    $value['logo'] = config('url.storage_url_api').$value['logo'].'?='.time();
+                    $value['logo'] = $value['logo'];
                 }
 
                 $delivery[] = $value;

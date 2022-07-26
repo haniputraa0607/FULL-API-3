@@ -753,6 +753,8 @@ class ApiMerchantTransactionController extends Controller
                 'delivery_id' => $orderID,
                 'delivery_name' => $deliveryName,
                 'delivery_logo' => $deliveryLogo,
+                'outlet_name' => $detail['outlet_name'],
+                'outlet_phone' => $detail['outlet_phone'],
                 'address' => $address
             ]]);
         }else{
