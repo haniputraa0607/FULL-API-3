@@ -41,6 +41,7 @@ class TransactionConsultationRecomendation extends model
 		'id_product',
 		'product_type',
 		'qty_product',
+        'qty_product_counter',
         'qty_product_redeem',
 		'id_outlet',
 		'treatment_description'
