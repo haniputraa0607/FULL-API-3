@@ -2686,7 +2686,7 @@ class ApiTransaction extends Controller
         }
 
         $codeIndo = [
-            'Reject' => [
+            'Rejected' => [
                 'code' => 1,
                 'text' => 'Dibatalkan'
             ],
@@ -2775,15 +2775,14 @@ class ApiTransaction extends Controller
         }
 
         $grandTotal = $transaction['transaction_grandtotal'];
-        $trxPaymentBalance = TransactionPaymentBalance::where('id_transaction_group', $transaction['id_transaction_group'])->first()['balance_nominal']??0;
-        $trxCount = Transaction::where('id_transaction_group', $transaction['id_transaction_group'])->count();
-        $balance = (int)$trxPaymentBalance/$trxCount;
+        $trxPaymentBalance = TransactionPaymentBalance::where('id_transaction', $transaction['id_transaction'])->first()['balance_nominal']??0;
+
         if(!empty($trxPaymentBalance)){
-            $grandTotal = $grandTotal - $balance;
             $paymentDetail[] = [
                 'text' => 'Point yang digunakan',
-                'value' => '-'.number_format($balance,0,",",".")
+                'value' => '-'.number_format($trxPaymentBalance,0,",",".")
             ];
+            $grandTotal = $grandTotal - $trxPaymentBalance;
         }
 
         $trxPaymentMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $transaction['id_transaction_group'])->first();

@@ -66,6 +66,13 @@ class ApiConfirm extends Controller
             ]);
         }
 
+        if ($check['transaction_payment_status'] == 'Completed' && $check['transaction_payment_type'] == 'Balance') {
+            DB::rollback();
+            return response()->json([
+                'status'   => 'success'
+            ]);
+        }
+
         if ($check['transaction_payment_status'] != 'Pending') {
             DB::rollback();
             return response()->json([

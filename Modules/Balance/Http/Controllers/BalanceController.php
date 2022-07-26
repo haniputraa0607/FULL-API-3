@@ -421,6 +421,42 @@ class BalanceController extends Controller
             ];
         }
 
+        $transactions = Transaction::where('id_transaction_group', $dataTrx['id_transaction_group'])->get()->toArray();
+        $totalTrx = count($transactions);
+        $splitPoint = 100/$totalTrx;
+        $splitPoint = (int) $splitPoint;
+        if ($current_balance >= $grandTotal) {
+            $lastPoint = $grandTotal;
+        }else{
+            $lastPoint = $current_balance;
+        }
+
+        foreach ($transactions as $key=>$t){
+            $index = $key+1;
+
+            if($totalTrx == $index){
+                $paymentPoint = $lastPoint;
+            }else{
+                $calculate = ($splitPoint/100) * $grandTotal;
+                $calculate = (int) $calculate;
+                if($calculate > $t['transaction_grandtotal']){
+                    $paymentPoint = $t['transaction_grandtotal'];
+                }else{
+                    $paymentPoint = $calculate;
+                }
+
+                $lastPoint = $lastPoint - $paymentPoint;
+            }
+
+            if($paymentPoint > 0){
+                $dataPaymentBalanceTrx = [
+                    'id_transaction'  => $t['id_transaction'],
+                    'balance_nominal' => $paymentPoint
+                ];
+                TransactionPaymentBalance::create($dataPaymentBalanceTrx);
+            }
+        }
+
         if ($current_balance >= $grandTotal) {
             $balanceNotif = app($this->notif)->balanceNotifGroup($dataTrx);
 
