@@ -1245,11 +1245,20 @@ class ApiPromoTransaction extends Controller
         $user = request()->user();
         $promoCashback = 'promo_code';
         $cashback = $trx['transaction_cashback_earned'];
+        $totalDiscount = (int) abs($trx['transaction_discount']);
+        $idPromoCampaign = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $trx['id_promo_campaign_promo_code'])->first()['id_promo_campaign']??null;
+        $dataDiscount = PromoCampaign::where('id_promo_campaign', $idPromoCampaign)->first();
+        $chargedCentral = ($dataDiscount['charged_central']/100) * $totalDiscount;
+        $chargedCentral = round($chargedCentral);
+        $chargedOutlet = ($dataDiscount['charged_outlet']/100) * $totalDiscount;
+        $chargedOutlet = round($chargedOutlet);
 
         $promoGetPoint = app($this->online_trx)->checkPromoGetPoint($promoCashback);
         $cashback_earned = $promoGetPoint ? $cashback : 0;
         Transaction::where('id_transaction', $trx['id_transaction'])->update([
-            'transaction_cashback_earned' => $cashback_earned
+            'transaction_cashback_earned' => $cashback_earned,
+            'discount_charged_central' => $chargedCentral,
+            'discount_charged_outlet' => $chargedOutlet
         ]);
 
         $totalDiscountBill = $trx['transaction_discount_bill']??0;
@@ -1264,8 +1273,6 @@ class ApiPromoTransaction extends Controller
             }
         }
 
-        $idPromoCampaign = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $trx['id_promo_campaign_promo_code'])->first()['id_promo_campaign']??null;
-        $dataDiscount = PromoCampaign::where('id_promo_campaign', $idPromoCampaign)->first();
         if(!empty($dataDiscount)){
             TransactionPromo::create([
                 'id_transaction' => $trx['id_transaction'],

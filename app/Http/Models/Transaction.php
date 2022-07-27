@@ -110,8 +110,8 @@ class Transaction extends Model
 		'calculate_achievement',
 		'show_rate_popup',
 		'transaction_discount_delivery',
-		'transaction_discount_item',
-		'transaction_discount_bill',
+        'discount_charged_outlet',
+        'discount_charged_central',
 		'need_manual_void',
         'refund_requirement',
 		'failed_void_reason',
@@ -538,20 +538,6 @@ class Transaction extends Model
         //insert point cashback
         $savePoint = app('Modules\Transaction\Http\Controllers\ApiNotification')->savePoint($this);
         if (!$savePoint) {
-            DB::rollback();
-            return false;
-        }
-
-        //insert balance merchant
-        $idMerchant = Merchant::where('id_outlet', $this->id_outlet)->first()['id_merchant']??null;
-        $dt = [
-            'id_merchant' => $idMerchant,
-            'id_transaction' => $this->id_transaction,
-            'balance_nominal' => $this->transaction_grandtotal,
-            'source' => 'Transaction Completed'
-        ];
-        $saveBalanceMerchant = app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dt);
-        if (!$saveBalanceMerchant) {
             DB::rollback();
             return false;
         }
