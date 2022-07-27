@@ -97,6 +97,7 @@ class Outlet extends Authenticatable
         'outlet_special_status',
 		'plastic_used_status',
         'outlet_special_fee',
+		'outlet_referral_code',
         'time_zone_utc'
 	];
 

@@ -64,7 +64,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix
     Route::get('detail-apps/{id}', ['uses' => 'ApiDoctorController@show']);
 
     Route::post('schedule/list', ['uses' => 'ApiScheduleController@getSchedule']);
-    Route::post('recomendation/get', ['uses' => 'ApiDoctorController@getDoctorRecomendation']);
+    Route::get('recommendation', ['uses' => 'ApiDoctorController@getDoctorRecomendation']);
 });
 
 Route::group(['prefix' => 'doctor'], function () {
@@ -91,5 +91,12 @@ Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-
     Route::group(['prefix' => 'rating'], function () {
         Route::get('summary', 'ApiDoctorController@ratingSummary');
         Route::get('comment', 'ApiDoctorController@ratingComment');
+    });
+
+    Route::group(['prefix' => 'inbox'], function () {
+        Route::post('marked', 'ApiDoctorInbox@markedInbox');
+        Route::post('unmark', 'ApiDoctorInbox@unmarkInbox');
+        Route::post('unread', 'ApiDoctorInbox@unread');
+        Route::post('/{mode?}', 'ApiDoctorInbox@listInbox');
     });
 });

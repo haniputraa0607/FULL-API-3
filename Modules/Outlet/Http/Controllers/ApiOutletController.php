@@ -179,6 +179,10 @@ class ApiOutletController extends Controller
             $data['outlet_postal_code'] = $post['outlet_postal_code'];
         }
 
+        if (isset($post['outlet_referral_code'])) {
+            $data['outlet_referral_code'] = $post['outlet_referral_code'];
+        }
+
         return $data;
     }
 
