@@ -1804,7 +1804,8 @@ class ApiProductController extends Controller
 
         }
 
-        $post['id_outlet'] = Merchant::where('id_merchant', $product['id_merchant'])->first()['id_outlet']??null;
+        $merchant = Merchant::where('id_merchant', $product['id_merchant'])->first();
+        $post['id_outlet'] = $merchant['id_outlet']??null;
         $outlet = Outlet::find($post['id_outlet']);
         if(!$outlet){
             return MyHelper::checkGet([],'Outlet not found');
@@ -1893,6 +1894,10 @@ class ApiProductController extends Controller
             ];
         }
         $product['ratings'] = $ratings;
+        $product['can_buy_own_product'] = true;
+        if($request->user()->id == $merchant['id_user']){
+            $product['can_buy_own_product'] = false;
+        }
 
         return MyHelper::checkGet($product);
     }
