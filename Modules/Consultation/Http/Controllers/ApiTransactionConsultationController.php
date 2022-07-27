@@ -143,6 +143,24 @@ class ApiTransactionConsultationController extends Controller
             'time' => $post['time']
         ];
 
+        //check referral code
+        if(isset($post['referral_code'])) {
+            $outlet = Outlet::where('outlet_referral_code', $post['referral_code'])->get();
+            
+            if(empty($outlet)){
+                $outlet = Outlet::where('outlet_code', $post['referral_code'])->get();
+            }
+
+            if(empty($outlet)){
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Referral Code Salah / Outlet Tidak Ditemukan']
+                ]);
+            }
+            //referral code
+            $result['referral_code'] = $post['referral_code'];
+        }
+
         //TO DO if any promo
         $subTotal = $doctor['doctor_session_price'];
         $diskon = 0;
@@ -533,12 +551,13 @@ class ApiTransactionConsultationController extends Controller
 
         $dataConsultation = [
             'id_transaction'               => $insertTransaction['id_transaction'],
-            'id_doctor'                   => $doctor['id_doctor'],
+            'id_doctor'                    => $doctor['id_doctor'],
             'consultation_type'            => $consultation_type,
             'id_user'                      => $insertTransaction['id_user'],
             'schedule_date'                => $post['date'],
             'schedule_start_time'          => $picked_schedule['start_time'],
-            'schedule_end_time'          => $picked_schedule['end_time'],
+            'schedule_end_time'            => $picked_schedule['end_time'],
+            'referral_code'                => $post['referral_code']??null,
             'created_at'                   => date('Y-m-d', strtotime($insertTransaction['transaction_date'])).' '.date('H:i:s'),
             'updated_at'                   => date('Y-m-d H:i:s')
         ];
@@ -1342,15 +1361,17 @@ class ApiTransactionConsultationController extends Controller
         $post = $request->json()->all();
 
         if(!empty($post['referal_code'])){
-            $idOutlet = Outlet::where('outlet_code', $post['referal_code'])->first()['id_outlet']??null;
-            if(empty($idMerchant)){
+            $idOutlet = Outlet::where('outlet_referral_code', $post['referal_code'])->first()['id_outlet']??null;
+
+            if(empty($idOutlet)) {
+                $idOutlet = Outlet::where('outlet_code', $post['referal_code'])->first()['id_outlet']??null;
+            }
+
+            if(empty($idOutlet)){
                 return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
             }
 
             $idMerchant = Merchant::where('id_outlet', $idOutlet)->first()['id_merchant']??null;
-            if(empty($idMerchant)){
-                return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
-            }
         }
 
         $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',

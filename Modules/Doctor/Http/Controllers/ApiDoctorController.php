@@ -10,6 +10,8 @@ use App\Lib\MyHelper;
 use Modules\Doctor\Entities\Doctor;
 use Modules\Doctor\Entities\DoctorSpecialist;
 use Modules\Doctor\Entities\DoctorSchedule;
+use App\Http\Models\Transaction;
+use App\Http\Models\TransactionConsultation;
 use Modules\Doctor\Entities\SubmissionChangeDoctorData;
 use Modules\Doctor\Http\Requests\DoctorCreate;
 use Modules\UserRating\Entities\RatingOption;
@@ -230,8 +232,6 @@ class ApiDoctorController extends Controller
                         false,
                         'doctor'
                     );
-
-                    dd($autocrm);
                 }
             }
         }
@@ -506,10 +506,64 @@ class ApiDoctorController extends Controller
     {
         $post = $request->json()->all();
 
-        $doctor = Doctor::where('doctor_recomendation_status', 1);
+        $user = $request->user();
 
-        $doctor = $doctor->get()->toArray();
+        //Logic doctor recomendation
+        $recomendationDoctor = array();
 
-        return response()->json(['status'  => 'success', 'result' => $doctor]);
+        //1. Doctor From Consultation History
+        $historyConsultation = Transaction::where('id_user', $user->id)->where('trasaction_type', 'consultation')->get();
+        if(!empty($historyConsultation)){
+            foreach($historyConsultation as $hc){
+                $doctorId = TransactionConsultation::where('id_transaction', $hc->id_transaction)->pluck('id_doctor');
+                $doctor = Doctor::with('outlet')->with('specialists')->first();
+
+                if(in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3) {
+                    $recomendationDoctor[] = $doctor;
+                }
+
+                if(count($recomendationDoctor) >= 3) {
+                    return response()->json(['status'  => 'success', 'result' => $recomendationDoctor]);
+                }
+            }
+        }
+
+        //2. Doctor From Outlet Related Transaction Product History
+        $historyTransaction = Transaction::where('id_user', $user->id)->where('trasaction_type', 'product')->get();
+        if(!empty($historyTransaction)){
+            foreach($historyTransaction as $ht){
+                $doctor = Doctor::with('outlet')->with('specialists')->where('id_outlet', $ht->id_outlet)->first();
+
+                if(in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3) {
+                    $recomendationDoctor[] = $doctor;
+                }
+
+                if(count($recomendationDoctor) >= 3) {
+                    return response()->json(['status'  => 'success', 'result' => $recomendationDoctor]);
+                }
+            }
+        }
+
+        //3. From Setting
+        $doctorRecomendationDefault = Doctor::with('outlet')->with('specialists')->where('doctor_recomendation_status', true)->get();
+
+        if(empty($doctorRecomendationDefault)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Doctor Recomendation Settings not found']
+            ]);
+        }
+
+        foreach($doctorRecomendationDefault as $dr){
+            if(in_array($dr, $recomendationDoctor) == false && count($recomendationDoctor) < 3) {
+                $recomendationDoctor[] = $dr;
+            }
+
+            if(count($recomendationDoctor) >= 3) {
+                return response()->json(['status'  => 'success', 'result' => $recomendationDoctor]);
+            }
+        }
+
+        return response()->json(['status'  => 'success', 'result' => $recomendationDoctor]);
     }
 }
