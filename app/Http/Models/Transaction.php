@@ -329,7 +329,7 @@ class Transaction extends Model
     	}
 
         $this->update([
-            'transaction_status' => 'Pending',
+            'transaction_status' => ($this->trasaction_type == 'Consultation' ? 'Completed' : 'Pending'),
             'transaction_payment_status' => 'Completed',
             'completed_at' => date('Y-m-d H:i:s'),
             'transactions_maximum_date_process' => date('Y-m-d', strtotime(('Y-m-d'). ' + 3 days'))
@@ -344,12 +344,6 @@ class Transaction extends Model
 				$this->consultation->triggerPaymentCompleted($data);
 				break;
     	}
-
-    	TransactionShipmentTrackingUpdate::create([
-    	    'id_transaction' => $this->id_transaction,
-            'tracking_description' => 'Menunggu konfirmasi penjual',
-            'tracking_date_time' => date('Y-m-d H:i:s')
-        ]);
 
     	// check fraud
     	if ($this->user) {
@@ -376,20 +370,28 @@ class Transaction extends Model
         $trx->load('outlet');
         $trx->load('productTransaction');
 
-        //app('\Modules\Transaction\Http\Controllers\ApiNotification')->notification($mid, $trx);
-        $idMerchant = Merchant::where('id_outlet', $this->id_outlet)->first()['id_merchant']??null;
-        $user = User::where('id', $this->id_user)->first();
-        app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM(
-            'Merchant Transaction New',
-            $idMerchant,
-            [
-                'customer_name' => $user['name']??'',
-                'customer_email' =>  $user['email']??'',
-                'customer_phone' =>  $user['phone']??'',
-                'receipt_number' => $this->transaction_receipt_number
-            ],
-            null, false, false, 'merchant'
-        );
+        if($this->trasaction_type == 'Delivery'){
+            TransactionShipmentTrackingUpdate::create([
+                'id_transaction' => $this->id_transaction,
+                'tracking_description' => 'Menunggu konfirmasi penjual',
+                'tracking_date_time' => date('Y-m-d H:i:s')
+            ]);
+
+            //app('\Modules\Transaction\Http\Controllers\ApiNotification')->notification($mid, $trx);
+            $idMerchant = Merchant::where('id_outlet', $this->id_outlet)->first()['id_merchant']??null;
+            $user = User::where('id', $this->id_user)->first();
+            app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM(
+                'Merchant Transaction New',
+                $idMerchant,
+                [
+                    'customer_name' => $user['name']??'',
+                    'customer_email' =>  $user['email']??'',
+                    'customer_phone' =>  $user['phone']??'',
+                    'receipt_number' => $this->transaction_receipt_number
+                ],
+                null, false, false, 'merchant'
+            );
+        }
 
         \DB::commit();
     	return true;
@@ -436,9 +438,14 @@ class Transaction extends Model
     		case 'Pickup Order':
     			$this->transaction_pickup->triggerPaymentCancelled($data);
     			break;
+            case 'Consultation':
+                $this->consultation->triggerPaymentCancelled($data);
+                break;
     	}
 
-        app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->updateStockProduct($this->id_transaction, 'cancel');
+        if($this->trasaction_type == 'Delivery') {
+            app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->updateStockProduct($this->id_transaction, 'cancel');
+        }
 
     	// send notification
     	// TODO write notification logic here

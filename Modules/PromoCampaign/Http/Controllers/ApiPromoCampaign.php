@@ -1256,8 +1256,9 @@ class ApiPromoCampaign extends Controller
                 DB::rollBack();
                 return response()->json($createFilterProduct);
             }
-        } elseif ($post['promo_type'] == 'Discount bill' && isset($post['filter_product_bill'])) {
+        } elseif ($post['promo_type'] == 'Discount bill') {
             try {
+                $post['filter_product_bill'] = $post['filter_product_bill']??'All Product';
                 $createFilterProduct = $this->createDiscountBill($id_post, $post['discount_type'], $post['discount_value'], $post['max_percent_discount'], $source, $table, $id_table, $post['filter_product_bill'], $post['multiple_product']??[], $product_type);
             } catch (Exception $e) {
                 $createFilterProduct = [

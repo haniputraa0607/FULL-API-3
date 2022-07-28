@@ -296,7 +296,7 @@ class ApiMerchantTransactionController extends Controller
             $codePromo = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $transaction['id_promo_campaign_promo_code'])->first()['promo_code']??'';
             $paymentDetail[] = [
                 'text' => 'Discount'.(!empty($transaction['transaction_discount_delivery'])? ' Biaya Kirim':'').(!empty($codePromo) ?' ('.$codePromo.')' : ''),
-                'value' => 'Rp '. number_format((int)$transaction['transaction_discount'],0,",",".")
+                'value' => '-Rp '. number_format((int)abs($transaction['transaction_discount']),0,",",".")
             ];
         }
 

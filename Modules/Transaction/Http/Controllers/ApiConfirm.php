@@ -145,46 +145,6 @@ class ApiConfirm extends Controller
                 array_push($dataDetailProduct, $dataShip);
             }
 
-            if ($check['transaction_shipment_go_send'] > 0) {
-                $dataShip = [
-                    'id'       => null,
-                    'price'    => abs($check['transaction_shipment_go_send']),
-                    'name'     => 'Shipping',
-                    'quantity' => 1,
-                ];
-                array_push($dataDetailProduct, $dataShip);
-            }
-
-            if ($check['transaction_shipment_grab'] > 0) {
-                $dataShip = [
-                    'id'       => null,
-                    'price'    => abs($check['transaction_shipment_grab']),
-                    'name'     => 'Shipping',
-                    'quantity' => 1,
-                ];
-                array_push($dataDetailProduct, $dataShip);
-            }
-
-            if ($check['transaction_service'] > 0) {
-                $dataService = [
-                    'id'       => null,
-                    'price'    => abs($check['transaction_service']),
-                    'name'     => 'Service',
-                    'quantity' => 1,
-                ];
-                array_push($dataDetailProduct, $dataService);
-            }
-
-            if ($check['transaction_tax'] > 0) {
-                $dataTax = [
-                    'id'       => null,
-                    'price'    => abs($check['transaction_tax']),
-                    'name'     => 'Tax',
-                    'quantity' => 1,
-                ];
-                array_push($dataDetailProduct, $dataTax);
-            }
-
             if (!empty($check['transaction_discount'])) {
                 $dataDis = [
                     'id'       => null,
@@ -193,17 +153,6 @@ class ApiConfirm extends Controller
                     'quantity' => 1,
                 ];
                 $countGrandTotal -= $check['transaction_discount'];
-                array_push($dataDetailProduct, $dataDis);
-            }
-
-            if (!empty($check['transaction_discount_delivery'])) {
-                $dataDis = [
-                    'id'       => null,
-                    'price'    => -abs($check['transaction_discount_delivery']),
-                    'name'     => 'Discount',
-                    'quantity' => 1,
-                ];
-                $countGrandTotal -= $check['transaction_discount_delivery'];
                 array_push($dataDetailProduct, $dataDis);
             }
 
@@ -405,7 +354,10 @@ class ApiConfirm extends Controller
             }
             $transactionGroup = Transaction::where('id_transaction_group', $check['id_transaction_group'])->get()->toArray();
             foreach ($transactionGroup as $transactions){
-                app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->updateStockProduct($transactions['id_transaction'], 'book');
+                if($transactions['trasaction_type'] == 'Delivery'){
+                    app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->updateStockProduct($transactions['id_transaction'], 'book');
+                }
+
                 if (!$checkPaymentBalance) {
                     Transaction::where('id_transaction', $transactions['id_transaction'])->update(['trasaction_payment_type' => $post['payment_type']]);
                 }
@@ -629,36 +581,6 @@ class ApiConfirm extends Controller
                 array_push($dataDetailProduct, $dataTax);
             }
 
-            // if ($check['transaction_discount'] > 0) {
-            //     $dataDis = [
-            //         'id'       => 'transaction_discount',
-            //         'price'    => -abs($check['transaction_discount']),
-            //         'name'     => 'Discount',
-            //         'quantity' => 1,
-            //     ];
-            //     array_push($dataDetailProduct, $dataDis);
-            // }
-
-            if ($check['transaction_payment_subscription']) {
-                $dataDis = [
-                    'id'       => 'transaction_payment_subscription',
-                    'price'    => -abs($check['transaction_payment_subscription']['subscription_nominal']),
-                    'name'     => 'Subscription',
-                    'quantity' => 1,
-                ];
-                array_push($dataDetailProduct, $dataDis);
-            }
-
-            if ($check['transaction_discount_delivery'] != 0) {
-                $dataDis = [
-                    'id'       => 'transaction_discount_delivery',
-                    'price'    => -abs($check['transaction_discount_delivery']),
-                    'name'     => 'Discount',
-                    'quantity' => 1,
-                ];
-                array_push($dataDetailProduct, $dataDis);
-            }
-
             if (!empty($checkPayment)) {
                 if ($checkPayment['type'] == 'Balance') {
                     if (empty($checkPaymentBalance)) {
@@ -671,7 +593,7 @@ class ApiConfirm extends Controller
 
                     $dataBalance     = [
                         'id'       => 'balance',
-                        'price'    => -abs($checkPaymentBalance['balance_nominal']),
+                        'price'    => abs($checkPaymentBalance['balance_nominal']),
                         'name'     => 'Balance',
                         'quantity' => 1,
                     ];
@@ -717,7 +639,10 @@ class ApiConfirm extends Controller
 
                 $transactionGroup = Transaction::where('id_transaction_group', $check['id_transaction_group'])->get()->toArray();
                 foreach ($transactionGroup as $transactions){
-                    app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->updateStockProduct($transactions['id_transaction'], 'book');
+                    if($transactions['trasaction_type'] == 'Delivery'){
+                        app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->updateStockProduct($transactions['id_transaction'], 'book');
+                    }
+
                     if (!$checkPaymentBalance) {
                         Transaction::where('id_transaction', $transactions['id_transaction'])->update(['trasaction_payment_type' => $post['payment_type']]);
                     }

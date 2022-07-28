@@ -74,7 +74,8 @@ class Shipper {
                 'rate_id' => $value['rate']['id'],
                 'insurance_fee' => $value['insurance_fee'],
                 'min_day' => $value['min_day'],
-                'max_day' => $value['max_day']
+                'max_day' => $value['max_day'],
+                'must_use_insurance' => $value['must_use_insurance']
             ];
             $logo[$logisticCode] = $value['logistic']['logo_url'];
         }
@@ -102,6 +103,7 @@ class Shipper {
                             "price" => $dtRate[$codeSearch]['price'],
                             "rate_id" => $dtRate[$codeSearch]['rate_id'],
                             "insurance_fee" => $dtRate[$codeSearch]['insurance_fee'],
+                            "must_use_insurance" => $dtRate[$codeSearch]['must_use_insurance'],
                             "estimated" => $estimated
                         ];
                     }
