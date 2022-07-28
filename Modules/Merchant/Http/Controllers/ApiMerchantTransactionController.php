@@ -125,6 +125,7 @@ class ApiMerchantTransactionController extends Controller
 
         $transactions = Transaction::leftJoin('transaction_shipments','transaction_shipments.id_transaction','=','transactions.id_transaction')
                         ->leftJoin('cities','transaction_shipments.destination_id_city','=','cities.id_city')
+                        ->where('trasaction_type', 'Delivery')
                         ->where('id_outlet', $idOutlet);
 
         if(!empty($post['status'])){
