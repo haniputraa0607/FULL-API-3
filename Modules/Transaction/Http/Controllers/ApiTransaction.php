@@ -1365,6 +1365,7 @@ class ApiTransaction extends Controller
         $list = Transaction::join('transaction_groups', 'transaction_groups.id_transaction_group', 'transactions.id_transaction_group')
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
             ->leftJoin('users', 'users.id', 'transactions.id_user')
+            ->where('trasaction_type', 'Delivery')
             ->orderBy('transaction_date', 'desc')
             ->select('transaction_groups.transaction_receipt_number as transaction_receipt_number_group', 'transactions.*', 'outlets.*', 'users.*');
 

@@ -1489,7 +1489,7 @@ class ApiHistoryController extends Controller
         ];
 
         $codeIndo = [
-            'Reject' => [
+            'Rejected' => [
                 'code' => 1,
                 'text' => 'Dibatalkan'
             ],
@@ -1517,6 +1517,7 @@ class ApiHistoryController extends Controller
 
         $list = Transaction::join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
                 ->where('id_user', $idUser)
+                ->where('trasaction_type', 'Delivery')
                 ->orderBy('transaction_date', 'desc');
 
         if(!empty($post['filter_date'])){
