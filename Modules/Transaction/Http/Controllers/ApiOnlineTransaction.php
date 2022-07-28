@@ -2600,9 +2600,9 @@ class ApiOnlineTransaction extends Controller
                         $error = 'Produk tidak valid';
                     }
 
-                    if($id_user == $merchant['id_user']){
-                        $error = 'Tidak bisa membeli produk sendiri';
-                    }
+//                    if($id_user == $merchant['id_user']){
+//                        $error = 'Tidak bisa membeli produk sendiri';
+//                    }
 
                     $totalPrice = (int)$product['product_price'] * $item['qty'];
                     $productSubtotal = $productSubtotal+(int)$totalPrice;
