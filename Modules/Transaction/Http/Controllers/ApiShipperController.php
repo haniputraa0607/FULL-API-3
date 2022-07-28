@@ -19,6 +19,7 @@ use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
 
 use DB;
+use Modules\Merchant\Entities\Merchant;
 use Modules\Transaction\Entities\LogShipper;
 use Modules\Transaction\Entities\TransactionShipmentTrackingUpdate;
 use Modules\UserRating\Entities\UserRatingLog;
@@ -27,7 +28,7 @@ class ApiShipperController extends Controller
 {
     public function updateTrackingTransaction(){
         $getTransaction = Transaction::join('transaction_shipments', 'transaction_shipments.id_transaction', 'transactions.id_transaction')
-            ->whereIn('transaction_status', ['On Progress', 'On Delivery'])
+            ->whereIn('transaction_status', ['On Delivery'])
             ->whereNotNull('transaction_shipments.order_id')
             ->select('transaction_shipments.*')->get()->toArray();
 
@@ -75,18 +76,7 @@ class ApiShipperController extends Controller
                         $updateCompleted = Transaction::where('id_transaction', $data['id_transaction'])->update(['transaction_status' => 'Completed', 'show_rate_popup' => '1']);
 
                         if($updateCompleted){
-                            $trxProduct = TransactionProduct::where('id_transaction', $data['id_transaction'])->pluck('id_product')->toArray();
-
-                            foreach ($trxProduct as $id_product){
-                                UserRatingLog::updateOrCreate([
-                                    'id_user' => $data['id_user'],
-                                    'id_transaction' => $data['id_transaction'],
-                                    'id_product' => $id_product
-                                ],[
-                                    'refuse_count' => 0,
-                                    'last_popup' => date('Y-m-d H:i:s', time() - MyHelper::setting('popup_min_interval', 'value', 900))
-                                ]);
-                            }
+                            $this->completedTransaction($data);
                         }
                     }
                 }
@@ -149,22 +139,40 @@ class ApiShipperController extends Controller
                 $updateCompleted = Transaction::where('id_transaction', $transaction['id_transaction'])->update(['transaction_status' => 'Completed', 'show_rate_popup' => '1']);
 
                 if($updateCompleted){
-                    $trxProduct = TransactionProduct::where('id_transaction', $transaction['id_transaction'])->pluck('id_product')->toArray();
-
-                    foreach ($trxProduct as $id_product){
-                        UserRatingLog::updateOrCreate([
-                            'id_user' => $transaction['id_user'],
-                            'id_transaction' => $transaction['id_transaction'],
-                            'id_product' => $id_product
-                        ],[
-                            'refuse_count' => 0,
-                            'last_popup' => date('Y-m-d H:i:s', time() - MyHelper::setting('popup_min_interval', 'value', 900))
-                        ]);
-                    }
+                    $this->completedTransaction($transaction);
                 }
             }
         }
 
         return response()->json(['status' => 'success']);
+    }
+
+    function completedTransaction($transaction){
+
+        //insert balance merchant
+        $idMerchant = Merchant::where('id_outlet', $transaction['id_outlet'])->first()['id_merchant']??null;
+        $nominal = $transaction['transaction_grandtotal'] - $transaction['transaction_shipment'] + $transaction['discount_charged_central'];
+        $dt = [
+            'id_merchant' => $idMerchant,
+            'id_transaction' => $transaction['id_transaction'],
+            'balance_nominal' => $nominal,
+            'source' => 'Transaction Completed'
+        ];
+        app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dt);
+
+        $trxProduct = TransactionProduct::where('id_transaction', $transaction['id_transaction'])->pluck('id_product')->toArray();
+
+        foreach ($trxProduct as $id_product){
+            UserRatingLog::updateOrCreate([
+                'id_user' => $transaction['id_user'],
+                'id_transaction' => $transaction['id_transaction'],
+                'id_product' => $id_product
+            ],[
+                'refuse_count' => 0,
+                'last_popup' => date('Y-m-d H:i:s', time() - MyHelper::setting('popup_min_interval', 'value', 900))
+            ]);
+        }
+
+        return true;
     }
 }

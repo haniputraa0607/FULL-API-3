@@ -208,7 +208,7 @@ class Kernel extends ConsoleKernel
          * Get Tracking status
          * run every 15 minutes
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiShipperController@updateTrackingTransaction')->cron('*/20 * * * *');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiShipperController@updateTrackingTransaction')->cron('*/5 * * * *');
 
         /**
          * To backup and truncate log database

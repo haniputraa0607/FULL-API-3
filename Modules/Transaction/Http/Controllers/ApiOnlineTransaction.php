@@ -201,7 +201,7 @@ class ApiOnlineTransaction extends Controller
             return response()->json(['status'    => 'fail', 'messages'  => ['Alamat tidak ditemukan.']]);
         }
 
-        $itemsCheck = $this->checkDataTransaction($post['items'], 1, 0, 0, $address, $fromRecipeDoctor);
+        $itemsCheck = $this->checkDataTransaction($post['items'], 1, 0, 0, $address, $fromRecipeDoctor, $user->id);
         if(!empty($itemsCheck['error_messages'])){
             return response()->json(['status'    => 'fail', 'messages'  => [$itemsCheck['error_messages']]]);
         }
@@ -608,7 +608,7 @@ class ApiOnlineTransaction extends Controller
         }
         $mainAddress = $address;
 
-        $itemsCheck = $this->checkDataTransaction($post['items'], 0, 0, 1, $mainAddress, $fromRecipeDoctor);
+        $itemsCheck = $this->checkDataTransaction($post['items'], 0, 0, 1, $mainAddress, $fromRecipeDoctor, $user->id);
         $items = $itemsCheck['items'];
         $subtotal = $itemsCheck['subtotal'];
         $delivery = $itemsCheck['total_delivery']??0;
@@ -2447,7 +2447,7 @@ class ApiOnlineTransaction extends Controller
         $post = $request->json()->all();
 
         if(!empty($post)){
-            $itemsCheck = $this->checkDataTransaction($post, 0, 1);
+            $itemsCheck = $this->checkDataTransaction($post, 0, 1, 0, [], 0, $request->user()->id);
             $items = $itemsCheck['items'];
             $subtotal = $itemsCheck['subtotal'];
 
@@ -2460,7 +2460,7 @@ class ApiOnlineTransaction extends Controller
         }
     }
 
-    function checkDataTransaction($post, $from_new = 0, $from_cart = 0, $from_check = 0, $dtAddress = [], $fromRecipeDoctor = 0){
+    function checkDataTransaction($post, $from_new = 0, $from_cart = 0, $from_check = 0, $dtAddress = [], $fromRecipeDoctor = 0, $id_user = null){
         $items = $this->mergeProducts($post);
 
         $availableCheckout = true;
@@ -2473,6 +2473,7 @@ class ApiOnlineTransaction extends Controller
 
         foreach ($items as $index=>$value){
             $errorMsgSubgroup = [];
+            $merchant = Merchant::where('id_outlet', $value['id_outlet'])->first();
             $checkOutlet = Outlet::where('id_outlet', $value['id_outlet'])->where('outlet_status', 'Active')->where('outlet_is_closed', 0)->first();
             if(!empty($checkOutlet)){
                 $productSubtotal = 0;
@@ -2598,6 +2599,10 @@ class ApiOnlineTransaction extends Controller
                     }else{
                         $error = 'Produk tidak valid';
                     }
+
+//                    if($id_user == $merchant['id_user']){
+//                        $error = 'Tidak bisa membeli produk sendiri';
+//                    }
 
                     $totalPrice = (int)$product['product_price'] * $item['qty'];
                     $productSubtotal = $productSubtotal+(int)$totalPrice;
