@@ -1445,7 +1445,6 @@ class ApiUserRatingController extends Controller
                 ];
             }
             $id_product = $product->id_product;
-            $id_outlet = null;
         }
 
 
@@ -1526,6 +1525,15 @@ class ApiUserRatingController extends Controller
             if ($productRating) {
                 $totalProductRating = array_sum(array_column($productRating,'rating_value')) / count($productRating);
                 Product::where('id_product', $id_product)->update(['total_rating' => $totalProductRating]);
+            }
+        }
+
+        if($id_outlet){
+            $outletRating = UserRating::where('id_outlet', $id_outlet)->sum('rating_value');
+            $countOutletRating = UserRating::where('id_outlet', $id_outlet)->count();
+            if ($outletRating > 0) {
+                $totalOutletRating = $outletRating / $countOutletRating;
+                Outlet::where('id_outlet', $id_outlet)->update(['outlet_total_rating' => $totalOutletRating]);
             }
         }
 

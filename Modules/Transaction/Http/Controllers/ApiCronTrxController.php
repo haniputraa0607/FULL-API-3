@@ -7,6 +7,8 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use Modules\Transaction\Entities\LogInvalidTransaction;
+use Modules\Transaction\Entities\TransactionGroup;
+use Modules\Xendit\Entities\TransactionPaymentXendit;
 use Queue;
 use App\Lib\Midtrans;
 
@@ -68,114 +70,92 @@ class ApiCronTrxController extends Controller
             $crossLine = date('Y-m-d H:i:s', strtotime('- 3days'));
             $dateLine  = date('Y-m-d H:i:s', strtotime('- 1days'));
             $now       = date('Y-m-d H:i:s');
-            $expired   = date('Y-m-d H:i:s',strtotime('- 5minutes'));
+            $expired   = date('Y-m-d H:i:s',strtotime('- 10minutes'));
 
-            $getTrx = Transaction::where('transaction_payment_status', 'Pending')->where('transaction_date', '<=', $expired)->get();
+            $getTrx = TransactionGroup::where('transaction_payment_status', 'Pending')
+                ->whereNotNull('transaction_payment_type')
+                ->where('transaction_group_date', '<=', $expired)->get();
 
             if (empty($getTrx)) {
                 $log->success('empty');
                 return response()->json(['empty']);
             }
+
             $count = 0;
             foreach ($getTrx as $key => $singleTrx) {
-
-                $singleTrx->load('outlet_name');
-
-                $productTrx = TransactionProduct::where('id_transaction', $singleTrx->id_transaction)->get();
-                if (empty($productTrx)) {
-                    continue;
+                $payment_type = $singleTrx->transaction_payment_type;
+                if ($payment_type == 'Balance') {
+                    $multi_payment = TransactionMultiplePayment::select('type')->where('id_transaction_group', $singleTrx->id_transaction_group)->pluck('type')->toArray();
+                    foreach ($multi_payment as $pm) {
+                        if ($pm != 'Balance') {
+                            $payment_type = $pm;
+                            break;
+                        }
+                    }
                 }
 
                 $user = User::where('id', $singleTrx->id_user)->first();
                 if (empty($user)) {
                     continue;
                 }
-                if($singleTrx->trasaction_payment_type == 'Midtrans') {
-                    $midtransStatus = Midtrans::status($singleTrx->id_transaction);
-                    if ((($midtransStatus['status'] ?? false) == 'fail' && ($midtransStatus['messages'][0] ?? false) == 'Midtrans payment not found') || in_array(($midtransStatus['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || ($midtransStatus['status_code'] ?? false) == '404') {
+                if($payment_type == 'Midtrans') {
+                    $dtMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $singleTrx->id_transaction_group)->first();
+
+                    if(empty($dtMidtrans)){
+                        continue;
+                    }
+
+                    if($dtMidtrans['payment_type'] == 'Credit Card'){
+                        $trxDate = strtotime($singleTrx->transaction_group_date);
+                        $currentDate = strtotime(date('Y-m-d H:i:s'));
+                        $mins = ($currentDate - $trxDate) / 60;
+                        if($mins < 15){
+                            continue;
+                        }
+                    }
+
+                    $midtransStatus = Midtrans::status($singleTrx->transaction_group_date);
+                    if(!empty($midtransStatus['status_code']) && $midtransStatus['status_code'] == 200){
+                        $singleTrx->triggerPaymentCompleted();
+                        continue;
+                    }elseif ((($midtransStatus['status'] ?? false) == 'fail' && ($midtransStatus['messages'][0] ?? false) == 'Midtrans payment not found') || in_array(($midtransStatus['response']['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || ($midtransStatus['status_code'] ?? false) == '404' ||
+                        (!empty($midtransStatus['payment_type']) && $midtransStatus['payment_type'] == 'gopay' && $midtransStatus['transaction_status'] == 'pending')) {
                         $connectMidtrans = Midtrans::expire($singleTrx->transaction_receipt_number);
-                    } else {
+
+                        if(!$connectMidtrans){
+                            continue;
+                        }
+                    }
+                }elseif ($payment_type == 'Xendit'){
+                    $dtXendit = TransactionPaymentXendit::where('id_transaction_group', $singleTrx->id_transaction_group)->first();
+                    if(empty($dtXendit['xendit_id'])){
                         continue;
                     }
-                }elseif($singleTrx->trasaction_payment_type == 'Ipay88') {
-                    $trx_ipay = TransactionPaymentIpay88::where('id_transaction',$singleTrx->id_transaction)->first();
 
-                    if ($trx_ipay && strtolower($trx_ipay->payment_method) == 'credit card' && $singleTrx->transaction_date > date('Y-m-d H:i:s', strtotime('- 15minutes'))) {
+                    if($dtXendit['type'] == 'CREDIT_CARD'){
+                        $trxDate = strtotime($singleTrx->transaction_group_date);
+                        $currentDate = strtotime(date('Y-m-d H:i:s'));
+                        $mins = ($currentDate - $trxDate) / 60;
+                        if($mins < 15){
+                            continue;
+                        }
+                    }
+
+                    $status = app('Modules\Xendit\Http\Controllers\XenditController')->checkStatus($dtXendit->xendit_id, $dtXendit->type);
+                    if ($status && $status['status'] == 'PENDING') {
+                        $cancel = app('Modules\Xendit\Http\Controllers\XenditController')->expireInvoice($dtXendit['xendit_id']);
+                        if(!$cancel){
+                            continue;
+                        }
+                    }elseif($status && ($status['status'] == 'COMPLETED' || $status['status'] == 'PAID')){
+                        $singleTrx->triggerPaymentCompleted();
+                        continue;
+                    }else{
                         continue;
                     }
-
-                    $update = \Modules\IPay88\Lib\IPay88::create()->update($trx_ipay?:$singleTrx->id_transaction,[
-                        'type' =>'trx',
-                        'Status' => '0',
-                        'requery_response' => 'Cancelled by cron'
-                    ],false,false);
-                    if ($trx_ipay) {
-                        \Modules\IPay88\Lib\IPay88::create()->void($trx_ipay);
-                    }
-                    continue;                
-                }
-                // $detail = $this->getHtml($singleTrx, $productTrx, $user->name, $user->phone, $singleTrx->created_at, $singleTrx->transaction_receipt_number);
-
-                // $autoCrm = app($this->autocrm)->SendAutoCRM('Transaction Online Cancel', $user->phone, ['date' => $singleTrx->created_at, 'status' => $singleTrx->transaction_payment_status, 'name'  => $user->name, 'id' => $singleTrx->transaction_receipt_number, 'receipt' => $detail, 'id_reference' => $singleTrx->transaction_receipt_number]);
-                // if (!$autoCrm) {
-                //     continue;
-                // }
-
-                DB::beginTransaction();
-
-                MyHelper::updateFlagTransactionOnline($singleTrx, 'cancel', $user);
-
-                $singleTrx->transaction_payment_status = 'Cancelled';
-                $singleTrx->void_date = $now;
-                $singleTrx->save();
-
-                if (!$singleTrx) {
-                    continue;
                 }
 
-                //reversal balance
-                $logBalance = LogBalance::where('id_reference', $singleTrx->id_transaction)->whereIn('source', ['Online Transaction', 'Transaction'])->where('balance', '<', 0)->get();
-                foreach($logBalance as $logB){
-                    $reversal = app($this->balance)->addLogBalance( $singleTrx->id_user, abs($logB['balance']), $singleTrx->id_transaction, 'Reversal', $singleTrx->transaction_grandtotal);
-    	            if (!$reversal) {
-    	            	DB::rollback();
-    	            	continue;
-    	            }
-                    $order_id = TransactionPickup::select('order_id')->where('id_transaction', $singleTrx->id_transaction)->pluck('order_id')->first();
-                    $usere= User::where('id',$singleTrx->id_user)->first();
-                    $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone,
-                        [
-                            "outlet_name"       => $singleTrx->outlet_name->outlet_name,
-                            "transaction_date"  => $singleTrx->transaction_date,
-                            'id_transaction'    => $singleTrx->id_transaction,
-                            'receipt_number'    => $singleTrx->transaction_receipt_number,
-                            'received_point'    => (string) abs($logB['balance']),
-                            'order_id'          => $order_id,
-                        ]
-                    );
-                }
-
-                // delete promo campaign report
-                if ($singleTrx->id_promo_campaign_promo_code) {
-                	$update_promo_report = app($this->promo_campaign)->deleteReport($singleTrx->id_transaction, $singleTrx->id_promo_campaign_promo_code);
-                	if (!$update_promo_report) {
-    	            	DB::rollBack();
-    	            	continue;
-    	            }	
-                }
-
-                // return voucher
-                $update_voucher = app($this->voucher)->returnVoucher($singleTrx->id_transaction);
-
-                // return subscription
-                $update_subscription = app($this->subscription)->returnSubscription($singleTrx->id_transaction);
-
-                if (!$update_voucher) {
-                	DB::rollback();
-                	continue;
-                }
-                DB::commit();
-
+                $singleTrx->triggerPaymentCancelled();
             }
 
             $log->success('success');

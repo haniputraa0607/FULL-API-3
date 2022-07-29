@@ -211,6 +211,12 @@ class Kernel extends ConsoleKernel
         $schedule->call('Modules\Transaction\Http\Controllers\ApiShipperController@updateTrackingTransaction')->cron('*/5 * * * *');
 
         /**
+         * Update satus received
+         * run every 4 am
+         */
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiShipperController@cronCompletedReceivedOrder')->dailyAt(config('app.env') == 'staging' ? '06:00' : '04:00');
+
+        /**
          * To backup and truncate log database
          */
         $schedule->command('backup:logdb --table=log_activities_apps --table=log_activities_be --table=log_activities_outlet_apps --table=log_activities_pos --table=log_activities_pos_transaction --truncate --chunk=10000')->dailyAt(config('app.env') == 'staging' ? '05:17' : '00:20');
