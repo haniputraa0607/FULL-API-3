@@ -33,23 +33,12 @@ class ApiTransactionConsultationController extends Controller
         date_default_timezone_set('Asia/Jakarta');
 
         $this->balance       = "Modules\Balance\Http\Controllers\BalanceController";
-        // $this->membership    = "Modules\Membership\Http\Controllers\ApiMembership";
-        // $this->autocrm       = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-        // $this->transaction   = "Modules\Transaction\Http\Controllers\ApiTransaction";
-        // $this->notif         = "Modules\Transaction\Http\Controllers\ApiNotification";
-        // $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
         $this->setting_trx   = "Modules\Transaction\Http\Controllers\ApiSettingTransactionV2";
-        // $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
-        // $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
-        // $this->promo       = "Modules\PromoCampaign\Http\Controllers\ApiPromo";
         $this->outlet       = "Modules\Outlet\Http\Controllers\ApiOutletController";
-        // $this->plastic       = "Modules\Plastic\Http\Controllers\PlasticController";
-        // $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
-        // $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
-        // $this->bundling      = "Modules\ProductBundling\Http\Controllers\ApiBundlingController";
         $this->payment = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
         $this->location = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
         $this->doctor = "Modules\Doctor\Http\Controllers\ApiDoctorController";
+        $this->promo_trx 	 = "Modules\Transaction\Http\Controllers\ApiPromoTransaction";
     }
 
     /**
@@ -111,9 +100,7 @@ class ApiTransactionConsultationController extends Controller
 
         //selected session
         $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
-        ->whereHas('schedule_time', function($query) use ($post){
-            $query->where('start_time', '=', $post['time']);
-        })->first();
+        ->first();
 
         if(empty($schedule_session)){
             return response()->json([
@@ -202,12 +189,13 @@ class ApiTransactionConsultationController extends Controller
         $result['payment_detail'][] = [
             'name'          => 'Subtotal Sesi Konsultasi Dr. '.$doctor['doctor_name'].'',
             "is_discount"   => 0,
-            'amount'        => MyHelper::requestNumber($result['subtotal'],'_CURRENCY')
+            'amount'        => '-Rp '.number_format($result['subtotal'],0,",",".")
         ];
+        $result['id_outlet'] = $doctor['id_outlet'];
+        $result = app($this->promo_trx)->applyPromoCheckoutConsultation($result);
 
         //get available payment
         $available_payment = app($this->payment)->availablePayment(new Request())['result']??null;
-
         $result['available_payment'] = $available_payment;
 
         return MyHelper::checkGet($result);
@@ -414,7 +402,7 @@ class ApiTransactionConsultationController extends Controller
         if(isset($post['point_use']) && $post['point_use']){
             $paymentType = 'Balance';
             $paymentStatus = 'Completed';
-            $transactionStatus = 'Pending';
+            $transactionStatus = 'Completed';
         }
 
         DB::beginTransaction();
@@ -428,6 +416,8 @@ class ApiTransactionConsultationController extends Controller
                 'messages'  => ['Outlet tidak ditemukan']
             ]);
         }
+
+        $post = app($this->promo_trx)->applyPromoCheckoutConsultation($post);
 
         $dataTransactionGroup = [
             'id_user' => $user->id,
@@ -472,13 +462,13 @@ class ApiTransactionConsultationController extends Controller
             'transaction_gross'  		  => $post['subtotal_final'],
             'transaction_shipment'        => $post['shipping'],
             'transaction_service'         => $post['service'],
-            'transaction_discount'        => $post['discount'],
-            'transaction_discount_delivery' => $post['discount_delivery'],
+            'transaction_discount'        => $post['total_discount'],
+            'transaction_discount_delivery' => 0,
             'transaction_discount_item' 	=> 0,
-            'transaction_discount_bill' 	=> 0,
+            'transaction_discount_bill' 	=> $post['total_discount'],
             'transaction_tax'             => $post['tax'],
             'transaction_grandtotal'      => $post['grandtotal'],
-            'transaction_point_earned'    => $post['point'],
+            'transaction_point_earned'    => $post['point']??0,
             'transaction_cashback_earned' => $post['cashback'],
             'trasaction_payment_type'     => $post['payment_type'],
             'transaction_payment_status'  => $post['transaction_payment_status'],
@@ -486,6 +476,7 @@ class ApiTransactionConsultationController extends Controller
             'longitude'                   => $post['longitude'],
             'distance_customer'           => $distance,
             'void_date'                   => null,
+            'transaction_status'          => $transactionStatus
         ];
 
         if($transaction['transaction_grandtotal'] == 0){
@@ -532,7 +523,7 @@ class ApiTransactionConsultationController extends Controller
         if($post['consultation_type'] != 'now') {
             $picked_schedule = DoctorSchedule::where('id_doctor', $doctor['id_doctor'])->leftJoin('time_schedules', function($query) {
                 $query->on('time_schedules.id_doctor_schedule', '=' , 'doctor_schedules.id_doctor_schedule');
-            })->where('start_time', '=', $post['time'])->first();
+            })->first();
         } else {
             $picked_schedule = DoctorSchedule::where('id_doctor', $doctor['id_doctor'])->leftJoin('time_schedules', function($query) {
                 $query->on('time_schedules.id_doctor_schedule', '=' , 'doctor_schedules.id_doctor_schedule');
@@ -627,6 +618,8 @@ class ApiTransactionConsultationController extends Controller
            $savelocation = app($this->location)->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction'], $outlet['id_outlet']);
         }
 
+        $trx = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->first();
+        app($this->promo_trx)->applyPromoNewTrx($trx);
         DB::commit();
 
         return response()->json([
@@ -925,6 +918,21 @@ class ApiTransactionConsultationController extends Controller
     
             $doctor->update(['doctor_status' => "online"]);
             $doctor->save();
+
+            //insert balance merchant
+            $transaction = Transaction::where('id_transaction', $transaction['consultation']['id_transaction'])->first();
+            $idMerchant = Merchant::where('id_outlet', $transaction['id_outlet'])->first()['id_merchant']??null;
+            $nominal = $transaction['transaction_grandtotal'] + $transaction['discount_charged_central'];
+            $dt = [
+                'id_merchant' => $idMerchant,
+                'id_transaction' => $transaction['id_transaction'],
+                'balance_nominal' => $nominal,
+                'source' => 'Transaction Consultation Completed'
+            ];
+            $insertSaldo = app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dt);
+            if(! $insertSaldo){
+                DB::rollBack();
+            }
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',

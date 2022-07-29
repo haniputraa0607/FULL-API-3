@@ -203,7 +203,11 @@ class ApiPromo extends Controller
 				$update = SubscriptionUser::where('id_subscription_user','=',$query['id_subscription_user'])->update(['is_used' => 1]);
 			}
 
-			$update = UserPromo::updateOrCreate(['id_user' => $user->id], ['promo_type' => $source, 'id_reference' => $id_promo]);
+            if($source == 'promo_campaign'){
+                $promoUseIn = PromoCampaignPromoCode::join('promo_campaigns', 'promo_campaigns.id_promo_campaign', 'promo_campaign_promo_codes.id_promo_campaign')
+                    ->where('id_promo_campaign_promo_code', $id_promo)->first()['promo_use_in']??null;
+            }
+			$update = UserPromo::updateOrCreate(['id_user' => $user->id, 'promo_use_in' => $promoUseIn], ['promo_type' => $source, 'promo_use_in' => $promoUseIn, 'id_reference' => $id_promo]);
 		}
 		else
 		{

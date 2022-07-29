@@ -237,7 +237,7 @@ class ApiDoctorController extends Controller
         }
 
         DB::commit();
-        return response()->json(['status'  => 'success', 'result' => ['id_doctor' => $post['id_doctor'], 'crm' => $autocrm]]);
+        return response()->json(['status'  => 'success', 'result' => ['id_doctor' => $post['id_doctor'], 'crm' => $autocrm??true]]);
     }
 
     /**

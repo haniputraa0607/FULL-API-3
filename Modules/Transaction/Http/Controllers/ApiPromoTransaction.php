@@ -157,7 +157,7 @@ class ApiPromoTransaction extends Controller
         $continueCheckOut = $data['available_checkout'];
         $data['available_checkout'] = $continueCheckOut;
 
-        $userPromo = UserPromo::where('id_user', $user->id)->get()->keyBy('promo_type');
+        $userPromo = UserPromo::where('id_user', $user->id)->where('promo_use_in', 'Product')->get()->keyBy('promo_type');
 
         if ($userPromo->isEmpty()) {
             return $data;
@@ -168,7 +168,7 @@ class ApiPromoTransaction extends Controller
         $codeErr = [];
         $codePayment = [];
         if (isset($userPromo['promo_campaign'])) {
-            $promoCode = $this->validatePromoCode($userPromo['promo_campaign']->id_reference, $data['id_doctor']??null);
+            $promoCode = $this->validatePromoCode($userPromo['promo_campaign']->id_reference, null);
 
             if ($promoCode['status'] == 'fail') {
                 $codeErr = $promoCode['messages'];
@@ -301,13 +301,106 @@ class ApiPromoTransaction extends Controller
         if($totalAllDisc > 0){
             $data['summary_order'][] = [
                 'name' => 'Diskon'.($discDeliveryAll > 0 ? ' Pengiriman':''),
-                'value' => 'Rp - '.number_format($totalAllDisc,0,",",".")
+                'is_discount' => 1,
+                'value' => '-Rp '.number_format($totalAllDisc,0,",",".")
             ];
             $data['total_discount'] = $totalAllDisc;
             $data['grandtotal'] = $data['grandtotal']-$totalAllDisc;
             $data['grandtotal_text'] = 'Rp '.number_format($data['grandtotal'],0,",",".");
         }
         $data['available_checkout'] = $continueCheckOut;
+        return $data;
+    }
+
+    public function applyPromoCheckoutConsultation($data)
+    {
+        $user = request()->user();
+        $sharedPromoTrx = TemporaryDataManager::create('promo_trx');
+        $userPromo = UserPromo::where('id_user', $user->id)->where('promo_use_in', 'Consultation')->get()->keyBy('promo_type');
+
+        if ($userPromo->isEmpty()) {
+            return $data;
+        }
+
+        $resPromoCode = null;
+        $codeErr = [];
+        $codePayment = [];
+        if (isset($userPromo['promo_campaign'])) {
+            $promoCode = $this->validatePromoCode($userPromo['promo_campaign']->id_reference, $data['doctor']['id_doctor']??$data['id_doctor']);
+
+            if ($promoCode['status'] == 'fail') {
+                $codeErr = $promoCode['messages'];
+            } else {
+                $promoCampaign = $promoCode['result']->promo_campaign;
+                $sharedPromoTrx['promo_campaign'] = $promoCampaign;
+                $sharedPromoTrx['promo_campaign']['promo_code'] = $promoCode['result']->promo_code;
+                $sharedPromoTrx['promo_campaign']['id_promo_campaign_promo_code'] = $promoCode['result']->id_promo_campaign_promo_code;
+                $codePayment = PromoCampaignPaymentMethod::where('id_promo_campaign', $promoCampaign['id_promo_campaign'])->pluck('payment_method')->toArray();
+                $codeType = $promoCampaign->promo_type;
+            }
+        }
+
+        if (!empty($codePayment)) {
+            $validPayment = [];
+            foreach ($data['available_payment'] as $payment) {
+                if (!in_array($payment['payment_method'], $codePayment)) {
+                    $payment['status'] = 0;
+                    continue;
+                }
+                if (!empty($payment['status'])) {
+                    $validPayment[] = $payment['payment_method'];
+                }
+            }
+            $codePayment = $validPayment;
+            if (empty($validPayment)) {
+                $codeErr = 'Metode pembayaran tidak tersedia';
+            }
+
+            $promoPayment = $codePayment;
+
+            foreach ($data['available_payment'] as &$payment) {
+                if (!in_array($payment['payment_method'], $promoPayment)) {
+                    $payment['status'] = 0;
+                }
+            }
+        }
+
+        $totalAllDisc = 0;
+        if (isset($userPromo['promo_campaign'])) {
+
+            if (empty($codeErr)) {
+                $applyCode = $this->applyPromoCode($userPromo['promo_campaign']->id_reference, $data);
+                $codeErr = $applyCode['messages'] ?? $codeErr;
+            }
+
+            $resPromoCode = [
+                'promo_code' 		=> $sharedPromoTrx['promo_campaign']['promo_code'] ?? null,
+                'title' 			=> $applyCode['result']['title'] ?? null,
+                'text' 				=> $applyCode['result']['text'] ?? $codeErr,
+                'remove_text' 		=> 'Batalkan penggunaan <b>' . ($sharedPromoTrx['promo_campaign']['promo_title'] ?? null) . '</b>'
+            ];
+
+            $resPromo = $applyCode['result'] ?? null;
+            $disc = $resPromo['discount']??0;
+            $totalAllDisc = $disc;
+            $data['id_promo_campaign_promo_code'] = $resPromo['id_promo_campaign_promo_code']??null;
+
+            if(!empty($resPromoCode)){
+                $resPromoCode['is_error'] = (!empty($codeErr) ? true : false);
+            }
+        }
+
+        $data['promo_code'] = $resPromoCode;
+        if($totalAllDisc > 0){
+            $data['payment_detail'][] = [
+                'name' => 'Diskon',
+                'is_discount' => 1,
+                'value' => '-Rp '.number_format($totalAllDisc,0,",",".")
+            ];
+            $data['total_discount'] = $totalAllDisc;
+            $data['grandtotal'] = $data['grandtotal']-$totalAllDisc;
+            $data['grandtotal_text'] = 'Rp '.number_format($data['grandtotal'],0,",",".");
+        }
         return $data;
     }
 
@@ -996,10 +1089,11 @@ class ApiPromoTransaction extends Controller
         $promo_product 	= $promo->{$promoSource . '_discount_bill_products'}->toArray();
         $promo_brand 	= $promo->{$promoSource . '_brands'}->pluck('id_brand')->toArray();
         $product_name 	= $pct->getProductName($promo_product, $promo->product_rule);
-        $promo_item 	= $data['items'];
+        $promo_item 	= $data['items']??[];
         $discount 		= 0;
 
-        if (!$promo_rules->is_all_product) {
+        $allProductStatus = $promo_rules->is_all_product??1;
+        if (!$allProductStatus) {
             if ($promo[$promoSource.'_discount_bill_products']->isEmpty()) {
                 return $this->failResponse('Produk tidak ditemukan');
             }
@@ -1023,9 +1117,9 @@ class ApiPromoTransaction extends Controller
             return $this->failResponse($message);
         }
 
-        $total_price = $data['items_subtotal'];
-
-        if ($promo_rules->discount_type == 'Percent') {
+        $total_price = $data['items_subtotal']??$data['subtotal'];
+        $discountType = $promo_rules->discount_type??'Nominal';
+        if ($discountType == 'Percent') {
             $discount += ($total_price * $promo_rules->discount_value) / 100;
             if (!empty($promo_rules->max_percent_discount) && $discount > $promo_rules->max_percent_discount) {
                 $discount = $promo_rules->max_percent_discount;
@@ -1262,12 +1356,19 @@ class ApiPromoTransaction extends Controller
         ]);
 
         $totalDiscountBill = $trx['transaction_discount_bill']??0;
-        if($totalDiscountBill > 0){
+        $totalDiscountDelivery = $trx['transaction_discount_delivery']??0;
+        if($totalDiscountBill > 0 || $totalDiscountDelivery > 0){
             $totalSubProduct = TransactionProduct::where('id_transaction', $trx['id_transaction'])->sum('transaction_product_subtotal');
             $products = TransactionProduct::where('id_transaction', $trx['id_transaction'])->get()->toArray();
             foreach ($products as $product){
-                $disc = $product['transaction_product_subtotal'] / $totalSubProduct * $totalDiscountBill;
+                if($totalDiscountBill > 0){
+                    $disc = $product['transaction_product_subtotal'] / $totalSubProduct * $totalDiscountBill;
+                }elseif ($totalDiscountDelivery > 0){
+                    $disc = $product['transaction_product_subtotal'] / $totalSubProduct * $totalDiscountDelivery;
+                }
+
                 TransactionProduct::where('id_transaction_product', $product['id_transaction_product'])->update([
+                    'transaction_product_discount' => $disc,
                     'transaction_product_discount_all' => $disc
                 ]);
             }

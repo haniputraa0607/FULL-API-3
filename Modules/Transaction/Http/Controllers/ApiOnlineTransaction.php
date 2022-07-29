@@ -447,6 +447,9 @@ class ApiOnlineTransaction extends Controller
                         $shipmentCourierCode = $service['code'];
                         $shipmentCourierService = $shipmentCheck['delivery_name'].' '.$service['service_name'];
                         $shipmentInsuranceStatus = ($data['delivery']['insurance_status'] == true ? 1 : 0);
+                        if($service['must_use_insurance'] == true){
+                            $shipmentInsuranceStatus = 1;
+                        }
                         $shipmentInsurancePrice = $service['insurance_fee'];
                         $shipmentPrice = $service['price'];
                         $estimated = $service['estimated'];
@@ -646,10 +649,12 @@ class ApiOnlineTransaction extends Controller
         $summaryOrder = [
             [
                 'name' => 'Subtotal',
+                'is_discount' => 0,
                 'value' => 'Rp '.number_format($subtotal,0,",",".")
             ],
             [
                 'name' => 'Biaya Kirim',
+                'is_discount' => 0,
                 'value' => 'Rp '.number_format($delivery,0,",",".")
             ]
         ];
@@ -685,10 +690,15 @@ class ApiOnlineTransaction extends Controller
 
             $currentBalance -= $usePoint;
 
-            $result['summary_order'][] = [
-                'name' => 'Point yang digunakan',
-                'value' => 'Rp - '.number_format($usePoint,0,",",".")
-            ];
+            if($usePoint > 0){
+                $result['summary_order'][] = [
+                    'name' => 'Point yang digunakan',
+                    'value' => '- '.number_format($usePoint,0,",",".")
+                ];
+            }else{
+                $result['available_checkout'] = false;
+                $result['error_messages'] = 'Tidak bisa menggunakan point, Anda tidak memiliki cukup point.';
+            }
         }
 
         $result['grandtotal'] = $grandTotalNew;
@@ -2600,9 +2610,9 @@ class ApiOnlineTransaction extends Controller
                         $error = 'Produk tidak valid';
                     }
 
-//                    if($id_user == $merchant['id_user']){
-//                        $error = 'Tidak bisa membeli produk sendiri';
-//                    }
+                    if($id_user == $merchant['id_user']){
+                        $error = 'Tidak bisa membeli produk sendiri';
+                    }
 
                     $totalPrice = (int)$product['product_price'] * $item['qty'];
                     $productSubtotal = $productSubtotal+(int)$totalPrice;
@@ -2731,6 +2741,9 @@ class ApiOnlineTransaction extends Controller
                                         $shipmentCourier = $shipmentCheck['delivery_method'];
                                         $shipmentCourierService = $shipmentCheck['delivery_name'].' '.$service['service_name'];
                                         $shipmentInsuranceStatus = ($value['delivery']['insurance_status'] == true ? 1 : 0);
+                                        if($service['must_use_insurance'] == true){
+                                            $shipmentInsuranceStatus = 1;
+                                        }
                                         $shipmentInsurancePrice = $service['insurance_fee'];
                                         $shipmentPrice = $service['price'];
                                         if($shipmentInsuranceStatus == 1){
