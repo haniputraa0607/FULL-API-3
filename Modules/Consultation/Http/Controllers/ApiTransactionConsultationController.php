@@ -100,7 +100,9 @@ class ApiTransactionConsultationController extends Controller
 
         //selected session
         $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
-        ->first();
+            ->whereHas('schedule_time', function($query) use ($post){
+                $query->where('start_time', '=', $post['time']);
+            })->first();
 
         if(empty($schedule_session)){
             return response()->json([
@@ -523,7 +525,7 @@ class ApiTransactionConsultationController extends Controller
         if($post['consultation_type'] != 'now') {
             $picked_schedule = DoctorSchedule::where('id_doctor', $doctor['id_doctor'])->leftJoin('time_schedules', function($query) {
                 $query->on('time_schedules.id_doctor_schedule', '=' , 'doctor_schedules.id_doctor_schedule');
-            })->first();
+            })->where('start_time', '=', $post['time'])->first();
         } else {
             $picked_schedule = DoctorSchedule::where('id_doctor', $doctor['id_doctor'])->leftJoin('time_schedules', function($query) {
                 $query->on('time_schedules.id_doctor_schedule', '=' , 'doctor_schedules.id_doctor_schedule');
