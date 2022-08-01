@@ -2790,12 +2790,26 @@ class ApiTransaction extends Controller
         $trxPaymentMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $transaction['id_transaction_group'])->first();
         $trxPaymentXendit = TransactionPaymentXendit::where('id_transaction_group', $transaction['id_transaction_group'])->first();
 
+        $paymentURL = null;
+        $paymentToken = null;
+        $paymentType = null;
         if(!empty($trxPaymentMidtrans)){
             $paymentMethod = $trxPaymentMidtrans['payment_type'].(!empty($trxPaymentMidtrans['bank']) ? ' ('.$trxPaymentMidtrans['bank'].')':'');
+            $paymentMethod = str_replace(" ","_",$paymentMethod);
             $paymentLogo = config('payment_method.midtrans_'.strtolower($paymentMethod).'.logo');
+            $paymentType = 'Midtrans';
+            if($transaction['transaction_status'] == 'Unpaid'){
+                $paymentURL = $trxPaymentMidtrans['redirect_url'];
+                $paymentToken = $trxPaymentMidtrans['token'];
+            }
         }elseif(!empty($trxPaymentXendit)){
             $paymentMethod = $trxPaymentXendit['type'];
+            $paymentMethod = str_replace(" ","_",$paymentMethod);
             $paymentLogo = config('payment_method.xendit_'.strtolower($paymentMethod).'.logo');
+            $paymentType = 'Xendit';
+            if($transaction['transaction_status'] == 'Unpaid'){
+                $paymentURL = $trxPaymentXendit['checkout_url'];
+            }
         }
 
         $district = Districts::join('subdistricts', 'subdistricts.id_district', 'districts.id_district')
@@ -2827,6 +2841,7 @@ class ApiTransaction extends Controller
             'transaction_status_text' => $codeIndo[$transaction['transaction_status']]['text']??'',
             'transaction_date' => MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_date'])), true),
             'transaction_products' => $products,
+            'show_rate_popup' => $transaction['show_rate_popup'],
             'address' => $address,
             'transaction_grandtotal' => 'Rp '. number_format($grandTotal,0,",","."),
             'outlet_name' => $transaction['outlet_name'],
@@ -2845,8 +2860,13 @@ class ApiTransaction extends Controller
             'user' => User::where('id', $transaction['id_user'])->select('name', 'email', 'phone')->first(),
             'payment' => $paymentMethod??'',
             'payment_logo' => $paymentLogo??'',
+            'payment_type' => $paymentType,
+            'payment_token' => $paymentToken,
+            'payment_url' => $paymentURL,
             'payment_detail' => $paymentDetail,
-            'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : '')
+            'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : ''),
+            'transaction_reject_reason' => $transaction['transaction_reject_reason'],
+            'transaction_reject_at' => (!empty($transaction['transaction_reject_reason']) ? date('d/M/Y H:i', strtotime($transaction['transaction_reject_reason'])) : null)
         ];
 
         return response()->json(MyHelper::checkGet($result));

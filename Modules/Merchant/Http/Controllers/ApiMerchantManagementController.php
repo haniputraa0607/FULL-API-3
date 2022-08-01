@@ -178,7 +178,12 @@ class ApiMerchantManagementController extends Controller
             $type = ($post['action_type'] == 'approve' ? 'Active' : $post['action_type']);
             $update = Merchant::where('id_merchant', $check['id_merchant'])->update(['merchant_status' => ucfirst($type)]);
             if($update){
-                $update = Outlet::where('id_outlet', $check['id_outlet'])->update(['outlet_status' => 'Active']);
+                if($post['action_type'] == 'approve'){
+                    $update = Outlet::where('id_outlet', $check['id_outlet'])->update(['outlet_status' => 'Active']);
+                }else{
+                    $update = Outlet::where('id_outlet', $check['id_outlet'])->update(['outlet_status' => 'Inactive']);
+                }
+
                 $autocrm = app($this->autocrm)->SendAutoCRM(
                     ucfirst($post['action_type']).' Merchant',
                     $check['phone'],

@@ -6,35 +6,40 @@ return [
         'payment_method'  => 'Gopay',
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_gopay.png',
-        'text'            => 'GoPay'
+        'text'            => 'GoPay',
+        'refund_time'     => 15
     ],
-    'midtrans_cc'    => [
+    'midtrans_credit_card'    => [
         'payment_gateway' => 'Midtrans',
         'payment_method'  => 'Credit Card',
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_creditcard.png',
-        'text'            => 'Debit/Credit Card'
+        'text'            => 'Debit/Credit Card',
+        'refund_time'     => 15
     ],
-    'midtrans_banktransfer'    => [
+    'midtrans_bank_transfer'    => [
         'payment_gateway' => 'Midtrans',
         'payment_method'  => 'Bank Transfer',
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_banktransfer.png',
-        'text'            => 'Bank Transfer'
+        'text'            => 'Bank Transfer',
+        'refund_time'     => 15
     ],
     'midtrans_akulaku'    => [
         'payment_gateway' => 'Midtrans',
         'payment_method'  => 'akulaku',
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_akulaku.png',
-        'text'            => 'Akulaku'
+        'text'            => 'Akulaku',
+        'refund_time'     => 15
     ],
     'midtrans_qris'    => [
         'payment_gateway' => 'Midtrans',
         'payment_method'  => 'shopeepay-qris',
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_shopeepay-qris.png',
-        'text'            => 'ShopeePay/e-Wallet Lainnya'
+        'text'            => 'ShopeePay/e-Wallet Lainnya',
+        'refund_time'     => 15
     ],
     'ipay88_cc'      => [
         'payment_gateway' => 'Ipay88',
@@ -45,7 +50,8 @@ return [
         'available_time'    => [
             'start' => '00:00',
             'end'   => '23:45',
-        ]
+        ],
+        'refund_time'     => 15
     ],
     'ipay88_ovo'     => [
         'payment_gateway' => 'Ipay88',
@@ -56,14 +62,16 @@ return [
         'available_time'    => [
             'start' => '00:00',
             'end'   => '23:45',
-        ]
+        ],
+        'refund_time'     => 15
     ],
     'ovo'            => [
         'payment_gateway' => 'Ovo',
         'payment_method'  => 'Ovo',
         'status'          => 0,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_ovo_pay.png',
-        'text'            => 'OVO'
+        'text'            => 'OVO',
+        'refund_time'     => 15
     ],
     'shopeepay'      => [
         'payment_gateway' => 'Shopeepay',
@@ -74,7 +82,8 @@ return [
         'available_time'    => [
             'start' => '03:00',
             'end'   => '23:45',
-        ]
+        ],
+        'refund_time'     => 15
     ],
     'online_payment' => [
         'payment_gateway' => 'Midtrans',
@@ -88,48 +97,55 @@ return [
         'payment_method'  => 'Ovo',
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_ovo_pay.png',
-        'text'            => 'OVO'
+        'text'            => 'OVO',
+        'refund_time'     => 15
     ],
     'xendit_dana'         => [
         'payment_gateway' => 'Xendit',
         'payment_method'  => 'Dana',
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_dana.png',
-        'text'            => 'DANA'
+        'text'            => 'DANA',
+        'refund_time'     => 15
     ],
     'xendit_linkaja'      => [
         'payment_gateway' => 'Xendit',
         'payment_method'  => 'Linkaja',
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_linkaja.png',
-        'text'            => 'LinkAJa'
+        'text'            => 'LinkAJa',
+        'refund_time'     => 15
     ],
     'xendit_shopeepay'      => [
         'payment_gateway' => 'Xendit',
         'payment_method'  => 'SHOPEEPAY',
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_shopee_pay.png',
-        'text'            => 'ShopeePay'
+        'text'            => 'ShopeePay',
+        'refund_time'     => 15
     ],
     'xendit_kredivo'      => [
         'payment_gateway' => 'Xendit',
         'payment_method'  => 'KREDIVO',
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_kredivo.png',
-        'text'            => 'Kredivo'
+        'text'            => 'Kredivo',
+        'refund_time'     => 15
     ],
     'xendit_qris'      => [
         'payment_gateway' => 'Xendit',
         'payment_method'  => 'QRIS',
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_qris.png',
-        'text'            => 'QRIS'
+        'text'            => 'QRIS',
+        'refund_time'     => 15
     ],
     'xendit_credit_card'      => [
         'payment_gateway' => 'Xendit',
         'payment_method'  => 'CREDIT_CARD',
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_creditcard.png',
-        'text'            => 'Credit Card'
+        'text'            => 'Credit Card',
+        'refund_time'     => 15
     ],
 ];
