@@ -370,7 +370,7 @@ class ApiMerchantTransactionController extends Controller
             'payment' => $paymentMethod??'',
             'payment_logo' => $paymentLogo??'',
             'payment_detail' => $paymentDetail,
-            'point_receive' => (!empty($transaction['transaction_cashback_earned']) ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : '')
+            'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : '')
         ];
 
         return response()->json(MyHelper::checkGet($result));

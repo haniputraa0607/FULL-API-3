@@ -1827,8 +1827,10 @@ class ApiProductController extends Controller
         if ($product['product_variant_status']) {
             $selectedVariant = ProductVariantGroup::join('product_variant_group_details', 'product_variant_group_details.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
                                 ->where('id_outlet', $post['id_outlet'])
+                                ->where('id_product', $product['id_product'])
                                 ->where('product_variant_group_details.product_variant_group_visibility', 'Visible')
-                                ->where('product_variant_group_stock_status', 'Available')->orderBy('product_variant_group_price', 'asc')->first();
+                                ->where('product_variant_group_stock_status', 'Available')
+                                ->orderBy('product_variant_group_price', 'asc')->first();
             $product['product_price'] = $selectedVariant['product_variant_group_price']??$product['product_price'];
             $post['id_product_variant_group'] = $selectedVariant['id_product_variant_group']??null;
             $product['id_product_variant_group'] = $post['id_product_variant_group'];
@@ -1996,7 +1998,6 @@ class ApiProductController extends Controller
                 ->where('product_global_price', '>', 0)
                 ->where('product_visibility', 'Visible')
                 ->where('product_detail_visibility', 'Visible')
-                ->where('product_detail_stock_status', 'Available')
                 ->where('product_count_transaction', '>', 0)
                 ->orderBy('product_count_transaction', 'desc')
                 ->limit(30)
@@ -2037,7 +2038,6 @@ class ApiProductController extends Controller
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
             ->where('product_detail_visibility', 'Visible')
-            ->where('product_detail_stock_status', 'Available')
             ->orderBy('products.created_at', 'desc');
 
         if(!empty($query['id_best'])){
@@ -2084,7 +2084,6 @@ class ApiProductController extends Controller
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
             ->where('product_detail_visibility', 'Visible')
-            ->where('product_detail_stock_status', 'Available')
             ->orderBy('product_count_transaction', 'desc')
             ->groupBy('products.id_product');
 
@@ -2168,7 +2167,6 @@ class ApiProductController extends Controller
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
             ->where('product_detail_visibility', 'Visible')
-            ->where('product_detail_stock_status', 'Available')
             ->where('product_recommendation_status', 1)
             ->groupBy('products.id_product')->get()->toArray();
 

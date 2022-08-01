@@ -112,6 +112,7 @@ class ApiTransaction extends Controller
         date_default_timezone_set('Asia/Jakarta');
         $this->shopeepay      = 'Modules\ShopeePay\Http\Controllers\ShopeePayController';
         $this->xendit         = 'Modules\Xendit\Http\Controllers\XenditController';
+        $this->shipper         = 'Modules\Transaction\Http\Controllers\ApiShipperController';
     }
 
     public function transactionRule() {
@@ -2845,7 +2846,7 @@ class ApiTransaction extends Controller
             'payment' => $paymentMethod??'',
             'payment_logo' => $paymentLogo??'',
             'payment_detail' => $paymentDetail,
-            'point_receive' => (!empty($transaction['transaction_cashback_earned']) ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : '')
+            'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : '')
         ];
 
         return response()->json(MyHelper::checkGet($result));
@@ -4284,5 +4285,27 @@ class ApiTransaction extends Controller
         ];
 
         return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function orderReceived(Request $request){
+        $transaction = Transaction::join('transaction_shipments', 'transaction_shipments.id_transaction', 'transactions.id_transaction')
+            ->where('transaction_receipt_number', $request->json('transaction_receipt_number'))
+            ->where('id_user', $request->user()->id)->first();
+
+        if(empty($transaction)){
+            return response()->json(MyHelper::checkGet($transaction));
+        }
+
+        if($transaction['transaction_status'] == 'Completed'){
+            return response()->json(['status' => 'success']);
+        }
+
+        $received = app($this->shipper)->completedTransaction($transaction);
+
+        if($received){
+            return response()->json(['status' => 'success']);
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['failed to update data']]);
+        }
     }
 }

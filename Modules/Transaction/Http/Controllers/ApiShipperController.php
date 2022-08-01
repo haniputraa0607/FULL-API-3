@@ -10,6 +10,7 @@ use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionProduct;
+use App\Http\Models\TransactionShipment;
 use App\Http\Models\User;
 use App\Lib\GoSend;
 use App\Lib\Shipper;
@@ -72,12 +73,9 @@ class ApiShipperController extends Controller
                         Transaction::where('id_transaction', $data['id_transaction'])->update(['transaction_status' => 'On Delivery']);
                     }
 
-                    if(in_array($dtShipper['code'], [2000, 3000, 2010])){
-                        $updateCompleted = Transaction::where('id_transaction', $data['id_transaction'])->update(['transaction_status' => 'Completed', 'show_rate_popup' => '1']);
-
-                        if($updateCompleted){
-                            $this->completedTransaction($data);
-                        }
+                    if(in_array($shipper['code'], [2000, 3000, 2010])){
+                        $receiveat = (!empty($body['status_date']) ? date('Y-m-d H:i:s', strtotime($body['status_date'])) : date('Y-m-d H:i:s'));
+                        TransactionShipment::where('id_transaction', $data['id_transaction'])->update(['receive_at' => $receiveat]);
                     }
                 }
             }
@@ -136,11 +134,8 @@ class ApiShipperController extends Controller
             }
 
             if(in_array($shipper['code'], [2000, 3000, 2010])){
-                $updateCompleted = Transaction::where('id_transaction', $transaction['id_transaction'])->update(['transaction_status' => 'Completed', 'show_rate_popup' => '1']);
-
-                if($updateCompleted){
-                    $this->completedTransaction($transaction);
-                }
+                $receiveat = (!empty($body['status_date']) ? date('Y-m-d H:i:s', strtotime($body['status_date'])) : date('Y-m-d H:i:s'));
+                TransactionShipment::where('id_transaction', $transaction['id_transaction'])->update(['receive_at' => $receiveat]);
             }
         }
 
@@ -148,29 +143,52 @@ class ApiShipperController extends Controller
     }
 
     function completedTransaction($transaction){
+        $updateCompleted = Transaction::where('id_transaction', $transaction['id_transaction'])->update(['transaction_status' => 'Completed', 'show_rate_popup' => '1']);
 
-        //insert balance merchant
-        $idMerchant = Merchant::where('id_outlet', $transaction['id_outlet'])->first()['id_merchant']??null;
-        $nominal = $transaction['transaction_grandtotal'] - $transaction['transaction_shipment'] + $transaction['discount_charged_central'];
-        $dt = [
-            'id_merchant' => $idMerchant,
-            'id_transaction' => $transaction['id_transaction'],
-            'balance_nominal' => $nominal,
-            'source' => 'Transaction Completed'
-        ];
-        app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dt);
-
-        $trxProduct = TransactionProduct::where('id_transaction', $transaction['id_transaction'])->pluck('id_product')->toArray();
-
-        foreach ($trxProduct as $id_product){
-            UserRatingLog::updateOrCreate([
-                'id_user' => $transaction['id_user'],
+        if($updateCompleted){
+            //insert balance merchant
+            $idMerchant = Merchant::where('id_outlet', $transaction['id_outlet'])->first()['id_merchant']??null;
+            $nominal = $transaction['transaction_grandtotal'] - $transaction['transaction_shipment'] + $transaction['discount_charged_central'];
+            $dt = [
+                'id_merchant' => $idMerchant,
                 'id_transaction' => $transaction['id_transaction'],
-                'id_product' => $id_product
-            ],[
-                'refuse_count' => 0,
-                'last_popup' => date('Y-m-d H:i:s', time() - MyHelper::setting('popup_min_interval', 'value', 900))
-            ]);
+                'balance_nominal' => $nominal,
+                'source' => 'Transaction Completed'
+            ];
+            app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dt);
+
+            $trxProduct = TransactionProduct::where('id_transaction', $transaction['id_transaction'])->pluck('id_product')->toArray();
+
+            foreach ($trxProduct as $id_product){
+                UserRatingLog::updateOrCreate([
+                    'id_user' => $transaction['id_user'],
+                    'id_transaction' => $transaction['id_transaction'],
+                    'id_product' => $id_product
+                ],[
+                    'refuse_count' => 0,
+                    'last_popup' => date('Y-m-d H:i:s', time() - MyHelper::setting('popup_min_interval', 'value', 900))
+                ]);
+            }
+        }
+
+        return true;
+    }
+
+    public function cronCompletedReceivedOrder(){
+        $maxDay = Setting::where('key', 'transaction_maximum_date_auto_completed')->first()['value']??2;
+        $maxDay = (int)$maxDay;
+        $currentDate = date('Y-m-d H:i:s');
+        $dateQuery = date('Y-m-d', strtotime($currentDate. ' - '.$maxDay.' days'));
+
+        $getTransaction = Transaction::join('transaction_shipments', 'transaction_shipments.id_transaction', 'transactions.id_transaction')
+            ->whereIn('transaction_status', ['On Delivery'])
+            ->whereNotNull('transaction_shipments.order_id')
+            ->whereNotNull('transaction_shipments.receive_at')
+            ->whereDate('transaction_shipments.receive_at', '<=', $dateQuery)
+            ->select('transactions.*')->get()->toArray();
+
+        foreach ($getTransaction as $dt){
+            $this->completedTransaction($dt);
         }
 
         return true;

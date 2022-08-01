@@ -2580,13 +2580,20 @@ class ApiOnlineTransaction extends Controller
                         $idUser = request()->user()->id;
                         $checkRecipe = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
                             ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product'])->first();
-                        $maxQty = ($checkRecipe['recipe_redemption_limit']??0) * ($checkRecipe['qty_product']??0);
-                        $qtyCanBuy = $maxQty - $checkRecipe['qty_product_redeem'];
 
-                        if(empty($checkRecipe) || (!empty($checkRecipe) && $item['qty'] > $qtyCanBuy)){
+                        if(empty($checkRecipe)){
                             $canBuyStatus = false;
                             $error = 'Produk membutuhkan resep, silahkan lakukan konsultasi terlebih dahulu';
+                        }else{
+                            $maxQty = ($checkRecipe['recipe_redemption_limit']??0) * ($checkRecipe['qty_product']??0);
+                            $qtyCanBuy = $maxQty - $checkRecipe['qty_product_redeem'];
+
+                            if($item['qty'] > $qtyCanBuy){
+                                $canBuyStatus = false;
+                                $error = 'Produk membutuhkan resep, silahkan lakukan konsultasi terlebih dahulu';
+                            }
                         }
+
                     }
 
                     if($item['qty'] > $product['stock_item']){
