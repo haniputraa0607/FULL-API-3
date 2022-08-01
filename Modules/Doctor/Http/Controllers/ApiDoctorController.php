@@ -195,7 +195,7 @@ class ApiDoctorController extends Controller
 
         //save specialists
         if($post['id_doctor'] != null) {
-            $oldSpecialist = Doctor::find($post['id_doctor'])->specialists()->delete();
+            $oldSpecialist = Doctor::find($post['id_doctor'])->specialists()->detach(); 
             $specialist = $save->specialists()->attach($specialist_id);
         } else {
             $specialist = $save->specialists()->attach($specialist_id);
