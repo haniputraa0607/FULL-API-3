@@ -145,10 +145,10 @@ class ApiTransactionConsultationController extends Controller
 
         //check referral code
         if(isset($post['referral_code'])) {
-            $outlet = Outlet::where('outlet_referral_code', $post['referral_code'])->get();
-            
+            $outlet = Outlet::where('outlet_referral_code', $post['referral_code'])->first();
+
             if(empty($outlet)){
-                $outlet = Outlet::where('outlet_code', $post['referral_code'])->get();
+                $outlet = Outlet::where('outlet_code', $post['referral_code'])->first();
             }
 
             if(empty($outlet)){
