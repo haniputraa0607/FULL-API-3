@@ -40,11 +40,35 @@ class ApiDoctorController extends Controller
         $post = $request->json()->all();
         $countTotal = null;
 
-        $doctor = Doctor::with('outlet')->with('specialists')->orderBy('created_at', 'DESC');
+        $doctor = Doctor::with('outlet')->with('specialists');
 
         if (isset($post['rule'])) {
             $countTotal = $doctor->count();
             $this->filterList($doctor, $post['rule'], $post['operator'] ?: 'and');
+        }
+
+        if (isset($post['order'])) {
+            $column_name = null;
+            $dir = $post['order'][0]['dir'];
+
+            switch($post['order'][0]['column']){
+                case '0':
+                    $column_name = "doctor_name";
+                    break;
+                case '1':
+                    $column_name = "doctor_phone";
+                    break;
+                case '2':
+                    $column_name = "outlet.outlet_name";
+                    break;
+                case '3':
+                    $column_name = "doctor_session_price";
+                    break;
+            }
+            
+            $doctor->orderBy($column_name, $dir);
+        } else {
+            $doctor->orderBy('created_at', 'DESC');
         }
 
         if(isset($post['id_doctor_specialist_category'])){
@@ -237,6 +261,23 @@ class ApiDoctorController extends Controller
         }
 
         DB::commit();
+        return response()->json(['status'  => 'success', 'result' => ['id_doctor' => $post['id_doctor'], 'crm' => $autocrm??true]]);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     * @param Request $request
+     * @return Response
+     */
+    public function changePassword(Request $request)
+    {
+        $post = $request->json()->all();
+        unset($post['_token']);
+
+        $password = bcrypt($post['pin']);
+
+        $update_password = Doctor::where('id_doctor', $post['id_doctor'])->update(['password' => $password]);
+        
         return response()->json(['status'  => 'success', 'result' => ['id_doctor' => $post['id_doctor'], 'crm' => $autocrm??true]]);
     }
 
@@ -518,6 +559,13 @@ class ApiDoctorController extends Controller
                 $doctorId = TransactionConsultation::where('id_transaction', $hc->id_transaction)->pluck('id_doctor');
                 $doctor = Doctor::with('outlet')->with('specialists')->first();
 
+                //create url image
+                if($doctor['doctor_photo'] != null){
+                    $doctor['url_doctor_photo'] = env('STORAGE_URL_API').$doctor['doctor_photo']; 
+                } else {
+                    $doctor['url_doctor_photo'] = null;
+                }
+
                 if(in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3) {
                     $recomendationDoctor[] = $doctor;
                 }
@@ -533,6 +581,13 @@ class ApiDoctorController extends Controller
         if(!empty($historyTransaction)){
             foreach($historyTransaction as $ht){
                 $doctor = Doctor::with('outlet')->with('specialists')->where('id_outlet', $ht->id_outlet)->first();
+
+                //create url image
+                if($doctor['doctor_photo'] != null){
+                    $doctor['url_doctor_photo'] = env('STORAGE_URL_API').$doctor['doctor_photo']; 
+                } else {
+                    $doctor['url_doctor_photo'] = null;
+                }
 
                 if(in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3) {
                     $recomendationDoctor[] = $doctor;
@@ -555,6 +610,13 @@ class ApiDoctorController extends Controller
         }
 
         foreach($doctorRecomendationDefault as $dr){
+            //create url image
+            if($dr['doctor_photo'] != null){
+                $dr['url_doctor_photo'] = env('STORAGE_URL_API').$dr['doctor_photo']; 
+            } else {
+                $dr['url_doctor_photo'] = null;
+            }
+
             if(in_array($dr, $recomendationDoctor) == false && count($recomendationDoctor) < 3) {
                 $recomendationDoctor[] = $dr;
             }

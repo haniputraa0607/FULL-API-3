@@ -19,6 +19,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
     Route::post('store', ['uses' => 'ApiDoctorController@store']);
     Route::get('detail/{id}', ['uses' => 'ApiDoctorController@show']);
     Route::post('delete', ['uses' => 'ApiDoctorController@destroy']);
+    Route::post('change-password', ['uses' => 'ApiDoctorController@changePassword']);
 
     Route::group(['prefix' => 'clinic'], function () {
         Route::any('/', ['uses' => 'ApiDoctorClinicController@index']);
@@ -67,7 +68,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix
     Route::get('recommendation', ['uses' => 'ApiDoctorController@getDoctorRecomendation']);
 });
 
-Route::group(['prefix' => 'doctor'], function () {
+Route::group(['prefix' => 'auth/doctor'], function () {
     Route::post('phone/check', ['uses' => 'AuthDoctorController@phoneCheck']);
     Route::post('pin/forgot', ['uses' => 'AuthDoctorController@forgotPin']);
     Route::post('pin/verify', 'AuthDoctorController@verifyPin')->middleware('decrypt_pin');
