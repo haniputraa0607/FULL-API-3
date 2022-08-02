@@ -70,7 +70,7 @@ class ApiCronTrxController extends Controller
             $crossLine = date('Y-m-d H:i:s', strtotime('- 3days'));
             $dateLine  = date('Y-m-d H:i:s', strtotime('- 1days'));
             $now       = date('Y-m-d H:i:s');
-            $expired   = date('Y-m-d H:i:s',strtotime('- 10minutes'));
+            $expired   = date('Y-m-d H:i:s',strtotime('- 5minutes'));
 
             $getTrx = TransactionGroup::where('transaction_payment_status', 'Pending')
                 ->whereNotNull('transaction_payment_type')
@@ -105,13 +105,14 @@ class ApiCronTrxController extends Controller
                         continue;
                     }
 
-                    if($dtMidtrans['payment_type'] == 'Credit Card'){
-                        $trxDate = strtotime($singleTrx->transaction_group_date);
-                        $currentDate = strtotime(date('Y-m-d H:i:s'));
-                        $mins = ($currentDate - $trxDate) / 60;
-                        if($mins < 15){
-                            continue;
-                        }
+                    $paymentMethod = str_replace(" ","_",$dtMidtrans['payment_type']);
+                    $configTime = config('payment_method.midtrans_'.strtolower($paymentMethod).'.refund_time');
+                    $configTime = (int)$configTime;;
+                    $trxDate = strtotime($singleTrx->transaction_group_date);
+                    $currentDate = strtotime(date('Y-m-d H:i:s'));
+                    $mins = ($currentDate - $trxDate) / 60;
+                    if($mins < $configTime){
+                        continue;
                     }
 
                     $midtransStatus = Midtrans::status($singleTrx->transaction_group_date);
@@ -132,13 +133,14 @@ class ApiCronTrxController extends Controller
                         continue;
                     }
 
-                    if($dtXendit['type'] == 'CREDIT_CARD'){
-                        $trxDate = strtotime($singleTrx->transaction_group_date);
-                        $currentDate = strtotime(date('Y-m-d H:i:s'));
-                        $mins = ($currentDate - $trxDate) / 60;
-                        if($mins < 15){
-                            continue;
-                        }
+                    $paymentMethod = str_replace(" ","_",$dtXendit['type']);
+                    $configTime = config('payment_method.xendit_'.strtolower($paymentMethod).'.refund_time');
+                    $configTime = (int)$configTime;
+                    $trxDate = strtotime($singleTrx->transaction_group_date);
+                    $currentDate = strtotime(date('Y-m-d H:i:s'));
+                    $mins = ($currentDate - $trxDate) / 60;
+                    if($mins < $configTime){
+                        continue;
                     }
 
                     $status = app('Modules\Xendit\Http\Controllers\XenditController')->checkStatus($dtXendit->xendit_id, $dtXendit->type);

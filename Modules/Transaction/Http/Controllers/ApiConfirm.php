@@ -363,6 +363,10 @@ class ApiConfirm extends Controller
                 }
             }
 
+            if(!empty($connectMidtrans['redirect_url'])){
+                TransactionPaymentMidtran::where('id_transaction_group', $check['id_transaction_group'])->update(['token' => $connectMidtrans['token'], 'redirect_url' => $connectMidtrans['redirect_url']]);
+            }
+
             \Cache::put('midtrans_confirm_'.$check['id_transaction_group'], $response, now()->addMinutes(10));
             return response()->json($response);
         } elseif ($post['payment_type'] == 'Ovo') {

@@ -315,9 +315,11 @@ class ApiMerchantTransactionController extends Controller
 
         if(!empty($trxPaymentMidtrans)){
             $paymentMethod = $trxPaymentMidtrans['payment_type'].(!empty($trxPaymentMidtrans['bank']) ? ' ('.$trxPaymentMidtrans['bank'].')':'');
+            $paymentMethod = str_replace(" ","_",$paymentMethod);
             $paymentLogo = config('payment_method.midtrans_'.strtolower($paymentMethod).'.logo');
         }elseif(!empty($trxPaymentXendit)){
             $paymentMethod = $trxPaymentXendit['type'];
+            $paymentMethod = str_replace(" ","_",$paymentMethod);
             $paymentLogo = config('payment_method.xendit_'.strtolower($paymentMethod).'.logo');
         }
 
@@ -354,6 +356,7 @@ class ApiMerchantTransactionController extends Controller
             'transaction_status_text' => $codeIndo[$transaction['transaction_status']]['text']??'',
             'transaction_date' => MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_date'])), true),
             'transaction_products' => $products,
+            'show_rate_popup' => $transaction['show_rate_popup'],
             'address' => $address,
             'transaction_grandtotal' => 'Rp '. number_format((int)$grandTotal,0,",","."),
             'delivery' => [
@@ -370,7 +373,9 @@ class ApiMerchantTransactionController extends Controller
             'payment' => $paymentMethod??'',
             'payment_logo' => $paymentLogo??'',
             'payment_detail' => $paymentDetail,
-            'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : '')
+            'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : ''),
+            'transaction_reject_reason' => $transaction['transaction_reject_reason'],
+            'transaction_reject_at' => (!empty($transaction['transaction_reject_reason']) ? date('d/M/Y H:i', strtotime($transaction['transaction_reject_reason'])) : null)
         ];
 
         return response()->json(MyHelper::checkGet($result));
