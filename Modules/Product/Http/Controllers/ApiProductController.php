@@ -2155,7 +2155,9 @@ class ApiProductController extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function listProducRecommendation(){
+    public function listProducRecommendation(Request $request){
+        $post = $request->json()->all();
+
         $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
             'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'product_categories.product_category_name', 'need_recipe_status')
             ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
@@ -2168,7 +2170,13 @@ class ApiProductController extends Controller
             ->where('product_visibility', 'Visible')
             ->where('product_detail_visibility', 'Visible')
             ->where('product_recommendation_status', 1)
-            ->groupBy('products.id_product')->get()->toArray();
+            ->groupBy('products.id_product');
+
+        if(!empty($post['all'])){
+            $list = $list->get()->take(5)->toArray();
+        }else{
+            $list = $list->get()->toArray();
+        }
 
         foreach ($list as $key=>$product){
             if ($product['product_variant_status']) {
