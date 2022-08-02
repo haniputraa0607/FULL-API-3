@@ -20,6 +20,7 @@ use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
 
 use DB;
+use App\Http\Models\Product;
 use Modules\Merchant\Entities\Merchant;
 use Modules\Transaction\Entities\LogShipper;
 use Modules\Transaction\Entities\TransactionShipmentTrackingUpdate;
@@ -160,6 +161,9 @@ class ApiShipperController extends Controller
             $trxProduct = TransactionProduct::where('id_transaction', $transaction['id_transaction'])->pluck('id_product')->toArray();
 
             foreach ($trxProduct as $id_product){
+                $countBestSaller = Product::where('id_product', $id_product)->first()['product_count_transaction']??0;
+                Product::where('id_product', $id_product)->update(['product_count_transaction' =>$countBestSaller + 1]);
+
                 UserRatingLog::updateOrCreate([
                     'id_user' => $transaction['id_user'],
                     'id_transaction' => $transaction['id_transaction'],

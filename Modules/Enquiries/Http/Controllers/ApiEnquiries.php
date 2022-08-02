@@ -536,7 +536,59 @@ class ApiEnquiries extends Controller
             $data->where('enquiry_subject', $post['enquiry_subject']);
         }
 
-        $data = $data->orderBy('id_enquiry','desc')->get()->toArray();
+        if(isset($post['date_start']) && !empty($post['date_start']) &&
+            isset($post['date_end']) && !empty($post['date_end'])){
+            $start_date = date('Y-m-d', strtotime($post['date_start']));
+            $end_date = date('Y-m-d', strtotime($post['date_end']));
+
+            $data->whereDate('created_at', '>=', $start_date)
+                ->whereDate('created_at', '<=', $end_date);
+        }
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'enquiry_status'){
+                            $data->where('enquiry_status', $row['operator']);
+                        }else{
+                            if($row['operator'] == '='){
+                                $data->where($row['subject'], $row['parameter']);
+                            }else{
+                                $data->where($row['subject'], 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+                    }
+                }
+            }else{
+                $data->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'enquiry_status'){
+                                $subquery->orWhere('enquiry_status', $row['operator']);
+                            }else{
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere($row['subject'], $row['parameter']);
+                                }else{
+                                    $subquery->orWhere($row['subject'], 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        if(isset($post['paginate']) && $post['paginate']){
+            $data = $data->orderBy('id_enquiry','desc')->paginate(25);
+        }else{
+            $data = $data->orderBy('id_enquiry','desc')->get()->toArray();
+        }
 
         return response()->json(MyHelper::checkGet($data));
     }
@@ -574,12 +626,9 @@ class ApiEnquiries extends Controller
     }
 
 	function listEnquirySubject(){
-		$list = Setting::where('key', 'enquiries_subject_list')->get()->first();
+		$list = Setting::where('key', 'enquiries_subject_list')->first();
 
-		$result = ['text' => $list['value'], 'value' => explode('| ' ,$list['value_text'])];
-		foreach ($result['value'] as $key => $value) {
-			$result['value'][$key] = explode('* ' ,$value);
-		}
+		$result = (array)json_decode($list['value_text']??"[]");
 		return response()->json(MyHelper::checkGet($result));
 	}
 
@@ -589,4 +638,58 @@ class ApiEnquiries extends Controller
 		$result = ['text' => $list['value'], 'value' => explode(', ' ,$list['value_text'])];
 		return response()->json(MyHelper::checkGet($result));
 	}
+
+    function createV2(Request $request){
+        $post = $request->all();
+        $idUser = $request->user()->id;
+
+        if(empty($post['subject']) || empty($post['messages'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Incompleted data']]);
+        }
+
+        $checkUser = User::where('id', $idUser)->first();
+
+        if(empty($checkUser['email'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Silahkan lengkapi email Anda pada profile terlebih dahulu.']]);
+        }
+
+        if(count($post['file']??[]) > 3){
+            return response()->json(['status' => 'fail', 'messages' => ['Tidak bisa mengunggah file lebih dari 3.']]);
+        }
+
+        $dataSave = [
+            'enquiry_name' => $checkUser['name'],
+            'enquiry_phone' => $checkUser['phone'],
+            'enquiry_email' => $checkUser['email'],
+            'enquiry_subject' => $post['subject'],
+            'enquiry_content' => $post['messages'],
+            'enquiry_status' => 'Unread'
+        ];
+
+        $save = Enquiry::create($dataSave);
+        $fileSubmit = [];
+        if($save){
+            foreach ($post['file']??[] as $file){
+                $encode = base64_encode(fread(fopen($file, "r"), filesize($file)));
+                $originalName = $file->getClientOriginalName();
+                $ext = pathinfo($originalName, PATHINFO_EXTENSION);
+                $upload = MyHelper::uploadFile($encode, 'img/enquiries/',$ext);
+                if (isset($upload['status']) && $upload['status'] == "success") {
+                    $fileName = $upload['path'];
+                    $fileSubmit[] = [
+                        'enquiry_file' => $fileName,
+                        'id_enquiry' => $save['id_enquiry'],
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+                }
+            }
+
+            if(!empty($fileSubmit)){
+                EnquiriesFile::insert($fileSubmit);
+            }
+        }
+
+        return response()->json(MyHelper::checkCreate($save));
+    }
 }

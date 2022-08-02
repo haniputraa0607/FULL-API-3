@@ -47,7 +47,7 @@ class ApiElearning extends Controller
         })->where('news_featured_status', 1)->orderBy('news_publish_date', 'desc');
 
         if(!empty($post['search_key'])){
-            $list = $list = $list->where(function ($query) use ($post){
+            $list = $list->where(function ($query) use ($post){
                 $query->where('news_title', 'like', '%'.$post['search_key'].'%')
                     ->orWhere('news_content_short', 'like', '%'.$post['search_key'].'%');
             });
@@ -64,14 +64,16 @@ class ApiElearning extends Controller
                     'slug' => $value['news_slug'],
                     'title' => $value['news_title'],
                     'link_video' => $value['news_video'],
-                    'short_description' => $value['news_content_short']
+                    'short_description' => $value['news_content_short'],
+                    'post_date' => MyHelper::dateFormatInd($value['news_publish_date'], true, false, false)
                 ];
             }elseif($value['news_type'] == 'article'){
                 $article[] = [
                     'slug' => $value['news_slug'],
                     'title' => $value['news_title'],
                     'image' => $value['url_news_image_dalam'],
-                    'short_description' => $value['news_content_short']
+                    'short_description' => $value['news_content_short'],
+                    'post_date' => MyHelper::dateFormatInd($value['news_publish_date'], true, false, false)
                 ];
             }elseif($value['news_type'] == 'online_class'){
                 $date = '';
@@ -91,7 +93,8 @@ class ApiElearning extends Controller
                     'title' => $value['news_title'],
                     'image' => $value['url_news_image_dalam'],
                     'class_date' => $date,
-                    'class_by' => $value['news_by']
+                    'class_by' => $value['news_by'],
+                    'post_date' => MyHelper::dateFormatInd($value['news_publish_date'], true, false, false)
                 ];
             }
         }
@@ -133,7 +136,8 @@ class ApiElearning extends Controller
                 'title' => $tmp['news_title'],
                 'link_video' => $tmp['news_video'],
                 'short_description' => $tmp['news_content_short'],
-                'image' => $tmp['url_news_image_dalam']
+                'image' => $tmp['url_news_image_dalam'],
+                'post_date' => MyHelper::dateFormatInd($tmp['news_publish_date'], true, false, false)
             ];
         }
 
