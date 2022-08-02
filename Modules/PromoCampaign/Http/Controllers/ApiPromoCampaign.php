@@ -4019,7 +4019,13 @@ class ApiPromoCampaign extends Controller
         }
 
         if ($request->featured) {
-            $campaign->whereDoesntHave('featured_promo_campaign');
+            if($request->featured_type){
+                $campaign->whereDoesntHave('featured_promo_campaign', function ($q) use($request){
+                    $q->where('feature_type', $request->featured_type);
+                });
+            }else{
+                $campaign->whereDoesntHave('featured_promo_campaign');
+            }
         }
 
         $res = $campaign->get();
