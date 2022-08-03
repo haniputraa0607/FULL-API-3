@@ -148,7 +148,8 @@ class ApiShipperController extends Controller
 
         if($updateCompleted){
             //insert balance merchant
-            $idMerchant = Merchant::where('id_outlet', $transaction['id_outlet'])->first()['id_merchant']??null;
+            $merchant = Merchant::where('id_outlet', $transaction['id_outlet'])->first();
+            $idMerchant = $merchant['id_merchant']??null;
             $nominal = $transaction['transaction_grandtotal'] - $transaction['transaction_shipment'] + $transaction['discount_charged_central'];
             $dt = [
                 'id_merchant' => $idMerchant,
@@ -173,6 +174,9 @@ class ApiShipperController extends Controller
                     'last_popup' => date('Y-m-d H:i:s', time() - MyHelper::setting('popup_min_interval', 'value', 900))
                 ]);
             }
+
+            $countTrxMerchant = $merchant['merchant_count_transaction']??0;
+            Merchant::where('id_merchant', $idMerchant)->update(['merchant_count_transaction' => $countTrxMerchant+1]);
         }
 
         return true;
