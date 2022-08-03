@@ -635,107 +635,58 @@ class ApiUserRatingController extends Controller
 
         if (($rule['rating_target'] ?? false) == 'product') {
         	$model->whereNotNull($col.'.id_product');
-        } else {
-        	$model->whereNotNull($col.'.id_outlet');
+            if(!empty($rule['id_outlet'])){
+                $model->where($col.'.id_outlet', $rule['id_outlet']);
+            }
         }
+
         $model->whereDate($col.'.created_at','>=',$rule['date_start'])->whereDate($col.'.created_at','<=',$rule['date_end']);
     }
     public function reportOutlet(Request $request) {
         $post = $request->json()->all();
-        if($post['outlet_code']??false){
-            $outlet = Outlet::select(\DB::raw('outlets.id_outlet,outlets.outlet_code,outlets.outlet_name,count(f1.id_user_rating) as rating1,count(f2.id_user_rating) as rating2,count(f3.id_user_rating) as rating3,count(f4.id_user_rating) as rating4,count(f5.id_user_rating) as rating5'))
-            ->where('outlet_code',$post['outlet_code'])->join('transactions','outlets.id_outlet','=','transactions.id_outlet')
-            ->leftJoin('user_ratings as f1',function($join) use ($post){
-                $join->on('f1.id_transaction','=','transactions.id_transaction')
-                ->where('f1.rating_value','=','1');
-                $this->applyFilter($join,$post,'f1');
-            })
-            ->leftJoin('user_ratings as f2',function($join) use ($post){
-                $join->on('f2.id_transaction','=','transactions.id_transaction')
-                ->where('f2.rating_value','=','2');
-                $this->applyFilter($join,$post,'f2');
-            })
-            ->leftJoin('user_ratings as f3',function($join) use ($post){
-                $join->on('f3.id_transaction','=','transactions.id_transaction')
-                ->where('f3.rating_value','=','3');
-                $this->applyFilter($join,$post,'f3');
-            })
-            ->leftJoin('user_ratings as f4',function($join) use ($post){
-                $join->on('f4.id_transaction','=','transactions.id_transaction')
-                ->where('f4.rating_value','=','4');
-                $this->applyFilter($join,$post,'f4');
-            })
-            ->leftJoin('user_ratings as f5',function($join) use ($post){
-                $join->on('f5.id_transaction','=','transactions.id_transaction')
-                ->where('f5.rating_value','=','5');
-                $this->applyFilter($join,$post,'f5');
-            })->first();
-            if(!$outlet){
-                return MyHelper::checkGet($outlet);
+        $data = Outlet::where('outlet_status', 'Active');
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
             }
-            $data['rating_data'] = $outlet;
-            $post['id_outlet'] = $outlet->id_outlet;
-            $counter['data'] = [];
-            for ($i = 1; $i<=5 ;$i++) {
-                $datax = UserRating::where('rating_value',$i)->with([
-                    'transaction'=>function($query){
-                        $query->select('id_transaction','transaction_receipt_number','trasaction_type','transaction_grandtotal');
-                    },
-                    'user'=>function($query){
-                        $query->select('id','name','phone');
-                    },
-                    'product'=>function($query){
-                        $query->select('id_product','product_code','product_name');
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'outlet_total_rating'){
+                            $data->where($row['subject'], $row['operator'], $row['parameter']);
+                        }else{
+                            if($row['operator'] == '='){
+                                $data->where($row['subject'], $row['parameter']);
+                            }else{
+                                $data->where($row['subject'], 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
                     }
-                ])
-                ->join('transactions','transactions.id_transaction','=','user_ratings.id_transaction')
-                ->where('transactions.id_outlet',$outlet->id_outlet)
-                ->take(10);
-                $this->applyFilter($datax,$post);
-                $counter['data'][$i] = $datax->get();
-            }
-            $data['rating_item'] = $counter;
-            return MyHelper::checkGet($data);
-        }else{
-            $dasc = ($post['order']??'outlet_name')=='outlet_name'?'asc':'desc';
-            $outlet = Outlet::select(\DB::raw('outlets.id_outlet,outlets.outlet_code,outlets.outlet_name,count(f1.id_user_rating) as rating1,count(f2.id_user_rating) as rating2,count(f3.id_user_rating) as rating3,count(f4.id_user_rating) as rating4,count(f5.id_user_rating) as rating5'))
-            ->join('transactions','outlets.id_outlet','=','transactions.id_outlet')
-            ->leftJoin('user_ratings as f1',function($join) use ($post){
-                $join->on('f1.id_transaction','=','transactions.id_transaction')
-                ->where('f1.rating_value','=','1');
-                $this->applyFilter($join,$post,'f1');
-            })
-            ->leftJoin('user_ratings as f2',function($join) use ($post){
-                $join->on('f2.id_transaction','=','transactions.id_transaction')
-                ->where('f2.rating_value','=','2');
-                $this->applyFilter($join,$post,'f2');
-            })
-            ->leftJoin('user_ratings as f3',function($join) use ($post){
-                $join->on('f3.id_transaction','=','transactions.id_transaction')
-                ->where('f3.rating_value','=','3');
-                $this->applyFilter($join,$post,'f1');
-            })
-            ->leftJoin('user_ratings as f4',function($join) use ($post){
-                $join->on('f4.id_transaction','=','transactions.id_transaction')
-                ->where('f4.rating_value','=','4');
-                $this->applyFilter($join,$post,'f4');
-            })
-            ->leftJoin('user_ratings as f5',function($join) use ($post){
-                $join->on('f5.id_transaction','=','transactions.id_transaction')
-                ->where('f5.rating_value','=','5');
-                $this->applyFilter($join,$post,'f5');
-            })
-            ->orderBy($post['order']??'outlet_name',$dasc)
-            ->groupBy('outlets.id_outlet');
-            if($post['search']??false){
-                $outlet->where(function($query) use($post){
-                    $param = '%'.$post['search'].'%';
-                    $query->where('outlet_name','like',$param)
-                    ->orWhere('outlet_code','like',$param);
+                }
+            }else{
+                $data->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'outlet_total_rating'){
+                                $subquery->orWhere($row['subject'], $row['operator'], $row['parameter']);
+                            }else{
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere($row['subject'], $row['parameter']);
+                                }else{
+                                    $subquery->orWhere($row['subject'], 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+                        }
+                    }
                 });
             }
-            return MyHelper::checkGet($outlet->paginate(15)->toArray());
         }
+
+        $data = $data->paginate(25);
+        return response()->json(MyHelper::checkGet($data));
     }
 
     public function reportProduct(Request $request) {
