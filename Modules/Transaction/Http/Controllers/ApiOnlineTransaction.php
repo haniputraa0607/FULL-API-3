@@ -2579,6 +2579,7 @@ class ApiOnlineTransaction extends Controller
                     if($product['need_recipe_status'] == 1){
                         $idUser = request()->user()->id;
                         $checkRecipe = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
+                            ->whereNotNull('completed_at')
                             ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product'])->first();
 
                         if(empty($checkRecipe)){

@@ -1072,15 +1072,24 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
-            118 =>
+            119 =>
                 array(
-                    'id_setting' => 117,
+                    'id_setting' => 118,
                     'key' => 'transaction_maximum_date_auto_completed',
                     'value' => 2,
                     'value_text' => NULL,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
-                )
+                ),
+            120 =>
+                array(
+                    'id_setting' => 119,
+                    'key' => 'merchant_promo_campaign_title',
+                    'value' => 'MERCHANTS EVENTS',
+                    'value_text' => NULL,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         );
 
         foreach ($settings as $setting) {

@@ -3824,7 +3824,7 @@ class ApiOutletController extends Controller
             $newest[] = [
                 'id_outlet' => $dt['id_outlet'],
                 'id_merchant' => $dt['id_merchant'],
-                'outlet_image_logo_landscape' => $dt['url_outlet_image_logo_portrait'],
+                'outlet_name' => $dt['outlet_name'],
                 'outlet_image_logo_portrait' => $dt['url_outlet_image_logo_portrait']
             ];
         }
@@ -3839,9 +3839,8 @@ class ApiOutletController extends Controller
 
     public function featuredPromoCampaign(Request $request){
         $now = date('Y-m-d H-i-s');
-        $home_text = Setting::whereIn('key',['home_promo_campaign_sub_title','home_promo_campaign_title'])->get()->keyBy('key');
-        $text['title'] = $home_text['home_promo_campaign_title']['value'] ?? 'Penawaran Spesial.';
-        $text['sub_title'] = $home_text['home_promo_campaign_sub_title']['value'] ?? 'Potongan menarik untuk setiap pembelian.';
+        $home_text = Setting::whereIn('key',['merchant_promo_campaign_title'])->get()->keyBy('key');
+        $text['title'] = $home_text['merchant_promo_campaign_title']['value'] ?? 'MERCHANTS EVENTS';
 
         $featuredPromo = FeaturedPromoCampaign::select('id_featured_promo_campaign','id_promo_campaign')
             ->with(['promo_campaign' => function($query) {

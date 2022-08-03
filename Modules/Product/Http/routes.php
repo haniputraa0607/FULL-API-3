@@ -14,6 +14,8 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     Route::any('sync', 'ApiSyncProductController@sync');
     Route::get('next/{id}', 'ApiProductController@getNextID');
     Route::any('recommendation', 'ApiProductController@listProducRecommendation');
+    Route::get('best-seller', 'ApiProductController@bestSeller');
+    Route::get('newest', 'ApiProductController@newest');
 
     /* category */
     Route::group(['prefix' => 'category'], function() {
