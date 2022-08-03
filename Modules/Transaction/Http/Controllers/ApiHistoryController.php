@@ -1480,7 +1480,7 @@ class ApiHistoryController extends Controller
         $idUser = $request->user()->id;
 
         $filterCode = [
-            1 => 'Reject',
+            1 => 'Rejected',
             2 => 'Unpaid',
             3 => 'Pending',
             4 => 'On Progress',
@@ -1524,8 +1524,15 @@ class ApiHistoryController extends Controller
             $list = $list->whereDate('transaction_date', date('Y-m-d', strtotime($filterCode)));
         }
 
-        if(!empty($post['filter_status_code']) && !empty($filterCode[$post['filter_status_code']])){
-            $list = $list->where('transaction_status', $filterCode[$post['filter_status_code']]);
+        if(!empty($post['filter_status_code'])){
+            $filterStatus = [];
+            foreach ($post['filter_status_code'] as $code){
+                if(!empty($filterCode[$code])){
+                    $filterStatus[] = $filterCode[$code];
+                }
+            }
+
+            $list = $list->whereIn('transaction_status', $filterStatus);
         }
 
         $list = $list->get()->toArray();

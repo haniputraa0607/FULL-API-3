@@ -133,8 +133,11 @@ class ApiMerchantTransactionController extends Controller
             $transactions = $transactions->where('transaction_status', $status);
         }
 
-        if(!empty($post['search_receipt_number'])){
-            $transactions = $transactions->where('transaction_receipt_number', 'like', '%'.$post['search_receipt_number'].'%');
+        if(!empty($post['search_receipt_number_order_id'])){
+            $transactions = $transactions->where(function ($q) use($post){
+                $q->where('transaction_receipt_number', 'like', '%'.$post['search_receipt_number_order_id'].'%')
+                    ->orWhere('transaction_shipments.order_id', 'like', '%'.$post['search_receipt_number_order_id'].'%');
+            });
         }
 
         $transactions = $transactions->paginate($post['pagination_total_row']??10)->toArray();
@@ -375,7 +378,7 @@ class ApiMerchantTransactionController extends Controller
             'payment_detail' => $paymentDetail,
             'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : ''),
             'transaction_reject_reason' => $transaction['transaction_reject_reason'],
-            'transaction_reject_at' => (!empty($transaction['transaction_reject_reason']) ? date('d/M/Y H:i', strtotime($transaction['transaction_reject_reason'])) : null)
+            'transaction_reject_at' => (!empty($transaction['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_reject_at'])), true) : null)
         ];
 
         return response()->json(MyHelper::checkGet($result));
