@@ -2836,6 +2836,7 @@ class ApiTransaction extends Controller
 
         $result = [
             'id_transaction' => $id,
+            'receipt_number_group' => TransactionGroup::where('id_transaction_group', $transaction['id_transaction_group'])->first()['transaction_receipt_number']??'',
             'transaction_receipt_number' => $transaction['transaction_receipt_number'],
             'transaction_status_code' => $codeIndo[$transaction['transaction_status']]['code']??'',
             'transaction_status_text' => $codeIndo[$transaction['transaction_status']]['text']??'',

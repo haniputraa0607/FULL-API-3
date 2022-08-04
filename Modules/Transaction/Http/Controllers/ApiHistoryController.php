@@ -1563,7 +1563,9 @@ class ApiHistoryController extends Controller
                 'product_name' => $product['product_name'],
                 'product_qty' => $product['transaction_product_qty'],
                 'product_image' => (empty($image) ? config('url.storage_url_api').'img/default.jpg': $image),
-                'product_variants' => $variant
+                'product_variants' => $variant,
+                'reject_at' => (!empty($value['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($value['transaction_reject_at'])), true) : null),
+                'reject_reason' => (!empty($value['transaction_reject_reason'])? $value['transaction_reject_reason']:''),
             ];
         }
 
