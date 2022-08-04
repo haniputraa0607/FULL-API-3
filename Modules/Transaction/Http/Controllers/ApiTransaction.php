@@ -2866,7 +2866,7 @@ class ApiTransaction extends Controller
             'payment_detail' => $paymentDetail,
             'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : ''),
             'transaction_reject_reason' => $transaction['transaction_reject_reason'],
-            'transaction_reject_at' => (!empty($transaction['transaction_reject_reason']) ? date('d/M/Y H:i', strtotime($transaction['transaction_reject_reason'])) : null)
+            'transaction_reject_at' => (!empty($transaction['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_reject_at'])), true) : null)
         ];
 
         return response()->json(MyHelper::checkGet($result));

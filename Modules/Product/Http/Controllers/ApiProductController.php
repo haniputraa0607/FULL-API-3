@@ -1985,25 +1985,32 @@ class ApiProductController extends Controller
         return response()->json(MyHelper::checkGet($data));
     }
 
-    public function listProductMerchantBestSeller($query = []){
-        $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $query['id_outlet'])->first();
+    public function bestSeller(){
+        $result = $this->listProductMerchantBestSeller([]);
+        return response()->json(['status' => 'success', 'result' => $result]);
+    }
 
+    public function listProductMerchantBestSeller($query = []){
         $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
-                    'product_detail_stock_status as stock_status', 'need_recipe_status')
+                    'product_detail_stock_status as stock_status', 'need_recipe_status', 'outlets.id_outlet')
                 ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
                 ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
                 ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
                 ->where('outlet_is_closed', 0)
-                ->where('product_detail.id_outlet', $query['id_outlet'])
                 ->where('product_global_price', '>', 0)
                 ->where('product_visibility', 'Visible')
                 ->where('product_detail_visibility', 'Visible')
                 ->where('product_count_transaction', '>', 0)
-                ->orderBy('product_count_transaction', 'desc')
-                ->limit(30)
-                ->get()->toArray();
+                ->where('product_detail_stock_status', 'Available')
+                ->orderBy('product_count_transaction', 'desc');
+
+        if(!empty($query['id_outlet'])){
+            $list = $list->where('product_detail.id_outlet', $query['id_outlet']);
+        }
+        $list = $list->limit(10)->get()->toArray();
 
         foreach ($list as $key=>$product){
+            $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $product['id_outlet'])->first();
             if ($product['product_variant_status']) {
                 $variantTree = Product::getVariantTree($product['id_product'], $outlet);
                 if(empty($variantTree['base_price'])){
@@ -2013,6 +2020,7 @@ class ApiProductController extends Controller
                 $list[$key]['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
             }
 
+            unset($list[$key]['id_outlet']);
             unset($list[$key]['product_variant_status']);
             unset($list[$key]['stock_status']);
             $list[$key]['product_price'] = (int)$list[$key]['product_price'];
@@ -2025,27 +2033,35 @@ class ApiProductController extends Controller
         return $list;
     }
 
-    public function listProductMerchantNewest($query = []){
-        $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $query['id_outlet'])->first();
+    public function newest(){
+        $result = $this->listProductMerchantNewest([]);
+        return response()->json(['status' => 'success', 'result' => $result]);
+    }
 
+    public function listProductMerchantNewest($query = []){
         $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
-            'product_detail_stock_status as stock_status', 'need_recipe_status')
+            'product_detail_stock_status as stock_status', 'need_recipe_status', 'outlets.id_outlet')
             ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
             ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
             ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
             ->where('outlet_is_closed', 0)
-            ->where('product_detail.id_outlet', $query['id_outlet'])
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
             ->where('product_detail_visibility', 'Visible')
+            ->where('product_detail_stock_status', 'Available')
             ->orderBy('products.created_at', 'desc');
 
         if(!empty($query['id_best'])){
             $list = $list->whereNotIn('products.id_product', $query['id_best']);
         }
+        if(!empty($query['id_outlet'])){
+            $list = $list->where('product_detail.id_outlet', $query['id_outlet']);
+        }
+
         $list = $list->limit(10)->get()->toArray();
 
         foreach ($list as $key=>$product){
+            $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $product['id_outlet'])->first();
             if ($product['product_variant_status']) {
                 $variantTree = Product::getVariantTree($product['id_product'], $outlet);
                 if(empty($variantTree['base_price'])){
@@ -2055,6 +2071,7 @@ class ApiProductController extends Controller
                 $list[$key]['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
             }
 
+            unset($list[$key]['id_outlet']);
             unset($list[$key]['product_variant_status']);
             unset($list[$key]['stock_status']);
             $list[$key]['product_price'] = (int)$list[$key]['product_price'];
@@ -2075,16 +2092,13 @@ class ApiProductController extends Controller
             }
         }
 
-        $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
-            'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'need_recipe_status')
-            ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
+        $list = Product::leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
             ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
             ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
             ->where('outlet_is_closed', 0)
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
             ->where('product_detail_visibility', 'Visible')
-            ->orderBy('product_count_transaction', 'desc')
             ->groupBy('products.id_product');
 
         if(!empty($idMerchant)){
@@ -2092,11 +2106,49 @@ class ApiProductController extends Controller
         }
 
         if(!empty($post['search_key'])){
-            $list = $list->where('product_name', 'like', '%'.$post['search_key'].'%');
+            $list = $list->whereRaw('MATCH (product_name,product_description) AGAINST ("'.$post['search_key'].'" IN BOOLEAN MODE)');
         }
 
         if(!empty($post['id_product_category'])){
             $list = $list->where('id_product_category', $post['id_product_category']);
+        }
+
+        $defaultSelect = 1;
+        if(!empty($post['filter_sorting'])){
+            $sorting = $post['filter_sorting'];
+
+            if($sorting == 'relate' && !empty($post['search_key'])){
+                $defaultSelect = 0;
+                $list = $list->select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
+                    'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'need_recipe_status',
+                    DB::raw('MATCH (product_name,product_description) AGAINST ("'.$post['search_key'].'" IN BOOLEAN MODE) AS relate'))
+                    ->orderBy('relate', 'desc');
+            }elseif($sorting == 'best seller'){
+                $list = $list->orderBy('product_count_transaction', 'desc');
+            }elseif($sorting == 'review'){
+                $list = $list->orderBy('total_rating', 'desc');
+            }elseif($sorting == 'newest'){
+                $list = $list->orderBy('products.created_at', 'desc');
+            }
+        }else{
+            $list = $list->orderBy('product_count_transaction', 'desc');
+        }
+
+        if($defaultSelect == 1){
+            $list = $list->select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
+                'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'need_recipe_status');
+        }
+
+        if(!empty($post['filter_category'])){
+            $list = $list->whereIn('id_product_category', $post['filter_category']);
+        }
+
+        if(!empty($post['filter_min_price'])){
+            $list = $list->where('product_global_price', '>=', $post['filter_min_price']);
+        }
+
+        if(!empty($post['filter_max_price'])){
+            $list = $list->where('product_global_price', '<=', $post['filter_max_price']);
         }
 
         if(!empty($post['pagination'])){
