@@ -80,4 +80,9 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
 		return $this->hasMany(\App\Http\Models\TransactionConsultationRecomendation::class, 'id_transaction_consultation', 'id_transaction_consultation');
 	}
 
+	// public function triggerPaymentCancelled()
+	// {
+	// 	return $this->update(['consultation_status' => 'canceled']);
+	// }
+
 }

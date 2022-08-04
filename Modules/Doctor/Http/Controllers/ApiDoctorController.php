@@ -521,14 +521,18 @@ class ApiDoctorController extends Controller
 
     public function updateRecomendationStatus(Request $request)
     {
-        $post = $request->json()->all();
+        $post = $request->json()->all(); 
 
         DB::beginTransaction();
         try {
             //initialize value
             $ids_doctor = $post['id_doctor'];
 
-            Doctor::whereIn('id_doctor', $ids_doctor)->update(['doctor_recomendation_status' => true]); 
+            //reset doctor recomendation
+            DB::table('doctors')->update([ 'doctor_recomendation_status' => false]);
+
+            //new doctor recomendation
+            Doctor::whereIn('id_doctor', $ids_doctor)->update(['doctor_recomendation_status' => true]);
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',

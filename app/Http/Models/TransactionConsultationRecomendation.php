@@ -44,7 +44,10 @@ class TransactionConsultationRecomendation extends model
         'qty_product_counter',
         'qty_product_redeem',
 		'id_outlet',
-		'treatment_description'
+		'treatment_description',
+		'usage_rules',
+		'usage_rules_time',
+		'usage_rules_additional_time'
 	];
 
 	public function consultation()

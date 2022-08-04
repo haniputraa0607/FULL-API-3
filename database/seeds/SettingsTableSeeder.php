@@ -329,9 +329,8 @@ class SettingsTableSeeder extends Seeder
             array(
                 'id_setting' => 36,
                 'key' => 'enquiries_subject_list',
-                'value' => 'Subject',
-                // 'value_text' => 'Customer Feedback* outlet,visiting_time,messages| Marketing Partnership* messages| Business Development* messages| Career* position',
-                'value_text' => 'Kritik, Saran & Keluhan* outlet,visiting_time,messages| Pengubahan Data Diri* messages| Lain - Lain* messages',
+                'value' => NULL,
+                'value_text' => '["Kritik, Saran & Keluhan","Transaksi","Pembayaran","Lain - lain"]',
                 'created_at' => '2019-10-03 12:00:00',
                 'updated_at' => '2019-10-03 12:00:00',
             ),

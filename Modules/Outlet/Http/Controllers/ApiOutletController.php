@@ -3869,6 +3869,8 @@ class ApiOutletController extends Controller
             return MyHelper::checkGet($featuredPromo);
         }
         $featuredPromo = array_map(function($value) {
+            $monthBahasa = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
             $used_code = PromoCampaignReport::where('id_promo_campaign',$value['id_promo_campaign'])->count();
             if ($value['promo_campaign']['total_coupon'] == "0") {
                 $calc = '*';
@@ -3883,6 +3885,18 @@ class ApiOutletController extends Controller
             }
             $value['promo_campaign']['show'] = 1;
             $value['promo_campaign']['time_to_end'] = strtotime($value['promo_campaign']['date_end'])-time();
+
+            $dayStart = date('j', strtotime($value['promo_campaign']['date_start']));
+            $dayEnd = date('j', strtotime($value['promo_campaign']['date_end']));
+            $monthStart = date('n', strtotime($value['promo_campaign']['date_start']));
+            $monthEnd = date('n', strtotime($value['promo_campaign']['date_end']));
+
+            if($monthStart == $monthEnd){
+                $value['promo_campaign']['date_text'] = $dayStart.'-'.$dayEnd.' '.$monthBahasa[$monthStart];
+            }else{
+                $value['promo_campaign']['date_text'] = $dayStart.' '.$monthBahasa[$monthStart].' - '.$dayEnd.' '.$monthBahasa[$monthEnd];
+            }
+
             return $value;
         },$featuredPromo->toArray());
         foreach ($featuredPromo as $key => $value) {
