@@ -74,7 +74,7 @@ class ApiShipperController extends Controller
                         Transaction::where('id_transaction', $data['id_transaction'])->update(['transaction_status' => 'On Delivery']);
                     }
 
-                    if(in_array($shipper['code'], [2000, 3000, 2010])){
+                    if(in_array($dtShipper['code'], [2000, 3000, 2010])){
                         $receiveat = (!empty($body['status_date']) ? date('Y-m-d H:i:s', strtotime($body['status_date'])) : date('Y-m-d H:i:s'));
                         TransactionShipment::where('id_transaction', $data['id_transaction'])->update(['receive_at' => $receiveat]);
                     }
