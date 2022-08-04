@@ -211,7 +211,7 @@ class ApiTransactionConsultationController extends Controller
 
     public function newTransaction(Request $request) {
         $post = $request->json()->all();
-        $user = $request->user();
+        $user = $request->user(); 
 
         //cek input date and time
         if($post['consultation_type'] != 'now') {
@@ -568,53 +568,33 @@ class ApiTransactionConsultationController extends Controller
             $trx_consultation->created_at = strtotime($insertTransaction['transaction_date']);
         }
 
-        // $insertUserTrxProduct = app($this->transaction)->insertUserTrxProduct($userTrxProduct);
-        // if ($insertUserTrxProduct == 'fail') {
-        //     DB::rollback();
-        //     return response()->json([
-        //         'status'    => 'fail',
-        //         'messages'  => ['Insert Consultation Transaction Failed']
-        //     ]);
-        // }
+        $trxGroup = TransactionGroup::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->first();
+        if ($paymentType == 'Balance' && isset($post['point_use']) && $post['point_use']) {
 
-        // if ($post['payment_type'] == 'Midtrans') {
-        //     if ($post['transaction_payment_status'] == 'Completed') {
-        //         //bank
-        //         $bank = ['BNI', 'Mandiri', 'BCA'];
-        //         $getBank = array_rand($bank);
+            $currentBalance = LogBalance::where('id_user', $user->id)->sum('balance');
+            $grandTotalNew = $trxGroup['transaction_grandtotal'];
+            if($currentBalance >= $grandTotalNew){
+                $grandTotalNew = 0;
+            }else{
+                $grandTotalNew = $grandTotalNew - $currentBalance;
+            }
 
-        //         //payment_method
-        //         $method = ['credit_card', 'bank_transfer', 'direct_debit'];
-        //         $getMethod = array_rand($method);
+            $save = app($this->balance)->topUpGroup($user->id, $trxGroup);
 
-        //         $dataInsertMidtrans = [
-        //             'id_transaction'     => $insertTransaction['id_transaction'],
-        //             'approval_code'      => 000000,
-        //             'bank'               => $bank[$getBank],
-        //             'eci'                => $this->getrandomnumber(2),
-        //             'transaction_time'   => $insertTransaction['transaction_date'],
-        //             'gross_amount'       => $insertTransaction['transaction_grandtotal'],
-        //             'order_id'           => $insertTransaction['transaction_receipt_number'],
-        //             'payment_type'       => $method[$getMethod],
-        //             'signature_key'      => $this->getrandomstring(),
-        //             'status_code'        => 200,
-        //             'vt_transaction_id'  => $this->getrandomstring(8).'-'.$this->getrandomstring(4).'-'.$this->getrandomstring(4).'-'.$this->getrandomstring(12),
-        //             'transaction_status' => 'capture',
-        //             'fraud_status'       => 'accept',
-        //             'status_message'     => 'Veritrans payment notification'
-        //         ];
+            if (!isset($save['status'])) {
+                DB::rollBack();
+                return response()->json(['status' => 'fail', 'messages' => ['Transaction failed']]);
+            }
 
-        //         $insertDataMidtrans = TransactionPaymentMidtran::create($dataInsertMidtrans);
-        //         if (!$insertDataMidtrans) {
-        //             DB::rollback();
-        //             return response()->json([
-        //                 'status'    => 'fail',
-        //                 'messages'  => ['Insert Data Midtrans Failed']
-        //             ]);
-        //         }
+            if ($save['status'] == 'fail') {
+                DB::rollBack();
+                return response()->json($save);
+            }
 
-        //     }
-        // }
+            if($grandTotalNew == 0){
+                $trxGroup->triggerPaymentCompleted();
+            }
+        }
 
         if($post['latitude'] && $post['longitude']){
            $savelocation = app($this->location)->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction'], $outlet['id_outlet']);
@@ -1172,16 +1152,18 @@ class ApiTransactionConsultationController extends Controller
         //get recomendation
         $recomendations = TransactionConsultationRecomendation::with('product')->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->onlyProduct()->get();
 
-        $result = [];
+        $items = [];
         if(!empty($recomendations)) {
             foreach($recomendations as $key => $recomendation){
-                $result['product_name'] = $recomendation->product->product_name ?? null;
-                $result['product_price'] = $recomendation->product->price->product_price ?? null;
-                $result['product_photo'] = $recomendation->product->product_photos ?? null;
-                $result['product_rating'] = null;
-                $result['qty'] = $recomendation->qty ?? null;
+                $items[$key]['product_name'] = $recomendation->product->product_name ?? null;
+                $items[$key]['product_price'] = $recomendation->product->price->product_price ?? null;
+                $items[$key]['product_photo'] = $recomendation->product->product_photos ?? null;
+                $items[$key]['product_rating'] = null;
+                $items[$key]['qty'] = $recomendation->qty ?? null;
             }
         }
+
+        $result = $items;
 
         return MyHelper::checkGet($result);
     }
@@ -1209,16 +1191,21 @@ class ApiTransactionConsultationController extends Controller
         //get recomendation
         $recomendations = TransactionConsultationRecomendation::with('product')->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->onlyDrug()->get();
 
-        $result = [];
+        $items = [];
         if(!empty($recomendations)) {
             foreach($recomendations as $key => $recomendation){
-                $result['product_name'] = $recomendation->product->product_name ?? null;
-                $result['product_price'] = $recomendation->product->price->product_price ?? null;
-                $result['product_photo'] = $recomendation->product->product_photos ?? null;
-                $result['product_rating'] = null;
-                $result['qty'] = $recomendation->qty ?? null;
+                $items[$key]['product_name'] = $recomendation->product->product_name ?? null;
+                $items[$key]['product_price'] = $recomendation->product->price->product_price ?? null;
+                $items[$key]['product_photo'] = $recomendation->product->product_photos ?? null;
+                $items[$key]['product_rating'] = null;
+                $items[$key]['qty'] = $recomendation->qty ?? null;
             }
         }
+
+        $result = [
+            'remaining_recipe_redemption' =>  ($transactionConsultation->recipe_redemption_limit - $transactionConsultation->recipe_redemption_counter), 
+            'items' => $items
+        ];
 
         return MyHelper::checkGet($result);
     }
@@ -1238,13 +1225,18 @@ class ApiTransactionConsultationController extends Controller
 
         foreach($post['items'] as $key => $item){
             $post['items'][$key]['product_type'] = $post['type'];
+            $post['items'][$key]['qty_product_counter'] = $post['items'][$key]['qty_product'];
+        }
+
+        if($post['type'] == "drug"){
+            $transactionConsultation->update(['recipe_redemption_limit' => $post['recipe_redemption_limit']]);
         }
 
         DB::beginTransaction();
         try {
             //drop old recomendation 
-            $oldRecomendation = TransactionConsultationRecomendation::where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->delete();
-            $result = $transactionConsultation->recomendation()->createMany($post['items']);
+            $oldRecomendation = TransactionConsultationRecomendation::where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->where('product_type', $post['type'])->delete();
+            $items = $transactionConsultation->recomendation()->createMany($post['items']);
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
@@ -1254,6 +1246,16 @@ class ApiTransactionConsultationController extends Controller
             return response()->json($result);
         }
         DB::commit();
+
+        $result = $items;
+
+        //product recomendation drug type
+        if($post['type'] == "drug"){
+            $result = [
+                'recipe_redemption_limit' => $transactionConsultation['recipe_redemption_limit'],
+                'items' => $items
+            ];
+        }
 
         return response()->json(['status'  => 'success', 'result' => $result]);
     }
@@ -1550,5 +1552,67 @@ class ApiTransactionConsultationController extends Controller
         //dd($list);
 
         return response()->json(MyHelper::checkGet($list));
+    }
+
+    public function cancelTransaction(Request $request)
+    {
+        if ($request->id) {
+            $trx = TransactionGroup::where(['id_transaction_group' => $request->id, 'id_user' => $request->user()->id])->where('transaction_payment_status', '<>', 'Completed')->first();
+        } else {
+            $trx = TransactionGroup::where(['transaction_receipt_number' => $request->receipt_number, 'id_user' => $request->user()->id])->where('transaction_payment_status', '<>', 'Completed')->first();
+        }
+        if (!$trx) {
+            return MyHelper::checkGet([],'Transaction not found');
+        }
+
+        if($trx->transaction_payment_status != 'Pending'){
+            return MyHelper::checkGet([],'Transaction cannot be canceled');
+        }
+
+        $payment_type = $trx->transaction_payment_type;
+        if ($payment_type == 'Balance') {
+            $multi_payment = TransactionMultiplePayment::select('type')->where('id_transaction_group', $trx->id_transaction_group)->pluck('type')->toArray();
+            foreach ($multi_payment as $pm) {
+                if ($pm != 'Balance') {
+                    $payment_type = $pm;
+                    break;
+                }
+            }
+        }
+
+        switch (strtolower($payment_type)) {
+            case 'midtrans':
+                $midtransStatus = Midtrans::status($trx['id_transaction_group']);
+                if ((($midtransStatus['status'] ?? false) == 'fail' && ($midtransStatus['messages'][0] ?? false) == 'Midtrans payment not found') || in_array(($midtransStatus['response']['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure', 'pending']) || ($midtransStatus['status_code'] ?? false) == '404' ||
+                    (!empty($midtransStatus['payment_type']) && $midtransStatus['payment_type'] == 'gopay' && $midtransStatus['transaction_status'] == 'pending')) {
+                    $connectMidtrans = Midtrans::expire($trx['transaction_receipt_number']);
+
+                    if($connectMidtrans){
+                        $trx->triggerPaymentCancelled();
+                        return ['status'=>'success', 'result' => ['message' => 'Pembayaran berhasil dibatalkan']];
+                    }
+                }
+                return [
+                    'status'=>'fail',
+                    'messages' => ['Transaksi tidak dapat dibatalkan karena proses pembayaran sedang berlangsung']
+                ];
+            case 'xendit':
+                $dtXendit = TransactionPaymentXendit::where('id_transaction_group', $trx['id_transaction_group'])->first();
+                $status = app('Modules\Xendit\Http\Controllers\XenditController')->checkStatus($dtXendit->xendit_id, $dtXendit->type);
+
+                if ($status && $status['status'] == 'PENDING' && !empty($status['id'])) {
+                    $cancel = app('Modules\Xendit\Http\Controllers\XenditController')->expireInvoice($status['id']);
+
+                    if($cancel){
+                        $trx->triggerPaymentCancelled();
+                        return ['status'=>'success', 'result' => ['message' => 'Pembayaran berhasil dibatalkan']];
+                    }
+                }
+                return [
+                    'status'=>'fail',
+                    'messages' => ['Transaksi tidak dapat dibatalkan karena proses pembayaran sedang berlangsung']
+                ];
+        }
+        return ['status' => 'fail', 'messages' => ["Cancel $payment_type transaction is not supported yet"]];
     }
 }
