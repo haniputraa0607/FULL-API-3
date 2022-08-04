@@ -619,6 +619,10 @@ class ApiUserRatingController extends Controller
         $data['rating_item'] = $counter;
         $data['rating_item_count'] = count($counter);
         $data['rating_data'] = $outlet5->get();
+
+        if(!empty($post['id_outlet'])){
+            $data['outlet_name'] = Outlet::where('id_outlet', $post['id_outlet'])->first()['outlet_name']??'';
+        }
         return MyHelper::checkGet($data);
     }
     // apply filter photos only/notes_only
