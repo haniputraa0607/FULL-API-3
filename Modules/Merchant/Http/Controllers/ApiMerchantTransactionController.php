@@ -143,6 +143,8 @@ class ApiMerchantTransactionController extends Controller
         $transactions = $transactions->paginate($post['pagination_total_row']??10)->toArray();
 
         foreach ($transactions['data']??[] as $key=>$value){
+            $countAllProduct = TransactionProduct::where('id_transaction', $value['id_transaction'])->count();
+            $countAllProduct = $countAllProduct-1;
             $product = TransactionProduct::where('id_transaction', $value['id_transaction'])
                 ->join('products', 'products.id_product', 'transaction_products.id_product')->first();
             $variant = '';
@@ -161,6 +163,7 @@ class ApiMerchantTransactionController extends Controller
                 'transaction_grandtotal' => $value['transaction_grandtotal'],
                 'product_name' => $product['product_name'],
                 'product_qty' => $product['transaction_product_qty'],
+                'another_product_qty' => (empty($countAllProduct) ? null:$countAllProduct),
                 'product_image' => (empty($image) ? config('url.storage_url_api').'img/default.jpg': $image),
                 'product_variants' => $variant,
                 'delivery_city' => $value['city_name'],
@@ -169,7 +172,7 @@ class ApiMerchantTransactionController extends Controller
                 'maximum_date_process' => (!empty($value['transaction_maximum_date_process'])? MyHelper::dateFormatInd($value['transaction_maximum_date_process'], false, false):''),
                 'maximum_date_delivery' => (!empty($value['transaction_maximum_date_delivery'])? MyHelper::dateFormatInd($value['transaction_maximum_date_delivery'], false, false):''),
                 'estimated_delivery' => '',
-                'reject_at' => (!empty($value['transaction_reject_at'])? MyHelper::dateFormatInd($value['transaction_reject_at'], false, false):''),
+                'reject_at' => (!empty($value['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($value['transaction_reject_at'])), true) : null),
                 'reject_reason' => (!empty($value['transaction_reject_reason'])? $value['transaction_reject_reason']:''),
             ];
             $ratings = [];

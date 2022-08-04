@@ -3742,6 +3742,7 @@ class ApiOutletController extends Controller
                 'outlet_name' => $detail['outlet_name'],
                 'outlet_description' => $detail['outlet_description'],
                 'outlet_image_cover' => $detail['url_outlet_image_cover'],
+                'outlet_image_logo_portrait' => $detail['url_outlet_image_logo_portrait'],
                 'product_newest' => $newestProduct,
                 'product_best_seller' => $bestProduct
              ];
@@ -3759,7 +3760,7 @@ class ApiOutletController extends Controller
             ->where('outlet_status', 'Active')
             ->where('outlet_is_closed', 0)
             ->where('merchant_status', 'Active')
-            ->select('outlets.id_outlet', 'id_merchant', 'outlet_name');
+            ->select('outlets.id_outlet', 'id_merchant', 'outlet_name', 'outlet_image_logo_portrait');
 
         if(!empty($post['search_key'])){
             $list = $list->where('outlet_name', 'like', '%'.$post['search_key'].'%');
@@ -3770,7 +3771,7 @@ class ApiOutletController extends Controller
 
             foreach ($list['data'] as $key=>$dt){
                 $list['data'][$key]['outlet_name'] = $dt['outlet_name'];
-                $list['data'][$key]['outlet_image_logo_landscape'] = $dt['url_outlet_image_logo_landscape'];
+                $list['data'][$key]['outlet_image_logo_portrait'] = $dt['url_outlet_image_logo_portrait'];
                 unset($list['data'][$key]['url_outlet_image_logo_landscape']);
                 unset($list['data'][$key]['url_outlet_image_logo_portrait']);
                 unset($list['data'][$key]['url_outlet_image_cover']);
@@ -3782,7 +3783,7 @@ class ApiOutletController extends Controller
 
             foreach ($list as $key=>$dt){
                 $list[$key]['outlet_name'] = $dt['outlet_name'];
-                $list[$key]['outlet_image_logo_landscape'] = $dt['url_outlet_image_logo_landscape'];
+                $list[$key]['outlet_image_logo_portrait'] = $dt['url_outlet_image_logo_portrait'];
                 unset($list[$key]['url_outlet_image_logo_landscape']);
                 unset($list[$key]['url_outlet_image_logo_portrait']);
                 unset($list[$key]['url_outlet_image_cover']);
@@ -3844,7 +3845,7 @@ class ApiOutletController extends Controller
 
         $featuredPromo = FeaturedPromoCampaign::select('id_featured_promo_campaign','id_promo_campaign')
             ->with(['promo_campaign' => function($query) {
-                $query->select('id_promo_campaign', 'promo_title', 'promo_image', 'total_coupon', 'date_start', 'date_end', 'is_all_outlet', 'used_code', 'limitation_usage', 'min_basket_size', 'is_all_shipment', 'is_all_payment', 'promo_description', 'user_limit', 'code_limit', 'device_limit');
+                $query->select('id_promo_campaign', 'promo_title', 'promo_image', 'promo_image_detail', 'total_coupon', 'date_start', 'date_end', 'is_all_outlet', 'used_code', 'limitation_usage', 'min_basket_size', 'is_all_shipment', 'is_all_payment', 'promo_description', 'user_limit', 'code_limit', 'device_limit');
             }])
             ->where('feature_type', 'merchant')
             ->whereHas('promo_campaign',function($query) use ($now){

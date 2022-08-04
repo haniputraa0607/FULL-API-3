@@ -844,6 +844,8 @@ class ApiPromoCampaign extends Controller
                 if (!empty($check_brand)) {
                     $del_rule = true;
                 }
+            }else{
+                PromoCampaignBrand::where('id_promo_campaign', $post['id_promo_campaign'])->delete();
             }
 
 			if ($del_rule) {
@@ -4012,6 +4014,7 @@ class ApiPromoCampaign extends Controller
                     ->orWhereNull('promo_type');
             })
             ->OrderBy('id_promo_campaign', 'DESC')
+            ->where('promo_campaign_visibility', '=', 'Visible')
             ->where('step_complete', '=', 1);
 
         if ($request->promo_use) {

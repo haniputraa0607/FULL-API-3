@@ -951,7 +951,7 @@ class ApiHome extends Controller
 
         $featuredPromo = FeaturedPromoCampaign::select('id_featured_promo_campaign','id_promo_campaign')
             ->with(['promo_campaign' => function($query) {
-                $query->select('id_promo_campaign', 'promo_title', 'promo_image', 'total_coupon', 'date_start', 'date_end', 'is_all_outlet', 'used_code', 'limitation_usage', 'min_basket_size', 'is_all_shipment', 'is_all_payment', 'promo_description', 'user_limit', 'code_limit', 'device_limit');
+                $query->select('id_promo_campaign', 'promo_title', 'promo_image', 'promo_image_detail', 'total_coupon', 'date_start', 'date_end', 'is_all_outlet', 'used_code', 'limitation_usage', 'min_basket_size', 'is_all_shipment', 'is_all_payment', 'promo_description', 'user_limit', 'code_limit', 'device_limit');
             }])
             ->where('feature_type', 'home')
             ->whereHas('promo_campaign',function($query) use ($now){

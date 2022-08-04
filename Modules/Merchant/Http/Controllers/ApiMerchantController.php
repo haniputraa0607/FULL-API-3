@@ -480,6 +480,7 @@ class ApiMerchantController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
+        $dtOutlet = Outlet::where('id_outlet', $checkMerchant['id_outlet'])->first();
         if(empty($post['merchant_license_number'])){
             $checkLicense = Outlet::where('outlet_license_number', $post['merchant_license_number'])->whereNotIn('id_outlet', [$checkMerchant['id_outlet']])->first();
             if(!empty($checkLicense)){
@@ -491,7 +492,7 @@ class ApiMerchantController extends Controller
         if(!empty($post['image_cover'])){
             $image = $post['image_cover'];
             $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/outlet/'.$checkMerchant['id_outlet'].'/');
+            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/outlet/'.$dtOutlet['outlet_code'].'/');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $dataUpdate['outlet_image_cover'] = $upload['path'];
@@ -501,7 +502,7 @@ class ApiMerchantController extends Controller
         if(!empty($post['image_logo_portrait'])){
             $image = $post['image_logo_portrait'];
             $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/outlet/'.$checkMerchant['id_outlet'].'/');
+            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/outlet/'.$dtOutlet['outlet_code'].'/');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $dataUpdate['outlet_image_logo_portrait'] = $upload['path'];

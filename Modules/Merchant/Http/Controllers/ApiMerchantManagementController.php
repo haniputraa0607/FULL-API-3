@@ -415,6 +415,14 @@ class ApiMerchantManagementController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
+        if(empty($post['image'])){
+            return ['status' => 'fail', 'messages' => ['Tambahkan minimal 1 gambar produk']];
+        }
+
+        if(empty($post['id_product_category'])){
+            return ['status' => 'fail', 'messages' => ['Kategori tidak boleh kosong']];
+        }
+
         if(count($post['image_detail']??[]) > 3){
             return ['status' => 'fail', 'messages' => ['You can upload maximum 3 image detail file']];
         }
@@ -436,7 +444,7 @@ class ApiMerchantManagementController extends Controller
 
         $product = [
             'id_merchant' => $checkMerchant['id_merchant'],
-            'product_code' => 'P'.rand().'-'.$checkMerchant['id_merchant'],
+            'product_code' => 'P'.rand().'-'.time(),
             'product_name' => $post['product_name'],
             'product_description' => $post['product_description'],
             'id_product_category' => (!empty($post['id_product_category']) ? $post['id_product_category'] : null),
@@ -471,7 +479,7 @@ class ApiMerchantManagementController extends Controller
         if(!empty($post['image'])){
             $image = $post['image'];
             $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/product/'.$idProduct.'/');
+            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/product/'.$product['product_code'].'/');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $img[] = $upload['path'];
@@ -480,7 +488,7 @@ class ApiMerchantManagementController extends Controller
 
         foreach ($post['image_detail']??[] as $image){
             $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/product/'.$idProduct.'/');
+            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/product/'.$product['product_code'].'/');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $img[] = $upload['path'];
@@ -674,6 +682,10 @@ class ApiMerchantManagementController extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['Data product tidak ditemukan']]);
             }
 
+            if(empty($post['id_product_category']) && empty($checkProduct['id_product_category'])){
+                return ['status' => 'fail', 'messages' => ['Kategori tidak boleh kosong']];
+            }
+
             if(count($post['image_detail']??[]) > 3){
                 return ['status' => 'fail', 'messages' => ['You can upload maximum 3 image detail file']];
             }
@@ -735,7 +747,7 @@ class ApiMerchantManagementController extends Controller
             if(!empty($post['image'])){
                 $image = $post['image'];
                 $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-                $upload = MyHelper::uploadPhotoAllSize($encode, 'img/product/'.$idProduct.'/');
+                $upload = MyHelper::uploadPhotoAllSize($encode, 'img/product/'.$checkProduct['product_code'].'/');
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
                     $checkPhoto = ProductPhoto::where('id_product', $post['id_product'])->orderBy('product_photo_order', 'asc')->first();
@@ -752,7 +764,7 @@ class ApiMerchantManagementController extends Controller
 
             foreach ($post['image_detail']??[] as $image){
                 $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-                $upload = MyHelper::uploadPhotoAllSize($encode, 'img/product/'.$idProduct.'/');
+                $upload = MyHelper::uploadPhotoAllSize($encode, 'img/product/'.$checkProduct['product_code'].'/');
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
                     $img[] = $upload['path'];
@@ -761,6 +773,11 @@ class ApiMerchantManagementController extends Controller
 
             $insertImg = [];
             $j = ProductPhoto::where('id_product', $post['id_product'])->orderBy('product_photo_order', 'desc')->first()['product_photo_order']??0;
+            if($j == 0 && empty($post['image'])){
+                DB::rollback();
+                return response()->json(['status' => 'fail', 'messages' => ['Tambahkan minimal 1 gambar produk']]);
+            }
+
             foreach ($img as $img){
                 $insertImg[] = [
                     'id_product' => $idProduct,

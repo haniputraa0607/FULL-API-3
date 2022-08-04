@@ -1867,6 +1867,13 @@ class ApiProductController extends Controller
         if ($post['id_product_variant_group'] ?? false) {
             $product['selected_available'] = (!!Product::getVariantParentId($post['id_product_variant_group'], $product['variants'], $post['selected']['extra_modifiers'] ?? []))?1:0;
         }
+
+        $product['stock_status'] = 'Available';
+        if((empty($product['stock_item']) && $product['product_variant_status'] == 0) ||
+            ($product['product_variant_status'] == 1 && empty($post['id_product_variant_group']))){
+            $product['stock_status'] = 'Sold Out';
+        }
+
         unset($product['product_variant_status']);
         $product['product_price'] = (int)$product['product_price'];
         $product['id_outlet'] = $post['id_outlet'];
