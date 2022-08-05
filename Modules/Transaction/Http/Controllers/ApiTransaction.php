@@ -92,6 +92,7 @@ use Modules\Transaction\Entities\TransactionGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 use Modules\Xendit\Entities\TransactionPaymentXendit;
+use Modules\UserRating\Entities\UserRating;
 
 use App\Lib\MyHelper;
 use App\Lib\GoSend;
@@ -2739,6 +2740,7 @@ class ApiTransaction extends Controller
 
         $products = [];
         foreach ($transactionProducts as $value){
+            $existRating = UserRating::where('id_transaction', $value['id_transaction'])->where('id_product', $value['id_product'])->first();
             $image = ProductPhoto::where('id_product', $value['id_product'])->orderBy('product_photo_order', 'asc')->first()['url_product_photo']??config('url.storage_url_api').'img/default.jpg';
             $products[] = [
                 'id_product' => $value['id_product'],
@@ -2753,7 +2755,8 @@ class ApiTransaction extends Controller
                 'discount_each_product_text' => 'Rp '.number_format((int)$value['transaction_product_base_discount'],0,",","."),
                 'note' => $value['transaction_product_note'],
                 'variants' => implode(', ', array_column($value['variants'], 'product_variant_name')),
-                'image' => $image
+                'image' => $image,
+                'reviewed_status' => (!empty($existRating) ? true:false)
             ];
         }
 
