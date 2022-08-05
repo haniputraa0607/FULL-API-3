@@ -220,7 +220,7 @@ class ApiPromoTransaction extends Controller
                 $resPromoCode = [
                     'promo_code' 		=> $sharedPromoTrx['promo_campaign']['promo_code'] ?? null,
                     'title' 			=> $applyCode['result']['title'] ?? null,
-                    'text' 				=> $applyCode['result']['text'] ?? $codeErr,
+                    'text' 				=> $codeErr??[],
                     'remove_text' 		=> 'Batalkan penggunaan <b>' . ($sharedPromoTrx['promo_campaign']['promo_title'] ?? null) . '</b>'
                 ];
 

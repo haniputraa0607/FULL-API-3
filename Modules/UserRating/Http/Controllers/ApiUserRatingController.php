@@ -1371,6 +1371,13 @@ class ApiUserRatingController extends Controller
             ];
         }
 
+        if(empty($post['option_question'])){
+            return [
+                'status'=>'fail',
+                'messages'=>['Option question can not be empty']
+            ];
+        }
+
         if(!empty($post['option_value'])){
             $post['option_value'] = json_decode($post['option_value']);
         }

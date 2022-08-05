@@ -4081,6 +4081,19 @@ class ApiPromoCampaign extends Controller
                 $value['code'] = $promo_code['promo_code'];
                 $value['share_promo'] = str_replace('%promo_code%',$value['code'],$text['share']);
             }
+
+            $monthBahasa = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            $dayStart = date('j', strtotime($value['date_start']));
+            $dayEnd = date('j', strtotime($value['date_end']));
+            $monthStart = date('n', strtotime($value['date_start']));
+            $monthEnd = date('n', strtotime($value['date_end']));
+
+            if($monthStart == $monthEnd){
+                $value['date_text'] = $dayStart.'-'.$dayEnd.' '.$monthBahasa[$monthStart];
+            }else{
+                $value['date_text'] = $dayStart.' '.$monthBahasa[$monthStart].' - '.$dayEnd.' '.$monthBahasa[$monthEnd];
+            }
+
             return $value;
         },$promo_map);
 
@@ -4104,7 +4117,7 @@ class ApiPromoCampaign extends Controller
             $home_text = Setting::whereIn('key',['share_promo_code'])->get()->keyBy('key');
             $text['share'] = $home_text['share_promo_code']['value_text'] ?? 'Bagikan %promo_code% ke teman-teman'; //dummy
 
-            $promo_campaign = PromoCampaign::select('id_promo_campaign', 'promo_title', 'promo_image', 'date_start', 'date_end', 'code_type', 'promo_description')
+            $promo_campaign = PromoCampaign::select('id_promo_campaign', 'promo_title', 'promo_image', 'promo_image_detail', 'date_start', 'date_end', 'code_type', 'promo_description')
                 ->where('id_promo_campaign',$id_promo)
                 ->where('date_end','>=',$now)
                 ->where('date_start','<=',$now)
@@ -4128,6 +4141,18 @@ class ApiPromoCampaign extends Controller
                 $promo_code = PromoCampaignPromoCode::where('id_promo_campaign',$promo_campaign['id_promo_campaign'])->select('promo_code')->first();
                 $promo_campaign['code'] = $promo_code['promo_code'];
                 $promo_campaign['share_promo'] = str_replace('%promo_code%',$promo_campaign['code'],$text['share']);
+            }
+
+            $monthBahasa = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            $dayStart = date('j', strtotime($promo_campaign['date_start']));
+            $dayEnd = date('j', strtotime($promo_campaign['date_end']));
+            $monthStart = date('n', strtotime($promo_campaign['date_start']));
+            $monthEnd = date('n', strtotime($promo_campaign['date_end']));
+
+            if($monthStart == $monthEnd){
+                $promo_campaign['date_text'] = $dayStart.'-'.$dayEnd.' '.$monthBahasa[$monthStart];
+            }else{
+                $promo_campaign['date_text'] = $dayStart.' '.$monthBahasa[$monthStart].' - '.$dayEnd.' '.$monthBahasa[$monthEnd];
             }
 
             return [
