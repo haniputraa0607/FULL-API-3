@@ -59,7 +59,7 @@ class ApiUserRatingController extends Controller
             'doctor' => function($query) {
                 $query->select('id_doctor','doctor_name','doctor_phone');
             }
-	    ])->orderBy('id_user_rating','desc');
+	    ])->orderBy('user_ratings.created_at','desc');
 
         // if($outlet_code = ($request['outlet_code']??false)){
         //     $data->whereHas('transaction.outlet',function($query) use ($outlet_code){
@@ -1368,6 +1368,13 @@ class ApiUserRatingController extends Controller
             return [
                 'status'=>'fail',
                 'messages'=>['Maximum upload 5 image']
+            ];
+        }
+
+        if(empty($post['option_question'])){
+            return [
+                'status'=>'fail',
+                'messages'=>['Option question can not be empty']
             ];
         }
 

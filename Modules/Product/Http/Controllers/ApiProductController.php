@@ -924,6 +924,11 @@ class ApiProductController extends Controller
             }
 		}
 
+        if(!empty($post['check_status'])){
+            $product = $product->join('product_detail', 'product_detail.id_product', 'products.id_product')
+                ->where('product_detail_stock_status', 'Available');
+        }
+
         if(!empty($post['outlet_detail'])){
             $product = Product::join('product_detail','product_detail.id_product','=','products.id_product')
                 ->where('product_detail.id_outlet','=',$post['id_outlet'])->with('category')->select('products.*');
@@ -977,8 +982,7 @@ class ApiProductController extends Controller
         }
 
         if(isset($post['admin_list'])){
-            $product = $product->where('product_type', 'product')
-                ->withCount('product_detail')->withCount('product_detail_hiddens')->with(['brands']);
+            $product = $product->where('product_type', 'product')->with(['brands']);
         }
 
         if(isset($post['pagination'])){
