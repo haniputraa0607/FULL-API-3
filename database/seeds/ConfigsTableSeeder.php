@@ -1233,17 +1233,17 @@ class ConfigsTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
-            137 => array(
-                'id_config'   => 138,
-                'config_name' => 'rating_product',
+            138 => array(
+                'id_config'   => 139,
+                'config_name' => 'rating_doctor',
                 'description' => '',
                 'is_active'   => '1',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
-            137 => array(
-                'id_config'   => 138,
-                'config_name' => 'rating_doctor',
+            139 => array(
+                'id_config'   => 140,
+                'config_name' => 'rating_product',
                 'description' => '',
                 'is_active'   => '1',
                 'created_at' => date('Y-m-d H:i:s'),

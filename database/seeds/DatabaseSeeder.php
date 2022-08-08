@@ -20,11 +20,11 @@ class DatabaseSeeder extends Seeder
         $this->call(ProductCategoriesTableSeeder::class);
         $this->call(ProductsTableSeeder::class);
         $this->call(ProductPricesTableSeeder::class);
-        $this->call(UserAddressesTableSeeder::class);
-        $this->call(ManualPaymentsTableSeeder::class);
-        $this->call(ManualPaymentMethodsTableSeeder::class);
+        // $this->call(UserAddressesTableSeeder::class);
+        // $this->call(ManualPaymentsTableSeeder::class);
+        // $this->call(ManualPaymentMethodsTableSeeder::class);
 
-        $this->call(AutocrmsTableAddClaimDeals::class);
+        // $this->call(AutocrmsTableAddClaimDeals::class);
         $this->call(SettingJobsCelebrateSeeder::class);
         $this->call(PromoCampaignsTableSeeder::class);
         $this->call(PromoCampaignReferralsTableSeeder::class);

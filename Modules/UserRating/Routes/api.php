@@ -14,33 +14,27 @@ use Illuminate\Http\Request;
 */
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps,web-apps'], 'prefix' => 'user-rating'], function () {
-    Route::post('create', 'ApiUserRatingController@store');
-    Route::post('get-detail', 'ApiUserRatingController@getDetail');
-});
-
-Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps,web-apps'], 'prefix' => 'outlet-service/user-rating'], function () {
-    Route::post('create', 'ApiUserRatingController@store');
-    Route::post('get-detail', 'ApiUserRatingController@getDetail');
-    Route::post('get-list', 'ApiUserRatingController@getList');
-    Route::post('get-rated', 'ApiUserRatingController@getRated');
+    Route::post('create', 'ApiUserRatingController@store'); //dipake
+    Route::post('get-detail', 'ApiUserRatingController@getDetail'); //dipake
+    Route::post('get-rated', 'ApiUserRatingController@getRated'); //dipake
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'user-rating/transaction'], function () {
-    Route::post('create', 'ApiUserRatingController@transactionStore');
-    Route::post('get-detail', 'ApiUserRatingController@transactionGetDetail');
-    Route::post('get-rated', 'ApiUserRatingController@transactionGetRated');
+    Route::post('create', 'ApiUserRatingController@transactionStore'); //dipake
+    Route::post('get-detail', 'ApiUserRatingController@transactionGetDetail'); //dipake
+    Route::post('get-rated', 'ApiUserRatingController@transactionGetRated'); //dipake
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'user-rating'], function () {
-    Route::post('/', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@index']);
+    Route::post('/', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@index']); //dipake
     Route::post('detail', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@show']);
     Route::post('delete', ['middleware' => 'feature_control:357', 'uses' => 'ApiUserRatingController@destroy']);
     Route::post('report', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@report']);
     Route::post('report/outlet', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@reportOutlet']);
-    Route::post('report/product', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@reportProduct']);
-    Route::post('report/doctor', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@reportDoctor']);
+    Route::post('report/product', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@reportProduct']); //dipake
+    Route::post('report/doctor', ['middleware' => 'feature_control:356', 'uses' => 'ApiUserRatingController@reportDoctor']); //dipake
     Route::group(['prefix'=>'option'],function(){
-    	Route::get('/',['middleware' => 'feature_control:358', 'uses' => 'ApiRatingOptionController@index']);
-    	Route::post('update',['middleware' => 'feature_control:360', 'uses' => 'ApiRatingOptionController@update']);
+    	Route::get('/',['middleware' => 'feature_control:358', 'uses' => 'ApiRatingOptionController@index']); //dipake
+    	Route::post('update',['middleware' => 'feature_control:360', 'uses' => 'ApiRatingOptionController@update']); //dipake
     });
 });
