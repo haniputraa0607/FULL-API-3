@@ -410,13 +410,22 @@ class ApiTransactionConsultationController extends Controller
         DB::beginTransaction();
         UserFeedbackLog::where('id_user',$request->user()->id)->delete();
 
-        $outlet = Outlet::where('id_outlet', $post['id_outlet'])->where('outlet_status', 'Active')->first();
-        if (empty($outlet)) {
-            DB::rollback();
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => ['Outlet tidak ditemukan']
-            ]);
+        //check referral code
+        if(isset($post['referral_code'])) {
+            $outlet = Outlet::where('outlet_referral_code', $post['referral_code'])->first();
+
+            if(empty($outlet)){
+                $outlet = Outlet::where('outlet_code', $post['referral_code'])->first();
+            }
+
+            if(empty($outlet)){
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Referral Code Salah / Outlet Tidak Ditemukan']
+                ]);
+            }
+            //referral code
+            $result['referral_code'] = $post['referral_code'];
         }
 
         $post = app($this->promo_trx)->applyPromoCheckoutConsultation($post);

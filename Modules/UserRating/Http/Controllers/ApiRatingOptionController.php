@@ -20,8 +20,8 @@ class ApiRatingOptionController extends Controller
     	$ratingData = [];
     	if ($request->outlet) {
     		$ratingData = RatingOption::where('rating_target','outlet')->get()->toArray();
-    	} elseif ($request->hairstylist) {
-    		$ratingData = RatingOption::where('rating_target','hairstylist')->get()->toArray();
+    	} elseif ($request->doctor) {
+    		$ratingData = RatingOption::where('rating_target','doctor')->get()->toArray();
     	} elseif ($request->product) {
             $ratingData = RatingOption::where('rating_target','product')->get()->toArray();
         }
@@ -58,7 +58,7 @@ class ApiRatingOptionController extends Controller
             $insert['star'] = implode(',',$rule['value']);
             $insert['question'] = substr($rule['question'],0,40);
             $insert['options'] = implode(',',array_map(function($var){return substr($var,0,20);},$rule['options']));
-            $insert['rating_target'] = $post['rating_target'] ?? null;
+            $insert['rating_target'] = $post['rating_target'];
             $create = RatingOption::create($insert);
             if(!$create){
                 \DB::rollBack();

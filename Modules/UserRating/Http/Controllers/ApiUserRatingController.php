@@ -144,13 +144,6 @@ class ApiUserRatingController extends Controller
                 });
             }
         }
-        if($rules=$newRule['hairstylist_phone']??false){
-            foreach ($rules as $rul) {
-                $model->{$where.'Has'}('user_hair_stylist',function($query) use ($rul){
-                    $query->where('phone_number',$rul['operator'],$rul['parameter']);
-                });
-            }
-        }
 
         if($rules=$newRule['product_name']??false){
             foreach ($rules as $rul) {
@@ -162,9 +155,7 @@ class ApiUserRatingController extends Controller
 
         if($rules=$newRule['rating_target']??false){
             foreach ($rules as $rul) {
-            	if ($rul['parameter'] == 'hairstylist') {
-                	$model->{$where.'NotNull'}('user_ratings.id_user_hair_stylist');
-            	} elseif ($rul['parameter'] == 'product') {
+            	if ($rul['parameter'] == 'product') {
                     $model->{$where.'NotNull'}('user_ratings.id_product');
                 } elseif ($rul['parameter'] == 'doctor') {
                     $model->{$where.'NotNull'}('doctors.id_doctor');
@@ -230,7 +221,7 @@ class ApiUserRatingController extends Controller
 			$id_outlet = null;
         }
 
-        $max_rating_value = Setting::select('value')->where('key','response_max_rating_value_hairstylist')->pluck('value')->first()?:2;
+        $max_rating_value = Setting::select('value')->where('key','response_max_rating_value_doctor')->pluck('value')->first()?:2;
         if($post['rating_value'] <= $max_rating_value){
             $trx->load('outlet_name');
             $variables = [
@@ -644,6 +635,13 @@ class ApiUserRatingController extends Controller
             }
         }
 
+        if (($rule['rating_target'] ?? false) == 'doctor') {
+        	$model->whereNotNull($col.'.id_doctor');
+            if(!empty($rule['id_doctor'])){
+                $model->where($col.'.id_outlet', $rule['id_outlet']);
+            }
+        }
+
         $model->whereDate($col.'.created_at','>=',$rule['date_start'])->whereDate($col.'.created_at','<=',$rule['date_end']);
     }
     public function reportOutlet(Request $request) {
@@ -809,160 +807,6 @@ class ApiUserRatingController extends Controller
         }
     }
 
-    public function getList(Request $request) {
-        $post = $request->json()->all();
-        $user = clone $request->user();
-
-        $logTrxs = UserRatingLog::where('id_user', $user->id)
-        		->groupBy('id_transaction')
-				->get();
-
-        $logRatings = [];
-        $interval = Setting::where('key','popup_min_interval')->pluck('value')->first() ?: 900;
-        $max_date = date('Y-m-d',time() - ((Setting::select('value')->where('key','popup_max_days')->pluck('value')->first()?:3) * 86400));
-        $maxList = Setting::where('key','popup_max_list')->pluck('value')->first() ?: 5;
-        $maxRefuse = Setting::where('key','popup_max_refuse')->pluck('value')->first() ?: 3;
-
-        if (empty($logTrxs)) {
-            return MyHelper::checkGet([]);
-        }
-
-        foreach ($logTrxs as $logTrx) {
-
-        	$trx = Transaction::where('id_transaction', $logTrx->id_transaction)->first();
-        	if (!$trx) {
-        		continue;
-        	}
-
-			$logs = UserRatingLog::where('id_user', $user->id)
-					->where('id_transaction', $logTrx->id_transaction)
-					->whereNotNull('id_user_hair_stylist')
-					->get();
-
-			foreach ($logs as $log) {
-				if ($log->refuse_count >= $maxRefuse
-					|| (strtotime($log->last_popup) + $interval) > time()
-	            ) {
-	                continue;
-	            }
-
-	            $log->refuse_count++;
-	            $log->last_popup = date('Y-m-d H:i:s');
-	            $log->save();
-				$logRatings[] = $log;
-
-				if ($maxList <= count($logRatings)) {
-	            	break;
-	            }
-			}
-
-            if ($maxList <= count($logRatings)) {
-            	break;
-            }
-        }
-
-        if (empty($logRatings)) {
-            return MyHelper::checkGet([]);
-        }
-
-        $ratingList = [];
-        $title = 'Beri Penilaian';
-        foreach ($logRatings as $key => $log) {
-			$rating['id'] = $log['id_transaction'];
-			$rating['id_transaction_product_service'] = $log['id_transaction_product_service'];
-    		$rating['id_user_hair_stylist'] = $log['id_user_hair_stylist'];
-	        $rating['transaction_receipt_number'] = $log['transaction']['transaction_receipt_number'];
-	        $rating['transaction_date'] = date('d M Y H:i',strtotime($log['transaction']['transaction_date']));
-	        $rating['transaction_from'] = $log['transaction']['transaction_from'];
-	        $rating['outlet_rating'] = null;
-	        $rating['hairstylist_rating'] = null;
-
-	        $trxDate = MyHelper::dateFormatInd($log['transaction']['transaction_date'], true, false, true);
-	        $outletName = $log['transaction']['outlet']['outlet_name'];
-	        $rating['title'] = $title;
-	        $rating['messages'] = "Dapatkan loyalty points dengan memberikan penilaian atas transaksi Anda pada hari:  \n <b>" . $trxDate;
-	        if ($outletName) {
-	        	$rating['messages'] = $rating['messages'] . " di " . $outletName . "</b>";
-	        }
-
-	        $rating['outlet'] = null;
-	        if (!empty($log['transaction']['outlet'])) {
-		        $rating['outlet'] = [
-					'id_outlet' => $log['transaction']['outlet']['id_outlet'],
-					'outlet_code' => $log['transaction']['outlet']['outlet_code'],
-					'outlet_name' => $log['transaction']['outlet']['outlet_name'],
-					'outlet_address' => $log['transaction']['outlet']['outlet_address'],
-					'outlet_latitude' => $log['transaction']['outlet']['outlet_latitude'],
-					'outlet_longitude' => $log['transaction']['outlet']['outlet_longitude']
-				];
-	        }
-
-			$rating['brand'] = null;
-	        if (!empty($log['transaction']['outlet']['brands'])) {
-				$rating['brand'] = [
-					'id_brand' => $log['transaction']['outlet']['brands'][0]['id_brand'],
-					'brand_code' => $log['transaction']['outlet']['brands'][0]['code_brand'],
-					'brand_name' => $log['transaction']['outlet']['brands'][0]['name_brand'],
-					'brand_logo' => $log['transaction']['outlet']['brands'][0]['logo_brand'],
-					'brand_logo_landscape' => $log['transaction']['outlet']['brands'][0]['logo_landscape_brand']
-				];
-			}
-			
-			if (!empty($log['id_transaction_product_service'])) {
-	        	$service = TransactionProductService::with('user_hair_stylist')
-				        	->where('id_transaction', $log['id_transaction'])
-				        	->where('id_user_hair_stylist', $log['id_user_hair_stylist'])
-				        	->where('id_transaction_product_service', $log['id_transaction_product_service'])
-				        	->first();
-
-	        	$hs = $service->user_hair_stylist;
-			} else {
-	        	$hs = UserHairStylist::where('id_user_hair_stylist', $log['id_user_hair_stylist'])->first();
-			}
-
-        	$isFavorite = FavoriteUserHiarStylist::where('id_user_hair_stylist',$log['id_user_hair_stylist'])
-	        					->where('id_user', $log['id_user'])
-	        					->first();
-
-			$rating['detail_hairstylist'] = [
-				'nickname' => $hs->nickname ?? null,
-				'fullname' => $hs->fullname ?? null,
-				'user_hair_stylist_photo' => $hs->user_hair_stylist_photo ?? null,
-				'is_favorite' => $isFavorite ? 1 : 0
-			];
-
-        	$currentRatingHs = UserRating::where([
-        		'id_transaction' => $log['id_transaction'],
-        		'id_user' => $log['id_user'],
-        		'id_outlet' => null,
-        		'id_user_hair_stylist' => $log['id_user_hair_stylist'],
-        		'id_transaction_product_service' => $log['id_transaction_product_service'],
-        	])
-        	->first();
-	        
-	        if ($currentRatingHs) {
-		        $rating['hairstylist_rating'] = $currentRatingHs['rating_value'];
-	        }
-
-	        $currentRatingOutlet = UserRating::where([
-        		'id_transaction' => $log['id_transaction'],
-        		'id_user' => $log['id_user'],
-        		'id_outlet' => $log['transaction']['outlet']['id_outlet'] ?? null,
-        		'id_user_hair_stylist' => null
-        	])
-        	->first();
-	        
-	        if ($currentRatingOutlet) {
-		        $rating['outlet_rating'] = $currentRatingOutlet['rating_value'];
-	        }
-
-	        $ratingList[] = $rating;
-        }
-
-        $result = $ratingList;
-        return MyHelper::checkGet($result);
-    }
-
     public function getRated(Request $request) {
         $post = $request->json()->all();
         $user = clone $request->user();
@@ -995,8 +839,8 @@ class ApiUserRatingController extends Controller
         foreach ($logRatings as $key => $log) {
 			$rating['id'] = $log['id_transaction'];
 			$rating['id_transaction_product_service'] = $log['id_transaction_product_service'];
-			$rating['id_user_hair_stylist'] = null;
-			$rating['detail_hairstylist'] = null;
+			$rating['id_doctor'] = null;
+			$rating['detail_doctor'] = null;
 	        $rating['transaction_receipt_number'] = $log['transaction']['transaction_receipt_number'];
 	        $rating['transaction_date'] = date('d M Y H:i',strtotime($log['transaction']['transaction_date']));
 
@@ -1026,29 +870,29 @@ class ApiUserRatingController extends Controller
 	        }
 			$rating['rating'] = null;
 			
-        	if (!empty($log['id_user_hair_stylist'])) {
+        	if (!empty($log['id_doctor'])) {
 
-        		$rating['id_user_hair_stylist'] = $log['id_user_hair_stylist'];
+        		$rating['id_doctor'] = $log['id_doctor'];
 
         		if (!empty($log['id_transaction_product_service'])) {
-		        	$service = TransactionProductService::with('user_hair_stylist')
+		        	$service = TransactionProductService::with('doctor')
 					        	->where('id_transaction', $log['id_transaction'])
-					        	->where('id_user_hair_stylist', $log['id_user_hair_stylist'])
+					        	->where('id_doctor', $log['id_doctor'])
 					        	->where('id_transaction_product_service', $log['id_transaction_product_service'])
 					        	->first();
-		        	$hs = $service->user_hair_stylist;
+		        	$dc = $service->doctor;
         		} else {
-        			$hs = UserHairStylist::where('id_user_hair_stylist', $log['id_user_hair_stylist'])->first();
+        			$dc = Doctor::where('id_doctor', $log['id_doctor'])->first();
         		}
 
-	        	$isFavorite = FavoriteUserHiarStylist::where('id_user_hair_stylist',$log['id_user_hair_stylist'])
-	        					->where('id_user', $log['id_user'])
-	        					->first();
+	        	// $isFavorite = FavoriteUserHiarStylist::where('id_doctor',$log['id_doctor'])
+	        	// 				->where('id_user', $log['id_user'])
+	        	// 				->first();
 
-				$rating['detail_hairstylist'] = [
-					'nickname' => $hs->nickname ?? null,
-					'fullname' => $hs->fullname ?? null,
-					'user_hair_stylist_photo' => $hs->user_hair_stylist_photo ?? null,
+				$rating['detail_doctor'] = [
+					'nickname' => $dc->nickname ?? null,
+					'fullname' => $dc->fullname ?? null,
+					'doctor_photo' => $dc->doctor_photo ?? null,
 					'is_favorite' => $isFavorite ? 1 : 0
 				];
         	}
@@ -1074,18 +918,18 @@ class ApiUserRatingController extends Controller
     public function reportDoctor(Request $request) {
         $post = $request->json()->all();
         if($post['id_doctor'] ?? false){
-            $hs = Doctor::select(\DB::raw('
-            	doctor.id_doctor,
-            	doctor.doctor_phone,
-            	doctor.doctor_name,
+            $dc = Doctor::select(\DB::raw('
+            	doctors.id_doctor,
+            	doctors.doctor_phone,
+            	doctors.doctor_name,
             	count(f1.id_user_rating) as rating1,
             	count(f2.id_user_rating) as rating2,
             	count(f3.id_user_rating) as rating3,
             	count(f4.id_user_rating) as rating4,
             	count(f5.id_user_rating) as rating5
         	'))
-            ->where('doctor.id_doctor',$post['id_doctor'])
-            ->join('transaction_consultations','doctor.id_doctor','=','transaction_consultations.id_doctor')
+            ->where('doctors.id_doctor',$post['id_doctor'])
+            ->join('transaction_consultations','doctors.id_doctor','=','transaction_consultations.id_doctor')
             ->leftJoin('user_ratings as f1',function($join) use ($post){
                 $join->on('f1.id_transaction','=','transaction_consultations.id_transaction')
                 ->where('f1.rating_value','=','1');
@@ -1111,10 +955,10 @@ class ApiUserRatingController extends Controller
                 ->where('f5.rating_value','=','5');
                 $this->applyFilter($join,$post,'f5');
             })->first();
-            if(!$hs){
-                return MyHelper::checkGet($hs);
+            if(!$dc){
+                return MyHelper::checkGet($dc);
             }
-            $data['rating_data'] = $hs;
+            $data['rating_data'] = $dc;
             $counter['data'] = [];
             for ($i = 1; $i<=5 ;$i++) {
                 $datax = UserRating::where('rating_value',$i)->with([
@@ -1129,7 +973,7 @@ class ApiUserRatingController extends Controller
                     }
                 ])
                 ->join('transactions','transactions.id_transaction','=','user_ratings.id_transaction')
-                ->where('user_ratings.id_doctor',$hs->id_doctor)
+                ->where('user_ratings.id_doctor',$dc->id_doctor)
                 ->take(10);
                 $this->applyFilter($datax,$post);
                 $counter['data'][$i] = $datax->get();
@@ -1138,17 +982,17 @@ class ApiUserRatingController extends Controller
             return MyHelper::checkGet($data);
         }else{
             $dasc = ($post['order'] ?? 'doctor_name') == 'doctor_name' ? 'asc' : 'desc';
-            $hs = Doctor::select(\DB::raw('
-            		doctor.id_doctor,
-            		doctor.doctor_phone,
-            		doctor.doctor_name,
+            $dc = Doctor::select(\DB::raw('
+            		doctors.id_doctor,
+            		doctors.doctor_phone,
+            		doctors.doctor_name,
             		count(f1.id_user_rating) as rating1,
             		count(f2.id_user_rating) as rating2,
             		count(f3.id_user_rating) as rating3,
             		count(f4.id_user_rating) as rating4,
             		count(f5.id_user_rating) as rating5
         		'))
-            ->join('transaction_product_services','doctor.id_doctor','=','transaction_consultations.id_doctor')
+            ->join('transaction_consultations','doctors.id_doctor','=','transaction_consultations.id_doctor')
             ->leftJoin('user_ratings as f1',function($join) use ($post){
                 $join->on('f1.id_transaction','=','transaction_consultations.id_transaction')
                 ->where('f1.rating_value','=','1');
@@ -1175,14 +1019,14 @@ class ApiUserRatingController extends Controller
                 $this->applyFilter($join,$post,'f5');
             })
             ->orderBy($post['order'] ?? 'doctor_name',$dasc)
-            ->groupBy('doctor.id_doctor');
+            ->groupBy('doctors.id_doctor');
             if($post['search'] ?? false){
                 $hs->where(function($query) use($post){
                     $param = '%'.$post['search'].'%';
                     $query->where('doctor_name','like',$param);
                 });
             }
-            return MyHelper::checkGet($hs->paginate(15)->toArray());
+            return MyHelper::checkGet($dc->paginate(15)->toArray());
         }
     }
 
