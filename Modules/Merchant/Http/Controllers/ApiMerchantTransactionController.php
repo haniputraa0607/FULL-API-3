@@ -140,7 +140,7 @@ class ApiMerchantTransactionController extends Controller
             });
         }
 
-        $transactions = $transactions->paginate($post['pagination_total_row']??10)->toArray();
+        $transactions = $transactions->orderBy('transactions.transaction_date', 'desc')->paginate($post['pagination_total_row']??10)->toArray();
 
         foreach ($transactions['data']??[] as $key=>$value){
             $countAllProduct = TransactionProduct::where('id_transaction', $value['id_transaction'])->count();

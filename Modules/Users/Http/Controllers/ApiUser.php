@@ -38,6 +38,7 @@ use Modules\Users\Http\Requests\users_phone_pin_new_admin;
 use Modules\Users\Http\Requests\users_new;
 use Modules\Users\Http\Requests\users_create;
 use Modules\Users\Http\Requests\users_profile;
+use Modules\Users\Http\Requests\users_delete;
 use Modules\Users\Http\Requests\users_profile_admin;
 use Modules\Users\Http\Requests\users_notification;
 use Modules\Users\Entities\UserFraud;
@@ -518,7 +519,23 @@ class ApiUser extends Controller
             return $finalResult;
         }
 
-        $result = $finalResult->paginate($take);
+        $result = $finalResult->paginate($take)->toArray();
+        foreach ($result['data']??[] as $index => $r){
+            $haveAnotherAccount = false;
+            if($r['is_deleted'] == 1){
+                $phone = str_replace("-deleted","",$r['phone']);
+                $email = str_replace("-deleted","",$r['email']);
+                $count = User::where(function($q) use($email,$phone){
+                    $q->where('email', $email)->orWhere('phone', $phone);
+                })->whereNotIn('id', [$r['id']])->count();
+
+                if($count > 0){
+                    $haveAnotherAccount = true;
+                }
+            }
+            $result['data'][$index]['have_another_account'] = $haveAnotherAccount;
+
+        }
         if ($result) {
             $response = [
                 'status'    => 'success',
@@ -3802,7 +3819,7 @@ class ApiUser extends Controller
 
     public function profileDetail(Request $request){
         $idUser = $request->user()->id;
-        $dataUser = User::where('id', $idUser)->first();
+        $dataUser = User::where('id', $idUser)->select('users.*', \DB::raw('0 as challenge_key'))->first();
 
         if(empty($dataUser)){
             return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
@@ -3821,7 +3838,7 @@ class ApiUser extends Controller
                 'email' => $dataUser['email']
             ],
             'personal_data' => [
-                'birth_date' => $dataUser['birthday'],
+                'birth_date' => date('Y-m-d', strtotime($dataUser['birthday'])),
                 'gender' => $dataUser['gender'],
                 'address' => $dataUser['address'],
                 'address_postal_code' => $dataUser['subdistrict_postal_code'],
@@ -3829,7 +3846,8 @@ class ApiUser extends Controller
                 'id_city' => $dtSubdisctrict['id_city']??null,
                 'id_district' => $dtSubdisctrict['id_district']??null,
                 'id_subdistrict' => $dtSubdisctrict['id_subdistrict']??null,
-             ]
+             ],
+            'challenge_key' => $dataUser['challenge_key']
         ];
 
         return response()->json(MyHelper::checkGet($detail));
@@ -3883,6 +3901,73 @@ class ApiUser extends Controller
             'id_city' => $dtSubdisctrict['id_city']??null,
             'id_subdistrict' => $dtSubdisctrict['id_subdistrict']??null,
         ]);
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function userDelete(Request $request){
+        $idUser = $request->user()->id;
+        $post = $request->json()->all();
+
+        if(empty($post['pin'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Password can not be empty']]);
+        }
+
+        $user = User::where('id', $idUser)->first();
+        if(!password_verify($post['pin'], $user['password'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Password yang Anda masukkan salah']]);
+        }
+
+        if($user->is_deleted == 1){
+            return response()->json(['status' => 'fail', 'messages' => ['Account already delete']]);
+        }
+
+        $update = User::where('id', $user['id'])->update([
+            'phone' => $user->phone.'-deleted',
+            'email' => $user->email.'-deleted',
+            'is_deleted' => 1
+        ]);
+
+        if($update){
+            UserDevice::where('id_user', $user->id)->delete();
+            UsersDeviceLogin::where('id_user', $user->id)->delete();
+            OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+                ->where('oauth_access_tokens.user_id', $user->id)->where('oauth_access_token_providers.provider', 'users')->delete();
+        }
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function activateUserDeleted(Request $request){
+        $idUser = $request->user()->id;
+        $post = $request->json()->all();
+        if(empty($post['id_user'])){
+            return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
+        }
+
+        if(empty($post['active_current_pin'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Current password can not be empty']]);
+        }
+
+        $user = User::where('id', $idUser)->first();
+        if(!password_verify($post['active_current_pin'], $user['password'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Your password does not match']]);
+        }
+
+        $activeUser = User::where('id', $post['id_user'])->first();
+        if($post['active_phone'] == $activeUser['phone']){
+            $update = User::where('id', $activeUser['id'])->update([
+                'phone' => str_replace('-deleted', '', $activeUser['phone']),
+                'email' => str_replace('-deleted', '', $activeUser['email']),
+                'is_deleted' => 0
+            ]);
+        }else{
+            $update = User::where('id', $activeUser['id'])->update([
+                'phone' => $post['active_phone'],
+                'email' => $post['active_email'],
+                'is_deleted' => 0
+            ]);
+        }
 
         return response()->json(MyHelper::checkUpdate($update));
     }

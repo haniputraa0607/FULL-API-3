@@ -40,6 +40,7 @@ Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent'
         Route::post('profile/update-info', 'ApiUser@profileUpdateInfo');
         Route::post('profile/update-personal', 'ApiUser@profileUpdatePersonal');
         Route::post('profile/update', 'ApiUser@profileUpdate');
+        Route::post('profile/delete', 'ApiUser@userDelete')->middleware('decrypt_pin');
     });
 
     Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
@@ -95,6 +96,7 @@ Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scope
     Route::post('update/status', ['middleware' => 'feature_control:5', 'uses' => 'ApiUser@updateStatus']);
     Route::post('update/feature', ['middleware' => 'feature_control:5', 'uses' => 'ApiUser@updateFeature']);
     Route::post('profile', ['middleware' => 'feature_control:3', 'uses' => 'ApiUser@profile']);
+    Route::post('activate', ['uses' => 'ApiUser@activateUserDeleted']);
 
     Route::any('summary', 'ApiUser@summaryUsers');
     Route::post('check', 'ApiUser@check');
