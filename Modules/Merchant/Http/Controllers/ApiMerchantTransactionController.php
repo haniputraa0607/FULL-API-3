@@ -42,6 +42,7 @@ use Modules\Transaction\Http\Requests\TransactionDetail;
 use Modules\UserRating\Entities\UserRating;
 use Modules\UserRating\Http\Controllers\ApiUserRatingController;
 use Modules\Xendit\Entities\TransactionPaymentXendit;
+use Modules\UserRating\Entities\UserRatingPhoto;
 
 class ApiMerchantTransactionController extends Controller
 {
@@ -175,21 +176,28 @@ class ApiMerchantTransactionController extends Controller
                 'reject_at' => (!empty($value['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($value['transaction_reject_at'])), true) : null),
                 'reject_reason' => (!empty($value['transaction_reject_reason'])? $value['transaction_reject_reason']:''),
             ];
-            $ratings = [];
+            $ratings = null;
 
-            if($value['transaction_status'] == 'Completed' && $value['show_rate_popup'] == 1){
+            $getRatings = UserRating::where('id_transaction', $value['id_transaction'])->where('id_product', $product['id_product'])->first();
+
+            if(!empty($getRatings)){
+                $getPhotos = UserRatingPhoto::where('id_user_rating', $getRatings['id_user_rating'])->get()->toArray();
+                $photos = [];
+                foreach ($getPhotos as $dt){
+                    $photos[] = $dt['url_user_rating_photo'];
+                }
+                $currentOption = explode(',', $getRatings['option_value']);
+                $ratings = [
+                    "rating_value" => $getRatings['rating_value'],
+                    "suggestion" => $getRatings['suggestion'],
+                    "option_value" => $currentOption,
+                    "photos" => $photos
+                ];
+            }
+
+            if($value['show_rate_popup'] == 1 && $value['transaction_status'] == 'Completed'){
                 $transactions['data'][$key]['transaction_status_code'] = $codeIndo['Unreview']['code']??'';
                 $transactions['data'][$key]['transaction_status_text'] = $codeIndo['Unreview']['text']??'';
-
-                $getRatings = UserRating::where('id_transaction', $value['id_transaction'])->get()->toArray();
-                foreach ($getRatings as $rating){
-                    $currentOption = explode(',', $rating['option_value']);
-                    $ratings[] = [
-                        "rating_value" => $rating['rating_value'],
-                        "suggestion" => $rating['suggestion'],
-                        "option_value" => $currentOption
-                    ];
-                }
             }
 
             $transactions['data'][$key]['ratings'] = $ratings;
@@ -351,7 +359,26 @@ class ApiMerchantTransactionController extends Controller
             ];
         }
 
-        if($transaction['transaction_status'] == 'Completed'){
+    
+        $ratings = [];
+        $getRatings = UserRating::where('id_transaction', $transaction['id_transaction'])->get()->toArray();
+        foreach ($getRatings as $rating){
+            $getPhotos = UserRatingPhoto::where('id_user_rating', $rating['id_user_rating'])->get()->toArray();
+            $photos = [];
+            foreach ($getPhotos as $dt){
+                $photos[] = $dt['url_user_rating_photo'];
+            }
+
+            $currentOption = explode(',', $rating['option_value']);
+            $ratings[] = [
+                "rating_value" => $rating['rating_value'],
+                "suggestion" => $rating['suggestion'],
+                "option_value" => $currentOption,
+                "photos" => $photos
+            ];
+        }
+
+        if($transaction['transaction_status'] == 'Completed' && $transaction['show_rate_popup'] == 1){
             $transaction['transaction_status'] = 'Unreview';
         }
 
@@ -381,7 +408,8 @@ class ApiMerchantTransactionController extends Controller
             'payment_detail' => $paymentDetail,
             'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : ''),
             'transaction_reject_reason' => $transaction['transaction_reject_reason'],
-            'transaction_reject_at' => (!empty($transaction['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_reject_at'])), true) : null)
+            'transaction_reject_at' => (!empty($transaction['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_reject_at'])), true) : null),
+            'ratings' => $ratings
         ];
 
         return response()->json(MyHelper::checkGet($result));
