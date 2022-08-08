@@ -306,6 +306,21 @@ class ApiMerchantTransactionController extends Controller
             ]
         ];
 
+        if($transaction['transaction_service'] > 0){
+            $paymentDetail[] = [
+                'text' => 'Biaya Layanan',
+                'value' => 'Rp '. number_format((int)$transaction['transaction_service'],0,",",".")
+            ];
+        }
+
+        if($transaction['transaction_tax'] > 0){
+            $paymentDetail[] = [
+                'text' => 'Pajak',
+                'value' => 'Rp '. number_format((int)$transaction['transaction_tax'],0,",",".")
+            ];
+        }
+        
+
         if(!empty($transaction['transaction_discount'])){
             $codePromo = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $transaction['id_promo_campaign_promo_code'])->first()['promo_code']??'';
             $paymentDetail[] = [
@@ -972,5 +987,65 @@ class ApiMerchantTransactionController extends Controller
 
 
         return $create;
+    }
+
+    public function detailTransactionCommission(Request $request)
+    {
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+        $idOutlet = $checkMerchant['id_outlet'];
+
+        $transaction = Transaction::where('transaction_receipt_number', $request->json('transaction_receipt_number'))
+        ->where('id_outlet', $idOutlet)->first();
+
+        if(empty($transaction)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data transaksi tidak ditemukan']]);
+        }
+
+        $productSubtotalFinal = $transaction['transaction_subtotal'] - $transaction['transaction_discount_item'];
+        $detailProduct = [
+            'product_subtotal' => 'Rp '. number_format((int)$transaction['transaction_subtotal'],0,",","."),
+            'product_subtotal_final' => 'Rp '. number_format((int)$productSubtotalFinal,0,",","."),
+        ];
+
+        if($transaction['transaction_discount_item'] > 0){
+            $detailProduct['discount'] =  'Rp '. number_format((int)$transaction['transaction_discount_item'],0,",",".");
+            $detailProduct['merchant_charged'] =  '-Rp '. number_format((int)$transaction['discount_charged_outlet'],0,",",".");
+        }
+
+        if($transaction['transaction_discount_bill'] > 0){
+            $detailProduct['discount'] =  'Rp '. number_format((int)$transaction['transaction_discount_bill'],0,",",".");
+            $detailProduct['merchant_charged'] =  '-Rp '. number_format((int)$transaction['discount_charged_outlet'],0,",",".");
+        }
+
+        $customerPay = $transaction['transaction_shipment'] - $transaction['transaction_discount_delivery'];
+        $deliveryDetail = [
+            'delivery_price' => 'Rp '. number_format((int)$transaction['transaction_shipment'],0,",","."),
+            'customer_pay' => 'Rp '. number_format((int)$customerPay,0,",","."),
+        ];
+
+        if($transaction['transaction_discount_delivery'] > 0){
+            $deliveryDetail['discount'] =  'Rp '. number_format((int)$transaction['transaction_discount_delivery'],0,",",".");
+            $deliveryDetail['merchant_charged'] =  '-Rp '. number_format((int)$transaction['discount_charged_outlet'],0,",",".");
+        }
+
+        $result = [
+            'grandtotal' => 'Rp '. number_format((int)$transaction['transaction_grandtotal'],0,",","."),
+            'product_detail' => $detailProduct,
+            'delivery_detail' =>$deliveryDetail,
+        ];
+
+        if($transaction['transaction_tax'] > 0){
+            $result['tax'] = '-Rp '. number_format((int)$transaction['transaction_tax'],0,",",".");
+        }
+
+        if($transaction['transaction_service'] > 0){
+            $result['service'] = '-Rp '. number_format((int)$transaction['transaction_service'],0,",",".");
+        }
+
+        return response()->json($result);
     }
 }

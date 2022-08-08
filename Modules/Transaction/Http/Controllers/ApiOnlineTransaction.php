@@ -210,6 +210,8 @@ class ApiOnlineTransaction extends Controller
         $subtotal = $itemsCheck['subtotal'];
         $grandtotal = 0;
         $deliveryTotal = $itemsCheck['total_delivery']??0;
+        $serviceTotal = $itemsCheck['service']??0;
+        $taxTotal = $itemsCheck['tax']??0;
         $currentDate = date('Y-m-d H:i:s');
         $paymentType = NULL;
         $transactionStatus = 'Unpaid';
@@ -218,7 +220,7 @@ class ApiOnlineTransaction extends Controller
             $paymentType = 'Balance';
         }
 
-        $grandTotal = $subtotal+$deliveryTotal;
+        $grandTotal = $subtotal+$deliveryTotal+$serviceTotal+$taxTotal;
         $itemsCheck['grandtotal'] = $grandTotal;
 
         $itemsCheck = app($this->promo_trx)->applyPromoCheckout($itemsCheck);
@@ -234,6 +236,8 @@ class ApiOnlineTransaction extends Controller
             'transaction_receipt_number' => 'TRX'.time().rand().substr($grandtotal, 0,5),
             'transaction_subtotal' => $subtotal,
             'transaction_shipment' => $deliveryTotal,
+            'transaction_service' => $serviceTotal,
+            'transaction_tax' => $taxTotal,
             'transaction_grandtotal' => $itemsCheck['grandtotal'],
             'transaction_discount' => $itemsCheck['total_discount']??0,
             'transaction_payment_status' => $paymentStatus,
@@ -262,7 +266,9 @@ class ApiOnlineTransaction extends Controller
             }
 
             $subtotal = $subtotal + $data['items_subtotal'];
-            $earnedPoint = $this->countTranscationPoint(['subtotal' => (int)$data['items_subtotal']], $user);
+            if (empty($post['point_use']) || (isset($post['point_use']) && !$post['point_use'])) {
+                $earnedPoint = $this->countTranscationPoint(['subtotal' => (int)$data['items_subtotal']], $user);
+            }
             $cashback = $earnedPoint['cashback'] ?? 0;
             $receiptNumber = rand().time().'-'.substr($data['id_outlet'], 0, 4).rand(1000,9999);
 
@@ -276,7 +282,8 @@ class ApiOnlineTransaction extends Controller
                 $discountItem = 0;
                 $discountBill = $discount;
             }
-
+            $sub = ($data['subtotal_promo'] ?? $data['subtotal'] ?? 0); 
+            $subFinal = $sub + ($data['tax'] ?? 0) + ($data['service'] ?? 0);
             $transaction = [
                 'id_transaction_group'        => $insertTransactionGroup['id_transaction_group'],
                 'id_promo_campaign_promo_code' => $data['id_promo_campaign_promo_code']??null,
@@ -290,7 +297,9 @@ class ApiOnlineTransaction extends Controller
                 'transaction_subtotal'        => $data['items_subtotal'],
                 'transaction_gross'  		  => $data['items_subtotal'],
                 'transaction_shipment'        => $data['delivery_price']['shipment_price']??0,
-                'transaction_grandtotal'      => $data['subtotal_promo'] ?? $data['subtotal'] ?? 0,
+                'transaction_grandtotal'      => $subFinal ?? 0,
+                'transaction_tax'             => $data['tax'] ?? 0,
+                'transaction_service'         => $data['service'] ?? 0,
                 'transaction_point_earned'    => 0,
                 'transaction_cashback_earned' => $cashback,
                 'trasaction_payment_type'     => $paymentType,
@@ -614,6 +623,8 @@ class ApiOnlineTransaction extends Controller
         $itemsCheck = $this->checkDataTransaction($post['items'], 0, 0, 1, $mainAddress, $fromRecipeDoctor, $user->id);
         $items = $itemsCheck['items'];
         $subtotal = $itemsCheck['subtotal'];
+        $service = $itemsCheck['service']??0;
+        $tax = $itemsCheck['tax']??0;
         $delivery = $itemsCheck['total_delivery']??0;
         $checkOutStatus = $itemsCheck['available_checkout'];
         $popupConsultation = $itemsCheck['pupop_need_consultation']??true;
@@ -658,7 +669,23 @@ class ApiOnlineTransaction extends Controller
                 'value' => 'Rp '.number_format($delivery,0,",",".")
             ]
         ];
-        $grandTotal = $subtotal+$delivery;
+        if($service > 0){
+            $summaryOrder[] = [
+                'name' => 'Biaya Layanan',
+                'is_discount' => 0,
+                'value' => 'Rp '.number_format($service,0,",",".")
+            ];
+        }
+
+        if($tax > 0){
+            $summaryOrder[] = [
+                'name' => 'Pajak',
+                'is_discount' => 0,
+                'value' => 'Rp '.number_format($tax,0,",",".")
+            ];
+        }
+
+        $grandTotal = $subtotal+$delivery+$service+$tax;
 
         $result = [
             'address' => $mainAddress,
@@ -2476,6 +2503,8 @@ class ApiOnlineTransaction extends Controller
         $availableCheckout = true;
         $canBuyStatus = true;
         $subtotal = 0;
+        $serviceTotal = 0;
+        $taxTotal = 0;
         $deliveryPrice = 0;
         $errorMsg = [];
         $weight = [];
@@ -2670,6 +2699,14 @@ class ApiOnlineTransaction extends Controller
 
                 if(!empty($value['items'])){
                     $subtotal = $subtotal + $productSubtotal;
+                    $dtTaxService = ['subtotal' => $productSubtotal];
+                    
+                    $service = app($this->setting_trx)->countTransaction('service', $dtTaxService);
+                    $serviceTotal = $serviceTotal + $service;
+
+                    $tax = app($this->setting_trx)->countTransaction('tax', $dtTaxService);
+                    $taxTotal = $taxTotal + $tax;
+
                     $s = round($dimentionProduct ** (1/3), 0);
                     $items[$index]['outlet_name'] = $checkOutlet['outlet_name'];
                     $items[$index]['items_total_height'] = (int)$s;
@@ -2679,6 +2716,9 @@ class ApiOnlineTransaction extends Controller
                     $items[$index]['items_subtotal'] = $productSubtotal;
                     $items[$index]['items_subtotal_text'] = 'Rp '.number_format($productSubtotal,0,",",".");
                     $items[$index]['items'] = array_values($value['items']);
+                    $items[$index]['service'] = $service;
+                    $items[$index]['tax'] = $tax;
+
                     if($from_cart == 0){
                         $subdistrictOutlet = Subdistricts::where('id_subdistrict', $checkOutlet['id_subdistrict'])
                             ->join('districts', 'districts.id_district', 'subdistricts.id_district')->first();
@@ -2805,6 +2845,8 @@ class ApiOnlineTransaction extends Controller
 
         return [
             'subtotal' => $subtotal,
+            'service' => $serviceTotal,
+            'tax' => $taxTotal,
             'items' => array_values($items),
             'total_delivery' => $deliveryPrice,
             'available_checkout' => $availableCheckout,

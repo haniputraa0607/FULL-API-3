@@ -2771,6 +2771,20 @@ class ApiTransaction extends Controller
             ]
         ];
 
+        if($transaction['transaction_service'] > 0){
+            $paymentDetail[] = [
+                'text' => 'Biaya Layanan',
+                'value' => 'Rp '. number_format((int)$transaction['transaction_service'],0,",",".")
+            ];
+        }
+
+        if($transaction['transaction_tax'] > 0){
+            $paymentDetail[] = [
+                'text' => 'Pajak',
+                'value' => 'Rp '. number_format((int)$transaction['transaction_tax'],0,",",".")
+            ];
+        }
+
         if(!empty($transaction['transaction_discount'])){
             $codePromo = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $transaction['id_promo_campaign_promo_code'])->first()['promo_code']??'';
             $paymentDetail[] = [
