@@ -1628,13 +1628,19 @@ class ApiUserRatingController extends Controller
             }
 
             $currentRating = $log;
+            $getPhotos = UserRatingPhoto::where('id_user_rating', $currentRating['id_user_rating'])->get()->toArray();
+            $photos = [];
+            foreach ($getPhotos as $dt){
+                $photos[] = $dt['url_user_rating_photo'];
+            }
 
             if ($currentRating) {
                 $currentOption = explode(',', $currentRating['option_value']);
                 $rating['rating'] = [
                     "rating_value" => $currentRating['rating_value'],
                     "suggestion" => $currentRating['suggestion'],
-                    "option_value" => $currentOption
+                    "option_value" => $currentOption,
+                    "photos" => $photos
                 ];
             }
 
