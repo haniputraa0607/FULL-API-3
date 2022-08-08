@@ -1364,10 +1364,10 @@ class ApiUserRatingController extends Controller
             ];
         }
 
-        if(!empty($post['images']) && count($post['images']) > 5){
+        if(!empty($post['images']) && count($post['images']) > 3){
             return [
                 'status'=>'fail',
-                'messages'=>['Maximum upload 5 image']
+                'messages'=>['Maximum upload 3 image']
             ];
         }
 
