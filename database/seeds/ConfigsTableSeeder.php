@@ -1245,7 +1245,7 @@ class ConfigsTableSeeder extends Seeder
                 'id_config'   => 140,
                 'config_name' => 'rating_product',
                 'description' => '',
-                'is_active'   => '1',
+                'is_active'   => '0',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),

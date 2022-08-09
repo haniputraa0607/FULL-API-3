@@ -1112,7 +1112,7 @@ class ApiUserRatingController extends Controller
 
         $defaultOptions = [
             'question'=>Setting::where('key','default_rating_question')->pluck('value_text')->first()?:'What\'s best from us?',
-            'options' =>explode(',',Setting::where('key','default_rating_options')->pluck('value_text')->first()?:'Cleanness,Accuracy,Employee Hospitality,Process Time')
+            'options' =>explode(',',Setting::where('key','default_rating_options')->pluck('value_text')->first()?:'Good Product,Fast Response')
         ];
 
         $optionProduct = ['1'=>$defaultOptions,'2'=>$defaultOptions,'3'=>$defaultOptions,'4'=>$defaultOptions,'5'=>$defaultOptions];
@@ -1126,7 +1126,6 @@ class ApiUserRatingController extends Controller
                 ];
             }
         }
-        $optionProduct = array_values($optionProduct);
 
         $ratingList = [];
         $title = 'Beri Penilaian';
@@ -1165,7 +1164,7 @@ class ApiUserRatingController extends Controller
                 'variants' => implode(',', $variants) ?? null
             ];
 
-            $rating['question_text'] = Setting::where('key','rating_question_text')->pluck('value_text')->first()?:'How about our Service';
+            $rating['question_text'] = Setting::where('key','product_rating_question_text')->pluck('value_text')->first()?:'Bagaimana menurutmu produk ini?';
             $rating['rating'] = null;
             $rating['options'] = $optionProduct;
 
@@ -1468,7 +1467,7 @@ class ApiUserRatingController extends Controller
                     'variants' => implode(',', $variants) ?? null
                 ];
 
-                $rating['question_text'] = Setting::where('key','rating_question_text')->pluck('value_text')->first()?:'How about our Service';
+                $rating['question_text'] = Setting::where('key','product_rating_question_text')->pluck('value_text')->first()?:'Bagaimana menurutmu produk ini?';
             }
 
             $currentRating = $log;
