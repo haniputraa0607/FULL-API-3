@@ -150,7 +150,8 @@ class ApiShipperController extends Controller
             //insert balance merchant
             $merchant = Merchant::where('id_outlet', $transaction['id_outlet'])->first();
             $idMerchant = $merchant['id_merchant']??null;
-            $nominal = $transaction['transaction_grandtotal'] - $transaction['transaction_shipment'] + $transaction['discount_charged_central'];
+            $chargedAll = $transaction['transaction_service'] + $transaction['transaction_tax'] + $transaction['discount_charged_outlet'];
+            $nominal = $transaction['transaction_subtotal'] - $chargedAll;
             $dt = [
                 'id_merchant' => $idMerchant,
                 'id_transaction' => $transaction['id_transaction'],

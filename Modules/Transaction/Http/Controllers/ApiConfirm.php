@@ -145,6 +145,26 @@ class ApiConfirm extends Controller
                 array_push($dataDetailProduct, $dataShip);
             }
 
+            if ($check['transaction_service'] > 0) {
+                $dataShip = [
+                    'id'       => null,
+                    'price'    => abs($check['transaction_service']),
+                    'name'     => 'Service',
+                    'quantity' => 1,
+                ];
+                array_push($dataDetailProduct, $dataShip);
+            }
+
+            if ($check['transaction_tax'] > 0) {
+                $dataShip = [
+                    'id'       => null,
+                    'price'    => abs($check['transaction_tax']),
+                    'name'     => 'Tax',
+                    'quantity' => 1,
+                ];
+                array_push($dataDetailProduct, $dataShip);
+            }
+
             if (!empty($check['transaction_discount'])) {
                 $dataDis = [
                     'id'       => null,

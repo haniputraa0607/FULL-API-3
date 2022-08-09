@@ -42,6 +42,7 @@ use Modules\Transaction\Http\Requests\TransactionDetail;
 use Modules\UserRating\Entities\UserRating;
 use Modules\UserRating\Http\Controllers\ApiUserRatingController;
 use Modules\Xendit\Entities\TransactionPaymentXendit;
+use Modules\UserRating\Entities\UserRatingPhoto;
 
 class ApiMerchantTransactionController extends Controller
 {
@@ -140,7 +141,7 @@ class ApiMerchantTransactionController extends Controller
             });
         }
 
-        $transactions = $transactions->paginate($post['pagination_total_row']??10)->toArray();
+        $transactions = $transactions->orderBy('transactions.transaction_date', 'desc')->paginate($post['pagination_total_row']??10)->toArray();
 
         foreach ($transactions['data']??[] as $key=>$value){
             $countAllProduct = TransactionProduct::where('id_transaction', $value['id_transaction'])->count();
@@ -175,21 +176,28 @@ class ApiMerchantTransactionController extends Controller
                 'reject_at' => (!empty($value['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($value['transaction_reject_at'])), true) : null),
                 'reject_reason' => (!empty($value['transaction_reject_reason'])? $value['transaction_reject_reason']:''),
             ];
-            $ratings = [];
+            $ratings = null;
 
-            if($value['transaction_status'] == 'Completed' && $value['show_rate_popup'] == 1){
+            $getRatings = UserRating::where('id_transaction', $value['id_transaction'])->where('id_product', $product['id_product'])->first();
+
+            if(!empty($getRatings)){
+                $getPhotos = UserRatingPhoto::where('id_user_rating', $getRatings['id_user_rating'])->get()->toArray();
+                $photos = [];
+                foreach ($getPhotos as $dt){
+                    $photos[] = $dt['url_user_rating_photo'];
+                }
+                $currentOption = explode(',', $getRatings['option_value']);
+                $ratings = [
+                    "rating_value" => $getRatings['rating_value'],
+                    "suggestion" => $getRatings['suggestion'],
+                    "option_value" => $currentOption,
+                    "photos" => $photos
+                ];
+            }
+
+            if($value['show_rate_popup'] == 1 && $value['transaction_status'] == 'Completed'){
                 $transactions['data'][$key]['transaction_status_code'] = $codeIndo['Unreview']['code']??'';
                 $transactions['data'][$key]['transaction_status_text'] = $codeIndo['Unreview']['text']??'';
-
-                $getRatings = UserRating::where('id_transaction', $value['id_transaction'])->get()->toArray();
-                foreach ($getRatings as $rating){
-                    $currentOption = explode(',', $rating['option_value']);
-                    $ratings[] = [
-                        "rating_value" => $rating['rating_value'],
-                        "suggestion" => $rating['suggestion'],
-                        "option_value" => $currentOption
-                    ];
-                }
             }
 
             $transactions['data'][$key]['ratings'] = $ratings;
@@ -298,6 +306,21 @@ class ApiMerchantTransactionController extends Controller
             ]
         ];
 
+        if($transaction['transaction_service'] > 0){
+            $paymentDetail[] = [
+                'text' => 'Biaya Layanan',
+                'value' => 'Rp '. number_format((int)$transaction['transaction_service'],0,",",".")
+            ];
+        }
+
+        if($transaction['transaction_tax'] > 0){
+            $paymentDetail[] = [
+                'text' => 'Pajak',
+                'value' => 'Rp '. number_format((int)$transaction['transaction_tax'],0,",",".")
+            ];
+        }
+        
+
         if(!empty($transaction['transaction_discount'])){
             $codePromo = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $transaction['id_promo_campaign_promo_code'])->first()['promo_code']??'';
             $paymentDetail[] = [
@@ -351,7 +374,26 @@ class ApiMerchantTransactionController extends Controller
             ];
         }
 
-        if($transaction['transaction_status'] == 'Completed'){
+    
+        $ratings = [];
+        $getRatings = UserRating::where('id_transaction', $transaction['id_transaction'])->get()->toArray();
+        foreach ($getRatings as $rating){
+            $getPhotos = UserRatingPhoto::where('id_user_rating', $rating['id_user_rating'])->get()->toArray();
+            $photos = [];
+            foreach ($getPhotos as $dt){
+                $photos[] = $dt['url_user_rating_photo'];
+            }
+
+            $currentOption = explode(',', $rating['option_value']);
+            $ratings[] = [
+                "rating_value" => $rating['rating_value'],
+                "suggestion" => $rating['suggestion'],
+                "option_value" => $currentOption,
+                "photos" => $photos
+            ];
+        }
+
+        if($transaction['transaction_status'] == 'Completed' && $transaction['show_rate_popup'] == 1){
             $transaction['transaction_status'] = 'Unreview';
         }
 
@@ -381,7 +423,8 @@ class ApiMerchantTransactionController extends Controller
             'payment_detail' => $paymentDetail,
             'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : ''),
             'transaction_reject_reason' => $transaction['transaction_reject_reason'],
-            'transaction_reject_at' => (!empty($transaction['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_reject_at'])), true) : null)
+            'transaction_reject_at' => (!empty($transaction['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_reject_at'])), true) : null),
+            'ratings' => $ratings
         ];
 
         return response()->json(MyHelper::checkGet($result));
@@ -944,5 +987,65 @@ class ApiMerchantTransactionController extends Controller
 
 
         return $create;
+    }
+
+    public function detailTransactionCommission(Request $request)
+    {
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+        $idOutlet = $checkMerchant['id_outlet'];
+
+        $transaction = Transaction::where('transaction_receipt_number', $request->json('transaction_receipt_number'))
+        ->where('id_outlet', $idOutlet)->first();
+
+        if(empty($transaction)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data transaksi tidak ditemukan']]);
+        }
+
+        $productSubtotalFinal = $transaction['transaction_subtotal'] - $transaction['transaction_discount_item'];
+        $detailProduct = [
+            'product_subtotal' => 'Rp '. number_format((int)$transaction['transaction_subtotal'],0,",","."),
+            'product_subtotal_final' => 'Rp '. number_format((int)$productSubtotalFinal,0,",","."),
+        ];
+
+        if($transaction['transaction_discount_item'] > 0){
+            $detailProduct['discount'] =  'Rp '. number_format((int)$transaction['transaction_discount_item'],0,",",".");
+            $detailProduct['merchant_charged'] =  '-Rp '. number_format((int)$transaction['discount_charged_outlet'],0,",",".");
+        }
+
+        if($transaction['transaction_discount_bill'] > 0){
+            $detailProduct['discount'] =  'Rp '. number_format((int)$transaction['transaction_discount_bill'],0,",",".");
+            $detailProduct['merchant_charged'] =  '-Rp '. number_format((int)$transaction['discount_charged_outlet'],0,",",".");
+        }
+
+        $customerPay = $transaction['transaction_shipment'] - $transaction['transaction_discount_delivery'];
+        $deliveryDetail = [
+            'delivery_price' => 'Rp '. number_format((int)$transaction['transaction_shipment'],0,",","."),
+            'customer_pay' => 'Rp '. number_format((int)$customerPay,0,",","."),
+        ];
+
+        if($transaction['transaction_discount_delivery'] > 0){
+            $deliveryDetail['discount'] =  'Rp '. number_format((int)$transaction['transaction_discount_delivery'],0,",",".");
+            $deliveryDetail['merchant_charged'] =  '-Rp '. number_format((int)$transaction['discount_charged_outlet'],0,",",".");
+        }
+
+        $result = [
+            'grandtotal' => 'Rp '. number_format((int)$transaction['transaction_grandtotal'],0,",","."),
+            'product_detail' => $detailProduct,
+            'delivery_detail' =>$deliveryDetail,
+        ];
+
+        if($transaction['transaction_tax'] > 0){
+            $result['tax'] = '-Rp '. number_format((int)$transaction['transaction_tax'],0,",",".");
+        }
+
+        if($transaction['transaction_service'] > 0){
+            $result['service'] = '-Rp '. number_format((int)$transaction['transaction_service'],0,",",".");
+        }
+
+        return response()->json($result);
     }
 }

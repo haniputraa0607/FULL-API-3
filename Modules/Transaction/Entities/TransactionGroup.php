@@ -19,6 +19,8 @@ class TransactionGroup extends Model
         'transaction_receipt_number',
         'transaction_subtotal',
         'transaction_shipment',
+        'transaction_service',
+        'transaction_tax',
         'transaction_grandtotal',
         'transaction_discount',
         'transaction_payment_status',
