@@ -227,7 +227,7 @@ class ApiMerchantTransactionController extends Controller
         $codeIndo = [
             'Rejected' => [
                 'code' => 1,
-                'text' => 'Ditolak'
+                'text' => 'Dibatalkan'
             ],
             'Unpaid' => [
                 'code' => 2,
@@ -903,7 +903,7 @@ class ApiMerchantTransactionController extends Controller
         $codeIndo = [
             'Reject' => [
                 'code' => 1,
-                'text' => 'Ditolak'
+                'text' => 'Dibatalkan'
             ],
             'Unpaid' => [
                 'code' => 2,
