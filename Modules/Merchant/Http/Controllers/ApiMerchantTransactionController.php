@@ -227,7 +227,7 @@ class ApiMerchantTransactionController extends Controller
         $codeIndo = [
             'Rejected' => [
                 'code' => 1,
-                'text' => 'Ditolak'
+                'text' => 'Dibatalkan'
             ],
             'Unpaid' => [
                 'code' => 2,
@@ -368,8 +368,18 @@ class ApiMerchantTransactionController extends Controller
         $tracking = [];
         $trxTracking = TransactionShipmentTrackingUpdate::where('id_transaction', $id)->orderBy('tracking_date_time', 'desc')->orderBy('id_transaction_shipment_tracking_update', 'desc')->get()->toArray();
         foreach ($trxTracking as $value){
+            $trackingDate = date('Y-m-d H:i', strtotime($value['tracking_date_time']));
+            $timeZone = 'WIB';
+            if(!empty($value['tracking_timezone']) && $value['tracking_timezone'] == '+0800'){
+                $trackingDate = date('Y-m-d H:i', strtotime('+ 1 hour',strtotime($value['tracking_date_time'])));
+                $timeZone = 'WITA';
+            }elseif(!empty($value['tracking_timezone']) && $value['tracking_timezone'] == '+0900'){
+                $trackingDate = date('Y-m-d H:i', strtotime('+ 2 hour',strtotime($value['tracking_date_time'])));
+                $timeZone = 'WIT';
+            }
+
             $tracking[] = [
-                'date' => MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($value['tracking_date_time'])), true),
+                'date' => MyHelper::dateFormatInd($trackingDate, true).' '.$timeZone,
                 'description' => $value['tracking_description']
             ];
         }
@@ -893,7 +903,7 @@ class ApiMerchantTransactionController extends Controller
         $codeIndo = [
             'Reject' => [
                 'code' => 1,
-                'text' => 'Ditolak'
+                'text' => 'Dibatalkan'
             ],
             'Unpaid' => [
                 'code' => 2,
@@ -937,8 +947,18 @@ class ApiMerchantTransactionController extends Controller
         $tracking = [];
         $trxTracking = TransactionShipmentTrackingUpdate::where('id_transaction', $id)->orderBy('tracking_date_time', 'desc')->orderBy('id_transaction_shipment_tracking_update', 'desc')->get()->toArray();
         foreach ($trxTracking as $value){
+            $trackingDate = date('Y-m-d H:i', strtotime($value['tracking_date_time']));
+            $timeZone = 'WIB';
+            if(!empty($value['tracking_timezone']) && $value['tracking_timezone'] == '+0800'){
+                $trackingDate = date('Y-m-d H:i', strtotime('+ 1 hour',strtotime($value['tracking_date_time'])));
+                $timeZone = 'WITA';
+            }elseif(!empty($value['tracking_timezone']) && $value['tracking_timezone'] == '+0900'){
+                $trackingDate = date('Y-m-d H:i', strtotime('+ 2 hour',strtotime($value['tracking_date_time'])));
+                $timeZone = 'WIT';
+            }
+
             $tracking[] = [
-                'date' => MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($value['tracking_date_time'])), true),
+                'date' => MyHelper::dateFormatInd($trackingDate, true).' '.$timeZone,
                 'description' => $value['tracking_description']
             ];
         }

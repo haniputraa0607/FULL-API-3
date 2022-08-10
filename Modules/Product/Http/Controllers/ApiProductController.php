@@ -2117,7 +2117,11 @@ class ApiProductController extends Controller
         }
 
         if(!empty($post['search_key'])){
-            $list = $list->whereRaw('MATCH (product_name,product_description) AGAINST ("'.$post['search_key'].'" IN BOOLEAN MODE)');
+            if(strpos($post['search_key']," ") !== false){
+                $list = $list->whereRaw('MATCH (product_name,product_description) AGAINST ("'.$post['search_key'].'" IN BOOLEAN MODE)');
+            }else{
+                $list->where('product_name', 'like', '%'.$post['search_key'].'%');
+            }
         }
 
         if(!empty($post['id_product_category'])){
