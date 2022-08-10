@@ -2122,7 +2122,7 @@ class ApiProductController extends Controller
 
         if(!empty($post['search_key'])){
             if(strpos($post['search_key']," ") !== false){
-                $list = $list->whereRaw('MATCH (product_name,product_description) AGAINST ("'.$post['search_key'].'" IN BOOLEAN MODE)');
+                $list = $list->whereRaw('MATCH (product_name) AGAINST ("'.$post['search_key'].'" IN BOOLEAN MODE)');
             }else{
                 $list->where('product_name', 'like', '%'.$post['search_key'].'%');
             }
@@ -2140,7 +2140,7 @@ class ApiProductController extends Controller
                 $defaultSelect = 0;
                 $list = $list->select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
                     'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'need_recipe_status',
-                    DB::raw('MATCH (product_name,product_description) AGAINST ("'.$post['search_key'].'" IN BOOLEAN MODE) AS relate'))
+                    DB::raw('MATCH (product_name) AGAINST ("'.$post['search_key'].'" IN BOOLEAN MODE) AS relate'))
                     ->orderBy('relate', 'desc');
             }elseif($sorting == 'best seller'){
                 $list = $list->orderBy('product_count_transaction', 'desc');
