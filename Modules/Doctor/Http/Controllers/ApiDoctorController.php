@@ -129,7 +129,7 @@ class ApiDoctorController extends Controller
     {
         $post = $request->json()->all();
 
-        $doctor = Doctor::with('clinic')->with('specialists')->orderBy('created_at', 'DESC');
+        $doctor = Doctor::with('outlet')->with('specialists')->orderBy('created_at', 'DESC');
 
         if(isset($post['id_doctor_specialist_category'])){
             $doctor->whereHas('specialists', function($query) use ($post) {
@@ -288,7 +288,14 @@ class ApiDoctorController extends Controller
      */
     public function show($id)
     {
-        $doctor = Doctor::where('id_doctor', $id)->with('specialists')->first();
+        $doctor = Doctor::where('id_doctor', $id)->with('outlet')->with('specialists')->first();
+
+        //create url image
+        if($doctor['doctor_photo'] != null){
+            $doctor['url_doctor_photo'] = env('STORAGE_URL_API').$doctor['doctor_photo']; 
+        } else {
+            $doctor['url_doctor_photo'] = null;
+        }
 
         $doctor_schedule = DoctorSchedule::where('id_doctor', $doctor['id_doctor'])->with('schedule_time');
 
