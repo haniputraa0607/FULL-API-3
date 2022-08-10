@@ -16,6 +16,7 @@ use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\ProductModifierGlobalPrice;
 use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
+use Modules\Favorite\Entities\Favorite;
 use Modules\Merchant\Entities\Merchant;
 use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductGlobalPrice;
@@ -1908,6 +1909,8 @@ class ApiProductController extends Controller
         }
         $product['ratings'] = $ratings;
         $product['can_buy_own_product'] = true;
+        $favorite = Favorite::where('id_product', $product['id_product'])->where('id_user', $request->user()->id)->first();
+        $product['favorite'] = (!empty($favorite) ? true : false);
         if($request->user()->id == $merchant['id_user']){
             $product['can_buy_own_product'] = false;
         }
@@ -2094,6 +2097,7 @@ class ApiProductController extends Controller
     }
 
     public function listProductMerchant(Request $request){
+        $idUser = $request->user()->id;
         $post = $request->json()->all();
 
         if(!empty($post['id_outlet'])){
@@ -2182,6 +2186,8 @@ class ApiProductController extends Controller
                 unset($list['data'][$key]['id_outlet']);
                 unset($list['data'][$key]['product_variant_status']);
                 $list['data'][$key]['product_price'] = (int)$list['data'][$key]['product_price'];
+                $favorite = Favorite::where('id_product', $product['id_product'])->where('id_user', $idUser)->first();
+                $list['data'][$key]['favorite'] = (!empty($favorite) ? true : false);
                 $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
                 $list['data'][$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
             }
@@ -2202,6 +2208,8 @@ class ApiProductController extends Controller
                 unset($list[$key]['id_outlet']);
                 unset($list[$key]['product_variant_status']);
                 $list[$key]['product_price'] = (int)$list[$key]['product_price'];
+                $favorite = Favorite::where('id_product', $product['id_product'])->where('id_user', $idUser)->first();
+                $list[$key]['favorite'] = (!empty($favorite) ? true : false);
                 $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
                 $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
             }
