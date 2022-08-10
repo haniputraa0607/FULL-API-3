@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
 
 Route::middleware(['auth:api', 'scopes:apps','log_activities'])->prefix('/favorite')->group(function () {
     Route::any('/', 'ApiFavoriteController@index');
-    Route::any('list', 'ApiFavoriteController@list');
-    Route::post('create', 'ApiFavoriteController@store');
+    Route::any('list', 'ApiFavoriteController@listV2');
+    Route::post('create', 'ApiFavoriteController@storeV2');
     Route::post('delete', 'ApiFavoriteController@destroy');
 });

@@ -2,6 +2,7 @@
 
 namespace Modules\Favorite\Http\Controllers;
 
+use App\Http\Models\ProductPhoto;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -325,6 +326,41 @@ class ApiFavoriteController extends Controller
         return MyHelper::checkCreate($data)+$extra;
     }
 
+    public function storeV2(Request $request){
+        $user = $request->user();
+
+        if(empty($request->json('id_product'))){
+            return [
+                'status'=>'fail',
+                'messages'=>['ID can not be empty']
+            ];
+        }
+
+        $dtProduct = Product::join('product_detail', 'product_detail.id_product', 'products.id_product')
+                    ->where('products.id_product', $request->json('id_product'))->first();
+
+        if(empty($dtProduct)){
+            return [
+                'status'=>'fail',
+                'messages'=>['Product not found']
+            ];
+        }
+
+        $checkExist = Favorite::where('id_product', $dtProduct['id_product'])->where('id_user', $user->id)->first();
+
+        $data = $checkExist;
+        if(empty($checkExist)){
+            $insert_data = [
+                'id_outlet' => $dtProduct['id_outlet'],
+                'id_product' => $dtProduct['id_product'],
+                'id_user' => $user->id
+            ];
+
+            $data = Favorite::create($insert_data);
+        }
+        return response()->json(MyHelper::checkCreate($data));
+    }
+
     /**
      * Remove favorite
      * @param int $id
@@ -333,9 +369,71 @@ class ApiFavoriteController extends Controller
     public function destroy(Request $request){
         $user = $request->user();
         $delete = Favorite::where([
-            ['id_favorite',$request->json('id_favorite')],
+            ['id_product',$request->json('id_product')],
             ['id_user',$user->id]
         ])->delete();
         return MyHelper::checkDelete($delete);
+    }
+
+    public function listV2(Request $request){
+        $post = $request->json()->all();
+        $user = $request->user();
+
+        $list = Product::leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
+            ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
+            ->join('favorites', 'favorites.id_product', '=', 'products.id_product')
+            ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
+            ->where('outlet_is_closed', 0)
+            ->where('product_global_price', '>', 0)
+            ->where('product_visibility', 'Visible')
+            ->where('product_detail_visibility', 'Visible')
+            ->where('favorites.id_user', $user->id)
+            ->select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
+                'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'need_recipe_status')
+            ->groupBy('products.id_product');
+
+        if(!empty($post['pagination'])){
+            $list = $list->paginate($post['pagination_total_row']??10)->toArray();
+
+            foreach ($list['data'] as $key=>$product){
+                if ($product['product_variant_status']) {
+                    $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
+                    $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                    if(empty($variantTree['base_price'])){
+                        $list['data'][$key]['stock_status'] = 'Sold Out';
+                    }
+                    $list['data'][$key]['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
+                }
+
+                unset($list['data'][$key]['id_outlet']);
+                unset($list['data'][$key]['product_variant_status']);
+                $list['data'][$key]['product_price'] = (int)$list['data'][$key]['product_price'];
+                $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+                $list['data'][$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
+            }
+            $list['data'] = array_values($list['data']);
+        }else{
+            $list = $list->get()->toArray();
+
+            foreach ($list as $key=>$product){
+                if ($product['product_variant_status']) {
+                    $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
+                    $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                    if(empty($variantTree['base_price'])){
+                        $list[$key]['stock_status'] = 'Sold Out';
+                    }
+                    $list[$key]['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
+                }
+
+                unset($list[$key]['id_outlet']);
+                unset($list[$key]['product_variant_status']);
+                $list[$key]['product_price'] = (int)$list[$key]['product_price'];
+                $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+                $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
+            }
+            $list = array_values($list);
+        }
+
+        return response()->json(MyHelper::checkGet($list));
     }
 }
