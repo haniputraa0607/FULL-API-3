@@ -15,7 +15,6 @@ class DoctorCreate extends FormRequest
             'doctor_phone'=>'required|string',
             'gender'=>'required|string',
             'birthday'=>'required|string',
-            'pin'=>'required|string',
             'id_outlet'=>'required|integer',
             'doctor_session_price'=>'required|string',
             'alumni'=>'required|string',
