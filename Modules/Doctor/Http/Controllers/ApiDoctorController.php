@@ -515,7 +515,7 @@ class ApiDoctorController extends Controller
     {
         $post = $request->json()->all();
 
-        $doctor = Doctor::with('getOutlet')->orderBy('created_at', 'DESC');
+        $doctor = Doctor::with('outlet')->orderBy('created_at', 'DESC');
 
         if(!empty($post['id_outlet'])){
             $doctor = $doctor->where('id_outlet', $post['id_outlet']);
