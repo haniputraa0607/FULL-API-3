@@ -139,6 +139,15 @@ class ApiDoctorController extends Controller
              });
         }
 
+        if(isset($post['search'])){
+            $doctor->where(function ($query) use ($post) {
+                $query->WhereHas('specialists', function($query) use ($post) {
+                            $query->where('doctor_specialist_name', 'LIKE' , '%'.$post['search'].'%');
+                        })
+                        ->orWhere('doctor_name', 'LIKE' , '%'.$post['search'].'%');
+            });
+        }
+
         if($request['page']) {
             $doctor = $doctor->paginate($post['length'] ?: 10);
         } else {
@@ -167,22 +176,24 @@ class ApiDoctorController extends Controller
         $post['doctor_session_price'] = str_replace(".", '', $post['doctor_session_price']);
 
         //set password
-        if ($post['pin'] == null) {
-            $pin = MyHelper::createRandomPIN(8, 'kecil');
-            if(env('APP_ENV') != "production"){
-                $pin = '77777777';
+        if(!isset($post['id_doctor'])){
+            if ($post['pin'] == null) {
+                $pin = MyHelper::createRandomPIN(8, 'kecil');
+                if(env('APP_ENV') != "production"){
+                    $pin = '77777777';
+                }
+            } else {
+                $pin = $post['pin'];
             }
-        } else {
-            $pin = $post['pin'];
+            unset($post['pin']);
+            $post['password'] = bcrypt($pin);
+
+            //sentPin
+            $sent_pin = $post['sent_pin'];
+            unset($post['sent_pin']);
         }
-        unset($post['pin']);
 
-        $post['password'] = bcrypt($pin);
         $post['provider'] = MyHelper::cariOperator($post['doctor_phone']);
-
-        //sentPin
-        $sent_pin = $post['sent_pin'];
-        unset($post['sent_pin']);
 
         //upload photo id doctor
         if (isset($post['doctor_photo'])) {
@@ -229,7 +240,7 @@ class ApiDoctorController extends Controller
 
         // TO DO Pending Task AutoCRM error 
         if ($result['status'] == "success") {
-            if ($sent_pin == 'Yes') {
+            if (isset($sent_pin) && $sent_pin == 'Yes') {
                 if (!empty($request->header('user-agent-view'))) {
                     $useragent = $request->header('user-agent-view');
                 } else {
@@ -289,13 +300,6 @@ class ApiDoctorController extends Controller
     public function show($id)
     {
         $doctor = Doctor::where('id_doctor', $id)->with('outlet')->with('specialists')->first();
-
-        //create url image
-        if($doctor['doctor_photo'] != null){
-            $doctor['url_doctor_photo'] = env('STORAGE_URL_API').$doctor['doctor_photo']; 
-        } else {
-            $doctor['url_doctor_photo'] = null;
-        }
 
         $doctor_schedule = DoctorSchedule::where('id_doctor', $doctor['id_doctor'])->with('schedule_time');
 
@@ -570,13 +574,6 @@ class ApiDoctorController extends Controller
                 $doctorId = TransactionConsultation::where('id_transaction', $hc->id_transaction)->pluck('id_doctor');
                 $doctor = Doctor::with('outlet')->with('specialists')->first();
 
-                //create url image
-                if($doctor['doctor_photo'] != null){
-                    $doctor['url_doctor_photo'] = env('STORAGE_URL_API').$doctor['doctor_photo']; 
-                } else {
-                    $doctor['url_doctor_photo'] = null;
-                }
-
                 if(in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3) {
                     $recomendationDoctor[] = $doctor;
                 }
@@ -592,13 +589,6 @@ class ApiDoctorController extends Controller
         if(!empty($historyTransaction)){
             foreach($historyTransaction as $ht){
                 $doctor = Doctor::with('outlet')->with('specialists')->where('id_outlet', $ht->id_outlet)->first();
-
-                //create url image
-                if($doctor['doctor_photo'] != null){
-                    $doctor['url_doctor_photo'] = env('STORAGE_URL_API').$doctor['doctor_photo']; 
-                } else {
-                    $doctor['url_doctor_photo'] = null;
-                }
 
                 if(in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3) {
                     $recomendationDoctor[] = $doctor;
@@ -621,13 +611,6 @@ class ApiDoctorController extends Controller
         }
 
         foreach($doctorRecomendationDefault as $dr){
-            //create url image
-            if($dr['doctor_photo'] != null){
-                $dr['url_doctor_photo'] = env('STORAGE_URL_API').$dr['doctor_photo']; 
-            } else {
-                $dr['url_doctor_photo'] = null;
-            }
-
             if(in_array($dr, $recomendationDoctor) == false && count($recomendationDoctor) < 3) {
                 $recomendationDoctor[] = $dr;
             }

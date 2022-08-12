@@ -31,7 +31,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix
         Route::post('/get', 'ApiTransactionConsultationController@getTransaction');
         Route::get('/reminder/list', 'ApiTransactionConsultationController@getSoonConsultationList');
         Route::post('/reminder/detail', 'ApiTransactionConsultationController@getSoonConsultationDetail');
-        Route::get('/history/list', 'ApiTransactionConsultationController@getHistoryConsultationList');
+        Route::post('/history/list', 'ApiTransactionConsultationController@getHistoryConsultationList');
     });
 
     Route::group(['prefix' => '/detail'], function () {
@@ -43,6 +43,10 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix
 
 Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-apps'], 'prefix' => 'doctor'], function () {
     Route::post('/consultation', 'ApiTransactionConsultationController@getHandledConsultation');
+    Route::post('/consultation/start', 'ApiTransactionConsultationController@startConsultation');
+    Route::post('/consultation/done', 'ApiTransactionConsultationController@doneConsultation');
+    Route::post('/consultation/message/get', 'ApiTransactionConsultationController@getMessage');
+    Route::post('/consultation/message/create', 'ApiTransactionConsultationController@createMessage');
 
     Route::group(['prefix' => '/consultation/detail'], function () {
         Route::post('/summary', 'ApiTransactionConsultationController@getDetailSummary');

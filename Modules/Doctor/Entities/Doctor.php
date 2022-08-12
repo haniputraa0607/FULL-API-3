@@ -63,7 +63,13 @@ class Doctor extends Authenticatable
         'count_login_failed',
         'pin_changed',
         'otp_forgot',
-        'otp_valid_time'
+        'otp_valid_time',
+        'id_agent',
+        'id_queue'
+    ];
+
+    protected $appends = [
+        'url_doctor_photo'
     ];
 
     public function clinic()
@@ -93,5 +99,16 @@ class Doctor extends Authenticatable
     public function schedules()
     {
         return $this->hasMany(DoctorSchedule::class, 'id_doctor', 'id_doctor');
+    }
+
+    public function getUrlDoctorPhotoAttribute()
+    {
+        if(!empty($this->attributes['doctor_photo'])){
+            $url_doctor_photo = env('STORAGE_URL_API').$this->attributes['doctor_photo'];
+        } else {
+            $url_doctor_photo = null;
+        }
+
+        return $url_doctor_photo;
     }
 }
