@@ -39,6 +39,8 @@ Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent'
         Route::get('profile/detail', 'ApiUser@profileDetail');
         Route::post('profile/update-info', 'ApiUser@profileUpdateInfo');
         Route::post('profile/update-personal', 'ApiUser@profileUpdatePersonal');
+        Route::post('profile/update-photo', 'ApiUser@profileUpdatePhoto');
+        Route::post('profile/update-password', 'ApiUser@profileUpdatePassword')->middleware(['decrypt_pin:password_old','decrypt_pin:password_new']);
         Route::post('profile/update', 'ApiUser@profileUpdate');
         Route::post('profile/delete', 'ApiUser@userDelete')->middleware('decrypt_pin');
     });

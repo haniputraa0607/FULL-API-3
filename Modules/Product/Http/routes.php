@@ -11,6 +11,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     Route::post('search', 'ApiCategoryController@search');
     Route::any('list', 'ApiProductController@listProductMerchant');
     Route::post('detail', 'ApiProductController@detail');
+    Route::post('detail/review', 'ApiProductController@detailReview');
     Route::any('sync', 'ApiSyncProductController@sync');
     Route::get('next/{id}', 'ApiProductController@getNextID');
     Route::any('recommendation', 'ApiProductController@listProducRecommendation');

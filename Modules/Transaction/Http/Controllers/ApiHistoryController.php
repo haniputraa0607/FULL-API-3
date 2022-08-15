@@ -1408,70 +1408,34 @@ class ApiHistoryController extends Controller
     {
         $post = $request->json()->all();
         $id = $request->user()->id;
-        $order = 'new';
-        $page = 0;
+        $log = LogBalance::where('log_balances.id_user', $id)->where('balance','!=',0)->paginate($post['pagination_total_row']??10)->toArray();
 
-        if (!isset($post['use_point'])) {
-            $post['use_point'] = null;
-        }
-        if (!isset($post['earn_point'])) {
-            $post['earn_point'] = null;
-        }
-        if (!isset($post['offline_order'])) {
-            $post['offline_order'] = null;
-        }
-        if (!isset($post['online_order'])) {
-            $post['online_order'] = null;
-        }
-        if (!isset($post['voucher'])) {
-            $post['voucher'] = null;
-        }
+        foreach ($log['data']??[] as $key=>$dt){
+            $title = '';
+            $description = '';
 
-        if (!is_null($request->get('page'))) {
-            $page = $request->get('page');
-        }
-
-        if ($request->get('sort')) {
-            if ($request->get('sort') == 'new') {
-                $order = 'new';
-            } elseif ($request->get('sort') == 'old') {
-                $order = 'old';
-            }
-        }
-        $next_page = $page + 1;
-        $balance = $this->balanceV2($post, $id);
-
-        if (count($balance) > 0) {
-            $sortBalance = $this->sorting($balance, $order, $page);
-            $check = MyHelper::checkGet($sortBalance);
-            $result['current_page']  = $page;
-            $result['data']          = $sortBalance['data'];
-            $result['total']         = count($sortBalance['data']);
-            $result['next_page_url'] = null;
-
-            if ($sortBalance['status'] == true) {
-                $result['next_page_url'] = ENV('APP_API_URL') . '/api/transaction/history-balance?page=' . $next_page;
-            }
-            $result = MyHelper::checkGet($result);
-        } else {
-            if (
-                $request->json('date_start') ||
-                $request->json('date_end') ||
-                $request->json('outlet') ||
-                $request->json('brand') ||
-                $request->json('use_point') ||
-                $request->json('earn_point')
-            ) {
-                $resultMessage = 'Data tidak ditemukan';
-            } else {
-                $resultMessage = 'Kamu belum memiliki point saat ini';
+            if($dt['source'] == 'Online Transaction'){
+                $title = 'Transaksi Pembelian';
+                $description = 'Total point terpakai';
+            }elseif($dt['source'] == 'Transaction Completed'){
+                $title = 'Cashback Point';
+                $description = 'Total point didapatkan';
             }
 
-            $result['status'] = 'fail';
-            $result['messages'] = [$resultMessage];
-        }
+            if($dt['balance'] < 0){
+                $amount = '- ' . abs(number_format($dt['balance'], 0, ',', '.'));
+            }else{
+                $amount = '+ ' . number_format($dt['balance'], 0, ',', '.');
+            }
 
-        return response()->json($result);
+            $log['data'][$key] = [
+                'date' => MyHelper::dateFormatInd(date('Y-m-d H:i:s', strtotime($dt['created_at'])), false),
+                'nominal' => $amount,
+                'title' => $title,
+                'description' => $description
+            ];
+        }
+        return response()->json($log);
     }
     /*============================= End Filter & Sort V2 ================================*/
 

@@ -91,13 +91,13 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('order-received', 'ApiTransaction@orderReceived');
 
     /*History V2*/
-    Route::post('history-balance/v2', 'ApiHistoryController@historyBalanceV2');
+    Route::post('history-balance', 'ApiHistoryController@historyBalanceV2');
 
     // Route::post('history', 'ApiHistoryController@historyAll');
     Route::post('history', 'ApiHistoryController@historyTrxV2');
     Route::post('history-ongoing/{mode?}', 'ApiHistoryController@historyTrxOnGoing');
     // Route::post('history-point', 'ApiHistoryController@historyPoint');
-    Route::post('history-balance/{mode?}', 'ApiHistoryController@historyBalance');
+    //Route::post('history-balance/{mode?}', 'ApiHistoryController@historyBalance');
 
     Route::post('/shipping', 'ApiTransaction@getShippingFee');
     Route::any('/address', 'ApiTransaction@getAddress');

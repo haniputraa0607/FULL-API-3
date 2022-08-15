@@ -35,6 +35,7 @@ use Modules\Users\Http\Requests\users_phone;
 use Modules\Users\Http\Requests\users_phone_pin;
 use Modules\Users\Http\Requests\users_phone_pin_new;
 use Modules\Users\Http\Requests\users_phone_pin_new_admin;
+use Modules\Users\Http\Requests\users_password_change;
 use Modules\Users\Http\Requests\users_new;
 use Modules\Users\Http\Requests\users_create;
 use Modules\Users\Http\Requests\users_profile;
@@ -3832,6 +3833,7 @@ class ApiUser extends Controller
                             ->select('provinces.id_province', 'cities.id_city', 'districts.id_district', 'subdistricts.id_subdistrict', 'subdistrict_postal_code')->first();
 
         $detail = [
+            'photo' => (!empty($dataUser['photo']) ? config('url.storage_url_api').$dataUser['photo']: null),
             'info' => [
                 'name' => $dataUser['name'],
                 'phone' => $dataUser['phone'],
@@ -3900,6 +3902,48 @@ class ApiUser extends Controller
             'address_postal_code' => $dtSubdisctrict['subdistrict_postal_code'],
             'id_city' => $dtSubdisctrict['id_city']??null,
             'id_subdistrict' => $dtSubdisctrict['id_subdistrict']??null,
+        ]);
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function profileUpdatePhoto(Request $request){
+        $idUser = $request->user()->id;
+        $post = $request->json()->all();
+
+        if(empty($post['photo'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Photo tidak boleh kosong']]);
+        }
+
+        $image = null;
+        $upload = MyHelper::uploadPhotoAllSize($post['photo'], 'img/users/', $request->user()->phone);
+
+        if (isset($upload['status']) && $upload['status'] == "success") {
+            $image = $upload['path'];
+        }
+
+        $update = User::where('id', $idUser)->update([
+            'photo' => $image
+        ]);
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function profileUpdatePassword(users_password_change $request){
+        $post = $request->json()->all();
+
+        if(empty($post['password_old']) || empty($post['password_new'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Password lama dan baru tidak boleh kosong']]);
+        }
+
+        $user = User::where('id', $request->user()->id)->first();
+        if(!password_verify($post['password_old'], $user['password'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Password lama Anda tidak sesuai']]);
+        }
+
+        $password = bcrypt($post['password_new']);
+        $update = User::where('id', $request->user()->id)->update([
+            'password' => $password
         ]);
 
         return response()->json(MyHelper::checkUpdate($update));

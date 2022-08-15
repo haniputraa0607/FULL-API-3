@@ -1892,7 +1892,8 @@ class ApiProductController extends Controller
         }
         $product['image_detail'] = $imagesDetail;
         $ratings = [];
-        $getRatings = UserRating::where('id_product', $product['id_product'])->get()->toArray();
+        $getRatings = UserRating::join('users', 'users.id', 'user_ratings.id_user')
+                    ->where('id_product', $product['id_product'])->orderBy('user_ratings.created_at', 'desc')->limit(5)->get()->toArray();
         foreach ($getRatings as $rating){
             $getPhotos = UserRatingPhoto::where('id_user_rating', $rating['id_user_rating'])->get()->toArray();
             $photos = [];
@@ -1901,6 +1902,8 @@ class ApiProductController extends Controller
             }
             $currentOption = explode(',', $rating['option_value']);
             $ratings[] = [
+                "user_name" => $rating['name'],
+                "user_photo" => (!empty($rating['photo']) ? config('url.storage_url_api').$rating['photo']: null),
                 "rating_value" => $rating['rating_value'],
                 "suggestion" => $rating['suggestion'],
                 "option_value" => $currentOption,
@@ -1915,6 +1918,46 @@ class ApiProductController extends Controller
             $product['can_buy_own_product'] = false;
         }
 
+        return MyHelper::checkGet($product);
+    }
+
+    public function detailReview(Request $request)
+    {
+        $post = $request->json()->all();
+        //get product
+        $product = Product::join('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
+            ->select('id_product', 'product_code', 'product_name', 'product_categories.product_category_name')
+            ->where('id_product', $post['id_product'])->first();
+
+        if (!$product) {
+            return MyHelper::checkGet([]);
+        } else {
+            $product = $product->toArray();
+        }
+
+
+        $getRatings = UserRating::join('users', 'users.id', 'user_ratings.id_user')
+            ->where('id_product', $product['id_product'])->orderBy('user_ratings.created_at', 'desc')->paginate($post['pagination_total_row']??10)->toArray();
+        foreach ($getRatings['data']??[] as $key=>$rating){
+            $getPhotos = UserRatingPhoto::where('id_user_rating', $rating['id_user_rating'])->get()->toArray();
+            $photos = [];
+            foreach ($getPhotos as $dt){
+                $photos[] = $dt['url_user_rating_photo'];
+            }
+            $currentOption = explode(',', $rating['option_value']);
+            $rating = [
+                "user_name" => $rating['name'],
+                "user_photo" => (!empty($rating['photo']) ? config('url.storage_url_api').$rating['photo']: null),
+                "rating_value" => $rating['rating_value'],
+                "suggestion" => $rating['suggestion'],
+                "option_value" => $currentOption,
+                "photos" => $photos
+            ];
+
+            $getRatings['data'][$key] = $rating;
+        }
+
+        $product['ratings'] = $getRatings;
         return MyHelper::checkGet($product);
     }
 
@@ -2006,9 +2049,10 @@ class ApiProductController extends Controller
 
     public function listProductMerchantBestSeller($query = []){
         $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
-                    'product_detail_stock_status as stock_status', 'need_recipe_status', 'outlets.id_outlet')
+                    'product_detail_stock_status as stock_status', 'need_recipe_status', 'outlets.id_outlet', 'product_categories.product_category_name')
                 ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
                 ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
+                ->join('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
                 ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
                 ->where('outlet_is_closed', 0)
                 ->where('product_global_price', '>', 0)
@@ -2054,9 +2098,10 @@ class ApiProductController extends Controller
 
     public function listProductMerchantNewest($query = []){
         $list = Product::select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
-            'product_detail_stock_status as stock_status', 'need_recipe_status', 'outlets.id_outlet')
+            'product_detail_stock_status as stock_status', 'need_recipe_status', 'outlets.id_outlet', 'product_categories.product_category_name')
             ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
             ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
+            ->join('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
             ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
             ->where('outlet_is_closed', 0)
             ->where('product_global_price', '>', 0)
@@ -2110,6 +2155,7 @@ class ApiProductController extends Controller
         $list = Product::leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
             ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
             ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
+            ->join('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
             ->where('outlet_is_closed', 0)
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
@@ -2139,7 +2185,7 @@ class ApiProductController extends Controller
             if($sorting == 'relate' && !empty($post['search_key'])){
                 $defaultSelect = 0;
                 $list = $list->select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
-                    'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'need_recipe_status',
+                    'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'need_recipe_status', 'product_categories.product_category_name',
                     DB::raw('MATCH (product_name) AGAINST ("'.$post['search_key'].'" IN BOOLEAN MODE) AS relate'))
                     ->orderBy('relate', 'desc');
             }elseif($sorting == 'best seller'){
@@ -2155,7 +2201,7 @@ class ApiProductController extends Controller
 
         if($defaultSelect == 1){
             $list = $list->select('products.id_product', 'products.product_name', 'products.product_code', 'products.product_description', 'product_variant_status', 'product_global_price as product_price',
-                'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'need_recipe_status');
+                'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'need_recipe_status', 'product_categories.product_category_name');
         }
 
         if(!empty($post['filter_category'])){
