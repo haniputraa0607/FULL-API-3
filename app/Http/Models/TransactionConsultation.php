@@ -52,7 +52,8 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
 		'completed_at',
         'recipe_redemption_limit',
         'recipe_redemption_counter',
-		'referral_code'
+		'referral_code',
+		'id_conversation'
 	];
 
 	public function scopeOnlySoon($query)

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
+use App\Lib\Infobip;
 use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionConsultation;
@@ -713,6 +714,7 @@ class ApiTransactionConsultationController extends Controller
             $result[$key]['id_doctor'] = $value['consultation']['id_doctor'];
             $result[$key]['doctor_name'] = $doctor['doctor_name'];
             $result[$key]['doctor_photo'] = $doctor['doctor_photo'];
+            $result[$key]['url_doctor_photo'] = $doctor['url_doctor_photo'];
             $result[$key]['schedule_date'] = $value['consultation']['schedule_date'];
             $result[$key]['diff_date'] = $diff_date;
         }
@@ -836,14 +838,69 @@ class ApiTransactionConsultationController extends Controller
 
         DB::beginTransaction();
         try {
-            $result = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])
+            //create agent if empty in doctor
+            if(!empty($doctor['id_agent'])){
+                $agentId = $doctor['id_agent'];
+            } else {
+                $outputAgent = $this->createAgent($doctor);
+                if($outputAgent['status'] == "fail"){
+                    return [
+                        'status'=>'fail',
+                        'messages' => $outputAgent['response']
+                    ];
+                }
+                $agentId = $outputAgent['response']['id'];
+                $doctor->update(['id_agent' => $agentId]);
+            }
+
+            //create queue if empty in doctor
+            if(!empty($doctor['id_queue'])){
+                $queueId = $doctor['id_queue'];
+            } else {
+                $outputQueue = $this->createQueue($doctor);
+                if($outputQueue['status'] == "fail"){
+                    return [
+                        'status'=>'fail',
+                        'messages' => $outputQueue['response']
+                    ];
+                }
+                $queueId = $outputQueue['response']['id'];
+                $doctor->update(['id_queue' => $queueId]);
+            }
+
+            //create conversation
+            if(!empty($transaction['consultation']['id_conversation'])){
+                $conversationId = $transaction['consultation']['id_conversation'];
+
+                //get conversation
+                $outputConversation = $this->getConversation($conversationId);
+            } else {
+                $outputConversation = $this->createConversation($doctor);
+                if($outputConversation['status'] == "fail"){
+                    return [
+                        'status'=>'fail',
+                        'messages' => $outputConversation['response']
+                    ];
+                }
+                $conversationId = $outputConversation['response']['id'];
+            }
+
+            //update transaction consultation
+            $consultation = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])
             ->update([
+                'id_conversation' => $conversationId,
                 'consultation_status' => "ongoing",
                 'consultation_start_at' => new DateTime
             ]);
-    
+
+            //update doctor statuses
             $doctor->update(['doctor_status' => "busy"]);
             $doctor->save();
+
+            $result = [
+                'transaction_consultation' => $transaction['consultation'],
+                'conversation' => $outputConversation
+            ];   
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
@@ -1623,5 +1680,137 @@ class ApiTransactionConsultationController extends Controller
                 ];
         }
         return ['status' => 'fail', 'messages' => ["Cancel $payment_type transaction is not supported yet"]];
+    }
+
+    public function createAgent($doctor)
+    {
+        //create Agent
+        $agent = [
+            "displayName" => $doctor['doctor_name'],
+            "status" => "ACTIVE",
+            "role" => "AGENT",
+            "enabled" => true 
+        ];
+
+        $url = "/ccaas/1/agents";
+
+        $outputAgent = Infobip::sendRequest('Agent', "POST", $url, $agent);
+
+        return $outputAgent;
+    }
+
+    public function createQueue($doctor)
+    {
+        //create Queue
+        $queue = [
+            "name" => "Queue".$doctor['doctor_name']
+        ];
+
+        $url = "/ccaas/1/queues";
+
+        $outputQueue = Infobip::sendRequest('Queue', "POST", $url, $queue);
+
+        return $outputQueue;
+    }
+
+    public function getConversation($conversationId)
+    {
+        //get ConversationId
+        // $conversationId = $request->id_conversation;
+
+        $url = "/ccaas/1/conversations/".$conversationId;
+
+        $subject = [
+            'action' => "Get Conversations $conversationId"
+        ];
+
+        $outputMessage = Infobip::getRequest('Conversation', "GET", $url);
+
+        return response()->json(MyHelper::checkGet($outputMessage));
+    }
+
+    public function createConversation($doctor)
+    {
+        //create Conversation
+        $conversation = [
+            "topic" => "Conversation".$doctor['id_doctor'],
+            "summarry" => null,
+            "status" => "OPEN",
+            "priority" => "HIGH",
+            "queueId" => $doctor['id_queue'],
+            "agentId" => $doctor['id_agent'] 
+        ];
+
+        $url = "/ccaas/1/conversations";
+
+        $subject = [
+            'id_doctor' => $doctor['id_doctor'],
+            'action' => 'Create Conversations'
+        ];
+
+        $outputConversation = Infobip::sendRequest('Conversation', "POST", $url, $conversation);
+
+        return $outputConversation;
+    }
+
+    public function getMessage(Request $request)
+    {
+        //create ConversationId
+        $conversationId = $request->id_conversation;
+
+        $url = "/ccaas/1/conversations/".$conversationId."/messages";
+
+        $subject = [
+            'action' => "Get Conversations Message $conversationId"
+        ];
+
+        $outputMessage = Infobip::getRequest('Conversation', "GET", $url);
+
+        return response()->json(MyHelper::checkGet($outputMessage));
+    }
+
+    public function createMessage(Request $request)
+    {
+        $post = $request->json()->all();
+
+        //cek id transaction
+        if(!isset($post['id_transaction'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Id transaction tidak boleh kosong']
+            ]);
+        }
+
+        //get Transaction
+        $transaction = Transaction::with('consultation')->where('id_transaction', $post['id_transaction'])->first();
+
+        if(empty($transaction)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaksi tidak ditemukan']
+            ]);
+        }
+
+        $transaction = $transaction->toArray();
+
+        //create Message
+        $message = [
+            "from" => $post['id_conversation'],
+            "to" => $post['id_conversation'],
+            "channel" => "LIVE_CHAT",
+            "contentType" => "TEXT",
+            "content" => $post['message']
+        ];
+
+        $url = "/ccaas/1/conversations/".$request->id_conversation."/messages";
+
+        $subject = [
+            'id_doctor' => $transaction['consultation']['id_doctor'],
+            'action' => 'Create Conversations'
+        ];
+
+        $outputMessages = Infobip::sendRequest('Conversation', "POST", $url, $message);
+
+        return response()->json(MyHelper::checkGet($outputMessages));
     }
 }
