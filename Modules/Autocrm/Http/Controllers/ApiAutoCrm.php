@@ -474,6 +474,8 @@ class ApiAutoCrm extends Controller
 								}
 							}
 
+                            $content 	= $this->TextReplace($crm['autocrm_sms_content'], $user['phone'], $variables, null,0, $recipient_type);
+
 							array_push($senddata['datapacket'],array(
 									'number' => trim($user['phone']),
 									'message' => urlencode(stripslashes(utf8_encode($content))),

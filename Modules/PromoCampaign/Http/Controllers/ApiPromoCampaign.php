@@ -2618,6 +2618,17 @@ class ApiPromoCampaign extends Controller
 	            ];
 	        }
 
+            $msgUseIn = [
+                'Consultation' => 'konsultasi',
+                'Product' => 'produk'
+            ];
+            if((empty($request->promo_use_in) && $code['promo_campaign']['promo_use_in'] == 'Consultation') || (!empty($request->promo_use_in) && $request->promo_use_in != $code['promo_campaign']['promo_use_in'])){
+                return [
+                    'status'=>'fail',
+                    'messages'=>['Promo hanya berlaku untuk transaksi '. $msgUseIn[$code['promo_campaign']['promo_use_in']]??'Produk']
+                ];
+            }
+
 	        if ($code['promo_campaign']['date_start'] > date('Y-m-d H:i:s')) {
 	        	$date_start = MyHelper::dateFormatInd($code['promo_campaign']['date_start'], true, false).' pukul '.date('H:i', strtotime($code['promo_campaign']['date_start']));
         		return [
