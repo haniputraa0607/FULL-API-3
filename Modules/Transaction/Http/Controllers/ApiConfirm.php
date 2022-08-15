@@ -172,7 +172,6 @@ class ApiConfirm extends Controller
                     'name'     => 'Discount',
                     'quantity' => 1,
                 ];
-                $countGrandTotal -= $check['transaction_discount'];
                 array_push($dataDetailProduct, $dataDis);
             }
 

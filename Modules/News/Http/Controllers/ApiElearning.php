@@ -63,6 +63,7 @@ class ApiElearning extends Controller
                 $video[] = [
                     'slug' => $value['news_slug'],
                     'title' => $value['news_title'],
+                    'image' => $value['url_news_image_dalam'],
                     'link_video' => $value['news_video'],
                     'short_description' => $value['news_content_short'],
                     'post_date' => MyHelper::dateFormatInd($value['news_publish_date'], true, false, false)
@@ -182,6 +183,7 @@ class ApiElearning extends Controller
             $res[] = [
                 'slug' => $value['news_slug'],
                 'title' => $value['news_title'],
+                'image' => $value['url_news_image_dalam'],
                 'link_video' => $value['news_video'],
                 'short_description' => $value['news_content_short']
             ];
@@ -200,6 +202,7 @@ class ApiElearning extends Controller
                 $res = [
                     'slug' => $detail['news_slug'],
                     'title' => $detail['news_title'],
+                    'image' => $detail['url_news_image_dalam'],
                     'link_video' => $detail['news_video'],
                     'short_description' => $detail['news_content_short']
                 ];

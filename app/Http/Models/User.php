@@ -71,6 +71,7 @@ class User extends Authenticatable
 		'email',
 		'password',
         'temporary_password',
+        'photo',
         'id_card_image',
 		'id_city',
         'id_subdistrict',
