@@ -1903,7 +1903,7 @@ class ApiProductController extends Controller
             $currentOption = explode(',', $rating['option_value']);
             $ratings[] = [
                 "user_name" => $rating['name'],
-                "user_photo" => (!empty($rating['photo']) ? config('url.storage_url_api').$rating['photo']: null),
+                "user_photo" => config('url.storage_url_api') . (!empty($rating['photo']) ? $rating['photo']: 'img/user_photo_default.png'),
                 "rating_value" => $rating['rating_value'],
                 "suggestion" => $rating['suggestion'],
                 "option_value" => $currentOption,
@@ -1947,7 +1947,7 @@ class ApiProductController extends Controller
             $currentOption = explode(',', $rating['option_value']);
             $rating = [
                 "user_name" => $rating['name'],
-                "user_photo" => (!empty($rating['photo']) ? config('url.storage_url_api').$rating['photo']: null),
+                "user_photo" => config('url.storage_url_api') . (!empty($rating['photo']) ? $rating['photo']: 'img/user_photo_default.png'),
                 "rating_value" => $rating['rating_value'],
                 "suggestion" => $rating['suggestion'],
                 "option_value" => $currentOption,
