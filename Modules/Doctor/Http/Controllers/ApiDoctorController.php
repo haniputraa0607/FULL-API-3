@@ -19,6 +19,7 @@ use Modules\UserRating\Entities\UserRating;
 use Validator;
 use Image;
 use DB;
+use Carbon\Carbon;
 
 class ApiDoctorController extends Controller
 {
@@ -300,33 +301,10 @@ class ApiDoctorController extends Controller
     public function show($id)
     {
         $doctor = Doctor::where('id_doctor', $id)->with('outlet')->with('specialists')->first();
+        unset($doctor['password']);
 
-        $doctor_schedule = DoctorSchedule::where('id_doctor', $doctor['id_doctor'])->with('schedule_time');
+        $schedule = $this->getScheduleDoctor($id);
 
-        $doctor_schedule = $doctor_schedule->get()->toArray();
-
-        //problems hereee
-        $schedule = array();
-        if(!empty($doctor_schedule)){
-            $i = 0;
-            while(count($schedule) < 4){
-                if($i > 0) {
-                    $date = date("Y-m-d", strtotime("+$i day"));
-                    $day = strtolower(date("l", strtotime($date)));
-                } else {
-                    $date = date("Y-m-d");
-                    $day = strtolower(date("l", strtotime($date)));
-                }
-                $i += 1;
-
-                foreach($doctor_schedule as $row) {
-                    if($row['day'] == $day) {
-                        $row['date'] = $date;
-                        $schedule[] = $row;
-                    }
-                }
-            }
-        }
         $doctor['schedules'] = $schedule;
 
         return response()->json(['status'  => 'success', 'result' => $doctor]);
@@ -621,5 +599,53 @@ class ApiDoctorController extends Controller
         }
 
         return response()->json(['status'  => 'success', 'result' => $recomendationDoctor]);
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     * @param int $id
+     * @return Response
+     */
+    public function getScheduleDoctor($id_doctor)
+    {
+        $doctor_schedule = DoctorSchedule::where('id_doctor', $id_doctor)->with('schedule_time');
+
+        $doctor_schedule = $doctor_schedule->get()->toArray();
+
+        //problems hereee
+        $schedule = array();
+        if(!empty($doctor_schedule)){
+            $i = 0;
+            while(count($schedule) < 4){
+                if($i > 0) {
+                    $date = date("d-m-Y", strtotime("+$i day"));
+                    $day = strtolower(date("l", strtotime($date)));
+
+                    $dateId = Carbon::parse($date)->locale('id');
+                    $dateId->settings(['formatFunction' => 'translatedFormat']);
+
+                    $dayId = $dateId->format('l');
+                } else {
+                    $date = date("d-m-Y");
+                    $day = strtolower(date("l", strtotime($date)));
+
+                    $dateId = Carbon::parse($date)->locale('id');
+                    $dateId->settings(['formatFunction' => 'translatedFormat']);
+
+                    $dayId = $dateId->format('l');
+                }
+                $i += 1;
+
+                foreach($doctor_schedule as $row) {
+                    if($row['day'] == $day) {
+                        $row['date'] = $date;
+                        $row['day'] = $dayId;
+                        $schedule[] = $row;
+                    }
+                }
+            }
+        }
+
+        return $schedule;
     }
 }

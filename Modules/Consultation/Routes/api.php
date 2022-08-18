@@ -32,6 +32,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix
         Route::get('/reminder/list', 'ApiTransactionConsultationController@getSoonConsultationList');
         Route::post('/reminder/detail', 'ApiTransactionConsultationController@getSoonConsultationDetail');
         Route::post('/history/list', 'ApiTransactionConsultationController@getHistoryConsultationList');
+        Route::post('/detail', 'ApiTransactionConsultationController@transactionDetail');
     });
 
     Route::group(['prefix' => '/detail'], function () {
