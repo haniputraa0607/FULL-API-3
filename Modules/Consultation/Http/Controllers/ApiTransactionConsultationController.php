@@ -14,9 +14,13 @@ use App\Http\Models\TransactionConsultationRecomendation;
 use App\Http\Models\User;
 use App\Http\Models\Setting;
 use App\Http\Models\Product;
+use App\Http\Models\LogBalance;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\Merchant\Entities\Merchant;
 use App\Http\Models\ProductPhoto;
+use App\Http\Models\TransactionPaymentBalance;
+use App\Http\Models\TransactionPaymentMidtran;
+use Modules\Xendit\Entities\TransactionPaymentXendit;
 
 use Modules\UserFeedback\Entities\UserFeedbackLog;
 use Modules\Doctor\Entities\DoctorSchedule;
@@ -25,6 +29,7 @@ use Modules\Doctor\Entities\Doctor;
 use Modules\Transaction\Entities\TransactionGroup;
 use DB;
 use DateTime;
+use Carbon\Carbon;
 
 
 class ApiTransactionConsultationController extends Controller
@@ -77,17 +82,22 @@ class ApiTransactionConsultationController extends Controller
         $doctor = $doctor->toArray();
 
         //check session availability
-        if($post['consultation_type'] != "now") {
-            $picked_date = $post['date'];
-            $picked_day = strtolower(date('l', strtotime($picked_date)));
-        } else {
-            $picked_date = $post['date'];
-            $picked_day = strtolower(date('l', strtotime($picked_date)));
-        }
+        $picked_date = date('Y-m-d', strtotime($post['date']));
+
+        $dateId = Carbon::parse($picked_date)->locale('id');
+        $dateId->settings(['formatFunction' => 'translatedFormat']);
+
+        $dayId = $dateId->format('l');
+
+        $dateEn = Carbon::parse($picked_date)->locale('en');
+        $dateEn->settings(['formatFunction' => 'translatedFormat']);
+
+        $picked_day = $dateEn->format('l');
+        $picked_time = date('H:i:s', strtotime($post['time']));
 
         //get doctor consultation
         $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
-                                ->where('schedule_start_time', $post['time'])->count();
+                                ->where('schedule_start_time', $picked_time)->count();
         
         $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
         $quota = $getSetting['value'];
@@ -102,7 +112,7 @@ class ApiTransactionConsultationController extends Controller
         //selected session
         $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
             ->whereHas('schedule_time', function($query) use ($post){
-                $query->where('start_time', '=', $post['time']);
+                $query->where('start_time', '=', $picked_time);
             })->first();
 
         if(empty($schedule_session)){
@@ -127,9 +137,10 @@ class ApiTransactionConsultationController extends Controller
             'doctor_session_price' => $doctor['doctor_session_price']
         ];
 
+        //selected schedule
         $result['selected_schedule'] = [
             'date' => $post['date'],
-            'day' => ucwords($schedule_session['day']),
+            'day' => $dayId,
             'time' => $post['time']
         ];
 
@@ -153,39 +164,16 @@ class ApiTransactionConsultationController extends Controller
 
         //TO DO if any promo
         $subTotal = $doctor['doctor_session_price'];
-        $diskon = 0;
-        $grandTotal = $subTotal - $diskon;
+        $grandTotal = $subTotal;
 
         $result['subtotal'] = $subTotal;
-        $result['diskon'] = $diskon;
         $result['grandtotal'] = $grandTotal;
         $result['used_point'] = 0;
 
         //check payment balance
-        $balance = app($this->balance)->balanceNow($user->id);
-        $result['points'] = (int) $balance;
+        $currentBalance = LogBalance::where('id_user', $user->id)->sum('balance');
+        $result['current_points'] = (int) $currentBalance;
 
-        if (!isset($post['payment_type'])) {
-            $post['payment_type'] = null;
-        }
-
-        if (isset($post['payment_type']) && $post['payment_type'] == 'Balance') {
-            if($balance >= ($result['grandtotal']-$result['subscription'])){
-                $result['used_point'] = $result['grandtotal'];
-
-	            if ($result['subscription'] >= $result['used_point']) {
-	            	$result['used_point'] = 0;
-	            }else{
-	            	$result['used_point'] = $result['used_point'] - $result['subscription'];
-	            }
-            }else{
-                $result['used_point'] = $balance;
-            }
-
-            $result['points'] -= $result['used_point'];
-        }
-
-        $result['total_payment'] = $result['grandtotal'] - $result['used_point'];
         $result['payment_detail'] = [];
                 
         //subtotal
@@ -200,6 +188,33 @@ class ApiTransactionConsultationController extends Controller
         //get available payment
         $available_payment = app($this->payment)->availablePayment(new Request())['result']??null;
         $result['available_payment'] = $available_payment;
+
+        $grandTotalNew = $result['grandtotal'];
+        if(isset($post['point_use']) && $post['point_use']){
+            if($currentBalance >= $grandTotalNew){
+                $usePoint = $grandTotalNew;
+                $grandTotalNew = 0;
+            }else{
+                $usePoint = $currentBalance;
+                $grandTotalNew = $grandTotalNew - $currentBalance;
+            }
+
+            $currentBalance -= $usePoint;
+
+            if($usePoint > 0){
+                $result['summary_order'][] = [
+                    'name' => 'Point yang digunakan',
+                    'value' => '- '.number_format($usePoint,0,",",".")
+                ];
+            }else{
+                $result['available_checkout'] = false;
+                $result['error_messages'] = 'Tidak bisa menggunakan point, Anda tidak memiliki cukup point.';
+            }
+        }
+
+        $result['grandtotal'] = $grandTotalNew;
+        $result['grandtotal_text'] = 'Rp '.number_format($grandTotalNew,0,",",".");
+        $result['current_points'] = $currentBalance;
 
         return MyHelper::checkGet($result);
     }
@@ -223,7 +238,7 @@ class ApiTransactionConsultationController extends Controller
                 ]);
             } 
         } else {
-            $post['date'] = date('Y-m-d', strtotime('2022-04-27'));
+            $post['date'] = date('Y-m-d');
             $post['time'] = date("H:i:s");
         }
 
@@ -251,21 +266,24 @@ class ApiTransactionConsultationController extends Controller
         }
 
         //check session availability
-        if($post['consultation_type'] != "now") {
-            $picked_date = $post['date'];
-            $picked_day = strtolower(date('l', strtotime($picked_date)));
-        } else {
-            $picked_date = $post['date'];
-            $picked_day = strtolower(date('l', strtotime($picked_date)));
-        }
+        $picked_date = date('Y-m-d', strtotime($post['date']));
+
+        $dateId = Carbon::parse($picked_date)->locale('id');
+        $dateId->settings(['formatFunction' => 'translatedFormat']);
+
+        $dayId = $dateId->format('l');
+
+        $dateEn = Carbon::parse($picked_date)->locale('en');
+        $dateEn->settings(['formatFunction' => 'translatedFormat']);
+
+        $picked_day = $dateEn->format('l');
+        $picked_time = date('H:i:s', strtotime($post['time']));
 
         //get doctor consultation
         $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
-                                ->where('schedule_start_time', $post['time'])->count();
+                                ->where('schedule_start_time', $picked_time)->count();
         $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
         $quota = $getSetting['value'];
-
-        //dd($doctor_constultation);
 
         if($quota <= $doctor_constultation && $quota != null){
             return response()->json([
@@ -340,8 +358,8 @@ class ApiTransactionConsultationController extends Controller
         }
 
         //delete
-        $post['discount'] = -$post['discount'];
-        $post['discount_delivery'] = -$post['discount_delivery'];
+        // $post['discount'] = -$post['discount'];
+        // $post['discount_delivery'] = -$post['discount_delivery'];
 
         if (isset($post['payment_type']) && $post['payment_type'] == 'Balance') {
             $post['cashback'] = 0;
@@ -402,10 +420,8 @@ class ApiTransactionConsultationController extends Controller
         $paymentType = NULL;
         $transactionStatus = 'Unpaid';
         $paymentStatus = 'Pending';
-        if(isset($post['point_use']) && $post['point_use']){
+        if(isset($post['point_use']) && $post['point_use']){ //
             $paymentType = 'Balance';
-            $paymentStatus = 'Completed';
-            $transactionStatus = 'Completed';
         }
 
         DB::beginTransaction();
@@ -676,9 +692,9 @@ class ApiTransactionConsultationController extends Controller
             $id = $post['id_user'];
         }
 
-        $transaction = Transaction::with('consultation')->where('id_user', $id)->whereHas('consultation', function($query){
+        $transaction = Transaction::with('consultation')->where('transaction_payment_status', "Completed")->where('id_user', $id)->whereHas('consultation', function($query){
             $query->onlySoon();
-        })->get()->toArray();
+        })->get();
 
         if(empty($transaction)){
             return response()->json([
@@ -686,6 +702,8 @@ class ApiTransactionConsultationController extends Controller
                 'messages'  => ['Tidak ada transaksi yang akan datang']
             ]);
         }
+
+        $transaction = $transaction->toArray();
 
         $now = new DateTime();
 
@@ -703,7 +721,12 @@ class ApiTransactionConsultationController extends Controller
 
             //logic schedule diff date
             if($schedule_date_start_time > $now && $schedule_date_end_time > $now) {
-                $diff_date = $now->diff($schedule_date_start_time)->format("%d days, %h hours and %i minutes");
+                $diff = $now->diff($schedule_date_start_time);
+                if($diff->d == 0) {
+                    $diff_date = $now->diff($schedule_date_start_time)->format("%h jam");
+                } else {
+                    $diff_date = $now->diff($schedule_date_start_time)->format("%d hr, %h jam");
+                }
             } elseif($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
                 $diff_date = "now";
             } else {
@@ -715,7 +738,7 @@ class ApiTransactionConsultationController extends Controller
             $result[$key]['doctor_name'] = $doctor['doctor_name'];
             $result[$key]['doctor_photo'] = $doctor['doctor_photo'];
             $result[$key]['url_doctor_photo'] = $doctor['url_doctor_photo'];
-            $result[$key]['schedule_date'] = $value['consultation']['schedule_date'];
+            $result[$key]['schedule_date'] = $value['consultation']['schedule_date_formatted'];
             $result[$key]['diff_date'] = $diff_date;
         }
 
@@ -748,7 +771,7 @@ class ApiTransactionConsultationController extends Controller
         }
 
         //get Transaction
-        $transaction = Transaction::with('consultation')->where('id_transaction', $post['id_transaction'])->first()->toArray();
+        $transaction = Transaction::with('consultation')->where('id_transaction', $post['id_transaction'])->first();
 
         if(empty($transaction)){
             return response()->json([
@@ -756,6 +779,8 @@ class ApiTransactionConsultationController extends Controller
                 'messages'  => ['Transaksi tidak ditemukan']
             ]);
         }
+
+        $transaction = $transaction->toArray();
 
         //get Doctor
         $detailDoctor = app($this->doctor)->show($transaction['consultation']['id_doctor']);
@@ -768,22 +793,35 @@ class ApiTransactionConsultationController extends Controller
         }
 
         //get day
-        $day = date('l', strtotime($transaction['consultation']['schedule_date']));
+        $day = $transaction['consultation']['schedule_day_formatted'];
 
-        //get diff date
+        //get diff datetime
         $now = new DateTime();
-        $schedule_date_time = $transaction['consultation']['schedule_date'] .' '. $transaction['consultation']['schedule_start_time'];
-        $schedule_date_time =new DateTime($schedule_date_time);
-        $diff_date = "missed";
+        $schedule_date_start_time = $transaction['consultation']['schedule_date'] .' '. $transaction['consultation']['schedule_start_time'];
+        $schedule_date_start_time =new DateTime($schedule_date_start_time);
+        $schedule_date_end_time = $transaction['consultation']['schedule_date'] .' '. $transaction['consultation']['schedule_end_time'];
+        $schedule_date_end_time =new DateTime($schedule_date_end_time);
+        $diff_date = null;
 
-        if($schedule_date_time > $now) {
-            $diff_date = $now->diff($schedule_date_time)->format("%d days, %h hours and %i minuts");
+        //logic schedule diff date
+        if($schedule_date_start_time > $now && $schedule_date_end_time > $now) {
+            $diff = $now->diff($schedule_date_start_time);
+            if($diff->d == 0) {
+                $diff_date = $now->diff($schedule_date_start_time)->format("%h jam");
+            } else {
+                $diff_date = $now->diff($schedule_date_start_time)->format("%d hr, %h jam");
+            }
+        } elseif($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
+            $diff_date = "now";
+        } else {
+            $diff_date = "missed";
         }
 
         $result = [
+            'id_transaction' => $transaction['id_transaction'],
             'doctor' => $detailDoctor->getData()->result,
-            'schedule_date' => $transaction['consultation']['schedule_date'],
-            'schedule_start_time' => $transaction['consultation']['schedule_start_time'],
+            'schedule_date' => $transaction['consultation']['schedule_date_formatted'],
+            'schedule_start_time' => $transaction['consultation']['schedule_start_time_formatted'],
             'schedule_day' => $day,
             'diff_date' => $diff_date
         ];
@@ -1812,5 +1850,147 @@ class ApiTransactionConsultationController extends Controller
         $outputMessages = Infobip::sendRequest('Conversation', "POST", $url, $message);
 
         return response()->json(MyHelper::checkGet($outputMessages));
+    }
+
+    /**
+     * Get info from given cart data
+     * @param  detailHistoryTransaction $request [description]
+     * @return View                    [description]
+     */
+    public function transactionDetail(Request $request) {
+        $post = $request->json()->all();
+
+        //cek id transaction
+        if(!isset($post['id_transaction'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Id transaction tidak boleh kosong']
+            ]);
+        }
+
+        //get Transaction
+        $transaction = Transaction::with('consultation')->with('outlet')->where('id_transaction', $post['id_transaction'])->first();
+
+        if(empty($transaction)){
+            return response()->json(MyHelper::checkGet($transaction));
+        }
+
+        $transaction = $transaction->toArray();
+
+        //if cek jadwal missed
+        $checkMissed = $this->checkConsultationMissed($transaction);
+
+        //get Consultation
+        $consultation = [
+            'schedule_date' => $transaction['consultation']['schedule_date'],
+            'schedule_start_time' => $transaction['consultation']['schedule_start_time_formatted'],
+            'schedule_end_time' => $transaction['consultation']['schedule_end_time_formatted'],
+            'consultation_status' => $transaction['consultation']['consultation_status']
+        ];
+
+        //get Doctor
+        $doctor = Doctor::with('outlet')->with('specialists')->where('id_doctor', $transaction['consultation']['id_doctor'])->first();
+        
+        if(empty($doctor)){
+            return response()->json(MyHelper::checkGet($doctor));
+        }
+
+        $doctor = $doctor->toArray();
+        unset($doctor['password']);
+
+        //set detail payment
+        $paymentDetail = [
+            [
+                'text' => 'Subtotal',
+                'value' => 'Rp '. number_format((int)$transaction['transaction_subtotal'],0,",",".")
+            ]
+        ];
+
+        if(!empty($transaction['transaction_discount'])){
+            $codePromo = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $transaction['id_promo_campaign_promo_code'])->first()['promo_code']??'';
+            $paymentDetail[] = [
+                'text' => 'Discount'.(!empty($transaction['transaction_discount_delivery'])? ' Biaya Kirim':'').(!empty($codePromo) ?' ('.$codePromo.')' : ''),
+                'value' => '-Rp '. number_format((int)abs($transaction['transaction_discount']),0,",",".")
+            ];
+        }
+
+        $grandTotal = $transaction['transaction_grandtotal'];
+        $trxPaymentBalance = TransactionPaymentBalance::where('id_transaction', $transaction['id_transaction'])->first()['balance_nominal']??0;
+
+        if(!empty($trxPaymentBalance)){
+            $paymentDetail[] = [
+                'text' => 'Point yang digunakan',
+                'value' => '-'.number_format($trxPaymentBalance,0,",",".")
+            ];
+            $grandTotal = $grandTotal - $trxPaymentBalance;
+        }
+
+        $trxPaymentMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $transaction['id_transaction_group'])->first();
+        $trxPaymentXendit = TransactionPaymentXendit::where('id_transaction_group', $transaction['id_transaction_group'])->first();
+
+        $paymentURL = null;
+        $paymentToken = null;
+        $paymentType = null;
+        if(!empty($trxPaymentMidtrans)){
+            $paymentMethod = $trxPaymentMidtrans['payment_type'].(!empty($trxPaymentMidtrans['bank']) ? ' ('.$trxPaymentMidtrans['bank'].')':'');
+            $paymentMethod = str_replace(" ","_",$paymentMethod);
+            $paymentLogo = config('payment_method.midtrans_'.strtolower($paymentMethod).'.logo');
+            $paymentType = 'Midtrans';
+            if($transaction['transaction_status'] == 'Unpaid'){
+                $paymentURL = $trxPaymentMidtrans['redirect_url'];
+                $paymentToken = $trxPaymentMidtrans['token'];
+            }
+        }elseif(!empty($trxPaymentXendit)){
+            $paymentMethod = $trxPaymentXendit['type'];
+            $paymentMethod = str_replace(" ","_",$paymentMethod);
+            $paymentLogo = config('payment_method.xendit_'.strtolower($paymentMethod).'.logo');
+            $paymentType = 'Xendit';
+            if($transaction['transaction_status'] == 'Unpaid'){
+                $paymentURL = $trxPaymentXendit['checkout_url'];
+            }
+        }
+
+        $result = [
+            'id_transaction' => $transaction['id_transaction'],
+            'receipt_number_group' => TransactionGroup::where('id_transaction_group', $transaction['id_transaction_group'])->first()['transaction_receipt_number']??'',
+            'transaction_receipt_number' => $transaction['transaction_receipt_number'],
+            'transaction_status' => $transaction['transaction_status']??'',
+            'transaction_date' => MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_date'])), true),
+            'transaction_consultation' => $consultation,
+            'show_rate_popup' => $transaction['show_rate_popup'],
+            'transaction_grandtotal' => 'Rp '. number_format($grandTotal,0,",","."),
+            'outlet_name' => $transaction['outlet']['outlet_name'],
+            'outlet_logo' => (empty($transaction['outlet_image_logo_portrait']) ? config('url.storage_url_api').'img/default.jpg': config('url.storage_url_api').$transaction['outlet_image_logo_portrait']),
+            'user' => User::where('id', $transaction['id_user'])->select('name', 'email', 'phone')->first(),
+            'doctor' => $doctor,
+            'payment' => $paymentMethod??'',
+            'payment_logo' => $paymentLogo??'',
+            'payment_type' => $paymentType,
+            'payment_token' => $paymentToken,
+            'payment_url' => $paymentURL,
+            'payment_detail' => $paymentDetail,
+            'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : ''),
+            'transaction_reject_reason' => $transaction['transaction_reject_reason'],
+            'transaction_reject_at' => (!empty($transaction['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_reject_at'])), true) : null)
+        ];
+
+        return response()->json(MyHelper::checkGet($result));
+    }
+
+    /**
+     * Get info from given cart data
+     * @param  detailHistoryTransaction $request [description]
+     * @return View                    [description]
+     */
+    public function checkConsultationMissed($transaction) {
+        
+        //getCurrentTime
+        $currentTime = date('Y-m-d');
+
+        if($transaction['consultation']['schedule_end_time'] < $currentTime) {
+            $updateConsultationStatus = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->update(['consultation_status' => "missed"]);
+        }
+        
+        return $transaction;
     }
 }

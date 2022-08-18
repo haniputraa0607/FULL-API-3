@@ -8,6 +8,7 @@
 namespace App\Http\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 /**
  * Class TransactionProduct
@@ -56,6 +57,13 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
 		'id_conversation'
 	];
 
+	protected $appends = [
+        'schedule_date_formatted',
+		'schedule_start_time_formatted',
+		'schedule_end_time_formatted',
+		'schedule_day_formatted'
+    ];
+
 	public function scopeOnlySoon($query)
     {
         return $query->where('consultation_status', "soon");
@@ -86,4 +94,28 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
 	// 	return $this->update(['consultation_status' => 'canceled']);
 	// }
 
+	public function getScheduleDateFormattedAttribute()
+    {
+        return date('d-m-Y', strtotime($this->attributes['schedule_date']));
+    }
+
+    public function getScheduleStartTimeFormattedAttribute()
+    {
+        return date('H:i', strtotime($this->attributes['schedule_start_time']));
+    }
+
+	public function getScheduleEndTimeFormattedAttribute()
+    {
+        return date('H:i', strtotime($this->attributes['schedule_end_time']));
+    }
+ 
+	public function getScheduleDayFormattedAttribute()
+    {
+		$dateId = Carbon::parse($this->attributes['schedule_date'])->locale('id');
+		$dateId->settings(['formatFunction' => 'translatedFormat']);
+
+		$dayId = $dateId->format('l');
+
+        return $dayId;
+    }
 }

@@ -16,4 +16,19 @@ class TimeSchedule extends Model
         'end_time',
         'status_session'
     ];
+
+    protected $appends = [
+        'start_time',
+        'end_time'
+    ];
+
+    public function getStartTimeAttribute()
+    {
+        return date('H:i', strtotime($this->attributes['start_time']));
+    }
+
+    public function getEndTimeAttribute()
+    {
+        return date('H:i', strtotime($this->attributes['end_time']));
+    }
 }
