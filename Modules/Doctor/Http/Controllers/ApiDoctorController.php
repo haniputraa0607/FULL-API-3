@@ -369,7 +369,7 @@ class ApiDoctorController extends Controller
     {
         $user = $request->user();
 
-        $doctor = Doctor::where('id_doctor', $user['id_doctor'])->with('getOutlet')->with('specialists')->orderBy('created_at', 'DESC');
+        $doctor = Doctor::where('id_doctor', $user['id_doctor'])->with('outlet')->with('specialists')->orderBy('created_at', 'DESC');
 
         if(empty($doctor)){
             return response()->json([
@@ -497,7 +497,7 @@ class ApiDoctorController extends Controller
     {
         $post = $request->json()->all();
 
-        $doctor = Doctor::with('getOutlet')->orderBy('created_at', 'DESC');
+        $doctor = Doctor::with('outlet')->orderBy('created_at', 'DESC');
 
         if(!empty($post['id_outlet'])){
             $doctor = $doctor->where('id_outlet', $post['id_outlet']);

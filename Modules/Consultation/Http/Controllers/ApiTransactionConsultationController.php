@@ -21,6 +21,7 @@ use App\Http\Models\ProductPhoto;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentMidtran;
 use Modules\Xendit\Entities\TransactionPaymentXendit;
+use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 
 use Modules\UserFeedback\Entities\UserFeedbackLog;
 use Modules\Doctor\Entities\DoctorSchedule;
@@ -134,7 +135,8 @@ class ApiTransactionConsultationController extends Controller
             'doctor_phone' => $doctor['doctor_phone'],
             'outlet_name' => $doctor['outlet']['outlet_name'],
             'doctor_specialist_name' => $doctor['specialists'][0]['doctor_specialist_name'],
-            'doctor_session_price' => $doctor['doctor_session_price']
+            'doctor_session_price' => $doctor['doctor_session_price'],
+            'url_doctor_photo' => $doctor['url_doctor_photo'],
         ];
 
         //selected schedule
@@ -180,7 +182,7 @@ class ApiTransactionConsultationController extends Controller
         $result['payment_detail'][] = [
             'name'          => 'Subtotal Sesi Konsultasi Dr. '.$doctor['doctor_name'].'',
             "is_discount"   => 0,
-            'amount'        => '-Rp '.number_format($result['subtotal'],0,",",".")
+            'amount'        => 'Rp '.number_format($result['subtotal'],0,",",".")
         ];
         $result['id_outlet'] = $doctor['id_outlet'];
         $result = app($this->promo_trx)->applyPromoCheckoutConsultation($result);
@@ -236,7 +238,7 @@ class ApiTransactionConsultationController extends Controller
                     'status'    => 'fail',
                     'messages'  => ['Schedule can not be empty']
                 ]);
-            } 
+            }
         } else {
             $post['selected_schedule']['date'] = date('Y-m-d');
             $post['selected_schedule']['time'] = date("H:i:s");
@@ -573,7 +575,7 @@ class ApiTransactionConsultationController extends Controller
             'id_doctor'                    => $doctor['id_doctor'],
             'consultation_type'            => $consultation_type,
             'id_user'                      => $insertTransaction['id_user'],
-            'schedule_date'                => $post['selected_schedule']['date'],
+            'schedule_date'                => $picked_date,
             'schedule_start_time'          => $picked_schedule['start_time'],
             'schedule_end_time'            => $picked_schedule['end_time'],
             'referral_code'                => $post['referral_code']??null,
@@ -692,7 +694,7 @@ class ApiTransactionConsultationController extends Controller
             $id = $post['id_user'];
         }
 
-        $transaction = Transaction::with('consultation')->where('transaction_payment_status', "Completed")->where('id_user', $id)->whereHas('consultation', function($query){
+        $transaction = Transaction::with('consultation')->where('transaction_payment_status', "Completed")->whereHas('consultation', function($query){
             $query->onlySoon();
         })->get();
 
@@ -1121,7 +1123,7 @@ class ApiTransactionConsultationController extends Controller
             $transaction = $transaction->whereHas('consultation');
         }
 
-        $transaction = $transaction->get()->toArray();
+        $transaction = $transaction->get();
 
         if(empty($transaction)){
             return response()->json([
@@ -1130,17 +1132,19 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
+        $transaction = $transaction->toArray();
+
         $result = array();
         foreach($transaction as $key => $value) {
-            $doctor = Doctor::with('outlet')->with('specialists')->where('id_doctor', $value['consultation']['id_doctor'])->first()->toArray();
+            $doctor = Doctor::with('outlet')->with('specialists')->where('id_doctor', $value['consultation']['id_doctor'])->first();
 
-            $result[$key]['id_transaction'] = $value['id_transaction'];
-            $result[$key]['doctor_name'] = $doctor['doctor_name'];
-            $result[$key]['doctor_photo'] = $doctor['url_doctor_photo'];
-            $result[$key]['outlet'] = $doctor['outlet'];
-            $result[$key]['specialists'] = $doctor['specialists'];
-            $result[$key]['schedule_date'] = $value['consultation']['schedule_date_human_formatted'];
-            $result[$key]['consultation_status'] = $value['consultation']['consultation_status'];
+            $result[$key]['id_transaction'] = $value['id_transaction'] ?? null;
+            $result[$key]['doctor_name'] = $doctor['doctor_name'] ?? null;
+            $result[$key]['doctor_photo'] = $doctor['url_doctor_photo'] ?? null;
+            $result[$key]['outlet'] = $doctor['outlet'] ?? null;
+            $result[$key]['specialists'] = $doctor['specialists'] ?? null;
+            $result[$key]['schedule_date'] = $value['consultation']['schedule_date_formatted'] ?? null;
+            $result[$key]['consultation_status'] = $value['consultation']['consultation_status'] ?? null;
         }
 
         return response()->json([
@@ -1321,11 +1325,16 @@ class ApiTransactionConsultationController extends Controller
         $items = [];
         if(!empty($recomendations)) {
             foreach($recomendations as $key => $recomendation){
+                $items[$key]['id_product'] = $recomendation->product->id_product ?? null;
                 $items[$key]['product_name'] = $recomendation->product->product_name ?? null;
-                $items[$key]['product_price'] = $recomendation->product->price->product_price ?? null;
-                $items[$key]['product_photo'] = $recomendation->product->product_photos ?? null;
-                $items[$key]['product_rating'] = null;
-                $items[$key]['qty'] = $recomendation->qty ?? null;
+                $items[$key]['product_price'] = $recomendation->product->product_price ?? null;
+                $items[$key]['product_photo'] = $recomendation->product->product_photos[0]['url_product_photo'] ?? null;
+                $items[$key]['product_rating'] = $recomendation->product->total_rating ?? null;
+                $items[$key]['qty'] = $recomendation->qty_product ?? null;
+                $items[$key]['usage_rules'] = $recomendation->usage_rules ?? null;
+                $items[$key]['usage_rules_time'] = $recomendation->usage_rules_time ?? null;
+                $items[$key]['usage_rules_additional_time'] = $recomendation->usage_rules_additional ?? null;
+                $items[$key]['treatment_description'] = $recomendation->treatment_description ?? null;
             }
         }
 
@@ -1347,6 +1356,8 @@ class ApiTransactionConsultationController extends Controller
             $transactionConsultation = TransactionConsultation::where('id_user', $user->id)->where('id_transaction', $post['id_transaction'])->first();
         }
 
+        $transaction = Transaction::with('outlet')->where('id_transaction', $transactionConsultation['id_transaction'])->first();
+
         if(empty($transactionConsultation)){
             return response()->json([
                 'status'    => 'fail',
@@ -1360,17 +1371,23 @@ class ApiTransactionConsultationController extends Controller
         $items = [];
         if(!empty($recomendations)) {
             foreach($recomendations as $key => $recomendation){
+                $items[$key]['id_product'] = $recomendation->product->id_product ?? null;
                 $items[$key]['product_name'] = $recomendation->product->product_name ?? null;
-                $items[$key]['product_price'] = $recomendation->product->price->product_price ?? null;
-                $items[$key]['product_photo'] = $recomendation->product->product_photos ?? null;
-                $items[$key]['product_rating'] = null;
-                $items[$key]['qty'] = $recomendation->qty ?? null;
+                $items[$key]['product_price'] = $recomendation->product->product_price ?? null;
+                $items[$key]['product_photo'] = $recomendation->product->product_photos[0]['url_product_photo'] ?? null;
+                $items[$key]['product_rating'] = $recomendation->product->total_rating ?? null;
+                $items[$key]['qty'] = $recomendation->qty_product ?? null;
+                $items[$key]['usage_rules'] = $recomendation->usage_rules ?? null;
+                $items[$key]['usage_rules_time'] = $recomendation->usage_rules_time ?? null;
+                $items[$key]['usage_rules_additional_time'] = $recomendation->usage_rules_additional ?? null;
+                $items[$key]['treatment_description'] = $recomendation->treatment_description ?? null;
             }
         }
 
         $result = [
-            'remaining_recipe_redemption' =>  ($transactionConsultation->recipe_redemption_limit - $transactionConsultation->recipe_redemption_counter), 
-            'items' => $items
+            'outlet' => $transaction['outlet'],
+            'items' => $items,
+            'remaining_recipe_redemption' =>  ($transactionConsultation->recipe_redemption_limit - $transactionConsultation->recipe_redemption_counter)
         ];
 
         return MyHelper::checkGet($result);
@@ -1506,7 +1523,7 @@ class ApiTransactionConsultationController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
         }
         
-        $recomendationProduct = TransactionConsultationRecomendation::with('product')->with('getOutlet')->where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "product")->get();
+        $recomendationProduct = TransactionConsultationRecomendation::with('product')->with('outlet')->where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "product")->get();
 
         foreach ($recomendationProduct as $key => $recP) {
             $variant = ProductVariantGroup::where('id_product_variant_group', $recP->id_product_variant_group)->first();
@@ -1514,7 +1531,7 @@ class ApiTransactionConsultationController extends Controller
             $recomendationProduct[$key]['variant'] = $variant;
         }
 
-        $recomendationDrug = TransactionConsultationRecomendation::with('product')->with('getOutlet')->where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "drug")->get();
+        $recomendationDrug = TransactionConsultationRecomendation::with('product')->with('outlet')->where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "drug")->get();
 
         foreach ($recomendationDrug as $key => $recD) {
             $variant = ProductVariantGroup::where('id_product_variant_group', $recP->id_product_variant_group)->first();
