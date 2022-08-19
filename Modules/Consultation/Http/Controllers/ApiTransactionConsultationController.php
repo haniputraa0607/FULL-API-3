@@ -1305,7 +1305,7 @@ class ApiTransactionConsultationController extends Controller
         if(isset($user->id_doctor)){
             $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first();    
         } else {
-            $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id)->where('id_transaction', $post['id_transaction'])->first();
+            $transactionConsultation = TransactionConsultation::where('id_user', $user->id)->where('id_transaction', $post['id_transaction'])->first();
         }
 
         if(empty($transactionConsultation)){
@@ -1344,7 +1344,7 @@ class ApiTransactionConsultationController extends Controller
         if(isset($user->id_doctor)){
             $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first();    
         } else {
-            $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id)->where('id_transaction', $post['id_transaction'])->first();
+            $transactionConsultation = TransactionConsultation::where('id_user', $user->id)->where('id_transaction', $post['id_transaction'])->first();
         }
 
         if(empty($transactionConsultation)){
