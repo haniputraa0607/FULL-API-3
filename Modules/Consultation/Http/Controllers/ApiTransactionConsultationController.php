@@ -168,7 +168,7 @@ class ApiTransactionConsultationController extends Controller
 
         $result['subtotal'] = $subTotal;
         $result['grandtotal'] = $grandTotal;
-        $result['used_point'] = 0;
+        $result['point_use'] = $post['point_use']??false;
 
         //check payment balance
         $currentBalance = LogBalance::where('id_user', $user->id)->sum('balance');
@@ -231,21 +231,21 @@ class ApiTransactionConsultationController extends Controller
 
         //cek input date and time
         if($post['consultation_type'] != 'now') {
-            if(empty($post['date']) && empty($post['time'])){
+            if(empty($post['selected_schedule']['date']) && empty($post['selected_schedule']['time'])){
                 return response()->json([
                     'status'    => 'fail',
                     'messages'  => ['Schedule can not be empty']
                 ]);
             } 
         } else {
-            $post['date'] = date('Y-m-d');
-            $post['time'] = date("H:i:s");
+            $post['selected_schedule']['date'] = date('Y-m-d');
+            $post['selected_schedule']['time'] = date("H:i:s");
         }
 
         //cek doctor exists
-        $id_doctor = $post['id_doctor'];
+        $id_doctor = $post['doctor']['id_doctor'];
         $doctor = Doctor::with('outlet')->with('specialists')
-        ->where('id_doctor', $post['id_doctor'])->onlyActive()
+        ->where('id_doctor', $post['doctor']['id_doctor'])->onlyActive()
         ->first();
 
         if(empty($doctor)){
@@ -266,7 +266,7 @@ class ApiTransactionConsultationController extends Controller
         }
 
         //check session availability
-        $picked_date = date('Y-m-d', strtotime($post['date']));
+        $picked_date = date('Y-m-d', strtotime($post['selected_schedule']['date']));
 
         $dateId = Carbon::parse($picked_date)->locale('id');
         $dateId->settings(['formatFunction' => 'translatedFormat']);
@@ -277,7 +277,7 @@ class ApiTransactionConsultationController extends Controller
         $dateEn->settings(['formatFunction' => 'translatedFormat']);
 
         $picked_day = $dateEn->format('l');
-        $picked_time = date('H:i:s', strtotime($post['time']));
+        $picked_time = date('H:i:s', strtotime($post['selected_schedule']['time']));
 
         //get doctor consultation
         $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
@@ -490,10 +490,10 @@ class ApiTransactionConsultationController extends Controller
             'transaction_gross'  		  => $post['subtotal_final'],
             'transaction_shipment'        => $post['shipping'],
             'transaction_service'         => $post['service'],
-            'transaction_discount'        => $post['total_discount'],
+            'transaction_discount'        => $post['total_discount']??0,
             'transaction_discount_delivery' => 0,
             'transaction_discount_item' 	=> 0,
-            'transaction_discount_bill' 	=> $post['total_discount'],
+            'transaction_discount_bill' 	=> $post['total_discount']??0,
             'transaction_tax'             => $post['tax'],
             'transaction_grandtotal'      => $post['grandtotal'],
             'transaction_point_earned'    => $post['point']??0,
@@ -551,11 +551,11 @@ class ApiTransactionConsultationController extends Controller
         if($post['consultation_type'] != 'now') {
             $picked_schedule = DoctorSchedule::where('id_doctor', $doctor['id_doctor'])->leftJoin('time_schedules', function($query) {
                 $query->on('time_schedules.id_doctor_schedule', '=' , 'doctor_schedules.id_doctor_schedule');
-            })->where('start_time', '=', $post['time'])->first();
+            })->where('start_time', '=', $post['selected_schedule']['time'])->first();
         } else {
             $picked_schedule = DoctorSchedule::where('id_doctor', $doctor['id_doctor'])->leftJoin('time_schedules', function($query) {
                 $query->on('time_schedules.id_doctor_schedule', '=' , 'doctor_schedules.id_doctor_schedule');
-            })->whereTime('start_time', '<', $post['time'])->whereTime('end_time', '>', $post['time'])->first();
+            })->whereTime('start_time', '<', $post['selected_schedule']['time'])->whereTime('end_time', '>', $post['selected_schedule']['time'])->first();
         }
 
         if (empty($picked_schedule)) {
@@ -573,7 +573,7 @@ class ApiTransactionConsultationController extends Controller
             'id_doctor'                    => $doctor['id_doctor'],
             'consultation_type'            => $consultation_type,
             'id_user'                      => $insertTransaction['id_user'],
-            'schedule_date'                => $post['date'],
+            'schedule_date'                => $post['selected_schedule']['date'],
             'schedule_start_time'          => $picked_schedule['start_time'],
             'schedule_end_time'            => $picked_schedule['end_time'],
             'referral_code'                => $post['referral_code']??null,
@@ -896,7 +896,11 @@ class ApiTransactionConsultationController extends Controller
         //     $getStartTime->minute($getTime->i);
         //     $getStartTime->second($getTime->s);
         // } else {
-        //     $getStartTime =  date('Y-m-d H:i:s', strtotime($transaction['consultation']['schedule_date'] . $transaction['consultation']['schedule_start_time']));
+        //     $getTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
+        //     $getStartTime = Carbon::parse($transaction['consultation']['schedule_date']);
+        //     $getStartTime->hour($getTime->h);
+        //     $getStartTime->minute($getTime->i);
+        //     $getStartTime->second($getTime->s);
         // }
 
         // if($currentTime < $getStartTime) {
@@ -1128,12 +1132,15 @@ class ApiTransactionConsultationController extends Controller
 
         $result = array();
         foreach($transaction as $key => $value) {
-            $doctor = Doctor::where('id_doctor', $value['consultation']['id_doctor'])->first()->toArray();
+            $doctor = Doctor::with('outlet')->with('specialists')->where('id_doctor', $value['consultation']['id_doctor'])->first()->toArray();
 
             $result[$key]['id_transaction'] = $value['id_transaction'];
             $result[$key]['doctor_name'] = $doctor['doctor_name'];
-            $result[$key]['doctor_photo'] = $doctor['doctor_photo'];
-            $result[$key]['schedule_date'] = $value['consultation']['schedule_date'];
+            $result[$key]['doctor_photo'] = $doctor['url_doctor_photo'];
+            $result[$key]['outlet'] = $doctor['outlet'];
+            $result[$key]['specialists'] = $doctor['specialists'];
+            $result[$key]['schedule_date'] = $value['consultation']['schedule_date_human_formatted'];
+            $result[$key]['consultation_status'] = $value['consultation']['consultation_status'];
         }
 
         return response()->json([
