@@ -1414,12 +1414,18 @@ class ApiHistoryController extends Controller
             $title = '';
             $description = '';
 
-            if($dt['source'] == 'Online Transaction'){
+            if($dt['source'] == 'Online Transaction' && $dt['balance'] < 0){
                 $title = 'Transaksi Pembelian';
                 $description = 'Total point terpakai';
-            }elseif($dt['source'] == 'Transaction Completed'){
+            }elseif($dt['source'] == 'Transaction Completed' || ($dt['source'] == 'Online Transaction' && $dt['balance'] > 0 )){
                 $title = 'Cashback Point';
                 $description = 'Total point didapatkan';
+            }elseif($dt['source'] == 'Welcome Point'){
+                $title = 'Welcome Point';
+                $description = 'Total point didapatkan';
+            }elseif($dt['source'] == 'Rejected Order'){
+                $title = 'Pembatalan Order';
+                $description = 'Total point dikembalikan';
             }
 
             if($dt['balance'] < 0){

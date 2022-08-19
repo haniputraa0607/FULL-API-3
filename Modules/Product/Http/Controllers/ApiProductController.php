@@ -1911,6 +1911,7 @@ class ApiProductController extends Controller
             ];
         }
         $product['ratings'] = $ratings;
+        $product['total_rating'] = round(UserRating::where('id_product', $product['id_product'])->average('rating_value') ?? 0, 1);
         $product['can_buy_own_product'] = true;
         $favorite = Favorite::where('id_product', $product['id_product'])->where('id_user', $request->user()->id)->first();
         $product['favorite'] = (!empty($favorite) ? true : false);
