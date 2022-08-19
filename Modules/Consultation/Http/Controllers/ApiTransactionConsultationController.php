@@ -111,7 +111,7 @@ class ApiTransactionConsultationController extends Controller
 
         //selected session
         $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
-            ->whereHas('schedule_time', function($query) use ($post){
+            ->whereHas('schedule_time', function($query) use ($post, $picked_time){
                 $query->where('start_time', '=', $picked_time);
             })->first();
 
@@ -874,6 +874,63 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
+        //validasi doctor status
+        // if(strtolower($doctor['doctor_status']) != "online" && strtolower($doctor['doctor_status']) != "busy"){
+        //     return response()->json([
+        //         'status'    => 'fail',
+        //         'messages'  => ['Harap Tunggu Hingga Dokter Siap']
+        //     ]);
+        // }
+
+        //validasi starts early
+        // $currentTime = Carbon::now()->format('Y-m-d H:i:s');
+        // $getSettingEarly = Setting::where('key','consultation_starts_early')->first();
+        // $getSettingLate = Setting::where('key','consultation_starts_late')->first();
+
+        // if(!empty($getSettingEarly)){
+        //     $carbonScheduleStartTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
+        //     $carbonSettingEarly = Carbon::parse($getSettingEarly->value);
+        //     $getTime = $carbonScheduleStartTime->diff($carbonSettingEarly);
+        //     $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
+        //     $getStartTime->hour($getTime->h);
+        //     $getStartTime->minute($getTime->i);
+        //     $getStartTime->second($getTime->s);
+        // } else {
+        //     $getStartTime =  date('Y-m-d H:i:s', strtotime($transaction['consultation']['schedule_date'] . $transaction['consultation']['schedule_start_time']));
+        // }
+
+        // if($currentTime < $getStartTime) {
+        //     return response()->json([
+        //         'status'    => 'fail',
+        //         'messages'  => ['Anda belum bisa memulai konsultasi, silahkan cek kembali jadwal konsultasi']
+        //     ]);
+        // }
+
+        // if(!empty($getSettingLate)){
+        //     $carbonScheduleStartTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
+        //     $carbonSettingLate = Carbon::parse($getSettingLate->value);
+        //     $getTime = $carbonScheduleStartTime->sub($carbonSettingLate);
+        //     dd($getTime);
+        //     $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
+        //     $getStartTime->hour($getTime->h);
+        //     $getStartTime->minute($getTime->i);
+        //     $getStartTime->second($getTime->s);
+        // } else {
+        //     $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
+        //     $getStartTime->hour($getTime->h);
+        //     $getStartTime->minute($getTime->i);
+        //     $getStartTime->second($getTime->s);
+        // }
+
+        // if($currentTime > $getLateTime) {
+        //     $updateStatus = $this->checkConsultationMissed($transaction);
+
+        //     return response()->json([
+        //         'status'    => 'fail',
+        //         'messages'  => ['Anda tidak bisa memulai konsultasi, karena jadwal konsultasi sudah selesai']
+        //     ]);
+        // }
+
         DB::beginTransaction();
         try {
             //create agent if empty in doctor
@@ -1051,15 +1108,13 @@ class ApiTransactionConsultationController extends Controller
         if(isset($post['filter'])) {
             $id_doctor = Doctor::where('doctor_name', 'like', '%'.$post['filter'].'%')->pluck('id_doctor')->toArray();
             $transaction = $transaction->whereHas('consultation', function($query) use ($post, $id_doctor){
-                $query->onlyDone()->where(function($query2) use ($post, $id_doctor){
+                $query->where(function($query2) use ($post, $id_doctor){
                     $query2->orWhere('schedule_date', 'like', '%'.$post['filter'].'%');
                     $query2->orWhereIn('id_doctor', $id_doctor);
                 });
             });
         } else {
-            $transaction = $transaction->whereHas('consultation', function($query){
-                $query->onlyDone();
-            });
+            $transaction = $transaction->whereHas('consultation');
         }
 
         $transaction = $transaction->get()->toArray();
@@ -1163,7 +1218,7 @@ class ApiTransactionConsultationController extends Controller
         if(isset($user->id_doctor)){
             $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first();    
         } else {
-            $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id)->where('id_transaction', $post['id_transaction'])->first();
+            $transactionConsultation = TransactionConsultation::where('id_user', $user->id)->where('id_transaction', $post['id_transaction'])->first();
         }
 
         if(empty($transactionConsultation)){
@@ -1985,7 +2040,7 @@ class ApiTransactionConsultationController extends Controller
     public function checkConsultationMissed($transaction) {
         
         //getCurrentTime
-        $currentTime = date('Y-m-d');
+        $currentTime = date('H:i:s');
 
         if($transaction['consultation']['schedule_end_time'] < $currentTime) {
             $updateConsultationStatus = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->update(['consultation_status' => "missed"]);
