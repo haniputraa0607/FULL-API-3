@@ -1336,10 +1336,10 @@ class ApiTransactionConsultationController extends Controller
                 $items[$key]['product_description'] = $recomendation->product->product_description ?? null;
                 $items[$key]['product_photo'] = $recomendation->product->product_photos[0]['url_product_photo'] ?? null;
                 $items[$key]['product_rating'] = $recomendation->product->total_rating ?? null;
-                $items[$key]['product_stock_item'] = $recomendation->product->product_detail[0]->product_detail_stock_item ?? null;
-                $items[$key]['product_stock_status'] = $recomendation->product->product_detail[0]->product_detail_stock_status ?? null;
-                $items[$key]['outlet_name'] = $recomendation->product->product_detail[0]->outlet->outlet_name ?? null;
-                $items[$key]['product_variant_group'] = $variantGroup ?? null;
+                // $items[$key]['product_stock_item'] = $recomendation->product->product_detail[0]->product_detail_stock_item ?? null;
+                // $items[$key]['product_stock_status'] = $recomendation->product->product_detail[0]->product_detail_stock_status ?? null;
+                // $items[$key]['outlet_name'] = $recomendation->product->product_detail[0]->outlet->outlet_name ?? null;
+                // $items[$key]['product_variant_group'] = $variantGroup ?? null;
                 $items[$key]['qty'] = $recomendation->qty_product ?? null;
                 $items[$key]['usage_rules'] = $recomendation->usage_rules ?? null;
                 $items[$key]['usage_rules_time'] = $recomendation->usage_rules_time ?? null;
