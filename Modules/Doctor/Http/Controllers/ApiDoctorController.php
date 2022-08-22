@@ -12,6 +12,7 @@ use Modules\Doctor\Entities\DoctorSpecialist;
 use Modules\Doctor\Entities\DoctorSchedule;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionConsultation;
+use App\Http\Models\Setting;
 use Modules\Doctor\Entities\SubmissionChangeDoctorData;
 use Modules\Doctor\Http\Requests\DoctorCreate;
 use Modules\UserRating\Entities\RatingOption;
@@ -608,7 +609,7 @@ class ApiDoctorController extends Controller
      */
     public function getScheduleDoctor($id_doctor)
     {
-        $doctor_schedule = DoctorSchedule::where('id_doctor', $id_doctor)->with('schedule_time');
+        $doctor_schedule = DoctorSchedule::where('id_doctor', $id_doctor)->with('schedule_time')->onlyActive();
 
         $doctor_schedule = $doctor_schedule->get()->toArray();
 
@@ -640,6 +641,21 @@ class ApiDoctorController extends Controller
                     if($row['day'] == $day) {
                         $row['date'] = $date;
                         $row['day'] = $dayId;
+                                
+                        foreach($row['schedule_time'] as $key2 => $time) {
+                            //cek validation avaibility time
+                            $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $date)
+                            ->where('schedule_start_time', $time['start_time'])->count();
+                            $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
+                            $quota = $getSetting['value'];
+    
+                            if($quota <= $doctor_constultation && $quota != null){
+                                $row['schedule_time'][$key2]['status_session'] = "disable";
+                            } else {
+                                $row['schedule_time'][$key2]['status_session'] = "available";
+                            }
+                        }
+
                         $schedule[] = $row;
                     }
                 }

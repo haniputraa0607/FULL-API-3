@@ -1022,11 +1022,12 @@ class ApiTransactionConsultationController extends Controller
      */
     public function doneConsultation(Request $request) {
         $post = $request->json()->all();
+        $user = $request->user();
 
-        if (!isset($post['id_user'])) {
+        if (!isset($user->id_doctor)) {
             $id = $request->user()->id;
         } else {
-            $id = $post['id_user'];
+            $id = $request->user()->id_doctor;
         }
 
         //cek id transaction
@@ -1065,8 +1066,9 @@ class ApiTransactionConsultationController extends Controller
                 'consultation_start_at' => new DateTime
             ]);
     
-            $doctor->update(['doctor_status' => "online"]);
-            $doctor->save();
+            // update doctor status
+            // $doctor->update(['doctor_status' => "online"]);
+            // $doctor->save();
 
             //insert balance merchant
             $transaction = Transaction::where('id_transaction', $transaction['consultation']['id_transaction'])->first();
@@ -1123,7 +1125,7 @@ class ApiTransactionConsultationController extends Controller
             $transaction = $transaction->whereHas('consultation');
         }
 
-        $transaction = $transaction->get();
+        $transaction = $transaction->latest()->get();
 
         if(empty($transaction)){
             return response()->json([
@@ -1143,7 +1145,7 @@ class ApiTransactionConsultationController extends Controller
             $result[$key]['doctor_photo'] = $doctor['url_doctor_photo'] ?? null;
             $result[$key]['outlet'] = $doctor['outlet'] ?? null;
             $result[$key]['specialists'] = $doctor['specialists'] ?? null;
-            $result[$key]['schedule_date'] = $value['consultation']['schedule_date_formatted'] ?? null;
+            $result[$key]['schedule_date'] = $value['consultation']['schedule_date_human_short_formatted'] ?? null; 
             $result[$key]['consultation_status'] = $value['consultation']['consultation_status'] ?? null;
         }
 
@@ -1325,11 +1327,19 @@ class ApiTransactionConsultationController extends Controller
         $items = [];
         if(!empty($recomendations)) {
             foreach($recomendations as $key => $recomendation){
+                //get Variant
+                $variantGroup = ProductVariantGroup::where('id_product_variant_group', $recomendation->id_product_variant_group)->first();
+
                 $items[$key]['id_product'] = $recomendation->product->id_product ?? null;
                 $items[$key]['product_name'] = $recomendation->product->product_name ?? null;
-                $items[$key]['product_price'] = $recomendation->product->product_price ?? null;
+                $items[$key]['product_price'] = $recomendation->product->product_global_price ?? null;
+                $items[$key]['product_description'] = $recomendation->product->product_description ?? null;
                 $items[$key]['product_photo'] = $recomendation->product->product_photos[0]['url_product_photo'] ?? null;
                 $items[$key]['product_rating'] = $recomendation->product->total_rating ?? null;
+                $items[$key]['product_stock_item'] = $recomendation->product->product_detail[0]->product_detail_stock_item ?? null;
+                $items[$key]['product_stock_status'] = $recomendation->product->product_detail[0]->product_detail_stock_status ?? null;
+                $items[$key]['outlet_name'] = $recomendation->product->product_detail[0]->outlet->outlet_name ?? null;
+                $items[$key]['product_variant_group'] = $variantGroup ?? null;
                 $items[$key]['qty'] = $recomendation->qty_product ?? null;
                 $items[$key]['usage_rules'] = $recomendation->usage_rules ?? null;
                 $items[$key]['usage_rules_time'] = $recomendation->usage_rules_time ?? null;
@@ -1961,7 +1971,7 @@ class ApiTransactionConsultationController extends Controller
 
         //get Consultation
         $consultation = [
-            'schedule_date' => $transaction['consultation']['schedule_date'],
+            'schedule_date' => $transaction['consultation']['schedule_date_human_short_formatted'],
             'schedule_start_time' => $transaction['consultation']['schedule_start_time_formatted'],
             'schedule_end_time' => $transaction['consultation']['schedule_end_time_formatted'],
             'consultation_status' => $transaction['consultation']['consultation_status']

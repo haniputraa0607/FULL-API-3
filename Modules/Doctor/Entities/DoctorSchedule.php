@@ -21,4 +21,9 @@ class DoctorSchedule extends Model
     {
         return $this->hasMany(TimeSchedule::class, 'id_doctor_schedule', 'id_doctor_schedule');
     }
+
+    public function scopeOnlyActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 }
