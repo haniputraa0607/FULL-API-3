@@ -2176,7 +2176,7 @@ class ApiProductController extends Controller
         }
 
         if(!empty($post['id_product_category'])){
-            $list = $list->where('id_product_category', $post['id_product_category']);
+            $list = $list->where('product_categories.id_product_category', $post['id_product_category']);
         }
 
         $defaultSelect = 1;
