@@ -2,6 +2,7 @@
 namespace App\Lib;
 
 use App\Http\Models\Setting;
+use GuzzleHttp\Client;
 
 /**
  * Integration with ValueFirst Payment Gateway
@@ -88,7 +89,8 @@ class ValueFirst
                     ],
                 ],
             ];
-            $res = MyHelper::postWithTimeout($this->json_endpoint, null, $sendData);
+            $token = 'Bearer '.$this->generateToken();
+            $res = MyHelper::postWithTimeout($this->json_endpoint, $token, $sendData);
             $log = [
                 'request_body' => $sendData,
                 'request_url'  => $this->json_endpoint,
@@ -150,6 +152,45 @@ class ValueFirst
             print "Sending to $phone...";
             $result = $this->send(['to' => $phone, 'text' => 'Sistem SMS OTP telah kembali normal, mohon maaf atas ketidaknyamanannya. Silakan coba register kembali.']);
             print " ".$result?"SUCCESS\n":"FAIL\n";
+        }
+    }
+
+    public function generateToken(){
+        $apikey = $this->apikey;
+        $currentDate = date('Y-m-d H:i:s');
+        $checkSetting = Setting::where('key', 'valuefirst_token')->first();
+        if(empty($checkSetting['value_text']) || (!empty($checkSetting['value']) && strtotime($currentDate) > strtotime($checkSetting['value']))){
+            $url = 'https://api.myvaluefirst.com/psms/api/messages/token?action=generate';
+            $client = new Client();
+
+            $req = [
+                'headers' => [
+                    'apikey' => $apikey,
+                    'Content-Type' => 'application/json'
+                ]
+            ];
+
+            try {
+                $output = $client->post($url, $req);
+                $output = json_decode($output->getBody(), true);
+                if(isset($output['token']) && !empty($output['token'])){
+                    Setting::updateOrCreate(['key' => 'valuefirst_token'], ['value' => $output['expiryDate'], 'value_text' => $output['token']]);
+                }
+                return $output['token']??null;
+            }catch (\GuzzleHttp\Exception\RequestException $e) {
+                try{
+                    if($e->getResponse()){
+                        $response = $e->getResponse()->getBody()->getContents();
+                        return ['status' => 'fail', 'response' => json_decode($response, true)];
+                    }
+                    return ['status' => 'fail', 'response' => ['Check your internet connection.']];
+                }
+                catch(Exception $e){
+                    return ['status' => 'fail', 'response' => ['Check your internet connection.']];
+                }
+            }
+        }else{
+            return $checkSetting['value_text'];
         }
     }
 
