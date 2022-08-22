@@ -60,6 +60,7 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
 	protected $appends = [
         'schedule_date_formatted',
 		'schedule_date_human_formatted',
+		'schedule_date_human_short_formatted',
 		'schedule_start_time_formatted',
 		'schedule_end_time_formatted',
 		'schedule_day_formatted'
@@ -103,6 +104,11 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
 	public function getScheduleDateHumanFormattedAttribute()
     {
         return date('d F Y', strtotime($this->attributes['schedule_date']));
+    }
+
+	public function getScheduleDateHumanShortFormattedAttribute()
+    {
+        return date('d M Y', strtotime($this->attributes['schedule_date']));
     }
 
     public function getScheduleStartTimeFormattedAttribute()
