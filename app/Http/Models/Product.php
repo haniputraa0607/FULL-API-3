@@ -875,4 +875,181 @@ class Product extends Model
         // return the result
         return $result;
     }
+
+     /**
+     * Generate product variant tree
+     * @param  integer  $id_product     id of product
+     * @param  boolean $with_index      result should use id_product_variant as index or not
+     * @return array                    array of product variant [tree]
+     */
+    public static function getVariant($id_product, $outlet, $with_index = false, $product_price = 0, $product_variant_status = 1, $id_product_variant_group)
+    {
+        // $cache_name = self::getCacheName($id_product, $outlet, $with_index);
+        // // retrieve from cache if available
+        // if (Cache::has($cache_name)) {
+        //     return Cache::get($cache_name);
+        // }
+        // get list variants available in products
+        if (!$product_variant_status) {
+            $list_variants = [];
+            $variants = [];
+            goto modifier_group_logic;
+        }
+        $list_variants = ProductVariant::select('product_variants.id_product_variant')
+            ->join('product_variant_pivot', 'product_variant_pivot.id_product_variant', '=', 'product_variants.id_product_variant')
+            ->join('product_variant_groups', 'product_variant_groups.id_product_variant_group', '=', 'product_variant_pivot.id_product_variant_group')
+            ->where('id_product', $id_product)
+            ->distinct()->pluck('id_product_variant');
+
+        // get variant tree from $list_variants
+        $variants = ProductVariant::getVariantTree($list_variants);
+
+        // return empty array if no variants found
+        if (!$variants) {
+            goto modifier_group_logic;
+        }
+
+        // get all product variant groups assigned to this product
+        $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_stock_status', 'product_variant_group_stock_item')->where('id_product', $id_product)->where('product_variant_groups.id_product_variant_group', $id_product_variant_group)->with(['id_product_variants']);
+
+        if ($outlet['outlet_different_price']) {
+            $variant_group_raws->addSelect('product_variant_group_special_prices.product_variant_group_price')->join('product_variant_group_special_prices', function($join) use ($outlet) {
+                $join->on('product_variant_groups.id_product_variant_group', '=', 'product_variant_group_special_prices.id_product_variant_group')
+                    ->where('product_variant_group_special_prices.id_outlet', '=', $outlet['id_outlet']);
+            });
+        } else {
+            $variant_group_raws->addSelect('product_variant_group_price');
+        }
+
+        $variant_group_raws->leftJoin('product_variant_group_details', function($join) use ($outlet) {
+            $join->on('product_variant_group_details.id_product_variant_group', '=', 'product_variant_groups.id_product_variant_group')
+                ->where('product_variant_group_details.id_outlet', $outlet['id_outlet']);
+        })->where(function($query) {
+            $query->where('product_variant_group_details.product_variant_group_visibility', 'Visible')
+                ->orWhere(function($q2) {
+                    $q2->whereNull('product_variant_group_details.product_variant_group_visibility')
+                        ->where('product_variant_groups.product_variant_group_visibility', 'Visible');
+                });
+        })->whereRaw('coalesce(product_variant_group_details.product_variant_group_status, "Active") <> "Inactive"');
+        //->whereRaw('coalesce(product_variant_group_details.product_variant_group_stock_status, "Available") <> "Sold Out"');
+
+        $variant_group_raws = $variant_group_raws->get()->toArray();
+
+        // create [id_product_variant_group => ProductVariantGroup,...] array
+        $variant_groups = [];
+        foreach ($variant_group_raws as $variant_group) {
+            $id_variants = array_column($variant_group['id_product_variants'], 'id_product_variant');
+            $slug = MyHelper::slugMaker($id_variants); // '2.5.7'
+
+            $wholesaler = ProductVariantGroupWholesaler::where('id_product_variant_group', $variant_group['id_product_variant_group'])->select('id_product_variant_group_wholesaler', 'variant_wholesaler_minimum as minimum', 'variant_wholesaler_unit_price as unit_price')->get()->toArray();
+            foreach ($wholesaler as $key=>$w){
+                $wholesaler[$key]['unit_price'] = (int)$w['unit_price'];
+            }
+
+            $variant_groups[$slug] = $variant_group;
+            $variant_groups[$slug]['wholesaler_price'] = $wholesaler;
+        }
+
+        // merge product variant tree and product's product variant group
+        self::recursiveCheck($variants, $variant_groups, [], $with_index);
+
+        modifier_group_logic:
+        // get list modifiers group order by name where id_product or id_variant
+        $modifier_groups_raw = ProductModifierGroup::select('product_modifier_groups.id_product_modifier_group', 'product_modifier_group_name', \DB::raw('GROUP_CONCAT(id_product) as id_products, GROUP_CONCAT(id_product_variant) as id_product_variants'))->join('product_modifier_group_pivots', 'product_modifier_groups.id_product_modifier_group', 'product_modifier_group_pivots.id_product_modifier_group')->where('id_product', $id_product)->orWhereIn('id_product_variant', $list_variants)->groupBy('product_modifier_groups.id_product_modifier_group')->orderBy('product_modifier_group_order', 'asc')->get()->toArray();
+
+        // ambil modifier + harga + yang visible dll berdasarkan modifier group
+        $modifier_groups = [];
+        foreach ($modifier_groups_raw as $key => &$modifier_group) {
+            $modifiers = ProductModifier::select('product_modifiers.id_product_modifier as id_product_variant', \DB::raw('coalesce(product_modifier_price,0) as product_variant_price'), 'text as product_variant_name', \DB::raw('coalesce(product_modifier_stock_status, "Available") as product_variant_stock_status'))
+                ->where('modifier_type', 'Modifier Group')
+                ->where('id_product_modifier_group', $modifier_group['id_product_modifier_group'])
+                ->leftJoin('product_modifier_details', function($join) use ($outlet) {
+                    $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+                        ->where('product_modifier_details.id_outlet',$outlet['id_outlet']);
+                })
+                ->where(function($query){
+                    $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
+                    ->orWhere(function($q){
+                        $q->whereNull('product_modifier_details.product_modifier_visibility')
+                        ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                    });
+                })
+                ->where(function($q){
+                    $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                })
+                ->where(function($q){
+                    $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+                })
+                ->groupBy('product_modifiers.id_product_modifier');
+            if ($outlet['outlet_different_price']) {
+                $modifiers->leftJoin('product_modifier_prices', function($join) use ($outlet) {
+                    $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier')
+                        ->where('product_modifier_prices.id_outlet',$outlet['id_outlet']);
+                });
+            } else {
+                $modifiers->leftJoin('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+            }
+            $modifiers = $modifiers->orderBy('product_modifiers.product_modifier_order', 'asc')->get()->toArray();
+            if (!$modifiers) {
+                unset($modifier_groups[$key]);
+            }
+            $modifier_group['childs'] = $modifiers;
+            if (in_array($id_product, explode(',', $modifier_group['id_products']))) {
+                unset($modifier_group['id_products']);
+                unset($modifier_group['id_product_variants']);
+                $modifier_groups['*'][$modifier_group['id_product_modifier_group']] = $modifier_group;
+            } else {
+                $id_product_variants = explode(',', $modifier_group['id_product_variants']);
+                unset($modifier_group['id_products']);
+                unset($modifier_group['id_product_variants']);
+                foreach ($id_product_variants as $id_product_variant) {
+                    $modifier_groups[$id_product_variant][$modifier_group['id_product_modifier_group']] = $modifier_group;
+                }
+            }
+        }
+
+        $noVariant = false;
+        if (!$variants && $modifier_groups) {
+            $noVariant = true;
+            $variants = [
+                'childs' => [
+                    [
+                        'id_product_variant' => 0,
+                        'id_product_variant_group' => 0,
+                        'product_variant_group_price' => $product_price,
+                        'extra_modifiers' => [],
+                        'variant' => null,
+                    ]
+                ]
+            ];
+        } elseif (!$variants) {
+            return $variants;
+        }
+
+        // masukan ke dalam vaiants
+        self::mergeModifierGroup($variants, $modifier_groups);
+
+        if ($noVariant) {
+            $variants = $variants['childs'][0]['variant'];
+        }
+
+        if (!$variants) {
+            return $variants;
+        }
+
+        // get base price and unset from array [for nice array structure]
+        $base_price = $variants['product_variant_group_price'] ?? $product_price;
+        unset($variants['product_variant_group_price']);
+        unset($variants['product_variant_stock_status']);
+
+        // create result
+        $result = [
+            'base_price'    => $base_price,
+            'variants_tree' => $variants,
+        ];
+        // save to cache
+        // Cache::forever($cache_name, $result);
+        // return the result
+        return $result;
+    }
 }

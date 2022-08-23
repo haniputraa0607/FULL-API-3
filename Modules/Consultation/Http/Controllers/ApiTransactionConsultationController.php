@@ -46,6 +46,7 @@ class ApiTransactionConsultationController extends Controller
         $this->location = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
         $this->doctor = "Modules\Doctor\Http\Controllers\ApiDoctorController";
         $this->promo_trx 	 = "Modules\Transaction\Http\Controllers\ApiPromoTransaction";
+        $this->product = "Modules\Product\Http\Controllers\ApiProductController";
     }
 
     /**
@@ -1309,9 +1310,11 @@ class ApiTransactionConsultationController extends Controller
         //get transaction
         $transactionConsultation = null;
         if(isset($user->id_doctor)){
-            $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first();    
+            $id = $user->id_doctor;
+            $transactionConsultation = TransactionConsultation::where('id_doctor', $id)->where('id_transaction', $post['id_transaction'])->first();    
         } else {
-            $transactionConsultation = TransactionConsultation::where('id_user', $user->id)->where('id_transaction', $post['id_transaction'])->first();
+            $id = $user->id;
+            $transactionConsultation = TransactionConsultation::where('id_user', $id)->where('id_transaction', $post['id_transaction'])->first();
         }
 
         if(empty($transactionConsultation)){
@@ -1327,19 +1330,38 @@ class ApiTransactionConsultationController extends Controller
         $items = [];
         if(!empty($recomendations)) {
             foreach($recomendations as $key => $recomendation){
-                //get Variant
-                $variantGroup = ProductVariantGroup::where('id_product_variant_group', $recomendation->id_product_variant_group)->first();
+                //get product data
+                // $variantGroup = ProductVariantGroup::join('product_variant_group_details', 'product_variant_group_details.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
+                //                 ->where('id_outlet', $post['id_outlet'])
+                //                 ->where('id_product', $product['id_product'])
+                //                 ->where('product_variant_group_details.product_variant_group_visibility', 'Visible')
+                //                 ->where('product_variant_group_stock_status', 'Available')
+                //                 ->orderBy('product_variant_group_price', 'asc')->first();
+                // $product['product_price'] = $selectedVariant['product_variant_group_price']??$product['product_price'];
+                // $post['id_product_variant_group'] = $selectedVariant['id_product_variant_group']??null;
+                // $product['id_product_variant_group'] = $post['id_product_variant_group'];
 
-                $items[$key]['id_product'] = $recomendation->product->id_product ?? null;
-                $items[$key]['product_name'] = $recomendation->product->product_name ?? null;
-                $items[$key]['product_price'] = $recomendation->product->product_global_price ?? null;
-                $items[$key]['product_description'] = $recomendation->product->product_description ?? null;
-                $items[$key]['product_photo'] = $recomendation->product->product_photos[0]['url_product_photo'] ?? null;
-                $items[$key]['product_rating'] = $recomendation->product->total_rating ?? null;
+                // $productDetail = 
+
+                $params = [
+                    'id_product' => $recomendation->id_product,
+                    'id_user' => $id,
+                    'id_product_variant_group' =>$recomendation->id_product_variant_group
+                ];
+
+                $detailProduct = app($this->product)->detailRecomendation($params);
+
+                // $items[$key]['id_product'] = $recomendation->product->id_product ?? null;
+                // $items[$key]['product_name'] = $recomendation->product->product_name ?? null;
+                // $items[$key]['product_price'] = $recomendation->product->product_global_price ?? null;
+                // $items[$key]['product_description'] = $recomendation->product->product_description ?? null;
+                // $items[$key]['product_photo'] = $recomendation->product->product_photos[0]['url_product_photo'] ?? null;
+                // $items[$key]['product_rating'] = $recomendation->product->total_rating ?? null;
                 // $items[$key]['product_stock_item'] = $recomendation->product->product_detail[0]->product_detail_stock_item ?? null;
                 // $items[$key]['product_stock_status'] = $recomendation->product->product_detail[0]->product_detail_stock_status ?? null;
                 // $items[$key]['outlet_name'] = $recomendation->product->product_detail[0]->outlet->outlet_name ?? null;
                 // $items[$key]['product_variant_group'] = $variantGroup ?? null;
+                $items[$key]['product'] = $detailProduct ?? null;
                 $items[$key]['qty'] = $recomendation->qty_product ?? null;
                 $items[$key]['usage_rules'] = $recomendation->usage_rules ?? null;
                 $items[$key]['usage_rules_time'] = $recomendation->usage_rules_time ?? null;
