@@ -2261,4 +2261,131 @@ class ApiProductController extends Controller
 
         return response()->json(MyHelper::checkGet($list));
     }
+
+    public function detailRecomendation($params) {
+        $post = $params;
+
+        //get product
+        $product = Product::join('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
+                    ->select('id_merchant', 'products.id_product_category', 'product_categories.product_category_name', 'id_product','product_code','product_name','product_description','product_code', 'product_variant_status', 'need_recipe_status')
+                    ->where('id_product',$post['id_product'])->first();
+        
+        if(!$product){
+            return MyHelper::checkGet([]);
+        }else{
+            // toArray error jika $product Null,
+            $product = $product->toArray();
+        }
+
+        $merchant = Merchant::where('id_merchant', $product['id_merchant'])->first();
+        $post['id_outlet'] = $merchant['id_outlet']??null;
+        $outlet = Outlet::find($post['id_outlet']);
+        if(!$outlet){
+            return MyHelper::checkGet([],'Outlet not found');
+        }
+        unset($product['product_detail']);
+        $post['id_product_category'] = $product['id_product_category']??0;
+        if($post['id_product_category'] === 0){
+            return MyHelper::checkGet([]);
+        }
+
+        $product['outlet_name'] = $outlet['outlet_name'];
+        $product['outlet_is_closed'] = (empty($outlet['outlet_is_closed']) ?false:true);
+        $product['product_price'] = 0;
+        $productGlobalPrice = ProductGlobalPrice::where('id_product',$post['id_product'])->first();
+        if($productGlobalPrice){
+            $product['product_price'] = $productGlobalPrice['product_global_price'];
+        }
+
+        if ($product['product_variant_status']) {
+            $selectedVariant = ProductVariantGroup::join('product_variant_group_details', 'product_variant_group_details.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
+                                ->where('id_outlet', $post['id_outlet'])
+                                ->where('id_product', $product['id_product'])
+                                ->where('product_variant_group_details.id_product_variant_group', $post['id_product_variant_group'])
+                                ->where('product_variant_group_details.product_variant_group_visibility', 'Visible')
+                                ->where('product_variant_group_stock_status', 'Available')
+                                ->orderBy('product_variant_group_price', 'asc')->first();
+            $product['product_price'] = $selectedVariant['product_variant_group_price']??$product['product_price'];
+            // $post['id_product_variant_group'] = $selectedVariant['id_product_variant_group']??null;
+            $product['id_product_variant_group'] = $post['id_product_variant_group'];
+        }else{
+            $product['stock_item'] = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $post['id_outlet'])->first()['product_detail_stock_item']??0;
+        }
+
+        $product['can_buy_status'] = true;
+        // if($product['need_recipe_status'] == 1){
+        //     $idUser = $params['id'];
+        //     $checkRecipe = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
+        //         ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product'])->first();
+        //     $maxQty = ($checkRecipe['recipe_redemption_limit']??0) * ($checkRecipe['qty_product']??0);
+
+        //     if(empty($checkRecipe) || (!empty($checkRecipe) && $checkRecipe['qty_product_redeem'] >= $maxQty)){
+        //         $product['can_buy_status'] = false;
+        //     }
+        // }
+
+        $product['variants'] = Product::getVariant($product['id_product'], $outlet, false, $product['product_price'], $product['product_variant_status'], $product['id_product_variant_group'])['variants_tree'];
+
+        if($product['product_variant_status'] && empty($product['variants'])){
+            return MyHelper::checkGet([],'Variants not available');
+        }
+
+        if(!$product['product_variant_status']){
+            $wholesaler = ProductWholesaler::where('id_product', $product['id_product'])->select('id_product_wholesaler', 'product_wholesaler_minimum as minimum', 'product_wholesaler_unit_price as unit_price')->get()->toArray();
+            foreach ($wholesaler as $key=>$w){
+                $wholesaler[$key]['unit_price'] = (int)$w['unit_price'];
+            }
+            $product['wholesaler_price'] =$wholesaler;
+        }
+
+        if ($post['id_product_variant_group'] ?? false) {
+            $product['selected_available'] = (!!Product::getVariantParentId($post['id_product_variant_group'], $product['variants'], $post['selected']['extra_modifiers'] ?? []))?1:0;
+        }
+
+        $product['stock_status'] = 'Available';
+        if((empty($product['stock_item']) && $product['product_variant_status'] == 0) ||
+            ($product['product_variant_status'] == 1 && empty($post['id_product_variant_group']))){
+            $product['stock_status'] = 'Sold Out';
+        }
+
+        unset($product['product_variant_status']);
+        $product['product_price'] = (int)$product['product_price'];
+        $product['id_outlet'] = $post['id_outlet'];
+
+        $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+        $product['image'] = (empty($image['url_product_photo']) ? config('url.storage_url_api').'img/product/item/default.png' : $image['url_product_photo']);
+        $imageDetail = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->whereNotIn('id_product_photo', [$image['id_product_photo']??null])->get()->toArray();
+        $imagesDetail = [];
+        foreach ($imageDetail as $dt){
+            $imagesDetail[] = $dt['url_product_photo'];
+        }
+        $product['image_detail'] = $imagesDetail;
+        $ratings = [];
+        $getRatings = UserRating::where('id_product', $product['id_product'])->get()->toArray();
+        foreach ($getRatings as $rating){
+            $getPhotos = UserRatingPhoto::where('id_user_rating', $rating['id_user_rating'])->get()->toArray();
+            $photos = [];
+            foreach ($getPhotos as $dt){
+                $photos[] = $dt['url_user_rating_photo'];
+            }
+            $currentOption = explode(',', $rating['option_value']);
+            $ratings[] = [
+                "rating_value" => $rating['rating_value'],
+                "suggestion" => $rating['suggestion'],
+                "option_value" => $currentOption,
+                "photos" => $photos
+            ];
+        }
+        $product['ratings'] = $ratings;
+        $product['total_rating'] = $product['total_rating'];
+        $product['can_buy_own_product'] = true;
+        if($params['id_user'] == $merchant['id_user']){
+            $product['can_buy_own_product'] = false;
+        }
+
+        $product['favorite'] = false;
+
+        return MyHelper::checkGet($product);
+    }
+
 }
