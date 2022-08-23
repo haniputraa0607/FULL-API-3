@@ -732,7 +732,8 @@ class ApiMerchantController extends Controller
                     $service[] = [
                         "code" => $s['code'],
                         "service_name" => $s['service_name'],
-                        "active_status" => $deliveryOutlet[$check]['available_status']??1
+                        "active_status" => $deliveryOutlet[$check]['available_status']??1,
+                        "drop_counter_status" => $s['drop_counter_status']??1
                     ];
                 }
             }

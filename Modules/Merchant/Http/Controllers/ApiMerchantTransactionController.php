@@ -563,10 +563,32 @@ class ApiMerchantTransactionController extends Controller
 
         $description = Setting::where('key', 'delivery_request_description')->first()['value_text']??'';
 
+        $deliveryList = app($this->merchant)->availableDelivery($detail['id_outlet']);
+        $deliveryName = '';
+        $deliveryLogo = '';
+        $dropCounterStatus = 1;
+        foreach ($deliveryList as $value){
+            if($value['delivery_method'] == $detail['shipment_courier']){
+                $deliveryName =  $value['delivery_name'];
+                $deliveryLogo = $value['logo'];
+
+                foreach ($value['service'] as $s){
+                    if($s['code'] == $detail['shipment_courier_code']){
+                        $dropCounterStatus = $s['drop_counter_status']??1;
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+
         return response()->json(['status' => 'success', 'result' => [
             'outlet_name' => $detail['outlet_name'],
             'address' => $address,
-            'description' => $description
+            'description' => $description,
+            'delivery_name' => $deliveryName,
+            'delivery_logo' => $deliveryLogo,
+            'show_drop_counter_status' => $dropCounterStatus
         ]]);
     }
 

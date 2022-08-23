@@ -2310,6 +2310,7 @@ class ApiOnlineTransaction extends Controller
                     if($checkService !== false){
                         $availableDelivery[$key]['service'][$index]['service_name'] = $dtDelivery[$check]['service'][$checkService]['service_name'];
                         $availableDelivery[$key]['service'][$index]['available_status'] = $dtDelivery[$check]['service'][$checkService]['available_status'];
+                        $availableDelivery[$key]['service'][$index]['drop_counter_status'] = $dtDelivery[$check]['service'][$checkService]['drop_counter_status'];
                     }
                 }
             }
