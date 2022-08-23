@@ -563,10 +563,35 @@ class ApiMerchantTransactionController extends Controller
 
         $description = Setting::where('key', 'delivery_request_description')->first()['value_text']??'';
 
+        $deliveryList = app($this->merchant)->availableDelivery($detail['id_outlet']);
+        $deliveryName = '';
+        $deliveryLogo = '';
+        $dropCounterStatus = 1;
+        $showListPickup = 1;
+        foreach ($deliveryList as $value){
+            if($value['delivery_method'] == $detail['shipment_courier']){
+                $deliveryName =  $value['delivery_name'];
+                $deliveryLogo = $value['logo'];
+
+                foreach ($value['service'] as $s){
+                    if($s['code'] == $detail['shipment_courier_code']){
+                        $dropCounterStatus = $s['drop_counter_status']??1;
+                        $showListPickup = $s['drop_counter_status']??1;
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+
         return response()->json(['status' => 'success', 'result' => [
             'outlet_name' => $detail['outlet_name'],
             'address' => $address,
-            'description' => $description
+            'description' => $description,
+            'delivery_name' => $deliveryName,
+            'delivery_logo' => $deliveryLogo,
+            'show_drop_counter_status' => $dropCounterStatus,
+            'show_list_time_pickup' => $showListPickup
         ]]);
     }
 
@@ -639,10 +664,6 @@ class ApiMerchantTransactionController extends Controller
 
         if(empty($post['id_transaction']) || !isset($post['pickup_status'])){
             return response()->json(['status' => 'fail', 'messages' => ['ID transaction and pickup status can not be empty']]);
-        }
-
-        if($post['pickup_status'] == true && (empty($post['pickup_time_start']) || empty($post['pickup_time_end']))){
-            return response()->json(['status' => 'fail', 'messages' => ['Pickup time can not be empty']]);
         }
 
         $detail = Transaction::join('transaction_shipments', 'transaction_shipments.id_transaction', 'transactions.id_transaction')
@@ -756,6 +777,8 @@ class ApiMerchantTransactionController extends Controller
         }
 
         if($post['pickup_status'] == true){
+            $post['pickup_time_start'] = (empty($post['pickup_time_start']) ? date('Y-m-d H:i:s'):$post['pickup_time_start']);
+            $post['pickup_time_end'] = (empty($post['pickup_time_end']) ? date('Y-m-d H:i:s'):$post['pickup_time_end']);
             //pickup request
             $timeZoneOutlet = City::join('provinces', 'provinces.id_province', 'cities.id_province')
                     ->where('id_city', $detail['id_city'])->first()['time_zone_utc']??null;
@@ -782,12 +805,12 @@ class ApiMerchantTransactionController extends Controller
             ];
 
             $pickupDelivery = $shipper->sendRequest('Request Pickup', 'POST', 'pickup/timeslot', $dtPickupShipment);
-            if(empty($pickupDelivery['response']['data']['order_activations'][0]['pickup_code'])){
+            if(empty($pickupDelivery['response']['data']['order_activations'])){
                 return response()->json(['status' => 'fail', 'messages' => ['Failed request pickup to third party']]);
             }
             $devPickup = $pickupDelivery['response']['data'];
 
-            $pickupCode = $devPickup['order_activations'][0]['pickup_code'];
+            $pickupCode = $devPickup['order_activations'][0]['pickup_code']??null;
             $update = TransactionShipment::where('id_transaction', $detail['id_transaction'])
                 ->update([
                     'shipment_pickup_time_start' => date('Y-m-d H:i:s', strtotime($post['pickup_time_start'])),

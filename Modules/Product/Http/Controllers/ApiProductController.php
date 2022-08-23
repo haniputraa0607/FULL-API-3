@@ -1893,6 +1893,7 @@ class ApiProductController extends Controller
         $product['image_detail'] = $imagesDetail;
         $ratings = [];
         $getRatings = UserRating::join('users', 'users.id', 'user_ratings.id_user')
+                    ->select('user_ratings.*', 'users.name', 'users.photo')
                     ->where('id_product', $product['id_product'])->orderBy('user_ratings.created_at', 'desc')->limit(5)->get()->toArray();
         foreach ($getRatings as $rating){
             $getPhotos = UserRatingPhoto::where('id_user_rating', $rating['id_user_rating'])->get()->toArray();
@@ -1902,6 +1903,7 @@ class ApiProductController extends Controller
             }
             $currentOption = explode(',', $rating['option_value']);
             $ratings[] = [
+                "date" => MyHelper::dateFormatInd($rating['created_at'], false, false, false),
                 "user_name" => $rating['name'],
                 "user_photo" => config('url.storage_url_api') . (!empty($rating['photo']) ? $rating['photo']: 'img/user_photo_default.png'),
                 "rating_value" => $rating['rating_value'],
@@ -1938,6 +1940,7 @@ class ApiProductController extends Controller
 
 
         $getRatings = UserRating::join('users', 'users.id', 'user_ratings.id_user')
+            ->select('user_ratings.*', 'users.name', 'users.photo')
             ->where('id_product', $product['id_product'])->orderBy('user_ratings.created_at', 'desc')->paginate($post['pagination_total_row']??10)->toArray();
         foreach ($getRatings['data']??[] as $key=>$rating){
             $getPhotos = UserRatingPhoto::where('id_user_rating', $rating['id_user_rating'])->get()->toArray();
@@ -1947,6 +1950,7 @@ class ApiProductController extends Controller
             }
             $currentOption = explode(',', $rating['option_value']);
             $rating = [
+                "date" => MyHelper::dateFormatInd($rating['created_at'], false, false, false),
                 "user_name" => $rating['name'],
                 "user_photo" => config('url.storage_url_api') . (!empty($rating['photo']) ? $rating['photo']: 'img/user_photo_default.png'),
                 "rating_value" => $rating['rating_value'],

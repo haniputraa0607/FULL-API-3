@@ -3799,7 +3799,7 @@ class ApiOutletController extends Controller
         $topList = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
                 ->where('outlet_status', 'Active')
                 ->where('outlet_is_closed', 0)
-                ->where('merchant_status', 'Active')->orderBy('merchant_count_transaction', 'desc')->limit(10)->get()->toArray();
+                ->where('merchant_status', 'Active')->where('merchant_count_transaction', '>', 0)->orderBy('merchant_count_transaction', 'desc')->limit(10)->get()->toArray();
 
         $top = [];
         $idTop = [];
