@@ -91,6 +91,8 @@ class ApiConfirm extends Controller
             }
         }
 
+        $transactionType = Transaction::where('id_transaction_group', $check['id_transaction_group'])->first()['trasaction_type']??'trx';
+        $transactionType = ($transactionType == 'Delivery' ? 'trx' : $transactionType);
         $payment_id = strtoupper(str_replace(' ', '_', $post['payment_id']??$post['payment_detail']??null));
         $post['payment_id'] = $payment_id;
         $countGrandTotal = $check['transaction_grandtotal'];
@@ -292,7 +294,7 @@ class ApiConfirm extends Controller
                     'unit'                => 'second',
                 );
 
-                $connectMidtrans = Midtrans::{$methodPayment}($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $dataShipping, $dataDetailProduct, 'trx', $check['transaction_receipt_number'], $post['payment_detail']);
+                $connectMidtrans = Midtrans::{$methodPayment}($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $dataShipping, $dataDetailProduct, $transactionType, $check['transaction_receipt_number'], $post['payment_detail']);
 
             } else {
                 $dataMidtrans = array(
@@ -302,7 +304,7 @@ class ApiConfirm extends Controller
                     'unit'                => 'second',
                 );
 
-                $connectMidtrans = Midtrans::{$methodPayment}($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $ship=null, $dataDetailProduct, 'trx', $check['transaction_receipt_number'], $post['payment_detail']);
+                $connectMidtrans = Midtrans::{$methodPayment}($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $ship=null, $dataDetailProduct, $transactionType, $check['transaction_receipt_number'], $post['payment_detail']);
             }
 
             if (empty($connectMidtrans['token']) && $payment_id != 'SHOPEEPAY') {

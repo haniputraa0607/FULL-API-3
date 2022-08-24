@@ -47,10 +47,15 @@ class TransactionPaymentXendit extends Model
         if ($this->checkout_url || $this->business_id) {
             return true;
         }
+
+        $transactionType = Transaction::where('id_transaction_group', $this->id_transaction_group)->first()['trasaction_type']??'trx';
+        $transactionType = ($transactionType == 'Delivery' ? 'trx' : $transactionType);
+
         $xenditController = app('Modules\Xendit\Http\Controllers\XenditController');
         $create = $xenditController->create($this->type, $this->external_id, $this->amount, [
             'phone' => $this->phone,
             'items' => $this->items,
+            'type' => $transactionType
         ], $errors);
         if ($create) {
             $this->xendit_id = $create['id'] ?? null;
