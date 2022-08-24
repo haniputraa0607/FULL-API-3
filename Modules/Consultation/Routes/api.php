@@ -46,6 +46,7 @@ Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-
     Route::post('/consultation', 'ApiTransactionConsultationController@getHandledConsultation');
     Route::post('/consultation/start', 'ApiTransactionConsultationController@startConsultation');
     Route::post('/consultation/done', 'ApiTransactionConsultationController@doneConsultation');
+    Route::post('/consultation/complete', 'ApiTransactionConsultationController@completeConsultation');
     Route::post('/consultation/message/get', 'ApiTransactionConsultationController@getMessage');
     Route::post('/consultation/message/create', 'ApiTransactionConsultationController@createMessage');
 

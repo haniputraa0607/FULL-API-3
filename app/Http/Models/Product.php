@@ -910,8 +910,12 @@ class Product extends Model
         }
 
         // get all product variant groups assigned to this product
-        $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_stock_status', 'product_variant_group_stock_item')->where('id_product', $id_product)->where('product_variant_groups.id_product_variant_group', $id_product_variant_group)->with(['id_product_variants']);
-
+        if($id_product_variant_group != null){
+            $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_stock_status', 'product_variant_group_stock_item')->where('id_product', $id_product)->where('product_variant_groups.id_product_variant_group', $id_product_variant_group)->with(['id_product_variants']);
+        } else {
+            $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_stock_status', 'product_variant_group_stock_item')->where('id_product', $id_product)->with(['id_product_variants']);
+        }
+        
         if ($outlet['outlet_different_price']) {
             $variant_group_raws->addSelect('product_variant_group_special_prices.product_variant_group_price')->join('product_variant_group_special_prices', function($join) use ($outlet) {
                 $join->on('product_variant_groups.id_product_variant_group', '=', 'product_variant_group_special_prices.id_product_variant_group')
