@@ -882,13 +882,14 @@ class Product extends Model
      * @param  boolean $with_index      result should use id_product_variant as index or not
      * @return array                    array of product variant [tree]
      */
-    public static function getVariant($id_product, $outlet, $with_index = false, $product_price = 0, $product_variant_status = 1, $id_product_variant_group)
+    public static function getVariant($id_product, $outlet, $with_index = false, $product_price = 0, $product_variant_status = 1, $id_product_variant_group = null)
     {
         // $cache_name = self::getCacheName($id_product, $outlet, $with_index);
         // // retrieve from cache if available
         // if (Cache::has($cache_name)) {
         //     return Cache::get($cache_name);
         // }
+        
         // get list variants available in products
         if (!$product_variant_status) {
             $list_variants = [];
