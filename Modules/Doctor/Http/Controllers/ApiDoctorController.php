@@ -619,6 +619,7 @@ class ApiDoctorController extends Controller
             $i = 0;
             while(count($schedule) < 4){
                 if($i > 0) {
+                    $post['date'] = date("Y-m-d", strtotime("+$i day"));
                     $date = date("d-m-Y", strtotime("+$i day"));
                     $day = strtolower(date("l", strtotime($date)));
 
@@ -627,6 +628,7 @@ class ApiDoctorController extends Controller
 
                     $dayId = $dateId->format('l');
                 } else {
+                    $post['date'] = date("Y-m-d");
                     $date = date("d-m-Y");
                     $day = strtolower(date("l", strtotime($date)));
 
@@ -643,9 +645,10 @@ class ApiDoctorController extends Controller
                         $row['day'] = $dayId;
                                 
                         foreach($row['schedule_time'] as $key2 => $time) {
+                            $post['time'] = date("H:i:s", strtotime($time['start_time']));
                             //cek validation avaibility time
-                            $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $date)
-                            ->where('schedule_start_time', $time['start_time'])->count();
+                            $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $post['date'])
+                            ->where('schedule_start_time', $post['time'])->count();
                             $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
                             $quota = $getSetting['value'];
     
