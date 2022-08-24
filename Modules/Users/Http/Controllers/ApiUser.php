@@ -3837,11 +3837,11 @@ class ApiUser extends Controller
             'info' => [
                 'name' => $dataUser['name'],
                 'phone' => $dataUser['phone'],
-                'email' => $dataUser['email']
+                'email' => $dataUser['email'],
+                'gender' => $dataUser['gender'],
             ],
             'personal_data' => [
-                'birth_date' => date('Y-m-d', strtotime($dataUser['birthday'])),
-                'gender' => $dataUser['gender'],
+                'birth_date' => (!empty($dataUser['birthday']) ? date('Y-m-d', strtotime($dataUser['birthday'])): null),
                 'address' => $dataUser['address'],
                 'address_postal_code' => $dataUser['subdistrict_postal_code'],
                 'id_province' => $dtSubdisctrict['id_province']??null,
@@ -3875,7 +3875,8 @@ class ApiUser extends Controller
 
         $update = User::where('id', $idUser)->update([
             'name' => $post['name'],
-            'email' => $post['email']
+            'email' => $post['email'],
+            'gender' => $post['gender']
         ]);
 
         return response()->json(MyHelper::checkUpdate($update));
@@ -3897,7 +3898,6 @@ class ApiUser extends Controller
 
         $update = User::where('id', $idUser)->update([
             'birthday' => date('Y-m-d', strtotime($post['birth_date'])),
-            'gender' => $post['gender'],
             'address' => $post['address'],
             'address_postal_code' => $dtSubdisctrict['subdistrict_postal_code'],
             'id_city' => $dtSubdisctrict['id_city']??null,
