@@ -2323,8 +2323,11 @@ class ApiProductController extends Controller
         //         $product['can_buy_status'] = false;
         //     }
         // }
-
-        $product['variants'] = Product::getVariant($product['id_product'], $outlet, false, $product['product_price'], $product['product_variant_status'], $product['id_product_variant_group'])['variants_tree'];
+        if(isset($product['id_product_variant_group'])){
+            $product['variants'] = Product::getVariant($product['id_product'], $outlet, false, $product['product_price'], $product['product_variant_status'], $product['id_product_variant_group'])['variants_tree'];
+        } else {
+            $product['variants'] = Product::getVariantTree($product['id_product'], $outlet, false, $product['product_price'], $product['product_variant_status'])['variants_tree']??null;
+        }
 
         if($product['product_variant_status'] && empty($product['variants'])){
             return MyHelper::checkGet([],'Variants not available');
