@@ -2440,8 +2440,9 @@ class ApiProductController extends Controller
             ];
         }
         $product['ratings'] = $ratings;
-        $product['total_rating'] = $product['total_rating'];
+        $product['total_rating'] = 0;
         $product['can_buy_own_product'] = true;
+        
         if($params['id_user'] == $merchant['id_user']){
             $product['can_buy_own_product'] = false;
         }

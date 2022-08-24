@@ -1064,7 +1064,7 @@ class ApiTransactionConsultationController extends Controller
             $result = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])
             ->update([
                 'consultation_status' => "done",
-                'consultation_start_at' => new DateTime
+                'consultation_end_at' => new DateTime
             ]);
     
             // update doctor status
@@ -1081,6 +1081,10 @@ class ApiTransactionConsultationController extends Controller
                 'balance_nominal' => $nominal,
                 'source' => 'Transaction Consultation Completed'
             ];
+
+            //push notifikasi
+
+            //insert saldo to merchant
             $insertSaldo = app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dt);
             if(! $insertSaldo){
                 DB::rollBack();
@@ -1094,6 +1098,90 @@ class ApiTransactionConsultationController extends Controller
             return response()->json($result);
         }
         DB::commit();
+
+        $consultation = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])->first();
+        $result = [
+            'id_transaction' => $consultation->id_transaction,
+            'id_transaction_consultation' => $consultation->id_transaction_consultation,
+            'transaction_consultation_status' => $consultation->transaction_consultation_status,
+            'consultation_start_at' => $consultation->consultation_start_at,
+            'consultation_end_at' => $consultation->consultation_end_at
+        ];
+
+        return response()->json(['status'  => 'success', 'result' => $result]);
+    }
+
+    /**
+     * Get info from given cart data
+     * @param  completeConsultation $request [description]
+     * @return View                    [description]
+     */
+    public function completeConsultation(Request $request) {
+        $post = $request->json()->all();
+        $user = $request->user();
+
+        if (!isset($user->id_doctor)) {
+            $id = $request->user()->id;
+        } else {
+            $id = $request->user()->id_doctor;
+        }
+
+        //cek id transaction
+        if(!isset($post['id_transaction'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Id transaction tidak boleh kosong']
+            ]);
+        }
+
+        //get Transaction
+        $transaction = Transaction::with('consultation')->where('id_transaction', $post['id_transaction'])->first()->toArray();
+
+        if(empty($transaction)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaksi tidak ditemukan']
+            ]);
+        }
+
+        //get Doctor
+        $doctor = Doctor::where('id_doctor', $transaction['consultation']['id_doctor'])->first();
+
+        if(empty($doctor)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Doctor tidak ditemukan']
+            ]);
+        }
+
+        DB::beginTransaction();
+        try {
+            $result = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])
+            ->update([
+                'consultation_status' => "completed",
+                'consultation_completed_at' => new DateTime
+            ]);
+    
+            //push notifikasi
+
+        } catch (\Exception $e) {
+            $result = [
+                'status'  => 'fail',
+                'message' => 'Done Consultation Failed'
+            ];
+            DB::rollBack();
+            return response()->json($result);
+        }
+        DB::commit();
+
+        $consultation = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])->first();
+        $result = [
+            'id_transaction' => $consultation->id_transaction,
+            'id_transaction_consultation' => $consultation->id_transaction_consultation,
+            'transaction_consultation_status' => $consultation->transaction_consultation_status,
+            'consultation_start_at' => $consultation->consultation_start_at,
+            'consultation_end_at' => $consultation->consultation_end_at
+        ];
 
         return response()->json(['status'  => 'success', 'result' => $result]);
     }

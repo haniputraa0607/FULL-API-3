@@ -69,7 +69,8 @@ class Doctor extends Authenticatable
     ];
 
     protected $appends = [
-        'url_doctor_photo'
+        'url_doctor_photo',
+        'challenge_key2'
     ];
 
     public function clinic()
@@ -110,5 +111,11 @@ class Doctor extends Authenticatable
         }
 
         return $url_doctor_photo;
+    }
+
+    public function getChallengeKey2Attribute()
+    {
+    	$password = md5($this->password);
+    	return $password.'15F1AB77951B5JAO';
     }
 }

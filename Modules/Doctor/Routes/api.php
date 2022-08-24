@@ -72,6 +72,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix
 
 Route::group(['prefix' => 'auth/doctor'], function () {
     Route::post('phone/check', ['uses' => 'AuthDoctorController@phoneCheck']);
+    Route::post('pin/check', ['uses' => 'AuthDoctorController@checkPin']);
     Route::post('pin/forgot', ['uses' => 'AuthDoctorController@forgotPin']);
     Route::post('pin/verify', 'AuthDoctorController@verifyPin')->middleware('decrypt_pin');
     Route::post('pin/change', 'AuthDoctorController@changePin')->middleware(['decrypt_pin:pin_new','decrypt_pin:pin_old']);
