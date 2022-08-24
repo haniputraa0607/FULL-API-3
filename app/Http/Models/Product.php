@@ -889,7 +889,7 @@ class Product extends Model
         // if (Cache::has($cache_name)) {
         //     return Cache::get($cache_name);
         // }
-        dd($id_product_variant_group);
+        
         // get list variants available in products
         if (!$product_variant_status) {
             $list_variants = [];
