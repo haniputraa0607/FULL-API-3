@@ -3836,7 +3836,7 @@ class ApiUser extends Controller
             'photo' => (!empty($dataUser['photo']) ? config('url.storage_url_api').$dataUser['photo']: null),
             'info' => [
                 'name' => $dataUser['name'],
-                'phone' => $dataUser['phone'],
+                'phone' => substr_replace($dataUser['phone'], '', 0, 1),
                 'email' => $dataUser['email'],
                 'gender' => $dataUser['gender'],
             ],
