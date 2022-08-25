@@ -2386,8 +2386,11 @@ class ApiProductController extends Controller
         //         $product['can_buy_status'] = false;
         //     }
         // }
-
-        $product['variants'] = Product::getVariant($product['id_product'], $outlet, false, $product['product_price'], $product['product_variant_status'], $product['id_product_variant_group'])['variants_tree'];
+        if(isset($product['id_product_variant_group'])){
+            $product['variants'] = Product::getVariant($product['id_product'], $outlet, false, $product['product_price'], $product['product_variant_status'], $product['id_product_variant_group'])['variants_tree'];
+        } else {
+            $product['variants'] = Product::getVariantTree($product['id_product'], $outlet, false, $product['product_price'], $product['product_variant_status'])['variants_tree']??null;
+        }
 
         if($product['product_variant_status'] && empty($product['variants'])){
             return MyHelper::checkGet([],'Variants not available');
@@ -2440,14 +2443,19 @@ class ApiProductController extends Controller
             ];
         }
         $product['ratings'] = $ratings;
-        $product['total_rating'] = 0;
+        $product['total_rating'] = round(UserRating::where('id_product', $product['id_product'])->average('rating_value') ?? 0, 1);
         $product['can_buy_own_product'] = true;
         
         if($params['id_user'] == $merchant['id_user']){
             $product['can_buy_own_product'] = false;
         }
 
-        $product['favorite'] = false;
+        if(isset($post['id_user'])){
+            $favorite = Favorite::where('id_product', $product['id_product'])->where('id_user', $post['id_user'])->first();
+        } else {
+            $favorite = null;
+        }
+        $product['favorite'] = (!empty($favorite) ? true : false);
 
         return MyHelper::checkGet($product);
     }
