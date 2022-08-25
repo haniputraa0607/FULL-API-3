@@ -310,7 +310,7 @@ class MyHelper{
 	}
 
 	public static function  createRandomPIN($digit, $mode = null) {
-			if (config('app.env') == 'staging') {
+			if (config('app.env') == 'staging' && env('RANDOM_PIN') == 0) {
 				return '123456';
 			}
 			if($mode != null)
