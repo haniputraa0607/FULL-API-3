@@ -659,17 +659,22 @@ class ApiDoctorController extends Controller
     
                             if($quota <= $doctor_constultation && $quota != null){
                                 $row['schedule_time'][$key2]['status_session'] = "disable";
+                                $row['schedule_time'][$key2]['disable_reason'] = "Kuota Sudah Penuh";
                             } else {
                                 $row['schedule_time'][$key2]['status_session'] = "available";
+                                $row['schedule_time'][$key2]['disable_reason'] = null;
                             }
 
                             //cek validation avaibility time from current time
                             $nowTime = date("H:i:s");
+                            $nowDate = date('d-m-Y');
 
-                            if($post['time'] < $nowTime){
+                            if($post['time'] < $nowTime && strtotime($date) <= strtotime($nowDate)){
                                 $row['schedule_time'][$key2]['status_session'] = "disable";
+                                $row['schedule_time'][$key2]['disable_reason'] = "Waktu Sudah Terlewati";
                             } else {
                                 $row['schedule_time'][$key2]['status_session'] = "available";
+                                $row['schedule_time'][$key2]['disable_reason'] = null;
                             }
                         }
 
