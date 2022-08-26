@@ -4,6 +4,7 @@ namespace Modules\Consultation\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Response as FacadeResponse;
 use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
 use App\Lib\Infobip;
@@ -1542,6 +1543,18 @@ class ApiTransactionConsultationController extends Controller
         ];
 
         return MyHelper::checkGet($result);
+    }
+
+    public function downloadDrugRecomendation(Request $request)
+    {
+        //PDF file is stored under project/public/download/info.pdf
+        $file= public_path(). "/download/receipt.pdf";
+
+        $headers = array(
+                'Content-Type: application/pdf',
+                );
+
+        return FacadeResponse::download($file, 'receipt.pdf', $headers);
     }
 
     public function updateRecomendation(Request $request)

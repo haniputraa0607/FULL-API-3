@@ -39,6 +39,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix
         Route::post('/summary', 'ApiTransactionConsultationController@getDetailSummary');
         Route::post('/product-recomendation', 'ApiTransactionConsultationController@getProductRecomendation');
         Route::post('/drug-recomendation', 'ApiTransactionConsultationController@getDrugRecomendation');
+        Route::post('/drug-recomendation/download', 'ApiTransactionConsultationController@downloadDrugRecomendation');
     });
 });
 
