@@ -33,6 +33,10 @@ class Doctor extends Authenticatable
         return $this->where('doctor_phone', $username)->first();
     }
 
+    public function getAuthPassword() {
+		return $this->password;
+	}
+
 
     protected $fillable   = [
         'doctor_name',

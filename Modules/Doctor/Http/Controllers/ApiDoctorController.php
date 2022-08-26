@@ -308,6 +308,10 @@ class ApiDoctorController extends Controller
 
         $doctor['schedules'] = $schedule;
 
+        $schedule_be = DoctorSchedule::where('id_doctor', $id)->with('schedule_time')->get();
+
+        $doctor['schedules_raw'] = $schedule_be;
+
         return response()->json(['status'  => 'success', 'result' => $doctor]);
     }
 

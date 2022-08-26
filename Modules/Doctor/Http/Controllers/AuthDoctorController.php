@@ -158,150 +158,121 @@ class AuthDoctorController extends Controller
         $cekFraud = 0;
         if ($datauser) {
             Doctor::where('doctor_phone', $phone)->update(['otp_forgot' => null, 'otp_valid_time' => null]);
-            if (Auth::attempt(['phone' => $phone, 'password' => $request->json('pin')])) {
-                /*first if --> check if otp have expired and the current time exceeds the expiration time*/
-                // if(!is_null($datauser[0]['otp_valid_time']) && strtotime(date('Y-m-d H:i:s')) > strtotime($datauser[0]['otp_valid_time'])){
-                //     return response()->json(['status' => 'fail', 'otp_check'=> 1, 'messages' => ['This OTP is expired, please re-request OTP from apps']]);
-                // }
+            /*first if --> check if otp have expired and the current time exceeds the expiration time*/
+            // if(!is_null($datauser[0]['otp_valid_time']) && strtotime(date('Y-m-d H:i:s')) > strtotime($datauser[0]['otp_valid_time'])){
+            //     return response()->json(['status' => 'fail', 'otp_check'=> 1, 'messages' => ['This OTP is expired, please re-request OTP from apps']]);
+            // }
 
-                //untuk verifikasi admin panel
-                if ($request->json('admin_panel')) {
-                    return ['status' => 'success'];
-                }
-                //kalo login success
-                if ($is_android != 0 || $is_ios != 0) {
-
-                    //kalo dari device
-                    $checkdevice = DoctorDevice::where('device_type', '=', $device_type)
-                        ->where('device_id', '=', $device_id)
-                        ->where('device_token', '=', $device_token)
-                        ->where('id_doctor', '=', $datauser[0]['id_doctor'])
-                        ->get()
-                        ->toArray();
-                    if (!$checkdevice) {
-                        //not trusted device or new device
-                        $createdevice = DoctorDevice::updateOrCreate(['device_id' => $device_id], [
-                            'id_doctor'           => $datauser[0]['id_doctor'],
-                            'device_token'        => $device_token,
-                            'device_type'        => $device_type
-                        ]);
-                        if ($device_type == "Android")
-                            $update = Doctor::where('id_doctor', '=', $datauser[0]['id_doctor'])->update(['android_device' => $device_id, 'ios_device' => null]);
-                        if ($device_type == "IOS")
-                            $update = Doctor::where('id_doctor', '=', $datauser[0]['id_doctor'])->update(['android_device' => null, 'ios_device' => $device_id]);
-
-                        if (stristr($useragent, 'iOS')) $useragent = 'iOS';
-                        if (stristr($useragent, 'okhttp')) $useragent = 'Android';
-                        if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
-                    }
-                }
-
-                if (stristr($useragent, 'iOS')) $useragent = 'iOS';
-                if (stristr($useragent, 'okhttp')) $useragent = 'Android';
-                if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
-
-                //update count login failed
-                if ($datauser[0]['count_login_failed'] > 0) {
-                    $updateCountFailed = Doctor::where('doctor_phone', $phone)->update(['count_login_failed' => 0]);
-                }
-
-                $result             = [];
-                $result['status']     = 'success';
-                $res['date']     = date('Y-m-d H:i:s');
-                $res['device']     = $device;
-                $res['ip']         = $ip;
-
-                if ($request->json('latitude') && $request->json('longitude')) {
-                    $userLocation = DoctorLocation::create([
-                        'id_user' => $datauser[0]['id'],
-                        'lat' => $request->json('latitude'),
-                        'lng' => $request->json('longitude'),
-                        'action' => 'Login'
-                    ]);
-                }
-
-                if ($device_id) {
-                    $fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->where('fraud_settings_status', 'Active')->first();
-                    if ($fraud) {
-                        app($this->setting_fraud)->createUpdateDeviceLogin($datauser[0], $device_id);
-                        $deviceCus = DoctorDeviceLogin::where('device_id', '=', $device_id)
-                            ->where('status', 'Active')
-                            ->select('id_user')
-                            ->orderBy('created_at', 'asc')
-                            ->groupBy('id_user')
-                            ->get()->toArray('id_user');
-
-                        $count = count($deviceCus);
-                        $check = array_slice($deviceCus, (int) $fraud['parameter_detail']);
-                        $check = array_column($check, 'id_user');
-
-                        if ($deviceCus && count($deviceCus) > (int) $fraud['parameter_detail'] && array_search($datauser[0]['id'], $check) !== false) {
-                            $emailSender = Setting::where('key', 'email_sender')->first();
-                            $sendFraud = app($this->setting_fraud)->checkFraud($fraud, $datauser[0], ['device_id' => $device_id, 'device_type' => $useragent??null], 0, 0, null, 0);
-                            $data = User::with('city')->where('phone', '=', $datauser[0]['phone'])->get()->toArray();
-
-                            if ($data[0]['is_suspended'] == 1) {
-                                return response()->json([
-                                    'status' => 'fail',
-                                    'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
-                                ]);
-                            } else {
-                                return response()->json([
-                                    'status' => 'fail',
-                                    'messages' => ['Akun Anda tidak dapat login di device ini karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
-                                ]);
-                            }
-                        }
-                    }
-                }
-
-                if (\Module::collections()->has('Autocrm')) {
-                    $autocrm = app($this->autocrm)->SendAutoCRM(
-                        'Login Success',
-                        $phone,
-                        [
-                            'ip' => $ip,
-                            'useragent' => $useragent,
-                            'now' => date('Y-m-d H:i:s')
-                        ]
-                    );
-                }
-
-                if ($datauser[0]['pin_changed'] == '0') {
-                    $res['pin_changed'] = false;
-                } else {
-                    $res['pin_changed'] = true;
-                }
-                
-                $result['result'] = $res;
-            } else {
-                //kalo login gagal
-                if ($datauser) {
-                    //update count login failed
-                    $updateCountFailed = Doctor::where('doctor_phone', $phone)->update(['count_login_failed' => $datauser[0]['count_login_failed'] + 1]);
-
-                    $failedLogin = $datauser[0]['count_login_failed'] + 1;
-                    //get setting login failed
-                    $getSet = Setting::where('key', 'count_login_failed')->first();
-                    if ($getSet && $getSet->value) {
-                        if ($failedLogin >= $getSet->value) {
-                            $autocrm = app($this->autocrm)->SendAutoCRM(
-                                'Login Failed',
-                                $phone,
-                                [
-                                    'ip' => $ip,
-                                    'useragent' => $useragent,
-                                    'now' => date('Y-m-d H:i:s')
-                                ]
-                            );
-                        }
-                    }
-                }
-
-                $result             = [];
-                $result['status']     = 'fail';
-                $result['messages'] = ['Kata sandi yang kamu masukkan kurang tepat'];
+            //untuk verifikasi admin panel
+            if ($request->json('admin_panel')) {
+                return ['status' => 'success'];
             }
+            //kalo login success
+            if ($is_android != 0 || $is_ios != 0) {
+
+                //kalo dari device
+                $checkdevice = DoctorDevice::where('device_type', '=', $device_type)
+                    ->where('device_id', '=', $device_id)
+                    ->where('device_token', '=', $device_token)
+                    ->where('id_doctor', '=', $datauser[0]['id_doctor'])
+                    ->get()
+                    ->toArray();
+                if (!$checkdevice) {
+                    //not trusted device or new device
+                    $createdevice = DoctorDevice::updateOrCreate(['device_id' => $device_id], [
+                        'id_doctor'           => $datauser[0]['id_doctor'],
+                        'device_token'        => $device_token,
+                        'device_type'        => $device_type
+                    ]);
+                    if ($device_type == "Android")
+                        $update = Doctor::where('id_doctor', '=', $datauser[0]['id_doctor'])->update(['android_device' => $device_id, 'ios_device' => null]);
+                    if ($device_type == "IOS")
+                        $update = Doctor::where('id_doctor', '=', $datauser[0]['id_doctor'])->update(['android_device' => null, 'ios_device' => $device_id]);
+
+                    if (stristr($useragent, 'iOS')) $useragent = 'iOS';
+                    if (stristr($useragent, 'okhttp')) $useragent = 'Android';
+                    if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
+                }
+            }
+
+            if (stristr($useragent, 'iOS')) $useragent = 'iOS';
+            if (stristr($useragent, 'okhttp')) $useragent = 'Android';
+            if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
+
+            //update count login failed
+            if ($datauser[0]['count_login_failed'] > 0) {
+                $updateCountFailed = Doctor::where('doctor_phone', $phone)->update(['count_login_failed' => 0]);
+            }
+
+            $result             = [];
+            $result['status']     = 'success';
+            $res['date']     = date('Y-m-d H:i:s');
+            $res['device']     = $device;
+            $res['ip']         = $ip;
+
+            if ($request->json('latitude') && $request->json('longitude')) {
+                $userLocation = DoctorLocation::create([
+                    'id_user' => $datauser[0]['id'],
+                    'lat' => $request->json('latitude'),
+                    'lng' => $request->json('longitude'),
+                    'action' => 'Login'
+                ]);
+            }
+
+            if ($device_id) {
+                $fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->where('fraud_settings_status', 'Active')->first();
+                if ($fraud) {
+                    app($this->setting_fraud)->createUpdateDeviceLogin($datauser[0], $device_id);
+                    $deviceCus = DoctorDeviceLogin::where('device_id', '=', $device_id)
+                        ->where('status', 'Active')
+                        ->select('id_user')
+                        ->orderBy('created_at', 'asc')
+                        ->groupBy('id_user')
+                        ->get()->toArray('id_user');
+
+                    $count = count($deviceCus);
+                    $check = array_slice($deviceCus, (int) $fraud['parameter_detail']);
+                    $check = array_column($check, 'id_user');
+
+                    if ($deviceCus && count($deviceCus) > (int) $fraud['parameter_detail'] && array_search($datauser[0]['id'], $check) !== false) {
+                        $emailSender = Setting::where('key', 'email_sender')->first();
+                        $sendFraud = app($this->setting_fraud)->checkFraud($fraud, $datauser[0], ['device_id' => $device_id, 'device_type' => $useragent??null], 0, 0, null, 0);
+                        $data = User::with('city')->where('phone', '=', $datauser[0]['phone'])->get()->toArray();
+
+                        if ($data[0]['is_suspended'] == 1) {
+                            return response()->json([
+                                'status' => 'fail',
+                                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
+                            ]);
+                        } else {
+                            return response()->json([
+                                'status' => 'fail',
+                                'messages' => ['Akun Anda tidak dapat login di device ini karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            if (\Module::collections()->has('Autocrm')) {
+                $autocrm = app($this->autocrm)->SendAutoCRM(
+                    'Login Success',
+                    $phone,
+                    [
+                        'ip' => $ip,
+                        'useragent' => $useragent,
+                        'now' => date('Y-m-d H:i:s')
+                    ]
+                );
+            }
+
+            if ($datauser[0]['pin_changed'] == '0') {
+                $res['pin_changed'] = false;
+            } else {
+                $res['pin_changed'] = true;
+            }
+            
+            $result['result'] = $res;
         } else {
             $result['status']     = 'fail';
             $result['messages'] = ['Nomor HP belum terdaftar'];

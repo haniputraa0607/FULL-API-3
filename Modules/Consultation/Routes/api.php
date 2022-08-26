@@ -49,6 +49,7 @@ Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-
     Route::post('/consultation/complete', 'ApiTransactionConsultationController@completeConsultation');
     Route::post('/consultation/message/get', 'ApiTransactionConsultationController@getMessage');
     Route::post('/consultation/message/create', 'ApiTransactionConsultationController@createMessage');
+    Route::post('/consultation/detail/soon', 'ApiTransactionConsultationController@getSoonConsultationDetail');
 
     Route::group(['prefix' => '/consultation/detail'], function () {
         Route::post('/summary', 'ApiTransactionConsultationController@getDetailSummary');
