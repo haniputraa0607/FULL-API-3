@@ -118,6 +118,10 @@ class User extends Authenticatable
         'transaction_online_status',
 	];
 
+	protected $appends = [
+        'url_photo',
+    ];
+
 	public function city()
 	{
 		return $this->belongsTo(\App\Http\Models\City::class, 'id_city');
@@ -265,5 +269,16 @@ class User extends Authenticatable
 	public function log_popup_user_rating()
     {
     	return $this->hasMany(\Modules\UserRating\Entities\UserRatingLog::class,'id_user')->orderBy('last_popup')->orderBy('id_user_rating_log');
+    }
+
+	public function getUrlPhotoAttribute()
+    {
+        if(!empty($this->attributes['photo'])){
+            $url_photo = env('STORAGE_URL_API').$this->attributes['photo'];
+        } else {
+            $url_photo = null;
+        }
+
+        return $url_photo;
     }
 }

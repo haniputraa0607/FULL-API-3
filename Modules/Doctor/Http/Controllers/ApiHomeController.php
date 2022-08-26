@@ -108,7 +108,7 @@ class ApiHomeController extends Controller
             $data_consultation[$key]['id_user'] = $value['consultation']['id_user'];
             $data_consultation[$key]['user_name'] = $user_selected['name'];
             $data_consultation[$key]['user_photo'] = $user_selected['photo'];
-            $data_consultation[$key]['url_user_photo'] = null;
+            $data_consultation[$key]['url_user_photo'] = $user_selected['url_photo'];
             $data_consultation[$key]['schedule_date'] = $value['consultation']['schedule_date_human_formatted'];
             $data_consultation[$key]['start_time'] = $value['consultation']['schedule_start_time_formatted'];
             $data_consultation[$key]['diff_date'] = $diff_date;
