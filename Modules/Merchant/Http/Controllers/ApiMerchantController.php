@@ -209,7 +209,9 @@ class ApiMerchantController extends Controller
         $phone = $request->json('merchant_phone');
 
         $phone = preg_replace("/[^0-9]/", "", $phone);
-
+        if(substr($phone, 0, 2) != 62 && substr($phone, 0, 1) != '0'){
+            $phone = '0'.$phone;
+        }
         $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
 
         if (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail') {
@@ -455,7 +457,7 @@ class ApiMerchantController extends Controller
                 'merchant_description' => $detail['outlet_description'],
                 'merchant_license_number' => $detail['outlet_license_number'],
                 "merchant_email" => $detail['outlet_email'],
-                "merchant_phone" => $detail['outlet_phone'],
+                "merchant_phone" => substr_replace($detail['outlet_phone'], '', 0, 1),
                 "city_name" => $detail['city_name'],
                 "image_cover" => (!empty($detail['outlet_image_cover']) ? config('url.storage_url_api').$detail['outlet_image_cover']: ''),
                 "image_logo_portrait" => (!empty($detail['outlet_image_logo_portrait']) ? config('url.storage_url_api').$detail['outlet_image_logo_portrait']: '')
@@ -478,6 +480,24 @@ class ApiMerchantController extends Controller
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
         if(empty($checkMerchant)){
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        $phone = $post['merchant_phone'];
+        if(substr($phone, 0, 2) != 62 && substr($phone, 0, 1) != '0'){
+            $phone = '0'.$phone;
+        }
+
+        $phone = preg_replace("/[^0-9]/", "", $phone);
+
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
+
+        if (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail') {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Format nomor telepon tidak valid']
+            ]);
+        } elseif (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success') {
+            $phone = $checkPhoneFormat['phone'];
         }
 
         $dtOutlet = Outlet::where('id_outlet', $checkMerchant['id_outlet'])->first();
@@ -513,7 +533,7 @@ class ApiMerchantController extends Controller
         $dataUpdate['outlet_description'] = $post['merchant_description'];
         $dataUpdate['outlet_license_number'] = $post['merchant_license_number']??null;
         $dataUpdate['outlet_email'] = $post['merchant_email'];
-        $dataUpdate['outlet_phone'] = $post['merchant_phone'];
+        $dataUpdate['outlet_phone'] = $phone;
 
         $update = Outlet::where('id_outlet', $checkMerchant['id_outlet'])->update($dataUpdate);
         return response()->json(MyHelper::checkUpdate($update));
