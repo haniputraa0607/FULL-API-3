@@ -13,7 +13,7 @@ class CreateTransactionConsultationRescheduleTable extends Migration
      */
     public function up()
     {
-        Schema::table('transaction_consultation_reschedules', function (Blueprint $table) {
+        Schema::create('transaction_consultation_reschedules', function (Blueprint $table) {
             $table->bigIncrements('id_transaction_consultation_reschedules');
             $table->integer('id_transaction');
             $table->integer('id_transaction_consultation');
@@ -21,7 +21,7 @@ class CreateTransactionConsultationRescheduleTable extends Migration
             $table->integer('id_doctor');
             $table->time('schedule_start_time');
             $table->time('schedule_date_time');
-            $table->string('status', array('requested', 'approved', 'rejected', 'cancelled'));
+            $table->enum('status', array('requested', 'approved', 'rejected', 'cancelled'));
             $table->integer('id_user_responder');
             $table->timestamps();
         });
