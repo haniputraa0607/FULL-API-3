@@ -140,47 +140,9 @@ class ApiNotification extends Controller {
             // }
 
             if ($midtrans['status_code'] == 200) {
-                // if (!in_array('Balance', $column)) {
-                //     $savePoint = $this->savePoint($newTrx);
-                //     if (!$savePoint) {
-                //         DB::rollback();
-                //         return response()->json([
-                //             'status'   => 'fail',
-                //             'messages' => ['Transaction failed']
-                //         ]);
-                //     }
-                // }
-                if($midtrans['transaction_status'] == 'settlement' && $midtrans['payment_type'] == 'credit_card'){}
-                else{
-                    if($midtrans['transaction_status'] == 'settlement' || ($midtrans['transaction_status'] == 'capture' && $midtrans['payment_type'] == 'credit_card')){
-                        $sendNotifOutlet = app($this->trx)->outletNotif($transac['id_transaction_group']);
-
-                        if($this->url_oauth != ''){
-                            $kirim = $this->kirimOutlet($transac['transaction_receipt_number']);
-                            if (isset($kirim['status']) && $kirim['status'] == 1) {
-                                DB::commit();
-                                return response()->json(['status' => 'success']);
-                            } elseif (isset($kirim['status']) && $kirim['status'] == 'fail') {
-                                if (isset($kirim['messages'])) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'   => 'fail',
-                                        'messages' => $kirim['messages']
-                                    ]);
-                                }
-                            } else {
-                                DB::rollback();
-                                return response()->json([
-                                    'status'   => 'fail',
-                                    'messages' => ['failed']
-                                ]);
-                            }
-                        }else{
-                            DB::commit();
-                        }
-                    }
+                if($midtrans['transaction_status'] == 'settlement' || ($midtrans['transaction_status'] == 'capture' && $midtrans['payment_type'] == 'credit_card')){
+                    DB::commit();
                 }
-
             } elseif ($midtrans['status_code'] == 201) {
                 $notifPending = $this->notificationPending($midtrans, $transac);
                 if (!$notifPending) {
