@@ -1495,9 +1495,11 @@ class ApiTransactionConsultationController extends Controller
         //get transaction
         $transactionConsultation = null;
         if(isset($user->id_doctor)){
-            $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first();    
+            $id = $user->id_doctor;
+            $transactionConsultation = TransactionConsultation::where('id_doctor', $id)->where('id_transaction', $post['id_transaction'])->first();    
         } else {
-            $transactionConsultation = TransactionConsultation::where('id_user', $user->id)->where('id_transaction', $post['id_transaction'])->first();
+            $id = $user->id;
+            $transactionConsultation = TransactionConsultation::where('id_user', $id)->where('id_transaction', $post['id_transaction'])->first();
         }
 
         $transaction = Transaction::with('outlet')->where('id_transaction', $transactionConsultation['id_transaction'])->first();
