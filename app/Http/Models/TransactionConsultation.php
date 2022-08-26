@@ -103,7 +103,11 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
 
 	public function getScheduleDateHumanFormattedAttribute()
     {
-        return date('d F Y', strtotime($this->attributes['schedule_date']));
+		$dateId = Carbon::parse($this->attributes['schedule_date'])->locale('id');
+		$dateId->settings(['formatFunction' => 'translatedFormat']);
+		$date = $dateId->format('d F Y');
+		
+        return $date;
     }
 
 	public function getScheduleDateHumanShortFormattedAttribute()
@@ -125,7 +129,6 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
     {
 		$dateId = Carbon::parse($this->attributes['schedule_date'])->locale('id');
 		$dateId->settings(['formatFunction' => 'translatedFormat']);
-
 		$dayId = $dateId->format('l');
 
         return $dayId;

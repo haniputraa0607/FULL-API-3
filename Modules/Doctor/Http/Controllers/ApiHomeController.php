@@ -9,11 +9,19 @@ use Illuminate\Routing\Controller;
 use Modules\Doctor\Entities\Doctor;
 use Modules\Doctor\Entities\DoctorSchedule;
 use App\Http\Models\Transaction;
+use App\Http\Models\User;
 
 use DateTime;
 
 class ApiHomeController extends Controller
 {
+    function __construct() {
+        ini_set('max_execution_time', 0);
+        date_default_timezone_set('Asia/Jakarta');
+
+        $this->doctor = "Modules\Doctor\Http\Controllers\ApiDoctorController";
+    }
+
     /**
      * Display a listing of the resource.
      * @return Response
@@ -23,7 +31,7 @@ class ApiHomeController extends Controller
         $user = $request->user();
 
         //get detail doctpr
-        $doctor = Doctor::with('specialists')->with('clinic')->with('schedules')->where('id_doctor', $user['id_doctor'])->first();
+        $doctor = Doctor::with('specialists')->with('clinic')->where('id_doctor', $user['id_doctor'])->first();
 
         if (empty($doctor)) {
             return response()->json([
@@ -70,45 +78,44 @@ class ApiHomeController extends Controller
 
         $data_consultation = array();
         foreach($transaction as $key => $value) {
-            $schedule_date_time = $value['consultation']['schedule_date'] .' '. $value['consultation']['schedule_start_time'];
-            $schedule_date_time =new DateTime($schedule_date_time);
-            $diff_date = "missed";
-            if($schedule_date_time > $now) {
-                $diff_date = $now->diff($schedule_date_time)->format("%d days, %h hours and %i minuts");
+            $user_selected = User::where('id', $value['consultation']['id_user'])->first()->toArray();
+
+            //get diff datetime
+            $now = new DateTime();
+            $schedule_date_start_time = $value['consultation']['schedule_date'] .' '. $value['consultation']['schedule_start_time'];
+            $schedule_date_start_time =new DateTime($schedule_date_start_time);
+            $schedule_date_end_time = $value['consultation']['schedule_date'] .' '. $value['consultation']['schedule_end_time'];
+            $schedule_date_end_time =new DateTime($schedule_date_end_time);
+            $diff_date = null;
+
+            //logic schedule diff date
+            if($schedule_date_start_time > $now && $schedule_date_end_time > $now) {
+                $diff = $now->diff($schedule_date_start_time);
+                if($diff->d == 0) {
+                    $diff_date = $now->diff($schedule_date_start_time)->format("%h jam, %i mnt");
+                } elseif($diff->d == 0 && $diff->h == 0) {
+                    $diff_date = $now->diff($schedule_date_start_time)->format("%i mnt");
+                } elseif($diff->d == 0 && $diff->h == 0 && $diff->i == 0) {
+                    $diff_date = $now->diff($schedule_date_start_time)->format("sebentar lagi");
+                }
+            } elseif($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
+                $diff_date = "now";
+            } else {
+                $diff_date = "missed";
             }
 
             $data_consultation[$key]['id_transaction'] = $value['id_transaction'];
-            $data_consultation[$key]['id_doctor'] = $value['consultation']['id_doctor'];
-            $data_consultation[$key]['doctor_name'] = $doctor['doctor_name'];
-            $data_consultation[$key]['doctor_photo'] = $doctor['doctor_photo'];
-            $data_consultation[$key]['schedule_date'] = $value['consultation']['schedule_date'];
+            $data_consultation[$key]['id_user'] = $value['consultation']['id_user'];
+            $data_consultation[$key]['user_name'] = $user_selected['name'];
+            $data_consultation[$key]['user_photo'] = $user_selected['photo'];
+            $data_consultation[$key]['url_user_photo'] = null;
+            $data_consultation[$key]['schedule_date'] = $value['consultation']['schedule_date_human_formatted'];
+            $data_consultation[$key]['start_time'] = $value['consultation']['schedule_start_time_formatted'];
             $data_consultation[$key]['diff_date'] = $diff_date;
         }
 
         //get doctor schedule
-        $doctor_schedule = DoctorSchedule::where('id_doctor', $doctor['id_doctor'])->with('schedule_time');
-
-        $doctor_schedule = $doctor_schedule->get()->toArray();
-
-        $data_schedule = array();
-        $i = 0;
-        while(count($data_schedule) < 4){
-            if($i > 0) {
-                $date = date("Y-m-d", strtotime("+$i day"));
-                $day = strtolower(date("l", strtotime($date)));
-            } else {
-                $date = date("Y-m-d");
-                $day = strtolower(date("l", strtotime($date)));
-            }
-            $i += 1;
-
-            foreach($doctor_schedule as $row) {
-                if($row['day'] == $day) {
-                    $row['date'] = $date;
-                    $data_schedule[] = $row;
-                }
-            }
-        }
+        $data_schedule = app($this->doctor)->getScheduleDoctor($user['id_doctor']);
 
         $result = [
             "data_doctor" => $data_doctor, 

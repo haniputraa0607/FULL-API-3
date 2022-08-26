@@ -33,7 +33,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
         Route::get('{id}', ['uses' => 'ApiDoctorServiceController@show']);
         Route::post('delete', ['uses' => 'ApiDoctorServiceController@destroy']);
     });
-    Route::group(['prefix' => 'specialist-category'], function () {
+    Route::group(['prefix' => 'be/specialist-category'], function () {
         Route::any('/', ['uses' => 'ApiDoctorSpecialistCategoryController@index']);
         Route::post('store', ['uses' => 'ApiDoctorSpecialistCategoryController@store']);
         Route::get('{id}', ['uses' => 'ApiDoctorSpecialistCategoryController@show']);
@@ -45,12 +45,11 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
         Route::get('{id}', ['uses' => 'ApiDoctorSpecialistController@show']);
         Route::post('delete', ['uses' => 'ApiDoctorSpecialistController@destroy']);
     });
-
-    Route::group(['prefix' => 'schedule-time'], function () {
-        Route::any('/', ['uses' => 'ApiDoctorScheduleTimeController@index']);
-        Route::post('store', ['uses' => 'ApiDoctorScheduleTimeController@store']);
-        Route::get('{id}', ['uses' => 'ApiDoctorScheduleTimeController@show']);
-        Route::post('delete', ['uses' => 'ApiDoctorScheduleTimeController@destroy']);
+    Route::group(['prefix' => 'schedule'], function () {
+        Route::post('/', ['uses' => 'ApiScheduleController@index']);
+        Route::post('store', ['uses' => 'ApiScheduleController@store']);
+        //Route::get('{id}', ['uses' => 'ApiScheduleController@show']);
+        Route::post('delete', ['uses' => 'ApiScheduleController@destroy']);
     });
 
     Route::group(['prefix' => 'recomendation'], function () {

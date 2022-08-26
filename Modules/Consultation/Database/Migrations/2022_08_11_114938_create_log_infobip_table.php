@@ -30,8 +30,6 @@ class CreateLogInfobipTable extends Migration
      */
     public function down()
     {
-        Schema::table('transaction_consultation_recomendations', function (Blueprint $table) {
-            Schema::connection('mysql2')->dropIfExists('log_shipper');
-        });
+        Schema::connection('mysql2')->dropIfExists('log_shipper');
     }
 }
