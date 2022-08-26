@@ -594,11 +594,11 @@ class ApiDoctorController extends Controller
         }
 
         foreach($doctorRecomendationDefault as $dr){
-            if(in_array($dr, $recomendationDoctor) == false && count($recomendationDoctor) < 3) {
+            if(in_array($dr, $recomendationDoctor) == false && count($recomendationDoctor) < 4) {
                 $recomendationDoctor[] = $dr;
             }
 
-            if(count($recomendationDoctor) >= 3) {
+            if(count($recomendationDoctor) >= 4) {
                 return response()->json(['status'  => 'success', 'result' => $recomendationDoctor]);
             }
         }
