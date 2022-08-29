@@ -47,6 +47,7 @@ use LaravelFCM\Message\PayloadDataBuilder;
 use LaravelFCM\Message\PayloadNotificationBuilder;
 use FCM;
 use Illuminate\Support\Facades\Crypt;
+use \Firebase\JWT\JWT;
 
 class MyHelper{
 	public static function  checkGet($data, $message = null){
@@ -3212,5 +3213,28 @@ class MyHelper{
     	}
 
     	return true;
+    }
+
+    public static function jwtTokenGenerator($payload = null)
+    {
+    	if (!$payload) {
+    		$payload = [
+		     "jti" => (string) time(), 
+		     "sid" => "session4", 
+		     "sub" => "john@mailinator.com",
+		     "stp" => "email",
+		     "iss" => "7320c57e-11a9-41e5-8529-f0c6ad0d9d26",
+		     "iat" => time(),
+		     "exp" => time()+3600,
+		     "ski" => "7bf861f0-3b2f-4c0e-9100-08079f72cda1",
+		    ];
+    	}
+    	$headers = [
+    		'typ' => 'JWT',
+    		'alg' => 'HS256',
+    	];
+
+		$token = JWT::encode($payload, base64_decode(env('INFOBIP_SECRETKEY')));
+    	return $token;
     }
 }

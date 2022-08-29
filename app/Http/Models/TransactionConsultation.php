@@ -133,4 +133,9 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
 
         return $dayId;
     }
+
+    public function getConsultationChatUrlAttribute()
+    {
+    	return url('api/consultation/detail/chat.html') . '?id_transaction=' . $transaction['id_transaction'];
+    }
 }
