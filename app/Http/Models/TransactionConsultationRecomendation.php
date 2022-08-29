@@ -39,6 +39,7 @@ class TransactionConsultationRecomendation extends model
 	protected $fillable = [
 		'id_transaction_consultation',
 		'id_product',
+		'id_product_variant_group',
 		'product_type',
 		'qty_product',
         'qty_product_counter',

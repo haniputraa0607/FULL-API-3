@@ -308,6 +308,10 @@ class ApiDoctorController extends Controller
 
         $doctor['schedules'] = $schedule;
 
+        $schedule_be = DoctorSchedule::where('id_doctor', $id)->with('schedule_time')->get();
+
+        $doctor['schedules_raw'] = $schedule_be;
+
         return response()->json(['status'  => 'success', 'result' => $doctor]);
     }
 
@@ -590,11 +594,11 @@ class ApiDoctorController extends Controller
         }
 
         foreach($doctorRecomendationDefault as $dr){
-            if(in_array($dr, $recomendationDoctor) == false && count($recomendationDoctor) < 3) {
+            if(in_array($dr, $recomendationDoctor) == false && count($recomendationDoctor) < 4) {
                 $recomendationDoctor[] = $dr;
             }
 
-            if(count($recomendationDoctor) >= 3) {
+            if(count($recomendationDoctor) >= 4) {
                 return response()->json(['status'  => 'success', 'result' => $recomendationDoctor]);
             }
         }
@@ -646,7 +650,8 @@ class ApiDoctorController extends Controller
                                 
                         foreach($row['schedule_time'] as $key2 => $time) {
                             $post['time'] = date("H:i:s", strtotime($time['start_time']));
-                            //cek validation avaibility time
+
+                            //cek validation avaibility time from consultation
                             $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $post['date'])
                             ->where('schedule_start_time', $post['time'])->count();
                             $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
@@ -654,8 +659,22 @@ class ApiDoctorController extends Controller
     
                             if($quota <= $doctor_constultation && $quota != null){
                                 $row['schedule_time'][$key2]['status_session'] = "disable";
+                                $row['schedule_time'][$key2]['disable_reason'] = "Kuota Sudah Penuh";
                             } else {
                                 $row['schedule_time'][$key2]['status_session'] = "available";
+                                $row['schedule_time'][$key2]['disable_reason'] = null;
+                            }
+
+                            //cek validation avaibility time from current time
+                            $nowTime = date("H:i:s");
+                            $nowDate = date('d-m-Y');
+
+                            if($post['time'] < $nowTime && strtotime($date) <= strtotime($nowDate)){
+                                $row['schedule_time'][$key2]['status_session'] = "disable";
+                                $row['schedule_time'][$key2]['disable_reason'] = "Waktu Sudah Terlewati";
+                            } else {
+                                $row['schedule_time'][$key2]['status_session'] = "available";
+                                $row['schedule_time'][$key2]['disable_reason'] = null;
                             }
                         }
 

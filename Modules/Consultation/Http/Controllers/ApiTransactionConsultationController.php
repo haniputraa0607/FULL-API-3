@@ -4,6 +4,7 @@ namespace Modules\Consultation\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Response as FacadeResponse;
 use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
 use App\Lib\Infobip;
@@ -726,9 +727,11 @@ class ApiTransactionConsultationController extends Controller
             if($schedule_date_start_time > $now && $schedule_date_end_time > $now) {
                 $diff = $now->diff($schedule_date_start_time);
                 if($diff->d == 0) {
-                    $diff_date = $now->diff($schedule_date_start_time)->format("%h jam");
-                } else {
-                    $diff_date = $now->diff($schedule_date_start_time)->format("%d hr, %h jam");
+                    $diff_date = $now->diff($schedule_date_start_time)->format("%h jam, %i mnt");
+                } elseif($diff->d == 0 && $diff->h == 0) {
+                    $diff_date = $now->diff($schedule_date_start_time)->format("%i mnt");
+                } elseif($diff->d == 0 && $diff->h == 0 && $diff->i == 0) {
+                    $diff_date = $now->diff($schedule_date_start_time)->format("sebentar lagi");
                 }
             } elseif($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
                 $diff_date = "now";
@@ -741,7 +744,7 @@ class ApiTransactionConsultationController extends Controller
             $result[$key]['doctor_name'] = $doctor['doctor_name'];
             $result[$key]['doctor_photo'] = $doctor['doctor_photo'];
             $result[$key]['url_doctor_photo'] = $doctor['url_doctor_photo'];
-            $result[$key]['schedule_date'] = $value['consultation']['schedule_date_formatted'];
+            $result[$key]['schedule_date'] = $value['consultation']['schedule_date_human_formatted'];
             $result[$key]['diff_date'] = $diff_date;
         }
 
@@ -759,10 +762,12 @@ class ApiTransactionConsultationController extends Controller
     public function getSoonConsultationDetail(Request $request) {
         $post = $request->json()->all();
 
-        if (!isset($post['id_user'])) {
-            $id = $request->user()->id;
+        $user = $request->user();
+
+        if (!isset($user->id_doctor)) {
+            $id = $request->user()->id_doctor;
         } else {
-            $id = $post['id_user'];
+            $id = $request->user()->id;
         }
 
         //cek id transaction
@@ -795,6 +800,16 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
+        //get User 
+        $detailUser = User::where('id', $transaction['consultation']['id_doctor'])->first();
+        if(empty($detailUser)) {
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Dokter tidak di temukan']
+            ]);
+        }
+
+
         //get day
         $day = $transaction['consultation']['schedule_day_formatted'];
 
@@ -810,9 +825,11 @@ class ApiTransactionConsultationController extends Controller
         if($schedule_date_start_time > $now && $schedule_date_end_time > $now) {
             $diff = $now->diff($schedule_date_start_time);
             if($diff->d == 0) {
-                $diff_date = $now->diff($schedule_date_start_time)->format("%h jam");
-            } else {
-                $diff_date = $now->diff($schedule_date_start_time)->format("%d hr, %h jam");
+                $diff_date = $now->diff($schedule_date_start_time)->format("%h jam, %i mnt");
+            } elseif($diff->d == 0 && $diff->h == 0) {
+                $diff_date = $now->diff($schedule_date_start_time)->format("%i mnt");
+            } elseif($diff->d == 0 && $diff->h == 0 && $diff->i == 0) {
+                $diff_date = $now->diff($schedule_date_start_time)->format("sebentar lagi");
             }
         } elseif($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
             $diff_date = "now";
@@ -820,11 +837,19 @@ class ApiTransactionConsultationController extends Controller
             $diff_date = "missed";
         }
 
+        $transactionDateId = Carbon::parse($transaction['transaction_date'])->locale('id');
+		$transactionDateId->settings(['formatFunction' => 'translatedFormat']);
+		$transactionDate = $transactionDateId->format('d F Y');
+
         $result = [
             'id_transaction' => $transaction['id_transaction'],
+            'transaction_date_time' => $transactionDate." ".date('H:i', strtotime($transaction['created_at'])),
+            'transaction_consultation_status' => $transaction['consultation']['consultation_status'],
+            'id_transaction_consultation' => $transaction['consultation']['id_transaction_consultation'],
             'doctor' => $detailDoctor->getData()->result,
-            'schedule_date' => $transaction['consultation']['schedule_date_formatted'],
-            'schedule_start_time' => $transaction['consultation']['schedule_start_time_formatted'],
+            'user' => $detailUser,
+            'schedule_date' => $transaction['consultation']['schedule_date_human_formatted'],
+            'schedule_session_time' => $transaction['consultation']['schedule_start_time_formatted']." - ".$transaction['consultation']['schedule_end_time_formatted'],
             'schedule_day' => $day,
             'diff_date' => $diff_date
         ];
@@ -1471,9 +1496,11 @@ class ApiTransactionConsultationController extends Controller
         //get transaction
         $transactionConsultation = null;
         if(isset($user->id_doctor)){
-            $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first();    
+            $id = $user->id_doctor;
+            $transactionConsultation = TransactionConsultation::where('id_doctor', $id)->where('id_transaction', $post['id_transaction'])->first();    
         } else {
-            $transactionConsultation = TransactionConsultation::where('id_user', $user->id)->where('id_transaction', $post['id_transaction'])->first();
+            $id = $user->id;
+            $transactionConsultation = TransactionConsultation::where('id_user', $id)->where('id_transaction', $post['id_transaction'])->first();
         }
 
         $transaction = Transaction::with('outlet')->where('id_transaction', $transactionConsultation['id_transaction'])->first();
@@ -1491,11 +1518,15 @@ class ApiTransactionConsultationController extends Controller
         $items = [];
         if(!empty($recomendations)) {
             foreach($recomendations as $key => $recomendation){
-                $items[$key]['id_product'] = $recomendation->product->id_product ?? null;
-                $items[$key]['product_name'] = $recomendation->product->product_name ?? null;
-                $items[$key]['product_price'] = $recomendation->product->product_price ?? null;
-                $items[$key]['product_photo'] = $recomendation->product->product_photos[0]['url_product_photo'] ?? null;
-                $items[$key]['product_rating'] = $recomendation->product->total_rating ?? null;
+                $params = [
+                    'id_product' => $recomendation->id_product,
+                    'id_user' => $id,
+                    'id_product_variant_group' =>$recomendation->id_product_variant_group
+                ];
+
+                $detailProduct = app($this->product)->detailRecomendation($params);
+
+                $items[$key]['product'] = $detailProduct ?? null;
                 $items[$key]['qty'] = $recomendation->qty_product ?? null;
                 $items[$key]['usage_rules'] = $recomendation->usage_rules ?? null;
                 $items[$key]['usage_rules_time'] = $recomendation->usage_rules_time ?? null;
@@ -1505,12 +1536,25 @@ class ApiTransactionConsultationController extends Controller
         }
 
         $result = [
+            'id_transaction_consultation' => $transactionConsultation['id_transaction_consultation'],
             'outlet' => $transaction['outlet'],
             'items' => $items,
             'remaining_recipe_redemption' =>  ($transactionConsultation->recipe_redemption_limit - $transactionConsultation->recipe_redemption_counter)
         ];
 
         return MyHelper::checkGet($result);
+    }
+
+    public function downloadDrugRecomendation(Request $request)
+    {
+        //PDF file is stored under project/public/download/info.pdf
+        $file= public_path(). "/download/receipt.pdf";
+
+        $headers = array(
+                'Content-Type: application/pdf',
+                );
+
+        return FacadeResponse::download($file, 'receipt.pdf', $headers);
     }
 
     public function updateRecomendation(Request $request)

@@ -39,6 +39,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix
         Route::post('/summary', 'ApiTransactionConsultationController@getDetailSummary');
         Route::post('/product-recomendation', 'ApiTransactionConsultationController@getProductRecomendation');
         Route::post('/drug-recomendation', 'ApiTransactionConsultationController@getDrugRecomendation');
+        Route::post('/drug-recomendation/download', 'ApiTransactionConsultationController@downloadDrugRecomendation');
     });
 });
 
@@ -49,6 +50,7 @@ Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-
     Route::post('/consultation/complete', 'ApiTransactionConsultationController@completeConsultation');
     Route::post('/consultation/message/get', 'ApiTransactionConsultationController@getMessage');
     Route::post('/consultation/message/create', 'ApiTransactionConsultationController@createMessage');
+    Route::post('/consultation/detail/soon', 'ApiTransactionConsultationController@getSoonConsultationDetail');
 
     Route::group(['prefix' => '/consultation/detail'], function () {
         Route::post('/summary', 'ApiTransactionConsultationController@getDetailSummary');

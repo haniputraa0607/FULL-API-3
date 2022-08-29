@@ -18,13 +18,23 @@ class ApiScheduleController extends Controller
      * Display a listing of the resource.
      * @return Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        $scheduleTime = ScheduleTime::orderBy('created_at', 'ASC');
+        $post = $request->json()->all();
+        unset($post['_token']);
 
-        $scheduleTime = $scheduleTime->get()->toArray();
+        if(empty($post['id_doctor'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Id doctor can not be empty']
+            ]);
+        }
 
-        return response()->json(['status'  => 'success', 'result' => $scheduleTime]);
+        $doctorSchedule = DoctorSchedule::where('id_doctor', $post['id_doctor'])->with('schedule_time')->onlyActive();
+
+        $doctorSchedule = $doctorSchedule->get()->toArray();
+
+        return response()->json(['status'  => 'success', 'result' => $doctorSchedule]);
     }
 
     /**
@@ -32,40 +42,89 @@ class ApiScheduleController extends Controller
      * @param Request $request
      * @return Response
      */
-    public function store(ScheduleTimeCreate $request)
+    public function store(Request $request)
     {
         $post = $request->json()->all();
         unset($post['_token']);
+
+        //collect id_doctor_schedules
+        $ids_doctor_schedule = [];
+        foreach($post['schedules'] as $sec){
+            if (isset($sec['id_doctor_schedule'])) {                
+                $ids_doctor_schedule[] = $sec['id_doctor_schedule'];
+            }
+        }
+
+        //get Deleted Schedule
+        $idDeletedSchedule = DoctorSchedule::where('id_doctor', $post['id_doctor'])->whereNotIn('id_doctor_schedule', $ids_doctor_schedule)->pluck('id_doctor_schedule')->toArray();
+        
+        if(!empty($idDeletedSchedule)){
+            $deleteTime = TimeSchedule::whereIn('id_doctor_schedule', $idDeletedSchedule)->delete();
+            $deletedSchedule = DoctorSchedule::whereIn('id_doctor_schedule', $idDeletedSchedule)->delete();
+        }
  
         DB::beginTransaction();
-        if (isset($post['id_schedule_time'])) {
-            try {
-                ScheduleTime::where('id_schedule_time', $post['id_schedule_time'])->update($post); 
-            } catch (\Exception $e) {
-                $result = [
-                    'status'  => 'fail',
-                    'message' => 'Update Schedule Time Failed'
+        foreach($post['schedules'] as $key => $schedule) {
+            if (isset($schedule['id_doctor_schedule'])) {
+                //try update schedule
+                $postSchedule = [
+                    'id_doctor' => $post['id_doctor'],
+                    'day' => $schedule['day'],
+                    'is_active' => $schedule['is_active']
                 ];
-                DB::rollBack();
-                return response()->json($result);
-            }
-            DB::commit();
-            return response()->json(['status'  => 'success', 'result' => ['id_schedule_time' => $post['id_schedule_time']]]);
-        } else {
-            try {
-                $save = ScheduleTime::create($post);
-            } catch (\Exception $e) {
-                $result = [
-                    'status'  => 'fail',
-                    'message' => 'Create Clinic Failed'
+                $updateSchedule = DoctorSchedule::where('id_doctor_schedule', $schedule['id_doctor_schedule'])->update($postSchedule); 
+
+                $getSchedule = DoctorSchedule::where('id_doctor_schedule', $schedule['id_doctor_schedule'])->first();
+                //drop and save schedule time
+                if (isset($schedule['session_time'])) {
+                    $oldTime = TimeSchedule::where('id_doctor_schedule', $getSchedule['id_doctor_schedule'])->delete();
+                    $getSchedule->schedule_time()->createMany($schedule['session_time']);
+                }
+                try {
+                    
+                } catch (\Exception $e) {
+                    $result = [
+                        'status'  => 'fail',
+                        'message' => 'Update Doctor Schedule Failed'
+                    ];
+                    DB::rollBack();
+                    return response()->json($result);
+                }
+            } else {
+                //try create schedule
+                $postSchedule = [
+                    'id_doctor' => $post['id_doctor'],
+                    'day' => $schedule['day'],
+                    'is_active' => $schedule['is_active']
                 ];
-                DB::rollBack();
-                return response()->json($result);
+
+                $saveSchedule = DoctorSchedule::create($postSchedule);
+
+                $getSchedule = DoctorSchedule::where('id_doctor_schedule', $saveSchedule['id_doctor_schedule'])->first();
+
+                //try create schedule time
+                if (isset($schedule['session_time'])) {
+                    $getSchedule->schedule_time()->createMany($schedule['session_time']);
+                }
+
+                $schedule = $saveSchedule;
+                try {
+                    
+                } catch (\Exception $e) {
+                    $result = [
+                        'status'  => 'fail',
+                        'message' => 'Create Doctor Schedule Failed'
+                    ];
+                    DB::rollBack();
+                    return response()->json($result);
+                }
             }
-            DB::commit();
-            //dd($save);
-            return response()->json(['status'  => 'success', 'result' => ['time' => $post['time'], 'created_at' => $save->created_at]]);
         }
+        DB::commit();
+
+        $result = DoctorSchedule::where('id_doctor', $post['id_doctor'])->get();
+
+        return response()->json(['status'  => 'success', 'result' => $result]);
     }
 
     /**
@@ -73,13 +132,19 @@ class ApiScheduleController extends Controller
      * @param int $id
      * @return Response
      */
-    public function destroy($id)
+    public function destroy(Request $request)
     {
         try {
             //TO DO add valdation when exists in doctor schedule time
-            $id_schedule_time = $request->json('id_schedule_time');
-            $scheduleTime = DoctorClinic::where('id_schedule_time', $id_schedule_time)->first();
-            $delete = $scheduleTime->delete();
+            $id_doctor_schedule = $request->json('id_doctor_schedule');
+            
+            $doctorSchedule = DoctorSchedule::where('id_doctor_schedule', $id_doctor_schedule)->first();
+            
+            //delete data child table
+            $doctorSchedule->schedule_time()->delete();
+            
+            //delete data table
+            $delete = $doctorSchedule->delete();
             return response()->json(MyHelper::checkDelete($delete));
         } catch (\Exception $e) {
             return response()->json([
