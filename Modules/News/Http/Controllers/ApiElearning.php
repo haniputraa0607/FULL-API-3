@@ -3,6 +3,7 @@
 namespace Modules\News\Http\Controllers;
 
 use App\Http\Models\News;
+use App\Http\Models\NewsFavorite;
 use App\Http\Models\NewsFormStructure;
 use App\Http\Models\NewsFormData;
 use App\Http\Models\NewsFormDataDetail;
@@ -199,12 +200,14 @@ class ApiElearning extends Controller
             $detail = News::where('news_slug', $post['slug'])->first();
 
             if(!empty($detail)){
+                $favorite = NewsFavorite::where('id_user', $request->user()->id)->where('id_news', $detail['id_news'])->first();
                 $res = [
                     'slug' => $detail['news_slug'],
                     'title' => $detail['news_title'],
                     'image' => $detail['url_news_image_dalam'],
                     'link_video' => $detail['news_video'],
-                    'short_description' => $detail['news_content_short']
+                    'short_description' => $detail['news_content_short'],
+                    'favorite' => (!empty($favorite) ? 1 : 0)
                 ];
             }
             return response()->json(MyHelper::checkGet($res??$detail));
@@ -237,6 +240,7 @@ class ApiElearning extends Controller
             $news = News::where('news_slug', $post['slug'])->with('newsOutlet','newsOutlet.outlet','newsProduct.product.photos')->first();
 
             if(!empty($news)){
+                $favorite = NewsFavorite::where('id_user', $request->user()->id)->where('id_news', $news['id_news'])->first();
                 $res = [
                     'slug' => $news['news_slug'],
                     'title' => $news['news_title'],
@@ -245,6 +249,7 @@ class ApiElearning extends Controller
                     'creator_by' => $news['news_by'],
                     'short_description' => $news['news_content_short'],
                     'description' => $news['news_content_long'],
+                    'favorite' => (!empty($favorite) ? 1 : 0)
                 ];
 
                 $res['video_text'] = $news['news_video_text'];
@@ -376,6 +381,7 @@ class ApiElearning extends Controller
             $news = News::where('news_slug', $post['slug'])->with('newsOutlet','newsOutlet.outlet','newsProduct.product.photos')->first();
 
             if(!empty($news)){
+                $favorite = NewsFavorite::where('id_user', $request->user()->id)->where('id_news', $news['id_news'])->first();
                 $res = [
                     'slug' => $news['news_slug'],
                     'title' => $news['news_title'],
@@ -384,6 +390,7 @@ class ApiElearning extends Controller
                     'class_by' => $news['news_by'],
                     'short_description' => $news['news_content_short'],
                     'description' => $news['news_content_long'],
+                    'favorite' => (!empty($favorite) ? 1 : 0)
                 ];
 
                 $res['class_date'] = NULL;
@@ -410,5 +417,116 @@ class ApiElearning extends Controller
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['Slug can not be empty']]);
         }
+    }
+
+    public function favoriteList(Request $request){
+        $idUser = $request->user()->id;
+        $post = $request->json()->all();
+        $now = date('Y-m-d');
+        $list = News::join('news_favorites', 'news_favorites.id_news', 'news.id_news')
+        ->whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
+            $query->whereDate('news_expired_date', '>=', $now)
+                ->orWhere('news_expired_date', null);
+        })->where('news_favorites.id_user', $idUser)->orderBy('news_publish_date', 'desc');
+
+        if(!empty($post['search_key'])){
+            $list = $list->where(function ($query) use ($post){
+                $query->where('news_title', 'like', '%'.$post['search_key'].'%')
+                    ->orWhere('news_content_short', 'like', '%'.$post['search_key'].'%');
+            });
+        }
+
+        $list = $list->get()->toArray();
+        $video = [];
+        $article = [];
+        $onlineClass = [];
+
+        foreach ($list as $value){
+            if($value['news_type'] == 'video'){
+                $video[] = [
+                    'slug' => $value['news_slug'],
+                    'title' => $value['news_title'],
+                    'image' => $value['url_news_image_dalam'],
+                    'link_video' => $value['news_video'],
+                    'short_description' => $value['news_content_short'],
+                    'post_date' => MyHelper::dateFormatInd($value['news_publish_date'], true, false, false)
+                ];
+            }elseif($value['news_type'] == 'article'){
+                $article[] = [
+                    'slug' => $value['news_slug'],
+                    'title' => $value['news_title'],
+                    'image' => $value['url_news_image_dalam'],
+                    'short_description' => $value['news_content_short'],
+                    'post_date' => MyHelper::dateFormatInd($value['news_publish_date'], true, false, false)
+                ];
+            }elseif($value['news_type'] == 'online_class'){
+                $date = '';
+                if(!empty($value['news_event_date_start'])){
+                    $dateEventStart = MyHelper::dateFormatInd($value['news_event_date_start'], true, false);
+                    $dateEventEnd = MyHelper::dateFormatInd($value['news_event_date_end'], true, false);
+
+                    if($dateEventStart == $dateEventEnd){
+                        $date = $dateEventStart;
+                    }else{
+                        $date = $dateEventStart.' - '.$dateEventEnd;
+                    }
+                }
+
+                $onlineClass[] = [
+                    'slug' => $value['news_slug'],
+                    'title' => $value['news_title'],
+                    'image' => $value['url_news_image_dalam'],
+                    'class_date' => $date,
+                    'class_by' => $value['news_by'],
+                    'post_date' => MyHelper::dateFormatInd($value['news_publish_date'], true, false, false)
+                ];
+            }
+        }
+
+        $res = [
+            'video' => $video,
+            'article' => $article,
+            'online_class' => $onlineClass
+        ];
+        return response()->json(MyHelper::checkGet($res));
+    }
+
+    public function favoriteAdd(Request $request){
+        $post = $request->json()->all();
+        $idUser = $request->user()->id;
+
+        if(empty($post['slug'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Slug news can not be empty']]);
+        }
+        $idNews = News::where('news_slug', $post['slug'])->first()['id_news']??null;
+        if(empty($idNews)){
+            return response()->json(['status' => 'fail', 'messages' => ['News not found']]);
+        }
+
+        $save = NewsFavorite::updateOrCreate([
+            'id_user' => $idUser,
+            'id_news' => $idNews
+        ], [
+            'id_user' => $idUser,
+            'id_news' => $idNews,
+            'updated_at' => date('Y-m-d H:i:s')
+        ]);
+
+        return response()->json(MyHelper::checkUpdate($save));
+    }
+
+    public function favoriteDelete(Request $request){
+        $post = $request->json()->all();
+        $idUser = $request->user()->id;
+
+        if(empty($post['slug'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Slug news can not be empty']]);
+        }
+        $idNews = News::where('news_slug', $post['slug'])->first()['id_news']??null;
+        if(empty($idNews)){
+            return response()->json(['status' => 'fail', 'messages' => ['News not found']]);
+        }
+        NewsFavorite::where('id_user', $idUser)->where('id_news', $idNews)->delete();
+        return response()->json(['status' => 'success']);
     }
 }

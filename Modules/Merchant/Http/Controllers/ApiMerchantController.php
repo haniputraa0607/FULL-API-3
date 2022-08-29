@@ -1118,8 +1118,9 @@ class ApiMerchantController extends Controller
         $currentBalance = MerchantLogBalance::where('id_merchant', $checkMerchant['id_merchant'])->sum('merchant_balance');
         $history = MerchantLogBalance::where('id_merchant', $checkMerchant['id_merchant'])->orderBy('created_at', 'desc');
 
-        if(!empty($post['history_date'])){
-            $history = $history->whereDate('created_at', date('Y-m-d', strtotime($post['history_date'])));
+        if(!empty($post['history_date_start']) && !empty($post['history_date_end'])){
+            $history = $history->whereDate('created_at', '>=', date('Y-m-d', strtotime($post['history_date_start'])))
+                ->whereDate('created_at', '<=', date('Y-m-d', strtotime($post['history_date_end'])));
         }
 
         $history = $history->paginate($post['pagination_total_row']??15)->toArray();

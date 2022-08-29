@@ -62,4 +62,7 @@ Route::group(['middleware' => ['auth:api','user_agent', 'scopes:apps', 'log_acti
     Route::get('online-class/banner', 'ApiElearning@onlineClassBanner');
     Route::any('online-class', 'ApiElearning@onlineClassList');
     Route::post('online-class/detail', 'ApiElearning@onlineClassDetail');
+    Route::any('favorite/list', 'ApiElearning@favoriteList');
+    Route::post('favorite/add', 'ApiElearning@favoriteAdd');
+    Route::post('favorite/delete', 'ApiElearning@favoriteDelete');
 });
