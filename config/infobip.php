@@ -6,4 +6,5 @@ return [
     'secretkey' => env('INFOBIP_SECRETKEY', null),
     'secretkey_id' => env('INFOBIP_SECRETKEY_ID', null),
     'widget_id' => env('INFOBIP_WIDGET_ID', null),
+    'rtc_application_id' => env('RTC_APPLICATION_ID', null),
 ];
