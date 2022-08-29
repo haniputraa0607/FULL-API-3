@@ -122,4 +122,9 @@ class Doctor extends Authenticatable
     	$password = md5($this->password);
     	return $password.'15F1AB77951B5JAO';
     }
+
+    public function token()
+    {
+        return $this->morphMany('App\Http\Models\InfobipRtcToken', 'tokenable');
+    }
 }
