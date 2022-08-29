@@ -2299,9 +2299,9 @@ class ApiProductController extends Controller
             ->groupBy('products.id_product');
 
         if(!empty($post['all'])){
-            $list = $list->get()->take(5)->toArray();
-        }else{
             $list = $list->get()->toArray();
+        }else{
+            $list = $list->get()->take(5)->toArray();
         }
 
         foreach ($list as $key=>$product){
