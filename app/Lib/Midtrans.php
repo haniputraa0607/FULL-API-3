@@ -81,17 +81,19 @@ class Midtrans {
             'secure' => true,
         ];
 
-        if(!is_null($type) && !is_null($id)){
+        $tab = ($type == 'trx' ? 'order' : strtolower($type));
+        $baseCallback = env('MIDTRANS_CALLBACK').'history/'.$tab.'?type='.$type.'&order_id='.urlencode($id);
+        if (!$payment_detail || strtolower($payment_detail) == 'gopay') {
             $dataMidtrans['gopay'] = [
                 'enable_callback' => true,
-                'callback_url' => env('MIDTRANS_CALLBACK').'?type='.$type.'&order_id='.urlencode($id),
-            ];
-        }else{
-            $dataMidtrans['gopay'] = [
-                'enable_callback' => true,
-                'callback_url' => env('MIDTRANS_CALLBACK').'?order_id='.urlencode($receipt),
+                'callback_url' => $baseCallback.'&result=success',
             ];
         }
+        $dataMidtrans['callbacks'] = [
+            'finish' => $baseCallback.'&result=success',
+            'unfinish' => $baseCallback.'&result=fail',
+            'error' => $baseCallback.'&result=fail'
+        ];
 
         $token = MyHelper::post($url, Self::bearer(), $dataMidtrans);
 
