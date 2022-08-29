@@ -136,6 +136,6 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
 
     public function getConsultationChatUrlAttribute()
     {
-    	return url('api/consultation/detail/chat.html') . '?id_transaction=' . $transaction['id_transaction'];
+    	return url('api/consultation/detail/chat.html') . '?id_transaction=' . $this->id_transaction;
     }
 }
