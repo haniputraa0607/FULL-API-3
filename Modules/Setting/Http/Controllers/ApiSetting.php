@@ -226,6 +226,49 @@ class ApiSetting extends Controller
 
     }
 
+    public function consultationSettingUpdate(Request $request, $type){
+        $post = $request->json()->all();
+
+        if(!empty($post)){
+            DB::beginTransaction();
+
+            $idSetting = [];
+            if($post['value']){
+                if(isset($post['id_setting'])){
+                    $save = Setting::where('id_setting', $post['id_setting'])->update(['value' => $post['value']]);
+                    if(!$save){
+                        DB::rollback();
+                        return response()->json(MyHelper::checkUpdate($save));
+                    }
+
+                    $idSetting[] = $post['id_setting'];
+                }else{
+                    $save = Setting::create([
+                        'key' => $type,
+                        'value' => $post['value']
+                    ]);
+
+                    if(!$save){
+                        DB::rollback();
+                        return response()->json(MyHelper::checkCreate($save));
+                    }
+
+                    $idSetting[] = $save['id_setting'];
+                }
+            }
+
+            $delete = Setting::where('key', $type)->whereNotIn('id_setting', $idSetting)->delete();
+
+            DB::commit();
+            return response()->json(['status' => 'success']);
+        }else{
+            $delete = Setting::where('key', $type)->delete();
+        }
+
+        return response()->json(['status' => 'success']);
+
+    }
+
     public function cronPointReset(){
         $log = MyHelper::logCron('Point Reset');
         try {

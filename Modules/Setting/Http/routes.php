@@ -115,6 +115,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('/faq/delete', 'ApiSetting@faqDelete');
     Route::post('faq/sort/update', 'ApiSetting@faqSortUpdate');
     Route::post('reset/{type}/update', 'ApiSetting@pointResetUpdate');// point reset
+    Route::post('consultation/{type}/update', 'ApiSetting@consultationSettingUpdate');
 
     /* Menu Setting */
     Route::any('/text_menu/update', ['middleware' => 'feature_control:161', 'uses' => 'ApiSetting@updateTextMenu']);

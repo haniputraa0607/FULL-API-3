@@ -62,6 +62,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
 Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'doctor'], function () {
     Route::post('list', ['uses' => 'ApiDoctorController@listDoctor']);
     Route::get('detail-apps/{id}', ['uses' => 'ApiDoctorController@show']);
+    Route::get('outlet/option', ['uses' => 'ApiDoctorController@listOutletOption']);
 
     Route::get('specialist-category', ['uses' => 'ApiDoctorSpecialistCategoryController@index']);
 
