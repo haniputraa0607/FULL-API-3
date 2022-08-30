@@ -1,4 +1,0 @@
-vendor
-.env.example
-.gitignore
-coverage

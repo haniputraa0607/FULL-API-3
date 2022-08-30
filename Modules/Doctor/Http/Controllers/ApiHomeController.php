@@ -67,13 +67,6 @@ class ApiHomeController extends Controller
             $query->where('id_doctor', $id)->onlySoon();
         })->get()->toArray();
 
-        if(empty($transaction)){
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => ['Tidak ada transaksi yang akan datang']
-            ]);
-        }
-
         $now = new DateTime();
 
         $data_consultation = array();
@@ -97,6 +90,8 @@ class ApiHomeController extends Controller
                     $diff_date = $now->diff($schedule_date_start_time)->format("%i mnt");
                 } elseif($diff->d == 0 && $diff->h == 0 && $diff->i == 0) {
                     $diff_date = $now->diff($schedule_date_start_time)->format("sebentar lagi");
+                } else {
+                    $diff_date = $now->diff($schedule_date_start_time)->format("%d hr %h jam");
                 }
             } elseif($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
                 $diff_date = "now";
