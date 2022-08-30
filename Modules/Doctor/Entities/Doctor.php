@@ -75,7 +75,9 @@ class Doctor extends Authenticatable
 
     protected $appends = [
         'url_doctor_photo',
-        'challenge_key2'
+        'challenge_key2',
+        'doctor_service_decoded',
+        'practice_experience_place_decoded'
     ];
 
     public function clinic()
@@ -127,5 +129,17 @@ class Doctor extends Authenticatable
     public function getNameAttribute()
     {
         return $this->doctor_name;
+    }
+
+    public function getDoctorServiceDecodedAttribute()
+    {
+    	$service = json_decode($this->doctor_service);
+    	return $service;
+    }
+
+    public function getPracticeExperiencePlaceDecodedAttribute()
+    {
+    	$experience_place = json_decode($this->practice_experience_place);
+    	return $experience_place;
     }
 }
