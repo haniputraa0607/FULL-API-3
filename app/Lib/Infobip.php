@@ -111,9 +111,11 @@ class Infobip {
 
     public static function generateInfobipToken($tokenable)
     {
-        $identity = strtolower(end(explode('\\', get_class($tokenable))));
-        $path = '/webrtc/1/token';
-        $request = [
+        $exploded = explode('\\', get_class($tokenable));
+        $end = end($exploded);
+        $identity = strtolower($end);
+        $url = '/webrtc/1/token';
+        $body = [
             'identity' => $identity,
             'applicationId' => config('infobip.rtc_application_id'),
             'displayName' => $tokenable->name,
@@ -128,7 +130,7 @@ class Infobip {
             $token = $response['response']['token'] ?? false;
             $tokenable->infobipTokens()->create([
                 'token' => $token,
-                'expired_at' => date('Y-m-d H:i:s', strtotime($response['status']['expirationTime'])),
+                'expired_at' => date('Y-m-d H:i:s', time() + 7 * 3600),
             ]);
             return $token;
         }
