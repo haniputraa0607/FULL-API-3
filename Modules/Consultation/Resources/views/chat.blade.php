@@ -104,8 +104,8 @@ liveChat('auth', '{{$token}}', function(error, result) {
     widgetWrapper.style['box-shadow'] = '#fff 0 0 0';
     widgetWrapper.style['z-index'] = '21370001';
 
-    iframe.style.bottom = '-24px';
-    iframe.style.height = 'calc(100vh + 104px)';
+    iframe.style.bottom = '0';
+    iframe.style.height = 'calc(100vh + 80px)';
     iframe.style.position = 'fixed';
     iframe.style.top = '-80px';
 
