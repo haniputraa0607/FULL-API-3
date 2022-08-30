@@ -58,7 +58,7 @@ Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent'
         Route::any('/featured-subscription','ApiHome@featuredSubscription');
         Route::any('/featured-promo-campaign','ApiHome@featuredPromoCampaign');
         Route::post('refresh-point-balance', 'ApiHome@refreshPointBalance');
-        Route::get('get-infobip-token', ['uses' => 'ApiDoctorController@getInfobipToken']);
+        Route::get('get-infobip-token', ['uses' => 'ApiHome@getInfobipToken']);
     });
 
     Route::group(['middleware' => ['auth:api', 'scopes:apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()

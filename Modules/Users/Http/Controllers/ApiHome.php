@@ -1016,5 +1016,21 @@ class ApiHome extends Controller
             'status' => 'success',
             'result' => $data_home
         ];
+    }    /**
+
+     * Get token for RTC infobip
+     * @param  string $value [description]
+     * @return [type]        [description]
+     */
+    public function getInfobipToken(Request $request)
+    {
+        $token = $request->user()->getActiveToken();
+        if (!$token) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Failed request infobip token'],
+            ];
+        }
+        return MyHelper::checkGet(['token' => $token]);
     }
 }
