@@ -20,7 +20,6 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
     Route::get('detail/{id}', ['uses' => 'ApiDoctorController@show']);
     Route::post('delete', ['uses' => 'ApiDoctorController@destroy']);
     Route::post('change-password', ['uses' => 'ApiDoctorController@changePassword']);
-    Route::get('get-infobip-token', ['uses' => 'ApiDoctorController@getInfobipToken']);
 
     Route::group(['prefix' => 'clinic'], function () {
         Route::any('/', ['uses' => 'ApiDoctorClinicController@index']);
@@ -86,6 +85,7 @@ Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-
     Route::get('home', ['uses' => 'ApiHomeController@home']);
     Route::get('schedule/my', ['uses' => 'ApiScheduleController@getMySchedule']);
     Route::post('schedule/my/store', ['uses' => 'ApiScheduleController@storeMySchedule']);
+    Route::get('get-infobip-token', ['uses' => 'ApiDoctorController@getInfobipToken']);
 
     Route::post('my/settings', ['uses' => 'ApiDoctorController@mySettings']);
     Route::get('my/profile', ['uses' => 'ApiDoctorController@myProfile']);
