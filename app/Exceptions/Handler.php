@@ -58,6 +58,10 @@ class Handler extends ExceptionHandler
         } elseif ($exception instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException && !app()->environment('production')) {
             $result = app('App\Http\Controllers\MockAPI')->mock($request);
             if ($result) return response($result);
+            return response([
+                'status' => 'fail',
+                'messages' => ['resource not found']
+            ], 404);
         } elseif ($exception instanceof \Illuminate\Validation\ValidationException) {
             return response([
                 'status' => 'fail',
@@ -67,7 +71,7 @@ class Handler extends ExceptionHandler
         if (request()->wantsJson()) {
             return response()->json([
                 'status' => 'fail',
-                'messages' => [$exception->getMessage()]
+                'messages' => config('app.env') == 'production' ? 'Terjadi kesalahan saat memproses permintaan' : [$exception->getMessage()]
             ]);
         }
         return parent::render($request, $exception);
