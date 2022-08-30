@@ -2287,7 +2287,10 @@ class ApiTransactionConsultationController extends Controller
         }
 
         if (!$transactionConsultation) {
-            return abort(404);
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaksi konsultasi tidak ditemukan']
+            ]);
         }
 
         return [
