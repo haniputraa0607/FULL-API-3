@@ -732,6 +732,8 @@ class ApiTransactionConsultationController extends Controller
                     $diff_date = $now->diff($schedule_date_start_time)->format("%i mnt");
                 } elseif($diff->d == 0 && $diff->h == 0 && $diff->i == 0) {
                     $diff_date = $now->diff($schedule_date_start_time)->format("sebentar lagi");
+                } else {
+                    $diff_date = $now->diff($schedule_date_start_time)->format("%d hr %h jam");
                 }
             } elseif($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
                 $diff_date = "now";
@@ -831,6 +833,8 @@ class ApiTransactionConsultationController extends Controller
                 $diff_date = $now->diff($schedule_date_start_time)->format("%i mnt");
             } elseif($diff->d == 0 && $diff->h == 0 && $diff->i == 0) {
                 $diff_date = $now->diff($schedule_date_start_time)->format("sebentar lagi");
+            } else {
+                $diff_date = $now->diff($schedule_date_start_time)->format("%d hr %h jam");
             }
         } elseif($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
             $diff_date = "now";
@@ -1316,7 +1320,16 @@ class ApiTransactionConsultationController extends Controller
 
             //logic schedule diff date
             if($schedule_date_start_time > $now && $schedule_date_end_time > $now) {
-                $diff_date = $now->diff($schedule_date_start_time)->format("%d days, %h hours and %i minutes");
+                $diff = $now->diff($schedule_date_start_time);
+                if($diff->d == 0) {
+                    $diff_date = $now->diff($schedule_date_start_time)->format("%h jam, %i mnt");
+                } elseif($diff->d == 0 && $diff->h == 0) {
+                    $diff_date = $now->diff($schedule_date_start_time)->format("%i mnt");
+                } elseif($diff->d == 0 && $diff->h == 0 && $diff->i == 0) {
+                    $diff_date = $now->diff($schedule_date_start_time)->format("sebentar lagi");
+                } else {
+                    $diff_date = $now->diff($schedule_date_start_time)->format("%d hr %h jam");
+                }
             } elseif($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
                 $diff_date = "now";
             } else {
@@ -1325,10 +1338,13 @@ class ApiTransactionConsultationController extends Controller
 
             //set response result
             $result[$key]['id_transaction'] = $value['id_transaction'];
-            $result[$key]['customer_name'] = $user['name'];
-            $result[$key]['schedule_date'] = $value['consultation']['schedule_date'];
-            $result[$key]['schedule_start_time'] = $value['consultation']['schedule_start_time'];
-            $result[$key]['schedule_diff_date'] = $diff_date;
+            $result[$key]['id_user'] = $value['consultation']['id_user'];
+            $result[$key]['user_name'] = $user['name'];
+            $result[$key]['user_photo'] = $user['photo'];
+            $result[$key]['url_user_photo'] = $user['url_photo'];
+            $result[$key]['schedule_date'] = $value['consultation']['schedule_date_human_formatted'];
+            $result[$key]['schedule_start_time'] = $value['consultation']['schedule_start_time_formatted'];
+            $result[$key]['diff_date'] = $diff_date;
         }
 
         return response()->json([
@@ -1553,8 +1569,8 @@ class ApiTransactionConsultationController extends Controller
         $file= public_path(). "/download/receipt.pdf";
 
         $headers = array(
-                'Content-Type: application/pdf',
-                );
+            'Content-Type: application/pdf',
+        );
 
         return FacadeResponse::download($file, 'receipt.pdf', $headers);
     }
@@ -2124,7 +2140,7 @@ class ApiTransactionConsultationController extends Controller
         $transaction = $transaction->toArray();
 
         //if cek jadwal missed
-        $checkMissed = $this->checkConsultationMissed($transaction);
+        //$checkMissed = $this->checkConsultationMissed($transaction);
 
         //get Consultation
         $consultation = [
