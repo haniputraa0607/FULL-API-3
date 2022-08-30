@@ -108,5 +108,31 @@ class Infobip {
             }
         }
     }
+
+    public static function generateInfobipToken($tokenable)
+    {
+        $url = '/webrtc/1/token';
+        $body = [
+            'identity' => $tokenable->infobip_identity,
+            'applicationId' => config('infobip.rtc_application_id'),
+            'displayName' => $tokenable->name,
+            'capabilities' => [
+                'recording' => 'ALWAYS'
+            ],
+            'timeToLive' => 8 * 3600,
+        ];
+
+        $response = static::sendRequest('Generate RTC Token', 'POST', $url, $body);
+        if (($response['status'] ?? '') == 'success') {
+            $token = $response['response']['token'] ?? false;
+            $tokenable->infobipTokens()->create([
+                'token' => $token,
+                'expired_at' => date('Y-m-d H:i:s', time() + 7 * 3600),
+            ]);
+            return $token;
+        }
+
+        return false;
+    }
 }
 ?>

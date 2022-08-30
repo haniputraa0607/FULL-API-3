@@ -1469,7 +1469,7 @@ class ApiHistoryController extends Controller
             ],
             'Pending' => [
                 'code' => 3,
-                'text' => 'Pending'
+                'text' => 'Menunggu Konfirmasi'
             ],
             'On Progress' => [
                 'code' => 4,

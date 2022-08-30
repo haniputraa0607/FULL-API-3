@@ -15,11 +15,12 @@ use Modules\UserFeedback\Entities\UserFeedbackLog;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Crypt;
+use App\Traits\HasInfobipToken;
 
 class User extends Authenticatable
 {
 	protected $connection = 'mysql';
-    use HasApiTokens, Notifiable;
+    use HasApiTokens, Notifiable, HasInfobipToken;
 	
 	public function findForPassport($username) {
 		if(substr($username, 0, 2) == '62'){

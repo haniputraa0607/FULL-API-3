@@ -10,12 +10,13 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Passport\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
 use Modules\Doctor\Entities\DoctorSchedule;
+use App\Traits\HasInfobipToken;
 
 class Doctor extends Authenticatable 
 {
     protected $table = 'doctors';
 
-    use HasApiTokens, Notifiable;
+    use HasApiTokens, Notifiable, HasInfobipToken;
 
     protected $primaryKey = 'id_doctor';
 
@@ -121,5 +122,10 @@ class Doctor extends Authenticatable
     {
     	$password = md5($this->password);
     	return $password.'15F1AB77951B5JAO';
+    }
+
+    public function getNameAttribute()
+    {
+        return $this->doctor_name;
     }
 }

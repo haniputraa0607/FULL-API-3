@@ -788,6 +788,7 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
+        $transaction_consultation_chat_url = optional($transaction->consultation)->consultation_chat_url;
         $transaction = $transaction->toArray();
 
         //get Doctor
@@ -851,7 +852,8 @@ class ApiTransactionConsultationController extends Controller
             'schedule_date' => $transaction['consultation']['schedule_date_human_formatted'],
             'schedule_session_time' => $transaction['consultation']['schedule_start_time_formatted']." - ".$transaction['consultation']['schedule_end_time_formatted'],
             'schedule_day' => $day,
-            'diff_date' => $diff_date
+            'diff_date' => $diff_date,
+            'transaction_consultation_chat_url' => $transaction_consultation_chat_url,
         ];
 
         return response()->json([
@@ -2118,6 +2120,7 @@ class ApiTransactionConsultationController extends Controller
             return response()->json(MyHelper::checkGet($transaction));
         }
 
+        $transaction_consultation_chat_url = optional($transaction->consultation)->consultation_chat_url;
         $transaction = $transaction->toArray();
 
         //if cek jadwal missed
@@ -2214,7 +2217,8 @@ class ApiTransactionConsultationController extends Controller
             'payment_detail' => $paymentDetail,
             'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : ''),
             'transaction_reject_reason' => $transaction['transaction_reject_reason'],
-            'transaction_reject_at' => (!empty($transaction['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_reject_at'])), true) : null)
+            'transaction_reject_at' => (!empty($transaction['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_reject_at'])), true) : null),
+            'transaction_consultation_chat_url' => $transaction_consultation_chat_url,
         ];
 
         return response()->json(MyHelper::checkGet($result));
@@ -2250,5 +2254,68 @@ class ApiTransactionConsultationController extends Controller
         $result = json_decode($getSetting);
 
         return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function getChatView(Request $request)
+    {
+        $trx = Transaction::where('id_transaction', $request->id_transaction)->first();
+        if (!$trx) {
+            return abort(404);
+        }
+
+        // if (!password_verify($trx->id_transaction . $trx->id_user, $request->auth_code)) {
+        //     return abort(403);
+        // }
+
+        $jti = ((string) time()) . rand(10, 99);
+        $payload = [
+             "jti" => $jti,
+             "sid" => "session" . $jti, 
+             "sub" => $trx->transaction_receipt_number,
+             "stp" => "externalPersonId",
+             "iss" => config('infobip.widget_id'),
+             "iat" => time(),
+             "exp" => time()+3600,
+             "ski" => config('infobip.secretkey_id'),
+        ];
+        $token = MyHelper::jwtTokenGenerator($payload);
+        return view('consultation::chat', ['token' => $token]);
+    }
+
+    public function getDetailInfobip(Request $request)
+    {
+        $post = $request->json()->all();
+        $user = $request->user();
+
+        //get transaction
+        $transactionConsultation = null;
+        if(isset($user->id_doctor)){
+            $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)
+                ->where('id_transaction', $post['id_transaction'])
+                ->with('doctor', 'user')
+                ->first();
+        } else {
+            $transactionConsultation = TransactionConsultation::where('id_user', $user->id)
+                ->where('id_transaction', $post['id_transaction'])
+                ->with('doctor', 'user')
+                ->first();
+        }
+
+        if (!$transactionConsultation) {
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaksi konsultasi tidak ditemukan']
+            ]);
+        }
+
+        return [
+            'status' => 'success', 
+            'result' => [
+                'transaction_consultation_chat_url' => $user->id_doctor ? null : $transactionConsultation->consultation_chat_url,
+                'doctor_identity' => $transactionConsultation->doctor->infobip_identity,
+                'customer_identity' => $transactionConsultation->user->infobip_identity,
+                'token' => $user->getActiveToken(),
+            ]
+        ];
     }
 }
