@@ -18,4 +18,12 @@ trait HasInfobipToken {
     	}
     	return Infobip::generateInfobipToken($this);
     }
+
+    public function getInfobipIdentityAttribute()
+    {
+        $exploded = explode('\\', get_class($this));
+        $end = end($exploded);
+        $identity = strtolower($end);
+        return $identity . $this->{$this->primaryKey};
+    }
 }

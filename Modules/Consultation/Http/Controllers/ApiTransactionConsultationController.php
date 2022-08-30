@@ -2266,4 +2266,38 @@ class ApiTransactionConsultationController extends Controller
         $token = MyHelper::jwtTokenGenerator($payload);
         return view('consultation::chat', ['token' => $token]);
     }
+
+    public function getDetailInfobip(Request $request)
+    {
+        $post = $request->json()->all();
+        $user = $request->user();
+
+        //get transaction
+        $transactionConsultation = null;
+        if(isset($user->id_doctor)){
+            $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)
+                ->where('id_transaction', $post['id_transaction'])
+                ->with('doctor', 'user')
+                ->first();
+        } else {
+            $transactionConsultation = TransactionConsultation::where('id_user', $user->id)
+                ->where('id_transaction', $post['id_transaction'])
+                ->with('doctor', 'user')
+                ->first();
+        }
+
+        if (!$transactionConsultation) {
+            return abort(404);
+        }
+
+        return [
+            'status' => 'success', 
+            'result' => [
+                'transaction_consultation_chat_url' => $user->id_doctor ? null : $transactionConsultation->consultation_chat_url,
+                'doctor_identity' => $transactionConsultation->doctor->infobip_identity,
+                'customer_identity' => $transactionConsultation->user->infobip_identity,
+                'token' => $user->getActiveToken(),
+            ]
+        ];
+    }
 }
