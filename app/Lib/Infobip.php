@@ -109,7 +109,7 @@ class Infobip {
         }
     }
 
-    public static function generateInfobibToken($tokenable)
+    public static function generateInfobipToken($tokenable)
     {
         $identity = strtolower(end(explode('\\', get_class($tokenable))));
         $path = '/webrtc/1/token';
