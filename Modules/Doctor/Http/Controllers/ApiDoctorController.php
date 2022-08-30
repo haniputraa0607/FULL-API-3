@@ -686,4 +686,21 @@ class ApiDoctorController extends Controller
 
         return $schedule;
     }
+
+    /**
+     * Get token for RTC infobib
+     * @param  string $value [description]
+     * @return [type]        [description]
+     */
+    public function getInfobibToken(Request $request)
+    {
+        $token = $request->user()->getActiveToken();
+        if (!$token) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Failed request infobip token'],
+            ];
+        }
+        return MyHelper::checkGet(['token' => $token]);
+    }
 }
