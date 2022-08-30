@@ -13,6 +13,7 @@ use Modules\Doctor\Entities\DoctorSchedule;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionConsultation;
 use App\Http\Models\Setting;
+use App\Http\Models\Outlet;
 use Modules\Doctor\Entities\SubmissionChangeDoctorData;
 use Modules\Doctor\Http\Requests\DoctorCreate;
 use Modules\UserRating\Entities\RatingOption;
@@ -73,12 +74,17 @@ class ApiDoctorController extends Controller
             $doctor->orderBy('created_at', 'DESC');
         }
 
-        if(isset($post['id_doctor_specialist_category'])){
-            $doctor->whereHas('specialists', function($query) use ($post) {
-                $query->whereHas('category', function($query2) use ($post) {
-                    $query2->where('id_doctor_specialist_category', $post['id_doctor_specialist_category']);
-                });
-             });
+        //filter by id_doctor_specialist_category
+        // if(isset($post['id_doctor_specialist_category'])){
+        //     $doctor->whereHas('specialists', function($query) use ($post) {
+        //         $query->whereHas('category', function($query2) use ($post) {
+        //             $query2->where('id_doctor_specialist_category', $post['id_doctor_specialist_category']);
+        //         });
+        //      });
+        // }
+
+        if(isset($post['id_outlet'])){
+            $doctor->where('id_outlet', $post['id_outlet']);
         }
 
         if(isset($post['doctor_recomendation_status'])){
@@ -133,12 +139,17 @@ class ApiDoctorController extends Controller
 
         $doctor = Doctor::with('outlet')->with('specialists')->orderBy('created_at', 'DESC');
 
-        if(isset($post['id_doctor_specialist_category'])){
-            $doctor->whereHas('specialists', function($query) use ($post) {
-                $query->whereHas('category', function($query2) use ($post) {
-                    $query2->where('id_doctor_specialist_category', $post['id_doctor_specialist_category']);
-                });
-             });
+        // get filter by id_doctor_specialist_category
+        // if(isset($post['id_doctor_specialist_category'])){
+        //     $doctor->whereHas('specialists', function($query) use ($post) {
+        //         $query->whereHas('category', function($query2) use ($post) {
+        //             $query2->where('id_doctor_specialist_category', $post['id_doctor_specialist_category']);
+        //         });
+        //      });
+        // }
+
+        if(isset($post['id_outlet'])){
+            $doctor->where('id_outlet', $post['id_outlet']);
         }
 
         if(isset($post['search'])){
@@ -685,5 +696,30 @@ class ApiDoctorController extends Controller
         }
 
         return $schedule;
+    }
+
+    public function listOutletOption(Request $request)
+    {
+        $idsOutletDoctor = Doctor::onlyActive()->get()->pluck('id_outlet');
+
+        $outlets = Outlet::whereIn('id_outlet', $idsOutletDoctor)->get();
+
+        if(empty($outlets)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Outlet not found']
+            ]);
+        }
+
+        $outlets = $outlets->toArray();
+
+        $result = [];
+
+        foreach($outlets as $key => $outlet){
+            $result[$key]['id_outlet'] = $outlet['id_outlet'];
+            $result[$key]['outlet_name'] = $outlet['outlet_name'];
+        }
+
+        return response()->json(['status'  => 'success', 'result' => $result]);
     }
 }

@@ -764,10 +764,10 @@ class ApiTransactionConsultationController extends Controller
 
         $user = $request->user();
 
-        if (!isset($user->id_doctor)) {
-            $id = $request->user()->id_doctor;
+        if (isset($user->id_doctor)) {
+            $id = $user->id_doctor;
         } else {
-            $id = $request->user()->id;
+            $id = $user->id;
         }
 
         //cek id transaction
@@ -801,7 +801,7 @@ class ApiTransactionConsultationController extends Controller
         }
 
         //get User 
-        $detailUser = User::where('id', $transaction['consultation']['id_doctor'])->first();
+        $detailUser = User::where('id', $transaction['consultation']['id_user'])->first();
         if(empty($detailUser)) {
             return response()->json([
                 'status'    => 'fail',
@@ -1277,7 +1277,7 @@ class ApiTransactionConsultationController extends Controller
     public function getHandledConsultation(Request $request) {
         $post = $request->json()->all();
 
-        if (!isset($post['id_user'])) {
+        if (!isset($post['id'])) {
             $id = $request->user()->id_doctor;
         } else {
             $id = $post['id_doctor'];
@@ -2235,5 +2235,20 @@ class ApiTransactionConsultationController extends Controller
         }
         
         return $transaction;
+    }
+
+    /**
+     * Get info from given cart data
+     * @param  detailHistoryTransaction $request [description]
+     * @return View                    [description]
+     */
+    public function getConsultationSettings(Request $request) {
+        $post = $request->json()->all();
+
+        $getSetting = Setting::where('key', $post['key'])->first()['value']??null;
+
+        $result = json_decode($getSetting);
+
+        return response()->json(MyHelper::checkGet($result));
     }
 }
