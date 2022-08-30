@@ -4,7 +4,7 @@ namespace App\Traits;
 
 use App\Lib\Infobip;
 
-trait HasInfobibToken {
+trait HasInfobipToken {
     public function infobipTokens()
     {
         return $this->morphMany('App\Http\Models\InfobipRtcToken', 'tokenable');
@@ -16,6 +16,6 @@ trait HasInfobibToken {
     	if ($token) {
     		return $token->token;
     	}
-    	return Infobip::generateInfobibToken($this);
+    	return Infobip::generateInfobipToken($this);
     }
 }

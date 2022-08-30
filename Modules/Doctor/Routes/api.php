@@ -20,7 +20,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
     Route::get('detail/{id}', ['uses' => 'ApiDoctorController@show']);
     Route::post('delete', ['uses' => 'ApiDoctorController@destroy']);
     Route::post('change-password', ['uses' => 'ApiDoctorController@changePassword']);
-    Route::get('get-infobip-token', ['uses' => 'ApiDoctorController@getInfobibToken']);
+    Route::get('get-infobip-token', ['uses' => 'ApiDoctorController@getInfobipToken']);
 
     Route::group(['prefix' => 'clinic'], function () {
         Route::any('/', ['uses' => 'ApiDoctorClinicController@index']);

@@ -688,11 +688,11 @@ class ApiDoctorController extends Controller
     }
 
     /**
-     * Get token for RTC infobib
+     * Get token for RTC infobip
      * @param  string $value [description]
      * @return [type]        [description]
      */
-    public function getInfobibToken(Request $request)
+    public function getInfobipToken(Request $request)
     {
         $token = $request->user()->getActiveToken();
         if (!$token) {
