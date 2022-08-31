@@ -263,4 +263,8 @@ class Outlet extends Authenticatable
     {
         return $this->hasOne(Merchant::class, 'id_outlet');
     }
+
+	public function doctors(){
+		return $this->hasMany(\Modules\Doctor\Entities\Doctor::class, 'id_outlet');
+	}
 }
