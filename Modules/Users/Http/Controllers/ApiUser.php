@@ -3843,7 +3843,7 @@ class ApiUser extends Controller
             'personal_data' => [
                 'birth_date' => (!empty($dataUser['birthday']) ? date('Y-m-d', strtotime($dataUser['birthday'])): null),
                 'address' => $dataUser['address'],
-                'address_postal_code' => $dataUser['subdistrict_postal_code'],
+                'address_postal_code' => $dataUser['address_postal_code'],
                 'id_province' => $dtSubdisctrict['id_province']??null,
                 'id_city' => $dtSubdisctrict['id_city']??null,
                 'id_district' => $dtSubdisctrict['id_district']??null,
