@@ -724,6 +724,36 @@ class ApiDoctorController extends Controller
         return response()->json(['status'  => 'success', 'result' => $result]);
     }
 
+    public function listAllOutletWithDoctor(Request $request)
+    {
+        $outlets = Outlet::with('doctors')->where('outlet_status', 'active')->get();
+
+        if(empty($outlets)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Outlet not found']
+            ]);
+        }
+
+        $result = [];
+
+        foreach($outlets as $key => $outlet){
+            $outletData = [
+                'id_outlet' => $outlet->id_outlet,
+                'outlet_name' => $outlet->outlet_name,
+                'outlet_address' => $outlet->outlet_address,
+                'outlet_image_logo_landscape' => $outlet->outlet_image_logo_landscape,
+                'outlet_image_logo_portrait' => $outlet->outlet_image_logo_portrait,
+                'outlet_image_cover' => $outlet->outlet_image_cover,
+                'doctor_count' => $outlet->doctors->count()
+            ];
+
+            $result[] = $outletData;
+        }
+
+        return response()->json(['status'  => 'success', 'result' => $result]);
+    }
+
     /**
      * Get token for RTC infobip
      * @param  string $value [description]
