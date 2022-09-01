@@ -1566,13 +1566,106 @@ class ApiTransactionConsultationController extends Controller
     public function downloadDrugRecomendation(Request $request)
     {
         //PDF file is stored under project/public/download/info.pdf
-        $file= public_path(). "/download/receipt.pdf";
+        // $file= public_path(). "/download/receipt.pdf";
 
-        $headers = array(
-            'Content-Type: application/pdf',
-        );
+        // $headers = array(
+        //     'Content-Type: application/pdf',
+        // );
 
-        return FacadeResponse::download($file, 'receipt.pdf', $headers);
+        // return FacadeResponse::download($file, 'receipt.pdf', $headers);
+
+        $post = $request->json()->all();
+
+        $id = $request->user()->id;
+
+        //get Transaction Consultation Data
+        $transactionConsultation = TransactionConsultation::with('doctor')->where('id_transaction_consultation', $post['id_transaction_consultation'])->first()->toArray();
+        $doctor = Doctor::with('specialists')->where('id_doctor', $transactionConsultation['id_doctor'])->first()->toArray();
+        $user = User::where('id', $transactionConsultation['id_user'])->first()->toArray();
+        $date = Carbon::parse($user['birthday']);
+        $now = Carbon::now();
+        $user['age'] = $date->diffInYears($now);
+
+        $transaction = Transaction::where('id_transaction', $transactionConsultation['id_transaction'])->first()->toArray();
+        $recomendations = TransactionConsultationRecomendation::with('product')->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->onlyDrug()->get();
+
+        $items = [];
+        if(!empty($recomendations)) {
+            foreach($recomendations as $key => $recomendation){
+                $params = [
+                    'id_product' => $recomendation->id_product,
+                    'id_user' => $id,
+                    'id_product_variant_group' =>$recomendation->id_product_variant_group
+                ];
+
+                $detailProduct = app($this->product)->detailRecomendation($params);
+
+                $items[$key]['product_name'] = $detailProduct['result']['product_name'] ?? null;
+                $items[$key]['variant_name'] = $detailProduct['result']['variants']['product_variant_name'] ?? null;
+                $items[$key]['qty'] = $recomendation->qty_product ?? null;
+                $items[$key]['usage_rule'] = $recomendation->usage_rules ?? null;
+                $items[$key]['usage_rule_time'] = $recomendation->usage_rules_time ?? null;
+                $items[$key]['usage_rule_additional_time'] = $recomendation->usage_rules_additional ?? null;
+            }
+        }
+
+        //$phpWord = new \PhpOffice\PhpWord\PhpWord();
+
+        //$section = $phpWord->addSection();
+
+        //setting template 
+        $templateProcessor = new \PhpOffice\PhpWord\TemplateProcessor(public_path().'/download/template_receipt.docx');
+        $templateProcessor->setValue('doctor_name', $doctor['doctor_name']);
+        $templateProcessor->setValue('doctor_specialist_name', $doctor['specialists'][0]['doctor_specialist_name']);
+        $templateProcessor->setValue('doctor_practice_lisence_number', $doctor['practice_lisence_number']);
+        $templateProcessor->setValue('transaction_date', MyHelper::dateFormatInd($transaction['transaction_date']));
+        $templateProcessor->setValue('transaction_receipt_number', null);
+        $templateProcessor->cloneBlock('block_items', 0, true, false, $items);
+        $templateProcessor->setValue('customer_name', $user['name']);
+        $templateProcessor->setValue('customer_age', $user['age']);
+        $templateProcessor->setValue('customer_gender', $user['gender']);
+
+        $directory = ('storage/save_pdf_test2.docx');
+        $templateProcessor->saveAs($directory);
+
+
+        // $description = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+
+        // tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+
+        // quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+
+        // consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+
+        // cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
+
+        // proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+
+        // $items = json_encode($items);
+
+        // $description = [
+        //     'doctor_name' => $doctor['doctor_name'],
+        //     'doctor_specialist_name' => $doctor['specialists'][0]['doctor_specialist_name'],
+        //     'transaction_date' => MyHelper::dateFormatInd($transaction['transaction_date']),
+        //     'items' => $items
+        // ];
+
+        // $description = implode("|", $description);
+
+
+        //$section->addImage("http://itsolutionstuff.com/frontTheme/images/logo.png");
+
+        //$section->addText($description);
+
+        $domPdfPath = realpath(base_path('vendor/dompdf/dompdf'));
+        \PhpOffice\PhpWord\Settings::setPdfRendererPath($domPdfPath);
+        \PhpOffice\PhpWord\Settings::setPdfRendererName('DomPDF');
+
+        $phpWord = \PhpOffice\PhpWord\IOFactory::load('storage/save_pdf_test2.docx');
+        $objWriter = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'PDF');
+        $objWriter->save('storage/helloWorld3.pdf');
+
+        return response()->download('storage/helloWorld3.pdf');
     }
 
     public function updateRecomendation(Request $request)
