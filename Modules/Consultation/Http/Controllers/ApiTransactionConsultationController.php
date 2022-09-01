@@ -1612,10 +1612,6 @@ class ApiTransactionConsultationController extends Controller
             }
         }
 
-        //$phpWord = new \PhpOffice\PhpWord\PhpWord();
-
-        //$section = $phpWord->addSection();
-
         //setting template 
         $templateProcessor = new \PhpOffice\PhpWord\TemplateProcessor(public_path().'/download/template_receipt.docx');
         $templateProcessor->setValue('doctor_name', $doctor['doctor_name']);
@@ -1635,55 +1631,12 @@ class ApiTransactionConsultationController extends Controller
         $directory = ('storage/receipt/docx/receipt_'.$transaction['transaction_receipt_number'].'.docx');
         $templateProcessor->saveAs($directory);
 
-        // $description = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-
-        // tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-
-        // quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-
-        // consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-
-        // cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-
-        // proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
-
-        // $items = json_encode($items);
-
-        // $description = [
-        //     'doctor_name' => $doctor['doctor_name'],
-        //     'doctor_specialist_name' => $doctor['specialists'][0]['doctor_specialist_name'],
-        //     'transaction_date' => MyHelper::dateFormatInd($transaction['transaction_date']),
-        //     'items' => $items
-        // ];
-
-        // $description = implode("|", $description);
-
-
-        //$section->addImage("http://itsolutionstuff.com/frontTheme/images/logo.png");
-
-        //$section->addText($description);
-
-        // $domPdfPath = realpath(base_path('vendor/dompdf/dompdf'));
-        // \PhpOffice\PhpWord\Settings::setPdfRendererPath($domPdfPath);
-        // \PhpOffice\PhpWord\Settings::setPdfRendererName('DomPDF');
-
-        // $phpWord = \PhpOffice\PhpWord\IOFactory::load('storage/save_pdf_test2.docx');
-        // $objWriter = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'PDF');
-        // $objWriter->save('storage/helloWorld3.pdf');
-
-        // $converter = new OfficeConverter('storage/save_pdf_test2.docx', 'storage/helloWorld4.pdf');
-
-        // $test = 'C:\\tpid-dian\dian\titip\test.txt';
-        // return response()->download($test);
-
         if(!Storage::exists('receipt/pdf')){
             Storage::makeDirectory('receipt/pdf');
         }
     
         $converter = new CustomOfficeConverter($directory, 'storage/receipt/pdf', '"C:\\Program Files\LibreOffice\program\soffice.exe"', true);
         $output = $converter->convertTo('receipt_'.$transaction['transaction_receipt_number'].'.pdf');
-        // $converter = new OfficeConverter('storage/save_pdf_test2.docx');
-        // $converter->convertTo('storage/save_pdf_test2.pdf');
 
         return response()->download($output);
     }
