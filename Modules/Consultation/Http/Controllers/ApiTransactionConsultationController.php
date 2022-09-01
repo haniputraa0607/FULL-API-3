@@ -23,6 +23,8 @@ use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentMidtran;
 use Modules\Xendit\Entities\TransactionPaymentXendit;
 use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
+use NcJoes\OfficeConverter\OfficeConverter;
+use App\Lib\CustomOfficeConverter;
 
 use Modules\UserFeedback\Entities\UserFeedbackLog;
 use Modules\Doctor\Entities\DoctorSchedule;
@@ -32,6 +34,7 @@ use Modules\Transaction\Entities\TransactionGroup;
 use DB;
 use DateTime;
 use Carbon\Carbon;
+use Storage;
 
 
 class ApiTransactionConsultationController extends Controller
@@ -1619,15 +1622,18 @@ class ApiTransactionConsultationController extends Controller
         $templateProcessor->setValue('doctor_specialist_name', $doctor['specialists'][0]['doctor_specialist_name']);
         $templateProcessor->setValue('doctor_practice_lisence_number', $doctor['practice_lisence_number']);
         $templateProcessor->setValue('transaction_date', MyHelper::dateFormatInd($transaction['transaction_date']));
-        $templateProcessor->setValue('transaction_receipt_number', null);
+        $templateProcessor->setValue('transaction_receipt_number', $transaction['transaction_receipt_number']);
         $templateProcessor->cloneBlock('block_items', 0, true, false, $items);
         $templateProcessor->setValue('customer_name', $user['name']);
         $templateProcessor->setValue('customer_age', $user['age']);
         $templateProcessor->setValue('customer_gender', $user['gender']);
 
-        $directory = ('storage/save_pdf_test2.docx');
-        $templateProcessor->saveAs($directory);
+        if(!Storage::exists('receipt/docx')){
+            Storage::makeDirectory('receipt/docx');
+        }
 
+        $directory = ('storage/receipt/docx/receipt_'.$transaction['transaction_receipt_number'].'.docx');
+        $templateProcessor->saveAs($directory);
 
         // $description = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
 
@@ -1657,15 +1663,29 @@ class ApiTransactionConsultationController extends Controller
 
         //$section->addText($description);
 
-        $domPdfPath = realpath(base_path('vendor/dompdf/dompdf'));
-        \PhpOffice\PhpWord\Settings::setPdfRendererPath($domPdfPath);
-        \PhpOffice\PhpWord\Settings::setPdfRendererName('DomPDF');
+        // $domPdfPath = realpath(base_path('vendor/dompdf/dompdf'));
+        // \PhpOffice\PhpWord\Settings::setPdfRendererPath($domPdfPath);
+        // \PhpOffice\PhpWord\Settings::setPdfRendererName('DomPDF');
 
-        $phpWord = \PhpOffice\PhpWord\IOFactory::load('storage/save_pdf_test2.docx');
-        $objWriter = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'PDF');
-        $objWriter->save('storage/helloWorld3.pdf');
+        // $phpWord = \PhpOffice\PhpWord\IOFactory::load('storage/save_pdf_test2.docx');
+        // $objWriter = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'PDF');
+        // $objWriter->save('storage/helloWorld3.pdf');
 
-        return response()->download('storage/helloWorld3.pdf');
+        // $converter = new OfficeConverter('storage/save_pdf_test2.docx', 'storage/helloWorld4.pdf');
+
+        // $test = 'C:\\tpid-dian\dian\titip\test.txt';
+        // return response()->download($test);
+
+        if(!Storage::exists('receipt/pdf')){
+            Storage::makeDirectory('receipt/pdf');
+        }
+    
+        $converter = new CustomOfficeConverter($directory, 'storage/receipt/pdf', '"C:\\Program Files\LibreOffice\program\soffice.exe"', true);
+        $output = $converter->convertTo('receipt_'.$transaction['transaction_receipt_number'].'.pdf');
+        // $converter = new OfficeConverter('storage/save_pdf_test2.docx');
+        // $converter->convertTo('storage/save_pdf_test2.pdf');
+
+        return response()->download($output);
     }
 
     public function updateRecomendation(Request $request)

@@ -25,6 +25,7 @@
         "league/flysystem-aws-s3-v3": "^1.0",
         "maatwebsite/excel": "^3.1",
         "mpociot/laravel-apidoc-generator": "^3.12",
+        "ncjoes/office-converter": "^1.0",
         "nwidart/laravel-modules": "^5.0",
         "orangehill/iseed": "^2.6",
         "php-http/guzzle6-adapter": "^1.1",
