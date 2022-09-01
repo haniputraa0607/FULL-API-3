@@ -1635,7 +1635,7 @@ class ApiTransactionConsultationController extends Controller
             Storage::makeDirectory('receipt/pdf');
         }
     
-        $converter = new CustomOfficeConverter($directory, 'storage/receipt/pdf', '"C:\\Program Files\LibreOffice\program\soffice.exe"', true);
+        $converter = new CustomOfficeConverter($directory, 'storage/receipt/pdf', env('LIBREOFFICE_URL'), true);
         $output = $converter->convertTo('receipt_'.$transaction['transaction_receipt_number'].'.pdf');
 
         return response()->download($output);
