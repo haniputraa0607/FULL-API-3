@@ -3887,7 +3887,7 @@ class ApiUser extends Controller
         $post = $request->json()->all();
 
         if(empty($post['id_subdistrict'])){
-            return response()->json(['status' => 'fail', 'messages' => ['ID subdistrict can not be empty']]);
+            return response()->json(['status' => 'fail', 'messages' => ['Mohon lengkapi semua data alamat']]);
         }
 
         $dtSubdisctrict = Subdistricts::join('districts', 'districts.id_district', 'subdistricts.id_district')
