@@ -1628,14 +1628,14 @@ class ApiTransactionConsultationController extends Controller
             Storage::makeDirectory('receipt/docx');
         }
 
-        $directory = ('storage/receipt/docx/receipt_'.$transaction['transaction_receipt_number'].'.docx');
+        $directory = storage_path('app/public/receipt/docx/receipt_'.$transaction['transaction_receipt_number'].'.docx');
         $templateProcessor->saveAs($directory);
 
         if(!Storage::exists('receipt/pdf')){
             Storage::makeDirectory('receipt/pdf');
         }
     
-        $converter = new CustomOfficeConverter($directory, 'storage/receipt/pdf', env('LIBREOFFICE_URL'), true);
+        $converter = new CustomOfficeConverter($directory, storage_path('app/public/receipt/pdf'), env('LIBREOFFICE_URL'), true);
         $output = $converter->convertTo('receipt_'.$transaction['transaction_receipt_number'].'.pdf');
 
         return response()->download($output);
