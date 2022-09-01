@@ -23,6 +23,8 @@ use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentMidtran;
 use Modules\Xendit\Entities\TransactionPaymentXendit;
 use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
+use NcJoes\OfficeConverter\OfficeConverter;
+use App\Lib\CustomOfficeConverter;
 
 use Modules\UserFeedback\Entities\UserFeedbackLog;
 use Modules\Doctor\Entities\DoctorSchedule;
@@ -32,6 +34,7 @@ use Modules\Transaction\Entities\TransactionGroup;
 use DB;
 use DateTime;
 use Carbon\Carbon;
+use Storage;
 
 
 class ApiTransactionConsultationController extends Controller
@@ -1566,13 +1569,76 @@ class ApiTransactionConsultationController extends Controller
     public function downloadDrugRecomendation(Request $request)
     {
         //PDF file is stored under project/public/download/info.pdf
-        $file= public_path(). "/download/receipt.pdf";
+        // $file= public_path(). "/download/receipt.pdf";
 
-        $headers = array(
-            'Content-Type: application/pdf',
-        );
+        // $headers = array(
+        //     'Content-Type: application/pdf',
+        // );
 
-        return FacadeResponse::download($file, 'receipt.pdf', $headers);
+        // return FacadeResponse::download($file, 'receipt.pdf', $headers);
+
+        $post = $request->json()->all();
+
+        $id = $request->user()->id;
+
+        //get Transaction Consultation Data
+        $transactionConsultation = TransactionConsultation::with('doctor')->where('id_transaction_consultation', $post['id_transaction_consultation'])->first()->toArray();
+        $doctor = Doctor::with('specialists')->where('id_doctor', $transactionConsultation['id_doctor'])->first()->toArray();
+        $user = User::where('id', $transactionConsultation['id_user'])->first()->toArray();
+        $date = Carbon::parse($user['birthday']);
+        $now = Carbon::now();
+        $user['age'] = $date->diffInYears($now);
+
+        $transaction = Transaction::where('id_transaction', $transactionConsultation['id_transaction'])->first()->toArray();
+        $recomendations = TransactionConsultationRecomendation::with('product')->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->onlyDrug()->get();
+
+        $items = [];
+        if(!empty($recomendations)) {
+            foreach($recomendations as $key => $recomendation){
+                $params = [
+                    'id_product' => $recomendation->id_product,
+                    'id_user' => $id,
+                    'id_product_variant_group' =>$recomendation->id_product_variant_group
+                ];
+
+                $detailProduct = app($this->product)->detailRecomendation($params);
+
+                $items[$key]['product_name'] = $detailProduct['result']['product_name'] ?? null;
+                $items[$key]['variant_name'] = $detailProduct['result']['variants']['product_variant_name'] ?? null;
+                $items[$key]['qty'] = $recomendation->qty_product ?? null;
+                $items[$key]['usage_rule'] = $recomendation->usage_rules ?? null;
+                $items[$key]['usage_rule_time'] = $recomendation->usage_rules_time ?? null;
+                $items[$key]['usage_rule_additional_time'] = $recomendation->usage_rules_additional ?? null;
+            }
+        }
+
+        //setting template 
+        $templateProcessor = new \PhpOffice\PhpWord\TemplateProcessor(public_path().'/download/template_receipt.docx');
+        $templateProcessor->setValue('doctor_name', $doctor['doctor_name']);
+        $templateProcessor->setValue('doctor_specialist_name', $doctor['specialists'][0]['doctor_specialist_name']);
+        $templateProcessor->setValue('doctor_practice_lisence_number', $doctor['practice_lisence_number']);
+        $templateProcessor->setValue('transaction_date', MyHelper::dateFormatInd($transaction['transaction_date']));
+        $templateProcessor->setValue('transaction_receipt_number', $transaction['transaction_receipt_number']);
+        $templateProcessor->cloneBlock('block_items', 0, true, false, $items);
+        $templateProcessor->setValue('customer_name', $user['name']);
+        $templateProcessor->setValue('customer_age', $user['age']);
+        $templateProcessor->setValue('customer_gender', $user['gender']);
+
+        if(!Storage::exists('receipt/docx')){
+            Storage::makeDirectory('receipt/docx');
+        }
+
+        $directory = ('storage/receipt/docx/receipt_'.$transaction['transaction_receipt_number'].'.docx');
+        $templateProcessor->saveAs($directory);
+
+        if(!Storage::exists('receipt/pdf')){
+            Storage::makeDirectory('receipt/pdf');
+        }
+    
+        $converter = new CustomOfficeConverter($directory, 'storage/receipt/pdf', '"C:\\Program Files\LibreOffice\program\soffice.exe"', true);
+        $output = $converter->convertTo('receipt_'.$transaction['transaction_receipt_number'].'.pdf');
+
+        return response()->download($output);
     }
 
     public function updateRecomendation(Request $request)
