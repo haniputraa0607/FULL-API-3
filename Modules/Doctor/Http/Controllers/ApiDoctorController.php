@@ -741,10 +741,10 @@ class ApiDoctorController extends Controller
             $outletData = [
                 'id_outlet' => $outlet->id_outlet,
                 'outlet_name' => $outlet->outlet_name,
-                'outlet_address' => $outlet->outlet_address,
-                'outlet_image_logo_landscape' => $outlet->outlet_image_logo_landscape,
-                'outlet_image_logo_portrait' => $outlet->outlet_image_logo_portrait,
-                'outlet_image_cover' => $outlet->outlet_image_cover,
+                'outlet_address' => $outlet->outlet_full_address,
+                'url_outlet_image_logo_landscape' => $outlet->url_outlet_image_logo_landscape,
+                'url_outlet_image_logo_portrait' => $outlet->url_outlet_image_logo_portrait,
+                'url_outlet_image_cover' => $outlet->url_outlet_image_cover,
                 'doctor_count' => $outlet->doctors->count()
             ];
 
