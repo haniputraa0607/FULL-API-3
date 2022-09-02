@@ -102,7 +102,7 @@ class Outlet extends Authenticatable
         'time_zone_utc'
 	];
 
-	protected $appends  = ['call', 'url', 'url_outlet_image_cover', 'url_outlet_image_logo_portrait', 'url_outlet_image_logo_landscape'];
+	protected $appends  = ['call', 'url', 'url_outlet_image_cover', 'url_outlet_image_logo_portrait', 'url_outlet_image_logo_landscape', 'outlet_full_address'];
 
 	public function getCallAttribute() {
 		$call = preg_replace("/[^0-9]/", "", $this->outlet_phone);
@@ -152,6 +152,11 @@ class Outlet extends Authenticatable
 	public function city()
 	{
 		return $this->belongsTo(\App\Http\Models\City::class, 'id_city');
+	}
+
+	public function subdistrict()
+	{
+		return $this->belongsTo(\App\Http\Models\Subdistricts::class, 'id_subdistrict');
 	}
 
 	public function deals()
@@ -266,5 +271,31 @@ class Outlet extends Authenticatable
 
 	public function doctors(){
 		return $this->hasMany(\Modules\Doctor\Entities\Doctor::class, 'id_outlet');
+	}
+
+	public function getOutletFullAddressAttribute()
+	{
+		$outletFullAddress = [];
+		if(!empty($this->outlet_address)){
+			$outletFullAddress[] = $this->outlet_address;
+		}
+
+		if(!empty($this->id_subdistrict)){
+			$outletFullAddress[] = $this->subdistrict->subdistrict_name;
+		}
+
+		if(!empty($this->id_city)){
+			$outletFullAddress[] = $this->city->city_name;
+		}
+
+		if(!empty($this->outlet_postal_code)){
+			$outletFullAddress[] = $this->outlet_postal_code;
+		}
+
+		// dd($outletFullAddress);
+
+		$outletFullAddress = implode(", ",$outletFullAddress);
+
+		return $outletFullAddress;
 	}
 }
