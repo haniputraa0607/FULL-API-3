@@ -2,6 +2,10 @@
 
 namespace Modules\Users\Http\Controllers;
 
+use App\Http\Models\News;
+use App\Http\Models\Outlet;
+use App\Http\Models\Product;
+use App\Http\Models\ProductPhoto;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -18,6 +22,8 @@ use App\Http\Models\HomeBackground;
 use App\Http\Models\UsersMembership;
 use App\Http\Models\Transaction;
 use App\Http\Models\Banner;
+use Modules\Doctor\Entities\Doctor;
+use Modules\Favorite\Entities\Favorite;
 use Modules\Merchant\Entities\Merchant;
 use Modules\PromoCampaign\Entities\FeaturedPromoCampaign;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
@@ -1032,5 +1038,168 @@ class ApiHome extends Controller
             ];
         }
         return MyHelper::checkGet(['token' => $token]);
+    }
+
+    public function searchHome(Request $request){
+        $post = $request->all();
+        if(empty($post['search_key'])){
+            return [
+                'status' => 'fail',
+                'messages' => ['Search key can not be empty'],
+            ];
+        }
+
+        $products = Product::leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
+            ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
+            ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
+            ->join('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
+            ->where('outlet_is_closed', 0)
+            ->where('product_global_price', '>', 0)
+            ->where('product_visibility', 'Visible')
+            ->where('product_detail_visibility', 'Visible')
+            ->groupBy('products.id_product');
+
+        if(strpos($post['search_key']," ") !== false){
+            $products = $products->whereRaw('MATCH (product_name) AGAINST ("'.$post['search_key'].'" IN BOOLEAN MODE)')
+                ->select('products.id_product', 'products.product_name', 'product_variant_status', 'product_global_price as product_price',
+                    'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'need_recipe_status', 'product_categories.product_category_name',
+                    DB::raw('MATCH (product_name) AGAINST ("'.$post['search_key'].'" IN BOOLEAN MODE) AS relate'))
+                ->orderBy('relate', 'desc');
+        }else{
+            $products->where('product_name', 'like', '%'.$post['search_key'].'%')->select('products.id_product', 'products.product_name', 'product_variant_status', 'product_global_price as product_price',
+                'product_detail_stock_status as stock_status', 'product_detail.id_outlet', 'need_recipe_status', 'product_categories.product_category_name');
+        }
+
+        $products = $products->get()->toArray();
+
+        foreach ($products as $key=>$product){
+            if ($product['product_variant_status']) {
+                $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
+                $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                if(empty($variantTree['base_price'])){
+                    $products[$key]['stock_status'] = 'Sold Out';
+                }
+                $products[$key]['product_price'] = ($variantTree['base_price']??false)?:$product['product_price'];
+            }
+
+            unset($products[$key]['id_outlet']);
+            unset($products[$key]['product_variant_status']);
+            if(isset($product['relate'])){
+                unset($products[$key]['relate']);
+            }
+            $products[$key]['product_price'] = (int)$products[$key]['product_price'];
+            $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+            $products[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
+        }
+        $products = array_values($products);
+
+        $outlets = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
+            ->where('outlet_status', 'Active')
+            ->where('outlet_is_closed', 0)
+            ->where('merchant_status', 'Active')
+            ->select('outlets.id_outlet', 'id_merchant', 'outlet_name', 'outlet_image_logo_portrait');
+
+        if(!empty($post['search_key'])){
+            $outlets = $outlets->where('outlet_name', 'like', '%'.$post['search_key'].'%');
+        }
+
+        $outlets = $outlets->get()->toArray();
+
+        foreach ($outlets as $key=>$dt){
+            $outlets[$key]['outlet_name'] = $dt['outlet_name'];
+            $outlets[$key]['outlet_image_logo_portrait'] = $dt['url_outlet_image_logo_portrait'];
+            unset($outlets[$key]['url_outlet_image_logo_landscape']);
+            unset($outlets[$key]['url_outlet_image_logo_portrait']);
+            unset($outlets[$key]['url_outlet_image_cover']);
+            unset($outlets[$key]['call']);
+            unset($outlets[$key]['url']);
+        }
+
+        $doctors = Doctor::join('outlets', 'doctors.id_outlet', 'outlets.id_outlet')
+            ->where('outlet_status', 'Active')
+            ->with('specialists')
+            ->select('doctor_name', 'id_doctor', 'doctor_photo');
+
+        if(!empty($post['search_key'])){
+            $doctors = $doctors->where('doctor_name', 'like', '%'.$post['search_key'].'%');
+        }
+
+        $doctors = $doctors->get()->toArray();
+        foreach ($doctors as $key=>$dt){
+            unset($doctors[$key]['challenge_key2']);
+            unset($doctors[$key]['doctor_service_decoded']);
+            unset($doctors[$key]['practice_experience_place_decoded']);
+            $specialist = array_column($dt['specialists'], 'doctor_specialist_name');
+            $specialistName = implode(',', $specialist);
+            $doctors[$key]['specialists'] = $specialistName;
+            $doctors[$key]['url_doctor_photo'] = (!empty($dt['url_doctor_photo']) ? $dt['url_doctor_photo'] : config('url.storage_url_api').'img/default.jpg');;
+        }
+
+        $now = date('Y-m-d');
+        $news = News::whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
+                $query->whereDate('news_expired_date', '>=', $now)
+                    ->orWhere('news_expired_date', null);
+            })->orderBy('news_publish_date', 'desc');
+
+        if(!empty($post['search_key'])){
+            $news = $news->where(function ($query) use ($post){
+                $query->where('news_title', 'like', '%'.$post['search_key'].'%')
+                    ->orWhere('news_content_short', 'like', '%'.$post['search_key'].'%');
+            });
+        }
+
+        $news = $news->select('news_slug', 'news_title', 'news_image_dalam', 'news_type')->get()->toArray();
+        foreach ($news as $key=>$dt){
+            unset($news[$key]['url_form']);
+            unset($news[$key]['news_form_status']);
+            unset($news[$key]['url_webview']);
+            unset($news[$key]['news_image_dalam']);
+            unset($news[$key]['url_news_image_luar']);
+        }
+
+        $allMerge = array_merge($products, $outlets, $doctors, $news);
+        $all = [];
+        foreach ($allMerge as $value){
+            if(!empty($value['id_product'])){
+                $all[] = [
+                    'type' => 'product',
+                    'id_reference' => $value['id_product'],
+                    'name' => $value['product_name'],
+                    'image' => $value['image']
+                ];
+            }elseif(!empty($value['id_outlet'])){
+                $all[] = [
+                    'type' => 'outlet-merchant',
+                    'id_reference' => $value['id_outlet'],
+                    'name' => $value['outlet_name'],
+                    'image' => $value['outlet_image_logo_portrait']
+                ];
+            }elseif(!empty($value['id_doctor'])){
+                $all[] = [
+                    'type' => 'doctor',
+                    'id_reference' => $value['id_doctor'],
+                    'name' => $value['doctor_name'],
+                    'image' => $value['url_doctor_photo']
+                ];
+            }elseif(!empty($value['news_slug'])){
+                $all[] = [
+                    'type' => 'e_learning',
+                    'id_reference' => $value['news_slug'],
+                    'e_learning_type' => $value['news_type'],
+                    'name' => $value['news_title'],
+                    'image' => $value['url_news_image_dalam']
+                ];
+            }
+        }
+
+        $res = [
+            'all' => $all,
+            'products' => $products,
+            'outlets' => $outlets,
+            'doctors' => $doctors,
+            'e_learning' => $news
+        ];
+
+        return response()->json(MyHelper::checkGet($res));
     }
 }
