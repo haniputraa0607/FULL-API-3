@@ -1100,10 +1100,6 @@ class ApiTransactionConsultationController extends Controller
                 'consultation_status' => "done",
                 'consultation_end_at' => new DateTime
             ]);
-    
-            // update doctor status
-            // $doctor->update(['doctor_status' => "online"]);
-            // $doctor->save();
 
             //insert balance merchant
             $transaction = Transaction::where('id_transaction', $transaction['consultation']['id_transaction'])->first();
@@ -1195,6 +1191,13 @@ class ApiTransactionConsultationController extends Controller
                 'consultation_status' => "completed",
                 'consultation_completed_at' => new DateTime
             ]);
+
+            //update doctor status
+            $getOngoingConsultation = TransactionConsultation::where('id_doctor', $doctor->id_doctor)->where('consultation_status', 'ongoing')->orWhere('consultation_status', 'done')->count();
+            if($getLiveConsultation = 0) {
+                $doctor->update(['doctor_status' => "online"]);
+                $doctor->save();
+            }
     
             //push notifikasi
 
@@ -1378,8 +1381,11 @@ class ApiTransactionConsultationController extends Controller
 
         $transactionConsultation = $transactionConsultation->toArray();
 
-        $diseaseComplaints = !empty($transactionConsultation['disease_complaint']) ? explode(', ', $transactionConsultation['disease_complaint']) : null;
-        $diseaseAnalysis = !empty($transactionConsultation['disease_complaint']) ? explode(', ', $transactionConsultation['disease_analysis']) : null;
+        // $diseaseComplaints = !empty($transactionConsultation['disease_complaint']) ? explode(', ', $transactionConsultation['disease_complaint']) : null;
+        // $diseaseAnalysis = !empty($transactionConsultation['disease_analysis']) ? explode(', ', $transactionConsultation['disease_analysis']) : null;
+
+        $diseaseComplaints = !empty($transactionConsultation['disease_complaint']) ? json_decode($transactionConsultation['disease_complaint']) : null;
+        $diseaseAnalysis = !empty($transactionConsultation['disease_analysis']) ? json_decode($transactionConsultation['disease_analysis']) : null;
 
         $result = [];
         $result['disease_complaint'] = $diseaseComplaints;
@@ -1412,8 +1418,11 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
-        $diseaseComplaint = implode(", ",$post['disease_complaint']);
-        $diseaseAnalysis = implode(", ",$post['disease_analysis']);
+        // $diseaseComplaint = implode(", ",$post['disease_complaint']);
+        // $diseaseAnalysis = implode(", ",$post['disease_analysis']);
+
+        $diseaseComplaint = json_encode($post['disease_complaint']);
+        $diseaseAnalysis = json_encode($post['disease_analysis']);
 
         DB::beginTransaction();
         try {
@@ -1582,15 +1591,57 @@ class ApiTransactionConsultationController extends Controller
         $id = $request->user()->id;
 
         //get Transaction Consultation Data
-        $transactionConsultation = TransactionConsultation::with('doctor')->where('id_transaction_consultation', $post['id_transaction_consultation'])->first()->toArray();
-        $doctor = Doctor::with('specialists')->where('id_doctor', $transactionConsultation['id_doctor'])->first()->toArray();
-        $user = User::where('id', $transactionConsultation['id_user'])->first()->toArray();
+        $transactionConsultation = TransactionConsultation::with('doctor')->where('id_transaction_consultation', $post['id_transaction_consultation'])->first();
+        if(empty($transactionConsultation)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaction Consultation Not Found']
+            ]);
+        }
+        $transactionConsultation = $transactionConsultation->toArray();
+
+        //get Doctor
+        $doctor = Doctor::with('specialists')->where('id_doctor', $transactionConsultation['id_doctor'])->first();
+        if(empty($doctor)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Doctor Not Found']
+            ]);
+        }
+        $doctor = $doctor->toArray();
+
+        //get User
+        $user = User::where('id', $transactionConsultation['id_user'])->first();
+        if(empty($user)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['User Not Found']
+            ]);
+        }
+        $user = $user->toArray();
+
         $date = Carbon::parse($user['birthday']);
         $now = Carbon::now();
         $user['age'] = $date->diffInYears($now);
 
-        $transaction = Transaction::where('id_transaction', $transactionConsultation['id_transaction'])->first()->toArray();
+        //get Transaction
+        $transaction = Transaction::where('id_transaction', $transactionConsultation['id_transaction'])->first();
+        if(empty($transaction)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaction Not Found']
+            ]);
+        }
+        $transaction = $transaction->toArray();
+
         $recomendations = TransactionConsultationRecomendation::with('product')->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->onlyDrug()->get();
+        if(empty($recomendations)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Receipt Not Found']
+            ]);
+        }
+
 
         $items = [];
         if(!empty($recomendations)) {
@@ -2333,7 +2384,18 @@ class ApiTransactionConsultationController extends Controller
 
         $getSetting = Setting::where('key', $post['key'])->first()['value']??null;
 
-        $result = json_decode($getSetting);
+        $result = [];
+        //search here
+        if(!empty($post['search'])){
+            $settings = json_decode($getSetting);
+            foreach ($settings as $setting) {
+                if (str_contains(strtolower($setting), strtolower($post['search']))) {
+                    $result[] = $setting;
+                }
+            }
+        } else {
+            $result = json_decode($getSetting);
+        }
 
         return response()->json(MyHelper::checkGet($result));
     }
