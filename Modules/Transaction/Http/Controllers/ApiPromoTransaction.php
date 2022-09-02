@@ -238,7 +238,7 @@ class ApiPromoTransaction extends Controller
                         $discItemStatus = 1;
                         foreach ($sharedPromo['items'] as $index=>$it){
                             $explode = explode('-', $index);
-                            if($explode[0] == $dt['id_outlet']){
+                            if($explode[0] == $dt['id_outlet'] && $it['is_promo'] == 1){
                                 $newPrice = $it['new_price'];
                                 $totalDiscount = $it['total_discount'];
                                 $baseDiscount = $it['base_discount'];
@@ -248,6 +248,7 @@ class ApiPromoTransaction extends Controller
                                 unset($it['base_discount']);
                                 unset($it['qty_discount']);
                                 unset($it['discount']);
+                                unset($it['not_get_discount']);
 
                                 $it['product_price_after_discount'] = $newPrice;
                                 $it['product_price_after_discount_text'] = 'Rp '.number_format($newPrice,0,",",".");
@@ -256,6 +257,16 @@ class ApiPromoTransaction extends Controller
                                 $it['total_discount'] = $totalDiscount;
                                 $it['base_discount_each_item'] = $baseDiscount;
                                 $it['qty_discount'] = $qtyDiscount;
+
+                                $itemsFinal[] = $it;
+                            }else{
+                                unset($it['promo_qty']);
+                                unset($it['new_price']);
+                                unset($it['total_discount']);
+                                unset($it['base_discount']);
+                                unset($it['qty_discount']);
+                                unset($it['discount']);
+                                unset($it['not_get_discount']);
 
                                 $itemsFinal[] = $it;
                             }
@@ -716,7 +727,7 @@ class ApiPromoTransaction extends Controller
             $promo_product = "*";
         }
 
-        $get_promo_product = $pct->getPromoProduct($promo_item, $promo_brand, $promo_product);
+        $get_promo_product = $pct->getPromoProduct($promo_item, $promo_brand, $promo_product, $promoQuery['product_type']);
         $product = $get_promo_product['product'];
 
         if (!$product) {
@@ -870,7 +881,7 @@ class ApiPromoTransaction extends Controller
             $promo_product = "*";
         }
 
-        $get_promo_product = $pct->getPromoProduct($promo_item, $promo_brand, $promo_product);
+        $get_promo_product = $pct->getPromoProduct($promo_item, $promo_brand, $promo_product, $promoQuery['product_type']);
         $product = $get_promo_product['product'];
         $total_product = $get_promo_product['total_product'];
 
@@ -1108,10 +1119,10 @@ class ApiPromoTransaction extends Controller
             $promo_product = "*";
         }
 
-        $get_promo_product = $pct->getPromoProduct($promo_item, $promo_brand, $promo_product);
+        $get_promo_product = $pct->getPromoProduct($promo_item, $promo_brand, $promo_product, $promoQuery['product_type']);
         $product = $get_promo_product['product'];
 
-        if (!$product && !empty($promo_brand)) {
+        if (!$product) {
             $message = $pct->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.';
             $message = MyHelper::simpleReplace($message,['product'=>$product_name]);
             return $this->failResponse($message);
@@ -1158,6 +1169,36 @@ class ApiPromoTransaction extends Controller
         $discount_value	= $promo_rules->discount_value;
         $discount_max	= $promo_rules->max_percent_discount;
 
+        $promo_item 	= $data['items'];
+        $total_product = 0;
+        foreach ($promo_item as $key => $trx) {
+            $notGetDiscountStatus = false;
+            if(!empty($promoQuery['product_type']) && $promoQuery['product_type'] != 'single + variant'){
+                if($promoQuery['product_type'] == 'single' && !empty($trx['id_product_variant_group'])){
+                    $notGetDiscountStatus = true;
+                }elseif ($promoQuery['product_type'] == 'variant' && empty($trx['id_product_variant_group'])){
+                    $notGetDiscountStatus = true;
+                }
+            }
+
+            $product[$key]['not_get_discount'] = $notGetDiscountStatus;
+            if(!$notGetDiscountStatus){
+                $total_product += $trx['qty'];
+            }
+        }
+
+        if ($total_product <= 0) {
+            $msg = '';
+            if($promoQuery['product_type'] == 'single'){
+                $msg = 'product tanpa variant';
+            }elseif($promoQuery['product_type'] == 'variant'){
+                $msg = 'product dengan variant';
+            }
+
+            $message = $pct->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli '.$msg.'.';
+            return $this->failResponse($message);
+        }
+
         if ($promo_rules) {
             if ($discount_type == 'Percent') {
                 $discount = ($delivery_fee * $discount_value) /100;
@@ -1193,7 +1234,7 @@ class ApiPromoTransaction extends Controller
         $item['is_promo']		= 0;
         $item['qty_discount']	= 0;
 
-        if (empty($discount_qty)) {
+        if (empty($discount_qty) || $item['not_get_discount']) {
             return 0;
         }
 
@@ -1256,17 +1297,23 @@ class ApiPromoTransaction extends Controller
 
         $promoItems = [];
         $outlet = Outlet::find($dataTrx['outlet']['id_outlet'] ?? $dataTrx['id_outlet']);
-        if (request()->transaction_from == 'academy' && isset($items['id_product'])) {
+        foreach ($items as $val) {
+            $productType = 'Product';
+            if (isset($val['id_user_hair_stylist'])
+                || request()->transaction_from == 'home-service'
+            ) {
+                $productType = 'Service';
+            }
 
-            $price = $items['product_price'];
+            $price = $val['product_price'] ?? $val['transaction_product_price'];
             if ($outlet->is_tax) {
                 if($outlet->outlet_different_price){
-                    $productPrice = ProductSpecialPrice::where(['id_product' => $items['id_product'], 'id_outlet' => $outlet['id_outlet']])->first();
+                    $productPrice = ProductSpecialPrice::where(['id_product' => $val['id_product'], 'id_outlet' => $outlet['id_outlet']])->first();
                     if($productPrice){
                         $price = $productPrice['product_special_price'];
                     }
                 }else{
-                    $productPrice = ProductGlobalPrice::where(['id_product' => $items['id_product']])->first();
+                    $productPrice = ProductGlobalPrice::where(['id_product' => $val['id_product']])->first();
                     if($productPrice){
                         $price = $productPrice['product_global_price'];
                     }
@@ -1274,46 +1321,13 @@ class ApiPromoTransaction extends Controller
             }
 
             $promoItems[] = [
-                'id_product' => $items['id_product'],
-                'id_brand' => $items['id_brand'],
+                'id_transaction_product' => $val['id_transaction_product'] ?? null,
+                'id_product' => $val['id_product'] ?? null,
+                'id_brand' => $val['id_brand'],
                 'product_price' => $price,
-                'product_type' => 'Academy',
-                'qty' => $items['qty']
+                'product_type' => $val['type'] ?? $productType,
+                'qty' => $val['qty'] ?? $val['transaction_product_qty'] ?? 1
             ];
-
-        } else {
-            foreach ($items as $val) {
-                $productType = 'Product';
-                if (isset($val['id_user_hair_stylist'])
-                    || request()->transaction_from == 'home-service'
-                ) {
-                    $productType = 'Service';
-                }
-
-                $price = $val['product_price'] ?? $val['transaction_product_price'];
-                if ($outlet->is_tax) {
-                    if($outlet->outlet_different_price){
-                        $productPrice = ProductSpecialPrice::where(['id_product' => $val['id_product'], 'id_outlet' => $outlet['id_outlet']])->first();
-                        if($productPrice){
-                            $price = $productPrice['product_special_price'];
-                        }
-                    }else{
-                        $productPrice = ProductGlobalPrice::where(['id_product' => $val['id_product']])->first();
-                        if($productPrice){
-                            $price = $productPrice['product_global_price'];
-                        }
-                    }
-                }
-
-                $promoItems[] = [
-                    'id_transaction_product' => $val['id_transaction_product'] ?? null,
-                    'id_product' => $val['id_product'] ?? null,
-                    'id_brand' => $val['id_brand'],
-                    'product_price' => $price,
-                    'product_type' => $val['type'] ?? $productType,
-                    'qty' => $val['qty'] ?? $val['transaction_product_qty'] ?? 1
-                ];
-            }
         }
 
         $sharedPromoTrx['items'] = $sharedPromoTrx['items'] ?? $promoItems;

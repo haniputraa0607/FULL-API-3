@@ -2108,7 +2108,7 @@ class PromoCampaignTools{
 		return true;
     }
 
-    public function getPromoProduct(&$trxs, $promo_brand, $promo_product)
+    public function getPromoProduct(&$trxs, $promo_brand, $promo_product, $promo_product_type = null)
     {
     	if ($promo_product != '*') {
 	    	if (!is_array($promo_product)) {
@@ -2147,13 +2147,25 @@ class PromoCampaignTools{
 					}
 				}
 			}else{
-				$product[$key] = $trx;
-				$total_product += $trx['qty'];
+                $product[$key] = $trx;
+                $notGetDiscountStatus = false;
+                if(!empty($promo_product_type) && $promo_product_type != 'single + variant'){
+                    if($promo_product_type == 'single' && !empty($trx['id_product_variant_group'])){
+                        $notGetDiscountStatus = true;
+                    }elseif ($promo_product_type == 'variant' && empty($trx['id_product_variant_group'])){
+                        $notGetDiscountStatus = true;
+                    }
+                }
+
+                $product[$key]['not_get_discount'] = $notGetDiscountStatus;
+                if(!$notGetDiscountStatus){
+                    $total_product += $trx['qty'];
+                }
 			}
 		}
 
 	    return [
-	    	'product' => $product,
+	    	'product' => (!empty($total_product) ? $product : []),
 	    	'total_product' => $total_product
 	    ];
     }
