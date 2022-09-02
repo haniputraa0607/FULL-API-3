@@ -682,6 +682,24 @@ class ApiMerchantTransactionController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Sedang menunggu pickup']]);
         }
 
+        $deliveryList = app($this->merchant)->availableDelivery($detail['id_outlet']);
+        $dropCounterStatus = 1;
+        foreach ($deliveryList as $value){
+            if($value['delivery_method'] == $detail['shipment_courier']){
+                foreach ($value['service'] as $s){
+                    if($s['code'] == $detail['shipment_courier_code']){
+                        $dropCounterStatus = $s['drop_counter_status']??1;
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+
+        if($dropCounterStatus == 1 && (empty($post['pickup_time_start']) || empty($post['pickup_time_end']))){
+            return response()->json(['status' => 'fail', 'messages' => ['Pickup time tidak boleh kosong']]);
+        }
+
         $items = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
                 ->where('id_transaction', $detail['id_transaction'])
                 ->get()->toArray();
