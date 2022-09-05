@@ -700,10 +700,10 @@ class ApiOnlineTransaction extends Controller
             'available_checkout' => $checkOutStatus,
             'error_messages' => implode('. ', array_unique($errorMsg))
         ];
-        $result = app($this->promo_trx)->applyPromoCheckout($result);
 
         $fake_request = new Request(['show_all' => 0]);
         $result['available_payment'] = $this->availablePayment($fake_request)['result'] ?? [];
+        $result = app($this->promo_trx)->applyPromoCheckout($result);
 
         $grandTotalNew = $result['grandtotal'];
         if(isset($post['point_use']) && $post['point_use']){

@@ -182,27 +182,11 @@ class ApiPromoTransaction extends Controller
             }
         }
 
+        $validPayment = $data['available_payment']??[];
         if (!empty($codePayment)) {
-            $validPayment = [];
-            foreach ($data['available_payment'] as $payment) {
+            foreach ($data['available_payment']??[] as $key=>$payment) {
                 if (!in_array($payment['payment_method'], $codePayment)) {
-                    $payment['status'] = 0;
-                    continue;
-                }
-                if (!empty($payment['status'])) {
-                    $validPayment[] = $payment['payment_method'];
-                }
-            }
-            $codePayment = $validPayment;
-            if (empty($validPayment)) {
-                $codeErr = 'Metode pembayaran tidak tersedia';
-            }
-
-            $promoPayment = $codePayment;
-
-            foreach ($data['available_payment'] as &$payment) {
-                if (!in_array($payment['payment_method'], $promoPayment)) {
-                    $payment['status'] = 0;
+                    unset($validPayment[$key]);
                 }
             }
         }
@@ -319,6 +303,7 @@ class ApiPromoTransaction extends Controller
             $data['grandtotal'] = $data['grandtotal']-$totalAllDisc;
             $data['grandtotal_text'] = 'Rp '.number_format($data['grandtotal'],0,",",".");
         }
+        $data['available_payment'] = $validPayment;
         $data['available_checkout'] = $continueCheckOut;
         return $data;
     }
