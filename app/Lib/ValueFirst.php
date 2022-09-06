@@ -89,7 +89,8 @@ class ValueFirst
                     ],
                 ],
             ];
-            $token = 'Bearer '.$this->generateToken();
+            $checkSetting = Setting::where('key', 'valuefirst_token')->first();
+            $token = 'Bearer '.$checkSetting['value_text']??'';
             $res = MyHelper::postWithTimeout($this->json_endpoint, $token, $sendData);
             $log = [
                 'request_body' => $sendData,
@@ -155,43 +156,45 @@ class ValueFirst
         }
     }
 
-    public function generateToken(){
+    public function generateToken($old_token){
         $apikey = $this->apikey;
-        $currentDate = date('Y-m-d H:i:s');
-        $checkSetting = Setting::where('key', 'valuefirst_token')->first();
-        if(empty($checkSetting['value_text']) || (!empty($checkSetting['value']) && strtotime($currentDate) > strtotime($checkSetting['value']))){
-            $url = 'https://api.myvaluefirst.com/psms/api/messages/token?action=generate';
-            $client = new Client();
+        $url = 'https://api.myvaluefirst.com/psms/api/messages/token?action=generate';
+        $jsonBody = json_encode([]);
 
-            $req = [
-                'headers' => [
-                    'apikey' => $apikey,
-                    'Content-Type' => 'application/json'
-                ]
-            ];
-
-            try {
-                $output = $client->post($url, $req);
-                $output = json_decode($output->getBody(), true);
-                if(isset($output['token']) && !empty($output['token'])){
-                    Setting::updateOrCreate(['key' => 'valuefirst_token'], ['value' => $output['expiryDate'], 'value_text' => $output['token']]);
-                }
-                return $output['token']??null;
-            }catch (\GuzzleHttp\Exception\RequestException $e) {
-                try{
-                    if($e->getResponse()){
-                        $response = $e->getResponse()->getBody()->getContents();
-                        return ['status' => 'fail', 'response' => json_decode($response, true)];
-                    }
-                    return ['status' => 'fail', 'response' => ['Check your internet connection.']];
-                }
-                catch(Exception $e){
-                    return ['status' => 'fail', 'response' => ['Check your internet connection.']];
-                }
-            }
-        }else{
-            return $checkSetting['value_text'];
+        if(!empty($old_token)){
+            $jsonBody = json_encode([
+                'old_token' => $old_token
+            ]);
         }
+
+        $client = new Client([
+            'headers' => [
+                'apikey' => $apikey,
+                'Content-Type' => 'application/json'
+            ]
+        ]);
+
+        try {
+            $output = $client->request('POST', $url, ['body' => $jsonBody]);
+            $output = json_decode($output->getBody(), true);
+            if(isset($output['token']) && !empty($output['token'])){
+                Setting::updateOrCreate(['key' => 'valuefirst_token'], ['value' => $output['expiryDate'], 'value_text' => $output['token']]);
+            }
+            return $output['token']??null;
+        }catch (\GuzzleHttp\Exception\RequestException $e) {
+            try{
+                if($e->getResponse()){
+                    $response = $e->getResponse()->getBody()->getContents();
+                    return ['status' => 'fail', 'response' => json_decode($response, true)];
+                }
+                return ['status' => 'fail', 'response' => ['Check your internet connection.']];
+            }
+            catch(Exception $e){
+                return ['status' => 'fail', 'response' => ['Check your internet connection.']];
+            }
+        }
+
+        return 'success';
     }
 
 }

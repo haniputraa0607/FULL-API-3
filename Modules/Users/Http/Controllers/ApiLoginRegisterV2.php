@@ -4,6 +4,7 @@ namespace Modules\Users\Http\Controllers;
 
 use App\Http\Models\UserDevice;
 use App\Http\Models\UsersDeviceLogin;
+use App\Lib\ValueFirst;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -1524,5 +1525,17 @@ class ApiLoginRegisterV2 extends Controller
         ]);
 
         return json_decode((string) $response->getBody(), true);
+    }
+
+    public function generateToken(){
+        $currentDate = date('Y-m-d H:i:s', strtotime(date('Y-m-d H:i:s') . ' +1 day'));
+        $checkSetting = Setting::where('key', 'valuefirst_token')->first();
+
+        if(empty($checkSetting['value_text']) || (!empty($checkSetting['value']) && strtotime($currentDate) >= strtotime($checkSetting['value']))){
+            $valueFirst = new ValueFirst();
+            $valueFirst->generateToken($checkSetting['value_text']);
+        }
+
+        return 'success';
     }
 }
