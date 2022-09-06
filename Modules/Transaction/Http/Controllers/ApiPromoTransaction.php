@@ -190,6 +190,7 @@ class ApiPromoTransaction extends Controller
                 }
             }
         }
+        $validPayment = array_values($validPayment);
 
         $totalAllDisc = 0;
         $discDeliveryAll = 0;
