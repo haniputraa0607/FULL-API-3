@@ -3528,6 +3528,24 @@ class FeaturesTableSeeder extends Seeder
                 'created_at'     => date('Y-m-d H:00:00'),
                 'updated_at'     => date('Y-m-d H:00:00'),
             ),
+            353 => array(
+                'id_feature'     => 354,
+                'feature_type'   => 'List',
+                'feature_module' => 'User Rating',
+                'show_hide'      => 1,
+                'order'          => 130,
+                'created_at'     => date('Y-m-d H:00:00'),
+                'updated_at'     => date('Y-m-d H:00:00'),
+            ),
+            354 => array(
+                'id_feature'     => 355,
+                'feature_type'   => 'Update',
+                'feature_module' => 'User Rating',
+                'show_hide'      => 1,
+                'order'          => 130,
+                'created_at'     => date('Y-m-d H:00:00'),
+                'updated_at'     => date('Y-m-d H:00:00'),
+            ),
         );
 
         foreach ($rows as $row) {
