@@ -54,6 +54,7 @@ Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-
     Route::post('/consultation/message/get', 'ApiTransactionConsultationController@getMessage');
     Route::post('/consultation/message/create', 'ApiTransactionConsultationController@createMessage');
     Route::post('/consultation/detail/soon', 'ApiTransactionConsultationController@getSoonConsultationDetail');
+    Route::post('/consultation/message/received', 'ApiTransactionConsultationController@receivedChatFromInfobip');
 
     Route::post('/consultation/option', 'ApiTransactionConsultationController@getConsultationSettings');
 

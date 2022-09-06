@@ -183,4 +183,33 @@ class ApiHomeController extends Controller
     {
         //
     }
+
+    public function updateDeviceUserGuest($device_id, $device_token, $device_type) {
+        $dataUpdate = [
+            'device_id'    => $device_id,
+            'device_token' => $device_token,
+            'device_type' => $device_type
+        ];
+
+        $checkDevice = DoctorDevice::where('device_id', $device_id)
+								->where('device_token', $device_token)
+								->where('device_type', $device_type)
+								->count();
+        if ($checkDevice == 0) {
+            $update                = DoctorDevice::updateOrCreate(['device_id' => $device_id], [
+                'device_token'		=> $device_token,
+                'device_type'		=> $device_type
+            ]);
+            $result = [
+                'status' => 'updated'
+            ];
+        }
+        else {
+            $result = [
+                'status' => 'success'
+            ];
+        }
+
+        return $result;
+    }
 }
