@@ -54,7 +54,9 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
         'recipe_redemption_limit',
         'recipe_redemption_counter',
 		'referral_code',
-		'id_conversation'
+		'id_conversation',
+		'id_doctor_infobip',
+		'id_user_infobip'
 	];
 
 	protected $appends = [
