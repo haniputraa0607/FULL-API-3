@@ -23,6 +23,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
 });
 
 Route::any('consultation/detail/chat.html', 'ApiTransactionConsultationController@getChatView');
+Route::post('consultation/message/received', 'ApiTransactionConsultationController@receivedChatFromInfobip');
 
 Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'consultation'], function () {
     Route::post('/start', 'ApiTransactionConsultationController@startConsultation');
@@ -51,10 +52,10 @@ Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-
     Route::post('/consultation/start', 'ApiTransactionConsultationController@startConsultation');
     Route::post('/consultation/done', 'ApiTransactionConsultationController@doneConsultation');
     Route::post('/consultation/complete', 'ApiTransactionConsultationController@completeConsultation');
+    Route::post('/consultation/message/refresh', 'ApiTransactionConsultationController@refreshMessage');
     Route::post('/consultation/message/get', 'ApiTransactionConsultationController@getMessage');
     Route::post('/consultation/message/create', 'ApiTransactionConsultationController@createMessage');
     Route::post('/consultation/detail/soon', 'ApiTransactionConsultationController@getSoonConsultationDetail');
-    Route::post('/consultation/message/received', 'ApiTransactionConsultationController@receivedChatFromInfobip');
 
     Route::post('/consultation/option', 'ApiTransactionConsultationController@getConsultationSettings');
 

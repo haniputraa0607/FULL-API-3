@@ -31,6 +31,8 @@ use Modules\Doctor\Entities\DoctorSchedule;
 use Modules\Doctor\Entities\TimeSchedule;
 use Modules\Doctor\Entities\Doctor;
 use Modules\Transaction\Entities\TransactionGroup;
+use Modules\Consultation\Entities\TransactionConsultationMessage;
+use Modules\Consultation\Entities\LogInfobip;
 use DB;
 use DateTime;
 use Carbon\Carbon;
@@ -2188,10 +2190,23 @@ class ApiTransactionConsultationController extends Controller
         return $outputConversation;
     }
 
-    public function getMessage(Request $request)
+    public function refreshMessage(Request $request)
     {
+        $post = $request->json()->all();
+
+        $transactionConsultation = TransactionConsultation::where('id_transaction', $post['id_transaction'])->first();
+
+        if(empty($transactionConsultation)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaksi Konsultasi tidak ditemukan']
+            ]);
+        }
+
+        $transactionConsultation = $transactionConsultation->toArray();
+
         //create ConversationId
-        $conversationId = $request->id_conversation;
+        $conversationId = $transactionConsultation['id_conversation'];
 
         $url = "/ccaas/1/conversations/".$conversationId."/messages";
 
@@ -2199,9 +2214,57 @@ class ApiTransactionConsultationController extends Controller
             'action' => "Get Conversations Message $conversationId"
         ];
 
-        $outputMessage = Infobip::getRequest('Conversation', "GET", $url);
+        $outputMessages = Infobip::getRequest('Conversation', "GET", $url)['response']??null;
 
-        return response()->json(MyHelper::checkGet($outputMessage));
+        foreach($outputMessages['messages'] as $outputMessage){
+            //payload messages
+            $payload = [
+                'id_transaction_consultation' => $transactionConsultation['id_transaction_consultation'],
+                'id_message' => $outputMessage['id'],
+                'direction' => $outputMessage['singleSendMessage']['direction'],
+                'content_type' => $outputMessage['singleSendMessage']['content']['type'],
+                'created_at_infobip' => $outputMessage['createdAt']
+            ];
+
+            switch ($outputMessage['singleSendMessage']['content']['type']) {
+                case "IMAGE":
+                    $payload['url'] = $outputMessage['content']['url'];
+                    $payload['caption'] = $outputMessage['content']['caption'];
+
+                    break;
+                case "DOCUMENT":
+                    $payload['url'] = $outputMessage['content']['url'];
+                    $payload['caption'] = $outputMessage['content']['caption'];
+
+                    break;
+                default:
+                    $payload['text'] = $outputMessage['content']['text'];
+            }
+            
+            $message = TransactionConsultationMessage::updateOrCreate(['id_message' => $outputMessage['id']], $payload);
+        }
+
+        return response()->json(MyHelper::checkGet($outputMessages));
+    }
+
+    public function getMessage(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $transactionConsultation = TransactionConsultation::where('id_transaction', $post['id_transaction'])->first();
+
+        if(empty($transactionConsultation)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaksi Konsultasi tidak ditemukan']
+            ]);
+        }
+
+        $transactionConsultation = $transactionConsultation->toArray();
+
+        $message = TransactionConsultationMessage::where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->orderBy('created_at_infobip', 'DESC')->paginate($post['per_page'] ?? 10);
+
+        return response()->json(MyHelper::checkGet($message));
     }
 
     public function createMessage(Request $request)
@@ -2238,26 +2301,42 @@ class ApiTransactionConsultationController extends Controller
 
         switch ($post['content_type']) {
             case "IMAGE":
+                //check extension
+                $ext = $post['file']->getClientOriginalExtension();
+
                 //Set Pict Name
-                $pictName = mt_rand(0, 1000).''.time().''.$ext;
+                $pictName = mt_rand(0, 1000).''.time().'.'.$ext;
                 
                 //Path
-                $path = 
-                $upload = $path.$pictName;
+                $path = 'img/chat/'.$transaction['consultation']['id_conversation'].'/';
                 
                 $resource = $post['file'];
-				$save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
+				$save = Storage::disk(env('STORAGE'))->putFileAs($path, $resource, $pictName, 'public');
 
                 $content = [
-                    "url" => $post['text'],
+                    "url" => env('STORAGE_URL_API').$path.$pictName,
                     "caption" => $post['caption']
                 ];
+
                 break;
             case "DOCUMENT":
+                //check extension
+                $ext = $post['file']->getClientOriginalExtension();
+
+                //Set Pict Name
+                $fileName = mt_rand(0, 1000).''.time().'.'.$ext;
+                
+                //Path
+                $path = 'file/chat/'.$transaction['consultation']['id_conversation'].'/';
+                
+                $resource = $post['file'];
+				$save = Storage::disk(env('STORAGE'))->putFileAs($path, $resource, $fileName, 'public');
+
                 $content = [
-                    "url" => $post['text'],
+                    "url" => env('STORAGE_URL_API').$path.$fileName,
                     "caption" => $post['caption']
                 ];
+
                 break;
             default:
                 $content = [
@@ -2267,14 +2346,14 @@ class ApiTransactionConsultationController extends Controller
 
         //create Message
         $message = [
-            "from" => $post['from'],
-            "to" => $post['to'],
+            "from" => $transaction['consultation']['id_doctor_infobip'],
+            "to" => $transaction['consultation']['id_user_infobip'],
             "channel" => "LIVE_CHAT",
             "contentType" => $post['content_type'],
             "content" => $content
         ];
 
-        $url = "/ccaas/1/conversations/".$request->id_conversation."/messages";
+        $url = "/ccaas/1/conversations/".$transaction['consultation']['id_conversation']."/messages";
 
         $subject = [
             'id_doctor' => $transaction['consultation']['id_doctor'],
@@ -2521,140 +2600,201 @@ class ApiTransactionConsultationController extends Controller
 
     public function receivedChatFromInfobip(Request $request)
     {
-        $post = $request->json()->all();
+        try {
+            $post = $request->json()->all();
 
-        //get Transaction where conversation Id
-        $transactionConsultation = TransactionConsultation::with('doctor')->with('user')->where('id_conversation', $post['conversationId'])->first();
+            //get Transaction where conversation Id
+            $transactionConsultation = TransactionConsultation::with('doctor')->with('user')->where('id_conversation', $post['conversationId'])->first();
 
-        if(!empty($transactionConsultation)){
-            $selectedConsultation = $transactionConsultation;
-        } else {
-            //get Transaction where conversation Id is null
-            $transactionConsultations = TransactionConsultation::where('id_conversation', null)->get();
+            if(!empty($transactionConsultation)){
+                $selectedConsultation = $transactionConsultation;
+            } else {
+                //get Transaction where conversation Id is null
+                $transactionConsultations = TransactionConsultation::where('id_conversation', null)->get();
 
-            if(empty($transactionConsultations)){
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Transaction Consultation with Id Conversation null is not found']
-                ]);
-            }
-            $transactionConsultations = $transactionConsultations->toArray();
+                if(empty($transactionConsultations)){
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Transaction Consultation with Id Conversation null is not found']
+                    ]);
+                }
+                $transactionConsultations = $transactionConsultations->toArray();
 
-            //foreach transaction, check to get person endpoint with externalId = transactionConsultation['receipt_number']
-            foreach($transactionConsultations as $key => $transactionConsultation){
-                //getTransaction
-                $transaction = Transaction::where('id_transaction', $transactionConsultation['id_transaction'])->first()->toArray();
+                //foreach transaction, check to get person endpoint with externalId = transactionConsultation['receipt_number']
+                foreach($transactionConsultations as $key => $transactionConsultation){
+                    //getTransaction
+                    $transaction = Transaction::where('id_transaction', $transactionConsultation['id_transaction'])->first()->toArray();
 
-                $url = '/people/2/persons?externalId='.$transaction['transaction_receipt_number'];
+                    $url = '/people/2/persons?externalId='.$transaction['transaction_receipt_number'];
 
-                $outputPersonDetail = Infobip::getRequest('Get Detail Person', "GET", $url);
+                    $outputPersonDetail = Infobip::getRequest('Get Detail Person', "GET", $url);
 
-                if($outputPersonDetail['status'] == 'success'){
-                    //compare transaction 
-                    $getLiveChatUserId = $outputPersonDetail['response']['contactInformation']['liveChat'][0]['userId'];
-                    $getWebhookUserId = $post['singleSendMessage']['from']['id'];
+                    if($outputPersonDetail['status'] == 'success'){
+                        //compare transaction 
+                        $getLiveChatUserId = $outputPersonDetail['response']['contactInformation']['liveChat'][0]['userId'];
+                        $getWebhookUserId = $post['singleSendMessage']['from']['id'];
 
-                    $selectedConsultation = null;
-                    if($getLiveChatUserId == $getWebhookUserId){
-                        //selected Consultation
-                        $selectedConsultation = $transactionConsultation;
-                        
-                        //update id_conversation in database
-                        $updateTransactionConsultation = TransactionConsultation::where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->update([
-                            'id_conversation' => $post['conversationId']
-                        ]);
+                        $selectedConsultation = null;
+                        if($getLiveChatUserId == $getWebhookUserId){
+                            //selected Consultation
+                            $selectedConsultation = $transactionConsultation;
+                            
+                            //update id_conversation in database
+                            $updateTransactionConsultation = TransactionConsultation::where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->update([
+                                'id_conversation' => $post['conversationId'],
+                                'id_doctor_infobip' => $post['singleSendMessage']['to']['id'],
+                                'id_user_infobip' => $post['singleSendMessage']['from']['id']
+                            ]);
+                        }
                     }
                 }
             }
-        }
 
-        if(isset($selectedConsultation['doctor'])){
-            $doctor = Doctor::where('id_doctor', $selectedConsultation['doctor']['id_doctor'])->first();
-            //create agent if empty in doctor
-            if(!empty($doctor['id_agent'])){
-                $agentId = $doctor['id_agent'];
-            } else {
-                $outputAgent = $this->createAgent($doctor);
-                if($outputAgent['status'] == "fail"){
-                    return [
-                        'status'=>'fail',
-                        'messages' => $outputAgent['response']
-                    ];
+            //save message to DB TransactionConsultationMessages
+            $payload = [
+                'id_transaction_consultation' => $selectedConsultation['id_transaction_consultation'],
+                'id_message' => $post['id'],
+                'direction' => $post['direction'],
+                'content_type' => $post['contentType'],
+                'created_at_infobip' => $post['createdAt']
+            ];
+
+            switch ($post['contentType']) {
+                case "IMAGE":
+                    $payload['url'] = $post['content']['url'];
+                    $payload['caption'] = $post['content']['caption'];
+
+                    break;
+                case "DOCUMENT":
+                    $payload['url'] = $post['content']['url'];
+                    $payload['caption'] = $post['content']['caption'];
+
+                    break;
+                default:
+                    $payload['text'] = $post['content']['text'];
+            }
+
+            $message = TransactionConsultationMessage::updateOrCreate(['id_message' => $payload['id_message']], $payload);
+
+            //create doctor data for chat
+            if(isset($selectedConsultation['doctor'])){
+                $doctor = Doctor::where('id_doctor', $selectedConsultation['doctor']['id_doctor'])->first();
+                //create agent if empty in doctor
+                if(!empty($doctor['id_agent'])){
+                    $agentId = $doctor['id_agent'];
+                } else {
+                    $outputAgent = $this->createAgent($doctor);
+                    if($outputAgent['status'] == "fail"){
+                        return [
+                            'status'=>'fail',
+                            'messages' => $outputAgent['response']
+                        ];
+                    }
+                    $agentId = $outputAgent['response']['id'];
+                    $doctor->update(['id_agent' => $agentId]);
                 }
-                $agentId = $outputAgent['response']['id'];
-                $doctor->update(['id_agent' => $agentId]);
-            }
 
-            //create queue if empty in doctor
-            if(!empty($doctor['id_queue'])){
-                $queueId = $doctor['id_queue'];
-            } else {
-                $outputQueue = $this->createQueue($doctor);
-                if($outputQueue['status'] == "fail"){
-                    return [
-                        'status'=>'fail',
-                        'messages' => $outputQueue['response']
-                    ];
+                //create queue if empty in doctor
+                if(!empty($doctor['id_queue'])){
+                    $queueId = $doctor['id_queue'];
+                } else {
+                    $outputQueue = $this->createQueue($doctor);
+                    if($outputQueue['status'] == "fail"){
+                        return [
+                            'status'=>'fail',
+                            'messages' => $outputQueue['response']
+                        ];
+                    }
+                    $queueId = $outputQueue['response']['id'];
+                    $doctor->update(['id_queue' => $queueId]);
                 }
-                $queueId = $outputQueue['response']['id'];
-                $doctor->update(['id_queue' => $queueId]);
-            }
 
-            //create conversation
-            if(!empty($transaction['consultation']['id_conversation'])){
-                $conversationId = $transaction['consultation']['id_conversation'];
+                //create conversation
+                if(!empty($transaction['consultation']['id_conversation'])){
+                    $conversationId = $transaction['consultation']['id_conversation'];
 
-                //get conversation
-                $outputConversation = $this->getConversation($conversationId);
-            } else {
-                $outputConversation = $this->createConversation($doctor);
-                if($outputConversation['status'] == "fail"){
-                    return [
-                        'status'=>'fail',
-                        'messages' => $outputConversation['response']
-                    ];
+                    //get conversation
+                    $outputConversation = $this->getConversation($conversationId);
+                } else {
+                    $outputConversation = $this->createConversation($doctor);
+                    if($outputConversation['status'] == "fail"){
+                        return [
+                            'status'=>'fail',
+                            'messages' => $outputConversation['response']
+                        ];
+                    }
+                    $conversationId = $outputConversation['response']['id'];
                 }
-                $conversationId = $outputConversation['response']['id'];
-            }
-        }
-
-        //send autoCRM notification to doctor
-        if(!empty($selectedConsultation['doctor'])){
-            if (!empty($request->header('user-agent-view'))) {
-                $useragent = $request->header('user-agent-view');
-            } else {
-                $useragent = $_SERVER['HTTP_USER_AGENT'];
             }
 
-            if (stristr($useragent, 'iOS')) $useragent = 'iOS';
-            if (stristr($useragent, 'okhttp')) $useragent = 'Android';
-            if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
+            //send autoCRM notification to doctor
+            if(!empty($selectedConsultation['doctor'])){
+                if (!empty($request->header('user-agent-view'))) {
+                    $useragent = $request->header('user-agent-view');
+                } else {
+                    $useragent = $_SERVER['HTTP_USER_AGENT'];
+                }
 
-            if (\Module::collections()->has('Autocrm')) {
-                $autocrm = app($this->autocrm)->SendAutoCRM(
-                    'Doctor Received New Chat',
-                    $selectedConsultation['doctor']['doctor_phone'],
-                    [
-                        'id_conversation' => $selectedConsultation['id_conversation'],
-                        'id_transaction' => $selectedConsultation['id_transaction'],
-                        'useragent' => $useragent,
-                        'now' => date('Y-m-d H:i:s'),
-                        'date_sent' => date('d-m-y H:i:s')
-                    ],
-                    $useragent,
-                    false,
-                    false,
-                    'doctor'
-                );
+                if (stristr($useragent, 'iOS')) $useragent = 'iOS';
+                if (stristr($useragent, 'okhttp')) $useragent = 'Android';
+                if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
+
+                if (\Module::collections()->has('Autocrm')) {
+                    $autocrm = app($this->autocrm)->SendAutoCRM(
+                        'Doctor Received New Chat',
+                        $selectedConsultation['doctor']['doctor_phone'],
+                        [
+                            'action' => 'doctorReceivedChat',
+                            'messages' => 'Doctor Received New Chat',
+                            'id_conversation' => $selectedConsultation['id_conversation'],
+                            'id_transaction' => $selectedConsultation['id_transaction'],
+                            'useragent' => $useragent,
+                            'now' => date('Y-m-d H:i:s'),
+                            'date_sent' => date('d-m-y H:i:s')
+                        ],
+                        $useragent,
+                        false,
+                        false,
+                        'doctor'
+                    );
+                }
             }
+
+
+            //create log data
+            $urlApi = env('API_URL').'api/consultation/message/received';
+            $result = [
+                'status' => 'success', 
+                'result' => [
+                    'id_conversation' => $selectedConsultation['id_conversation']
+                ]
+            ];
+                
+            $dataLog= [
+                'subject' => 'Receive Message',
+                'request' => json_encode($post),
+                'request_url' => $urlApi,
+                'response' => json_encode($result)
+            ];
+            LogInfobip::create($dataLog);
+            
+            return [
+                'status' => 'success', 
+                'result' => [
+                    'id_conversation' => $selectedConsultation['id_conversation']
+                ]
+            ];
+        } catch(Exception $e){
+            $urlApi = env('API_URL').'api/consultation/message/received';
+            $dataLog= [
+                'subject' => 'Receive Message',
+                'request' => json_encode($post),
+                'request_url' => $urlApi
+            ];
+            $dataLog['response'] = 'Check your internet connection.';
+            LogInfobip::create($dataLog);
+            return ['status' => 'fail', 'response' => ['Check your internet connection.']];
         }
         
-        return [
-            'status' => 'success', 
-            'result' => [
-                'id_conversation' => $selectedConsultation['id_conversation'],
-                'id_transaction' => $selectedConsultation['id_transaction']
-            ]
-        ];
     }
 }
