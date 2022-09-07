@@ -1679,7 +1679,7 @@ class ApiTransactionConsultationController extends Controller
                 $items[$key]['qty'] = $recomendation->qty_product ?? null;
                 $items[$key]['usage_rule'] = $recomendation->usage_rules ?? null;
                 $items[$key]['usage_rule_time'] = $recomendation->usage_rules_time ?? null;
-                $items[$key]['usage_rule_additional_time'] = $recomendation->usage_rules_additional ?? null;
+                $items[$key]['usage_rule_additional_time'] = $recomendation->usage_rules_additional_time ?? null;
             }
         }
 
@@ -1687,9 +1687,9 @@ class ApiTransactionConsultationController extends Controller
         $templateProcessor = new \PhpOffice\PhpWord\TemplateProcessor(public_path().'/download/template_receipt.docx');
         $templateProcessor->setValue('doctor_name', $doctor['doctor_name']);
         $templateProcessor->setValue('doctor_specialist_name', $doctor['specialists'][0]['doctor_specialist_name']);
-        $templateProcessor->setValue('doctor_practice_lisence_number', $doctor['practice_lisence_number']);
-        $templateProcessor->setValue('transaction_date', MyHelper::dateFormatInd($transaction['transaction_date']));
-        $templateProcessor->setValue('transaction_receipt_number', $transaction['transaction_receipt_number']);
+        $templateProcessor->setValue('doctor_practice_lisence_number', $doctor['registration_certificate_number']);
+        $templateProcessor->setValue('transaction_date', MyHelper::dateOnlyFormatInd($transaction['transaction_date']));
+        $templateProcessor->setValue('transaction_recipe_code', $transactionConsultation['recipe_code']);
         $templateProcessor->cloneBlock('block_items', 0, true, false, $items);
         $templateProcessor->setValue('customer_name', $user['name']);
         $templateProcessor->setValue('customer_age', $user['age']);
@@ -1699,7 +1699,7 @@ class ApiTransactionConsultationController extends Controller
             Storage::makeDirectory('receipt/docx');
         }
 
-        $directory = storage_path('app/public/receipt/docx/receipt_'.$transaction['transaction_receipt_number'].'.docx');
+        $directory = storage_path('app/public/receipt/docx/receipt_'.$transactionConsultation['recipe_code'].'.docx');
         $templateProcessor->saveAs($directory);
 
         if(!Storage::exists('receipt/pdf')){
@@ -1707,7 +1707,7 @@ class ApiTransactionConsultationController extends Controller
         }
     
         $converter = new CustomOfficeConverter($directory, storage_path('app/public/receipt/pdf'), env('LIBREOFFICE_URL'), true);
-        $output = $converter->convertTo('receipt_'.$transaction['transaction_receipt_number'].'.pdf');
+        $output = $converter->convertTo('receipt_'.$transactionConsultation['recipe_code'].'.pdf');
 
         return response()->download($output);
     }
@@ -1716,8 +1716,9 @@ class ApiTransactionConsultationController extends Controller
     {
         $post = $request->json()->all();
         $user = $request->user();
-        $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first();
 
+        //get Consultation
+        $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first();
         if(empty($transactionConsultation)){
             return response()->json([
                 'status'    => 'fail',
@@ -1725,13 +1726,21 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
+        //get Transaction
+        $transaction = Transaction::where('id_transaction', $transactionConsultation['id_transaction'])->first();
+
         foreach($post['items'] as $key => $item){
             $post['items'][$key]['product_type'] = $post['type'];
             $post['items'][$key]['qty_product_counter'] = $post['items'][$key]['qty_product'];
         }
 
         if($post['type'] == "drug"){
-            $transactionConsultation->update(['recipe_redemption_limit' => $post['recipe_redemption_limit']]);
+            //generate recipe code
+            $padOutlet = str_pad($transaction['id_outlet'], 3, '0', STR_PAD_LEFT);
+            $padTransaction = str_pad($transactionConsultation['id_transaction'], 4, '0', STR_PAD_LEFT);
+            $recipeCode = 'KNSL.'.$padOutlet.'-'.$padTransaction;
+
+            $transactionConsultation->update(['recipe_code' => $recipeCode, 'recipe_redemption_limit' => $post['recipe_redemption_limit']]);
         }
 
         DB::beginTransaction();
@@ -1753,9 +1762,11 @@ class ApiTransactionConsultationController extends Controller
 
         //product recomendation drug type
         if($post['type'] == "drug"){
+
             $result = [
+                'recipe_code' => $transactionConsultation['recipe_code'],
                 'recipe_redemption_limit' => $transactionConsultation['recipe_redemption_limit'],
-                'items' => $items
+                'items' => $items,
             ];
         }
 
@@ -1979,12 +1990,12 @@ class ApiTransactionConsultationController extends Controller
 
                 //get merchant name
                 $merchant = Merchant::where('id_outlet', $product['id_outlet'])->first();
-                $list['data'][$key]['merchant_pic_name'] = $merchant->merchant_pic_name;
+                $list[$key]['merchant_pic_name'] = $merchant->merchant_pic_name;
+                $list[$key]['outlet_name'] = $outlet->outlet_name;
 
                 //get ratings product
-                $list['data'][$key]['total_rating'] = round(UserRating::where('id_product', $product['id_product'])->average('rating_value') ?? 0, 1);
+                $list[$key]['total_rating'] = round(UserRating::where('id_product', $product['id_product'])->average('rating_value') ?? 0, 1);
 
-                unset($list[$key]['id_outlet']);
                 unset($list[$key]['product_variant_status']);
                 $list[$key]['product_price'] = (int)$list[$key]['product_price'];
                 $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
@@ -2074,11 +2085,11 @@ class ApiTransactionConsultationController extends Controller
                 //get merchant name
                 $merchant = Merchant::where('id_outlet', $product['id_outlet'])->first();
                 $list['data'][$key]['merchant_pic_name'] = $merchant->merchant_pic_name;
+                $list[$key]['outlet_name'] = $outlet->outlet_name;
 
                 //get ratings product
                 $list['data'][$key]['total_rating'] = round(UserRating::where('id_product', $product['id_product'])->average('rating_value') ?? 0, 1);
 
-                unset($list['data'][$key]['id_outlet']);
                 unset($list['data'][$key]['product_variant_status']);
                 $list['data'][$key]['product_price'] = (int)$list['data'][$key]['product_price'];
                 $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
@@ -2102,12 +2113,12 @@ class ApiTransactionConsultationController extends Controller
 
                 //get merchant name
                 $merchant = Merchant::where('id_outlet', $product['id_outlet'])->first();
-                $list['data'][$key]['merchant_pic_name'] = $merchant->merchant_pic_name;
+                $list[$key]['merchant_pic_name'] = $merchant->merchant_pic_name;
+                $list[$key]['outlet_name'] = $outlet->outlet_name;
 
                 //get ratings product
-                $list['data'][$key]['total_rating'] = round(UserRating::where('id_product', $product['id_product'])->average('rating_value') ?? 0, 1);
+                $list[$key]['total_rating'] = round(UserRating::where('id_product', $product['id_product'])->average('rating_value') ?? 0, 1);
 
-                unset($list[$key]['id_outlet']);
                 unset($list[$key]['product_variant_status']);
                 $list[$key]['product_price'] = (int)$list[$key]['product_price'];
                 $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
