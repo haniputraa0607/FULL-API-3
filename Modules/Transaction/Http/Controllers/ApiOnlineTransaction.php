@@ -557,6 +557,8 @@ class ApiOnlineTransaction extends Controller
             if($grandTotalNew == 0){
                 $trxGroup->triggerPaymentCompleted();
             }
+        }elseif($insertTransactionGroup['transaction_grandtotal'] == 0 && !empty($itemsCheck['promo_code'])){
+            $trxGroup->triggerPaymentCompleted();
         }
 
         $transactionPromo = Transaction::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->get()->toArray();

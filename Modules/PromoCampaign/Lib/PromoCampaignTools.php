@@ -2126,42 +2126,27 @@ class PromoCampaignTools{
 				continue;
 			}
 
-			if (isset($promo_product_array)) {
-				foreach ($promo_product_array as $key2 => $val) {
-					if ($val['id_brand'] == $trx['id_brand'] 
-						&& $val['id_product'] == $trx['id_product'] 
-						&& (empty($val['id_product_variant_group']) || $val['id_product_variant_group'] == $trx['id_product_variant_group'])
-					) {
-						if (empty($val['id_product_variant_group'])) {
-							$product[$key] = $trx;
-							$product[$key]['product_type'] = 'single';
-							$total_product += $trx['qty'];
-							break;
-
-						} elseif( $val['id_product_variant_group'] == $trx['id_product_variant_group'] ) {
-							$product[$key] = $trx;
-							$product[$key]['product_type'] = 'variant';
-							$total_product += $trx['qty'];
-							break;
-						}
-					}
-				}
-			}else{
-                $product[$key] = $trx;
-                $notGetDiscountStatus = false;
-                if(!empty($promo_product_type) && $promo_product_type != 'single + variant'){
-                    if($promo_product_type == 'single' && !empty($trx['id_product_variant_group'])){
-                        $notGetDiscountStatus = true;
-                    }elseif ($promo_product_type == 'variant' && empty($trx['id_product_variant_group'])){
-                        $notGetDiscountStatus = true;
-                    }
+            $product[$key] = $trx;
+            $notGetDiscountStatus = false;
+            if(!empty($promo_product_type) && $promo_product_type != 'single + variant'){
+                if($promo_product_type == 'single' && !empty($trx['id_product_variant_group'])){
+                    $notGetDiscountStatus = true;
+                }elseif ($promo_product_type == 'variant' && empty($trx['id_product_variant_group'])){
+                    $notGetDiscountStatus = true;
                 }
+            }
 
-                $product[$key]['not_get_discount'] = $notGetDiscountStatus;
-                if(!$notGetDiscountStatus){
-                    $total_product += $trx['qty'];
+			if (!empty($promo_product_array)) {
+                $allProductSelected =  array_column($promo_product_array, 'id_product');
+                if(!in_array($trx['id_product'], $allProductSelected)){
+                    $notGetDiscountStatus = true;
                 }
 			}
+
+            $product[$key]['not_get_discount'] = $notGetDiscountStatus;
+            if(!$notGetDiscountStatus){
+                $total_product += $trx['qty'];
+            }
 		}
 
 	    return [
