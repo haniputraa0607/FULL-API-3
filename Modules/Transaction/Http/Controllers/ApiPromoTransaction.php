@@ -1114,7 +1114,7 @@ class ApiPromoTransaction extends Controller
             return $this->failResponse($message);
         }
 
-        $total_price = $data['subtotal']+((int)$data['service']??0)+((int)$data['tax']??0);
+        $total_price = $data['subtotal'];
         $discountType = $promo_rules->discount_type??'Nominal';
         if ($discountType == 'Percent') {
             $discount += ($total_price * $promo_rules->discount_value) / 100;
