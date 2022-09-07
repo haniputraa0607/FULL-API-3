@@ -33,6 +33,7 @@ use Modules\Doctor\Entities\Doctor;
 use Modules\Transaction\Entities\TransactionGroup;
 use Modules\Consultation\Entities\TransactionConsultationMessage;
 use Modules\Consultation\Entities\LogInfobip;
+use Modules\UserRating\Entities\UserRating;
 use DB;
 use DateTime;
 use Carbon\Carbon;
@@ -881,10 +882,10 @@ class ApiTransactionConsultationController extends Controller
      */
     public function startConsultation(Request $request) {
         $post = $request->json()->all();
-        $user = $request()->user();
+        $user = $request->user();
 
-        if (!isset($user['id_doctor'])) {
-            $id = $user()->id;
+        if (!isset($user->id_doctor)) {
+            $id = $user->id;
         } else {
             $id = $user->id_doctor;
         }
@@ -911,10 +912,10 @@ class ApiTransactionConsultationController extends Controller
         //get Transaction Consulation
         $transactionConsultation = TransactionConsultation::where('id_transaction', $post['id_transaction'])->first();
 
-        if(empty($transaction)){
+        if(empty($transactionConsultation)){
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['Transaksi tidak ditemukan']
+                'messages'  => ['Transaksi Konsultasi tidak ditemukan']
             ]);
         }
         $transactionConsultation = $transactionConsultation->toArray();
@@ -1045,7 +1046,6 @@ class ApiTransactionConsultationController extends Controller
             //update transaction consultation
             $consultation = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])
             ->update([
-                'id_conversation' => $conversationId,
                 'consultation_status' => "ongoing",
                 'consultation_start_at' => new DateTime
             ]);
@@ -1055,9 +1055,8 @@ class ApiTransactionConsultationController extends Controller
             $doctor->save();
 
             $result = [
-                'transaction_consultation' => $transaction['consultation'],
-                'conversation' => $outputConversation
-            ];   
+                'transaction_consultation' => $transaction['consultation']
+            ]; 
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
@@ -1875,6 +1874,16 @@ class ApiTransactionConsultationController extends Controller
     {
         $post = $request->json()->all();
 
+        $user = $request->user();
+
+        //get default outlet
+        $idOutlet = Outlet::where('id_outlet', $user->id_outlet)->first()['id_outlet']??null;
+
+        if(empty($idOutlet)){
+            return response()->json(['status' => 'fail', 'messages' => ['Doctor Outlet Not Found']]);
+        }
+
+        //if referral code outlet not empty
         if(!empty($post['referal_code'])){
             $idOutlet = Outlet::where('outlet_referral_code', $post['referal_code'])->first()['id_outlet']??null;
 
@@ -1883,7 +1892,7 @@ class ApiTransactionConsultationController extends Controller
             }
 
             if(empty($idOutlet)){
-                return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
+                return response()->json(['status' => 'fail', 'messages' => ['Outlet with referral not found']]);
             }
 
             $idMerchant = Merchant::where('id_outlet', $idOutlet)->first()['id_merchant']??null;
@@ -1899,7 +1908,6 @@ class ApiTransactionConsultationController extends Controller
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
             ->where('product_detail_visibility', 'Visible')
-            ->orderBy('product_count_transaction', 'desc')
             ->groupBy('products.id_product');
         
         if(!empty($idMerchant)){
@@ -1914,10 +1922,21 @@ class ApiTransactionConsultationController extends Controller
             $list = $list->where('id_product_category', $post['id_product_category']);
         }
 
+        if(!empty($post['sort_name'])){
+            $list = $list->orderBy('product_name', $post['sort_name']);
+        }
+
+        if(!empty($post['sort_price'])){
+            $list = $list->orderBy('product_price', $post['sort_price']);
+        }
+
+        $list->orderBy('product_count_transaction', 'desc');
+
         if(!empty($post['pagination'])){
             $list = $list->paginate($post['pagination_total_row']??10)->toArray();
 
             foreach ($list['data'] as $key=>$product){
+                //get variant
                 if ($product['product_variant_status']) {
                     $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
                     $variantTree = Product::getVariantTree($product['id_product'], $outlet);
@@ -1928,6 +1947,13 @@ class ApiTransactionConsultationController extends Controller
                     //TO DO cek
                     $list['data'][$key]['variants'] = $variantTree ?? null;
                 }
+
+                //get merchant name
+                $merchant = Merchant::where('id_outlet', $product['id_outlet'])->first();
+                $list['data'][$key]['merchant_pic_name'] = $merchant->merchant_pic_name;
+
+                //get ratings product
+                $list['data'][$key]['total_rating'] = round(UserRating::where('id_product', $product['id_product'])->average('rating_value') ?? 0, 1);
 
                 unset($list['data'][$key]['id_outlet']);
                 unset($list['data'][$key]['product_variant_status']);
@@ -1951,6 +1977,13 @@ class ApiTransactionConsultationController extends Controller
                     $list[$key]['variants'] = $variantTree ?? null;
                 }
 
+                //get merchant name
+                $merchant = Merchant::where('id_outlet', $product['id_outlet'])->first();
+                $list['data'][$key]['merchant_pic_name'] = $merchant->merchant_pic_name;
+
+                //get ratings product
+                $list['data'][$key]['total_rating'] = round(UserRating::where('id_product', $product['id_product'])->average('rating_value') ?? 0, 1);
+
                 unset($list[$key]['id_outlet']);
                 unset($list[$key]['product_variant_status']);
                 $list[$key]['product_price'] = (int)$list[$key]['product_price'];
@@ -1959,8 +1992,6 @@ class ApiTransactionConsultationController extends Controller
             }
             $list = array_values($list);
         }
-
-        //dd($list);
 
         return response()->json(MyHelper::checkGet($list));
     }
