@@ -66,7 +66,7 @@ class ApiConfirm extends Controller
             ]);
         }
 
-        if ($check['transaction_payment_status'] == 'Completed' && $check['transaction_payment_type'] == 'Balance') {
+        if ($check['transaction_payment_status'] == 'Completed' && ($check['transaction_payment_type'] == 'Balance' || $check['transaction_grandtotal'] == 0)) {
             DB::rollback();
             return response()->json([
                 'status'   => 'success'
