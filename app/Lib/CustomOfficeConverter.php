@@ -50,7 +50,7 @@ class CustomOfficeConverter {
         }
 
         $outdir = $this->tempPath;
-        $shell = $this->exec($this->makeCommand($outdir, $outputExtension));
+        $shell = exec($this->makeCommand($outdir, $outputExtension));
 
         return $this->prepOutput($outdir, $filename, $outputExtension);
     }
@@ -125,7 +125,7 @@ class CustomOfficeConverter {
         $oriFile = escapeshellarg($this->file);
         $outputDirectory = escapeshellarg($outputDirectory);
 
-        return "{$this->bin} --headless --convert-to {$outputExtension} {$oriFile} --outdir {$outputDirectory}";
+        return "\"{$this->bin}\" --headless --convert-to {$outputExtension} {$oriFile} --outdir {$outputDirectory}";
     }
 
     /**

@@ -2394,6 +2394,19 @@ class MyHelper{
 		return trim(($hari?$days[date('w', strtotime($date))].', ':'').date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).($clock?date(' H:i', strtotime($date)):''));
 	}
 
+	public static function dateOnlyFormatInd($date,$full=true,$clock=true,$hari=false){
+		if($hari){
+			$days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jum\'at','Sabtu'];
+		}
+		if($full){
+			$bulan = ['','Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+		}else{
+			$bulan = ['','Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+		}
+
+		return trim(($hari?$days[date('w', strtotime($date))].', ':'').date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)));
+	}
+
 	public static function indonesian_date_v2($timestamp = '', $date_format = 'l, d F Y H:i') {
 		if (trim ($timestamp) == '')
 		{
