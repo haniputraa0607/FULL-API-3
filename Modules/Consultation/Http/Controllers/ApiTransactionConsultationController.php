@@ -2000,6 +2000,16 @@ class ApiTransactionConsultationController extends Controller
     {
         $post = $request->json()->all();
 
+        $user = $request->user();
+
+        //get default outlet
+        $idOutlet = Outlet::where('id_outlet', $user->id_outlet)->first()['id_outlet']??null;
+
+        if(empty($idOutlet)){
+            return response()->json(['status' => 'fail', 'messages' => ['Doctor Outlet Not Found']]);
+        }
+
+        //if referral code outlet not empty
         if(!empty($post['referal_code'])){
             $idOutlet = Outlet::where('outlet_code', $post['referal_code'])->first()['id_outlet']??null;
             if(empty($idMerchant)){
@@ -2022,7 +2032,6 @@ class ApiTransactionConsultationController extends Controller
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
             ->where('product_detail_visibility', 'Visible')
-            ->orderBy('product_count_transaction', 'desc')
             ->groupBy('products.id_product');
         
         if(!empty($idMerchant)){
@@ -2036,6 +2045,16 @@ class ApiTransactionConsultationController extends Controller
         if(!empty($post['id_product_category'])){
             $list = $list->where('id_product_category', $post['id_product_category']);
         }
+
+        if(!empty($post['sort_name'])){
+            $list = $list->orderBy('product_name', $post['sort_name']);
+        }
+
+        if(!empty($post['sort_price'])){
+            $list = $list->orderBy('product_price', $post['sort_price']);
+        }
+
+        $list->orderBy('product_count_transaction', 'desc');
 
         if(!empty($post['pagination'])){
             $list = $list->paginate($post['pagination_total_row']??10)->toArray();
@@ -2051,6 +2070,13 @@ class ApiTransactionConsultationController extends Controller
                     //TO DO cek
                     $list['data'][$key]['variants'] = $variantTree ?? null;
                 }
+
+                //get merchant name
+                $merchant = Merchant::where('id_outlet', $product['id_outlet'])->first();
+                $list['data'][$key]['merchant_pic_name'] = $merchant->merchant_pic_name;
+
+                //get ratings product
+                $list['data'][$key]['total_rating'] = round(UserRating::where('id_product', $product['id_product'])->average('rating_value') ?? 0, 1);
 
                 unset($list['data'][$key]['id_outlet']);
                 unset($list['data'][$key]['product_variant_status']);
@@ -2073,6 +2099,13 @@ class ApiTransactionConsultationController extends Controller
                     //TO DO cek
                     $list[$key]['variants'] = $variantTree ?? null;
                 }
+
+                //get merchant name
+                $merchant = Merchant::where('id_outlet', $product['id_outlet'])->first();
+                $list['data'][$key]['merchant_pic_name'] = $merchant->merchant_pic_name;
+
+                //get ratings product
+                $list['data'][$key]['total_rating'] = round(UserRating::where('id_product', $product['id_product'])->average('rating_value') ?? 0, 1);
 
                 unset($list[$key]['id_outlet']);
                 unset($list[$key]['product_variant_status']);
