@@ -1890,6 +1890,8 @@ class ApiTransactionConsultationController extends Controller
         //get default outlet
         $idOutlet = Outlet::where('id_outlet', $user->id_outlet)->first()['id_outlet']??null;
 
+        $idMerchant = Merchant::where('id_outlet', $idOutlet)->first()['id_merchant']??null;
+
         if(empty($idOutlet)){
             return response()->json(['status' => 'fail', 'messages' => ['Doctor Outlet Not Found']]);
         }
@@ -2015,6 +2017,8 @@ class ApiTransactionConsultationController extends Controller
 
         //get default outlet
         $idOutlet = Outlet::where('id_outlet', $user->id_outlet)->first()['id_outlet']??null;
+
+        $idMerchant = Merchant::where('id_outlet', $idOutlet)->first()['id_merchant']??null;
 
         if(empty($idOutlet)){
             return response()->json(['status' => 'fail', 'messages' => ['Doctor Outlet Not Found']]);
