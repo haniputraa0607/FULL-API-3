@@ -5,7 +5,9 @@ namespace Modules\Transaction\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use Modules\Brand\Entities\BrandOutlet;
 use Modules\PromoCampaign\Entities\PromoCampaign;
+use Modules\PromoCampaign\Entities\PromoCampaignBrand;
 use Modules\PromoCampaign\Entities\PromoCampaignOutlet;
 use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Entities\PromoCampaignProductDiscount;
@@ -195,6 +197,22 @@ class ApiPromoTransaction extends Controller
         $totalAllDisc = 0;
         $discDeliveryAll = 0;
         if (isset($userPromo['promo_campaign'])) {
+            //check brand outlet
+            $allOutlet = array_unique(array_column($data['items'], 'id_outlet'));
+            $promoBrands = PromoCampaignBrand::where('id_promo_campaign', $promoCampaign->id_promo_campaign)->pluck('id_brand')->toArray();
+            $outletBrand = BrandOutlet::whereIn('id_outlet', $allOutlet)->pluck('id_brand')->toArray();
+            $checkBrand 	= array_diff($promoBrands, $outletBrand);
+
+            $statusCheckBrand = true;
+            if($promoCampaign->brand_rule == 'or' && count($checkBrand) == count($promoBrands)) {
+                $statusCheckBrand = false;
+            }elseif($promoCampaign->brand_rule == 'and' && !empty($checkBrand)){
+                $statusCheckBrand = false;
+            }
+
+            if (!$statusCheckBrand) {
+                $codeErr = ['Promo tidak dapat digunakan di outlet ini'];
+            }
 
             foreach ($data['items'] as $key=>$dt){
                 if (empty($codeErr)) {
@@ -269,9 +287,8 @@ class ApiPromoTransaction extends Controller
                 if($disc > 0){
                     $data['items'][$key]['discount'] = $discAll;
                     $data['items'][$key]['discount_text'] = 'Rp -'.number_format($discAll,0,",",".");
+                    $data['items'][$key]['discount_bill_status'] = ($discItemStatus == 0 && empty($discDelivery) ? 1: 0);
                 }
-
-                $data['items'][$key]['discount_bill_status'] = ($discItemStatus == 0 && empty($discDelivery) ? 1: 0);
 
                 if($discDelivery > 0){
                     $data['items'][$key]['discount_delivery'] = $discAll;
@@ -547,17 +564,12 @@ class ApiPromoTransaction extends Controller
 
         if ($promo->code_type == 'Single') {
             if ($promo->limitation_usage) {
-                $usedCode = PromoCampaignReport::where('id_promo_campaign',$promo->id_promo_campaign)->where('id_user', $user->id)->count();
+                $usedCode = PromoCampaignReport::where('id_promo_campaign',$promo->id_promo_campaign)->where('id_user', $user->id)->distinct()->count('id_transaction_group');
                 if ($usedCode >= $promo->limitation_usage) {
                     return $this->failResponse('Promo tidak tersedia');
                 }
             }
 
-            // limit usage device
-            /*if (PromoCampaignReport::where('id_promo_campaign',$promo->id_promo_campaign)->where('device_id',$device_id)->count()>=$promo->limitation_usage) {
-                $errors[]='Kuota device anda untuk penggunaan kode promo ini telah habis';
-                return false;
-            }*/
         } else {
             $used_by_other_user = PromoCampaignReport::where('id_promo_campaign',$promo->id_promo_campaign)
                 ->where('id_user', '!=', $user->id)
@@ -571,7 +583,7 @@ class ApiPromoTransaction extends Controller
             $used_code = PromoCampaignReport::where('id_promo_campaign',$promo->id_promo_campaign)
                 ->where('id_user',$user->id)
                 ->where('id_promo_campaign_promo_code', $id_code)
-                ->count();
+                ->distinct()->count('id_transaction_group');
 
             if ($code_limit = $promo->code_limit) {
                 if ($used_code >= $code_limit) {
@@ -583,7 +595,7 @@ class ApiPromoTransaction extends Controller
                 $used_diff_code = PromoCampaignReport::where('id_promo_campaign', $promo->id_promo_campaign)
                     ->where('id_user', $user->id)
                     ->distinct()
-                    ->count('id_promo_campaign_promo_code');
+                    ->count('id_promo_campaign_promo_code','id_promo_campaign_promo_code');
 
                 if ($used_diff_code >= $promo->user_limit) {
                     return $this->failResponse('Promo tidak tersedia');
@@ -609,15 +621,6 @@ class ApiPromoTransaction extends Controller
         $sharedPromoTrx = TemporaryDataManager::create('promo_trx');
         $promoName = $this->promoName($promoSource);
         $pct = new PromoCampaignTools;
-
-        $id_outlet = $data['id_outlet'];
-        $sharedPromoTrx['id_outlet'] = $id_outlet;
-        $promoBrand = $promo->{$promoSource . '_brands'}->pluck('id_brand')->toArray();
-        $promoOutlet = $promo->{$promoSource . '_outlets'};
-        $outlet = $pct->checkOutletBrandRule($id_outlet, $promo->is_all_outlet ?? 0, $promoOutlet, $promoBrand, $promo->brand_rule, $promo->outlet_groups);
-        if (!$outlet) {
-            return $this->failResponse($promoName . ' tidak dapat digunakan di outlet ini');
-        }
 
         if (!empty($data['delivery_price']['shipment_code']) || !empty($data['transaction_shipments']['shipment_courier_code'])) {
             $shipment = $data['delivery_price']['shipment_code']??$data['transaction_shipments']['shipment_courier_code'];
@@ -1114,7 +1117,7 @@ class ApiPromoTransaction extends Controller
             return $this->failResponse($message);
         }
 
-        $total_price = $data['subtotal']+((int)$data['service']??0)+((int)$data['tax']??0);
+        $total_price = $data['subtotal'];
         $discountType = $promo_rules->discount_type??'Nominal';
         if ($discountType == 'Percent') {
             $discount += ($total_price * $promo_rules->discount_value) / 100;
@@ -1437,9 +1440,7 @@ class ApiPromoTransaction extends Controller
             $trx['id_outlet'],
             $deviceId,
             $deviceType,
-            $dataDiscount['user_name']??null,
-            $dataDiscount['user_phone']??null,
-            $dataDiscount['id_user']??null
+            $trx['id_transaction_group']
         );
 
         if (!$promo_campaign_report) {
