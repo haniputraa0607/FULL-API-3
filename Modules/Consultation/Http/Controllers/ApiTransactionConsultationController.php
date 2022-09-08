@@ -1524,7 +1524,7 @@ class ApiTransactionConsultationController extends Controller
                 // $items[$key]['product_stock_status'] = $recomendation->product->product_detail[0]->product_detail_stock_status ?? null;
                 // $items[$key]['outlet_name'] = $recomendation->product->product_detail[0]->outlet->outlet_name ?? null;
                 // $items[$key]['product_variant_group'] = $variantGroup ?? null;
-                $items[$key]['product'] = $detailProduct['result'] ?? null;
+                $items[$key]['product'] = $detailProduct ?? null;
                 $items[$key]['qty'] = $recomendation->qty_product ?? null;
                 $items[$key]['usage_rules'] = $recomendation->usage_rules ?? null;
                 $items[$key]['usage_rules_time'] = $recomendation->usage_rules_time ?? null;
@@ -1576,7 +1576,7 @@ class ApiTransactionConsultationController extends Controller
 
                 $detailProduct = app($this->product)->detailRecomendation($params);
 
-                $items[$key]['product'] = $detailProduct['result'] ?? null;
+                $items[$key]['product'] = $detailProduct ?? null;
                 $items[$key]['qty'] = $recomendation->qty_product ?? null;
                 $items[$key]['usage_rules'] = $recomendation->usage_rules ?? null;
                 $items[$key]['usage_rules_time'] = $recomendation->usage_rules_time ?? null;
