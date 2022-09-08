@@ -4,8 +4,11 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class UpdateTransactionConsultationRecomendationsToNullable extends Migration
+class UpdateTransactionConsultationRecomendationToNullable extends Migration
 {
+    public function __construct() {
+        DB::getDoctrineSchemaManager()->getDatabasePlatform()->registerDoctrineTypeMapping('enum', 'string');
+    }
     /**
      * Run the migrations.
      *
