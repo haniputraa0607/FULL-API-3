@@ -49,6 +49,7 @@ class PromoCampaignReport extends Eloquent
 		'id_promo_campaign_promo_code',
 		'id_user',
 		'id_transaction',
+        'id_transaction_group',
 		'id_outlet',
 		'device_id',
 		'device_type',

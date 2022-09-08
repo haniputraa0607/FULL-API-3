@@ -12,6 +12,7 @@ use Illuminate\Routing\Controller;
 use App\Http\Models\Setting;
 use App\Lib\MyHelper;
 use Modules\Brand\Entities\Brand;
+use Modules\Brand\Entities\BrandOutlet;
 use Modules\Brand\Entities\BrandProduct;
 use Modules\Disburse\Entities\BankAccount;
 use Modules\Merchant\Entities\Merchant;
@@ -467,7 +468,7 @@ class ApiMerchantManagementController extends Controller
         }
         $idProduct = $create['id_product'];
 
-        $defaultBrand = Setting::where('key', 'default_brand')->first()['value']??null;
+        $defaultBrand = BrandOutlet::where('id_outlet', $checkMerchant['id_outlet'])->first()['id_brand']??null;
         if(!empty($defaultBrand)){
             $checkBrand = Brand::where('id_brand', $defaultBrand)->first();
             if(!empty($checkBrand)){
@@ -728,7 +729,7 @@ class ApiMerchantManagementController extends Controller
 
             $checkBrand = BrandProduct::where('id_product', $idProduct)->first();
             if(empty($checkBrand)){
-                $defaultBrand = Setting::where('key', 'default_brand')->first()['value']??null;
+                $defaultBrand = BrandOutlet::where('id_outlet', $checkMerchant['id_outlet'])->first()['id_brand']??null;
                 if(!empty($defaultBrand)){
                     $checkBrand = Brand::where('id_brand', $defaultBrand)->first();
                     if(!empty($checkBrand)){

@@ -24,6 +24,7 @@ use App\Http\Models\Setting;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
+use Modules\Brand\Entities\BrandProduct;
 use Modules\Merchant\Entities\Merchant;
 use Modules\Outlet\Entities\DeliveryOutlet;
 use Modules\Product\Entities\ProductDetail;
@@ -323,17 +324,29 @@ class ApiOutletController extends Controller
         }
 
         DB::beginTransaction();
-        if(is_array($brands=$post['outlet_brands']??false)){
-            if(in_array('*', $post['outlet_brands'])){
-                $brands=Brand::select('id_brand')->get()->toArray();
-                $brands=array_column($brands, 'id_brand');
-            }
+        if(!empty($post['outlet_brands'])){
+            $id_brand = $post['outlet_brands'];
             BrandOutlet::where('id_outlet',$request->json('id_outlet'))->delete();
-            foreach ($brands as $id_brand) {
-                BrandOutlet::create([
-                    'id_outlet'=>$request->json('id_outlet'),
-                    'id_brand'=>$id_brand
-                ]);
+            BrandOutlet::create([
+                'id_outlet'=>$request->json('id_outlet'),
+                'id_brand'=>$id_brand
+            ]);
+
+            $idMerchant = Merchant::where('id_outlet', $request->json('id_outlet'))->first()['id_merchant']??null;
+            if(!empty($idMerchant)){
+                $getAllProduct = Product::where('id_merchant', $idMerchant)->pluck('id_product')->toArray();
+                BrandProduct::whereIn('id_product',$getAllProduct)->delete();
+                $insertBrand = [];
+                foreach ($getAllProduct as $p){
+                    $insertBrand[] = [
+                        'id_product' => $p,
+                        'id_brand' => $id_brand,
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+                }
+
+                BrandProduct::insert($insertBrand);
             }
         }
 
