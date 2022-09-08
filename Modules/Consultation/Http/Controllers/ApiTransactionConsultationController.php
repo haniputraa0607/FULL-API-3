@@ -2341,7 +2341,7 @@ class ApiTransactionConsultationController extends Controller
 
         $transactionConsultation = $transactionConsultation->toArray();
 
-        $message = TransactionConsultationMessage::where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->orderBy('created_at_infobip', 'DESC')->paginate($post['per_page'] ?? 10);
+        $message = TransactionConsultationMessage::select('*', \DB::raw('0 as time'))->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->orderBy('created_at_infobip', 'DESC')->paginate($post['per_page'] ?? 10);
 
         return response()->json(MyHelper::checkGet($message));
     }
@@ -2440,6 +2440,44 @@ class ApiTransactionConsultationController extends Controller
         ];
 
         $outputMessages = Infobip::sendRequest('Conversation', "POST", $url, $message);
+
+        //save message to DB TransactionConsultationMessages
+        $response = $outputMessages['response'] ?? false;
+        if (!$response || ($response['requestError'] ?? false)) {
+            return [
+                'status' => 'fail',
+                'messages' => is_array($response['requestError'] ?? false) ? 
+                    array_column($response['requestError'], 'text') :
+                    ['Terjadi kesalahan saat mencoba mengirim pesan'],
+            ];
+        }
+
+        if ($response) {
+            $payload = [
+                'id_transaction_consultation' => $transaction['consultation']['id_transaction_consultation'],
+                'id_message' => $response['id'],
+                'direction' => $response['direction'],
+                'content_type' => $response['contentType'],
+                'created_at_infobip' => $response['createdAt']
+            ];
+
+            switch ($response['contentType']) {
+                case "IMAGE":
+                    $payload['url'] = $response['content']['url'];
+                    $payload['caption'] = $response['content']['caption'];
+
+                    break;
+                case "DOCUMENT":
+                    $payload['url'] = $response['content']['url'];
+                    $payload['caption'] = $response['content']['caption'];
+
+                    break;
+                default:
+                    $payload['text'] = $response['content']['text'];
+            }
+
+            $message = TransactionConsultationMessage::updateOrCreate(['id_message' => $payload['id_message']], $payload);
+        }
 
         return response()->json(MyHelper::checkGet($outputMessages));
     }

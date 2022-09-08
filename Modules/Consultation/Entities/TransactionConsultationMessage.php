@@ -20,4 +20,8 @@ class TransactionConsultationMessage extends Model
         'created_at_infobip'
     ];
 
+    public function getTimeAttribute()
+    {
+        return date('H:i', strtotime($this->created_at_infobip));
+    }
 }
