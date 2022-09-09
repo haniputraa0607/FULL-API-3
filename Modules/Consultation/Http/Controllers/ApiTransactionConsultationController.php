@@ -1777,7 +1777,7 @@ class ApiTransactionConsultationController extends Controller
     {
         $post = $request->json()->all();
         //get Transaction
-        $transactions = Transaction::where('trasaction_type', 'Consultation')->with('consultation')->with('outlet');
+        $transactions = Transaction::where('trasaction_type', 'Consultation')->with('outlet');
 
         if ($post['rule']) {
             $countTotal = $transactions->count();
@@ -1785,9 +1785,21 @@ class ApiTransactionConsultationController extends Controller
         }
 
         if($request['page']) {
-            $result = $transactions->paginate($post['length'] ?: 10);
+            $result = $transactions->latest()->paginate($post['length'] ?: 10);
+
+            foreach($result as $key => $transaction){
+                $transactionConsultation = TransactionConsultation::with('doctor')->with('user')->where('id_transaction', $transaction['id_transaction'])->first();
+    
+                $result[$key]['consultation'] = $transactionConsultation;
+            }
         } else {
-            $result = $transactions->get()->toArray();
+            $result = $transactions->latest()->get()->toArray();
+
+            foreach($result as $key => $transaction){
+                $transactionConsultation = TransactionConsultation::with('doctor')->with('user')->where('id_transaction', $transaction['id_transaction'])->first();
+    
+                $result[$key]['consultation'] = $transactionConsultation;
+            }
         }
         
         return response()->json(['status'  => 'success', 'result' => $result]);
@@ -1831,16 +1843,17 @@ class ApiTransactionConsultationController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Transaction not found']]);
         }
 
-        if(empty($transaction)){
-            return response()->json(['status' => 'fail', 'messages' => ['Transaction Not Found']]);
-        }
-
+        //get consultation
         $consultation = $transaction->consultation;
+        
+        $consultation->disease_complaint = json_decode($consultation->disease_complaint);
+        $consultation->disease_analysis = json_decode($consultation->disease_analysis);
 
         if(empty($consultation)){
             return response()->json(['status' => 'fail', 'messages' => ['Consultation not found']]);
         }
 
+        //get doctor
         $doctor = $consultation->doctor;
 
         if(empty($doctor)){
@@ -1849,33 +1862,71 @@ class ApiTransactionConsultationController extends Controller
 
         $user = $transaction->user;
 
+        //get user
         if(empty($user)){
             return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
         }
         
-        $recomendationProduct = TransactionConsultationRecomendation::with('product')->with('outlet')->where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "product")->get();
+        //get recomendation product
+        $recomendationProducts = TransactionConsultationRecomendation::with('product')->where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "product")->get();
 
-        foreach ($recomendationProduct as $key => $recP) {
-            $variant = ProductVariantGroup::where('id_product_variant_group', $recP->id_product_variant_group)->first();
+        $itemsRecomendationProduct = [];
+        if(!empty($recomendationProducts)) {
+            foreach($recomendationProducts as $key => $product){
+                $params = [
+                    'id_product' => $product->id_product,
+                    'id_user' => $id,
+                    'id_product_variant_group' => $product->id_product_variant_group
+                ];
 
-            $recomendationProduct[$key]['variant'] = $variant;
+                $detailProduct = app($this->product)->detailRecomendation($params);
+
+                $itemsRecomendationProduct[$key]['product'] = $detailProduct['result'] ?? null;
+                $itemsRecomendationProduct[$key]['qty'] = $product->qty_product ?? null;
+                $itemsRecomendationProduct[$key]['usage_rules'] = $product->usage_rules ?? null;
+                $itemsRecomendationProduct[$key]['usage_rules_time'] = $product->usage_rules_time ?? null;
+                $itemsRecomendationProduct[$key]['usage_rules_additional_time'] = $product->usage_rules_additional ?? null;
+                $itemsRecomendationProduct[$key]['treatment_description'] = $product->treatment_description ?? null;
+            }
         }
 
-        $recomendationDrug = TransactionConsultationRecomendation::with('product')->with('outlet')->where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "drug")->get();
+        //get recomendation drug
+        $recomendationDrugs = TransactionConsultationRecomendation::with('product')->where('id_transaction_consultation', $consultation->id_transaction_consultation)->where('product_type', "drug")->get();
 
-        foreach ($recomendationDrug as $key => $recD) {
-            $variant = ProductVariantGroup::where('id_product_variant_group', $recP->id_product_variant_group)->first();
+        $itemsRecomendationDrug = [];
+        if(!empty($recomendationDrugs)) {
+            foreach($recomendationDrugs as $key => $drug){
+                $params = [
+                    'id_product' => $drug->id_product,
+                    'id_user' => $id,
+                    'id_product_variant_group' => $drug->id_product_variant_group
+                ];
 
-            $recomendationDrug[$key]['variant'] = $variant;
+                $detailDrug = app($this->product)->detailRecomendation($params);
+
+                $itemsRecomendationDrug[$key]['product'] = $detailDrug['result'] ?? null;
+                $itemsRecomendationDrug[$key]['qty'] = $drug->qty_product ?? null;
+                $itemsRecomendationDrug[$key]['usage_rules'] = $drug->usage_rules ?? null;
+                $itemsRecomendationDrug[$key]['usage_rules_time'] = $drug->usage_rules_time ?? null;
+                $itemsRecomendationDrug[$key]['usage_rules_additional_time'] = $drug->usage_rules_additional ?? null;
+                $itemsRecomendationDrug[$key]['treatment_description'] = $drug->treatment_description ?? null;
+            }
         }
+
+        //get messages
+        $messages = TransactionConsultationMessage::where('id_transaction_consultation', $transaction->consultation->id_transaction_consultation)->get()->toArray();
+
+        $modifier_user = auth()->user();
 
         $result = [
             'transaction' => $transaction,
             'consultation' => $consultation,
             'doctor' => $doctor,
             'customer' => $user,
-            'recomendation_product' => $recomendationProduct,
-            'recomendation_drug' => $recomendationDrug
+            'recomendation_product' => $itemsRecomendationProduct,
+            'recomendation_drug' => $itemsRecomendationDrug,
+            'messages' => $messages,
+            'modifier_user' => $modifier_user
         ];
 
         return response()->json(['status'  => 'success', 'result' => $result]);
@@ -2875,5 +2926,41 @@ class ApiTransactionConsultationController extends Controller
             return ['status' => 'fail', 'response' => ['Check your internet connection.']];
         }
         
+    }
+
+    public function updateConsultationFromAdmin(Request $request)
+    {
+        $post = $request->json()->all();
+
+        //get Transaction
+        $transaction = Transaction::where('id_transaction', $post['id_transaction'])->first();
+
+        if(empty($transaction)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaction not found']
+            ]);
+        }
+
+        //get Transaction Consultation
+        $transactionConsultations = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->first();
+
+        if(empty($transactionConsultations)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Consultation not found']
+            ]);
+        }
+
+        //update Transaction Consultation
+        $update = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->update([
+            'consultation_status' => $post['consultation_status'],
+            'reason_status_change' => $post['reason_status_change'],
+            'id_user_modifier' => 1
+        ]);
+
+        $result = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->first();
+        
+        return response()->json(['status'  => 'success', 'result' => $result]);
     }
 }

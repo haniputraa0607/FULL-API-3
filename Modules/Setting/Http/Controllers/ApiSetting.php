@@ -233,9 +233,13 @@ class ApiSetting extends Controller
             DB::beginTransaction();
 
             $idSetting = [];
-            if($post['value']){
+            if(isset($post['value']) || isset($post['value_text'])){
                 if(isset($post['id_setting'])){
-                    $save = Setting::where('id_setting', $post['id_setting'])->update(['value' => $post['value']]);
+                    if (str_contains($type, 'usage_rules') !== false || strpos($type, 'diagnosis') !== false || strpos($type, 'complaints') !== false) {
+                        $save = Setting::where('id_setting', $post['id_setting'])->update(['value_text' => $post['value_text']]);
+                    } else {
+                        $save = Setting::where('id_setting', $post['id_setting'])->update(['value' => $post['value']]);
+                    }
                     if(!$save){
                         DB::rollback();
                         return response()->json(MyHelper::checkUpdate($save));
@@ -243,10 +247,17 @@ class ApiSetting extends Controller
 
                     $idSetting[] = $post['id_setting'];
                 }else{
-                    $save = Setting::create([
-                        'key' => $type,
-                        'value' => $post['value']
-                    ]);
+                    if (str_contains($type, 'usage_rules') !== false || strpos($type, 'diagnosis') !== false || strpos($type, 'complaints') !== false) {
+                        $save = Setting::create([
+                            'key' => $type,
+                            'value_text' => $post['value_text']
+                        ]);
+                    } else {
+                        $save = Setting::create([
+                            'key' => $type,
+                            'value' => $post['value']
+                        ]);
+                    }
 
                     if(!$save){
                         DB::rollback();
