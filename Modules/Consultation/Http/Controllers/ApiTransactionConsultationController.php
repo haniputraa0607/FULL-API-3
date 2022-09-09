@@ -2649,7 +2649,7 @@ class ApiTransactionConsultationController extends Controller
     public function getConsultationSettings(Request $request) {
         $post = $request->json()->all();
 
-        $getSetting = Setting::where('key', $post['key'])->first()['value']??null;
+        $getSetting = Setting::where('key', $post['key'])->first()['value_text']??null;
 
         $result = [];
         //search here
