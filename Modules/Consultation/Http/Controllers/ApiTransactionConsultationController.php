@@ -2041,6 +2041,7 @@ class ApiTransactionConsultationController extends Controller
                     $list[$key]['variants'] = $variantTree ?? null;
                 }
 
+                $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
                 //get merchant name
                 $merchant = Merchant::where('id_outlet', $product['id_outlet'])->first();
                 $list[$key]['merchant_pic_name'] = $merchant->merchant_pic_name;
@@ -2054,6 +2055,7 @@ class ApiTransactionConsultationController extends Controller
                 $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
                 $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api').$image['product_photo'] : config('url.storage_url_api').'img/default.jpg');
             }
+
             $list = array_values($list);
         }
 
