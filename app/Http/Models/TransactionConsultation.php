@@ -57,7 +57,9 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
 		'referral_code',
 		'id_conversation',
 		'id_doctor_infobip',
-		'id_user_infobip'
+		'id_user_infobip',
+		'reason_status_change',
+		'id_user_modifier'
 	];
 
 	protected $appends = [

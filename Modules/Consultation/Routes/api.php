@@ -20,6 +20,7 @@ Route::middleware('auth:api')->get('/consultation', function (Request $request) 
 Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' => 'be'], function () {
     Route::post('/consultation', 'ApiTransactionConsultationController@getConsultationFromAdmin');
     Route::get('/consultation/detail/{id}', 'ApiTransactionConsultationController@getConsultationDetailFromAdmin');
+    Route::post('/consultation/update', 'ApiTransactionConsultationController@updateConsultationFromAdmin');
 });
 
 Route::any('consultation/detail/chat.html', 'ApiTransactionConsultationController@getChatView');
