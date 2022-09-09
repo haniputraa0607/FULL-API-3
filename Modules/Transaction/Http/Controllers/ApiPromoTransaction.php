@@ -197,21 +197,23 @@ class ApiPromoTransaction extends Controller
         $totalAllDisc = 0;
         $discDeliveryAll = 0;
         if (isset($userPromo['promo_campaign'])) {
-            //check brand outlet
-            $allOutlet = array_unique(array_column($data['items'], 'id_outlet'));
-            $promoBrands = PromoCampaignBrand::where('id_promo_campaign', $promoCampaign->id_promo_campaign)->pluck('id_brand')->toArray();
-            $outletBrand = BrandOutlet::whereIn('id_outlet', $allOutlet)->pluck('id_brand')->toArray();
-            $checkBrand 	= array_diff($promoBrands, $outletBrand);
+            if(!empty($promoCampaign)){
+                //check brand outlet
+                $allOutlet = array_unique(array_column($data['items'], 'id_outlet'));
+                $promoBrands = PromoCampaignBrand::where('id_promo_campaign', $promoCampaign->id_promo_campaign)->pluck('id_brand')->toArray();
+                $outletBrand = BrandOutlet::whereIn('id_outlet', $allOutlet)->pluck('id_brand')->toArray();
+                $checkBrand 	= array_diff($promoBrands, $outletBrand);
 
-            $statusCheckBrand = true;
-            if($promoCampaign->brand_rule == 'or' && count($checkBrand) == count($promoBrands)) {
-                $statusCheckBrand = false;
-            }elseif($promoCampaign->brand_rule == 'and' && !empty($checkBrand)){
-                $statusCheckBrand = false;
-            }
+                $statusCheckBrand = true;
+                if(!empty($promoBrands) && $promoCampaign->brand_rule == 'or' && count($checkBrand) == count($promoBrands)) {
+                    $statusCheckBrand = false;
+                }elseif(!empty($promoBrands) && $promoCampaign->brand_rule == 'and' && !empty($checkBrand)){
+                    $statusCheckBrand = false;
+                }
 
-            if (!$statusCheckBrand) {
-                $codeErr = ['Promo tidak dapat digunakan di outlet ini'];
+                if (!$statusCheckBrand) {
+                    $codeErr = ['Promo tidak dapat digunakan di outlet ini'];
+                }
             }
 
             foreach ($data['items'] as $key=>$dt){
