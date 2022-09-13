@@ -30,7 +30,12 @@ class ApiHomeController extends Controller
     {
         $user = $request->user();
 
-        //get detail doctpr
+        //update Device Token
+        if ($request->json('device_id') && $request->json('device_token') && $request->json('device_type')) {
+            $this->updateDeviceUserGuest($request->json('device_id'), $request->json('device_token'), $request->json('device_type'));
+         }
+
+        //get detail doctor
         $doctor = Doctor::with('specialists')->with('clinic')->where('id_doctor', $user['id_doctor'])->first();
 
         if (empty($doctor)) {

@@ -32,6 +32,7 @@ use Modules\Doctor\Entities\TimeSchedule;
 use Modules\Doctor\Entities\Doctor;
 use Modules\Transaction\Entities\TransactionGroup;
 use Modules\Consultation\Entities\TransactionConsultationMessage;
+use Modules\Consultation\Entities\TransactionConsultationReschedule;
 use Modules\Consultation\Entities\LogInfobip;
 use Modules\UserRating\Entities\UserRating;
 use DB;
@@ -3068,10 +3069,14 @@ class ApiTransactionConsultationController extends Controller
         $nowTime = Carbon::now();
 
         $finishTime = Carbon::parse($transactionConsultation['schedule_end_time']);
-        
-        $remainingDuration = $finishTime->diffInSeconds($nowTime);
 
-        $remainingTime = gmdate('H:i:s', $remainingDuration);
+        if ($finishTime->gt($nowTime)) { 
+            $remainingDuration = $finishTime->diffInSeconds($nowTime);
+
+            $remainingTime = gmdate('H:i:s', $remainingDuration);
+        } else {
+            $remainingTime = date('H:i:s', strtotime('00:00:00'));
+        }
 
         $result = [
             'message_date' => $dayId.', '.$chatDateId,
@@ -3079,5 +3084,117 @@ class ApiTransactionConsultationController extends Controller
         ];
 
         return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function submitRescheduleConsultation(Request $request)
+    {
+        $post = $request->json()->all();
+
+        //cek date time schedule
+        if(empty($post['date']) && empty($post['time'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Schedule can not be empty']
+            ]);
+        }
+
+        //check doctor availability
+        $id_doctor = $post['id_doctor'];
+        $doctor = Doctor::with('outlet')->with('specialists')->where('id_doctor', $post['id_doctor'])->first();
+
+        if(empty($doctor)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Silahkan pilh dokter terlebih dahulu / Dokter tidak ditemukan']
+            ]);
+        }
+        $doctor = $doctor->toArray();
+
+        //check session availability
+        $picked_date = date('Y-m-d', strtotime($post['date']));
+
+        $dateId = Carbon::parse($picked_date)->locale('id');
+        $dateId->settings(['formatFunction' => 'translatedFormat']);
+
+        $dayId = $dateId->format('l');
+
+        $dateEn = Carbon::parse($picked_date)->locale('en');
+        $dateEn->settings(['formatFunction' => 'translatedFormat']);
+
+        $picked_day = $dateEn->format('l');
+        $picked_time = date('H:i:s', strtotime($post['time']));
+
+        //get doctor consultation
+        $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
+                                ->where('schedule_start_time', $picked_time)->count();
+        
+        $getSettingQuota = Setting::where('key', 'max_consultation_quota')->first()->toArray();
+        $quota = $getSettingQuota['value'];
+
+        if($quota <= $doctor_constultation && $quota != null){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Jadwal penuh / tidak tersedia']
+            ]);
+        }
+
+        //selected session
+        $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
+            ->whereHas('schedule_time', function($query) use ($post, $picked_time){
+                $query->where('start_time', '=', $picked_time);
+            })->first();
+
+        if(empty($schedule_session)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Jadwal penuh / tidak tersedia']
+            ]);
+        }
+
+        //get picked session
+        $picked_schedule = DoctorSchedule::where('id_doctor', $doctor['id_doctor'])->leftJoin('time_schedules', function($query) {
+            $query->on('time_schedules.id_doctor_schedule', '=' , 'doctor_schedules.id_doctor_schedule');
+        })->where('start_time', '=', $picked_time)->first();
+
+        //get Transaction Consultation
+        $transactionConsultation = TransactionConsultation::where('id_transaction', $post['id_transaction'])->first();
+
+        //get Reschedule Settings
+        $getSettingReschedule = Setting::where('key', 'max_reschedule_before')->first();
+        $settingReschedule = $getSettingReschedule['value'];
+
+        $maxReschedule = Carbon::parse($transactionConsultation['schedule_date'])->subDays((int)$settingReschedule);
+        $now = Carbon::now();
+        
+        if($now > $maxReschedule){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Sudah Melewati Batas Dapat Reschedule']
+            ]);
+        }
+
+        //create log transaction consultation
+        $createReschedule = TransactionConsultationReschedule::create([
+            'id_transaction_consultation' => $transactionConsultation['id_transaction_consultation'],
+            'id_doctor' => $transactionConsultation['id_doctor'],
+            'id_user' => $transactionConsultation['id_user'],
+            'old_schedule_date' => $transactionConsultation['schedule_date'],
+            'old_schedule_start_time' => $transactionConsultation['schedule_start_time'],
+            'old_schedule_end_time' => $transactionConsultation['schedule_end_time'],
+            'new_schedule_date' => $picked_date,
+            'new_schedule_start_time' => $picked_schedule['start_time'],
+            'new_schedule_end_time' => $picked_schedule['end_time'],
+            'id_user_modifier' => $request->user()->id,
+            'user_modifier_type' => 'customer'
+        ]);
+
+        //update to Transaction
+        $updateConsultation = TransactionConsultation::where('id_transaction', $post['id_transaction'])->update([
+            'schedule_date' => $picked_date,
+            'schedule_start_time' => $picked_schedule['start_time'],
+            'schedule_end_time' => $picked_schedule['end_time']
+        ]);
+
+        return MyHelper::checkGet($createReschedule);
     }
 }
