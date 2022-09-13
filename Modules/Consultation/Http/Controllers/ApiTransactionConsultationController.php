@@ -3002,9 +3002,9 @@ class ApiTransactionConsultationController extends Controller
         }
 
         //get Transaction Consultation
-        $transactionConsultations = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->first();
+        $transactionConsultation = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->first();
 
-        if(empty($transactionConsultations)){
+        if(empty($transactionConsultation)){
             return response()->json([
                 'status'    => 'fail',
                 'messages'  => ['Consultation not found']
@@ -3014,6 +3014,23 @@ class ApiTransactionConsultationController extends Controller
         $scheduleDate = date('Y-m-d', strtotime($post['schedule_date']));
         $scheduleStartTime = date('H:i:s', strtotime($post['schedule_start_time']));
         $scheduleEndTime = date('H:i:s', strtotime($post['schedule_end_time']));
+
+        if($transactionConsultation['schedule_date'] != $scheduleDate || $transactionConsultation['schedule_start_time'] != $scheduleStartTime || $transactionConsultation['schedule_end_time'] != $scheduleEndTime){
+            //create log transaction consultation reschedule
+            $createReschedule = TransactionConsultationReschedule::create([
+                'id_transaction_consultation' => $transactionConsultation['id_transaction_consultation'],
+                'id_doctor' => $transactionConsultation['id_doctor'],
+                'id_user' => $transactionConsultation['id_user'],
+                'old_schedule_date' => $transactionConsultation['schedule_date'],
+                'old_schedule_start_time' => $transactionConsultation['schedule_start_time'],
+                'old_schedule_end_time' => $transactionConsultation['schedule_end_time'],
+                'new_schedule_date' => $scheduleDate,
+                'new_schedule_start_time' => $scheduleStartTime,
+                'new_schedule_end_time' => $scheduleEndTime,
+                'id_user_modifier' => $request->user()->id,
+                'user_modifier_type' => 'admin'
+            ]);
+        }
 
         //update Transaction Consultation
         $update = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->update([
@@ -3173,7 +3190,7 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
-        //create log transaction consultation
+        //create log transaction consultation reschedule
         $createReschedule = TransactionConsultationReschedule::create([
             'id_transaction_consultation' => $transactionConsultation['id_transaction_consultation'],
             'id_doctor' => $transactionConsultation['id_doctor'],

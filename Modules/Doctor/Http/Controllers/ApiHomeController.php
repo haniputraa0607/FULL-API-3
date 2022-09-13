@@ -8,6 +8,7 @@ use Illuminate\Routing\Controller;
 
 use Modules\Doctor\Entities\Doctor;
 use Modules\Doctor\Entities\DoctorSchedule;
+use Modules\Doctor\Entities\DoctorDevice;
 use App\Http\Models\Transaction;
 use App\Http\Models\User;
 

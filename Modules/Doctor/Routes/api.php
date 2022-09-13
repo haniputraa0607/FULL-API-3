@@ -84,7 +84,7 @@ Route::group(['prefix' => 'auth/doctor'], function () {
 });
 
 Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-apps'], 'prefix' => 'doctor'], function () {
-    Route::get('home', ['uses' => 'ApiHomeController@home']);
+    Route::post('home', ['uses' => 'ApiHomeController@home']);
     Route::get('schedule/my', ['uses' => 'ApiScheduleController@getMySchedule']);
     Route::post('schedule/my/store', ['uses' => 'ApiScheduleController@storeMySchedule']);
     Route::get('get-infobip-token', ['uses' => 'ApiDoctorController@getInfobipToken']);
