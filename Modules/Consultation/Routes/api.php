@@ -40,6 +40,11 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix
         Route::post('/detail', 'ApiTransactionConsultationController@transactionDetail');
     });
 
+    Route::group(['prefix' => 'reschedule'], function () {
+        Route::post('/edit', 'ApiTransactionConsultationController@editRescheduleConsultation');
+        Route::post('/update', 'ApiTransactionConsultationController@submitRescheduleConsultation');
+    });
+
     Route::group(['prefix' => '/detail'], function () {
         Route::post('/infobip', 'ApiTransactionConsultationController@getDetailInfobip');
         Route::post('/summary', 'ApiTransactionConsultationController@getDetailSummary');
