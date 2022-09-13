@@ -1860,9 +1860,25 @@ class ApiTransactionConsultationController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Doctor not found']]);
         }
 
-        $user = $transaction->user;
+        //get doctor Schedule
+        $schedule = app($this->doctor)->getScheduleDoctor($doctor['id_doctor']);
+        $selectedScheduleTime = null;
+
+        //get selected Schedule time
+        $scheduleDateFormatted = date('d-m-Y', strtotime($consultation['schedule_date']));
+        $idDoctorSchedule = null;
+        if(!empty($schedule)){
+            foreach($schedule as $s){
+                if($s['date'] == $scheduleDateFormatted){
+                    $idDoctorSchedule = $s['id_doctor_schedule'];
+                }
+            }
+            $selectedScheduleTime = app($this->doctor)->getScheduleTime($idDoctorSchedule);
+        }
 
         //get user
+        $user = $transaction->user;
+
         if(empty($user)){
             return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
         }
@@ -1922,6 +1938,8 @@ class ApiTransactionConsultationController extends Controller
             'transaction' => $transaction,
             'consultation' => $consultation,
             'doctor' => $doctor,
+            'schedule' => $schedule,
+            'selected_schedule_time' => $selectedScheduleTime,
             'customer' => $user,
             'recomendation_product' => $itemsRecomendationProduct,
             'recomendation_drug' => $itemsRecomendationDrug,
@@ -2992,8 +3010,15 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
+        $scheduleDate = date('Y-m-d', strtotime($post['schedule_date']));
+        $scheduleStartTime = date('H:i:s', strtotime($post['schedule_start_time']));
+        $scheduleEndTime = date('H:i:s', strtotime($post['schedule_end_time']));
+
         //update Transaction Consultation
         $update = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->update([
+            'schedule_date' => $scheduleDate,
+            'schedule_start_time' => $scheduleStartTime,
+            'schedule_end_time' => $scheduleEndTime,
             'consultation_status' => $post['consultation_status'],
             'reason_status_change' => $post['reason_status_change'],
             'id_user_modifier' => 1
@@ -3002,5 +3027,57 @@ class ApiTransactionConsultationController extends Controller
         $result = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->first();
         
         return response()->json(['status'  => 'success', 'result' => $result]);
+    }
+
+    public function getScheduleTimeFromAdmin(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $selectedScheduleTime = app($this->doctor)->getScheduleTime($post['id_doctor_schedule']);
+
+        return response()->json(['status'  => 'success', 'result' => $selectedScheduleTime]);
+    }
+
+    public function getDateAndRemainingTimeConsultation(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $transactionConsultation = TransactionConsultation::where('id_transaction', $post['id_transaction'])->first();
+
+        if(empty($transactionConsultation)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaksi Konsultasi tidak ditemukan']
+            ]);
+        }
+
+        $transactionConsultation = $transactionConsultation->toArray();
+
+        //get Date Chat
+        $message = TransactionConsultationMessage::where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->first();
+
+        $dateId = Carbon::parse($message['created_at_infobip'])->locale('id');
+
+        $dateId->settings(['formatFunction' => 'translatedFormat']);
+
+        $dayId = $dateId->format('l');
+
+        $chatDateId = MyHelper::dateOnlyFormatInd($message['created_at_infobip']);
+
+        //get Remaining Time
+        $nowTime = Carbon::now();
+
+        $finishTime = Carbon::parse($transactionConsultation['schedule_end_time']);
+        
+        $remainingDuration = $finishTime->diffInSeconds($nowTime);
+
+        $remainingTime = gmdate('H:i:s', $remainingDuration);
+
+        $result = [
+            'message_date' => $dayId.', '.$chatDateId,
+            'remaining_time' => $remainingTime
+        ];
+
+        return response()->json(MyHelper::checkGet($result));
     }
 }

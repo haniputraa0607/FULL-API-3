@@ -21,6 +21,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
     Route::post('/consultation', 'ApiTransactionConsultationController@getConsultationFromAdmin');
     Route::get('/consultation/detail/{id}', 'ApiTransactionConsultationController@getConsultationDetailFromAdmin');
     Route::post('/consultation/update', 'ApiTransactionConsultationController@updateConsultationFromAdmin');
+    Route::post('/consultation/get-schedule-time', 'ApiTransactionConsultationController@getScheduleTimeFromAdmin');
 });
 
 Route::any('consultation/detail/chat.html', 'ApiTransactionConsultationController@getChatView');
@@ -56,6 +57,7 @@ Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-
     Route::post('/consultation/message/refresh', 'ApiTransactionConsultationController@refreshMessage');
     Route::post('/consultation/message/get', 'ApiTransactionConsultationController@getMessage');
     Route::post('/consultation/message/create', 'ApiTransactionConsultationController@createMessage');
+    Route::post('/consultation/message/date-time', 'ApiTransactionConsultationController@getDateAndRemainingTimeConsultation');
     Route::post('/consultation/detail/soon', 'ApiTransactionConsultationController@getSoonConsultationDetail');
 
     Route::post('/consultation/option', 'ApiTransactionConsultationController@getConsultationSettings');
