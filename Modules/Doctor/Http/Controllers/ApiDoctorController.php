@@ -10,6 +10,7 @@ use App\Lib\MyHelper;
 use Modules\Doctor\Entities\Doctor;
 use Modules\Doctor\Entities\DoctorSpecialist;
 use Modules\Doctor\Entities\DoctorSchedule;
+use Modules\Doctor\Entities\TimeSchedule;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionConsultation;
 use App\Http\Models\Setting;
@@ -697,6 +698,18 @@ class ApiDoctorController extends Controller
         }
 
         return $schedule;
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     * @param int $id
+     * @return Response
+     */
+    public function getScheduleTime($id_doctor_schedule)
+    {
+        $timeSchedule = TimeSchedule::where('id_doctor_schedule', $id_doctor_schedule)->get()->toArray();
+
+        return $timeSchedule;
     }
 
     public function listOutletOption(Request $request)
