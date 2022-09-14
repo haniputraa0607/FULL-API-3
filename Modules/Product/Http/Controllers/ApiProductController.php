@@ -964,7 +964,7 @@ class ApiProductController extends Controller
         }
 
         if (isset($post['product_code'])) {
-            $product->with(['global_price','product_special_price','product_tags','brands','product_promo_categories'=>function($q){$q->select('product_promo_categories.id_product_promo_category');}])->where('products.product_code', $post['product_code']);
+            $product->with(['global_price','product_special_price','product_tags','outlet','brands','product_promo_categories'=>function($q){$q->select('product_promo_categories.id_product_promo_category');}])->where('products.product_code', $post['product_code']);
         }
 
         if (isset($post['update_price']) && $post['update_price'] == 1) {
@@ -983,7 +983,7 @@ class ApiProductController extends Controller
         }
 
         if(isset($post['admin_list'])){
-            $product = $product->where('product_type', 'product')->with(['brands']);
+            $product = $product->where('product_type', 'product')->with(['brands', 'outlet']);
         }
 
         if(isset($post['pagination'])){

@@ -17,6 +17,9 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Http\Models\Setting;
 use App\Lib\MyHelper;
+use Modules\Brand\Entities\Brand;
+use Modules\Brand\Entities\BrandOutlet;
+use Modules\Brand\Entities\BrandProduct;
 use Modules\Disburse\Entities\BankAccount;
 use Modules\Disburse\Entities\BankAccountOutlet;
 use Modules\Disburse\Entities\BankName;
@@ -257,6 +260,14 @@ class ApiMerchantController extends Controller
             if(!$createOutlet){
                 DB::rollback();
                 return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan data outlet']]);
+            }
+
+            $defaultBrand = Setting::where('key', 'default_brand')->first()['value']??null;
+            if(!empty($defaultBrand)){
+                $checkBrand = Brand::where('id_brand', $defaultBrand)->first();
+                if(!empty($checkBrand)){
+                    BrandOutlet::create(['id_outlet' => $createOutlet['id_outlet'], 'id_brand' => $defaultBrand]);
+                }
             }
 
             Merchant::where('id_merchant', $create['id_merchant'])->update(['id_outlet' => $createOutlet['id_outlet']]);

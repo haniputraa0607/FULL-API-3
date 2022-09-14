@@ -9,6 +9,7 @@ namespace App\Http\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Cache;
+use Modules\Merchant\Entities\Merchant;
 use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use App\Lib\MyHelper;
@@ -231,6 +232,11 @@ class Product extends Model
         return $this->hasMany(\Modules\ProductVariant\Entities\ProductVariantGroup::class,'id_product','id_product')
             ->join('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
             ->join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
+    }
+
+    public function outlet(){
+        return $this->hasOne(Merchant::class,'id_merchant','id_merchant')
+            ->join('outlets', 'outlets.id_outlet', 'merchants.id_outlet');
     }
 
     /**

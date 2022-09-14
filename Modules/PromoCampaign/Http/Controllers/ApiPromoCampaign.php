@@ -362,11 +362,14 @@ class ApiPromoCampaign extends Controller
         $promoCampaign = $promoCampaign->toArray();
         if ($promoCampaign) {
 
-            $used_code = PromoCampaignReport::where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign']);
         	if ($promoCampaign['code_type'] != 'Single') {
-	        	$used_code->distinct();
-	        }
-            $promoCampaign['used_code'] = $used_code->count('id_promo_campaign_promo_code');
+                $promoCampaign['used_code'] = PromoCampaignReport::where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign'])
+                    ->distinct()->count('id_promo_campaign_promo_code', 'id_transaction_group');
+	        }else{
+                $promoCampaign['used_code'] = PromoCampaignReport::where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign'])
+                    ->distinct()->count('id_transaction_group');
+            }
+
             $total = PromoCampaignReport::where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign']);
             $this->filterReport($total,$request,$foreign);
             foreach ($foreign as $value) {
@@ -3578,12 +3581,13 @@ class ApiPromoCampaign extends Controller
     }
 
 
-    public function addReport($id_promo_campaign, $id_promo_campaign_promo_code, $id_transaction, $id_outlet, $device_id, $device_type)
+    public function addReport($id_promo_campaign, $id_promo_campaign_promo_code, $id_transaction, $id_outlet, $device_id, $device_type, $id_transaction_group)
     {
     	$data = [
     		'id_promo_campaign_promo_code' 	=> $id_promo_campaign_promo_code,
     		'id_promo_campaign' => $id_promo_campaign,
     		'id_transaction' 	=> $id_transaction,
+            'id_transaction_group' 	=> $id_transaction_group,
     		'id_outlet' 		=> $id_outlet,
     		'device_id' 		=> $device_id,
     		'device_type' 		=> $device_type,
@@ -3598,14 +3602,14 @@ class ApiPromoCampaign extends Controller
     		return false;
     	}
 
-    	$used_code = PromoCampaignReport::where('id_promo_campaign',$id_promo_campaign)->count();
+    	$used_code = PromoCampaignReport::where('id_promo_campaign',$id_promo_campaign)->distinct()->count('id_transaction_group');
     	$update = PromoCampaign::where('id_promo_campaign', $id_promo_campaign)->update(['used_code' => $used_code]);
 
 		if (!$update) {
     		return false;
     	}
 
-    	$usage_code = PromoCampaignReport::where('id_promo_campaign_promo_code', $id_promo_campaign_promo_code)->count();
+    	$usage_code = PromoCampaignReport::where('id_promo_campaign_promo_code', $id_promo_campaign_promo_code)->distinct()->count('id_transaction_group');
     	$update = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $id_promo_campaign_promo_code)->update(['usage' => $usage_code]);
 
 		if (!$update) {

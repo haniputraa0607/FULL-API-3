@@ -557,6 +557,8 @@ class ApiOnlineTransaction extends Controller
             if($grandTotalNew == 0){
                 $trxGroup->triggerPaymentCompleted();
             }
+        }elseif($insertTransactionGroup['transaction_grandtotal'] == 0 && !empty($itemsCheck['promo_code'])){
+            $trxGroup->triggerPaymentCompleted();
         }
 
         $transactionPromo = Transaction::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->get()->toArray();
@@ -700,10 +702,10 @@ class ApiOnlineTransaction extends Controller
             'available_checkout' => $checkOutStatus,
             'error_messages' => implode('. ', array_unique($errorMsg))
         ];
-        $result = app($this->promo_trx)->applyPromoCheckout($result);
 
         $fake_request = new Request(['show_all' => 0]);
         $result['available_payment'] = $this->availablePayment($fake_request)['result'] ?? [];
+        $result = app($this->promo_trx)->applyPromoCheckout($result);
 
         $grandTotalNew = $result['grandtotal'];
         if(isset($post['point_use']) && $post['point_use']){
@@ -2861,7 +2863,7 @@ class ApiOnlineTransaction extends Controller
     {
         $tmp = [];
         foreach ($items as $value){
-            $tmp[$value['id_outlet']]['id_outlet'] = $value['id_outlet'];
+            $tmp[$value['id_outlet']]['id_outlet'] = $value['id_outlet']??null;
             $tmp[$value['id_outlet']]['delivery'] = $value['delivery']??'';
             $tmp[$value['id_outlet']]['items'] = array_merge($tmp[$value['id_outlet']]['items']??[], $value['items']);
         }
