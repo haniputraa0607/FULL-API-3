@@ -229,10 +229,13 @@ class ApiPromoTransaction extends Controller
                     $codeErr = $applyCode['messages'] ?? $codeErr;
                 }
 
+                $err = $codeErr??[];
                 $resPromoCode = [
                     'promo_code' 		=> $sharedPromoTrx['promo_campaign']['promo_code'] ?? null,
                     'title' 			=> $applyCode['result']['title'] ?? null,
-                    'text' 				=> $codeErr??[],
+                    'text' 				=> array_map(function($v){
+                        return trim(strip_tags($v));
+                    },$err),
                     'remove_text' 		=> 'Batalkan penggunaan ' . ($sharedPromoTrx['promo_campaign']['promo_title'] ?? null)
                 ];
 
@@ -396,10 +399,13 @@ class ApiPromoTransaction extends Controller
                 $codeErr = $applyCode['messages'] ?? $codeErr;
             }
 
+            $err = $applyCode['result']['text'] ?? $codeErr;
             $resPromoCode = [
                 'promo_code' 		=> $sharedPromoTrx['promo_campaign']['promo_code'] ?? null,
                 'title' 			=> $applyCode['result']['title'] ?? null,
-                'text' 				=> $applyCode['result']['text'] ?? $codeErr,
+                'text' 				=> array_map(function($v){
+                    return trim(strip_tags($v));
+                },$err),
                 'remove_text' 		=> 'Batalkan penggunaan ' . ($sharedPromoTrx['promo_campaign']['promo_title'] ?? null)
             ];
 
