@@ -911,7 +911,7 @@ class ApiTransactionConsultationController extends Controller
         $transaction = $transaction->toArray();
 
         //get Transaction Consulation
-        $transactionConsultation = TransactionConsultation::where('id_transaction', $post['id_transaction'])->first();
+        $transactionConsultation = TransactionConsultation::with('doctor')->with('user')->where('id_transaction', $post['id_transaction'])->first();
 
         if(empty($transactionConsultation)){
             return response()->json([
@@ -1068,6 +1068,38 @@ class ApiTransactionConsultationController extends Controller
         }
         DB::commit();
 
+        //Send Autoresponse to Doctor Device
+        if(!empty($transactionConsultation['doctor'])){
+            if (!empty($request->header('user-agent-view'))) {
+                $useragent = $request->header('user-agent-view');
+            } else {
+                $useragent = $_SERVER['HTTP_USER_AGENT'];
+            }
+
+            if (stristr($useragent, 'iOS')) $useragent = 'iOS';
+            if (stristr($useragent, 'okhttp')) $useragent = 'Android';
+            if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
+
+            if (\Module::collections()->has('Autocrm')) {
+                $autocrm = app($this->autocrm)->SendAutoCRM(
+                    'Consultation Has Started',
+                    $transactionConsultation['doctor']['doctor_phone'],
+                    [
+                        'action' => 'consultationHasStarted',
+                        'messages' => 'Consultation Has Started',
+                        'id_conversation' => $transactionConsultation['id_conversation'],
+                        'id_transaction' => $transactionConsultation['id_transaction'],
+                        'useragent' => $useragent,
+                        'now' => date('Y-m-d H:i:s'),
+                        'date_sent' => date('d-m-y H:i:s')
+                    ],
+                    $useragent,
+                    false,
+                    false
+                );
+            }
+        }
+
         return response()->json(['status'  => 'success', 'result' => $result]);
     }
 
@@ -1095,7 +1127,7 @@ class ApiTransactionConsultationController extends Controller
         }
 
         //get Transaction
-        $transaction = Transaction::with('consultation')->where('id_transaction', $post['id_transaction'])->first()->toArray();
+        $transaction = Transaction::with('consultation')->where('id_transaction', $post['id_transaction'])->first();
 
         if(empty($transaction)){
             return response()->json([
@@ -1103,6 +1135,21 @@ class ApiTransactionConsultationController extends Controller
                 'messages'  => ['Transaksi tidak ditemukan']
             ]);
         }
+
+        $transaction = $transaction->toArray();
+
+        $transactionConsultation = $transaction->consultation->user;
+
+        if(empty($transactionConsultation)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaksi tidak ditemukan']
+            ]);
+        }
+
+        $transactionConsultation->load('user', 'doctor');
+
+        $transactionConsultation = $transactionConsultation->toArray();
 
         //get Doctor
         $doctor = Doctor::where('id_doctor', $transaction['consultation']['id_doctor'])->first();
@@ -1149,6 +1196,38 @@ class ApiTransactionConsultationController extends Controller
             return response()->json($result);
         }
         DB::commit();
+
+        //Send Autoresponse to Doctor Device
+        if(!empty($transactionConsultation['user'])){
+            if (!empty($request->header('user-agent-view'))) {
+                $useragent = $request->header('user-agent-view');
+            } else {
+                $useragent = $_SERVER['HTTP_USER_AGENT'];
+            }
+
+            if (stristr($useragent, 'iOS')) $useragent = 'iOS';
+            if (stristr($useragent, 'okhttp')) $useragent = 'Android';
+            if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
+
+            if (\Module::collections()->has('Autocrm')) {
+                $autocrm = app($this->autocrm)->SendAutoCRM(
+                    'Consultation Done',
+                    $transactionConsultation['user']['phone'],
+                    [
+                        'action' => 'consultationDone',
+                        'messages' => 'Consultation Done',
+                        'id_conversation' => $transactionConsultation['id_conversation'],
+                        'id_transaction' => $transactionConsultation['id_transaction'],
+                        'useragent' => $useragent,
+                        'now' => date('Y-m-d H:i:s'),
+                        'date_sent' => date('d-m-y H:i:s')
+                    ],
+                    $useragent,
+                    false,
+                    false
+                );
+            }
+        }
 
         $consultation = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])->first();
         $result = [
@@ -1210,27 +1289,56 @@ class ApiTransactionConsultationController extends Controller
             $result = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])
             ->update([
                 'consultation_status' => "completed",
-                'consultation_completed_at' => new DateTime
+                'completed_at' => new DateTime
             ]);
-
+    
             //update doctor status
             $getOngoingConsultation = TransactionConsultation::where('id_doctor', $doctor->id_doctor)->where('consultation_status', 'ongoing')->orWhere('consultation_status', 'done')->count();
             if($getLiveConsultation = 0) {
                 $doctor->update(['doctor_status' => "online"]);
                 $doctor->save();
-            }
-    
-            //push notifikasi
-
+            }    
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
-                'message' => 'Done Consultation Failed'
+                'message' => 'Completed Consultation Failed'
             ];
             DB::rollBack();
             return response()->json($result);
         }
         DB::commit();
+
+        //Send Autoresponse to User Device
+        if(!empty($transactionConsultation['user'])){
+            if (!empty($request->header('user-agent-view'))) {
+                $useragent = $request->header('user-agent-view');
+            } else {
+                $useragent = $_SERVER['HTTP_USER_AGENT'];
+            }
+
+            if (stristr($useragent, 'iOS')) $useragent = 'iOS';
+            if (stristr($useragent, 'okhttp')) $useragent = 'Android';
+            if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
+
+            if (\Module::collections()->has('Autocrm')) {
+                $autocrm = app($this->autocrm)->SendAutoCRM(
+                    'Consultation Done',
+                    $transactionConsultation['user']['phone'],
+                    [
+                        'action' => 'consultationComplete',
+                        'messages' => 'Consultation Complete',
+                        'id_conversation' => $transactionConsultation['id_conversation'],
+                        'id_transaction' => $transactionConsultation['id_transaction'],
+                        'useragent' => $useragent,
+                        'now' => date('Y-m-d H:i:s'),
+                        'date_sent' => date('d-m-y H:i:s')
+                    ],
+                    $useragent,
+                    false,
+                    false
+                );
+            }
+        }
 
         $consultation = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])->first();
         $result = [
@@ -2443,6 +2551,16 @@ class ApiTransactionConsultationController extends Controller
 
         $transaction = $transaction->toArray();
 
+        //get Transaction Consultation
+        $transactionConsultation = TransactionConsultation::with('doctor')->with('user')->where('id_transaction', $post['id_transaction'])->first();
+
+        if(empty($transactionConsultation)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaksi Konsultasi tidak ditemukan']
+            ]);
+        }
+
         //check contentType
         if($post['content_type'] == 'TEXT'){
             $content = [
@@ -2512,6 +2630,38 @@ class ApiTransactionConsultationController extends Controller
         ];
 
         $outputMessages = Infobip::sendRequest('Conversation', "POST", $url, $message);
+
+        //Send Autoresponse to Customer Device
+        if(!empty($transactionConsultation['user'])){
+            if (!empty($request->header('user-agent-view'))) {
+                $useragent = $request->header('user-agent-view');
+            } else {
+                $useragent = $_SERVER['HTTP_USER_AGENT'];
+            }
+
+            if (stristr($useragent, 'iOS')) $useragent = 'iOS';
+            if (stristr($useragent, 'okhttp')) $useragent = 'Android';
+            if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
+
+            if (\Module::collections()->has('Autocrm')) {
+                $autocrm = app($this->autocrm)->SendAutoCRM(
+                    'Received Chat',
+                    $transactionConsultation['user']['phone'],
+                    [
+                        'action' => 'userReceivedChat',
+                        'messages' => 'User Received New Chat',
+                        'id_conversation' => $transactionConsultation['id_conversation'],
+                        'id_transaction' => $transactionConsultation['id_transaction'],
+                        'useragent' => $useragent,
+                        'now' => date('Y-m-d H:i:s'),
+                        'date_sent' => date('d-m-y H:i:s')
+                    ],
+                    $useragent,
+                    false,
+                    false
+                );
+            }
+        }
 
         return response()->json(MyHelper::checkGet($outputMessages));
     }
@@ -2892,7 +3042,7 @@ class ApiTransactionConsultationController extends Controller
 
                 if (\Module::collections()->has('Autocrm')) {
                     $autocrm = app($this->autocrm)->SendAutoCRM(
-                        'Doctor Received New Chat',
+                        'Received Chat',
                         $selectedConsultation['doctor']['doctor_phone'],
                         [
                             'action' => 'doctorReceivedChat',
@@ -3175,5 +3325,43 @@ class ApiTransactionConsultationController extends Controller
         ]);
 
         return MyHelper::checkGet($createReschedule);
+    }
+
+    public function mergeProducts($items)
+    {
+        // create unique array
+        foreach ($items as $index => $val) {
+            $new_items = [];
+            $item_qtys = [];
+            $id_custom = [];
+
+            foreach ($val['items'] as $item){
+                $new_item = [
+                    'id_product' => $item['id_product'],
+                    'id_product_variant_group' => $item['id_product_variant_group']??null,
+                    'id_product_variant_group_wholesaler' => $item['id_product_variant_group_wholesaler']??null,
+                    'id_product_wholesaler' => $item['id_product_wholesaler']??null,
+                    'note' => $item['note']
+                ];
+                $pos = array_search($new_item, $new_items);
+                if($pos === false) {
+                    $new_items[] = $new_item;
+                    $item_qtys[] = $item['qty'];
+                    $id_custom[] = $item['id_custom']??0;
+                } else {
+                    $item_qtys[$pos] += $item['qty'];
+                }
+            }
+
+            // update qty
+            foreach ($new_items as $key => &$value) {
+                $value['qty'] = $item_qtys[$key];
+                $value['id_custom'] = $id_custom[$key];
+            }
+
+            $items[$index]['items'] = $new_items;
+        }
+
+        return $items;
     }
 }
