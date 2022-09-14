@@ -32,9 +32,9 @@ class ApiHomeController extends Controller
         $user = $request->user();
 
         //update Device Token
-        if ($request->json('device_id') && $request->json('device_token') && $request->json('device_type')) {
-            $this->updateDeviceUserGuest($request->json('device_id'), $request->json('device_token'), $request->json('device_type'));
-         }
+        //if ($request->json('device_id') && $request->json('device_token') && $request->json('device_type')) {
+        $device = $this->updateDeviceUserGuest($request->json('device_id'), $request->json('device_token'), $request->json('device_type'));
+         //}
 
         //get detail doctor
         $doctor = Doctor::with('specialists')->with('clinic')->where('id_doctor', $user['id_doctor'])->first();
@@ -121,7 +121,8 @@ class ApiHomeController extends Controller
         $result = [
             "data_doctor" => $data_doctor, 
             "data_consultation" => $data_consultation, 
-            "data_schedule" => $data_schedule
+            "data_schedule" => $data_schedule,
+            "device_token" => $device
         ];
 
         return response()->json([
@@ -215,6 +216,13 @@ class ApiHomeController extends Controller
                 'status' => 'success'
             ];
         }
+
+        $checkDevice = DoctorDevice::where('device_id', $device_id)
+								->where('device_token', $device_token)
+								->where('device_type', $device_type)
+                                ->first();
+
+        $result['check_device'] = $checkDevice;
 
         return $result;
     }
