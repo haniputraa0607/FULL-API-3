@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Models\Districts;
 use App\Http\Models\Subdistricts;
 use App\Http\Models\Transaction;
+use App\Http\Models\TransactionConsultation;
 use Illuminate\Http\Request;
 
 use App\Http\Models\Feature;
@@ -201,6 +202,7 @@ class Controller extends BaseController
     		'result' => [
                 'merchant_register_pending' => $this->merchant_register_pending(),
     			'transaction_pending' => $this->transaction_pending(),
+                'transaction_consultation_pending' => $this->transaction_consultation_pending()
     		],
     	];
     }
@@ -216,6 +218,15 @@ class Controller extends BaseController
 
     public function transaction_pending(){
         $total = Transaction::whereIn('transaction_status', ['Unpaid','Pending'])->count();
+        if($total==0){
+            $total = null;
+        }
+
+        return $total;
+    }
+
+    public function transaction_consultation_pending(){
+        $total = TransactionConsultation::whereNotIn('consultation_status', ['completed'])->count();
         if($total==0){
             $total = null;
         }
