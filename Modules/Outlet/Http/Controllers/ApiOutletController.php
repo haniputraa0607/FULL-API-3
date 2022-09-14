@@ -3735,7 +3735,7 @@ class ApiOutletController extends Controller
         $post = $request->json()->all();
 
         if(!empty($post['id_outlet'])){
-            $detail = Outlet::where('id_outlet', $post['id_outlet'])->first();
+            $detail = Outlet::where('outlet_status', 'Active')->where('id_outlet', $post['id_outlet'])->first();
 
             if(empty($detail)){
                 return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
