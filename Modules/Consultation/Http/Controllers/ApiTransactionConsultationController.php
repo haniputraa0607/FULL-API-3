@@ -1424,15 +1424,25 @@ class ApiTransactionConsultationController extends Controller
             $id = $post['id_doctor'];
         }
 
-        $transaction = Transaction::with('consultation');
+        if(!isset($post['consultation_status'])) {
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Status konsultasi tidak bisa kosong']
+            ]);
+        }
 
-        if(isset($post['consultation_status'])) {
+        $transaction = Transaction::with('consultation');
+        if($post['consultation_status'] == "soon" || $post['consultation_status'] == "ongoing"){
             $transaction = $transaction->whereHas('consultation', function($query) use ($post, $id){
                 $query->where('id_doctor', $id)->where('consultation_status', $post['consultation_status']);
             });
+        } else {
+            $transaction = $transaction->whereHas('consultation', function($query) use ($post, $id){
+                $query->where('id_doctor', $id)->whereIn('consultation_status', ['missed','done','completed']);
+            });
         }
 
-        $transaction = $transaction->get()->toArray();
+        $transaction = $transaction->get();
 
         if(empty($transaction)){
             return response()->json([
@@ -1440,6 +1450,8 @@ class ApiTransactionConsultationController extends Controller
                 'messages'  => ['History transaksi konsultasi tidak ditemukan']
             ]);
         }
+
+        $transaction = $transaction->toArray();
 
         $result = array();
         foreach($transaction as $key => $value) {
@@ -2731,7 +2743,7 @@ class ApiTransactionConsultationController extends Controller
         $transaction = $transaction->toArray();
 
         //if cek jadwal missed
-        //$checkMissed = $this->checkConsultationMissed($transaction);
+        $checkMissed = $this->checkConsultationMissed($transaction);
 
         //get Consultation
         $consultation = [
@@ -2839,10 +2851,14 @@ class ApiTransactionConsultationController extends Controller
     public function checkConsultationMissed($transaction) {
         
         //getCurrentTime
-        $currentTime = date('H:i:s');
+        $nowDateTime = Carbon::now();
 
-        if($transaction['consultation']['schedule_end_time'] < $currentTime) {
-            $updateConsultationStatus = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->update(['consultation_status' => "missed"]);
+        $scheduleDateTime = Carbon::parse($transaction['consultation']['schedule_date'].$transaction['consultation']['schedule_end_time']);
+
+        if (!$scheduleDateTime->gt($nowDateTime)) {
+            if($transaction['consultation']['consultation_status'] == "soon") {
+                $updateConsultationStatus = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->update(['consultation_status' => "missed"]);
+            }
         }
         
         return $transaction;
@@ -3066,7 +3082,7 @@ class ApiTransactionConsultationController extends Controller
                 }
             }
 
-            //send autoCRM notification to doctor
+            //send Autoresponse notification to doctor
             if(!empty($selectedConsultation['doctor'])){
                 if (!empty($request->header('user-agent-view'))) {
                     $useragent = $request->header('user-agent-view');
