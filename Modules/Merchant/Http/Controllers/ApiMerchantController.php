@@ -463,6 +463,7 @@ class ApiMerchantController extends Controller
 
         $detail = [
             'outlet' => [
+                'is_active' => ($detail['outlet_status'] == 'Active' ? true:false),
                 'is_closed' => (empty($detail['outlet_is_closed']) ?false:true),
                 'merchant_name' => $detail['outlet_name'],
                 'merchant_description' => $detail['outlet_description'],

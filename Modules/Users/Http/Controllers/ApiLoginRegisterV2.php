@@ -1528,14 +1528,23 @@ class ApiLoginRegisterV2 extends Controller
     }
 
     public function generateToken(){
-        $currentDate = date('Y-m-d H:i:s', strtotime(date('Y-m-d H:i:s') . ' +1 day'));
-        $checkSetting = Setting::where('key', 'valuefirst_token')->first();
+        $log = MyHelper::logCron('Generate Token Valuefirst');
+        try {
+            $currentDate = date('Y-m-d', strtotime(date('Y-m-d') . ' +1 day'));
+            $checkSetting = Setting::where('key', 'valuefirst_token')->first();
+            $statusUpdate = 0;
+            $date = (empty($checkSetting['value']) ? null : date('Y-m-d', strtotime($checkSetting['value'])));
 
-        if(empty($checkSetting['value_text']) || (!empty($checkSetting['value']) && strtotime($currentDate) >= strtotime($checkSetting['value']))){
-            $valueFirst = new ValueFirst();
-            $valueFirst->generateToken($checkSetting['value_text']);
+            if(empty($checkSetting['value_text']) || (!empty($checkSetting['value']) && strtotime($currentDate) >= strtotime($date))){
+                $valueFirst = new ValueFirst();
+                $valueFirst->generateToken($checkSetting['value_text']);
+                $statusUpdate = 1;
+            }
+
+            $log->success(['status_update' => $statusUpdate]);
+            return 'success';
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
         }
-
-        return 'success';
     }
 }
