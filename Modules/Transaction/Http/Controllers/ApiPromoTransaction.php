@@ -8,6 +8,7 @@ use Illuminate\Routing\Controller;
 use Modules\Brand\Entities\BrandOutlet;
 use Modules\PromoCampaign\Entities\PromoCampaign;
 use Modules\PromoCampaign\Entities\PromoCampaignBrand;
+use Modules\PromoCampaign\Entities\PromoCampaignDiscountBillProduct;
 use Modules\PromoCampaign\Entities\PromoCampaignOutlet;
 use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Entities\PromoCampaignProductDiscount;
@@ -198,6 +199,12 @@ class ApiPromoTransaction extends Controller
         $discDeliveryAll = 0;
         if (isset($userPromo['promo_campaign'])) {
             if(!empty($promoCampaign)){
+                //check product rule
+                $checkItemPromo = $this->checkRuleItem($data, $promoCampaign);
+                if(!$checkItemPromo['status']){
+                    $codeErr = $checkItemPromo['message'];
+                }
+
                 //check brand outlet
                 $allOutlet = array_unique(array_column($data['items'], 'id_outlet'));
                 $promoBrands = PromoCampaignBrand::where('id_promo_campaign', $promoCampaign->id_promo_campaign)->pluck('id_brand')->toArray();
@@ -226,7 +233,7 @@ class ApiPromoTransaction extends Controller
                     'promo_code' 		=> $sharedPromoTrx['promo_campaign']['promo_code'] ?? null,
                     'title' 			=> $applyCode['result']['title'] ?? null,
                     'text' 				=> $codeErr??[],
-                    'remove_text' 		=> 'Batalkan penggunaan <b>' . ($sharedPromoTrx['promo_campaign']['promo_title'] ?? null) . '</b>'
+                    'remove_text' 		=> 'Batalkan penggunaan ' . ($sharedPromoTrx['promo_campaign']['promo_title'] ?? null)
                 ];
 
                 if (!empty($codeErr)) {
@@ -393,7 +400,7 @@ class ApiPromoTransaction extends Controller
                 'promo_code' 		=> $sharedPromoTrx['promo_campaign']['promo_code'] ?? null,
                 'title' 			=> $applyCode['result']['title'] ?? null,
                 'text' 				=> $applyCode['result']['text'] ?? $codeErr,
-                'remove_text' 		=> 'Batalkan penggunaan <b>' . ($sharedPromoTrx['promo_campaign']['promo_title'] ?? null) . '</b>'
+                'remove_text' 		=> 'Batalkan penggunaan ' . ($sharedPromoTrx['promo_campaign']['promo_title'] ?? null)
             ];
 
             $resPromo = $applyCode['result'] ?? null;
@@ -418,6 +425,48 @@ class ApiPromoTransaction extends Controller
             $data['grandtotal_text'] = 'Rp '.number_format($data['grandtotal'],0,",",".");
         }
         return $data;
+    }
+
+    public function checkRuleItem($data, $promo){
+        //all id product in cart
+        $allIDItem = [];
+        foreach ($data['items'] as $dt){
+            $column = array_column($dt['items'], 'id_product');
+            $allIDItem = array_merge($allIDItem, $column);
+        }
+
+        switch ($promo->promo_type) {
+            case 'Product discount':
+                $productFromPromo 	= PromoCampaignProductDiscount::where('id_promo_campaign', $promo->id_promo_campaign)->pluck('id_product')->toArray();
+                break;
+
+            case 'Tier discount':
+                $productFromPromo 	= PromoCampaignTierDiscountProduct::where('id_promo_campaign', $promo->id_promo_campaign)->pluck('id_product')->toArray();
+                break;
+
+            case 'Discount bill':
+                $productFromPromo 	= PromoCampaignDiscountBillProduct::where('id_promo_campaign', $promo->id_promo_campaign)->pluck('id_product')->toArray();
+                break;
+
+            default:
+                $productFromPromo = [];
+                break;
+        }
+
+        $check = array_diff($productFromPromo, $allIDItem);
+        $statusCanUse = true;
+        if(!empty($productFromPromo) && $promo->product_rule == 'or' && count($check) == count($productFromPromo)){
+            $statusCanUse = false;
+            $msg = ['Promo dapat digunakan dengan membeli produk bertanda khusus'];
+        }elseif(!empty($productFromPromo) && $promo->product_rule == 'and' && !empty($check)){
+            $statusCanUse = false;
+            $msg = ['Promo dapat digunakan dengan membeli semua produk bertanda khusus'];
+        }
+
+        return [
+            'status' => $statusCanUse,
+            'message' => $msg??''
+        ];
     }
 
     public function applyDeals($id_deals_user, $data = [])
@@ -701,20 +750,7 @@ class ApiPromoTransaction extends Controller
         $promo_item 	= $data['items'];
         $discount 		= 0;
 
-        if (!$promo_rules->is_all_product) {
-            if ($promo[$promoSource.'_product_discount']->isEmpty()) {
-                return $this->failResponse('Produk tidak ditemukan');
-            }
-
-            $check_product = $pct->checkProductRule($promo, $promo_brand, $promo_product, $promo_item);
-
-            if (!$check_product && !empty($promo_brand)) {
-                $message = $pct->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.';
-                $message = MyHelper::simpleReplace($message,['product'=>$product_name]);
-                return $this->failResponse($message);
-            }
-
-        } else {
+        if ($promo_rules->is_all_product) {
             $promo_product = "*";
         }
 
@@ -854,21 +890,7 @@ class ApiPromoTransaction extends Controller
             }
         }
 
-        $minmax = ($min_qty != $max_qty ? "$min_qty sampai $max_qty" : $min_qty)." item";
-
-        if (!$promo_rules[0]->is_all_product) {
-            if ($promo[$promoSource.'_tier_discount_product']->isEmpty()) {
-                return $this->failResponse('Produk tidak ditemukan');
-            }
-
-            $check_product = $pct->checkProductRule($promo, $promo_brand, $promo_product, $promo_item);
-
-            if (!$check_product && !empty($promo_brand)) {
-                $message = $pct->getMessage('error_tier_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b> sebanyak %minmax%.';
-                $message = MyHelper::simpleReplace($message,['product'=>$product_name, 'minmax'=>$minmax]);
-                return $this->failResponse($message);
-            }
-        } else {
+        if ($promo_rules[0]->is_all_product) {
             $promo_product = "*";
         }
 
@@ -1095,18 +1117,7 @@ class ApiPromoTransaction extends Controller
         $discount 		= 0;
 
         $allProductStatus = $promo_rules->is_all_product??1;
-        if (!$allProductStatus) {
-            if ($promo[$promoSource.'_discount_bill_products']->isEmpty()) {
-                return $this->failResponse('Produk tidak ditemukan');
-            }
-
-            $check_product = $pct->checkProductRule($promo, $promo_brand, $promo_product, $promo_item);
-            if (!$check_product && empty($request['bundling_promo'])) {
-                $message = $pct->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.';
-                $message = MyHelper::simpleReplace($message,['product'=>$product_name]);
-                return $this->failResponse($message);
-            }
-        } else {
+        if ($allProductStatus) {
             $promo_product = "*";
         }
 
