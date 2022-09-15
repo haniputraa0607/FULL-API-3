@@ -65,45 +65,85 @@ class PushNotificationHelper{
     }
 
     // based on field Users Table
-    public static function searchDeviceToken($type, $value) {
+    public static function searchDeviceToken($type, $value, $recipient_type) {
         $result = [];
 
-        $devUser = User::leftjoin('user_devices', 'user_devices.id_user', '=', 'users.id')
-            ->select('id_device_user', 'users.id', 'user_devices.device_token', 'user_devices.device_id', 'phone');
+        if($recipient_type == 'doctor'){
+            $devUser = Doctor::leftjoin('doctor_devices', 'doctor_devices.id_doctor', '=', 'doctors.id_doctor')
+            ->select('id_doctor_device', 'doctors.id_doctor', 'doctor_devices.device_token', 'doctor_devices.device_id', 'doctor_phone');
 
-        if (is_array($type) && is_array($value)) {
-            for ($i=0; $i < count($type) ; $i++) { 
-                $devUser->where($type[$i], $value[$i]);
-            }
-        }
-        else {
-            if (is_array($value)) {
-                $devUser->whereIn('users.'.$type, $value);
+            if (is_array($type) && is_array($value)) {
+                for ($i=0; $i < count($type) ; $i++) { 
+                    $devUser->where($type[$i], $value[$i]);
+                }
             }
             else {
-                $devUser->where('users.'.$type, $value);
-            }
-        }
-
-        $devUser = $devUser->get()->toArray();
-        if (!empty($devUser)) {
-            // if phone
-            if ($type == "phone") {
                 if (is_array($value)) {
-                    $phone = implode(",", $value);
+                    $devUser->whereIn('doctors.doctor_'.$type, $value);
                 }
                 else {
-                    $phone = $value;
+                    $devUser->where('doctors.doctor_'.$type, $value);
                 }
-
-                $result['phone'] = $phone;
             }
 
-            $token             = array_values(array_filter(array_unique(array_pluck($devUser, 'device_token'))));
-            $id_user           = array_values(array_filter(array_unique(array_pluck($devUser, 'id_user'))));
-            $result['token']   = $token;
-            $result['id_user'] = $id_user;
-            $result['mphone']  = array_values(array_filter(array_unique(array_pluck($devUser, 'phone'))));
+            $devUser = $devUser->get()->toArray();
+            if (!empty($devUser)) {
+                // if phone
+                if ($type == "phone") {
+                    if (is_array($value)) {
+                        $phone = implode(",", $value);
+                    }
+                    else {
+                        $phone = $value;
+                    }
+
+                    $result['phone'] = $phone;
+                }
+
+                $token             = array_values(array_filter(array_unique(array_pluck($devUser, 'device_token'))));
+                $id_user           = array_values(array_filter(array_unique(array_pluck($devUser, 'id_doctor'))));
+                $result['token']   = $token;
+                $result['id_user'] = $id_user;
+                $result['mphone']  = array_values(array_filter(array_unique(array_pluck($devUser, 'doctor_phone'))));
+            }
+        } else { 
+            $devUser = User::leftjoin('user_devices', 'user_devices.id_user', '=', 'users.id')
+                ->select('id_device_user', 'users.id', 'user_devices.device_token', 'user_devices.device_id', 'phone');
+
+            if (is_array($type) && is_array($value)) {
+                for ($i=0; $i < count($type) ; $i++) { 
+                    $devUser->where($type[$i], $value[$i]);
+                }
+            }
+            else {
+                if (is_array($value)) {
+                    $devUser->whereIn('users.'.$type, $value);
+                }
+                else {
+                    $devUser->where('users.'.$type, $value);
+                }
+            }
+
+            $devUser = $devUser->get()->toArray();
+            if (!empty($devUser)) {
+                // if phone
+                if ($type == "phone") {
+                    if (is_array($value)) {
+                        $phone = implode(",", $value);
+                    }
+                    else {
+                        $phone = $value;
+                    }
+
+                    $result['phone'] = $phone;
+                }
+
+                $token             = array_values(array_filter(array_unique(array_pluck($devUser, 'device_token'))));
+                $id_user           = array_values(array_filter(array_unique(array_pluck($devUser, 'id_user'))));
+                $result['token']   = $token;
+                $result['id_user'] = $id_user;
+                $result['mphone']  = array_values(array_filter(array_unique(array_pluck($devUser, 'phone'))));
+            }
         }
 
         return $result;

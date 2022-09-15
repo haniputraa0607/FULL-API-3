@@ -1095,7 +1095,8 @@ class ApiTransactionConsultationController extends Controller
                     ],
                     $useragent,
                     false,
-                    false
+                    false,
+                    'doctor'
                 );
             }
         }
