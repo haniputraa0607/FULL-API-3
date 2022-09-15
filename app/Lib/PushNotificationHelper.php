@@ -20,6 +20,8 @@ use Guzzle\Http\EntityBody;
 use Guzzle\Http\Message\Request;
 use Guzzle\Http\Message\Response;
 use Guzzle\Http\Exception\ServerErrorResponseException;
+use Modules\Doctor\Entities\Doctor;
+use Modules\Doctor\Entities\DoctorDevice;
 
 use LaravelFCM\Message\OptionsBuilder;
 use LaravelFCM\Message\PayloadDataBuilder;
