@@ -1085,7 +1085,7 @@ class ApiTransactionConsultationController extends Controller
                     'Consultation Has Started',
                     $transactionConsultation['doctor']['doctor_phone'],
                     [
-                        'action' => 'consultationHasStarted',
+                        'action' => 'consultation_has_started',
                         'messages' => 'Consultation Has Started',
                         'id_conversation' => $transactionConsultation['id_conversation'],
                         'id_transaction' => $transactionConsultation['id_transaction'],
@@ -1214,7 +1214,7 @@ class ApiTransactionConsultationController extends Controller
                     'Consultation Done',
                     $transactionConsultation['user']['phone'],
                     [
-                        'action' => 'consultationDone',
+                        'action' => 'consultation_done',
                         'messages' => 'Consultation Done',
                         'id_conversation' => $transactionConsultation['id_conversation'],
                         'id_transaction' => $transactionConsultation['id_transaction'],
@@ -1322,11 +1322,11 @@ class ApiTransactionConsultationController extends Controller
 
             if (\Module::collections()->has('Autocrm')) {
                 $autocrm = app($this->autocrm)->SendAutoCRM(
-                    'Consultation Done',
+                    'Consultation Completed',
                     $transactionConsultation['user']['phone'],
                     [
-                        'action' => 'consultationComplete',
-                        'messages' => 'Consultation Complete',
+                        'action' => 'consultation_completed',
+                        'messages' => 'Consultation Completed',
                         'id_conversation' => $transactionConsultation['id_conversation'],
                         'id_transaction' => $transactionConsultation['id_transaction'],
                         'useragent' => $useragent,
@@ -2695,10 +2695,10 @@ class ApiTransactionConsultationController extends Controller
 
             if (\Module::collections()->has('Autocrm')) {
                 $autocrm = app($this->autocrm)->SendAutoCRM(
-                    'Received Chat',
+                    'User Received Chat',
                     $transactionConsultation['user']['phone'],
                     [
-                        'action' => 'userReceivedChat',
+                        'action' => 'user_received_chat',
                         'messages' => 'User Received New Chat',
                         'id_conversation' => $transactionConsultation['id_conversation'],
                         'id_transaction' => $transactionConsultation['id_transaction'],
@@ -3082,7 +3082,7 @@ class ApiTransactionConsultationController extends Controller
                 }
             }
 
-            //send Autoresponse notification to doctor
+            //send Autoresponse notification to Doctor Device
             if(!empty($selectedConsultation['doctor'])){
                 if (!empty($request->header('user-agent-view'))) {
                     $useragent = $request->header('user-agent-view');
@@ -3094,13 +3094,17 @@ class ApiTransactionConsultationController extends Controller
                 if (stristr($useragent, 'okhttp')) $useragent = 'Android';
                 if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
 
+                if($post['contentType'] == 'TEXT') $message = $payload['text'];
+                if($post['contentType'] == 'IMAGE') $message = 'Send an Image';
+                if($post['contentType'] == 'DOCUMENT') $message = 'Send an Document';
+
                 if (\Module::collections()->has('Autocrm')) {
                     $autocrm = app($this->autocrm)->SendAutoCRM(
-                        'Received Chat',
+                        'Doctor Received Chat',
                         $selectedConsultation['doctor']['doctor_phone'],
                         [
-                            'action' => 'doctorReceivedChat',
-                            'messages' => 'Doctor Received New Chat',
+                            'action' => 'doctor_received_chat',
+                            'messages' => $message,
                             'id_conversation' => $selectedConsultation['id_conversation'],
                             'id_transaction' => $selectedConsultation['id_transaction'],
                             'useragent' => $useragent,
