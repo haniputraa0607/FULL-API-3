@@ -229,6 +229,12 @@ class Kernel extends ConsoleKernel
         $schedule->command('backup:logdb --table=log_activities_apps --table=log_activities_be --table=log_activities_outlet_apps --table=log_activities_pos --table=log_activities_pos_transaction --truncate --chunk=10000')->dailyAt(config('app.env') == 'staging' ? '05:17' : '00:20');
 
         $schedule->command('backup:logdb --table=log_api_gosends --table=log_api_wehelpyou --table=log_backend_errors --table=log_call_outlet_apps --table=log_check_promo_code --table=log_crons --table=log_ipay88s --table=log_iris --table=log_midtrans --table=log_ovo_deals --table=log_ovos --table=log_shopee_pays --table=log_xendits --truncate')->dailyAt(config('app.env') == 'staging' ? '05:18' : '00:25');
+
+        /**
+         * AutoEnd Consultation
+         * run every minute
+         */
+        $schedule->call('Modules\Consultation\Http\Controllers\ApiTransactionConsultationController@cronAutoEndConsultation')->everyMinute();
     }
 
     /**
