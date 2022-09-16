@@ -45,6 +45,8 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix
         Route::post('/update', 'ApiTransactionConsultationController@submitRescheduleConsultation');
     });
 
+    Route::post('/message/date-time', 'ApiTransactionConsultationController@getDateAndRemainingTimeConsultation');
+
     Route::group(['prefix' => '/detail'], function () {
         Route::post('/infobip', 'ApiTransactionConsultationController@getDetailInfobip');
         Route::post('/summary', 'ApiTransactionConsultationController@getDetailSummary');
