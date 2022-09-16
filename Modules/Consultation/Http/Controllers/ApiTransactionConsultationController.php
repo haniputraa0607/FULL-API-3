@@ -1684,6 +1684,12 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
+        $outlet = [
+            "outlet_name" => $transaction->outlet->outlet_name,
+            "outlet_address" => $transaction->outlet->OutletFullAddress,
+            "outlet_referral_code" => '#'.$transaction->outlet->outlet_referral_code
+        ];
+
         //get recomendation
         $recomendations = TransactionConsultationRecomendation::with('product')->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->onlyDrug()->get();
 
@@ -1709,7 +1715,7 @@ class ApiTransactionConsultationController extends Controller
 
         $result = [
             'id_transaction_consultation' => $transactionConsultation['id_transaction_consultation'],
-            'outlet' => $transaction['outlet'],
+            'outlet' => $outlet,
             'items' => $items,
             'remaining_recipe_redemption' =>  ($transactionConsultation->recipe_redemption_limit - $transactionConsultation->recipe_redemption_counter)
         ];
@@ -2280,9 +2286,10 @@ class ApiTransactionConsultationController extends Controller
                 }
 
                 //get merchant name
+                $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
                 $merchant = Merchant::where('id_outlet', $product['id_outlet'])->first();
                 $list['data'][$key]['merchant_pic_name'] = $merchant->merchant_pic_name;
-                $list[$key]['outlet_name'] = $outlet->outlet_name;
+                $list['data'][$key]['outlet_name'] = $outlet->outlet_name;
 
                 //get ratings product
                 $list['data'][$key]['total_rating'] = round(UserRating::where('id_product', $product['id_product'])->average('rating_value') ?? 0, 1);
@@ -2309,6 +2316,7 @@ class ApiTransactionConsultationController extends Controller
                 }
 
                 //get merchant name
+                $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
                 $merchant = Merchant::where('id_outlet', $product['id_outlet'])->first();
                 $list[$key]['merchant_pic_name'] = $merchant->merchant_pic_name;
                 $list[$key]['outlet_name'] = $outlet->outlet_name;
@@ -2323,8 +2331,6 @@ class ApiTransactionConsultationController extends Controller
             }
             $list = array_values($list);
         }
-
-        //dd($list);
 
         return response()->json(MyHelper::checkGet($list));
     }

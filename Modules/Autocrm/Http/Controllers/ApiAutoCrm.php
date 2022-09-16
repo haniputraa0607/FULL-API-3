@@ -669,6 +669,65 @@ class ApiAutoCrm extends Controller
                             case 'home_service_history' :
                                 $dataOptional['type'] = $variables['mitra_get_order_clickto']??'home_service_history';
                                 break;
+							case 'doctor_home' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = 0;
+								break;
+							case 'consultation_list_online' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = 0;
+								break;
+							case 'consultation_list_scheduled' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = 0;
+							case 'consultation_list_completed' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = 0;
+							case 'doctor_profile' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = 0;
+							case 'doctor_profile_update_request' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = 0;
+							case 'doctor_rating_detail' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = 0;
+							case 'setting_detail' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = 0;
+							case 'doctor_privacy_policy' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = 0;
+							case 'doctor_faq' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = 0;
+							case 'doctor_contact_cs' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = 0;
+							case 'doctor_received_chat' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = $variables['id_transaction'];
+								break;
+							case 'consultation_detail' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = $variables['id_transaction'];
+								break;
+							case 'consultation_chat' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = $variables['id_transaction'];
+								break;
+							case 'consultation_summary' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = $variables['id_transaction'];
+								break;
+							case 'consultation_product_recomendation' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = $variables['id_transaction'];
+								break;
+							case 'consultation_prescription' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = $variables['id_transaction'];
+								break;
                             default :
                                 $dataOptional['type'] = 'Home';
                                 $dataOptional['id_reference'] = 0;

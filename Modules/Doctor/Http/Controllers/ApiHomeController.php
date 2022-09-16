@@ -33,7 +33,7 @@ class ApiHomeController extends Controller
 
         //update Device Token
         if ($request->json('device_id') && $request->json('device_token') && $request->json('device_type')) {
-            $device = $this->updateDeviceUserGuest($request->json('device_id'), $request->json('device_token'), $request->json('device_type'));
+            $device = $this->updateDeviceUserGuest($request->json('device_id'), $request->json('device_token'), $request->json('device_type'), $user);
         }
 
         //get detail doctor
@@ -121,8 +121,7 @@ class ApiHomeController extends Controller
         $result = [
             "data_doctor" => $data_doctor, 
             "data_consultation" => $data_consultation, 
-            "data_schedule" => $data_schedule,
-            "device_token" => $device
+            "data_schedule" => $data_schedule
         ];
 
         return response()->json([
@@ -191,7 +190,7 @@ class ApiHomeController extends Controller
         //
     }
 
-    public function updateDeviceUserGuest($device_id, $device_token, $device_type) {
+    public function updateDeviceUserGuest($device_id, $device_token, $device_type, $user) {
         $dataUpdate = [
             'device_id'    => $device_id,
             'device_token' => $device_token,
@@ -205,7 +204,8 @@ class ApiHomeController extends Controller
         if ($checkDevice == 0) {
             $update                = DoctorDevice::updateOrCreate(['device_id' => $device_id], [
                 'device_token'		=> $device_token,
-                'device_type'		=> $device_type
+                'device_type'		=> $device_type,
+                'id_doctor'         => $user->id_doctor
             ]);
             $result = [
                 'status' => 'updated'
