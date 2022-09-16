@@ -63,6 +63,7 @@ Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-
     Route::post('/consultation/complete', 'ApiTransactionConsultationController@completeConsultation');
     Route::post('/consultation/message/refresh', 'ApiTransactionConsultationController@refreshMessage');
     Route::post('/consultation/message/get', 'ApiTransactionConsultationController@getMessage');
+    Route::post('/consultation/message/get-new', 'ApiTransactionConsultationController@getNewMessage');
     Route::post('/consultation/message/create', 'ApiTransactionConsultationController@createMessage');
     Route::post('/consultation/message/date-time', 'ApiTransactionConsultationController@getDateAndRemainingTimeConsultation');
     Route::post('/consultation/detail/soon', 'ApiTransactionConsultationController@getSoonConsultationDetail');

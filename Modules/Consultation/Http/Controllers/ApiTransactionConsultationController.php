@@ -2545,6 +2545,31 @@ class ApiTransactionConsultationController extends Controller
         return response()->json(MyHelper::checkGet($message));
     }
 
+    public function getNewMessage(Request $request)
+    {
+        $post = $request->validate([
+            'direction' => 'required|string|in:forward,backward',
+            'id_transaction' => 'required',
+            'limit' => 'sometimes|nullable|numeric',
+            'last_id' => 'sometimes|nullable|numeric',
+        ]);
+
+        $limit = $request->limit ?: 10;
+
+        $transactionConsultation = TransactionConsultation::where('id_transaction', $post['id_transaction'])->first();
+
+        if(empty($transactionConsultation)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaksi Konsultasi tidak ditemukan']
+            ]);
+        }
+
+        $message = TransactionConsultationMessage::select('*', \DB::raw('0 as time'))->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->orderBy('created_at_infobip')->where('id_transaction_consultation_message', $request->direction == 'forward' ? '>' : '<', $request->last_id ?: 0)->get();
+
+        return response()->json(MyHelper::checkGet($message));
+    }
+
     public function createMessage(Request $request)
     {
         // $post = $request->json()->all();
