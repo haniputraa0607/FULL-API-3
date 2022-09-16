@@ -669,6 +669,22 @@ class ApiAutoCrm extends Controller
                             case 'home_service_history' :
                                 $dataOptional['type'] = $variables['mitra_get_order_clickto']??'home_service_history';
                                 break;
+							case 'doctor_received_chat' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = $variables['id_transaction'];
+								break;
+							case 'consultation_has_started' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = $variables['id_transaction'];
+								break;
+							case 'consultation_done' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = $variables['id_transaction'];
+								break;
+							case 'consultation_completed' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = $variables['id_transaction'];
+								break;
                             default :
                                 $dataOptional['type'] = 'Home';
                                 $dataOptional['id_reference'] = 0;
