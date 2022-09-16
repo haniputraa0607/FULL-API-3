@@ -673,15 +673,23 @@ class ApiAutoCrm extends Controller
 								$dataOptional['type'] = $crm['autocrm_push_clickto'];
 								$dataOptional['id_reference'] = $variables['id_transaction'];
 								break;
-							case 'consultation_has_started' :
+							case 'consultation_detail' :
 								$dataOptional['type'] = $crm['autocrm_push_clickto'];
 								$dataOptional['id_reference'] = $variables['id_transaction'];
 								break;
-							case 'consultation_done' :
+							case 'consultation_chat' :
 								$dataOptional['type'] = $crm['autocrm_push_clickto'];
 								$dataOptional['id_reference'] = $variables['id_transaction'];
 								break;
-							case 'consultation_completed' :
+							case 'consultation_summary' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = $variables['id_transaction'];
+								break;
+							case 'consultation_product_recomendation' :
+								$dataOptional['type'] = $crm['autocrm_push_clickto'];
+								$dataOptional['id_reference'] = $variables['id_transaction'];
+								break;
+							case 'consultation_prescription' :
 								$dataOptional['type'] = $crm['autocrm_push_clickto'];
 								$dataOptional['id_reference'] = $variables['id_transaction'];
 								break;
