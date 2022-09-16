@@ -121,8 +121,7 @@ class ApiHomeController extends Controller
         $result = [
             "data_doctor" => $data_doctor, 
             "data_consultation" => $data_consultation, 
-            "data_schedule" => $data_schedule,
-            "device_token" => $device
+            "data_schedule" => $data_schedule
         ];
 
         return response()->json([
