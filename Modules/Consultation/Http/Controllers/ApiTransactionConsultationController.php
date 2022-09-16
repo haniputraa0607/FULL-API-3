@@ -931,66 +931,75 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
-        //validasi doctor status
-        // if(strtolower($doctor['doctor_status']) != "online" && strtolower($doctor['doctor_status']) != "busy"){
-        //     return response()->json([
-        //         'status'    => 'fail',
-        //         'messages'  => ['Harap Tunggu Hingga Dokter Siap']
-        //     ]);
-        // }
+        if(env('BYPASS_VALIDASI') == true){
+            //validasi doctor status
+            if(strtolower($doctor['doctor_status']) != "online" && strtolower($doctor['doctor_status']) != "busy"){
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Harap Tunggu Hingga Dokter Siap']
+                ]);
+            }
 
-        //validasi starts early
-        // $currentTime = Carbon::now()->format('Y-m-d H:i:s');
-        // $getSettingEarly = Setting::where('key','consultation_starts_early')->first();
-        // $getSettingLate = Setting::where('key','consultation_starts_late')->first();
+            //validasi starts early
+            $currentTime = Carbon::now()->format('Y-m-d H:i:s');
+            $getSettingEarly = Setting::where('key','consultation_starts_early')->first();
+            $getSettingLate = Setting::where('key','consultation_starts_late')->first();
 
-        // if(!empty($getSettingEarly)){
-        //     $carbonScheduleStartTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
-        //     $carbonSettingEarly = Carbon::parse($getSettingEarly->value);
-        //     $getTime = $carbonScheduleStartTime->diff($carbonSettingEarly);
-        //     $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
-        //     $getStartTime->hour($getTime->h);
-        //     $getStartTime->minute($getTime->i);
-        //     $getStartTime->second($getTime->s);
-        // } else {
-        //     $getTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
-        //     $getStartTime = Carbon::parse($transaction['consultation']['schedule_date']);
-        //     $getStartTime->hour($getTime->h);
-        //     $getStartTime->minute($getTime->i);
-        //     $getStartTime->second($getTime->s);
-        // }
+            if(!empty($getSettingEarly)){
+                $carbonScheduleStartTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
+                $carbonSettingEarly = Carbon::parse($getSettingEarly->value);
+                $getTime = $carbonScheduleStartTime->diff($carbonSettingEarly);
+                $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
+                $getStartTime->hour($getTime->h);
+                $getStartTime->minute($getTime->i);
+                $getStartTime->second($getTime->s);
+            } else {
+                $getTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
+                $getStartTime = Carbon::parse($transaction['consultation']['schedule_date']);
+                $getStartTime->hour($getTime->h);
+                $getStartTime->minute($getTime->i);
+                $getStartTime->second($getTime->s);
+            }
 
-        // if($currentTime < $getStartTime) {
-        //     return response()->json([
-        //         'status'    => 'fail',
-        //         'messages'  => ['Anda belum bisa memulai konsultasi, silahkan cek kembali jadwal konsultasi']
-        //     ]);
-        // }
+            if($currentTime < $getStartTime) {
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Anda belum bisa memulai konsultasi, silahkan cek kembali jadwal konsultasi']
+                ]);
+            }
 
-        // if(!empty($getSettingLate)){
-        //     $carbonScheduleStartTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
-        //     $carbonSettingLate = Carbon::parse($getSettingLate->value);
-        //     $getTime = $carbonScheduleStartTime->sub($carbonSettingLate);
-        //     dd($getTime);
-        //     $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
-        //     $getStartTime->hour($getTime->h);
-        //     $getStartTime->minute($getTime->i);
-        //     $getStartTime->second($getTime->s);
-        // } else {
-        //     $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
-        //     $getStartTime->hour($getTime->h);
-        //     $getStartTime->minute($getTime->i);
-        //     $getStartTime->second($getTime->s);
-        // }
+            if(!empty($getSettingLate)){
+                $carbonScheduleStartTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
+                $carbonSettingLate = Carbon::parse($getSettingLate->value);
+                $getTime = $carbonScheduleStartTime->sub($carbonSettingLate);
+                dd($getTime);
+                $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
+                $getStartTime->hour($getTime->h);
+                $getStartTime->minute($getTime->i);
+                $getStartTime->second($getTime->s);
+            } else {
+                $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
+                $getStartTime->hour($getTime->h);
+                $getStartTime->minute($getTime->i);
+                $getStartTime->second($getTime->s);
+            }
 
-        // if($currentTime > $getLateTime) {
-        //     $updateStatus = $this->checkConsultationMissed($transaction);
+            if($currentTime > $getLateTime) {
+                $updateStatus = $this->checkConsultationMissed($transaction);
 
-        //     return response()->json([
-        //         'status'    => 'fail',
-        //         'messages'  => ['Anda tidak bisa memulai konsultasi, karena jadwal konsultasi sudah selesai']
-        //     ]);
-        // }
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Anda tidak bisa memulai konsultasi, karena jadwal konsultasi sudah selesai']
+                ]);
+            }
+
+            if($transactionConsultation['consultation_status'] != 'soon' || $transactionConsultation['consultation_status'] != 'ongoing'){
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Konsultasi Tidak bisa dimulai kembali']
+                ]);
+            }
+        }
 
         DB::beginTransaction();
         try {
@@ -1139,13 +1148,22 @@ class ApiTransactionConsultationController extends Controller
 
         $transaction = $transaction->toArray();
 
-        $transactionConsultation = $transaction->consultation->user;
+        $transactionConsultation = $transaction->consultation;
 
         if(empty($transactionConsultation)){
             return response()->json([
                 'status'    => 'fail',
                 'messages'  => ['Transaksi tidak ditemukan']
             ]);
+        }
+
+        if(env('BYPASS_VALIDASI') == true){
+            if($transactionConsultation['consultation_status'] != 'ongoing' || $transactionConsultation['consultation_status'] != 'done'){
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Konsultasi gagal tidak bisa ditandai selesai']
+                ]);
+            }
         }
 
         $transactionConsultation->load('user', 'doctor');
@@ -1273,6 +1291,15 @@ class ApiTransactionConsultationController extends Controller
                 'status'    => 'fail',
                 'messages'  => ['Transaksi tidak ditemukan']
             ]);
+        }
+
+        if(env('BYPASS_VALIDASI') == true){
+            if($transaction['consultation']['consultation_status'] != 'done'){
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Konsultasi Tidak bisa ditandai completed']
+                ]);
+            }
         }
 
         //get Doctor
@@ -1856,6 +1883,15 @@ class ApiTransactionConsultationController extends Controller
 
         //get Transaction
         $transaction = Transaction::where('id_transaction', $transactionConsultation['id_transaction'])->first();
+
+        if(env('BYPASS_VALIDASI') == true){
+            if($transactionConsultation['consultation_status'] != 'soon' || $transactionConsultation['consultation_status'] != 'ongoing'){
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Konsultasi Tidak bisa dimulai kembali']
+                ]);
+            }
+        }
 
         foreach($post['items'] as $key => $item){
             $post['items'][$key]['product_type'] = $post['type'];
@@ -3453,5 +3489,22 @@ class ApiTransactionConsultationController extends Controller
         }
 
         return $items;
+    }
+
+    public function cronAutoEndConsultation()
+    {
+        $log = MyHelper::logCron('Auto End Consultation');
+        try {
+            $now = Carbon::now();
+
+            $transactionConsultation = TransactionConsultation::where('consultation_status', "ongoing")->where('schedule_end_time', '<=', $now)->update([
+                'consultation_status' => 'done'
+            ]);
+            
+            $log->success(['status_update' => $statusUpdate]);
+            return 'success';
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+        }
     }
 }
