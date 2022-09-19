@@ -942,8 +942,8 @@ class ApiTransactionConsultationController extends Controller
 
             //validasi starts early
             $currentTime = Carbon::now()->format('Y-m-d H:i:s');
-            $getSettingEarly = Setting::where('key','consultation_starts_early')->first();
-            $getSettingLate = Setting::where('key','consultation_starts_late')->first();
+            $getSettingEarly = (int) Setting::where('key','consultation_starts_early')->first();
+            $getSettingLate = (int) Setting::where('key','consultation_starts_late')->first();
 
             if(!empty($getSettingEarly)){
                 $carbonScheduleStartTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
