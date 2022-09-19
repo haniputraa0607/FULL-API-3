@@ -947,7 +947,7 @@ class ApiTransactionConsultationController extends Controller
 
             if(!empty($getSettingEarly)){
                 $carbonScheduleStartTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
-                $carbonSettingEarly = Carbon::parse($getSettingEarly->value);
+                $carbonSettingEarly = Carbon::parse((int) $getSettingEarly->value);
                 $getTime = $carbonScheduleStartTime->diff($carbonSettingEarly);
                 $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
                 $getStartTime->hour($getTime->h);
@@ -970,7 +970,7 @@ class ApiTransactionConsultationController extends Controller
 
             if(!empty($getSettingLate)){
                 $carbonScheduleStartTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
-                $carbonSettingLate = Carbon::parse($getSettingLate->value);
+                $carbonSettingLate = Carbon::parse((int) $getSettingLate->value);
                 $getTime = $carbonScheduleStartTime->sub($carbonSettingLate);
                 dd($getTime);
                 $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
