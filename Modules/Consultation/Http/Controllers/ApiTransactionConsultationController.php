@@ -2601,7 +2601,7 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
-        $message = TransactionConsultationMessage::select('*', \DB::raw('0 as time'))->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->orderBy('created_at_infobip')->where('id_transaction_consultation_message', $request->direction == 'forward' ? '>' : '<', $request->last_id ?: 0)->get();
+        $message = TransactionConsultationMessage::select('*', \DB::raw('0 as time'))->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->orderBy('created_at_infobip')->where('id_transaction_consultation_message', $request->direction == 'forward' ? '>' : '<', $request->last_id ?: 0)->take($limit)->get();
 
         return response()->json(MyHelper::checkGet($message));
     }
