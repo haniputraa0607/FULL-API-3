@@ -27,6 +27,7 @@ class DailyTransactions extends Model
         'id_daily_transaction',
         'transaction_date',
         'id_transaction',
+        'id_transaction_group',
         'id_user',
         'id_outlet',
         'referral_code',

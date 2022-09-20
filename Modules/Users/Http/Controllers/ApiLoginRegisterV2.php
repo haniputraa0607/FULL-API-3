@@ -1529,6 +1529,7 @@ class ApiLoginRegisterV2 extends Controller
 
     public function generateToken(){
         $log = MyHelper::logCron('Generate Token Valuefirst');
+        $response = [];
         try {
             $currentDate = date('Y-m-d', strtotime(date('Y-m-d') . ' +1 day'));
             $checkSetting = Setting::where('key', 'valuefirst_token')->first();
@@ -1537,11 +1538,12 @@ class ApiLoginRegisterV2 extends Controller
 
             if(empty($checkSetting['value_text']) || (!empty($checkSetting['value']) && strtotime($currentDate) >= strtotime($date))){
                 $valueFirst = new ValueFirst();
-                $valueFirst->generateToken($checkSetting['value_text']);
+                $res = $valueFirst->generateToken($checkSetting['value_text']);
+                $response = $res;
                 $statusUpdate = 1;
             }
 
-            $log->success(['status_update' => $statusUpdate]);
+            $log->success(['status_update' => $statusUpdate, 'result' => $response]);
             return 'success';
         } catch (\Exception $e) {
             $log->fail($e->getMessage());
