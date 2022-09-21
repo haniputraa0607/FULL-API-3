@@ -706,8 +706,9 @@ class ApiTransactionConsultationController extends Controller
             $id = $post['id_user'];
         }
 
-        $transaction = Transaction::with('consultation')->where('transaction_payment_status', "Completed")->whereHas('consultation', function($query){
+        $transaction = Transaction::with('consultation')->where('id_user', $id)->where('transaction_payment_status', "Completed")->whereHas('consultation', function($query){
             $query->onlySoon();
+            $query->onlyOngoing();
         })->get();
 
         if(empty($transaction)){

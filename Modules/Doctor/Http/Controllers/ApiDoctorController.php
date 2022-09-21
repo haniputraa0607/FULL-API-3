@@ -19,6 +19,7 @@ use Modules\Doctor\Entities\SubmissionChangeDoctorData;
 use Modules\Doctor\Http\Requests\DoctorCreate;
 use Modules\UserRating\Entities\RatingOption;
 use Modules\UserRating\Entities\UserRating;
+use Modules\UserRating\Entities\UserRatingPhoto;
 use Validator;
 use Image;
 use DB;
@@ -138,7 +139,7 @@ class ApiDoctorController extends Controller
     {
         $post = $request->json()->all();
 
-        $doctor = Doctor::with('outlet')->with('specialists')->orderBy('created_at', 'DESC');
+        $doctors = Doctor::with('outlet')->with('specialists')->orderBy('created_at', 'DESC');
 
         // get filter by id_doctor_specialist_category
         // if(isset($post['id_doctor_specialist_category'])){
@@ -150,11 +151,11 @@ class ApiDoctorController extends Controller
         // }
 
         if(isset($post['id_outlet'])){
-            $doctor->where('id_outlet', $post['id_outlet']);
+            $doctors->where('id_outlet', $post['id_outlet']);
         }
 
         if(isset($post['search'])){
-            $doctor->where(function ($query) use ($post) {
+            $doctors->where(function ($query) use ($post) {
                 $query->WhereHas('specialists', function($query) use ($post) {
                             $query->where('doctor_specialist_name', 'LIKE' , '%'.$post['search'].'%');
                         })
@@ -163,12 +164,42 @@ class ApiDoctorController extends Controller
         }
 
         if($request['page']) {
-            $doctor = $doctor->paginate($post['length'] ?: 10);
+            $doctors = $doctors->paginate($post['length'] ?: 10);
         } else {
-            $doctor = $doctor->get()->toArray();
+            $doctors = $doctors->get()->toArray();
         }
 
-        return response()->json(['status'  => 'success', 'result' => $doctor]);
+        //add ratings to doctor
+        foreach($doctors as $key => $doctor){
+            $ratings = [];
+            $getRatings = UserRating::join('users', 'users.id', 'user_ratings.id_user')
+                        ->select('user_ratings.*', 'users.name', 'users.photo')
+                        ->where('id_doctor', $doctor['id_doctor'])->orderBy('user_ratings.created_at', 'desc')->limit(5)->get()->toArray();
+            foreach ($getRatings as $rating){
+                $getPhotos = UserRatingPhoto::where('id_user_rating', $rating['id_user_rating'])->get()->toArray();
+                $photos = [];
+                foreach ($getPhotos as $dt){
+                    $photos[] = $dt['url_user_rating_photo'];
+                }
+                $currentOption = explode(',', $rating['option_value']);
+                $ratings[] = [
+                    "date" => MyHelper::dateFormatInd($rating['created_at'], false, false, false),
+                    "user_name" => $rating['name'],
+                    "user_photo" => config('url.storage_url_api') . (!empty($rating['photo']) ? $rating['photo']: 'img/user_photo_default.png'),
+                    "rating_value" => $rating['rating_value'],
+                    "suggestion" => $rating['suggestion'],
+                    "option_value" => $currentOption,
+                    "photos" => $photos
+                ];
+            }
+            $doctors[$key]['ratings'] = $ratings;
+            $doctors[$key]['count_rating'] = UserRating::where('id_doctor', $doctor['id_doctor'])->count();
+    
+            //get ratings product
+            $doctors[$key]['total_rating'] = round(UserRating::where('id_doctor', $doctor['id_doctor'])->average('rating_value') ?? 0, 1);
+        }
+
+        return response()->json(['status'  => 'success', 'result' => $doctors]);
     }
 
     /**
