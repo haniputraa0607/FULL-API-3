@@ -708,7 +708,7 @@ class ApiTransactionConsultationController extends Controller
 
         $transaction = Transaction::with('consultation')->where('transaction_payment_status', "Completed")->whereHas('consultation', function($query){
             $query->onlySoon();
-        })->get();
+        })->where('id_user', $id)->get();
 
         if(empty($transaction)){
             return response()->json([
@@ -994,7 +994,7 @@ class ApiTransactionConsultationController extends Controller
                 ]);
             }
 
-            if($transactionConsultation['consultation_status'] != 'soon' || $transactionConsultation['consultation_status'] != 'ongoing'){
+            if($transactionConsultation['consultation_status'] != 'soon' && $transactionConsultation['consultation_status'] != 'ongoing'){
                 return response()->json([
                     'status'    => 'fail',
                     'messages'  => ['Konsultasi Tidak bisa dimulai kembali']
@@ -3313,29 +3313,35 @@ class ApiTransactionConsultationController extends Controller
         //get Date Chat
         $message = TransactionConsultationMessage::where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->first();
 
-        $dateId = Carbon::parse($message['created_at_infobip'])->locale('id');
+        $messageDate = MyHelper::indonesian_date_v2($message['created_at_infobip'] ?? time(), 'l, d F Y');
+        $remaining = strtotime($transactionConsultation['schedule_end_time']) - time();
+        if ($remaining < 0) $remaining = 0;
+        $remaining -= 7 * 3600;
+        $remainingTime = date('H:i:s', $remaining);
 
-        $dateId->settings(['formatFunction' => 'translatedFormat']);
+        // $dateId = Carbon::parse($message['created_at_infobip'])->locale('id');
 
-        $dayId = $dateId->format('l');
+        // $dateId->settings(['formatFunction' => 'translatedFormat']);
 
-        $chatDateId = MyHelper::dateOnlyFormatInd($message['created_at_infobip']);
+        // $dayId = $dateId->format('l');
 
-        //get Remaining Time
-        $nowTime = Carbon::now();
+        // $chatDateId = MyHelper::dateOnlyFormatInd($message['created_at_infobip']);
 
-        $finishTime = Carbon::parse($transactionConsultation['schedule_end_time']);
+        // //get Remaining Time
+        // $nowTime = Carbon::now();
 
-        if ($finishTime->gt($nowTime)) { 
-            $remainingDuration = $finishTime->diffInSeconds($nowTime);
+        // $finishTime = Carbon::parse($transactionConsultation['schedule_end_time']);
 
-            $remainingTime = gmdate('H:i:s', $remainingDuration);
-        } else {
-            $remainingTime = date('H:i:s', strtotime('00:00:00'));
-        }
+        // if ($finishTime->gt($nowTime)) { 
+        //     $remainingDuration = $finishTime->diffInSeconds($nowTime);
+
+        //     $remainingTime = gmdate('H:i:s', $remainingDuration);
+        // } else {
+        //     $remainingTime = date('H:i:s', strtotime('00:00:00'));
+        // }
 
         $result = [
-            'message_date' => $dayId.', '.$chatDateId,
+            'message_date' => $messageDate, //$dayId.', '.$chatDateId,
             'remaining_time' => $remainingTime
         ];
 
