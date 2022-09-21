@@ -218,9 +218,9 @@ class Kernel extends ConsoleKernel
 
         /**
          * generate token value first
-         * run every day at 06:00
+         * run every day at 06:30
          */
-        $schedule->call('Modules\Users\Http\Controllers\ApiLoginRegisterV2@generateToken')->dailyAt('06:00');
+        $schedule->call('Modules\Users\Http\Controllers\ApiLoginRegisterV2@generateToken')->dailyAt('06:30');
 
 
         /**

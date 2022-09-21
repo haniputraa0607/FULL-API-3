@@ -514,21 +514,19 @@ class ApiOnlineTransaction extends Controller
                     'messages'  => ['Insert Shipment Transaction Failed']
                 ]);
             }
+        }
 
-            $dataDailyTrx = [
-                'id_transaction'    => $insertTransaction['id_transaction'],
-                'id_outlet'         => $outlet['id_outlet'],
-                'transaction_date'  => date('Y-m-d H:i:s', strtotime($insertTransaction['transaction_date'])),
-                'id_user'           => $user['id']
-            ];
-            $createDailyTrx = DailyTransactions::create($dataDailyTrx);
-            if (!$createDailyTrx) {
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Failed create daily transaction']
-                ]);
-            }
+        $createDailyTrx = DailyTransactions::create([
+            'id_transaction_group' => $insertTransactionGroup['id_transaction_group'],
+            'transaction_date'  => date('Y-m-d H:i:s', strtotime($insertTransactionGroup['transaction_group_date'])),
+            'id_user'           => $user['id']
+        ]);
+        if (!$createDailyTrx) {
+            DB::rollback();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Failed create daily transaction']
+            ]);
         }
 
         $trxGroup = TransactionGroup::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->first();
