@@ -969,14 +969,15 @@ class ApiTransactionConsultationController extends Controller
             }
 
             if(!empty($getSettingLate)){
-                $carbonScheduleStartTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
-                $carbonSettingLate = Carbon::parse((int) $getSettingLate->value);
-                $getTime = $carbonScheduleStartTime->sub($carbonSettingLate);
-                dd($getTime);
-                $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
-                $getStartTime->hour($getTime->h);
-                $getStartTime->minute($getTime->i);
-                $getStartTime->second($getTime->s);
+                $getStartTime = date('Y-m-d H:i:s', strtotime("{$transaction['consultation']['schedule_date']} {$transaction['consultation']['schedule_start_time']} +{$getSettingLate->value}minutes" ));
+                // $carbonScheduleStartTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
+                // $carbonSettingLate = Carbon::parse((int) $getSettingLate->value);
+                // $getTime = $carbonScheduleStartTime->sub($carbonSettingLate);
+                // dd($getTime);
+                // $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
+                // $getStartTime->hour($getTime->h);
+                // $getStartTime->minute($getTime->i);
+                // $getStartTime->second($getTime->s);
             } else {
                 $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
                 $getStartTime->hour($getTime->h);
@@ -984,7 +985,7 @@ class ApiTransactionConsultationController extends Controller
                 $getStartTime->second($getTime->s);
             }
 
-            if($currentTime > $getLateTime) {
+            if($currentTime > $getStartTime) {
                 $updateStatus = $this->checkConsultationMissed($transaction);
 
                 return response()->json([
