@@ -935,30 +935,6 @@ class ApiProductController extends Controller
                 ->where('product_detail.id_outlet','=',$post['id_outlet'])->with('category')->select('products.*');
         }
 
-		if(isset($post['rule'])){
-            foreach ($post['rule'] as $rule){
-                if($rule[0] !== 'all_product'){
-                	if ($rule[1] == 'like' && isset($rule[2])) {
-                		$rule[2] = '%' . $rule[2] . '%';
-                	}
-
-                    if($post['operator'] == 'or'){
-                        if(isset($rule[2])){
-                            $product->orWhere('products.'.$rule[0], $rule[1],$rule[2]);
-                        }else{
-                            $product->orWhere('products.'.$rule[0], $rule[1]);
-                        }
-                    }else{
-                        if(isset($rule[2])){
-                            $product->where('products.'.$rule[0], $rule[1],$rule[2]);
-                        }else{
-                            $product->where('products.'.$rule[0], $rule[1]);
-                        }
-                    }
-                }
-            }
-        }
-
         if (isset($post['id_product'])) {
             $product->with('category')->where('products.id_product', $post['id_product'])->with(['brands']);
         }
@@ -984,6 +960,45 @@ class ApiProductController extends Controller
 
         if(isset($post['admin_list'])){
             $product = $product->where('product_type', 'product')->with(['brands', 'outlet']);
+        }
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'id_outlet'){
+                            $product->whereHas('outlet',function($query) use ($row){
+                                $query->where('id_outlet',$row['operator']);
+                            });
+                        }elseif($row['operator'] == '=' || empty($row['parameter'])){
+                            $product->where($row['subject'], (empty($row['parameter']) ? $row['operator'] : $row['parameter']));
+                        }else{
+                            $product->where($row['subject'], 'like', '%'.$row['parameter'].'%');
+                        }
+                    }
+                }
+            }else{
+                $product->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'id_outlet'){
+                                $row->orWhereHas('outlet',function($query) use ($row){
+                                    $query->where('id_outlet',$row['operator']);
+                                });
+                            }elseif($row['operator'] == '=' || empty($row['parameter'])){
+                                $subquery->orWhere($row['subject'], (empty($row['parameter']) ? $row['operator'] : $row['parameter']));
+                            }else{
+                                $subquery->orWhere($row['subject'], 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+                    }
+                });
+            }
         }
 
         if(isset($post['pagination'])){
@@ -1771,7 +1786,8 @@ class ApiProductController extends Controller
             ];
         }
         // update visibility
-        $update = ProductDetail::find($post['id_product'])->update(['product_detail_visibility'=>$post['product_visibility']]);
+        Product::where('id_product', $post['id_product'])->update(['product_visibility'=>$post['product_visibility']]);
+        $update = ProductDetail::where('id_product', $post['id_product'])->update(['product_detail_visibility'=>$post['product_visibility']]);
 
         return response()->json(MyHelper::checkUpdate($update));
     }
