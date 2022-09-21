@@ -2025,7 +2025,7 @@ class ApiTransactionConsultationController extends Controller
         }
 
         //get doctor Schedule
-        $schedule = app($this->doctor)->getScheduleDoctor($doctor['id_doctor']);
+        $schedule = app($this->doctor)->getAvailableScheduleDoctor($doctor['id_doctor']);
         $selectedScheduleTime = null;
 
         //get selected Schedule time
@@ -3289,7 +3289,7 @@ class ApiTransactionConsultationController extends Controller
     {
         $post = $request->json()->all();
 
-        $selectedScheduleTime = app($this->doctor)->getScheduleTime($post['id_doctor_schedule']);
+        $selectedScheduleTime = app($this->doctor)->getAvailableScheduleTime($post['id_doctor_schedule'], $post['date']);
 
         return response()->json(['status'  => 'success', 'result' => $selectedScheduleTime]);
     }
