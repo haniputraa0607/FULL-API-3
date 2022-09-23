@@ -150,6 +150,10 @@ class ApiVersion extends Controller
         $ios = Version::select('app_type', 'app_version', 'rules')->orderBy('app_version', 'desc')->where('app_type', 'IOS')->get()->toArray();
         $outlet = Version::select('app_type', 'app_version', 'rules')->orderBy('app_version', 'desc')->where('app_type', 'OutletApp')->get()->toArray();
 
+        //get doctor app version
+        $doctorAndroid = Version::select('app_type', 'app_version', 'rules')->orderBy('app_version', 'desc')->where('app_type', 'DoctorAndroid')->get()->toArray();
+        $doctorIos = Version::select('app_type', 'app_version', 'rules')->orderBy('app_version', 'desc')->where('app_type', 'DoctorIOS')->get()->toArray();
+
         $result = [];
         foreach ($display as $data) {
             $result[$data['key']] = $data['value'];
@@ -158,6 +162,8 @@ class ApiVersion extends Controller
         $result['Android'] = $android;
         $result['IOS'] = $ios;
         $result['OutletApp'] = $outlet;
+        $result['DoctorAndroid'] = $doctorAndroid;
+        $result['DoctorIOS'] = $doctorIos;
 
         return response()->json(MyHelper::checkGet($result));
     }

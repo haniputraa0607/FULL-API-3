@@ -717,13 +717,17 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
-        $transaction = $transaction->toArray();
+        // $transaction = $transaction->toArray();
+
 
         $now = new DateTime();
 
         $result = array();
         foreach($transaction as $key => $value) {
             $doctor = Doctor::where('id_doctor', $value['consultation']['id_doctor'])->first()->toArray();
+
+            //get Consultation
+            $transactionConsultation = $value->consultation;
 
             //get diff datetime
             $now = new DateTime();
@@ -751,6 +755,41 @@ class ApiTransactionConsultationController extends Controller
                 $diff_date = "missed";
             }
 
+            //badge setting
+            switch ($transactionConsultation['consultation_status']) {
+                case "soon":
+                    $badgeText = $diff_date;
+                    $badgeColor = '#E6E6E6';
+                    $badgeTextColor = '#000000';
+                    break;
+                case "ongoing":
+                    $badgeText = 'Sedang Berjalan';
+                    $badgeColor = '#9c1f60';
+                    $badgeTextColor = '#eeeeee';
+                    break;
+                case "done":
+                    $badgeText = 'Menunggu Hasil';
+                    $badgeColor = '#CECECE';
+                    $badgeTextColor = '#000000';
+                    break;
+                case "completed":
+                    $badgeText = 'Selesai';
+                    $badgeColor = '#CECECE';
+                    $badgeTextColor = '#000000';
+                    break;
+                case "canceled":
+                    $badgeText = 'Dibatalkan';
+                    $badgeColor = '#F6AE2D';
+                    $badgeTextColor = '#000000';
+                    break;
+                default:
+                    $badgeText = 'Terlewati';
+                    $badgeColor = '#F6AE2D';
+                    $badgeTextColor = '#000000';
+                    break;
+            }
+
+
             $result[$key]['id_transaction'] = $value['id_transaction'];
             $result[$key]['id_doctor'] = $value['consultation']['id_doctor'];
             $result[$key]['doctor_name'] = $doctor['doctor_name'];
@@ -758,6 +797,9 @@ class ApiTransactionConsultationController extends Controller
             $result[$key]['url_doctor_photo'] = $doctor['url_doctor_photo'];
             $result[$key]['schedule_date'] = $value['consultation']['schedule_date_human_formatted'];
             $result[$key]['diff_date'] = $diff_date;
+            $result[$key]['badge_text'] = $badgeText;
+            $result[$key]['badge_color'] = $badgeColor;
+            $result[$key]['badge_text_color'] = $badgeTextColor;
         }
 
         return response()->json([
@@ -801,6 +843,8 @@ class ApiTransactionConsultationController extends Controller
         }
 
         $transaction_consultation_chat_url = optional($transaction->consultation)->consultation_chat_url;
+        //get Consultation
+        $transactionConsultation = $transaction->consultation;
         $transaction = $transaction->toArray();
 
         //get Doctor
@@ -829,10 +873,19 @@ class ApiTransactionConsultationController extends Controller
         //get diff datetime
         $now = new DateTime();
         $schedule_date_start_time = $transaction['consultation']['schedule_date'] .' '. $transaction['consultation']['schedule_start_time'];
+
+        //if get setting early
+        $getSettingEarly = Setting::where('key','consultation_starts_early')->first();
+        $schedule_date_start_time = date('d-m-Y H:i:s', strtotime($schedule_date_start_time." -$getSettingEarly->value minutes"));
+
         $schedule_date_start_time =new DateTime($schedule_date_start_time);
+
         $schedule_date_end_time = $transaction['consultation']['schedule_date'] .' '. $transaction['consultation']['schedule_end_time'];
         $schedule_date_end_time =new DateTime($schedule_date_end_time);
         $diff_date = null;
+
+        //dd($schedule_date_start_time < $now && $schedule_date_end_time > $now);
+        //dd($transactionConsultation['consultation_status']);
 
         //logic schedule diff date
         if($schedule_date_start_time > $now && $schedule_date_end_time > $now) {
@@ -848,18 +901,51 @@ class ApiTransactionConsultationController extends Controller
             }
         } elseif($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
             $diff_date = "now";
+            $transaction['consultation']['consultation_status'] = 'now';
+        } elseif($transactionConsultation['consultation_status'] == 'done' || $transactionConsultation['consultation_status'] == 'completed') {
+            $diff_date = "completed";
         } else {
             $diff_date = "missed";
-        }
+        } 
 
         $transactionDateId = Carbon::parse($transaction['transaction_date'])->locale('id');
 		$transactionDateId->settings(['formatFunction' => 'translatedFormat']);
 		$transactionDate = $transactionDateId->format('d F Y');
 
+        //badge setting
+        //dd($transactionConsultation['consultation_status']);
+        switch ($transactionConsultation['consultation_status']) {
+            case "soon":
+                $consultationDescription = 'Konsultasi anda akan dimulai dalam '.$diff_date;
+                $canGoDetail = 'false';
+                $buttonDetail = "Mulai Konsultasi";
+                break;
+            case "ongoing":
+                $canGoDetail = 'true';
+                $buttonDetail = "Lanjutkan Konsultasi";
+                break;
+            case "done":
+                $canGoDetail = 'true';
+                $buttonDetail = "Lihat Riwayat";
+                break;
+            case "completed":
+                $canGoDetail = 'true';
+                $buttonDetail = "Lihat Riwayat";
+                break;
+            case "canceled":
+                $canGoDetail = 'false';
+                $consultationDescription = 'Konsultasi telah berhasil dibatalkan';
+                break;
+            default:
+                $canGoDetail = 'false';
+                $consultationDescription = 'Konsultasi anda terlewati silahkan hubungi admin untuk info lebih lanjut';
+                break;
+        }
+
         $result = [
             'id_transaction' => $transaction['id_transaction'],
             'transaction_date_time' => $transactionDate." ".date('H:i', strtotime($transaction['created_at'])),
-            'transaction_consultation_status' => $transaction['consultation']['consultation_status'],
+            'transaction_consultation_status' => $transactionConsultation['consultation_status'],
             'id_transaction_consultation' => $transaction['consultation']['id_transaction_consultation'],
             'doctor' => $detailDoctor->getData()->result,
             'user' => $detailUser,
@@ -868,6 +954,9 @@ class ApiTransactionConsultationController extends Controller
             'schedule_day' => $day,
             'diff_date' => $diff_date,
             'transaction_consultation_chat_url' => $transaction_consultation_chat_url,
+            'can_go_detail' => isset($canGoDetail) ? $canGoDetail : null,
+            'button_detail' => isset($buttonDetail) ? $buttonDetail : null,
+            'consultation_text_description' => isset($consultationDescription) ? $consultationDescription : null
         ];
 
         return response()->json([
@@ -1400,13 +1489,15 @@ class ApiTransactionConsultationController extends Controller
         if(isset($post['filter'])) {
             $id_doctor = Doctor::where('doctor_name', 'like', '%'.$post['filter'].'%')->pluck('id_doctor')->toArray();
             $transaction = $transaction->whereHas('consultation', function($query) use ($post, $id_doctor){
-                $query->where(function($query2) use ($post, $id_doctor){
+                $query->whereIn('consultation_status',['done', 'completed', 'missed'])->where(function($query2) use ($post, $id_doctor){
                     $query2->orWhere('schedule_date', 'like', '%'.$post['filter'].'%');
                     $query2->orWhereIn('id_doctor', $id_doctor);
                 });
             });
         } else {
-            $transaction = $transaction->whereHas('consultation');
+            $transaction = $transaction->whereHas('consultation', function($query) {
+                $query->whereIn('consultation_status',['done', 'completed', 'missed']);
+            });
         }
 
         $transaction = $transaction->latest()->get();
@@ -1418,11 +1509,47 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
-        $transaction = $transaction->toArray();
+        //$transaction = $transaction->toArray();
 
         $result = array();
         foreach($transaction as $key => $value) {
             $doctor = Doctor::with('outlet')->with('specialists')->where('id_doctor', $value['consultation']['id_doctor'])->first();
+
+            $transactionConsultation = $value->consultation;
+
+            //badge setting
+            switch ($transactionConsultation['consultation_status']) {
+                case "soon":
+                    $badgeText = $diff_date;
+                    $badgeColor = '#E6E6E6';
+                    $badgeTextColor = '#000000';
+                    break;
+                case "ongoing":
+                    $badgeText = 'Sedang Berjalan';
+                    $badgeColor = '#9c1f60';
+                    $badgeTextColor = '#eeeeee';
+                    break;
+                case "done":
+                    $badgeText = 'Menunggu Hasil';
+                    $badgeColor = '#CECECE';
+                    $badgeTextColor = '#000000';
+                    break;
+                case "completed":
+                    $badgeText = 'Selesai';
+                    $badgeColor = '#CECECE';
+                    $badgeTextColor = '#000000';
+                    break;
+                case "canceled":
+                    $badgeText = 'Dibatalkan';
+                    $badgeColor = '#F6AE2D';
+                    $badgeTextColor = '#000000';
+                    break;
+                default:
+                    $badgeText = 'Terlewati';
+                    $badgeColor = '#F6AE2D';
+                    $badgeTextColor = '#000000';
+                    break;
+            }
 
             $result[$key]['id_transaction'] = $value['id_transaction'] ?? null;
             $result[$key]['doctor_name'] = $doctor['doctor_name'] ?? null;
@@ -1431,6 +1558,9 @@ class ApiTransactionConsultationController extends Controller
             $result[$key]['specialists'] = $doctor['specialists'] ?? null;
             $result[$key]['schedule_date'] = $value['consultation']['schedule_date_human_short_formatted'] ?? null; 
             $result[$key]['consultation_status'] = $value['consultation']['consultation_status'] ?? null;
+            $result[$key]['badge_text'] = $badgeText;
+            $result[$key]['badge_color'] = $badgeColor;
+            $result[$key]['badge_text_color'] = $badgeTextColor;
         }
 
         return response()->json([
@@ -1460,7 +1590,7 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
-        $transaction = Transaction::with('consultation');
+        $transaction = Transaction::with('consultation')->where('transaction_payment_status','Completed');
         if($post['consultation_status'] == "soon" || $post['consultation_status'] == "ongoing"){
             $transaction = $transaction->whereHas('consultation', function($query) use ($post, $id){
                 $query->where('id_doctor', $id)->where('consultation_status', $post['consultation_status']);
@@ -1480,11 +1610,13 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
-        $transaction = $transaction->toArray();
+        //$transaction = $transaction->toArray();
 
         $result = array();
         foreach($transaction as $key => $value) {
             $user = User::where('id', $value['consultation']['id_user'])->first()->toArray();
+
+            $transactionConsultation = $value->consultation;
 
             //get diff datetime
             $now = new DateTime();
@@ -1508,8 +1640,44 @@ class ApiTransactionConsultationController extends Controller
                 }
             } elseif($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
                 $diff_date = "now";
+            } elseif($value['consultation']['consultation_status'] == 'done') {
+                $diff_date = "completed";
             } else {
                 $diff_date = "missed";
+            }
+
+            //badge setting
+            switch ($transactionConsultation['consultation_status']) {
+                case "soon":
+                    $badgeText = $diff_date;
+                    $badgeColor = '#E6E6E6';
+                    $badgeTextColor = '#000000';
+                    break;
+                case "ongoing":
+                    $badgeText = 'Sedang Berjalan';
+                    $badgeColor = '#9c1f60';
+                    $badgeTextColor = '#eeeeee';
+                    break;
+                case "done":
+                    $badgeText = 'Menunggu Hasil';
+                    $badgeColor = '#CECECE';
+                    $badgeTextColor = '#000000';
+                    break;
+                case "completed":
+                    $badgeText = 'Selesai';
+                    $badgeColor = '#CECECE';
+                    $badgeTextColor = '#000000';
+                    break;
+                case "canceled":
+                    $badgeText = 'Dibatalkan';
+                    $badgeColor = '#F6AE2D';
+                    $badgeTextColor = '#000000';
+                    break;
+                default:
+                    $badgeText = 'Terlewati';
+                    $badgeColor = '#F6AE2D';
+                    $badgeTextColor = '#000000';
+                    break;
             }
 
             //set response result
@@ -1521,6 +1689,9 @@ class ApiTransactionConsultationController extends Controller
             $result[$key]['schedule_date'] = $value['consultation']['schedule_date_human_formatted'];
             $result[$key]['schedule_start_time'] = $value['consultation']['schedule_start_time_formatted'];
             $result[$key]['diff_date'] = $diff_date;
+            $result[$key]['badge_text'] = $badgeText;
+            $result[$key]['badge_color'] = $badgeColor;
+            $result[$key]['badge_text_color'] = $badgeTextColor;
         }
 
         return response()->json([
@@ -3314,10 +3485,14 @@ class ApiTransactionConsultationController extends Controller
         $message = TransactionConsultationMessage::where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->first();
 
         $messageDate = MyHelper::indonesian_date_v2($message['created_at_infobip'] ?? time(), 'l, d F Y');
-        $remaining = strtotime($transactionConsultation['schedule_end_time']) - time();
-        if ($remaining < 0) $remaining = 0;
-        $remaining -= 7 * 3600;
-        $remainingTime = date('H:i:s', $remaining);
+        if($transactionConsultation['consultation_status'] == 'ongoing'){
+            $remaining = strtotime($transactionConsultation['schedule_end_time']) - time();
+            if ($remaining < 0) $remaining = 0;
+            $remaining -= 7 * 3600;
+            $remainingTime = date('H:i:s', $remaining);
+        } else {
+            $remainingTime = date('H:i:s', strtotime('00:00:00'));
+        }
 
         // $dateId = Carbon::parse($message['created_at_infobip'])->locale('id');
 
@@ -3507,6 +3682,23 @@ class ApiTransactionConsultationController extends Controller
             $transactionConsultation = TransactionConsultation::where('consultation_status', "ongoing")->where('schedule_end_time', '<=', $now)->update([
                 'consultation_status' => 'done'
             ]);
+
+            //update to missed consultation
+            //get setting late
+            $getSettingLate = Setting::where('key','consultation_starts_late')->first();
+            $endConsultation = $transaction['consultation']['schedule_date'].$transaction['consultation']['schedule_end_time'];
+
+            if(!empty($getSettingLate)){
+                $endConsultation = date('Y-m-d H:i:s', strtotime("{$transaction['consultation']['schedule_date']} {$transaction['consultation']['schedule_start_time']} +{$getSettingLate->value}minutes" ));
+            }
+
+            $scheduleDateTime = Carbon::parse($endConsultation);
+            if (!$scheduleDateTime->gt($now)) {
+                if($transaction['consultation']['consultation_status'] == "soon") {
+                    $updateConsultationStatus = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->update(['consultation_status' => "missed"]);
+                }
+            }
+           
             
             $log->success(['status_update' => $statusUpdate]);
             return 'success';
