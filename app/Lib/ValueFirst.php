@@ -180,7 +180,7 @@ class ValueFirst
             if(isset($output['token']) && !empty($output['token'])){
                 Setting::updateOrCreate(['key' => 'valuefirst_token'], ['value' => $output['expiryDate'], 'value_text' => $output['token']]);
             }
-            return $output['token']??null;
+            return $output;
         }catch (\GuzzleHttp\Exception\RequestException $e) {
             try{
                 if($e->getResponse()){

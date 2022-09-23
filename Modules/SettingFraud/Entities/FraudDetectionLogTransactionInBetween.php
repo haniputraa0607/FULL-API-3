@@ -11,7 +11,6 @@ class FraudDetectionLogTransactionInBetween extends Model
 
 	protected $fillable = [
 		'id_user',
-		'id_transaction',
         'status',
 		'fraud_setting_parameter_detail',
         'fraud_setting_parameter_detail_time',

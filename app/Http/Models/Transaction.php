@@ -8,7 +8,6 @@
 namespace App\Http\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Jobs\FraudJob;
 use App\Lib\MyHelper;
 use Modules\Merchant\Entities\Merchant;
 use Modules\Transaction\Entities\TransactionGroup;
@@ -343,22 +342,6 @@ class Transaction extends Model
 			case 'Consultation':
 				$this->consultation->triggerPaymentCompleted($data);
 				break;
-    	}
-
-    	// check fraud
-    	if ($this->user) {
-	    	$this->user->update([
-	            'count_transaction_day' => $this->user->count_transaction_day + 1,
-	            'count_transaction_week' => $this->user->count_transaction_week + 1,
-	    	]);
-
-	    	$config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->value('is_active');
-
-	        if($config_fraud_use_queue == 1){
-	            FraudJob::dispatch($this->user, $this, 'transaction')->onConnection('fraudqueue');
-	        }else {
-	            $checkFraud = app('\Modules\SettingFraud\Http\Controllers\ApiFraud')->checkFraudTrxOnline($this->user, $this);
-	        }
     	}
 
     	// send notification

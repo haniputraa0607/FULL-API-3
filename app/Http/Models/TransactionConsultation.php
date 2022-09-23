@@ -73,7 +73,7 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
 
 	public function scopeOnlySoon($query)
     {
-        return $query->where('consultation_status', "soon");
+        return $query->whereIn('consultation_status', ["soon", 'ongoing']);
     }
 
 	public function scopeOnlyOngoing($query)

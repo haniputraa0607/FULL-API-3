@@ -4,6 +4,8 @@ namespace Modules\SettingFraud\Http\Controllers;
 
 use App\Http\Models\Configs;
 use App\Http\Models\DailyTransactions;
+use App\Http\Models\LogPoint;
+use App\Http\Models\Outlet;
 use Modules\PromoCampaign\Entities\PromoCampaign;
 use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
@@ -39,6 +41,7 @@ use App\Lib\apiwha;
 use DateTime;
 use App\Lib\SendMail as Mail;
 use Modules\SettingFraud\Entities\LogCheckPromoCode;
+use Modules\Transaction\Entities\TransactionGroup;
 use function GuzzleHttp\Psr7\str;
 use File;
 use Storage;
@@ -89,260 +92,63 @@ class ApiFraud extends Controller
     }
 
     function checkFraudTrxOnline($user, $trx){
-        $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status','Active')->first();
-        $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status','Active')->first();
+        $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status', 'Active')->first();
+        $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status', 'Active')->first();
 
-        $autoSuspend = 0;
-        $forwardAdmin = 0;
-        $countUser = 0;
-        $stringUserList = '';
-        $stringTransactionDay = '';
-        $stringTransactionWeek = '';
-        $areaOutlet = '';
-        $dateTime = $trx['transaction_date'];
-
-        //========= This process to check if user have fraud ============//
-        $geCountTrxDay = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-            ->where('transactions.id_user', $trx['id_user'])
-            ->whereRaw('DATE(transactions.transaction_date) = "' . date('Y-m-d', strtotime($trx['transaction_date'])) . '"')
-            ->where('transactions.transaction_payment_status', 'Completed')
-            ->whereNull('transaction_pickups.reject_at')
+        $geCountTrxDay = TransactionGroup::where('id_user', $user['id'])
+            ->whereRaw('DATE(transaction_group_date) = "' . date('Y-m-d', strtotime($trx['transaction_group_date'])) . '"')
+            ->where('transaction_payment_status', 'Completed')
+            ->where('id_transaction_group', '<', $trx['id_transaction_group'])
             ->count();
 
-        $currentWeekNumber = date('W', strtotime($trx['transaction_date']));
-        $currentYear = date('Y', strtotime($trx['transaction_date']));
+        $currentWeekNumber = date('W', strtotime($trx['transaction_group_date']));
+        $currentYear = date('Y', strtotime($trx['transaction_group_date']));
         $dto = new DateTime();
         $dto->setISODate($currentYear, $currentWeekNumber);
         $start = $dto->format('Y-m-d');
         $dto->modify('+6 days');
         $end = $dto->format('Y-m-d');
 
-        $geCountTrxWeek = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-            ->where('id_user', $trx['id_user'])
-            ->where('transactions.transaction_payment_status', 'Completed')
-            ->whereNull('transaction_pickups.reject_at')
-            ->whereRaw('Date(transactions.transaction_date) BETWEEN "' . $start . '" AND "' . $end . '"')
+        $geCountTrxWeek = TransactionGroup::where('id_user', $user['id'])
+            ->where('transaction_payment_status', 'Completed')
+            ->whereRaw('Date(transaction_group_date) BETWEEN "' . $start . '" AND "' . $end . '"')
+            ->where('id_transaction_group', '<', $trx['id_transaction_group'])
             ->count();
 
         $countTrxDay = $geCountTrxDay + 1;
         $countTrxWeek = $geCountTrxWeek + 1;
-        //================================ End ================================//
 
-       if($fraudTrxDay){
+        if ($countTrxDay > $fraudTrxDay['parameter_detail'] && $fraudTrxDay) {
+            $dataUpdate = [
+                'fraud_flag' => 'transaction day',
+                'transaction_point_earned' => NULL,
+                'transaction_cashback_earned' => NULL,
+            ];
+        } elseif ($countTrxWeek > $fraudTrxWeek['parameter_detail'] && $fraudTrxWeek) {
+            $dataUpdate = [
+                'fraud_flag' => 'transaction week',
+                'transaction_point_earned' => NULL,
+                'transaction_cashback_earned' => NULL,
+            ];
+        } else {
+            $dataUpdate = [
+                'fraud_flag' => NULL
+            ];
 
-            if($countTrxDay > (int)$fraudTrxDay['parameter_detail']){
-                $getFraudLogDay = FraudDetectionLogTransactionDay::whereRaw("DATE(fraud_detection_date) = '".date('Y-m-d', strtotime($dateTime))."'")->where('id_user', $user['id'])
-                    ->where('status', 'Active')->first();
+            app('Modules\Membership\Http\Controllers\ApiMembership')->calculateMembership($user['phone']);
+        }
 
-                if($getFraudLogDay){
-                    FraudDetectionLogTransactionDay::where('id_user',$user['id'])->where('id_fraud_detection_log_transaction_day',$getFraudLogDay['id_fraud_detection_log_transaction_day'])->update([
-                        'count_transaction_day' => $countTrxDay,
-                        'updated_at' => date('Y-m-d H:i:s')
-                    ]);
-                }else{
-                    $createLog = FraudDetectionLogTransactionDay::create([
-                        'id_user' => $user['id'],
-                        'count_transaction_day' => $countTrxDay,
-                        'fraud_detection_date'=> date('Y-m-d H:i:s', strtotime($dateTime)),
-                        'fraud_setting_parameter_detail' => $fraudTrxDay['parameter_detail'],
-                        'fraud_setting_forward_admin_status' => $fraudTrxDay['forward_admin_status'],
-                        'fraud_setting_auto_suspend_status' => $fraudTrxDay['auto_suspend_status'],
-                        'fraud_setting_auto_suspend_value' => $fraudTrxDay['auto_suspend_value'],
-                        'fraud_setting_auto_suspend_time_period' => $fraudTrxDay['suspend_time_period']
-                    ]);
-                }
+        Transaction::where('id_transaction_group', $trx['id_transaction_group'])->update($dataUpdate);
 
-                if($fraudTrxDay['forward_admin_status'] == '1'){
-                    $forwardAdmin = 1;
+        if ($dataUpdate['fraud_flag'] == 'transaction day' && $fraudTrxDay) {
+            $this->checkFraud($fraudTrxDay, $user, null, $countTrxDay, $countTrxWeek, $trx['transaction_group_date'], 0, $trx['transaction_receipt_number']);
+        }
 
-                    $detailTransaction = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                        ->where('transactions.transaction_payment_status','Completed')
-                        ->whereNull('transaction_pickups.reject_at')
-                        ->whereRaw('Date(transaction_date) = "'.date('Y-m-d', strtotime($dateTime)).'"')
-                        ->where('id_user',$user['id'])
-                        ->orderBy('transactions.created_at','desc')
-                        ->select('transactions.*',
-                            DB::raw('(CASE
-                                WHEN (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" ) 
-                                is NULL THEN NULL
-                                ELSE (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" )
-                            END) as balance'))
-                        ->with(['outlet_city','user'])->get()->toArray();
+        if ($dataUpdate['fraud_flag'] == 'transaction week'  && $fraudTrxWeek) {
+            $this->checkFraud($fraudTrxWeek, $user, null, $countTrxDay, $countTrxWeek, $trx['transaction_group_date'], 0, $trx['transaction_receipt_number']);
+        }
 
-                    $stringTransactionDay = '';
-
-                    if(count($detailTransaction) > 0){
-                        $areaOutlet = $detailTransaction[0]['outlet_city']['city_name'];
-                        $stringTransactionDay .= '<table id="table-fraud-list">';
-                        $stringTransactionDay .= '<tr>';
-                        $stringTransactionDay .= '<td>Status Fraud</td>';
-                        $stringTransactionDay .= '<td>Receipt Number</td>';
-                        $stringTransactionDay .= '<td>Outlet</td>';
-                        $stringTransactionDay .= '<td>Transaction Date</td>';
-                        $stringTransactionDay .= '<td>Transaction Time</td>';
-                        $stringTransactionDay .= '<td>Point</td>';
-                        $stringTransactionDay .= '<td>Nominal</td>';
-                        $stringTransactionDay .= '<tr>';
-                        foreach ($detailTransaction as $val){
-                            if($val['fraud_flag'] != null){
-                                if($val['fraud_flag'] == 'transaction day'){
-                                    $status = '<span style="color: red">Fraud <strong>Day</strong></span>';
-                                }else{
-                                    $status = '<span style="color: red">Fraud <strong>Week</strong></span>';
-                                }
-                            }else{
-                                $status = '<span style="color: green">No Fraud</span>';
-                            }
-                            $stringTransactionDay .= '<tr>';
-                            $stringTransactionDay .= '<td>'.$status.'</td>';
-                            $stringTransactionDay .= '<td>'.$val['transaction_receipt_number'].'</td>';
-                            $stringTransactionDay .= '<td>'.$val['outlet_city']['outlet_name'].'</td>';
-                            $stringTransactionDay .= '<td>'.date('d F Y',strtotime($val['transaction_date'])).'</td>';
-                            $stringTransactionDay .= '<td>'.date('H:i',strtotime($val['transaction_date'])).'</td>';
-                            $stringTransactionDay .= '<td>'.($val['balance'] != NULL ? $val['balance'] : '0').'</td>';
-                            $stringTransactionDay .= '<td>'.number_format($val['transaction_grandtotal']).'</td>';
-                            $stringTransactionDay .= '<tr>';
-                        }
-                        $stringTransactionDay .= '</table>';
-                    }
-                }
-
-                $timeperiod = $fraudTrxDay['auto_suspend_time_period'] - 1;
-                $getLogWithTimePeriod = FraudDetectionLogTransactionDay::whereRaw("DATE(fraud_detection_date) BETWEEN '".date('Y-m-d',strtotime('-'.$timeperiod.' days',strtotime($dateTime)))."' AND '".date('Y-m-d', strtotime($dateTime))."'")
-                    ->where('id_user', $user['id'])
-                    ->where('status', 'Active')->get();
-                $countLog = count($getLogWithTimePeriod);
-
-                if($countLog > (int)$fraudTrxDay['auto_suspend_value']){
-
-                    if($fraudTrxDay['auto_suspend_status'] == '1'){
-                        $autoSuspend = 1;
-                    }
-                }
-            }
-
-           $contentEmail = ['transaction_count_day' => (string)$countTrxDay, 'transaction_count_week' => (string)$countTrxWeek, 'device_id' => [], 'device_type' => [] , 'count_account' => (string)$countUser, 'user_list' => $stringUserList, 'fraud_date' => date('d F Y'), 'fraud_time' => date('H:i'), 'list_transaction_day' => $stringTransactionDay, 'list_transaction_week' => $stringTransactionWeek, 'receipt_number' => $trx['transaction_receipt_number'], 'area_outlet' => $areaOutlet, 'point' => 0];
-           $sendFraud = $this->SendFraudDetection($fraudTrxDay['id_fraud_setting'], $user, null, null, null, $autoSuspend, $forwardAdmin, $contentEmail);
-       }
-
-       if($fraudTrxWeek) {
-           if ($countTrxWeek > (int)$fraudTrxWeek['parameter_detail']) {
-               $WeekNumber = date('W', strtotime($dateTime));
-               $year = date('Y', strtotime($dateTime));
-               $getFraudLogWeek = FraudDetectionLogTransactionWeek::where('fraud_detection_week', $WeekNumber)
-                   ->where('fraud_detection_year', $year)
-                   ->where('id_user', $user['id'])
-                   ->where('status', 'Active')->first();
-
-               if ($getFraudLogWeek) {
-                   FraudDetectionLogTransactionWeek::where('id_user', $user['id'])->where('id_fraud_detection_log_transaction_week', $getFraudLogWeek['id_fraud_detection_log_transaction_week'])->update([
-                       'count_transaction_week' => $countTrxWeek,
-                       'updated_at' => date('Y-m-d H:i:s')
-                   ]);
-
-               } else {
-                   FraudDetectionLogTransactionWeek::create([
-                       'id_user' => $user['id'],
-                       'fraud_detection_year' => $year,
-                       'fraud_detection_week' => $WeekNumber,
-                       'count_transaction_week' => $countTrxWeek,
-                       'fraud_setting_parameter_detail' => $fraudTrxWeek['parameter_detail'],
-                       'fraud_setting_forward_admin_status' => $fraudTrxWeek['forward_admin_status'],
-                       'fraud_setting_auto_suspend_status' => $fraudTrxWeek['auto_suspend_status'],
-                       'fraud_setting_auto_suspend_value' => $fraudTrxWeek['auto_suspend_value'],
-                       'fraud_setting_auto_suspend_time_period' => $fraudTrxWeek['suspend_time_period']
-                   ]);
-               }
-
-               if ($fraudTrxWeek['forward_admin_status'] == '1') {
-                   $forwardAdmin = 1;
-
-                   $year = $year;
-                   $week = $WeekNumber;
-                   $dto = new DateTime();
-                   $dto->setISODate($year, $week);
-                   $start = $dto->format('Y-m-d');
-                   $dto->modify('+6 days');
-                   $end = $dto->format('Y-m-d');
-                   $detailTransaction = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                       ->where('transactions.transaction_payment_status', 'Completed')
-                       ->whereNull('transaction_pickups.reject_at')
-                       ->where('id_user', $user['id'])
-                       ->whereRaw('Date(transaction_date) BETWEEN "' . $start . '" AND "' . $end . '"')
-                       ->orderBy('transactions.created_at', 'desc')
-                       ->select('transactions.*',
-                           DB::raw('(CASE
-                                WHEN (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" ) 
-                                is NULL THEN NULL
-                                ELSE (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" )
-                            END) as balance'))
-                       ->with(['outlet_city', 'user'])->get();
-
-                   $stringTransactionWeek = '';
-
-                   if (count($detailTransaction) > 0) {
-                       $areaOutlet = $detailTransaction[0]['outlet_city']['city_name'];
-                       $stringTransactionWeek .= '<table id="table-fraud-list">';
-                       $stringTransactionWeek .= '<tr>';
-                       $stringTransactionWeek .= '<td>Status Fraud</td>';
-                       $stringTransactionWeek .= '<td>Receipt Number</td>';
-                       $stringTransactionWeek .= '<td>Outlet</td>';
-                       $stringTransactionWeek .= '<td>Transaction Date</td>';
-                       $stringTransactionWeek .= '<td>Transaction Time</td>';
-                       $stringTransactionWeek .= '<td>Point</td>';
-                       $stringTransactionWeek .= '<td>Nominal</td>';
-                       $stringTransactionWeek .= '<tr>';
-                       foreach ($detailTransaction as $val) {
-                           if ($val['fraud_flag'] != null) {
-                               if ($val['fraud_flag'] == 'transaction day') {
-                                   $status = '<span style="color: red">Fraud <strong>Day</strong></span>';
-                               } else {
-                                   $status = '<span style="color: red">Fraud <strong>Week</strong></span>';
-                               }
-                           } else {
-                               $status = '<span style="color: green">No Fraud</span>';
-                           }
-                           $stringTransactionWeek .= '<tr>';
-                           $stringTransactionWeek .= '<td>' . $status . '</td>';
-                           $stringTransactionWeek .= '<td>' . $val['transaction_receipt_number'] . '</td>';
-                           $stringTransactionWeek .= '<td>' . $val['outlet']['outlet_name'] . '</td>';
-                           $stringTransactionWeek .= '<td>' . date('d F Y', strtotime($val['transaction_date'])) . '</td>';
-                           $stringTransactionWeek .= '<td>' . date('H:i', strtotime($val['transaction_date'])) . '</td>';
-                           $stringTransactionWeek .= '<td>' . ($val['balance'] != NULL ? $val['balance'] : '0') . '</td>';
-                           $stringTransactionWeek .= '<td>' . number_format($val['transaction_grandtotal']) . '</td>';
-                           $stringTransactionWeek .= '<tr>';
-                       }
-                       $stringTransactionWeek .= '</table>';
-                   }
-               }
-
-               $totalWeekPeriod = $fraudTrxWeek['auto_suspend_time_period'] / 7;
-               if ((int)$totalWeekPeriod == 0) {
-                   $weekStart = $WeekNumber - 1;
-               } else {
-                   $weekStart = $WeekNumber - $totalWeekPeriod;
-               }
-
-               $getLogWithTimePeriod = FraudDetectionLogTransactionWeek::whereRaw("fraud_detection_week BETWEEN " . (int)$weekStart . ' AND ' . $WeekNumber)
-                   ->where('fraud_detection_year', $year)
-                   ->where('id_user', $user['id'])
-                   ->where('status', 'Active')->get();
-               $countLog = count($getLogWithTimePeriod);
-               if ($countLog > (int)$fraudTrxWeek['auto_suspend_value']) {
-                   if ($fraudTrxWeek['auto_suspend_status'] == '1') {
-                       $autoSuspend = 1;
-                   }
-               }
-           }
-
-           $contentEmail = ['transaction_count_day' => (string)$countTrxDay, 'transaction_count_week' => (string)$countTrxWeek, 'device_id' => [], 'device_type' => [] , 'count_account' => (string)$countUser, 'user_list' => $stringUserList, 'fraud_date' => date('d F Y'), 'fraud_time' => date('H:i'), 'list_transaction_day' => $stringTransactionDay, 'list_transaction_week' => $stringTransactionWeek, 'receipt_number' => $trx['transaction_receipt_number'], 'area_outlet' => $areaOutlet, 'point' => 0];
-           $sendFraud = $this->SendFraudDetection($fraudTrxWeek['id_fraud_setting'], $user, null, null, null, $autoSuspend, $forwardAdmin, $contentEmail);
-       }
-
-        if(isset($sendFraud))
-            return $sendFraud;
-        else
-            return false;
+        return true;
     }
 
     function checkFraud($fraudSetting, $user, $device = null, $countTrxDay, $countTrxWeek, $dateTime, $deleteToken, $trxId = null,
@@ -464,32 +270,27 @@ class ApiFraud extends Controller
                 if($fraudSetting['forward_admin_status'] == '1'){
                     $forwardAdmin = 1;
 
-                    $detailTransaction = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                        ->where('transactions.transaction_payment_status','Completed')
-                        ->whereNull('transaction_pickups.reject_at')
-                        ->whereRaw('Date(transaction_date) = "'.date('Y-m-d', strtotime($dateTime)).'"')
-                        ->where('id_user',$user['id'])
+                    $idGroups = TransactionGroup::where('transaction_payment_status','Completed')
+                        ->whereRaw('Date(transaction_group_date) = "'.date('Y-m-d', strtotime($dateTime)).'"')
+                        ->where('id_user',$user['id'])->pluck('id_transaction_group')->toArray();
+
+                    $detailTransaction = Transaction::join('transaction_groups', 'transaction_groups.id_transaction_group', 'transactions.id_transaction_group')
                         ->orderBy('transactions.created_at','desc')
-                        ->select('transactions.*',
-                            DB::raw('(CASE
-                                WHEN (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" ) 
-                                is NULL THEN NULL
-                                ELSE (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" )
-                            END) as balance'))
-                        ->with(['outlet_city','user'])->get()->toArray();
+                        ->select('transactions.*', 'transaction_groups.transaction_receipt_number as receipt_number_group')
+                        ->with(['outlet_city','user'])->whereIn('transactions.id_transaction_group', $idGroups)->get()->toArray();
 
                     $stringTransactionDay = '';
 
-                    if(count($detailTransaction) > 0){
+                    if(!empty($detailTransaction)){
                         $areaOutlet = $detailTransaction[0]['outlet_city']['city_name'];
                         $stringTransactionDay .= '<table id="table-fraud-list">';
                         $stringTransactionDay .= '<tr>';
                         $stringTransactionDay .= '<td>Status Fraud</td>';
+                        $stringTransactionDay .= '<td>Receipt Number Group</td>';
                         $stringTransactionDay .= '<td>Receipt Number</td>';
                         $stringTransactionDay .= '<td>Outlet</td>';
                         $stringTransactionDay .= '<td>Transaction Date</td>';
                         $stringTransactionDay .= '<td>Transaction Time</td>';
-                        $stringTransactionDay .= '<td>Point</td>';
                         $stringTransactionDay .= '<td>Nominal</td>';
                         $stringTransactionDay .= '<tr>';
                         foreach ($detailTransaction as $val){
@@ -504,11 +305,11 @@ class ApiFraud extends Controller
                             }
                             $stringTransactionDay .= '<tr>';
                             $stringTransactionDay .= '<td>'.$status.'</td>';
+                            $stringTransactionDay .= '<td>'.$val['receipt_number_group'].'</td>';
                             $stringTransactionDay .= '<td>'.$val['transaction_receipt_number'].'</td>';
                             $stringTransactionDay .= '<td>'.$val['outlet_city']['outlet_name'].'</td>';
                             $stringTransactionDay .= '<td>'.date('d F Y',strtotime($val['transaction_date'])).'</td>';
                             $stringTransactionDay .= '<td>'.date('H:i',strtotime($val['transaction_date'])).'</td>';
-                            $stringTransactionDay .= '<td>'.($val['balance'] != NULL ? $val['balance'] : '0').'</td>';
                             $stringTransactionDay .= '<td>'.number_format($val['transaction_grandtotal']).'</td>';
                             $stringTransactionDay .= '<tr>';
                         }
@@ -568,32 +369,28 @@ class ApiFraud extends Controller
                     $start = $dto->format('Y-m-d');
                     $dto->modify('+6 days');
                     $end = $dto->format('Y-m-d');
-                    $detailTransaction = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                        ->where('transactions.transaction_payment_status','Completed')
-                        ->whereNull('transaction_pickups.reject_at')
-                        ->where('id_user',$user['id'])
-                        ->whereRaw('Date(transaction_date) BETWEEN "'.$start.'" AND "'.$end.'"')
+
+                    $idGroups = TransactionGroup::where('transaction_payment_status','Completed')
+                        ->whereRaw('Date(transaction_group_date) BETWEEN "'.$start.'" AND "'.$end.'"')
+                        ->where('id_user',$user['id'])->pluck('id_transaction_group')->toArray();
+
+                    $detailTransaction = Transaction::join('transaction_groups', 'transaction_groups.id_transaction_group', 'transactions.id_transaction_group')
                         ->orderBy('transactions.created_at','desc')
-                        ->select('transactions.*',
-                            DB::raw('(CASE
-                                WHEN (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" ) 
-                                is NULL THEN NULL
-                                ELSE (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" )
-                            END) as balance'))
-                        ->with(['outlet_city','user'])->get();
+                        ->select('transactions.*', 'transaction_groups.transaction_receipt_number as receipt_number_group')
+                        ->with(['outlet_city','user'])->whereIn('transactions.id_transaction_group', $idGroups)->get()->toArray();
 
                     $stringTransactionWeek = '';
 
-                    if(count($detailTransaction) > 0){
+                    if(!empty($detailTransaction)){
                         $areaOutlet = $detailTransaction[0]['outlet_city']['city_name'];
                         $stringTransactionWeek .= '<table id="table-fraud-list">';
                         $stringTransactionWeek .= '<tr>';
                         $stringTransactionWeek .= '<td>Status Fraud</td>';
+                        $stringTransactionWeek .= '<td>Receipt Number Group</td>';
                         $stringTransactionWeek .= '<td>Receipt Number</td>';
                         $stringTransactionWeek .= '<td>Outlet</td>';
                         $stringTransactionWeek .= '<td>Transaction Date</td>';
                         $stringTransactionWeek .= '<td>Transaction Time</td>';
-                        $stringTransactionWeek .= '<td>Point</td>';
                         $stringTransactionWeek .= '<td>Nominal</td>';
                         $stringTransactionWeek .= '<tr>';
                         foreach ($detailTransaction as $val){
@@ -608,11 +405,11 @@ class ApiFraud extends Controller
                             }
                             $stringTransactionWeek .= '<tr>';
                             $stringTransactionWeek .= '<td>'.$status.'</td>';
+                            $stringTransactionWeek .= '<td>'.$val['receipt_number_group'].'</td>';
                             $stringTransactionWeek .= '<td>'.$val['transaction_receipt_number'].'</td>';
-                            $stringTransactionWeek .= '<td>'.$val['outlet']['outlet_name'].'</td>';
+                            $stringTransactionWeek .= '<td>'.$val['outlet_city']['outlet_name'].'</td>';
                             $stringTransactionWeek .= '<td>'.date('d F Y',strtotime($val['transaction_date'])).'</td>';
                             $stringTransactionWeek .= '<td>'.date('H:i',strtotime($val['transaction_date'])).'</td>';
-                            $stringTransactionWeek .= '<td>'.($val['balance'] != NULL ? $val['balance'] : '0').'</td>';
                             $stringTransactionWeek .= '<td>'.number_format($val['transaction_grandtotal']).'</td>';
                             $stringTransactionWeek .= '<tr>';
                         }
@@ -689,11 +486,11 @@ class ApiFraud extends Controller
                 foreach ($trxId as $value){
                     $dtInsert = [
                         'id_fraud_detection_log_transaction_in_between' => $insertLog['id_fraud_detection_log_transaction_in_between'],
-                        'id_transaction' => $value
+                        'id_transaction_group' => $value
                     ];
                     $data[] = $dtInsert;
                 }
-                DB::table('fraud_between_transaction')->insert($data);
+                FraudBetweenTransaction::insert($data);
             }
 
             if($fraudSetting['forward_admin_status'] == '1'){
@@ -725,7 +522,7 @@ class ApiFraud extends Controller
             }
         }
 
-        $contentEmail = ['transaction_count_day' => (string)$countTrxDay, 'transaction_count_week' => (string)$countTrxWeek, 'device_id' => $device['device_id'], 'device_type' => $device['device_type'] , 'count_account' => (string)$countUser, 'user_list' => $stringUserList, 'fraud_date' => date('d F Y'), 'fraud_time' => date('H:i'), 'list_transaction_day' => $stringTransactionDay, 'list_transaction_week' => $stringTransactionWeek, 'receipt_number' => $trxId, 'area_outlet' => $areaOutlet, 'point' => $currentBalance];
+        $contentEmail = ['transaction_count_day' => (string)$countTrxDay, 'transaction_count_week' => (string)$countTrxWeek, 'device_id' => $device['device_id']??null, 'device_type' => $device['device_type']??null , 'count_account' => (string)$countUser, 'user_list' => $stringUserList, 'fraud_date' => date('d F Y'), 'fraud_time' => date('H:i'), 'list_transaction_day' => $stringTransactionDay, 'list_transaction_week' => $stringTransactionWeek, 'receipt_number' => $trxId, 'area_outlet' => $areaOutlet, 'point' => $currentBalance];
         $sendFraud = $this->SendFraudDetection($fraudSetting['id_fraud_setting'], $user, null, $device, $deleteToken, $autoSuspend, $forwardAdmin, $contentEmail);
 
         if(isset($sendFraud))
@@ -1149,11 +946,10 @@ class ApiFraud extends Controller
             if(isset($post['export']) && $post['export'] == 1){
                 $queryList = FraudDetectionLogTransactionInBetween::join('users', 'users.id', '=', 'fraud_detection_log_transaction_in_between.id_user')
                     ->join('fraud_between_transaction', 'fraud_detection_log_transaction_in_between.id_fraud_detection_log_transaction_in_between', '=', 'fraud_between_transaction.id_fraud_detection_log_transaction_in_between')
-                    ->join('transactions', 'transactions.id_transaction', '=', 'fraud_between_transaction.id_transaction')
-                    ->join('outlets', 'outlets.id_outlet', '=', 'transactions.id_outlet')
+                    ->join('transaction_groups', 'transaction_groups.id_transaction_group', '=', 'fraud_between_transaction.id_transaction_group')
                     ->whereRaw("DATE(fraud_detection_log_transaction_in_between.created_at) BETWEEN '".$date_start."' AND '".$date_end."'")
-                    ->groupBy('transactions.id_transaction')
-                    ->select('transactions.*', 'outlets.outlet_name', 'fraud_detection_log_transaction_in_between.*', 'users.name', 'users.phone', 'users.email', 'fraud_detection_log_transaction_in_between.created_at as log_date');
+                    ->groupBy('transaction_groups.id_transaction_group')
+                    ->select('transactions.*', 'fraud_detection_log_transaction_in_between.*', 'users.name', 'users.phone', 'users.email', 'fraud_detection_log_transaction_in_between.created_at as log_date');
             }else{
                 $queryList = FraudDetectionLogTransactionInBetween::join('users', 'users.id', '=', 'fraud_detection_log_transaction_in_between.id_user')
                     ->whereRaw("DATE(fraud_detection_log_transaction_in_between.created_at) BETWEEN '".$date_start."' AND '".$date_end."'")
@@ -1334,16 +1130,15 @@ class ApiFraud extends Controller
             $detailLog = FraudDetectionLogTransactionDay::where('id_fraud_detection_log_transaction_day',$post['id_fraud_detection_log_transaction_day'])->with('user')->first();
         }
 
-        $detailTransaction = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+        $detailTransaction = Transaction::leftJoin('transaction_groups', 'transaction_groups.id_transaction_group', '=', 'transactions.id_transaction_group')
             ->where('transactions.transaction_payment_status','Completed')
-            ->whereNull('transaction_pickups.reject_at')
             ->whereRaw('Date(transaction_date) = "'.date('Y-m-d', strtotime($detailLog['fraud_detection_date'])).'"')
-            ->where('id_user',$detailLog['id_user'])
+            ->where('transactions.id_user',$detailLog['id_user'])
             ->select('transactions.*',  DB::raw('(CASE
                                 WHEN (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" ) 
                                 is NULL THEN NULL
                                 ELSE (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" )
-                            END) as balance'))
+                            END) as balance'), 'transaction_groups.transaction_receipt_number as receipt_number_group')
             ->with('outlet')->get();
         $detailUser = User::where('id',$detailLog['id_user'])->first();
         return response()->json([
@@ -1369,16 +1164,15 @@ class ApiFraud extends Controller
         $start = $dto->format('Y-m-d');
         $dto->modify('+6 days');
         $end = $dto->format('Y-m-d');
-        $detailTransaction = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+        $detailTransaction = Transaction::leftJoin('transaction_groups', 'transaction_groups.id_transaction_group', '=', 'transactions.id_transaction_group')
             ->where('transactions.transaction_payment_status','Completed')
-            ->whereNull('transaction_pickups.reject_at')
-            ->where('id_user',$detailLog['id_user'])
+            ->where('transactions.id_user',$detailLog['id_user'])
             ->whereRaw('Date(transaction_date) BETWEEN "'.$start.'" AND "'.$end.'"')
             ->select('transactions.*',  DB::raw('(CASE
                                 WHEN (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" ) 
                                 is NULL THEN NULL
                                 ELSE (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" )
-                            END) as balance'))
+                            END) as balance'), 'transaction_groups.transaction_receipt_number as receipt_number_group')
             ->with('outlet')->get();
         $detailUser = User::where('id',$detailLog['id_user'])->first();
         return response()->json([
@@ -1396,11 +1190,10 @@ class ApiFraud extends Controller
 
 
         $detailLog = FraudDetectionLogTransactionInBetween::join('fraud_between_transaction', 'fraud_detection_log_transaction_in_between.id_fraud_detection_log_transaction_in_between', '=', 'fraud_between_transaction.id_fraud_detection_log_transaction_in_between')
-                    ->join('transactions', 'transactions.id_transaction', '=', 'fraud_between_transaction.id_transaction')
-                    ->join('outlets', 'outlets.id_outlet', '=', 'transactions.id_outlet')
+                    ->join('transaction_groups', 'transaction_groups.id_transaction_group', '=', 'fraud_between_transaction.id_transaction_group')
                     ->where('fraud_detection_log_transaction_in_between.id_user',$post['id_user'])->whereDate('fraud_detection_log_transaction_in_between.created_at',$post['date_fraud'])
-                    ->groupBy('transactions.id_transaction')
-                    ->select('transactions.*', 'outlets.outlet_name', 'fraud_detection_log_transaction_in_between.*')
+                    ->groupBy('transaction_groups.id_transaction_group')
+                    ->select('transaction_groups.*', 'fraud_detection_log_transaction_in_between.*')
                     ->with(['user'])->get()->toArray();
 
         return response()->json([
@@ -1642,14 +1435,14 @@ class ApiFraud extends Controller
                                 ->where('flag_check',0)
                                ->orderBy('id_user')
                                ->orderBy('transaction_date', 'asc')
-                               ->pluck('id_transaction');
+                               ->pluck('id_transaction_group');
 
-            $getTrxStatusCompleted = Transaction::whereIn('id_transaction',$getTrxFisrt)
-                    ->where('transaction_payment_status', 'Completed')->pluck('id_transaction');
+            $getTrxStatusCompleted = TransactionGroup::whereIn('id_transaction_group',$getTrxFisrt)
+                    ->where('transaction_payment_status', 'Completed')->pluck('id_transaction_group');
 
             $getTrx = DailyTransactions::whereDate('transaction_date','=',$currentDate)
                 ->where('flag_check',0)
-                ->whereIn('id_transaction',$getTrxStatusCompleted)
+                ->whereIn('id_transaction_group',$getTrxStatusCompleted)
                 ->orderBy('id_user')
                 ->orderBy('transaction_date', 'asc')
                 ->get()->toArray();
@@ -1667,7 +1460,7 @@ class ApiFraud extends Controller
 
                     if($differentTime <= (int)$parameterDetail){
                         $userData = User::where('id', $getTrx[$i]['id_user'])->first();
-                        $checkFraudMinute = $this->checkFraud($fraudSetting, $userData, null, 0, 0, null, 0, [$getTrx[$i]['id_transaction'], $getTrx[$i+1]['id_transaction']]);
+                        $checkFraudMinute = $this->checkFraud($fraudSetting, $userData, null, 0, 0, null, 0, [$getTrx[$i]['id_transaction_group'], $getTrx[$i+1]['id_transaction_group']]);
                     }
                     DailyTransactions::where('id_daily_transaction', $getTrx[$i]['id_daily_transaction'])->update(['flag_check' => 1]);
                 }

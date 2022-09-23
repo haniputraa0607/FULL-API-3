@@ -6,6 +6,7 @@ use App\Http\Models\Configs;
 use App\Http\Models\LogBalance;
 use App\Http\Models\Transaction;
 use App\Http\Models\User;
+use App\Jobs\FraudJob;
 use Illuminate\Database\Eloquent\Model;
 
 class TransactionGroup extends Model
@@ -57,6 +58,23 @@ class TransactionGroup extends Model
         foreach ($getTransactions as $transaction){
             $transaction->triggerPaymentCompleted();
         }
+
+        // check fraud
+        if ($this->user) {
+            $this->user->update([
+                'count_transaction_day' => $this->user->count_transaction_day + 1,
+                'count_transaction_week' => $this->user->count_transaction_week + 1,
+            ]);
+
+            $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->value('is_active');
+
+            if($config_fraud_use_queue == 1){
+                FraudJob::dispatch($this->user, $this, 'transaction')->onConnection('fraudqueue');
+            }else {
+                app('\Modules\SettingFraud\Http\Controllers\ApiFraud')->checkFraudTrxOnline($this->user, $this);
+            }
+        }
+
 
         \DB::commit();
         return true;

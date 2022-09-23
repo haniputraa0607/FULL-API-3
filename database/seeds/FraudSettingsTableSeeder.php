@@ -15,6 +15,7 @@ class FraudSettingsTableSeeder extends Seeder
             array (
                 'parameter' => 'Number of transactions in 1 day for each customer',
                 'parameter_detail' => 2,
+                'fraud_settings_status' => 'Inactive',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
@@ -22,6 +23,7 @@ class FraudSettingsTableSeeder extends Seeder
             array (
                 'parameter' => 'Number of transactions in 1 week for each customer',
                 'parameter_detail' => 5,
+                'fraud_settings_status' => 'Inactive',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
@@ -29,6 +31,7 @@ class FraudSettingsTableSeeder extends Seeder
             array (
                 'parameter' => 'Customer login using a device ID that has been used by another customer',
                 'parameter_detail' => null,
+                'fraud_settings_status' => 'Inactive',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
@@ -36,6 +39,7 @@ class FraudSettingsTableSeeder extends Seeder
                 array (
                     'parameter' => 'Transaction between',
                     'parameter_detail' => null,
+                    'fraud_settings_status' => 'Inactive',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
@@ -43,6 +47,7 @@ class FraudSettingsTableSeeder extends Seeder
                 array (
                     'parameter' => 'Point user',
                     'parameter_detail' => null,
+                    'fraud_settings_status' => 'Inactive',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
@@ -50,6 +55,7 @@ class FraudSettingsTableSeeder extends Seeder
                 array (
                     'parameter' => 'Check promo code',
                     'parameter_detail' => null,
+                    'fraud_settings_status' => 'Inactive',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
@@ -57,6 +63,7 @@ class FraudSettingsTableSeeder extends Seeder
                 array (
                     'parameter' => 'Check referral global',
                     'parameter_detail' => null,
+                    'fraud_settings_status' => 'Inactive',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
@@ -64,6 +71,7 @@ class FraudSettingsTableSeeder extends Seeder
                 array (
                     'parameter' => 'Check referral user',
                     'parameter_detail' => 1,
+                    'fraud_settings_status' => 'Inactive',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 )

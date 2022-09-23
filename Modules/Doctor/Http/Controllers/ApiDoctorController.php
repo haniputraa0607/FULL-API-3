@@ -731,6 +731,82 @@ class ApiDoctorController extends Controller
         return $schedule;
     }
 
+    public function getAvailableScheduleDoctor($id_doctor)
+    {
+        $doctor_schedule = DoctorSchedule::where('id_doctor', $id_doctor)->with('schedule_time')->onlyActive();
+
+        $doctor_schedule = $doctor_schedule->get()->toArray();
+
+        //problems hereee
+        $schedule = array();
+        if(!empty($doctor_schedule)){
+            $i = 0;
+            while(count($schedule) < 4){
+                if($i > 0) {
+                    $post['date'] = date("Y-m-d", strtotime("+$i day"));
+                    $date = date("d-m-Y", strtotime("+$i day"));
+                    $day = strtolower(date("l", strtotime($date)));
+
+                    $dateId = Carbon::parse($date)->locale('id');
+                    $dateId->settings(['formatFunction' => 'translatedFormat']);
+
+                    $dayId = $dateId->format('l');
+                } else {
+                    $post['date'] = date("Y-m-d");
+                    $date = date("d-m-Y");
+                    $day = strtolower(date("l", strtotime($date)));
+
+                    $dateId = Carbon::parse($date)->locale('id');
+                    $dateId->settings(['formatFunction' => 'translatedFormat']);
+
+                    $dayId = $dateId->format('l');
+                }
+                $i += 1;
+
+                foreach($doctor_schedule as $key => $row) {
+                    if($row['day'] == $day) {
+                        $row['date'] = $date;
+                        $row['day'] = $dayId;
+
+                        $is_avaible = false;        
+                        foreach($row['schedule_time'] as $key2 => $time) {
+                            $post['time'] = date("H:i:s", strtotime($time['start_time']));
+
+                            //cek validation avaibility time from current time
+                            $nowTime = date("H:i:s");
+                            $nowDate = date('d-m-Y');
+
+                            //cek validation avaibility time from consultation
+                            $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $post['date'])
+                            ->where('schedule_start_time', $post['time'])->count();
+                            $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
+                            $quota = $getSetting['value'];
+
+
+                            if($post['time'] < $nowTime && strtotime($date) <= strtotime($nowDate)){
+                                //
+                            } else {
+                                if($quota <= $doctor_constultation && $quota != null){
+                                    //
+                                } else {
+                                    $is_avaible = true;
+                                }
+                            }
+                        }
+
+                        if ($is_avaible == true) {
+                            $schedule[] = $row;
+                        }
+
+                        
+                    }
+                }
+            }
+        }
+
+        return $schedule;
+    }
+
     /**
      * Show the form for editing the specified resource.
      * @param int $id
@@ -739,6 +815,34 @@ class ApiDoctorController extends Controller
     public function getScheduleTime($id_doctor_schedule)
     {
         $timeSchedule = TimeSchedule::where('id_doctor_schedule', $id_doctor_schedule)->get()->toArray();
+
+        return $timeSchedule;
+    }
+
+    public function getAvailableScheduleTime($id_doctor_schedule, $date)
+    {
+        $timeSchedule = TimeSchedule::where('id_doctor_schedule', $id_doctor_schedule)->get()->toArray();
+        foreach($timeSchedule as $key => $time) {
+            $post['time'] = date("H:i:s", strtotime($time['start_time']));
+
+            //cek validation avaibility time from current time
+            $nowTime = date("H:i:s");
+            $nowDate = date('d-m-Y');
+
+            //cek validation avaibility time from consultation
+            $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor_schedule)->where('schedule_date', $date)
+            ->where('schedule_start_time', $post['time'])->count();
+            $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
+            $quota = $getSetting['value'];
+
+            if($post['time'] < $nowTime && strtotime($date) <= strtotime($nowDate)){
+                unset($timeSchedule[$key]);
+            } else {
+                if($quota <= $doctor_constultation && $quota != null){
+                    unset($timeSchedule[$key]);
+                }
+            }
+        }
 
         return $timeSchedule;
     }
