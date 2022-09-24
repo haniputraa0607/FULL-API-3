@@ -3158,7 +3158,9 @@ class ApiTransactionConsultationController extends Controller
 
     public function getDetailInfobip(Request $request)
     {
-        $post = $request->json()->all();
+        $post = $request->validate([
+            'id_transaction' => 'required|numeric',
+        ]);
         $user = $request->user();
 
         //get transaction
@@ -3468,7 +3470,9 @@ class ApiTransactionConsultationController extends Controller
 
     public function getDateAndRemainingTimeConsultation(Request $request)
     {
-        $post = $request->json()->all();
+        $post = $request->validate([
+            'id_transaction' => 'required|numeric',
+        ]);
 
         $transactionConsultation = TransactionConsultation::where('id_transaction', $post['id_transaction'])->first();
 
