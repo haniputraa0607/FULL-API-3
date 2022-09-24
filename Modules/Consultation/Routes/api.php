@@ -47,7 +47,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix
 
     Route::post('/message/date-time', 'ApiTransactionConsultationController@getDateAndRemainingTimeConsultation');
 
-    //Route::post('/cron/autoend', 'ApiTransactionConsultationController@cronAutoEndConsultation');
+    Route::post('/cron/autoend', 'ApiTransactionConsultationController@cronAutoEndConsultation');
 
     Route::group(['prefix' => '/detail'], function () {
         Route::post('/infobip', 'ApiTransactionConsultationController@getDetailInfobip');

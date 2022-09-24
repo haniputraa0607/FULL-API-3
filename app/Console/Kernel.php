@@ -235,6 +235,12 @@ class Kernel extends ConsoleKernel
          * run every minute
          */
         $schedule->call('Modules\Consultation\Http\Controllers\ApiTransactionConsultationController@cronAutoEndConsultation')->everyMinute();
+
+        /**
+         * Update doctor status to online or offline 
+         * run every 5 minute
+         */
+        $schedule->call('Modules\Consultation\Http\Controllers\ApiDoctorController@cronUpdateDoctorStatus')->everyFiveMinutes();
     }
 
     /**

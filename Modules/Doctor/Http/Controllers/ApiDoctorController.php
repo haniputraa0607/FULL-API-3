@@ -918,4 +918,45 @@ class ApiDoctorController extends Controller
         }
         return MyHelper::checkGet(['token' => $token]);
     }
+
+    public function cronUpdateDoctorStatus()
+    {
+        $log = MyHelper::logCron('Update Doctor Status');
+        try {
+            $day = date('l');
+            $now = date('H:i:s');
+
+            //update doctor status to online
+            $doctorOnline = Doctor::whereHas('schedules', function($query) use ($day, $now) {
+                            $query->where('day', '=' , $day);
+                            $query->whereHas('schedule_time', function($query2) use ($now){
+                                $query2->whereTime('start_time', '<=' , $now);
+                                $query2->whereTime('end_time', '>=' , $now);  
+                            });
+                        })->update(['doctor_status' => 'online']);
+
+            //update doctor status to offline
+            $doctorDoesntHaveDay = Doctor::whereDoesntHave('schedules', function($query) use ($day, $now) {
+                $query->where('day', '=' , $day);
+            })->update(['doctor_status' => 'offline']);
+
+            $doctorDoesntHaveTime = Doctor::whereHas('schedules', function($query) use ($day, $now) {
+                $query->where('day', '=' , $day);
+                $query->whereDoesntHave('schedule_time', function($query2) use ($now){
+                    $query2->whereTime('start_time', '<=' , $now);
+                    $query2->whereTime('end_time', '>=' , $now);  
+                });
+            })->update(['doctor_status' => 'offline']);
+
+            //check if doctor have ongoing transaction
+            $idsDoctorBusy = TransactionConsultation::whereIn('consultation_status', ['ongoing', 'done'])->pluck('id_doctor')->toArray();
+
+            $doctorBusy = Doctor::whereIn('id_doctor', $idsDoctorBusy)->update(['doctor_status' => 'busy']);
+            
+            $log->success(['status_update' => 'success']);
+            return 'success';
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+        }
+    }
 }
