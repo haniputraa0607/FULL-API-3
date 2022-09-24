@@ -33,6 +33,7 @@ use Modules\Doctor\Entities\Doctor;
 use Modules\Transaction\Entities\TransactionGroup;
 use Modules\Consultation\Entities\TransactionConsultationMessage;
 use Modules\Consultation\Entities\TransactionConsultationReschedule;
+use Modules\Consultation\Http\Requests\DoneConsultation;
 use Modules\Consultation\Entities\LogInfobip;
 use Modules\UserRating\Entities\UserRating;
 use DB;
@@ -1236,9 +1237,9 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
-        $transaction = $transaction->toArray();
-
         $transactionConsultation = $transaction->consultation;
+
+        $transaction = $transaction->toArray();
 
         if(empty($transactionConsultation)){
             return response()->json([
@@ -1374,7 +1375,7 @@ class ApiTransactionConsultationController extends Controller
         }
 
         //get Transaction
-        $transaction = Transaction::with('consultation')->where('id_transaction', $post['id_transaction'])->first()->toArray();
+        $transaction = Transaction::with('consultation')->where('id_transaction', $post['id_transaction'])->first();
 
         if(empty($transaction)){
             return response()->json([
@@ -1382,6 +1383,11 @@ class ApiTransactionConsultationController extends Controller
                 'messages'  => ['Transaksi tidak ditemukan']
             ]);
         }
+
+        //get consultation
+        $transactionConsultation = $transaction->consultation;
+
+        $transaction = $transaction->toArray();
 
         if(env('BYPASS_VALIDASI') == true){
             if($transaction['consultation']['consultation_status'] != 'done'){
@@ -1402,6 +1408,24 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
+        //if not from done consulttaion, akses doneConsultation first
+        if($transactionConsultation->consultation_status == 'ongoing'){
+            // done consultation
+            $params = [
+                'id_transaction' => $transaction['id_transaction']
+            ];
+
+            //macking request objec
+            $fake_request = new DoneConsultation();
+            $fake_request->setJson(new \Symfony\Component\HttpFoundation\ParameterBag($params));
+            $fake_request->merge(['user' => $doctor]);
+            $fake_request->setUserResolver(function () use ($doctor) {
+                return $doctor;
+            });
+
+            $done = $this->doneConsultation($fake_request);
+        }
+
         DB::beginTransaction();
         try {
             $result = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])
@@ -1411,7 +1435,7 @@ class ApiTransactionConsultationController extends Controller
             ]);
     
             //update doctor status
-            $getOngoingConsultation = TransactionConsultation::where('id_doctor', $doctor->id_doctor)->where('consultation_status', 'ongoing')->orWhere('consultation_status', 'done')->count();
+            $getLiveConsultation = TransactionConsultation::where('id_doctor', $doctor->id_doctor)->where('consultation_status', 'ongoing')->orWhere('consultation_status', 'done')->count();
             if($getLiveConsultation = 0) {
                 $doctor->update(['doctor_status' => "online"]);
                 $doctor->save();
@@ -1462,7 +1486,7 @@ class ApiTransactionConsultationController extends Controller
         $result = [
             'id_transaction' => $consultation->id_transaction,
             'id_transaction_consultation' => $consultation->id_transaction_consultation,
-            'transaction_consultation_status' => $consultation->transaction_consultation_status,
+            'transaction_consultation_status' => $consultation->consultation_status,
             'consultation_start_at' => $consultation->consultation_start_at,
             'consultation_end_at' => $consultation->consultation_end_at
         ];
@@ -1640,7 +1664,7 @@ class ApiTransactionConsultationController extends Controller
                 }
             } elseif($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
                 $diff_date = "now";
-            } elseif($value['consultation']['consultation_status'] == 'done') {
+            } elseif($value['consultation']['consultation_status'] == 'done' || $value['consultation']['consultation_status'] == 'completed') {
                 $diff_date = "completed";
             } else {
                 $diff_date = "missed";
@@ -3683,28 +3707,48 @@ class ApiTransactionConsultationController extends Controller
         try {
             $now = Carbon::now();
 
-            $transactionConsultation = TransactionConsultation::where('consultation_status', "ongoing")->where('schedule_end_time', '<=', $now)->update([
-                'consultation_status' => 'done'
-            ]);
+            $countAutoDone = 0;
+            $idsConsultationAutoDone = TransactionConsultation::where('consultation_status', "ongoing")->where('schedule_end_time', '<=', $now)->pluck('id_transaction');
+            if(!empty($idsConsultationAutoDone)){
+                $countAutoDone = $idsConsultationAutoDone->count();
+                $idsConsultationAutoDone = $idsConsultationAutoDone->toArray();
+                //auto end consultation
+                $transactionConsultation = TransactionConsultation::where('consultation_status', "ongoing")->where('schedule_end_time', '<=', $now)->update([
+                    'consultation_status' => 'done'
+                ]);
+            }
 
             //update to missed consultation
-            //get setting late
-            $getSettingLate = Setting::where('key','consultation_starts_late')->first();
-            $endConsultation = $transaction['consultation']['schedule_date'].$transaction['consultation']['schedule_end_time'];
+            //get consultation where status soon
+            $countAutoMissed = 0;
+            $idsConsultationAutoMissed = [];
+            $transactionConsultationSoon = TransactionConsultation::where('consultation_status', 'soon')->get();
+            //dd($transactionConsultationSoon);
+            foreach($transactionConsultationSoon as $key => $consultationSoon){
+                //get setting late
+                $getSettingLate = Setting::where('key','consultation_starts_late')->first();
+                $endConsultation = $consultationSoon['schedule_date'].$consultationSoon['schedule_end_time'];
 
-            if(!empty($getSettingLate)){
-                $endConsultation = date('Y-m-d H:i:s', strtotime("{$transaction['consultation']['schedule_date']} {$transaction['consultation']['schedule_start_time']} +{$getSettingLate->value}minutes" ));
-            }
+                if(!empty($getSettingLate)){
+                    $endConsultation = date('Y-m-d H:i:s', strtotime("{$consultationSoon['schedule_date']} {$consultationSoon['schedule_start_time']} +{$getSettingLate->value}minutes" ));
+                }
 
-            $scheduleDateTime = Carbon::parse($endConsultation);
-            if (!$scheduleDateTime->gt($now)) {
-                if($transaction['consultation']['consultation_status'] == "soon") {
-                    $updateConsultationStatus = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->update(['consultation_status' => "missed"]);
+                $scheduleDateTime = Carbon::parse($endConsultation);
+                if (!$scheduleDateTime->gt($now)) {
+                    $idsConsultationAutoMissed[] = $consultationSoon['id_transaction'];
+                    $updateConsultationStatus = TransactionConsultation::where('id_transaction', $consultationSoon['id_transaction'])->update(['consultation_status' => "missed"]);
+                    $countAutoMissed = $countAutoMissed+1;
                 }
             }
-           
+
+            // dd($countAutoMissed);
             
-            $log->success(['status_update' => $statusUpdate]);
+            $log->success([
+                'count_auto_done' => $countAutoDone, 
+                'id_consultation_auto_done' => $idsConsultationAutoDone, 
+                'count_auto_missed' => $countAutoMissed,
+                'id_consultation_auto_missed' => $idsConsultationAutoMissed
+            ]);
             return 'success';
         } catch (\Exception $e) {
             $log->fail($e->getMessage());

@@ -89,6 +89,8 @@ Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-
     Route::post('schedule/my/store', ['uses' => 'ApiScheduleController@storeMySchedule']);
     Route::get('get-infobip-token', ['uses' => 'ApiDoctorController@getInfobipToken']);
 
+    Route::get('cron-status', ['uses' => 'ApiDoctorController@cronUpdateDoctorStatus']);
+
     Route::post('my/settings', ['uses' => 'ApiDoctorController@mySettings']);
     Route::get('my/profile', ['uses' => 'ApiDoctorController@myProfile']);
 
