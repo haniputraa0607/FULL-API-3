@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Test RTC</title>
+	<script src="//rtc.cdn.infobip.com/latest/infobip.rtc.js"></script>
+	<script
+			  src="https://code.jquery.com/jquery-3.6.1.min.js"
+			  integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ="
+			  crossorigin="anonymous"></script>
+	<style type="text/css">
+		body {
+			margin: 0;
+			padding: 0;
+			width: 100vw;
+			height: 100vh;
+		}
+		#remoteVideo {
+			width: 100vw;
+			height: 100vh;
+			z-index: -1;
+			position: absolute;
+			top: 0;
+			left: 0;
+			background-color: rgb(156 31 96);
+		}
+		#localVideo {
+			width: 25vw;
+			height: 25vh;
+			z-index: 1;
+			position: absolute;
+			bottom: 10px;
+			right: 10px;
+			background-color: black;
+			border: 3px solid white;
+		}
+		.control-button {
+			position: absolute;
+			bottom: 10px;
+			left: 10px;
+			z-index: 2;
+		}
+		.control-button button{
+			padding: 5px;
+		}
+	</style>
+</head>
+<body>
+<video id="remoteVideo" autoplay></video>
+<video id="localVideo" autoplay muted></video>
+
+<div class="control-button">
+	<button class="on-connected" disabled>Connected as <span class="logged-name"></span></button>
+	<button id="login" class="on-logout" type="button" onclick="initInfobip()">Login</button>
+	<button id="call" class="on-standby" type="button" onclick="call()">Call</button>
+	<button id="accept" class="on-incoming-call" type="button" onclick="accept()">Accept</button>
+	<button id="decline" class="on-incoming-call" type="button" onclick="decline()">Decline</button>
+	<button id="hangup" class="on-call" type="button" onclick="hangup()">Hangup</button>
+	<button class="on-connecting" disabled>Connecting</button>
+	<button class="on-calling" disabled>Calling <span class="called-name"></span>...</button>
+	<button class="on-ringing" disabled><span class="called-name"></span> Ringing...</button>
+	<button class="on-call" disabled>On Call with <span class="called-name"></span></button>
+</div>
+
+<script type="text/javascript">
+	var infobipRTC = null;
+	var outgoingCall = null;
+	var incomingCall = null;
+	var state = 'logout';
+
+	function established(event) {
+		document.getElementById('localVideo').srcObject = event.localStream;
+		document.getElementById('remoteVideo').srcObject = event.remoteStream;
+		setState('call');
+	}
+
+	function setState(newState) {
+		state = newState;
+		refreshButton();
+	}
+
+	function initInfobip(token) {
+		if (!token) {
+			token = window.prompt("Enter infobip token");
+		}
+		let options = { debug: true }
+		infobipRTC = new InfobipRTC(token, options);
+
+		infobipRTC.on('connected', function(event) {
+			setState('standby');
+			$('.logged-name').text(event.identity);
+			console.log('Connected with identity: ' + event.identity);
+		});
+		infobipRTC.on('disconnected', function(event) {
+			setState('logout');
+			console.log('Disconnected!');
+		});
+
+		infobipRTC.on('incoming-call', function(incomingCallEvent) {
+			incomingCall = incomingCallEvent.incomingCall;
+			console.log('Received incoming call from: ' + incomingCall.source().identity);
+			$('.called-name').text(incomingCall.source().identity);
+			setState('incoming-call');
+
+			incomingCall.on('established', established);
+			incomingCall.on('hangup', function() {
+				console.log('hangup');
+				setState('standby');
+			});
+
+		});
+
+		console.log('Connecting...');
+		setState('connecting');
+		infobipRTC.connect();
+	}
+
+	function call(identity) {
+		$('.called-name').text(identity);
+		setState('calling');
+		if (!identity) {
+			identity = window.prompt("Enter identity");
+		}
+		outgoingCall = infobipRTC.call(identity, CallOptions.builder().setVideo(true).build());
+		outgoingCall.on('ringing', function(event) {
+		  setState('ringing');
+		  console.log('Call is ringing on Alice\'s device!');
+		});
+		outgoingCall.on('hangup', function(event) {
+		  setState('standby');
+		  console.log('Call is done! Status: ' + JSON.stringify(event.status));
+		});
+		outgoingCall.on('error', function(event) {
+		  setState('standby');
+		  console.log('Oops, something went very wrong! Message: ' + JSON.stringify(event));
+		});
+		outgoingCall.on('established', established);
+	}
+
+	function accept() {
+		incomingCall.accept();
+	}
+
+	function decline() {
+		incomingCall.decline();
+	}
+
+	function hangup() {
+		if (outgoingCall) {
+			outgoingCall.hangup();
+		}
+		if (incomingCall) {
+			incomingCall.hangup();
+		}
+	}
+
+	function refreshButton() {
+		$('.control-button button').hide();
+		switch (state) {
+			case 'logout':
+				$('.on-logout').show();
+				break;
+
+			case 'standby':
+				$('.on-standby').show();
+				break;
+
+			case 'incoming-call':
+				$('.on-incoming-call').show();
+				break;
+
+			case 'connecting':
+				$('.on-connecting').show();
+				break;
+
+			case 'call':
+				$('.on-call').show();
+				break;
+
+			default:
+				$('.on-' + state).show();
+				break;
+		}
+
+		if (state != 'logout' && state != 'connecting') {
+			$('.on-connected').show();
+		}
+	}
+
+	$(document).ready(() => {
+		refreshButton();
+	});
+</script>
+</body>
+</html>
