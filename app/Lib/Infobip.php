@@ -127,7 +127,7 @@ class Infobip {
             $token = $response['response']['token'] ?? false;
             $tokenable->infobipTokens()->create([
                 'token' => $token,
-                'expired_at' => date('Y-m-d H:i:s', time() + 7 * 3600),
+                'expired_at' => date('Y-m-d H:i:s', time() + 3 * 3600),
             ]);
             return $token;
         }
