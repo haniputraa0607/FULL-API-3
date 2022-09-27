@@ -1117,6 +1117,7 @@ class ApiMerchantTransactionController extends Controller
 
             $transactions = Transaction::join('users', 'users.id', 'transactions.id_user')
                 ->where('transaction_status', 'Pending')
+                ->where('trasaction_type', 'Delivery')
                 ->where('transaction_maximum_date_process', '<', $currentDate)->get();
 
             foreach ($transactions as $transaction){
