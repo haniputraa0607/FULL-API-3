@@ -1021,12 +1021,20 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
-        if(env('BYPASS_VALIDASI') == true){
+        if(env('BYPASS_VALIDASI') != true){
             //validasi doctor status
-            if(strtolower($doctor['doctor_status']) != "online" && strtolower($doctor['doctor_status']) != "busy"){
+            if(strtolower($doctor['doctor_status']) != "online"){
                 return response()->json([
                     'status'    => 'fail',
                     'messages'  => ['Harap Tunggu Hingga Dokter Siap']
+                ]);
+            }
+
+            //validasi consultation status
+            if($transactionConsultation['consultation_status'] != 'soon' && $transactionConsultation['consultation_status'] != 'ongoing'){
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Konsultasi Tidak bisa dimulai kembali']
                 ]);
             }
 
@@ -1036,19 +1044,9 @@ class ApiTransactionConsultationController extends Controller
             $getSettingLate = Setting::where('key','consultation_starts_late')->first();
 
             if(!empty($getSettingEarly)){
-                $carbonScheduleStartTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
-                $carbonSettingEarly = Carbon::parse((int) $getSettingEarly->value);
-                $getTime = $carbonScheduleStartTime->diff($carbonSettingEarly);
-                $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
-                $getStartTime->hour($getTime->h);
-                $getStartTime->minute($getTime->i);
-                $getStartTime->second($getTime->s);
+                $getStartTime = date('Y-m-d H:i:s', strtotime("{$transaction['consultation']['schedule_date']} {$transaction['consultation']['schedule_start_time']} -{$getSettingEarly->value}minutes" ));
             } else {
-                $getTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
-                $getStartTime = Carbon::parse($transaction['consultation']['schedule_date']);
-                $getStartTime->hour($getTime->h);
-                $getStartTime->minute($getTime->i);
-                $getStartTime->second($getTime->s);
+                $getStartTime = date('Y-m-d H:i:s', strtotime("{$transaction['consultation']['schedule_date']} {$transaction['consultation']['schedule_start_time']}"));
             }
 
             if($currentTime < $getStartTime) {
@@ -1060,19 +1058,8 @@ class ApiTransactionConsultationController extends Controller
 
             if(!empty($getSettingLate)){
                 $getStartTime = date('Y-m-d H:i:s', strtotime("{$transaction['consultation']['schedule_date']} {$transaction['consultation']['schedule_start_time']} +{$getSettingLate->value}minutes" ));
-                // $carbonScheduleStartTime = Carbon::parse($transaction['consultation']['schedule_start_time']);
-                // $carbonSettingLate = Carbon::parse((int) $getSettingLate->value);
-                // $getTime = $carbonScheduleStartTime->sub($carbonSettingLate);
-                // dd($getTime);
-                // $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
-                // $getStartTime->hour($getTime->h);
-                // $getStartTime->minute($getTime->i);
-                // $getStartTime->second($getTime->s);
             } else {
-                $getStartTime =  Carbon::parse($transaction['consultation']['schedule_date']);
-                $getStartTime->hour($getTime->h);
-                $getStartTime->minute($getTime->i);
-                $getStartTime->second($getTime->s);
+                $getStartTime = date('Y-m-d H:i:s', strtotime("{$transaction['consultation']['schedule_date']} {$transaction['consultation']['schedule_start_time']}"));
             }
 
             if($currentTime > $getStartTime) {
@@ -1080,14 +1067,7 @@ class ApiTransactionConsultationController extends Controller
 
                 return response()->json([
                     'status'    => 'fail',
-                    'messages'  => ['Anda tidak bisa memulai konsultasi, karena jadwal konsultasi sudah selesai']
-                ]);
-            }
-
-            if($transactionConsultation['consultation_status'] != 'soon' && $transactionConsultation['consultation_status'] != 'ongoing'){
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Konsultasi Tidak bisa dimulai kembali']
+                    'messages'  => ['Anda tidak bisa memulai konsultasi, karena melebihi batas toleransi keterlambatan']
                 ]);
             }
         }
@@ -1248,8 +1228,8 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
-        if(env('BYPASS_VALIDASI') == true){
-            if($transactionConsultation['consultation_status'] != 'ongoing' || $transactionConsultation['consultation_status'] != 'done'){
+        if(env('BYPASS_VALIDASI') != true){
+            if($transactionConsultation['consultation_status'] != 'ongoing'){
                 return response()->json([
                     'status'    => 'fail',
                     'messages'  => ['Konsultasi gagal tidak bisa ditandai selesai']
@@ -1389,8 +1369,8 @@ class ApiTransactionConsultationController extends Controller
 
         $transaction = $transaction->toArray();
 
-        if(env('BYPASS_VALIDASI') == true){
-            if($transaction['consultation']['consultation_status'] != 'done'){
+        if(env('BYPASS_VALIDASI') != true){
+            if($transaction['consultation']['consultation_status'] != 'done' && $transaction['consultation']['consultation_status'] != 'ongoing'){
                 return response()->json([
                     'status'    => 'fail',
                     'messages'  => ['Konsultasi Tidak bisa ditandai completed']
@@ -2108,11 +2088,11 @@ class ApiTransactionConsultationController extends Controller
         //get Transaction
         $transaction = Transaction::where('id_transaction', $transactionConsultation['id_transaction'])->first();
 
-        if(env('BYPASS_VALIDASI') == true){
-            if($transactionConsultation['consultation_status'] != 'soon' || $transactionConsultation['consultation_status'] != 'ongoing'){
+        if(env('BYPASS_VALIDASI') != true){
+            if($transactionConsultation['consultation_status'] == 'completed'){
                 return response()->json([
                     'status'    => 'fail',
-                    'messages'  => ['Konsultasi Tidak bisa dimulai kembali']
+                    'messages'  => ['Konsultasi Sudah Tertandai Completed, Tidak Bisa Mengubah Rekomendasi Lagi']
                 ]);
             }
         }
@@ -3514,6 +3494,15 @@ class ApiTransactionConsultationController extends Controller
                 'status'    => 'fail',
                 'messages'  => ['Consultation not found']
             ]);
+        }
+
+        if(env('BYPASS_VALIDASI') != true){
+            if($transactionConsultation['consultation_status'] == 'completed'){
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Konsultasi Sudah Tertandai Completed, Tidak Bisa Mengubah Rekomendasi Lagi']
+                ]);
+            }
         }
 
         $scheduleDate = date('Y-m-d', strtotime($post['schedule_date']));
