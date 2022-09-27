@@ -240,7 +240,7 @@ class Kernel extends ConsoleKernel
          * Update doctor status to online or offline 
          * run every 5 minute
          */
-        $schedule->call('Modules\Consultation\Http\Controllers\ApiDoctorController@cronUpdateDoctorStatus')->everyFiveMinutes();
+        $schedule->call('Modules\Doctor\Http\Controllers\ApiDoctorController@cronUpdateDoctorStatus')->everyFiveMinutes();
     }
 
     /**

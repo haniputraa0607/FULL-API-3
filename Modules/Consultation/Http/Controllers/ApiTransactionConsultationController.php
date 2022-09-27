@@ -106,7 +106,7 @@ class ApiTransactionConsultationController extends Controller
         $dateEn = Carbon::parse($picked_date)->locale('en');
         $dateEn->settings(['formatFunction' => 'translatedFormat']);
 
-        $picked_day = $dateEn->format('l');
+        $picked_day = strtolower($dateEn->format('l'));
         $picked_time = date('H:i:s', strtotime($post['time']));
 
         //get doctor consultation
@@ -126,13 +126,13 @@ class ApiTransactionConsultationController extends Controller
         //selected session
         $schedule_session = DoctorSchedule::with('schedule_time')->where('id_doctor', $id_doctor)->where('day', $picked_day)
             ->whereHas('schedule_time', function($query) use ($post, $picked_time){
-                $query->where('start_time', '=', $picked_time);
+                $query->where('start_time', '<=', $picked_time);
             })->first();
 
         if(empty($schedule_session)){
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['Jadwal penuh / tidak tersedia']
+                'messages'  => ['Jadwal Sesi penuh / tidak tersedia']
             ]);
         }
 
@@ -1765,6 +1765,27 @@ class ApiTransactionConsultationController extends Controller
         $post = $request->json()->all();
         $user = $request->user();
 
+        if(empty($post['disease_complaint'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Keluhan Pasien Harus Diisi']
+            ]);
+        }
+
+        if(empty($post['disease_analysis'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Keluhan Pasien Harus Diisi']
+            ]);
+        }
+
+        if(empty($post['treatment_recomendation'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Anjuran Penanganan Harus Diisi']
+            ]);
+        }
+
         $transactionConsultation = TransactionConsultation::where('id_doctor', $user->id_doctor)->where('id_transaction', $post['id_transaction'])->first();
 
         if(empty($transactionConsultation)){
@@ -1776,7 +1797,7 @@ class ApiTransactionConsultationController extends Controller
 
         $transactionConsultation = $transactionConsultation->toArray();
 
-        if(empty($transactionConsultation['consultation_status'])){
+        if($transactionConsultation['consultation_status'] == 'completed'){
             return response()->json([
                 'status'    => 'fail',
                 'messages'  => ['Anda Tidak Bisa Merubah Data, Transaksi Sudah Ditandai Selesai']
@@ -1927,10 +1948,17 @@ class ApiTransactionConsultationController extends Controller
 
                 $detailProduct = app($this->product)->detailRecomendation($params);
 
+                //decode and implode usage rules time
+                $json = json_decode($recomendation->usage_rules_time);
+                $usageRules = null;
+                if(!empty($json)){
+                    $usageRules = implode(", ", $json);
+                }
+
                 $items[$key]['product'] = $detailProduct ?? null;
                 $items[$key]['qty'] = $recomendation->qty_product ?? null;
                 $items[$key]['usage_rules'] = $recomendation->usage_rules ?? null;
-                $items[$key]['usage_rules_time'] = $recomendation->usage_rules_time ?? null;
+                $items[$key]['usage_rules_time'] = $usageRules ?? null;
                 $items[$key]['usage_rules_additional_time'] = $recomendation->usage_rules_additional ?? null;
                 $items[$key]['treatment_description'] = $recomendation->treatment_description ?? null;
             }
@@ -2092,6 +2120,10 @@ class ApiTransactionConsultationController extends Controller
         foreach($post['items'] as $key => $item){
             $post['items'][$key]['product_type'] = $post['type'];
             $post['items'][$key]['qty_product_counter'] = $post['items'][$key]['qty_product'];
+
+            if($post['type'] == 'drug'){
+                $post['items'][$key]['usage_rules_time'] = json_encode($post['items'][$key]['usage_rules_time']);
+            }
         }
 
         if($post['type'] == "drug"){
@@ -3219,57 +3251,94 @@ class ApiTransactionConsultationController extends Controller
         ];
     }
 
+    public function updateIdUserInfobip(Request $request)
+    {
+        $post = $request->json()->all();
+
+        //getTransaction
+        $transaction = Transaction::where('id_transaction', $post['id_transaction'])->first()->toArray();
+
+        $url = '/people/2/persons?externalId='.$transaction['transaction_receipt_number'];
+
+        $outputPersonDetail = Infobip::getRequest('Get Detail Person', "GET", $url);
+
+        //return $outputPersonDetail;
+
+        if($outputPersonDetail['status'] == 'success'){
+            $getLiveChatUserId = $outputPersonDetail['response']['contactInformation']['liveChat'][0]['userId'];
+
+            $updateTransactionConsultation = TransactionConsultation::where('id_transaction', $post['id_transaction'])->update([
+                'id_user_infobip' => $getLiveChatUserId
+            ]);
+        }
+
+        return ['status' => 'Success', 'response' => $outputPersonDetail];
+    }
+
     public function receivedChatFromInfobip(Request $request)
     {
         try {
             $post = $request->json()->all();
 
+            $getWebhookUserId = $post['singleSendMessage']['from']['id'];
+
             //get Transaction where conversation Id
-            $transactionConsultation = TransactionConsultation::with('doctor')->with('user')->where('id_conversation', $post['conversationId'])->first();
+            $transactionConsultation = TransactionConsultation::with('doctor')->with('user')->where('consultation_status', 'ongoing')->where('id_user_infobip', $getWebhookUserId)->first();
 
             if(!empty($transactionConsultation)){
+                $updateTransactionConsultation = TransactionConsultation::where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->update([
+                    'id_conversation' => $post['conversationId'],
+                    'id_doctor_infobip' => $post['singleSendMessage']['to']['id']
+                ]);
+
                 $selectedConsultation = $transactionConsultation;
             } else {
-                //get Transaction where conversation Id is null
-                $transactionConsultations = TransactionConsultation::where('id_conversation', null)->get();
-
-                if(empty($transactionConsultations)){
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Transaction Consultation with Id Conversation null is not found']
-                    ]);
-                }
-                $transactionConsultations = $transactionConsultations->toArray();
-
-                //foreach transaction, check to get person endpoint with externalId = transactionConsultation['receipt_number']
-                foreach($transactionConsultations as $key => $transactionConsultation){
-                    //getTransaction
-                    $transaction = Transaction::where('id_transaction', $transactionConsultation['id_transaction'])->first()->toArray();
-
-                    $url = '/people/2/persons?externalId='.$transaction['transaction_receipt_number'];
-
-                    $outputPersonDetail = Infobip::getRequest('Get Detail Person', "GET", $url);
-
-                    if($outputPersonDetail['status'] == 'success'){
-                        //compare transaction 
-                        $getLiveChatUserId = $outputPersonDetail['response']['contactInformation']['liveChat'][0]['userId'];
-                        $getWebhookUserId = $post['singleSendMessage']['from']['id'];
-
-                        $selectedConsultation = null;
-                        if($getLiveChatUserId == $getWebhookUserId){
-                            //selected Consultation
-                            $selectedConsultation = $transactionConsultation;
-                            
-                            //update id_conversation in database
-                            $updateTransactionConsultation = TransactionConsultation::where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->update([
-                                'id_conversation' => $post['conversationId'],
-                                'id_doctor_infobip' => $post['singleSendMessage']['to']['id'],
-                                'id_user_infobip' => $post['singleSendMessage']['from']['id']
-                            ]);
-                        }
-                    }
-                }
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Transaction Consultation with Id User is not found']
+                ]);
             }
+            // } else {
+            //     //get Transaction where conversation Id is null
+            //     $transactionConsultations = TransactionConsultation::where('consultation_status', 'ongoing')->where('id_conversation', null)->get();
+
+            //     if(empty($transactionConsultations)){
+            //         return response()->json([
+            //             'status'    => 'fail',
+            //             'messages'  => ['Transaction Consultation with Id Conversation null is not found']
+            //         ]);
+            //     }
+            //     $transactionConsultations = $transactionConsultations->toArray();
+
+            //     //foreach transaction, check to get person endpoint with externalId = transactionConsultation['receipt_number']
+            //     foreach($transactionConsultations as $key => $transactionConsultation){
+            //         //getTransaction
+            //         $transaction = Transaction::where('id_transaction', $transactionConsultation['id_transaction'])->first()->toArray();
+
+            //         $url = '/people/2/persons?externalId='.$transaction['transaction_receipt_number'];
+
+            //         $outputPersonDetail = Infobip::getRequest('Get Detail Person', "GET", $url);
+
+            //         if($outputPersonDetail['status'] == 'success'){
+            //             //compare transaction 
+            //             $getLiveChatUserId = $outputPersonDetail['response']['contactInformation']['liveChat'][0]['userId'];
+            //             $getWebhookUserId = $post['singleSendMessage']['from']['id'];
+
+            //             $selectedConsultation = null;
+            //             if($getLiveChatUserId == $getWebhookUserId){
+            //                 //selected Consultation
+            //                 $selectedConsultation = $transactionConsultation;
+                            
+            //                 //update id_conversation in database
+            //                 $updateTransactionConsultation = TransactionConsultation::where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->update([
+            //                     'id_conversation' => $post['conversationId'],
+            //                     'id_doctor_infobip' => $post['singleSendMessage']['to']['id'],
+            //                     'id_user_infobip' => $post['singleSendMessage']['from']['id']
+            //                 ]);
+            //             }
+            //         }
+            //     }
+            // }
 
             //save message to DB TransactionConsultationMessages
             $payload = [
@@ -3706,14 +3775,16 @@ class ApiTransactionConsultationController extends Controller
         $log = MyHelper::logCron('Auto End Consultation');
         try {
             $now = Carbon::now();
+            $date = date('Y-m-d');
+            $time = date('H:i:s');
 
             $countAutoDone = 0;
-            $idsConsultationAutoDone = TransactionConsultation::where('consultation_status', "ongoing")->where('schedule_end_time', '<=', $now)->pluck('id_transaction');
+            $idsConsultationAutoDone = TransactionConsultation::where('consultation_status', "ongoing")->where('schedule_date', $date)->where('schedule_end_time', '<=', $time)->pluck('id_transaction');
             if(!empty($idsConsultationAutoDone)){
                 $countAutoDone = $idsConsultationAutoDone->count();
                 $idsConsultationAutoDone = $idsConsultationAutoDone->toArray();
                 //auto end consultation
-                $transactionConsultation = TransactionConsultation::where('consultation_status', "ongoing")->where('schedule_end_time', '<=', $now)->update([
+                $transactionConsultation = TransactionConsultation::where('consultation_status', "ongoing")->where('schedule_date', $date)->where('schedule_end_time', '<=', $time)->update([
                     'consultation_status' => 'done'
                 ]);
             }
