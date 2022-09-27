@@ -1109,4 +1109,28 @@ class ApiMerchantTransactionController extends Controller
 
         return response()->json($result);
     }
+
+    public function autoCancel(){
+        $log = MyHelper::logCron('Auto cancel transaction');
+        try {
+            $currentDate = date('Y-m-d');
+
+            $transactions = Transaction::join('users', 'users.id', 'transactions.id_user')
+                ->where('transaction_status', 'Pending')
+                ->where('transaction_maximum_date_process', '<', $currentDate)->get();
+
+            foreach ($transactions as $transaction){
+                $post = [
+                    'id_transaction' => $transaction['id_transaction'],
+                    'reject_reason' => 'Auto reject transaction'
+                ];
+                $transaction->triggerReject($post);
+            }
+
+            $log->success(['reject_count' => count($transactions)]);
+            return 'success';
+        }catch (\Exception $e) {
+            $log->fail($e->getMessage());
+        }
+    }
 }
