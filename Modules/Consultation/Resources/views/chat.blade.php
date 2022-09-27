@@ -77,11 +77,38 @@ p=n.getElementsByTagName(f)[0];p.parentNode.insertBefore(i,p)})
 
 @if (request()->logged_out)
 liveChat('auth', '{{$token}}', function(error, result) {
-  // if (error) {
-  //   console.log(error.code, error.message)
-  // } else {
-  // 	console.log('Sukses login', result)
-  // }
+  if (error) {
+    console.log(error.code, error.message)
+  } else {
+  	console.log('Sukses login', result);
+    // $.ajax({
+		// 		type: "POST",
+		// 		url: "{{url('api/consultation/detail/chat/updateIdUserInfobip')}}",
+		// 		dataType: "json",
+    //     data: {'id_transaction': {{request()->id_transaction}},},
+		// 		success: function(data){
+		// 			if (data.status == 'fail') {
+		// 				$.ajax(this)
+		// 				return
+		// 			}
+    //       return data;
+    //     }
+		// 	});
+
+    (async () => {
+      const rawResponse = await fetch('{{url('api/consultation/detail/chat/updateIdUserInfobip')}}', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({'id_transaction': {{request()->id_transaction}}})
+      });
+      const content = await rawResponse.json();
+
+      console.log(content);
+    })();
+  }
   liveChat('init', '{{config('infobip.widget_id')}}', () => {
     // console.log('Initiated');
     const widgetWrapper = document.getElementsByClassName('ib-widget-wrapper')[0];

@@ -25,6 +25,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
 });
 
 Route::any('consultation/detail/chat.html', 'ApiTransactionConsultationController@getChatView');
+Route::any('consultation/detail/chat/updateIdUserInfobip', 'ApiTransactionConsultationController@updateIdUserInfobip');
 Route::post('consultation/message/received', 'ApiTransactionConsultationController@receivedChatFromInfobip');
 
 Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'consultation'], function () {
