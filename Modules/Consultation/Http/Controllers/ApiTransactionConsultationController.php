@@ -1232,7 +1232,7 @@ class ApiTransactionConsultationController extends Controller
             if($transactionConsultation['consultation_status'] != 'ongoing'){
                 return response()->json([
                     'status'    => 'fail',
-                    'messages'  => ['Konsultasi gagal tidak bisa ditandai selesai']
+                    'messages'  => ['Konsultasi tidak bisa ditandai selesai']
                 ]);
             }
         }
@@ -1270,7 +1270,8 @@ class ApiTransactionConsultationController extends Controller
                 'source' => 'Transaction Consultation Completed'
             ];
 
-            //push notifikasi
+            //update conversation to infobip
+            $outputUpdateConversation = $this->updateConversationInfobip($transaction);
 
             //insert saldo to merchant
             $insertSaldo = app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dt);
@@ -1287,7 +1288,7 @@ class ApiTransactionConsultationController extends Controller
         }
         DB::commit();
 
-        //Send Autoresponse to Doctor Device
+        //Send Autoresponse to User Device
         if(!empty($transactionConsultation['user'])){
             if (!empty($request->header('user-agent-view'))) {
                 $useragent = $request->header('user-agent-view');
@@ -1605,7 +1606,7 @@ class ApiTransactionConsultationController extends Controller
             });
         }
 
-        $transaction = $transaction->get();
+        $transaction = $transaction->latest()->get();
 
         if(empty($transaction)){
             return response()->json([
@@ -3768,14 +3769,51 @@ class ApiTransactionConsultationController extends Controller
             $time = date('H:i:s');
 
             $countAutoDone = 0;
-            $idsConsultationAutoDone = TransactionConsultation::where('consultation_status', "ongoing")->where('schedule_date', $date)->where('schedule_end_time', '<=', $time)->pluck('id_transaction');
+            $idsConsultationAutoDone = TransactionConsultation::where('consultation_status', "ongoing")->where('schedule_date', '<=', $date)->where('schedule_end_time', '<=', $time)->pluck('id_transaction');
             if(!empty($idsConsultationAutoDone)){
                 $countAutoDone = $idsConsultationAutoDone->count();
                 $idsConsultationAutoDone = $idsConsultationAutoDone->toArray();
                 //auto end consultation
-                $transactionConsultation = TransactionConsultation::where('consultation_status', "ongoing")->where('schedule_date', $date)->where('schedule_end_time', '<=', $time)->update([
+                $transactionConsultation = TransactionConsultation::where('consultation_status', "ongoing")->where('schedule_date', '<=', $date)->where('schedule_end_time', '<=', $time)->update([
                     'consultation_status' => 'done'
                 ]);
+
+                $transactions = Transaction::whereIn('id_transaction', $idsConsultationAutoDone)->get();
+                foreach($transactions as $key => $transaction){
+                    $outputUpdateConversation = $this->updateConversationInfobip($transaction);
+
+                    //Send Autoresponse to User Device
+                    if(!empty($transactionConsultation['user'])){
+                        if (!empty($request->header('user-agent-view'))) {
+                            $useragent = $request->header('user-agent-view');
+                        } else {
+                            $useragent = $_SERVER['HTTP_USER_AGENT'];
+                        }
+
+                        if (stristr($useragent, 'iOS')) $useragent = 'iOS';
+                        if (stristr($useragent, 'okhttp')) $useragent = 'Android';
+                        if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
+
+                        if (\Module::collections()->has('Autocrm')) {
+                            $autocrm = app($this->autocrm)->SendAutoCRM(
+                                'Consultation Done',
+                                $transactionConsultation['user']['phone'],
+                                [
+                                    'action' => 'consultation_done',
+                                    'messages' => 'Consultation Done',
+                                    'id_conversation' => $transactionConsultation['id_conversation'],
+                                    'id_transaction' => $transactionConsultation['id_transaction'],
+                                    'useragent' => $useragent,
+                                    'now' => date('Y-m-d H:i:s'),
+                                    'date_sent' => date('d-m-y H:i:s')
+                                ],
+                                $useragent,
+                                false,
+                                false
+                            );
+                        }
+                    }
+                }
             }
 
             //update to missed consultation
@@ -3798,6 +3836,38 @@ class ApiTransactionConsultationController extends Controller
                     $idsConsultationAutoMissed[] = $consultationSoon['id_transaction'];
                     $updateConsultationStatus = TransactionConsultation::where('id_transaction', $consultationSoon['id_transaction'])->update(['consultation_status' => "missed"]);
                     $countAutoMissed = $countAutoMissed+1;
+
+                    //Send Autoresponse to User Device
+                    if(!empty($transactionConsultation['user'])){
+                        if (!empty($request->header('user-agent-view'))) {
+                            $useragent = $request->header('user-agent-view');
+                        } else {
+                            $useragent = $_SERVER['HTTP_USER_AGENT'];
+                        }
+
+                        if (stristr($useragent, 'iOS')) $useragent = 'iOS';
+                        if (stristr($useragent, 'okhttp')) $useragent = 'Android';
+                        if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
+
+                        if (\Module::collections()->has('Autocrm')) {
+                            $autocrm = app($this->autocrm)->SendAutoCRM(
+                                'Consultation Done',
+                                $transactionConsultation['user']['phone'],
+                                [
+                                    'action' => 'consultation_missed',
+                                    'messages' => 'Consultation Missed',
+                                    'id_conversation' => $transactionConsultation['id_conversation'],
+                                    'id_transaction' => $transactionConsultation['id_transaction'],
+                                    'useragent' => $useragent,
+                                    'now' => date('Y-m-d H:i:s'),
+                                    'date_sent' => date('d-m-y H:i:s')
+                                ],
+                                $useragent,
+                                false,
+                                false
+                            );
+                        }
+                    }
                 }
             }
 
@@ -3812,6 +3882,44 @@ class ApiTransactionConsultationController extends Controller
             return 'success';
         } catch (\Exception $e) {
             $log->fail($e->getMessage());
+        }
+    }
+
+    public function updateConversationInfobip($transaction)
+    {
+        $url = "/ccaas/1/conversations/".$transaction['consultation']['id_conversation'];
+
+        $outputGetConversation = Infobip::getRequest('Get Conversation', "GET", $url);
+        
+        $response = $outputGetConversation['response'] ?? false;
+        if (!$response || ($response['requestError'] ?? false)) {
+            return [
+                'status' => 'fail',
+                'messages' => is_array($response['requestError'] ?? false) ? 
+                    array_column($response['requestError'], 'text') :
+                    ['Terjadi kesalahan saat mencoba mendapatkan conversation'],
+            ];
+        }
+
+        $payload = [
+            "topic" => $outputGetConversation['response']['topic'],
+            "summary" => $outputGetConversation['response']['summary'],
+            "status" => "CLOSED",
+            "priority" => $outputGetConversation['response']['priority'],
+            "queueId" => $outputGetConversation['response']['queueId'],
+            "agentId"=> $outputGetConversation['response']['agentId'],
+        ];
+
+        $outputUpdateConversation = Infobip::sendRequest('Close Conversation', "PUT", $url, $payload);
+        
+        $response = $outputUpdateConversation['response'] ?? false;
+        if (!$response || ($response['requestError'] ?? false)) {
+            return [
+                'status' => 'fail',
+                'messages' => is_array($response['requestError'] ?? false) ? 
+                    array_column($response['requestError'], 'text') :
+                    ['Terjadi kesalahan saat mencoba mengupdate conversation'],
+            ];
         }
     }
 }
