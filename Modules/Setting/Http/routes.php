@@ -38,6 +38,7 @@ Route::group(['middleware' => ['auth_client', 'log_activities', 'user_agent'], '
     Route::any('/', 'ApiSetting@settingList');
     Route::get('/faq', 'ApiSetting@faqList');
     Route::any('/default_home', 'ApiSetting@homeNotLogin');
+    Route::any('/default_home_doctor', 'ApiSetting@homeDoctorNotLogin');
 	Route::get('/navigation', 'ApiSetting@Navigation');
 	Route::get('/navigation-logo', 'ApiSetting@NavigationLogo');
 	Route::get('/navigation-sidebar', 'ApiSetting@NavigationSidebar');

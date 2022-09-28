@@ -2034,11 +2034,18 @@ class ApiTransactionConsultationController extends Controller
 
                 $detailProduct = app($this->product)->detailRecomendation($params);
 
+                //decode and implode usage rules time
+                $json = json_decode($recomendation->usage_rules_time);
+                $usageRules = null;
+                if(!empty($json)){
+                    $usageRules = implode(", ", $json);
+                }
+
                 $items[$key]['product_name'] = $detailProduct['result']['product_name'] ?? null;
                 $items[$key]['variant_name'] = $detailProduct['result']['variants']['product_variant_name'] ?? null;
                 $items[$key]['qty'] = $recomendation->qty_product ?? null;
                 $items[$key]['usage_rule'] = $recomendation->usage_rules ?? null;
-                $items[$key]['usage_rule_time'] = $recomendation->usage_rules_time ?? null;
+                $items[$key]['usage_rule_time'] = $usageRules ?? null;
                 $items[$key]['usage_rule_additional_time'] = $recomendation->usage_rules_additional_time ?? null;
             }
         }
