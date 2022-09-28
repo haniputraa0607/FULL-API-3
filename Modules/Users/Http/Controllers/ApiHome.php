@@ -787,8 +787,8 @@ class ApiHome extends Controller
     }
 
     public function doctorSplash(Request $request){
-        $splash = Setting::where('key', '=', 'default_doctor_home_splash_screen')->first();
-        $duration = Setting::where('key', '=', 'default_doctor_home_splash_duration')->pluck('value')->first();
+        $splash = Setting::where('key', '=', 'default_home_doctor_splash_screen')->first();
+        $duration = Setting::where('key', '=', 'default_home_doctor_splash_duration')->pluck('value')->first();
 
         if(!empty($splash)){
             $splash = $this->endPoint.$splash['value'];
