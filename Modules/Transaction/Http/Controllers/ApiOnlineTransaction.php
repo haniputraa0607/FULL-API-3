@@ -284,6 +284,7 @@ class ApiOnlineTransaction extends Controller
             }
             $sub = ($data['subtotal_promo'] ?? $data['subtotal'] ?? 0); 
             $subFinal = $sub + ($data['tax'] ?? 0) + ($data['service'] ?? 0);
+            $maximumDateProcess = Setting::where('key', 'transaction_maximum_date_process')->first()['value']??3;
             $transaction = [
                 'id_transaction_group'        => $insertTransactionGroup['id_transaction_group'],
                 'id_promo_campaign_promo_code' => $data['id_promo_campaign_promo_code']??null,
@@ -309,7 +310,7 @@ class ApiOnlineTransaction extends Controller
                 'transaction_discount_item'  => $discountItem,
                 'transaction_discount_bill'  => $discountBill,
                 'transaction_discount_delivery'  => $discountDelivery,
-                'transaction_maximum_date_process' => date('Y-m-d', strtotime($currentDate. ' + 3 days'))
+                'transaction_maximum_date_process' => date('Y-m-d', strtotime($currentDate. ' + '.$maximumDateProcess.' days'))
             ];
 
             $newTopupController = new NewTopupController();

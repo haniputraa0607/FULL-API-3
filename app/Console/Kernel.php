@@ -220,8 +220,7 @@ class Kernel extends ConsoleKernel
          * generate token value first
          * run every day at 06:30
          */
-        $schedule->call('Modules\Users\Http\Controllers\ApiLoginRegisterV2@generateToken')->dailyAt('06:30');
-
+        $schedule->call('Modules\Users\Http\Controllers\ApiLoginRegisterV2@generateToken')->dailyAt(config('app.env') == 'staging' ? '06:00' : '05:30');
 
         /**
          * To backup and truncate log database
@@ -241,6 +240,12 @@ class Kernel extends ConsoleKernel
          * run every 5 minute
          */
         $schedule->call('Modules\Doctor\Http\Controllers\ApiDoctorController@cronUpdateDoctorStatus')->everyFiveMinutes();
+
+        /**
+         * Auto cancel cancel
+         * run every day at 00:30
+         */
+        $schedule->call('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController@autoCancel')->dailyAt(config('app.env') == 'staging' ? '07:00' : '00:30');
     }
 
     /**
