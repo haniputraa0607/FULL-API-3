@@ -1909,10 +1909,12 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
+        $outlet_referral_code = !empty($transaction->outlet->outlet_referral_code) ? $transaction->outlet->outlet_referral_code : $transaction->outlet->outlet_code;
+
         $outlet = [
             "outlet_name" => $transaction->outlet->outlet_name,
             "outlet_address" => $transaction->outlet->OutletFullAddress,
-            "outlet_referral_code" => '#'.$transaction->outlet->outlet_referral_code
+            "outlet_referral_code" => '#'.$outlet_referral_code
         ];
 
         //get recomendation
@@ -1924,7 +1926,7 @@ class ApiTransactionConsultationController extends Controller
                 $params = [
                     'id_product' => $recomendation->id_product,
                     'id_user' => $id,
-                    'id_product_variant_group' =>$recomendation->id_product_variant_group
+                    'id_product_variant_group' => $recomendation->id_product_variant_group
                 ];
 
                 $detailProduct = app($this->product)->detailRecomendation($params);
