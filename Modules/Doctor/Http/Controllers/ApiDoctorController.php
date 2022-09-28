@@ -374,7 +374,7 @@ class ApiDoctorController extends Controller
             if($transanctionConsultation > 0){
                 return response()->json([
                     'status' => 'fail',
-                    'messages' => ['The Doctor Has a Consultation.']
+                    'messages' => ['Doctors who already have a consultation cannot be deleted.']
                 ]);
             }
 
