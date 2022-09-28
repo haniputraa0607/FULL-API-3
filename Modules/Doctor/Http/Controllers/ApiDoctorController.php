@@ -368,6 +368,16 @@ class ApiDoctorController extends Controller
         try {
             //TO DO add validation delete where has konsultasi
             $id_doctor = $request->json('id_doctor');
+
+            //check transaction consultation
+            $transanctionConsultation = TransactionConsultation::where('id_doctor', $id_doctor)->count();
+            if($transanctionConsultation > 0){
+                return response()->json([
+                    'status' => 'fail',
+                    'messages' => ['The Doctor Has a Consultation.']
+                ]);
+            }
+
             $doctor = Doctor::where('id_doctor', $id_doctor)->first();
             $delete = $doctor->delete();
             return response()->json(MyHelper::checkDelete($delete));
