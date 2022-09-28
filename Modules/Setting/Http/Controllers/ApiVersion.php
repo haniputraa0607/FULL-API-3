@@ -175,7 +175,7 @@ class ApiVersion extends Controller
         foreach ($post as $key => $data) {
             if ($key == 'Display') {
                 foreach ($data as $keyData => $value) {
-                    if ($keyData == 'version_image_mobile' || $keyData == 'version_image_outlet') {
+                    if ($keyData == 'version_image_mobile' || $keyData == 'version_image_outlet' || $keyData == 'version_image_doctor_mobile') {
                         if (!file_exists('img/setting/version/')) {
                             mkdir('img/setting/version/', 0777, true);
                         }

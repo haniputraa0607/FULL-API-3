@@ -1061,6 +1061,89 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkUpdate($save));
     }
 
+    public function homeDoctorNotLogin(Request $request) {
+        $post = $request->json()->all();
+
+        if(empty($post)){
+            $key = array_pluck(Setting::where('key', 'LIKE', '%default_home_doctor%')->get()->toArray(), 'key');
+            $value = array_pluck(Setting::where('key', 'LIKE', '%default_home_doctor%')->get()->toArray(), 'value');
+            $defaultHome = array_combine($key, $value);
+            if(isset($defaultHome['default_home_doctor_image'])){
+                $defaultHome['default_home_doctor_image_url'] = $this->endPoint.$defaultHome['default_home_doctor_image'];
+            }
+			if(isset($defaultHome['default_home_doctor_splash_screen'])){
+                $defaultHome['default_home_doctor_splash_screen_url'] = $this->endPoint.$defaultHome['default_home_doctor_splash_screen'];
+            }
+            return response()->json(MyHelper::checkGet($defaultHome));
+        }
+
+        if (isset($post['default_home_doctor_image'])) {
+            $image = Setting::where('key', 'default_home_doctor_image')->first();
+
+            if(isset($image['value']) && file_exists($image['value'])){
+                unlink($image['value']);
+            }
+            $upload = MyHelper::uploadPhotoStrict($post['default_home_doctor_image'], $this->saveImage, 1080, 270);
+
+            if (isset($upload['status']) && $upload['status'] == "success") {
+                $post['default_home_doctor_image'] = $upload['path'];
+            }
+            else {
+                $result = [
+                    'error'    => 1,
+                    'status'   => 'fail',
+                    'messages' => ['fail upload image']
+                ];
+
+                return $result;
+            }
+        }
+
+		if (isset($post['default_home_doctor_splash_screen'])) {
+            $image = Setting::where('key', 'default_home_doctor_splash_screen')->first();
+
+            if(isset($image['value']) && file_exists($image['value'])){
+                unlink($image['value']);
+            }
+            // base64 image,path,h,w,name,ext
+            $upload = MyHelper::uploadPhotoStrict($post['default_home_doctor_splash_screen'], $this->saveImage, 1080, 1920,'splash');
+
+            if (isset($upload['status']) && $upload['status'] == "success") {
+                $post['default_home_doctor_splash_screen'] = $upload['path'];
+            }
+            else {
+                $result = [
+                    'error'    => 1,
+                    'status'   => 'fail',
+                    'messages' => ['fail upload image']
+                ];
+
+                return $result;
+            }
+        }
+
+        DB::beginTransaction();
+        foreach ($post as $key => $value) {
+            $insert = [
+                'key' => $key,
+                'value' => $value
+            ];
+            $save = Setting::updateOrCreate(['key' => $key], $insert);
+            if(!$save){
+                return $insert;
+                DB::rollBack();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'      => [
+                        'Data is invalid !!!'
+                    ]
+                ]);
+            }
+        }
+        DB::commit();
+        return response()->json(MyHelper::checkUpdate($save));
+    }
+
     public function settingWhatsApp(Request $request){
         $post = $request->json()->all();
 
