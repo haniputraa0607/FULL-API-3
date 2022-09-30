@@ -2107,6 +2107,9 @@ class ApiTransactionConsultationController extends Controller
             }
         }
 
+        //merge product
+        $post['items'] = $this->mergeProducts($post['items']);
+
         foreach($post['items'] as $key => $item){
             $post['items'][$key]['product_type'] = $post['type'];
             $post['items'][$key]['qty_product_counter'] = $post['items'][$key]['qty_product'];
@@ -3734,39 +3737,35 @@ class ApiTransactionConsultationController extends Controller
     public function mergeProducts($items)
     {
         // create unique array
-        foreach ($items as $index => $val) {
-            $new_items = [];
-            $item_qtys = [];
-            $id_custom = [];
+        $new_items = [];
+        $test = [];
+        foreach ($items as $key => $item) {
+            $new_item = [
+                'id_product' => $item['id_product'],
+                'id_product_variant_group' => $item['id_product_variant_group']??null,
+                'usage_rules' => $item['usage_rules']??null,
+                'usage_rules_time' => $item['usage_rules_time']??null,
+                'usage_rules_additional_time' => $item['usage_rules_additional_time']??null,
+                'id_outlet' => $item['id_outlet'],
+                'treatment_description' => $item['treatment_description']??null
+            ];
 
-            foreach ($val['items'] as $item){
-                $new_item = [
-                    'id_product' => $item['id_product'],
-                    'id_product_variant_group' => $item['id_product_variant_group']??null,
-                    'id_product_variant_group_wholesaler' => $item['id_product_variant_group_wholesaler']??null,
-                    'id_product_wholesaler' => $item['id_product_wholesaler']??null,
-                    'note' => $item['note']
-                ];
-                $pos = array_search($new_item, $new_items);
-                if($pos === false) {
-                    $new_items[] = $new_item;
-                    $item_qtys[] = $item['qty'];
-                    $id_custom[] = $item['id_custom']??0;
-                } else {
-                    $item_qtys[$pos] += $item['qty'];
-                }
+            $pos = array_search($new_item, $new_items);
+
+            if($pos === false) {
+                $new_items[] = $new_item;
+                $item_qtys[] = $item['qty_product'];
+            } else {
+                $item_qtys[$pos] += $item['qty_product'];
             }
-
-            // update qty
-            foreach ($new_items as $key => &$value) {
-                $value['qty'] = $item_qtys[$key];
-                $value['id_custom'] = $id_custom[$key];
-            }
-
-            $items[$index]['items'] = $new_items;
         }
 
-        return $items;
+        // update qty
+        foreach ($new_items as $key => &$value) {
+            $value['qty_product'] = $item_qtys[$key];
+        }
+
+        return $new_items;
     }
 
     public function cronAutoEndConsultation()
