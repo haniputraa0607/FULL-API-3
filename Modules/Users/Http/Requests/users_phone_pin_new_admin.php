@@ -27,7 +27,7 @@ class users_phone_pin_new_admin extends FormRequest
 	{
 		return [
 			'phone'			=> 'required|string|max:18',
-			'password_new'	=> 'required|string|digits:6|confirmed',
+			'password_new'	=> 'required|string|min:8|max:20|confirmed',
         ];
     }
 
