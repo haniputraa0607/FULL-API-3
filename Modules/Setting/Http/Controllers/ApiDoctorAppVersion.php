@@ -8,7 +8,7 @@ use Illuminate\Routing\Controller;
 use Modules\Setting\Http\Requests\Version\VersionList;
 
 use App\Http\Models\Setting;
-use Modules\Setting\Entities\DoctorAppVersion;
+use Modules\Setting\Entities\Version;
 
 use App\Lib\MyHelper;
 use DB;
@@ -40,7 +40,7 @@ class ApiDoctorAppVersion extends Controller
         /*=======================End====================*/
         $post = $request->json()->all();
         $dbSetting = Setting::where('key', 'like', 'doctor_app_version_%')->get()->toArray();
-        $dbDevice = DoctorAppVersion::select('app_type', 'app_version')->orderBy('app_version', 'desc')->where('rules', '1')->get()->toArray();
+        $dbDevice = Version::select('app_type', 'app_version')->orderBy('app_version', 'desc')->where('rules', '1')->get()->toArray();
 
         if(empty($dbDevice)) {
             return response()->json(['status' => 'success', 'message' => 'Belum ada pengaturan versi untuk aplikasi']);
@@ -72,8 +72,9 @@ class ApiDoctorAppVersion extends Controller
         }
         if ($device != null) {
             if ($device == 'android') {
+                $compare_version = [];
                 foreach ($setting['Device'] as $value) {
-                    if (in_array('Android', $value)) {
+                    if (in_array('DoctorAndroid', $value)) {
                         $value['app_type'] = strtolower($value['app_type']);
                         $compare_version[] = $value;
                     }
@@ -96,8 +97,9 @@ class ApiDoctorAppVersion extends Controller
                 ]);
             }
             if ($device == 'ios') {
+                $compare_version = [];
                 foreach ($setting['Device'] as $value) {
-                    if (in_array('IOS', $value)) {
+                    if (in_array('DoctorIOS', $value)) {
                         $value['app_type'] = strtolower($value['app_type']);
                         $compare_version[] = $value;
                     }
