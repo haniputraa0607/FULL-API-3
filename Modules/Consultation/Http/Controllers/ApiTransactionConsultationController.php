@@ -3931,4 +3931,214 @@ class ApiTransactionConsultationController extends Controller
             ];
         }
     }
+
+    public function exportDetail(Request $request)
+    {
+        $post = $request->json()->all();
+
+        //get Transaction
+        $transaction = Transaction::where('id_transaction', $post['id_transaction'])->first();
+
+        $transactionDate = date('d F Y | H:i', strtotime($transaction['transaction_date']));
+
+        //get Transaction Consultation
+        $transactionConsultation = $transaction->consultation;
+
+        $detailTransaction = [
+            ['Detail Transaksi', ' '],
+            ['Nomor Transaksi' , $transaction['transaction_receipt_number']],
+            ['Tanggal Transaksi', $transactionDate],
+            ['Doctor', $transactionConsultation->doctor->doctor_name],
+            ['Customer' , $transactionConsultation->user->name],
+            ['Jenis Pembayaran' , $transaction->trasaction_payment_type],
+            ['Status Pembayaran' , $transaction->transaction_payment_status],
+            ['Tipe Konsultasi' , $transactionConsultation->consultation_type],
+            ['Waktu Mulai' , date('H:i', strtotime($transactionConsultation->schedule_start_time))],
+            ['Waktu Selesai' , date('H:i', strtotime($transactionConsultation->schedule_end_time))],
+            ['Status Konsultasi' , $transactionConsultation->consultation_status]
+        ];
+
+
+        $detailConsultation = [];
+        $diseaseComplaint = json_decode($transactionConsultation['disease_complaint']);
+        $diseaseAnalysis = json_decode($transactionConsultation['disease_analysis']);
+
+        $detailConsultation[] = [
+            'Hasil Konsultasi', ' '
+        ];
+
+        //create tabel disease complaint
+        foreach($diseaseComplaint as $key => $complaint){
+            if($key == 0) {
+                $detailConsultation[] = ['Keluhan', $complaint];
+            } else {
+                $detailConsultation[] = ['', $complaint];
+            }
+        }
+
+        //create tabel disease analysis
+        foreach($diseaseAnalysis as $key => $analysis){
+            if($key == 0) {
+                $detailConsultation[] = ['Diagnosa', $analysis];
+            } else {
+                $detailConsultation[] = ['', $analysis];
+            }
+        }
+
+
+        $detailConsultation[] = ['Anjuran Penanganan', $transactionConsultation['treatment_recomendation']];
+
+        //get Transaction Message
+        $transactionMessages = TransactionConsultationMessage::where('id_transaction_consultation', $transactionConsultation->id_transaction_consultation)->get();
+
+        //doctor
+        $doctor = $transactionConsultation->doctor;
+
+        //user
+        $user = $transactionConsultation->user;
+
+        //get Transaction
+        $messages = [];
+        foreach($transactionMessages as $key => $message){
+            $messages[0] = [
+                'Name',
+                'Url',
+                'Text / Caption',
+                'Created At Infobip'
+            ];
+
+            if($message['direction'] == 'OUTBOUND'){
+                $messages[$key+1]['name'] = $doctor['doctor_name'];
+            } else {
+                $messages[$key+1]['name'] = $user['name'];
+            }
+            
+            if($message['content_type'] == 'DOCUMENT'){
+                $messages[$key+1]['url'] = $message['url'];
+                $messages[$key+1]['caption'] = $message['caption'];
+            } elseif ($message['content_type'] == 'IMAGE') {
+                $messages[$key+1]['url'] = $message['url'];
+                $messages[$key+1]['caption'] = $message['caption'];
+            } else {
+                $messages[$key+1]['url'] = '';
+                $messages[$key+1]['text'] = $message['text'];
+            }
+            $messages[$key+1]['created_at_infobip'] = date('H:i', strtotime($message['created_at_infobip']));
+        }
+
+        //get Transaction Recomendation Product
+        $recomendations = TransactionConsultationRecomendation::with('product')->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->onlyProduct()->get();
+
+        $itemsProduct = [];
+        if(!empty($recomendations)) {
+            $itemsProduct = [
+                ['Nama Product',
+                'Harga',
+                'Qty',
+                'Aturan Pakai',
+                'Waktu Pemakaian',
+                'Aturan Tambahan',
+                'Anjuran Penggunaan']
+            ];
+
+            $i = 1;
+            foreach($recomendations as $key => $recomendation){
+                $params = [
+                    'id_product' => $recomendation->id_product,
+                    'id_user' => $transaction['id_user'],
+                    'id_product_variant_group' =>$recomendation->id_product_variant_group
+                ];
+
+                $detailProduct = app($this->product)->detailRecomendation($params);
+
+                $itemsProduct[$i][] = $detailProduct['result']['product_name'] ?? null;
+                
+                
+                if($detailProduct['result']['variants'] != null && isset($detailProduct['result']['variants']['childs'][0]['product_variant_group_price'])){
+                    $itemsProduct[$i][] = $detailProduct['result']['variants']['childs'][0]['product_variant_group_price'];
+                } else {
+                    $itemsProduct[$i][] = $detailProduct['result']['product_price'];
+                }
+                
+                $itemsProduct[$i][] = $recomendation->qty_product ?? null;
+                $itemsProduct[$i][] = $recomendation->usage_rules ?? null;
+                $itemsProduct[$i][] = $recomendation->usage_rules_time ?? null;
+                $itemsProduct[$i][] = $recomendation->usage_rules_additional ?? null;
+                $itemsProduct[$i][] = $recomendation->treatment_description ?? null;
+
+                $i++;
+            }
+        }
+
+        //get Transaction Recomendation Drug
+        $recomendations = TransactionConsultationRecomendation::with('product')->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->onlyDrug()->get();
+
+        $outlet_referral_code = !empty($transaction->outlet->outlet_referral_code) ? $transaction->outlet->outlet_referral_code : $transaction->outlet->outlet_code;
+
+        $outlet = [
+            [''],
+            ["Outlet", $transaction->outlet->outlet_name],
+            ["Alamat Outlet", $transaction->outlet->OutletFullAddress],
+            ["Referral Code Outlet", '#'.$outlet_referral_code]
+        ];
+
+        $prescription_redemption = ['Batas Maksimal Penebusan', ($transactionConsultation->recipe_redemption_limit - $transactionConsultation->recipe_redemption_counter)];
+
+        $itemsDrugs = [];
+        if(!empty($recomendations)) {
+            $itemsDrugs = [
+                ['Nama Product',
+                'Harga',
+                'Qty',
+                'Aturan Pakai',
+                'Waktu Pemakaian',
+                'Aturan Tambahan',
+                'Anjuran Penggunaan']
+            ];
+
+            $i = 1;
+            foreach($recomendations as $key => $recomendation){
+                $params = [
+                    'id_product' => $recomendation->id_product,
+                    'id_user' => $transaction['id_user'],
+                    'id_product_variant_group' =>$recomendation->id_product_variant_group
+                ];
+
+                $detailProduct = app($this->product)->detailRecomendation($params);
+
+                $itemsDrugs[$i][] = $detailProduct['result']['product_name'] ?? null;
+                
+                
+                if($detailProduct['result']['variants'] != null && isset($detailProduct['result']['variants']['childs'][0]['product_variant_group_price'])){
+                    $itemsDrugs[$i][] = $detailProduct['result']['variants']['childs'][0]['product_variant_group_price'];
+                } else {
+                    $itemsDrugs[$i][] = $detailProduct['result']['product_price'];
+                }
+                
+                $itemsDrugs[$i][] = $recomendation->qty_product ?? null;
+                $itemsDrugs[$i][] = $recomendation->usage_rules ?? null;
+                $itemsDrugs[$i][] = $recomendation->usage_rules_time ?? null;
+                $itemsDrugs[$i][] = $recomendation->usage_rules_additional ?? null;
+                $itemsDrugs[$i][] = $recomendation->treatment_description ?? null;
+
+                $i++;
+            }
+        }
+
+        $prescriptions = [
+            'items' => $itemsDrugs,
+            'outlet' => $outlet,
+            'prescription_redemption' => $prescription_redemption
+        ];
+
+        $result = [
+            'Detail Transaction' => $detailTransaction,
+            'Riwayat Chat' => $messages,
+            'Hasil Konsultasi' => $detailConsultation,
+            'Rekomendasi Produk' => $itemsProduct,
+            'Rekomendasi Drug' => $prescriptions
+        ];
+
+        return response()->json(['status'  => 'success', 'result' => $result]);
+    }
 }

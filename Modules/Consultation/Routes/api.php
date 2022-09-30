@@ -22,6 +22,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
     Route::get('/consultation/detail/{id}', 'ApiTransactionConsultationController@getConsultationDetailFromAdmin');
     Route::post('/consultation/update', 'ApiTransactionConsultationController@updateConsultationFromAdmin');
     Route::post('/consultation/get-schedule-time', 'ApiTransactionConsultationController@getScheduleTimeFromAdmin');
+    Route::post('/consultation/detail/export', 'ApiTransactionConsultationController@exportDetail');
 });
 
 Route::any('consultation/detail/chat.html', 'ApiTransactionConsultationController@getChatView');
