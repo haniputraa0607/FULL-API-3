@@ -4072,17 +4072,6 @@ class ApiTransactionConsultationController extends Controller
         //get Transaction Recomendation Drug
         $recomendations = TransactionConsultationRecomendation::with('product')->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->onlyDrug()->get();
 
-        $outlet_referral_code = !empty($transaction->outlet->outlet_referral_code) ? $transaction->outlet->outlet_referral_code : $transaction->outlet->outlet_code;
-
-        $outlet = [
-            [''],
-            ["Outlet", $transaction->outlet->outlet_name],
-            ["Alamat Outlet", $transaction->outlet->OutletFullAddress],
-            ["Referral Code Outlet", '#'.$outlet_referral_code]
-        ];
-
-        $prescription_redemption = ['Batas Maksimal Penebusan', ($transactionConsultation->recipe_redemption_limit - $transactionConsultation->recipe_redemption_counter)];
-
         $itemsDrugs = [];
         if(!empty($recomendations)) {
             $itemsDrugs = [
@@ -4113,29 +4102,52 @@ class ApiTransactionConsultationController extends Controller
                 } else {
                     $itemsDrugs[$i][] = $detailProduct['result']['product_price'];
                 }
+
+                //decode and implode usage rules time
+                $json = json_decode($recomendation->usage_rules_time);
+                $usageRules = null;
+                if(!empty($json)){
+                    $usageRules = implode(", ", $json);
+                }
                 
                 $itemsDrugs[$i][] = $recomendation->qty_product ?? null;
                 $itemsDrugs[$i][] = $recomendation->usage_rules ?? null;
-                $itemsDrugs[$i][] = $recomendation->usage_rules_time ?? null;
+                $itemsDrugs[$i][] = $usageRules ?? null;
                 $itemsDrugs[$i][] = $recomendation->usage_rules_additional ?? null;
                 $itemsDrugs[$i][] = $recomendation->treatment_description ?? null;
 
                 $i++;
             }
-        }
 
-        $prescriptions = [
-            'items' => $itemsDrugs,
-            'outlet' => $outlet,
-            'prescription_redemption' => $prescription_redemption
-        ];
+            $outlet_referral_code = !empty($transaction->outlet->outlet_referral_code) ? $transaction->outlet->outlet_referral_code : $transaction->outlet->outlet_code;
+
+            $outlet = [
+                ["Outlet", $transaction->outlet->outlet_name],
+                ["Alamat Outlet", $transaction->outlet->OutletFullAddress],
+                ["Referral Code Outlet", '#'.$outlet_referral_code],
+                ["Batas Maksimal Penebusan", ($transactionConsultation->recipe_redemption_limit - $transactionConsultation->recipe_redemption_counter).' '],
+                []
+            ];
+
+            // $itemsDrugs[] = ['Outlet', $transaction->outlet->outlet_name];
+            // $itemsDrugs[] = ['Alamat Outlet', $transaction->outlet->OutletFullAddress];
+            // $itemsDrugs[] = ['Referral Code Outlet', '#'.$outlet_referral_code];
+            // $itemsDrugs[] = ['Batas Maksimal Penebusan', ($transactionConsultation->recipe_redemption_limit - $transactionConsultation->recipe_redemption_counter)];
+    
+            // $itemsDrugs['redemption'] = ['Batas Maksimal Penebusan', ($transactionConsultation->recipe_redemption_limit - $transactionConsultation->recipe_redemption_counter)];
+
+            $prescriptions = [
+                'outlet' => $outlet,
+                'items' => $itemsDrugs
+            ];
+        }
 
         $result = [
             'Detail Transaction' => $detailTransaction,
             'Riwayat Chat' => $messages,
             'Hasil Konsultasi' => $detailConsultation,
             'Rekomendasi Produk' => $itemsProduct,
-            'Rekomendasi Drug' => $prescriptions
+            'Rekomendasi Obat' => $prescriptions
         ];
 
         return response()->json(['status'  => 'success', 'result' => $result]);
