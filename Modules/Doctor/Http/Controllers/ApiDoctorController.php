@@ -217,6 +217,20 @@ class ApiDoctorController extends Controller
         $d = explode('/', $post['birthday']);
         $post['birthday'] = $d[2] . "-" . $d[0] . "-" . $d[1];
 
+        //check phone format
+        $post['doctor_phone'] = preg_replace("/[^0-9]/", "", $post['doctor_phone']);
+
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($post['doctor_phone']);
+
+        if (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail') {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [$checkPhoneFormat['messages']]
+            ]);
+        } elseif (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success') {
+            $post['doctor_phone'] = $checkPhoneFormat['phone'];
+        }
+
         //doctor session price
         $post['doctor_session_price'] = str_replace(".", '', $post['doctor_session_price']);
 
