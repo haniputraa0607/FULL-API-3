@@ -2,11 +2,11 @@
 
 namespace App\Console\Commands;
 
-use Symfony\Component\Process\Process;
-use Symfony\Component\Process\Exception\ProcessFailedException;
+use App\Lib\MyHelper;
 use Illuminate\Console\Command;
 use Illuminate\Http\File;
 use Storage;
+use Symfony\Component\Process\Process;
 
 class BackupLogToStorage extends Command
 {
@@ -41,61 +41,74 @@ class BackupLogToStorage extends Command
      */
     public function handle()
     {
-        $name = 'alltable';
-        $tables = $this->option('table');
-        $totalRow = $this->option('chunk');
-        $maxbackup = $this->option('maxbackup');
+        $log = MyHelper::logCron('Backup Log Database');
+        try {
+            $name      = 'alltable';
+            $tables    = $this->option('table');
+            $totalRow  = $this->option('chunk');
+            $maxbackup = $this->option('maxbackup');
 
-        foreach ($tables as $table) {
-            $this->info("Processing $table...");
-            if ($table == '*') {
-                $table = '';
-            }
-            if (!$table) {
-                continue;
-            }
-            $currentbackup = 0;
+            foreach ($tables as $table) {
+                $this->info("Processing $table...");
+                if ($table == '*') {
+                    $table = '';
+                }
+                if (!$table) {
+                    continue;
+                }
+                $currentbackup = 0;
 
-            backupagain:
-            if ($currentbackup >= $maxbackup) continue;
-            try {
+                backupagain:
+                if ($currentbackup >= $maxbackup) {
+                    continue;
+                }
+
                 $foundRecord = \DB::connection('mysql2')->table($table)->where('created_at', '<', date('Y-m-d H:i:s', strtotime('-30days')))->count();
-            } catch (\Exception $e) {
-                $this->error($e->getMessage());
-                continue;
+                $this->line('>' . ($foundRecord ?: 'No') . ' records found');
+                if ($table && $foundRecord < 1) {
+                    continue;
+                }
+
+                $this->line('>> Backup #' . ($currentbackup + 1));
+                $filename     = date('YmdHi_') . $currentbackup . '_' . ($table ?: 'alltable') . '.sql';
+                $backupFileUC = storage_path('app/' . $filename);
+
+                $dbUser     = config('database.connections.mysql2.username');
+                $dbHost     = config('database.connections.mysql2.host');
+                $dbPassword = config('database.connections.mysql2.password');
+                $dbName     = config('database.connections.mysql2.database');
+                $awsCliProfile = env('S3_AWS_PROFILE');
+                $bucketBackup     = env('S3_BUCKET_BACKUP');
+
+                $dbPassword = $dbPassword ? '-p' . $dbPassword : '';
+
+                $mysql_dump_command = "mysqldump -v -u{$dbUser} -h {$dbHost} {$dbPassword} {$dbName} {$table} --where=\"1 limit $totalRow\" >  \"$backupFileUC\"";
+                $gzip_command       = "gzip -9 -f \"$backupFileUC\"";
+
+                $run_mysql = Process::fromShellCommandline($mysql_dump_command);
+                $run_mysql->mustRun();
+
+                if ($this->option('truncate') && $table) {
+                    \DB::connection('mysql2')->table($table)->where('created_at', '<', date('Y-m-d H:i:s', strtotime('-30days')))->limit($totalRow)->delete();
+                }
+
+                $gzip_process = Process::fromShellCommandline($gzip_command);
+                $gzip_process->mustRun();
+
+                if (config('filesystems.default') == 's3') {
+                    $sync_command = "aws s3 cp \"$backupFileUC.gz\" s3://$bucketBackup/_backup_dblog/ --acl=private --profile=\"$awsCliProfile\"";
+
+                    $run_sync = Process::fromShellCommandline($sync_command);
+                    $run_sync->mustRun();
+                    unlink($backupFileUC . '.gz');
+                }
+
+                $currentbackup++;
+                goto backupagain;
             }
-            $this->line('>' . ($foundRecord ?: 'No') . ' records found');
-            if ($table && $foundRecord < 1) {
-                continue;
-            }
-
-            $this->line('>> Backup #' . ($currentbackup + 1));
-            $filename = date('YmdHi_'). $currentbackup . '_' . ($table ?: 'alltable') . '.sql';
-            $backupFileUC = storage_path('app/' . $filename);
-
-            $dbUser = env('DB2_USERNAME');
-            $dbHost = env('DB2_HOST');
-            $dbPassword = env('DB2_PASSWORD');
-            $dbName = env('DB2_DATABASE');
-
-            $dbPassword = $dbPassword ? '-p'.$dbPassword : '';
-
-            $mysql_dump_command= "mysqldump -v -u{$dbUser} -h{$dbHost} {$dbPassword} {$dbName} {$table} --where=\"1 limit $totalRow\" >  \"$backupFileUC\"";
-            $gzip_command= "gzip -9 -f \"$backupFileUC\"";
-
-            $run_mysql= Process::fromShellCommandline($mysql_dump_command);
-            $run_mysql->mustRun(); 
-            $gzip_process= Process::fromShellCommandline($gzip_command);
-            $gzip_process->mustRun();
-
-            Storage::putFileAs('_backup_dblog/', new File($backupFileUC . '.gz') , $filename . '.gz', 'private');
-            unlink($backupFileUC . '.gz');
-
-            if ($this->option('truncate') && $table) {
-                \DB::connection('mysql2')->table($table)->where('created_at', '<', date('Y-m-d H:i:s', strtotime('-30days')))->limit($totalRow)->delete();
-            }
-            $currentbackup++;
-            goto backupagain;
+            $log->success($tables);
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
         }
     }
 }
