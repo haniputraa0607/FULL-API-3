@@ -1490,8 +1490,12 @@ class ApiHistoryController extends Controller
                 ->where('trasaction_type', 'Delivery')
                 ->orderBy('transaction_date', 'desc');
 
-        if(!empty($post['filter_date'])){
-            $list = $list->whereDate('transaction_date', date('Y-m-d', strtotime($post['filter_date'])));
+        if(!empty($post['filter_date_start'])){
+            $list = $list->whereDate('transaction_date', '>=', date('Y-m-d', strtotime($post['filter_date_start'])));
+        }
+
+        if(!empty($post['filter_date_end'])){
+            $list = $list->whereDate('transaction_date', '<=', date('Y-m-d', strtotime($post['filter_date_end'])));
         }
 
         if(!empty($post['filter_status_code'])){
