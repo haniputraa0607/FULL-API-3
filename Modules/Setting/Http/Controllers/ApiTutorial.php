@@ -34,8 +34,8 @@ class ApiTutorial extends Controller
                     'active'        => 0,
                     'skippable'     => 0,
                     'text_next'     => 'Selanjutnya',
-                    'text_skip'     => 'Lewati',
-                    'text_last'     => 'Mulai'
+                    'text_previous' => 'Sebelumnya',
+                    'text_skip'     => 'Lewati'
                 ])
             ]);
         }

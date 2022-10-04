@@ -81,7 +81,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('be/complete-profile', 'ApiSetting@completeProfile');
     Route::any('be/text_menu_list', 'ApiSetting@textMenuList');
     Route::any('be/faq', 'ApiSetting@faqList');
-    Route::any('/intro', ['middleware' => 'feature_control:168', 'uses' => 'ApiTutorial@introList']);
+    Route::any('/intro', ['middleware' => 'feature_control:168', 'uses' => 'ApiTutorial@introList']); //hereee
     Route::post('/intro/save', ['middleware' => 'feature_control:169', 'uses' => 'ApiTutorial@introSave']);
     Route::post('email', 'ApiSetting@settingEmail');
     Route::any('email/update', 'ApiSetting@emailUpdate');
