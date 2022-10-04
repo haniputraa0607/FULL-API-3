@@ -2504,7 +2504,7 @@ class FeaturesTableSeeder extends Seeder
                 array(
                     'id_feature' => 250,
                     'feature_type' => 'Update',
-                    'feature_module' => 'Setting Payment Method',
+                    'feature_module' => 'Order Setting',
                     'show_hide' => 1,
                     'order' => 103,
                     'created_at' => '2018-05-10 08:00:00',

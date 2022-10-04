@@ -83,6 +83,8 @@ class Transaction extends Model
         'transaction_discount_item',
         'transaction_discount_bill',
 		'transaction_tax',
+        'transaction_mdr',
+        'transaction_mdr_charged',
 		'trasaction_type',
 		'transaction_cashier',
 		'sales_type',
@@ -376,6 +378,8 @@ class Transaction extends Model
             );
         }
 
+        $this->recalculateTaxandMDR();
+
         \DB::commit();
     	return true;
     }
@@ -539,5 +543,42 @@ class Transaction extends Model
 	public function consultation()
     {
         return $this->belongsTo(\App\Http\Models\TransactionConsultation::class, 'id_transaction', 'id_transaction');
+    }
+
+    public function recalculateTaxandMDR()
+    {
+        $payment_type = TransactionMultiplePayment::where('id_transaction_group', $this->id_transaction_group)
+                        ->where('type', '<>', 'Balance')->first()['type']??null;
+
+        $payment_detail = null;
+        switch ($payment_type) {
+            case 'Midtrans':
+                $payment = $this->transaction_payment_midtrans()->first();
+                $payment_detail = optional($payment)->payment_type;
+                break;
+            case 'Xendit':
+                $payment = $this->transaction_payment_xendit()->first();
+                $payment_detail = optional($payment)->type;
+                break;
+        }
+
+        //update mdr
+        if($payment_type && $payment_detail){
+            $code = strtolower($payment_type.'_'.$payment_detail);
+            $settingmdr = Setting::where('key', 'mdr_formula')->first()['value_text']??'';
+            $settingmdr = (array)json_decode($settingmdr);
+            $formula = $settingmdr[$code]??'';
+            if(!empty($formula)){
+                try {
+                    $balanceUse = TransactionPaymentBalance::where('id_transaction', $this->id_transaction)->first()['balance_nominal']??0;
+                    $grandtotal = $this->transaction_grandtotal - $balanceUse;
+                    $mdr = MyHelper::calculator($formula, ['transaction_grandtotal' => $grandtotal]);
+                    if(!empty($mdr)){
+                        $this->update(['transaction_mdr' => $mdr]);
+                    }
+                } catch (\Exception $e) {
+                }
+            }
+        }
     }
 }

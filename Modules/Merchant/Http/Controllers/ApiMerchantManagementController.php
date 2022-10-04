@@ -1509,6 +1509,8 @@ class ApiMerchantManagementController extends Controller
                 ->where('bank_accounts.id_bank_account', $dt['merchant_balance_id_reference'])
                 ->first();
 
+            $fee = MerchantLogBalance::where('merchant_balance_source', 'Withdrawal Fee')->where('merchant_balance_id_reference', $dt['id_merchant_log_balance'])->first()['merchant_balance']??0;
+
             $list['data'][$key] = [
                 'id_merchant_log_balance' => $dt['id_merchant_log_balance'],
                 'date' => $dt['request_at'],
@@ -1516,6 +1518,7 @@ class ApiMerchantManagementController extends Controller
                 'status' => $dt['merchant_balance_status'],
                 'data_bank_account' => $bankAccount,
                 'outlet' => $dt['outlet_code'].'-'.$dt['outlet_name'],
+                'fee' => $fee,
                 'data_outlet' => [
                     'outlet_code' => $dt['outlet_code'],
                     'outlet_name' => $dt['outlet_name'],

@@ -175,9 +175,13 @@ class ApiShipperController extends Controller
 
         if($updateCompleted){
             //insert balance merchant
+            $settingmdrCharged = Setting::where('key', 'mdr_charged')->first()['value']??null;
             $merchant = Merchant::where('id_outlet', $transaction['id_outlet'])->first();
             $idMerchant = $merchant['id_merchant']??null;
             $chargedAll = $transaction['transaction_service'] + $transaction['transaction_tax'] + $transaction['discount_charged_outlet'];
+            if(!empty($settingmdrCharged) && $settingmdrCharged == 'merchant'){
+                $chargedAll = $chargedAll + $transaction['transaction_mdr'];
+            }
             $nominal = $transaction['transaction_subtotal'] - $chargedAll;
             $dt = [
                 'id_merchant' => $idMerchant,
@@ -205,6 +209,7 @@ class ApiShipperController extends Controller
 
             $countTrxMerchant = $merchant['merchant_count_transaction']??0;
             Merchant::where('id_merchant', $idMerchant)->update(['merchant_count_transaction' => $countTrxMerchant+1]);
+            Transaction::where('id_transaction', $transaction['id_transaction'])->update(['transaction_mdr_charged' => $settingmdrCharged]);
         }
 
         return true;

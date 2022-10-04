@@ -1491,7 +1491,7 @@ class ApiHistoryController extends Controller
                 ->orderBy('transaction_date', 'desc');
 
         if(!empty($post['filter_date'])){
-            $list = $list->whereDate('transaction_date', date('Y-m-d', strtotime($filterCode)));
+            $list = $list->whereDate('transaction_date', date('Y-m-d', strtotime($post['filter_date'])));
         }
 
         if(!empty($post['filter_status_code'])){
