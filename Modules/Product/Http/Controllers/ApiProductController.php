@@ -2218,6 +2218,8 @@ class ApiProductController extends Controller
                 $list = $list->orderBy('total_rating', 'desc');
             }elseif($sorting == 'newest'){
                 $list = $list->orderBy('products.created_at', 'desc');
+            }elseif($sorting == 'recommendation'){
+                $list = $list->orderBy('products.product_recommendation_status', 'desc')->orderBy('products.product_name', 'asc');
             }
         }else{
             $list = $list->orderBy('product_count_transaction', 'desc');
