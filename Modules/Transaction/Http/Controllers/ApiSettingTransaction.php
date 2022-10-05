@@ -14,6 +14,7 @@ use App\Lib\MyHelper;
 
 use DB;
 use Image;
+use Modules\Disburse\Entities\BankName;
 
 class ApiSettingTransaction extends Controller
 {
@@ -293,5 +294,25 @@ class ApiSettingTransaction extends Controller
 
             return MyHelper::checkUpdate($update);
         }
+    }
+
+    public function settingMdr(Request $request){
+        $post = $request->all();
+
+        Setting::updateOrCreate(['key' => 'mdr_charged'], ['value' => $post['mdr_charged']]);
+        $update = Setting::updateOrCreate(['key' => 'mdr_formula'], ['value_text' => json_encode($post['mdr_formula'])]);
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function settingWithdrawal(Request $request){
+        $post = $request->all();
+
+        Setting::updateOrCreate(['key' => 'withdrawal_fee_global'], ['value' => $post['withdrawal_fee_global']]);
+        foreach ($post['data'] as $key=>$value){
+            $update = BankName::where('id_bank_name', $key)->update(['withdrawal_fee_formula' => $value['value']]);
+        }
+
+        return response()->json(MyHelper::checkUpdate($update));
     }
 }

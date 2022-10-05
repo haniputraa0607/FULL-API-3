@@ -1187,6 +1187,7 @@ class ApiMerchantController extends Controller
         }
 
         $checkBankAccount = BankAccount::join('bank_account_outlets', 'bank_account_outlets.id_bank_account', 'bank_accounts.id_bank_account')
+                            ->join('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
                             ->where('bank_accounts.id_bank_account', $post['id_bank_account'])
                             ->where('id_outlet', $checkMerchant['id_outlet'])
                             ->first();
@@ -1195,13 +1196,34 @@ class ApiMerchantController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Bank account tidak ditemukan']]);
         }
 
+        $amount = $post['amount_withdrawal'];
+        //calculate withdrawal fee
+        if(empty($checkBankAccount['withdrawal_fee_formula'])){
+            $formula = Setting::where('key', 'withdrawal_fee_global')->first()['value']??null;
+        }else{
+            $formula = $checkBankAccount['withdrawal_fee_formula'];
+        }
+
+        $fee = (!empty($formula) ? MyHelper::calculator($formula, ['amount' => $amount]) : 0);
+        $amount = $amount - $fee;
+
+
         $dt = [
             'id_merchant' => $checkMerchant['id_merchant'],
-            'balance_nominal' => -$post['amount_withdrawal'],
+            'balance_nominal' => -$amount,
             'id_transaction' => $post['id_bank_account'],
             'source' => 'Withdrawal'
         ];
         $saveBalanceMerchant = app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dt);
+
+        $dtFee = [
+            'id_merchant' => $checkMerchant['id_merchant'],
+            'balance_nominal' => -$fee,
+            'id_transaction' => $saveBalanceMerchant['id_merchant_log_balance'],
+            'source' => 'Withdrawal Fee'
+        ];
+        $saveBalanceMerchant = app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dtFee);
+
         return response()->json(MyHelper::checkUpdate($saveBalanceMerchant));
     }
 

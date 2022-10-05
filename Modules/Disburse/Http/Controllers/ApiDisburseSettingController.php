@@ -44,7 +44,7 @@ class ApiDisburseSettingController extends Controller
 
     public function getBank(Request $request){
         $post = $request->json()->all();
-        $bank = BankName::select('id_bank_name', 'bank_code', 'bank_name')->get()->toArray();
+        $bank = BankName::select('id_bank_name', 'bank_code', 'bank_name', 'withdrawal_fee_formula')->get()->toArray();
         return response()->json(MyHelper::checkGet($bank));
     }
 

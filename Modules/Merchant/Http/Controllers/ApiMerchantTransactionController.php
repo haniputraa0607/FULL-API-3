@@ -1019,15 +1019,6 @@ class ApiMerchantTransactionController extends Controller
         $balance_nominal = $data['balance_nominal'];
         $balance_before = MerchantLogBalance::where('id_merchant', $data['id_merchant'])->sum('merchant_balance');
         $balance_after = $balance_before + $balance_nominal;
-        $checkLog = MerchantLogBalance::where('merchant_balance_source', 'Completed Transaction')->where('merchant_balance_id_reference', $data['id_transaction'])->where('id_merchant', $data['id_merchant'])->first();
-        if($checkLog){
-            $balance_before = $checkLog->balance_before;
-            if($balance_nominal == $checkLog->balance){
-                $balance_after = $checkLog->balance_after;
-            }else{
-                $balance_after = $balance_before + $balance_nominal;
-            }
-        }
 
         $LogBalance = [
             'id_merchant'                    => $data['id_merchant'],

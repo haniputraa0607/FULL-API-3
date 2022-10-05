@@ -796,149 +796,52 @@ class ApiMerchantManagementController extends Controller
                 ProductGlobalPrice::where('id_product', $idProduct)->update( ['product_global_price' => $post['base_price']]);
             }
 
-            $priceVariant = [];
             if(!empty($post['variants']) && !empty($post['variant_status'])){
                 $variants = (array)json_decode($post['variants']);
 
-                $dtVariant = [];
-                foreach ($variants['variants'] as $key=>$variant){
-                    $variant = (array)$variant;
-                    if(empty($variant['id_product_variant'])){
-                        $createVariant = ProductVariant::create([
-                            'product_variant_name' => $variant['variant_name'],
-                            'product_variant_visibility' => 'Visible',
-                            'product_variant_order' => $key+1
-                        ]);
-                        $dtVariant[$variant['variant_name']]['id'] = $createVariant['id_product_variant'];
-                        $idProductVariant = $createVariant['id_product_variant'];
-                    }else{
-                        ProductVariant::where('id_product_variant', $variant['id_product_variant'])->update([
-                            'product_variant_name' => $variant['variant_name'],
-                            'product_variant_order' => $key+1
-                        ]);
-                        $dtVariant[$variant['variant_name']]['id'] = $variant['id_product_variant'];
-                        $idProductVariant = $variant['id_product_variant'];
-                    }
-
-                    foreach ($variant['variant_child'] as $index=>$child){
-                        $child = (array)$child;
-                        if(empty($child['id_product_variant'])){
-                            $insertChild = ProductVariant::create([
-                                'id_parent' => $idProductVariant,
-                                'product_variant_name' => $child['variant_name'],
-                                'product_variant_visibility' => 'Visible',
-                                'product_variant_order' => $index+1
-                            ]);
-
-                            $dtVariant[$variant['variant_name']][$child['variant_name']] = $insertChild['id_product_variant'];
-                        }else{
-                            ProductVariant::where('id_product_variant', $child['id_product_variant'])->update([
-                                'id_parent' => $idProductVariant,
-                                'product_variant_name' => $child['variant_name'],
-                                'product_variant_order' => $index+1
-                            ]);
-
-                            $dtVariant[$variant['variant_name']][$child['variant_name']] = $child['id_product_variant'];
-                        }
-                    }
-                }
-
                 foreach ($variants['variants_price'] as $combination){
                     $combination = (array) $combination;
-                    if(empty($combination['id_product_variant_group'])){
-                        $idVariants = [];
-                        foreach ($combination['data'] as $dt){
-                            $first = explode('|',$dt)[0]??'';
-                            $second = explode('|',$dt)[1]??'';
+                    $idProductVariantGroup = $combination['id_product_variant_group'];
 
-                            if(isset($dtVariant[$first][$second])){
-                                $idVariants[] = $dtVariant[$first][$second];
-                            }
-                        }
-
-                        if(!empty($idVariants)){
-                            $variantGroup = ProductVariantGroup::create([
-                                'id_product' => $idProduct,
-                                'product_variant_group_code' => 'PV'.time().'-'.implode('', $idVariants),
-                                'product_variant_group_name' => $combination['name'],
-                                'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible'),
-                                'product_variant_group_price' => $combination['price']
-                            ]);
-                            $idProductVariantGroup = $variantGroup['id_product_variant_group'];
-
-                            $insertPivot = [];
-                            foreach ($idVariants as $id){
-                                $insertPivot[] = [
-                                    'id_product_variant' => $id,
-                                    'id_product_variant_group' => $variantGroup['id_product_variant_group']
+                    if(!empty($idProductVariantGroup)){
+                        ProductVariantGroupWholesaler::where('id_product_variant_group', $idProductVariantGroup)->delete();
+                        if(!empty($combination['wholesaler_price'])){
+                            $insertWholesalerVariant = [];
+                            foreach ($combination['wholesaler_price'] as $wholesaler){
+                                $wholesaler = (array)$wholesaler;
+                                if($wholesaler['minimum'] <= 1){
+                                    DB::rollback();
+                                    return response()->json(['status' => 'fail', 'messages' => ['Jumlah unit harus lebih dari satu']]);
+                                }
+                                $insertWholesalerVariant[] = [
+                                    'id_product_variant_group' => $idProductVariantGroup,
+                                    'variant_wholesaler_minimum' => $wholesaler['minimum']??0,
+                                    'variant_wholesaler_unit_price' => $wholesaler['unit_price']??0,
+                                    'created_at' => date('Y-m-d H:i:s'),
+                                    'updated_at' => date('Y-m-d H:i:s')
                                 ];
                             }
 
-                            if(!empty($insertPivot)){
-                                ProductVariantPivot::insert($insertPivot);
-                            }
-
-                            ProductVariantGroupDetail::create([
-                                'id_product_variant_group' => $variantGroup['id_product_variant_group'],
-                                'id_outlet' => $checkMerchant['id_outlet'],
-                                'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible'),
-                                'product_variant_group_stock_status' => (empty($combination['stock']) ? 'Sold Out': 'Available'),
-                                'product_variant_group_stock_item' => $combination['stock']]);
-                        }
-                    }else{
-                        ProductVariantGroup::where('id_product_variant_group', $combination['id_product_variant_group'])->update([
-                            'product_variant_group_name' => $combination['name'],
-                            'product_variant_group_price' => $combination['price'],
-                            'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible')
-                        ]);
-
-                        ProductVariantGroupDetail::where('id_product_variant_group', $combination['id_product_variant_group'])->where('id_outlet', $checkMerchant['id_outlet'])
-                            ->update([
-                                'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible'),
-                                'product_variant_group_stock_status' => (empty($combination['stock']) ? 'Sold Out': 'Available'),
-                                'product_variant_group_stock_item' => $combination['stock']]);
-
-                        $idProductVariantGroup = $combination['id_product_variant_group'];
-                    }
-
-                    ProductVariantGroupWholesaler::where('id_product_variant_group', $idProductVariantGroup)->delete();
-                    if(!empty($combination['wholesaler_price'])){
-                        $insertWholesalerVariant = [];
-                        foreach ($combination['wholesaler_price'] as $wholesaler){
-                            $wholesaler = (array)$wholesaler;
-                            if($wholesaler['minimum'] <= 1){
+                            $arrayColumn = array_column($insertWholesalerVariant, 'variant_wholesaler_minimum');
+                            $withoutDuplicates = array_unique($arrayColumn);
+                            $duplicates = array_diff_assoc($arrayColumn, $withoutDuplicates);
+                            if(!empty($duplicates)){
                                 DB::rollback();
-                                return response()->json(['status' => 'fail', 'messages' => ['Jumlah unit harus lebih dari satu']]);
+                                return response()->json(['status' => 'fail', 'messages' => ['Minimum tidak boleh sama']]);
                             }
-                            $insertWholesalerVariant[] = [
-                                'id_product_variant_group' => $idProductVariantGroup,
-                                'variant_wholesaler_minimum' => $wholesaler['minimum']??0,
-                                'variant_wholesaler_unit_price' => $wholesaler['unit_price']??0,
-                                'created_at' => date('Y-m-d H:i:s'),
-                                'updated_at' => date('Y-m-d H:i:s')
-                            ];
-                        }
 
-                        $arrayColumn = array_column($insertWholesalerVariant, 'variant_wholesaler_minimum');
-                        $withoutDuplicates = array_unique($arrayColumn);
-                        $duplicates = array_diff_assoc($arrayColumn, $withoutDuplicates);
-                        if(!empty($duplicates)){
-                            DB::rollback();
-                            return response()->json(['status' => 'fail', 'messages' => ['Minimum tidak boleh sama']]);
+                            ProductVariantGroupWholesaler::insert($insertWholesalerVariant);
                         }
-
-                        ProductVariantGroupWholesaler::insert($insertWholesalerVariant);
                     }
-
-                    $priceVariant[] = $combination['price'];
                 }
             }
 
             DB::commit();
 
             $price = $post['base_price']??0;
-            if(!empty($post['variants']) && !empty($post['variant_status'])){
-                $price = min($priceVariant);
+            $priceVariant = ProductVariantGroup::where('id_product', $post['id_product'])->orderBy('product_variant_group_price', 'asc')->first()['product_variant_group_price']??0;
+            if(!empty($priceVariant)){
+                $price = $priceVariant;
             }
 
             ProductWholesaler::where('id_product', $post['id_product'])->delete();
@@ -1135,7 +1038,18 @@ class ApiMerchantManagementController extends Controller
 
     public function variantDelete($post){
         if(!empty($post['id_product_variant'])){
-            $delete = ProductVariant::where('id_product_variant', $post['id_product_variant'])->delete();
+            $delete = false;
+            $idProductVariantGroup = ProductVariantPivot::join('product_variant_groups', 'product_variant_groups.id_product_variant_group', 'product_variant_pivot.id_product_variant_group')
+                ->where('id_product_variant', $post['id_product_variant'])->pluck('product_variant_groups.id_product_variant_group')->toArray();
+            $check = TransactionProduct::whereIn('id_product_variant_group', $idProductVariantGroup)->first();
+
+            if($check <= 0 ){
+                $delete = ProductVariant::where('id_product_variant', $post['id_product_variant'])->delete();
+                if($delete){
+                    ProductVariantPivot::whereIn('id_product_variant_group', $idProductVariantGroup)->delete();
+                    ProductVariantGroup::whereIn('id_product_variant_group', $idProductVariantGroup)->delete();
+                }
+            }
             return response()->json(MyHelper::checkDelete($delete));
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
@@ -1509,6 +1423,8 @@ class ApiMerchantManagementController extends Controller
                 ->where('bank_accounts.id_bank_account', $dt['merchant_balance_id_reference'])
                 ->first();
 
+            $fee = MerchantLogBalance::where('merchant_balance_source', 'Withdrawal Fee')->where('merchant_balance_id_reference', $dt['id_merchant_log_balance'])->first()['merchant_balance']??0;
+
             $list['data'][$key] = [
                 'id_merchant_log_balance' => $dt['id_merchant_log_balance'],
                 'date' => $dt['request_at'],
@@ -1516,6 +1432,7 @@ class ApiMerchantManagementController extends Controller
                 'status' => $dt['merchant_balance_status'],
                 'data_bank_account' => $bankAccount,
                 'outlet' => $dt['outlet_code'].'-'.$dt['outlet_name'],
+                'fee' => $fee,
                 'data_outlet' => [
                     'outlet_code' => $dt['outlet_code'],
                     'outlet_name' => $dt['outlet_name'],
