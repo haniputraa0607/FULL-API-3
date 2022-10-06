@@ -1290,7 +1290,7 @@ class ApiCronReport extends Controller
 				DB::raw('"'.$month.'" as trx_month'), 
 				DB::raw('"'.$year.'" as trx_year'), 
 				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
-				DB::raw('SUM(transaction_payment_midtrans.gross_amount) as trx_payment_nominal'), 
+				DB::raw('SUM(transactions.transaction_grandtotal-ifnull(transaction_payment_balances.balance_nominal, 0)) as trx_payment_nominal'),
 				DB::raw("CONCAT_WS(' ', transaction_payment_midtrans.payment_type, transaction_payment_midtrans.bank) AS trx_payment"),
                 DB::raw('"'.date('Y-m-d H:i:s').'" as created_at'),
                 DB::raw('"'.date('Y-m-d H:i:s').'" as updated_at')
