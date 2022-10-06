@@ -230,6 +230,7 @@ class ApiOnlineTransaction extends Controller
         $tax = 0;
         foreach ($items as $index=>$value){
             $sub = $value['items_subtotal'] - ($value['discount']??0);
+            $sub = ($sub < 0 ? 0 : $sub);
             $dtTaxService = ['subtotal' => $sub];
 
             $serviceCalculate = app($this->setting_trx)->countTransaction('service', $dtTaxService);
@@ -709,6 +710,7 @@ class ApiOnlineTransaction extends Controller
         $tax = 0;
         foreach ($result['items'] as $index=>$value){
             $sub = $value['items_subtotal'] - ($value['discount']??0);
+            $sub = ($sub < 0 ? 0 : $sub);
             $dtTaxService = ['subtotal' => $sub];
 
             $serviceCalculate = app($this->setting_trx)->countTransaction('service', $dtTaxService);
