@@ -1127,13 +1127,15 @@ class ApiPromoTransaction extends Controller
             $promo_product = "*";
         }
 
-        $get_promo_product = $pct->getPromoProduct($promo_item, $promo_brand, $promo_product, $promoQuery['product_type']);
-        $product = $get_promo_product['product'];
+        if($promoQuery['promo_use_in'] == 'Product'){
+            $get_promo_product = $pct->getPromoProduct($promo_item, $promo_brand, $promo_product, $promoQuery['product_type']);
+            $product = $get_promo_product['product'];
 
-        if (!$product) {
-            $message = $pct->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.';
-            $message = MyHelper::simpleReplace($message,['product'=>$product_name]);
-            return $this->failResponse($message);
+            if (!$product) {
+                $message = $pct->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.';
+                $message = MyHelper::simpleReplace($message,['product'=>$product_name]);
+                return $this->failResponse($message);
+            }
         }
 
         $total_price = $data['subtotal'];
