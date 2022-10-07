@@ -20,6 +20,7 @@ use Modules\Doctor\Http\Requests\DoctorCreate;
 use Modules\UserRating\Entities\RatingOption;
 use Modules\UserRating\Entities\UserRating;
 use Modules\UserRating\Entities\UserRatingPhoto;
+use Modules\Doctor\Http\Requests\doctor_pin_new_admin;
 use Validator;
 use Image;
 use DB;
@@ -339,12 +340,12 @@ class ApiDoctorController extends Controller
      * @param Request $request
      * @return Response
      */
-    public function changePassword(Request $request)
+    public function changePassword(doctor_pin_new_admin $request)
     {
         $post = $request->json()->all();
         unset($post['_token']);
 
-        $password = bcrypt($post['pin']);
+        $password = bcrypt($post['password_new']);
 
         $update_password = Doctor::where('id_doctor', $post['id_doctor'])->update(['password' => $password]);
         
