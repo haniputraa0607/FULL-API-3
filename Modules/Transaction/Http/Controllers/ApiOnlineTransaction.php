@@ -2888,9 +2888,11 @@ class ApiOnlineTransaction extends Controller
     {
         $tmp = [];
         foreach ($items as $value){
-            $tmp[$value['id_outlet']]['id_outlet'] = $value['id_outlet']??null;
-            $tmp[$value['id_outlet']]['delivery'] = $value['delivery']??'';
-            $tmp[$value['id_outlet']]['items'] = array_merge($tmp[$value['id_outlet']]['items']??[], $value['items']);
+            if(!empty($value['id_outlet'])){
+                $tmp[$value['id_outlet']]['id_outlet'] = $value['id_outlet']??null;
+                $tmp[$value['id_outlet']]['delivery'] = $value['delivery']??'';
+                $tmp[$value['id_outlet']]['items'] = array_merge($tmp[$value['id_outlet']]['items']??[], $value['items']);
+            }
         }
         $items = array_values($tmp);
 
