@@ -428,8 +428,13 @@ class ApiTransactionConsultationController extends Controller
             unset($post['headers']);
         }
 
-        $grandtotal = 0;
         $subtotal = $post['subtotal'];
+        $grandtotal = $subtotal;
+
+        //update subtotal and grandtotal
+        $post['subtotal'] = $subtotal;
+        $post['grandtotal'] = $grandtotal;
+
         $deliveryTotal = 0; 
         $currentDate = date('Y-m-d H:i:s');
         $paymentType = NULL;
@@ -501,7 +506,7 @@ class ApiTransactionConsultationController extends Controller
             'shipment_method'             => $shipment_method ?? null,
             'shipment_courier'            => $shipment_courier ?? null,
             'transaction_notes'           => $post['notes'],
-            'transaction_subtotal'        => $post['subtotal'],
+            'transaction_subtotal'        => $subtotal,
             'transaction_gross'  		  => $post['subtotal_final'],
             'transaction_shipment'        => $post['shipping'],
             'transaction_service'         => $post['service'],
@@ -510,7 +515,7 @@ class ApiTransactionConsultationController extends Controller
             'transaction_discount_item' 	=> 0,
             'transaction_discount_bill' 	=> $post['total_discount']??0,
             'transaction_tax'             => $post['tax'],
-            'transaction_grandtotal'      => $post['grandtotal'],
+            'transaction_grandtotal'      => $grandtotal,
             'transaction_point_earned'    => $post['point']??0,
             'transaction_cashback_earned' => $post['cashback'],
             'trasaction_payment_type'     => $post['payment_type'],
@@ -640,10 +645,18 @@ class ApiTransactionConsultationController extends Controller
         if($post['latitude'] && $post['longitude']){
            $savelocation = app($this->location)->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction'], $outlet['id_outlet']);
         }
+        DB::commit();
 
         $trx = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->first();
-        app($this->promo_trx)->applyPromoNewTrx($trx);
-        DB::commit();
+        if($trx['transaction_grandtotal'] == 0){
+            $trx->triggerPaymentCompleted();
+
+            return response()->json([
+                'status'   => 'success',
+                'redirect' => false,
+                'result'   => $insertTransaction
+            ]);
+        }
 
         return response()->json([
             'status'   => 'success',
