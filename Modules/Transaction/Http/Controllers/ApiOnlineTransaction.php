@@ -473,7 +473,7 @@ class ApiOnlineTransaction extends Controller
                         $shipmentCourier = $shipmentCheck['delivery_method'];
                         $shipmentCourierCode = $service['code'];
                         $shipmentCourierService = $shipmentCheck['delivery_name'].' '.$service['service_name'];
-                        $shipmentInsuranceStatus = ($data['delivery']['insurance_status'] == true ? 1 : 0);
+                        $shipmentInsuranceStatus = (($data['delivery']['insurance_status'] ?? false) == true ? 1 : 0);
                         if($service['must_use_insurance'] == true){
                             $shipmentInsuranceStatus = 1;
                         }
@@ -2817,7 +2817,7 @@ class ApiOnlineTransaction extends Controller
                                         $shipmentCode = $service['code'];
                                         $shipmentCourier = $shipmentCheck['delivery_method'];
                                         $shipmentCourierService = $shipmentCheck['delivery_name'].' '.$service['service_name'];
-                                        $shipmentInsuranceStatus = ($value['delivery']['insurance_status'] == true ? 1 : 0);
+                                        $shipmentInsuranceStatus = (($value['delivery']['insurance_status'] ?? false) == true ? 1 : 0);
                                         if($service['must_use_insurance'] == true){
                                             $shipmentInsuranceStatus = 1;
                                         }
