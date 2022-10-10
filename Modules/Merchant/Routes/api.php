@@ -47,6 +47,7 @@ Route::group(['prefix' => 'merchant'], function () {
 
         Route::post('balance/detail', 'ApiMerchantController@balanceDetail');
         Route::post('balance/withdrawal', 'ApiMerchantController@balanceWithdrawal');
+        Route::post('balance/withdrawal/fee', 'ApiMerchantController@balanceWithdrawalFee');
 
         Route::group(['prefix' => 'management'], function () {
             Route::post('product/variant/create-combination', 'ApiMerchantManagementController@variantCombination');
