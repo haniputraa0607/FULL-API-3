@@ -2231,7 +2231,7 @@ class ApiProductController extends Controller
         }
 
         if(!empty($post['filter_category'])){
-            $list = $list->whereIn('id_product_category', $post['filter_category']);
+            $list = $list->whereIn('product_categories.id_product_category', $post['filter_category']);
         }
 
         if(!empty($post['filter_min_price'])){
