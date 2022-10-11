@@ -1013,6 +1013,13 @@ class ApiMerchantManagementController extends Controller
             }
 
             $delete = Product::where('id_product', $post['id_product'])->delete();
+            if($delete){
+                ProductDetail::where('id_product', $post['id_product'])->delete();
+                ProductGlobalPrice::where('id_product', $post['id_product'])->delete();
+                $idProductVariantGroup = ProductVariantGroup::where('id_product', $post['id_product'])->pluck('id_product_variant_group')->toArray();
+                ProductVariantGroup::where('id_product', $post['id_product'])->delete();
+                ProductVariantGroupDetail::whereIn('id_product_variant_group', $idProductVariantGroup)->delete();
+            }
             return response()->json(MyHelper::checkDelete($delete));
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);

@@ -195,6 +195,10 @@ class ApiPromoTransaction extends Controller
         }
         $validPayment = array_values($validPayment);
 
+        if(isset($data['subtotal'])){
+            $sharedPromoTrx['subtotal'] = $data['subtotal'];
+        }
+
         $totalAllDisc = 0;
         $discDeliveryAll = 0;
         if (isset($userPromo['promo_campaign'])) {
@@ -319,6 +323,78 @@ class ApiPromoTransaction extends Controller
 
             if(!empty($resPromoCode)){
                 $resPromoCode['is_error'] = (!empty($codeErr) ? true : false);
+            }
+        }
+
+        if($codeType == 'Discount bill'){
+            $maxDiscountBill = $promoCampaign['promo_campaign_discount_bill_rules']['max_percent_discount']??null;
+            if($totalAllDisc > $maxDiscountBill){
+                $totalAllDisc = 0;
+                $subtotal = $data['subtotal'];
+                $lastDiscount = $maxDiscountBill;
+                $count = count($data['items']);
+
+                foreach ($data['items'] as $key=>$dt){
+                    $index = $key + 1;
+                    $sub = $dt['subtotal'];
+                    $finalDiscount = 0;
+
+                    foreach ($dt['items'] as $item){
+                        $discItem = (int)($item['product_price_subtotal']/$subtotal * $maxDiscountBill);
+                        $finalDiscount = $finalDiscount + $discItem;
+                    }
+
+                    if($count == $index){
+                        $finalDiscount = $lastDiscount;
+                    }else{
+                        $lastDiscount = $lastDiscount - $finalDiscount;
+                    }
+
+                    if($discItem > 0){
+                        $data['items'][$key]['discount'] = $finalDiscount;
+                        $data['items'][$key]['discount_text'] = 'Rp -'.number_format($finalDiscount,0,",",".");
+                        $subTotalPromo = $sub - $finalDiscount;
+                        $data['items'][$key]['subtotal_promo'] = $subTotalPromo;
+                        $data['items'][$key]['subtotal_promo_text'] = 'Rp '.number_format($subTotalPromo,0,",",".");
+                    }
+
+                    $totalAllDisc = $totalAllDisc+$finalDiscount;
+                }
+            }
+        }
+        elseif ($codeType == 'Discount delivery'){
+            $maxDiscountDelivery = $promoCampaign['promo_campaign_discount_delivery_rules']['max_percent_discount']??null;
+            if($totalAllDisc > $maxDiscountDelivery){
+                $totalAllDisc = 0;
+                $subtotal = $data['total_delivery'];
+                $lastDiscount = $maxDiscountDelivery;
+                $count = count($data['items']);
+
+                foreach ($data['items'] as $key=>$dt){
+                    $index = $key + 1;
+                    $sub = $dt['subtotal'];
+                    $deliveryPrice = $dt['delivery_price']['shipment_price']??0;
+                    if($deliveryPrice > 0){
+                        $discItem = (int)($deliveryPrice/$subtotal * $maxDiscountDelivery);
+
+                        if($count == $index){
+                            $discItem = $lastDiscount;
+                        }else{
+                            $lastDiscount = $lastDiscount - $discItem;
+                        }
+
+                        if($discItem > 0){
+                            $data['items'][$key]['discount_delivery'] = $discItem;
+                            $data['items'][$key]['discount_delivery_text'] = 'Rp -'.number_format($discItem,0,",",".");
+                            $subTotalPromo = $sub - $discItem;
+                            $data['items'][$key]['subtotal_promo'] = $subTotalPromo;
+                            $data['items'][$key]['subtotal_promo_text'] = 'Rp '.number_format($subTotalPromo,0,",",".");
+                        }
+
+                        $discDeliveryAll = $discDeliveryAll + $discItem;
+                        $totalAllDisc = $totalAllDisc+$discItem;
+                    }
+                }
             }
         }
 
