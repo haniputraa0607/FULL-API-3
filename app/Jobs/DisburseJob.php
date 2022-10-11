@@ -19,7 +19,6 @@ class DisburseJob implements ShouldQueue
      */
     public function __construct($data)
     {
-        $this->disburse ="Modules\Disburse\Http\Controllers\ApiIrisController";
         $this->data   = $data;
     }
 
@@ -30,7 +29,7 @@ class DisburseJob implements ShouldQueue
      */
     public function handle()
     {
-        $calculate = app($this->disburse)->calculationTransaction($this->data['id_transaction']);
+        $calculate = app('Modules\Merchant\Http\Controllers\ApiMerchantController')->balanceTransfer($this->data);
 
         return $calculate;
     }
