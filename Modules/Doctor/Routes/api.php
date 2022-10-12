@@ -91,7 +91,8 @@ Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-
 
     Route::get('cron-status', ['uses' => 'ApiDoctorController@cronUpdateDoctorStatus']);
 
-    Route::post('my/settings', ['uses' => 'ApiDoctorController@mySettings']);
+    Route::get('my/settings', ['uses' => 'ApiDoctorController@getMySettings']);
+    Route::post('my/settings', ['uses' => 'ApiDoctorController@updateMySettings']);
     Route::get('my/profile', ['uses' => 'ApiDoctorController@myProfile']);
 
     Route::post('submission/store', ['uses' => 'ApiDoctorController@submissionChangeDataStore']);

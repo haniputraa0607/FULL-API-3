@@ -404,7 +404,7 @@ class ApiDoctorController extends Controller
         }
     }
 
-    public function mySettings(Request $request)
+    public function updateMySettings(Request $request)
     {
         $post = $request->json()->all();
 
@@ -436,6 +436,27 @@ class ApiDoctorController extends Controller
 
         //default for on value case
         return response()->json(['status'  => 'success', 'result' => $post['action']." Has Been Activated Successfully"]);
+    }
+
+    public function getMySettings(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $user = $request->user();
+
+        $result['schedule_toogle'] = $user->schedule_toogle;
+        $result['notification_toogle'] = $user->notification_toogle;
+
+        foreach($result as $key => $value){
+            if($value == 1){
+                $result[$key] = 'on';
+            } else {
+                $result[$key] = 'off';
+            }
+        }
+
+        //default for on value case
+        return response()->json(['status'  => 'success', 'result' => $result]);
     }
 
     public function myProfile(Request $request)
