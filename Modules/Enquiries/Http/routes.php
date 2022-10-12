@@ -16,3 +16,9 @@ Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes
     Route::post('create', 'ApiEnquiries@createV2');
     Route::any('list-subject', 'ApiEnquiries@listEnquirySubject');
 });
+
+Route::group(['middleware' => ['auth:doctor-apps','user_agent','log_activities', 'scopes:doctor-apps'], 'prefix' => 'api/doctor/contact-us', 'namespace' => 'Modules\Enquiries\Http\Controllers'], function()
+{
+    Route::post('create', 'ApiEnquiries@createV2Doctor');
+    Route::any('list-subject', 'ApiEnquiries@listEnquirySubjectDoctor');
+});
