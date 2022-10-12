@@ -710,7 +710,7 @@ class ApiEnquiries extends Controller
 
         $dataSave = [
             'enquiry_name' => $checkUser['name'],
-            'enquiry_phone' => $checkUser['phone'],
+            'enquiry_phone' => $checkUser['doctor_phone'],
             'enquiry_subject' => $post['subject'],
             'enquiry_content' => $post['messages'],
             'enquiry_status' => 'Unread'
