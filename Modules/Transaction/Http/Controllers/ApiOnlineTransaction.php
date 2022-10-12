@@ -233,10 +233,10 @@ class ApiOnlineTransaction extends Controller
             $sub = ($sub < 0 ? 0 : $sub);
             $dtTaxService = ['subtotal' => $sub];
 
-            $serviceCalculate = app($this->setting_trx)->countTransaction('service', $dtTaxService);
+            $serviceCalculate = round(app($this->setting_trx)->countTransaction('service', $dtTaxService));
             $service = $service + $serviceCalculate;
 
-            $taxCalculate = app($this->setting_trx)->countTransaction('tax', $dtTaxService);
+            $taxCalculate = round(app($this->setting_trx)->countTransaction('tax', $dtTaxService));
             $tax = $tax + $taxCalculate;
 
             $items[$index]['service'] = $serviceCalculate;
@@ -695,6 +695,8 @@ class ApiOnlineTransaction extends Controller
             'items' => $items,
             'current_points' => $currentBalance,
             'summary_order' => $summaryOrder,
+            'subtotal' => $subtotal,
+            'total_delivery' => $delivery,
             'grandtotal' => $grandTotal,
             'grandtotal_text' => 'Rp '.number_format($grandTotal,0,",","."),
             'pupop_need_consultation' => $popupConsultation,
@@ -713,15 +715,18 @@ class ApiOnlineTransaction extends Controller
             $sub = ($sub < 0 ? 0 : $sub);
             $dtTaxService = ['subtotal' => $sub];
 
-            $serviceCalculate = app($this->setting_trx)->countTransaction('service', $dtTaxService);
+            $serviceCalculate = round(app($this->setting_trx)->countTransaction('service', $dtTaxService));
             $service = $service + $serviceCalculate;
 
-            $taxCalculate = app($this->setting_trx)->countTransaction('tax', $dtTaxService);
+            $taxCalculate = round(app($this->setting_trx)->countTransaction('tax', $dtTaxService));
             $tax = $tax + $taxCalculate;
 
             $result['items'][$index]['service'] = $serviceCalculate;
             $result['items'][$index]['tax'] = $taxCalculate;
         }
+
+        $service = round($service);
+        $tax = round($tax);
 
         if($service > 0){
             $result['summary_order'][] = [

@@ -1144,24 +1144,6 @@ class ApiProductController extends Controller
 
     	// check data
         DB::beginTransaction();
-        $brands=$post['product_brands']??false;
-        if(!$brands){
-            $brands = ['0'];
-            $post['product_brands'] = ['0'];
-        }
-        if(in_array('*', $post['product_brands'])){
-            $brands=Brand::select('id_brand')->get()->toArray();
-            $brands=array_column($brands, 'id_brand');
-        }
-        BrandProduct::where('id_product',$request->json('id_product'))->delete();
-        foreach ($brands as $id_brand) {
-            BrandProduct::create([
-                'id_product'=>$request->json('id_product'),
-                'id_brand'=>$id_brand,
-                'id_product_category'=>$request->json('id_product_category')
-            ]);
-        }
-        unset($post['product_brands']);
         // promo_category
         ProductProductPromoCategory::where('id_product',$post['id_product'])->delete();
         ProductProductPromoCategory::insert(array_map(function($id_product_promo_category) use ($post) {

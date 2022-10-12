@@ -13,6 +13,7 @@ use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\TransactionPaymentOvo;
 use App\Http\Models\TransactionProduct;
+use App\Http\Models\User;
 use App\Jobs\DisburseJob;
 use App\Jobs\SendEmailDisburseJob;
 use Cassandra\Exception\ExecutionException;
@@ -105,7 +106,7 @@ class ApiIrisController extends Controller
                         [
                             'amount' => number_format((int)$check['disburse_nominal'],0,",","."),
                             'status' => $status
-                        ]
+                        ],null, false, false, 'merchant'
                     );
                 }
 
