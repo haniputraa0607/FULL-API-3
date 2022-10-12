@@ -28,6 +28,7 @@ use Modules\Enquiries\Http\Requests\Update;
 use Modules\Enquiries\Http\Requests\Delete;
 use Modules\Enquiries\Entities\EnquiriesFile;
 use Modules\Brand\Entities\Brand;
+use Modules\Doctor\Entities\Doctor;
 
 class ApiEnquiries extends Controller
 {
@@ -692,4 +693,60 @@ class ApiEnquiries extends Controller
 
         return response()->json(MyHelper::checkCreate($save));
     }
+
+	function createV2Doctor(Request $request){
+        $post = $request->all();
+        $idUser = $request->user()->id_doctor;
+
+        if(empty($post['subject']) || empty($post['messages'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Incompleted data']]);
+        }
+
+        $checkUser = Doctor::where('id_doctor', $idUser)->first();
+
+        if(count($post['file']??[]) > 3){
+            return response()->json(['status' => 'fail', 'messages' => ['Tidak bisa mengunggah file lebih dari 3.']]);
+        }
+
+        $dataSave = [
+            'enquiry_name' => $checkUser['name'],
+            'enquiry_phone' => $checkUser['phone'],
+            'enquiry_subject' => $post['subject'],
+            'enquiry_content' => $post['messages'],
+            'enquiry_status' => 'Unread'
+        ];
+
+        $save = Enquiry::create($dataSave);
+        $fileSubmit = [];
+        if($save){
+            foreach ($post['file']??[] as $file){
+                $encode = base64_encode(fread(fopen($file, "r"), filesize($file)));
+                $originalName = $file->getClientOriginalName();
+                $ext = pathinfo($originalName, PATHINFO_EXTENSION);
+                $upload = MyHelper::uploadFile($encode, 'img/enquiries/',$ext);
+                if (isset($upload['status']) && $upload['status'] == "success") {
+                    $fileName = $upload['path'];
+                    $fileSubmit[] = [
+                        'enquiry_file' => $fileName,
+                        'id_enquiry' => $save['id_enquiry'],
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+                }
+            }
+
+            if(!empty($fileSubmit)){
+                EnquiriesFile::insert($fileSubmit);
+            }
+        }
+
+        return response()->json(MyHelper::checkCreate($save));
+    }
+
+	function listEnquirySubjectDoctor(){
+		$list = Setting::where('key', 'enquiries_doctor_subject_list')->first();
+
+		$result = (array)json_decode($list['value_text']??"[]");
+		return response()->json(MyHelper::checkGet($result));
+	}
 }
