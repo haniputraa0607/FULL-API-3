@@ -327,8 +327,12 @@ class ApiPromoTransaction extends Controller
         }
 
         if($codeType == 'Discount bill'){
-            $maxDiscountBill = $promoCampaign['promo_campaign_discount_bill_rules']['max_percent_discount']??null;
-            if($totalAllDisc > $maxDiscountBill){
+            if($promoCampaign['promo_campaign_discount_bill_rules']['discount_type'] == 'Percent'){
+                $maxDiscountBill = $promoCampaign['promo_campaign_discount_bill_rules']['max_percent_discount']??null;
+            }else{
+                $maxDiscountBill = $promoCampaign['promo_campaign_discount_bill_rules']['discount_value']??null;
+            }
+            if(!empty($maxDiscountBill) && $totalAllDisc > $maxDiscountBill){
                 $totalAllDisc = 0;
                 $subtotal = $data['subtotal'];
                 $lastDiscount = $maxDiscountBill;
@@ -363,8 +367,13 @@ class ApiPromoTransaction extends Controller
             }
         }
         elseif ($codeType == 'Discount delivery'){
-            $maxDiscountDelivery = $promoCampaign['promo_campaign_discount_delivery_rules']['max_percent_discount']??null;
-            if($totalAllDisc > $maxDiscountDelivery){
+            if($promoCampaign['promo_campaign_discount_delivery_rules']['discount_type'] == 'Percent'){
+                $maxDiscountDelivery = $promoCampaign['promo_campaign_discount_delivery_rules']['max_percent_discount']??null;
+            }else{
+                $maxDiscountDelivery = $promoCampaign['promo_campaign_discount_delivery_rules']['discount_value']??null;
+            }
+
+            if(!empty($maxDiscountDelivery) && $totalAllDisc > $maxDiscountDelivery){
                 $totalAllDisc = 0;
                 $subtotal = $data['total_delivery'];
                 $lastDiscount = $maxDiscountDelivery;
