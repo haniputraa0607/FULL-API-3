@@ -5,7 +5,9 @@ namespace Modules\Merchant\Http\Controllers;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPhoto;
+use App\Http\Models\Subdistricts;
 use App\Http\Models\TransactionProduct;
+use App\Http\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -202,6 +204,90 @@ class ApiMerchantManagementController extends Controller
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
+    }
+
+    public function store(Request $request){
+        $post = $request->json()->all();
+        $idUser = $post['id_user'];
+        $check = Merchant::where('id_user', $idUser)->first();
+        if(!empty($check)){
+            return response()->json(['status' => 'fail', 'messages' => ['Merchant for this user already create']]);
+        }
+
+        $phone = $request->json('merchant_phone');
+
+        $phone = preg_replace("/[^0-9]/", "", $phone);
+        if(substr($phone, 0, 2) != 62 && substr($phone, 0, 1) != '0'){
+            $phone = '0'.$phone;
+        }
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
+
+        if (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail') {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Format nomor telepon tidak valid']
+            ]);
+        } elseif (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success') {
+            $phone = $checkPhoneFormat['phone'];
+        }
+
+        $check = Outlet::where('outlet_phone', $post['merchant_phone'])->first();
+
+        if(!empty($check)){
+            return response()->json(['status' => 'fail', 'messages' => ['Nomor telepon sudah terdaftar']]);
+        }
+
+        DB::beginTransaction();
+
+        $create = Merchant::create(
+            [
+                "id_user" =>$idUser,
+                "merchant_pic_name" => $post['merchant_pic_name'],
+                "merchant_pic_id_card_number" => $post['merchant_pic_id_card_number'],
+                "merchant_pic_email" => $post['merchant_pic_email'],
+                "merchant_pic_phone" => $phone,
+                "merchant_completed_step" => 1
+            ]);
+        if(!$create){
+            return response()->json(['status' => 'fail', 'messages' => ['Failed save data merchant']]);
+        }
+
+        $lastOutlet = Outlet::orderBy('outlet_code', 'desc')->first()['outlet_code']??'';
+        $lastOutlet = substr($lastOutlet, -5);
+        $lastOutlet = (int)$lastOutlet;
+        $countCode = $lastOutlet+1;
+        $idSubdis = explode("|",$post['id_subdistrict']);
+        $idSubdis = $idSubdis[0]??null;
+
+        $dataCreateOutlet = [
+            "outlet_code" => 'M'.sprintf("%06d", $countCode),
+            "outlet_name" => $post['merchant_name'],
+            "outlet_license_number" => $post['merchant_license_number'],
+            "outlet_email" => (empty($post['merchant_email']) ? null : $post['merchant_email']),
+            "outlet_phone" => $phone,
+            "id_city" => $post['id_city'],
+            "id_subdistrict" => $idSubdis,
+            "outlet_address" => $post['merchant_address'],
+            "outlet_postal_code" => (empty($post['merchant_postal_code']) ? null : $post['merchant_postal_code'])
+        ];
+
+        $createOutlet = Outlet::create($dataCreateOutlet);
+        if(!$createOutlet){
+            DB::rollback();
+            return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan data outlet']]);
+        }
+
+        if(!empty($post['id_brand'])){
+            $checkBrand = Brand::where('id_brand', $post['id_brand'])->first();
+            if(!empty($checkBrand)){
+                BrandOutlet::create(['id_outlet' => $createOutlet['id_outlet'], 'id_brand' => $post['id_brand']]);
+            }
+        }
+
+        Merchant::where('id_merchant', $create['id_merchant'])->update(['id_outlet' => $createOutlet['id_outlet']]);
+
+        DB::commit();
+        return response()->json(MyHelper::checkCreate($create));
     }
 
     public function detail(Request $request){
@@ -1456,5 +1542,13 @@ class ApiMerchantManagementController extends Controller
         $post = $request->json()->all();
         $update = MerchantLogBalance::where('id_merchant_log_balance', $post['id_merchant_log_balance'])->update(['merchant_balance_status' => 'Completed']);
         return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function userListNotRegister(Request $request){
+        $list = User::leftJoin('merchants', 'merchants.id_user', 'users.id')
+                ->whereNull('merchants.id_merchant')
+                ->whereNotNull('users.name')
+                ->select('id', 'name', 'phone')->get()->toArray();
+        return response()->json(MyHelper::checkGet($list));
     }
 }

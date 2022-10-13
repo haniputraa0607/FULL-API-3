@@ -115,11 +115,13 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::post('register/rejected/save', 'ApiMerchantController@registerRejected');
 
         Route::post('list', 'ApiMerchantManagementController@list');
+        Route::post('store', 'ApiMerchantManagementController@store');
         Route::post('detail', 'ApiMerchantManagementController@detail');
         Route::post('update', 'ApiMerchantManagementController@update');
         Route::post('delete', 'ApiMerchantManagementController@delete');
         Route::any('candidate/list', 'ApiMerchantManagementController@canditateList');
         Route::post('candidate/update', 'ApiMerchantManagementController@canditateUpdate');
+        Route::get('user/list-not-register', 'ApiMerchantManagementController@userListNotRegister');
 
         //withdrawal
         Route::any('withdrawal/list', 'ApiMerchantManagementController@withdrawalList');
