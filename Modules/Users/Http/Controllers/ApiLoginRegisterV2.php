@@ -1541,6 +1541,10 @@ class ApiLoginRegisterV2 extends Controller
                 $res = $valueFirst->generateToken($checkSetting['value_text']);
                 $response = $res;
                 $statusUpdate = 1;
+
+                if(!empty($response['token'])){
+                    Setting::updateOrCreate(['key' => 'valuefirst_token'], ['value' => $response['expiryDate'], 'value_text' => $response['token']]);
+                }
             }
 
             $log->success(['status_update' => $statusUpdate, 'result' => $response]);

@@ -178,7 +178,7 @@ class ApiDashboardSetting extends Controller
 
 		DB::beginTransaction();
 		$dataUpdate = [];
-		foreach ($post['order'] as $key => $value) {
+		foreach ($post['order']??[] as $key => $value) {
 			$section = DashboardUser::find($value['id']);
 			if(!$section){
 				DB::rollBack();
