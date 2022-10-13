@@ -34,7 +34,8 @@ class DoctorSchedule extends Model
 
     public function getDayFormattedAttribute()
     {
-        switch($this->attributes['day']){
+        $day = null;
+        switch(strtolower($this->attributes['day'])){
             case 'monday':
                 $day = "Senin";
                 break;
@@ -55,6 +56,9 @@ class DoctorSchedule extends Model
                 break;
             case 'sunday':
                 $day = "Minggu";
+                break;
+            default :
+                $day = "none";
                 break;
         }
 

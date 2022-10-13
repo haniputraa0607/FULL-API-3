@@ -391,10 +391,6 @@ class ApiDoctorController extends Controller
         $doctor = Doctor::where('id_doctor', $id)->with('outlet')->with('specialists')->first();
         unset($doctor['password']);
 
-        $schedule = $this->getScheduleDoctor($id, 'admin');
-
-        $doctor['schedules'] = $schedule;
-
         $schedule_be = DoctorSchedule::where('id_doctor', $id)->with('schedule_time')->get();
 
         $doctor['schedules_raw'] = $schedule_be;
