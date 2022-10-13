@@ -296,6 +296,14 @@ class ApiDoctorController extends Controller
             $specialist = $save->specialists()->attach($specialist_id);
         }
 
+        //save schedule day
+        if($post['id_doctor'] != null) {
+            $createSchedule = $save->createScheduleDay($post['id_doctor']);
+        } else {
+            $doctor = Doctor::where('doctor_phone', $post['doctor_phone'])->first();
+            $createSchedule = $save->createScheduleDay($doctor['id_doctor']);
+        }
+
         $result = MyHelper::checkGet($save);
 
         // TO DO Pending Task AutoCRM error 
@@ -332,7 +340,7 @@ class ApiDoctorController extends Controller
         }
 
         DB::commit();
-        return response()->json(['status'  => 'success', 'result' => ['id_doctor' => $post['id_doctor'], 'crm' => $autocrm??true]]);
+        return response()->json(['status'  => 'success', 'result' => ['id_doctor' => $post['id_doctor'], 'crm' => $autocrm??true, 'save' => $save]]);
     }
 
     /**
@@ -363,6 +371,27 @@ class ApiDoctorController extends Controller
         unset($doctor['password']);
 
         $schedule = $this->getScheduleDoctor($id);
+
+        $doctor['schedules'] = $schedule;
+
+        $schedule_be = DoctorSchedule::where('id_doctor', $id)->with('schedule_time')->get();
+
+        $doctor['schedules_raw'] = $schedule_be;
+
+        return response()->json(['status'  => 'success', 'result' => $doctor]);
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     * @param int $id
+     * @return Response
+     */
+    public function showAdmin($id)
+    {
+        $doctor = Doctor::where('id_doctor', $id)->with('outlet')->with('specialists')->first();
+        unset($doctor['password']);
+
+        $schedule = $this->getScheduleDoctor($id, 'admin');
 
         $doctor['schedules'] = $schedule;
 
@@ -700,12 +729,16 @@ class ApiDoctorController extends Controller
      * @param int $id
      * @return Response
      */
-    public function getScheduleDoctor($id_doctor)
+    public function getScheduleDoctor($id_doctor, $type = null)
     {
-        $doctor_schedule = DoctorSchedule::where('id_doctor', $id_doctor)->with('schedule_time')->onlyActive();
+        if($type == 'admin' | $type == 'doctor'){
+            $doctor_schedule = DoctorSchedule::where('id_doctor', $id_doctor)->with('schedule_time')->orderBy('order', 'ASC');
+        } else {
+            $doctor_schedule = DoctorSchedule::where('id_doctor', $id_doctor)->with('schedule_time')->onlyActive();
+        }
 
         $doctor_schedule = $doctor_schedule->get()->toArray();
-
+        
         //problems hereee
         $schedule = array();
         if(!empty($doctor_schedule)){

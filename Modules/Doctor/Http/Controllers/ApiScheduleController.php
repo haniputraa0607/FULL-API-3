@@ -30,7 +30,7 @@ class ApiScheduleController extends Controller
             ]);
         }
 
-        $doctorSchedule = DoctorSchedule::where('id_doctor', $post['id_doctor'])->with('schedule_time')->onlyActive();
+        $doctorSchedule = DoctorSchedule::where('id_doctor', $post['id_doctor'])->with('schedule_time')->orderBy('order', 'ASC');
 
         $doctorSchedule = $doctorSchedule->get()->toArray();
 
@@ -226,6 +226,13 @@ class ApiScheduleController extends Controller
         $posts = $request->json()->all();
 
         $user = $request->user();
+
+        //translate day to english day
+        foreach($posts as $key => $value){
+            $date = date('l', strtotime($value['day']));
+
+            $posts[$key]['day'] = $date;
+        }
  
         DB::beginTransaction();
         foreach($posts as $key => $post) {

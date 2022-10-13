@@ -14,7 +14,12 @@ class DoctorSchedule extends Model
     protected $fillable   = [
         'id_doctor',
         'day',
+        'order',
         'is_active'
+    ];
+
+    protected $appends = [
+        'day_formatted'
     ];
 
     public function schedule_time()
@@ -25,5 +30,34 @@ class DoctorSchedule extends Model
     public function scopeOnlyActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function getDayFormattedAttribute()
+    {
+        switch($this->attributes['day']){
+            case 'monday':
+                $day = "Senin";
+                break;
+            case 'tuesday':
+                $day = "Selasa";
+                break;
+            case 'wednesday':
+                $day = "Rabu";
+                break;
+            case 'thursday':
+                $day = "Kamis";
+                break;
+            case 'friday':
+                $day = "Jumat";
+                break;
+            case 'saturday':
+                $day = "Sabtu";
+                break;
+            case 'sunday':
+                $day = "Minggu";
+                break;
+        }
+
+        return $day;
     }
 }
