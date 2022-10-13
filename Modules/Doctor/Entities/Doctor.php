@@ -142,4 +142,60 @@ class Doctor extends Authenticatable
     	$experience_place = json_decode($this->practice_experience_place);
     	return $experience_place;
     }
+
+    public function createScheduleDay($id_doctor)
+    {
+    	$scheduleDay = DoctorSchedule::where('id_doctor', $id_doctor)->pluck('day')->toArray();
+        $arrayDay = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+        foreach($arrayDay as $key => $day){
+            //order for day
+            $order = $this->getOrder($day);
+            
+            if(in_array($day, $scheduleDay) == false){
+                $create = DoctorSchedule::create([
+                    'id_doctor' => $this->id_doctor,
+                    'day' => $day,
+                    'order' => $order,
+                    'is_active' => 0
+                ]);
+            } else {
+                $update = DoctorSchedule::where('id_doctor', $id_doctor)->where('day', $day)->update([
+                    'order' => $order
+                ]);
+            }
+        }
+
+        $doctorSchedule = DoctorSchedule::where('id_doctor', $id_doctor)->get();
+
+    	return $doctorSchedule;
+    }
+
+    public function getOrder($day){
+        switch ($day) {
+            case "monday":
+              $order = 1;
+              break;
+            case "tuesday":
+                $order = 2;
+                break;
+            case "wednesday":
+                $order = 3;
+                break;
+            case "thursday":
+                $order = 4;
+                break;
+            case "friday":
+                $order = 5;
+                break;
+            case "saturday":
+                $order = 6;
+                break;
+            case "sunday":
+                $order = 7;
+                break;
+        }
+
+        return $order;
+    }
 }

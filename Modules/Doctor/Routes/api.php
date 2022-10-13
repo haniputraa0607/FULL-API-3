@@ -17,7 +17,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
     //Route::any('be/list', ['uses' => 'ApiDoctorClinicController@index']);
     Route::post('/', ['uses' => 'ApiDoctorController@index']);
     Route::post('store', ['uses' => 'ApiDoctorController@store']);
-    Route::get('detail/{id}', ['uses' => 'ApiDoctorController@show']);
+    Route::get('detail/{id}', ['uses' => 'ApiDoctorController@showAdmin']);
     Route::post('delete', ['uses' => 'ApiDoctorController@destroy']);
     Route::post('change-password', ['uses' => 'ApiDoctorController@changePassword']);
 
