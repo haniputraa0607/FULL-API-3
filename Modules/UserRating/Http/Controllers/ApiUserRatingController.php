@@ -1600,6 +1600,14 @@ class ApiUserRatingController extends Controller
             'option_value' => implode(',',array_map(function($var){return trim($var,'"');},$post['option_value']??[]))
         ];
 
+        if(isset($post['is_anonymous'])){
+            if($post['is_anonymous'] == 'true'){
+                $insert['is_anonymous'] = 1;
+            } else {
+                $insert['is_anonymous'] = 0;
+            }
+        }
+
         $create = UserRating::updateOrCreate([
             'id_user' => $request->user()->id,
             'id_transaction' => $id,
