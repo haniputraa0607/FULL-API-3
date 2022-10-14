@@ -4235,13 +4235,34 @@ class ApiTransaction extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
 
-        $listTransaction = Transaction::join('transaction_payment_midtrans', 'transaction_payment_midtrans.id_transaction_group', 'transactions.id_transaction_group')
-                        ->where('id_outlet', $post['id_outlet']);
+        $listTransaction = Transaction::leftJoin('transaction_payment_midtrans', 'transaction_payment_midtrans.id_transaction_group', 'transactions.id_transaction_group')
+                        ->leftJoin('transaction_payment_xendits', 'transaction_payment_xendits.id_transaction_group', 'transactions.id_transaction_group')
+                        ->where('id_outlet', $post['id_outlet'])
+                        ->where(function($q){
+                            $q->whereNotNull('transaction_payment_midtrans.id_transaction_payment')
+                              ->orWhereNotNull('transaction_payment_xendits.id_transaction_payment_xendit');
+                        });
 
         if(!empty($post['search_key'])){
-            $listTransaction = $listTransaction->where('transaction_receipt_number', 'like', '%'.$post['search_key'].'%');
+            $listTransaction = $listTransaction->where(function($q) use($post){
+                $q->where('transaction_receipt_number', 'like', '%'.$post['search_key'].'%')
+                ->orWhere('transaction_payment_midtrans.payment_type', 'like', '%'.$post['search_key'].'%')
+                ->orWhere('transaction_payment_xendits.type', 'like', '%'.$post['search_key'].'%');
+            });
         }
-        $listTransaction = $listTransaction->orderBy('transaction_date', 'desc')->paginate(15);
+        $listTransaction = $listTransaction->select('transactions.*', 'transaction_payment_midtrans.payment_type', 'transaction_payment_xendits.type')->orderBy('transaction_date', 'desc')->paginate(15)->toArray();
+        foreach ($listTransaction['data']??[] as $key=>$val){
+            $balance = TransactionPaymentBalance::where('id_transaction', $val['id_transaction'])->first()['balance_nominal']??0;
+            if(!empty($val['payment_type'])){
+                $paymentType = $val['payment_type'];
+            }else{
+                $paymentType = $val['type'];
+            }
+            $amount = $val['transaction_grandtotal']-$balance;
+            $listTransaction['data'][$key]['payment_type'] = $paymentType;
+            $listTransaction['data'][$key]['amount'] = $amount;
+        }
+
         return response()->json(MyHelper::checkGet($listTransaction));
     }
 
