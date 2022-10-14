@@ -36,6 +36,7 @@ use Modules\Consultation\Entities\TransactionConsultationReschedule;
 use Modules\Consultation\Http\Requests\DoneConsultation;
 use Modules\Consultation\Entities\LogInfobip;
 use Modules\UserRating\Entities\UserRating;
+use Modules\UserRating\Entities\UserRatingLog;
 use DB;
 use DateTime;
 use Carbon\Carbon;
@@ -1433,7 +1434,18 @@ class ApiTransactionConsultationController extends Controller
             if($getLiveConsultation = 0) {
                 $doctor->update(['doctor_status' => "online"]);
                 $doctor->save();
-            }    
+            }
+            
+            //create to user log Rating
+            $payloadLogRating = [
+                'id_user' => $transactionConsultation->id_user,
+                'id_transaction' => $transactionConsultation->id_transaction,
+                'id_transaction_consultation' => $transactionConsultation->id_transaction_consultation,
+                'id_doctor' => $transactionConsultation->id_doctor,
+                'id_outlet' => $transaction['id_outlet']
+            ];
+
+            $userRatingLog = UserRatingLog::create($payloadLogRating);
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
