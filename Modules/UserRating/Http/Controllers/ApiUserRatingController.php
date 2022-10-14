@@ -1493,4 +1493,450 @@ class ApiUserRatingController extends Controller
         $result = $ratingList;
         return MyHelper::checkGet($result);
     }
+
+    public function consultationStore(Request $request)
+    {
+        $post = $request->all();
+        $id = $post['id'];
+        $user = $request->user();
+        $trx = Transaction::where([
+            'id_transaction'=>$id,
+            'id_user'=>$request->user()->id
+        ])->first();
+        if(!$trx){
+            return [
+                'status'=>'fail',
+                'messages'=>['Transaction not found']
+            ];
+        }
+
+        if(!empty($post['images']) && count($post['images']) > 3){
+            return [
+                'status'=>'fail',
+                'messages'=>['Maximum upload 3 image']
+            ];
+        }
+
+        if(empty($post['option_question'])){
+            return [
+                'status'=>'fail',
+                'messages'=>['Option question can not be empty']
+            ];
+        }
+
+        if(!empty($post['option_value'])){
+            $post['option_value'] = json_decode($post['option_value']);
+        }
+
+        $id_outlet = $trx->id_outlet;
+        $id_doctor = null;
+        if (!empty($post['id_doctor'])) {
+            $trxDoctor = TransactionConsultation::where('id_transaction', $id)
+                ->where('id_doctor', $post['id_doctor'])
+                ->first();
+
+            if (!$trxDoctor) {
+                return [
+                    'status'=>'fail',
+                    'messages'=>['Doctor not found']
+                ];
+            }
+
+            $id_doctor = $trxDoctor->id_doctor;
+            $doctor = $trxDoctor->doctor;
+        } else {
+            $doctor = Doctor::where('id_doctor', $id_doctor)->first();
+            if (!$doctor) {
+                return [
+                    'status'=>'fail',
+                    'messages'=>['Doctor not found']
+                ];
+            }
+            $id_doctor = $doctor->id_doctor;
+        }
+
+        if ($id_doctor) {
+            $max_rating_value = Setting::select('value')->where('key','response_max_rating_value_doctor')->pluck('value')->first()?:2;
+            if($post['rating_value'] <= $max_rating_value){
+                $trx->load('outlet_name');
+                $variables = [
+                    'receipt_number' => $trx->transaction_receipt_number,
+                    'outlet_name' => $trx->outlet_name->outlet_name,
+                    'transaction_date' => date('d F Y H:i',strtotime($trx->transaction_date)),
+                    'rating_value' => (string) $post['rating_value'],
+                    'suggestion' => $post['suggestion']??'',
+                    'question' => $post['option_question'],
+                    'product_name' => $product['product_name'],
+                    'selected_option' => implode(',',array_map(function($var){return trim($var,'"');},$post['option_value']??[]))
+                ];
+                app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('User Rating Doctor', $user->phone, $variables,null,true);
+            }
+        } else {
+            $max_rating_value = Setting::select('value')->where('key','response_max_rating_value')->pluck('value')->first()?:2;
+            if($post['rating_value'] <= $max_rating_value){
+                $trx->load('outlet_name');
+                $variables = [
+                    'receipt_number' => $trx->transaction_receipt_number,
+                    'outlet_name' => $trx->outlet_name->outlet_name,
+                    'transaction_date' => date('d F Y H:i',strtotime($trx->transaction_date)),
+                    'rating_value' => (string) $post['rating_value'],
+                    'suggestion' => $post['suggestion']??'',
+                    'question' => $post['option_question'],
+                    'selected_option' => implode(',',array_map(function($var){return trim($var,'"');},$post['option_value']??[]))
+                ];
+                app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('User Rating Doctor', $user->phone, $variables,null,true);
+            }
+        }
+
+        $insert = [
+            'id_transaction' => $trx->id_transaction,
+            'id_user' => $request->user()->id,
+            'id_outlet' => $id_outlet,
+            'id_transaction_consultation' => $trxDoctor->id_transaction_consultation,
+            'id_doctor' => $id_doctor,
+            'rating_value' => $post['rating_value'],
+            'suggestion' => $post['suggestion']??'',
+            'option_question' => $post['option_question'],
+            'option_value' => implode(',',array_map(function($var){return trim($var,'"');},$post['option_value']??[]))
+        ];
+
+        if(isset($post['is_anonymous'])){
+            if($post['is_anonymous'] == 'true'){
+                $insert['is_anonymous'] = 1;
+            } else {
+                $insert['is_anonymous'] = 0;
+            }
+        }
+
+        $create = UserRating::updateOrCreate([
+            'id_user' => $request->user()->id,
+            'id_transaction' => $id,
+            'id_outlet'	=> $id_outlet,
+            'id_doctor' => $id_doctor
+        ],$insert);
+
+        if($create && !empty($post['images'])){
+            $img = [];
+            foreach ($post['images']??[] as $image){
+                $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
+                $upload = MyHelper::uploadPhotoAllSize($encode, 'img/user_rating/'.$create['id_user_rating'].'/');
+
+                if (isset($upload['status']) && $upload['status'] == "success") {
+                    $img[] = [
+                        'id_user_rating' => $create['id_user_rating'],
+                        'user_rating_photo' => $upload['path'],
+                        'updated_at' => date('Y-m-d H:i:s'),
+                        'created_at' => date('Y-m-d H:i:s')
+                    ];
+                }
+            }
+
+            if(!empty($img)){
+                UserRatingPhoto::insert($img);
+            }
+        }
+
+        if ($id_doctor) {
+            $doctorRating = UserRating::where('id_doctor', $id_doctor)->get()->toArray();
+            if ($doctorRating) {
+                $totalDoctorRating = array_sum(array_column($doctorRating,'rating_value')) / count($doctorRating);
+                Doctor::where('id_doctor', $id_doctor)->update(['total_rating' => $totalDoctorRating]);
+            }
+        }
+
+        UserRatingLog::where([
+            'id_user' => $request->user()->id,
+            'id_transaction' => $id,
+            'id_doctor' => $id_doctor
+        ])->delete();
+
+        $unrated = UserRatingLog::where('id_transaction',$trx->id_transaction)->first();
+        if(!$unrated){
+            (new ApiOutletApp)->insertUserCashback($trx);
+            Transaction::where('id_transaction',$trx->id_transaction)->update(['show_rate_popup'=>0]);
+        }
+
+        $countRatingValue = UserRating::where([
+            'id_outlet'	=> $id_outlet,
+            'id_doctor' => $id_doctor,
+            'rating_value'=> $post['rating_value']
+        ])->count();
+
+        $summaryRatingValue = UserRatingSummary::updateOrCreate([
+            'id_outlet'	=> $id_outlet,
+            'id_doctor' => $id_doctor,
+            'key' => $post['rating_value'],
+            'summary_type' => 'rating_value'
+        ],[
+            'value' => $countRatingValue
+        ]);
+
+        foreach ($post['option_value'] ?? [] as $value) {
+            $countOptionValue = UserRating::where([
+                'id_outlet'	=> $id_outlet,
+                'id_doctor' => $id_doctor,
+                ['option_value', 'like', '%' . $value . '%']
+            ])->count();
+
+            $summaryOptionValue = UserRatingSummary::updateOrCreate([
+                'id_outlet'	=> $id_outlet,
+                'id_doctor' => $id_doctor,
+                'key' => $value,
+                'summary_type' => 'option_value'
+            ],[
+                'value' => $countOptionValue
+            ]);
+        }
+
+        $countRating = UserRating::where('id_transaction', $trx->id_transaction)->count();
+        $counTrxDoctor = TransactionConsultation::where('id_transaction', $trx->id_transaction)->count();
+        if($countRating == $counTrxDoctor){
+            $newTrx = Transaction::where('id_transaction', $trx->id_transaction)
+                ->with('user.memberships')->first();
+            $savePoint = app($this->getNotif)->savePoint($newTrx);
+            if (!$savePoint) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Failed insert point'],
+                ]);
+            }
+        }
+
+        return MyHelper::checkCreate($create);
+    }
+
+    public function consultationGetDetail(Request $request) {
+        $post = $request->json()->all();
+        $user = clone $request->user();
+
+        if (isset($post['id'])) {
+            $id_transaction = $post['id'];
+            $user->load('log_popup_user_rating');
+
+            $transaction = Transaction::find($id_transaction);
+            if(!$transaction){
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Transaction not found']
+                ];
+            }
+
+            $logRatings = UserRatingLog::where('id_transaction', $id_transaction)
+                ->where('id_user', $user->id)
+                ->get();
+
+        } else {
+            $user->load('log_popup_user_rating.transaction.outlet');
+            $log_popup_user_ratings = $user->log_popup_user_rating;
+            $log_popup_user_rating = null;
+            $logRatings = [];
+            $interval = (Setting::where('key','popup_min_interval')->pluck('value')->first()?:900);
+            $max_date = date('Y-m-d',time() - ((Setting::select('value')->where('key','popup_max_days')->pluck('value')->first()?:3) * 86400));
+            $maxList = Setting::where('key','popup_max_list')->pluck('value')->first() ?: 5;
+
+            if (empty($log_popup_user_ratings)) {
+                return MyHelper::checkGet([]);
+            }
+
+            foreach ($log_popup_user_ratings as $log_pop) {
+                if (
+                    $log_pop->refuse_count>=(Setting::where('key','popup_max_refuse')->pluck('value')->first()?:3) ||
+                    strtotime($log_pop->last_popup)+$interval>time()
+                ) {
+                    continue;
+                }
+
+                if ($log_popup_user_rating && $log_popup_user_rating->last_popup < $log_pop->last_popup) {
+                    continue;
+                }
+
+                $log_popup_user_rating = $log_pop;
+                $transaction = Transaction::select('id_transaction','transaction_receipt_number','transaction_date','id_outlet')
+                    ->with(['outlet'=>function($query){
+                        $query->select('outlet_name','id_outlet');
+                    }])
+                    ->where('id_transaction', $log_popup_user_rating->id_transaction)
+                    ->where(['id_user'=>$user->id])
+                    ->whereDate('transaction_date','>',$max_date)
+                    ->orderBy('transaction_date','asc')
+                    ->first();
+
+                // check if transaction is exist
+                if(!$transaction){
+                    // log popup is not valid
+                    continue;
+                    $log_popup_user_rating->delete();
+                    return $this->getDetail($request);
+                }
+
+                $log_popup_user_rating->refuse_count++;
+                $log_popup_user_rating->last_popup = date('Y-m-d H:i:s');
+                $log_popup_user_rating->save();
+                $logRatings[] = $log_popup_user_rating;
+
+                if ($maxList <= count($logRatings)) {
+                    break;
+                }
+            }
+
+            if (empty($logRatings)) {
+                return MyHelper::checkGet([]);
+            }
+        }
+
+        $defaultOptions = [
+            'question'=>Setting::where('key','default_rating_question')->pluck('value_text')->first()?:'What\'s best from us?',
+            'options' =>explode(',',Setting::where('key','default_rating_options')->pluck('value_text')->first()?:'Fast Response')
+        ];
+
+        $optionDoctor = ['1'=>$defaultOptions,'2'=>$defaultOptions,'3'=>$defaultOptions,'4'=>$defaultOptions,'5'=>$defaultOptions];
+        $ratingOptionDoctor = RatingOption::select('star','question','options')->where('rating_target', 'doctor')->get();
+        foreach ($ratingOptionDoctor as $rt) {
+            $stars = explode(',',$rt['star']);
+            foreach ($stars as $star) {
+                $optionDoctor[$star] = [
+                    'question'=>$rt['question'],
+                    'options'=>explode(',',$rt['options'])
+                ];
+            }
+        }
+
+        $ratingList = [];
+        $title = 'Beri Penilaian';
+        $message = "Dapatkan loyalty points dengan memberikan penilaian atas transaksi Anda pada hari:  /n <b>'%date%' di '%outlet_address%'</b>";
+        foreach ($logRatings as $key => $log) {
+            $rating['id'] = $log['id_transaction'];
+            $rating['id_doctor'] = $log['id_doctor'];
+            $rating['transaction_receipt_number'] = $log['transaction']['transaction_receipt_number'];
+            $rating['transaction_date'] = date('d M Y H:i',strtotime($log['transaction']['transaction_date']));
+
+            $trxDate = MyHelper::dateFormatInd($log['transaction']['transaction_date'], true, false, true);
+            $outletName = $log['transaction']['outlet']['outlet_name'];
+            $rating['title'] = $title;
+            $rating['messages'] = "Dapatkan loyalty points dengan memberikan penilaian atas transaksi Anda pada hari:  \n <b>" . $trxDate . " di " . $outletName . "</b>";
+
+            $rating['outlet'] = [
+                'id_outlet' => $log['transaction']['outlet']['id_outlet'],
+                'outlet_code' => $log['transaction']['outlet']['outlet_code'],
+                'outlet_name' => $log['transaction']['outlet']['outlet_name'],
+                'outlet_address' => $log['transaction']['outlet']['outlet_address'],
+                'outlet_latitude' => $log['transaction']['outlet']['outlet_latitude'],
+                'outlet_longitude' => $log['transaction']['outlet']['outlet_longitude']
+            ];
+
+            $doctor = TransactionConsultation::join('doctors', 'doctors.id_doctor', 'transaction_consultations.id_doctor')
+                ->where('transaction_consultations.id_doctor', $log['id_doctor'])->first();
+            $rating['detail_doctor'] = [
+                'doctor' => $doctor->doctor_name ?? null,
+            ];
+
+            $rating['question_text'] = Setting::where('key','doctor_rating_question_text')->pluck('value_text')->first()?:"Bagaimana pengalaman konsultasi anda?";
+            $rating['rating'] = null;
+            $rating['options'] = $optionDoctor;
+
+            $currentRating = UserRating::where([
+                'id_transaction' => $log['id_transaction'],
+                'id_user' => $log['id_user'],
+                'id_doctor' => $log['id_doctor']
+            ])
+            ->first();
+
+            if ($currentRating) {
+                $currentOption = explode(',', $currentRating['option_value']);
+                $rating['rating'] = [
+                    "rating_value" => $currentRating['rating_value'],
+                    "suggestion" => $currentRating['suggestion'],
+                    "option_value" => $currentOption
+                ];
+            }
+
+            $ratingList[] = $rating;
+        }
+
+        $result = $ratingList;
+        return MyHelper::checkGet($result);
+    }
+
+    public function consultationGetRated(Request $request) {
+        $post = $request->json()->all();
+        $user = clone $request->user();
+
+        $logRatings = UserRating::where('id_user', $user->id)
+            ->with('transaction.outlet');
+
+        if (isset($post['id'])) {
+            $id_transaction = $post['id'];
+
+            $transaction = Transaction::find($id_transaction);
+            if(!$transaction){
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Transaction not found']
+                ];
+            }
+
+            $logRatings = $logRatings->where('id_transaction', $id_transaction);
+
+            if (isset($post['id_doctor'])) {
+                $logRatings = $logRatings->where('id_doctor', $post['id_doctor']);
+            }
+
+        }
+
+        $logRatings = $logRatings->get();
+
+        $ratingList = [];
+        foreach ($logRatings as $key => $log) {
+            $rating['id'] = $log['id_transaction'];
+            $rating['id_doctor'] = $log['id_doctor'];
+            $rating['transaction_receipt_number'] = $log['transaction']['transaction_receipt_number'];
+            $rating['transaction_date'] = date('d M Y H:i',strtotime($log['transaction']['transaction_date']));
+
+            $rating['outlet'] = null;
+            if (!empty($log['transaction']['outlet'])) {
+                $rating['outlet'] = [
+                    'id_outlet' => $log['transaction']['outlet']['id_outlet'],
+                    'outlet_code' => $log['transaction']['outlet']['outlet_code'],
+                    'outlet_name' => $log['transaction']['outlet']['outlet_name'],
+                    'outlet_address' => $log['transaction']['outlet']['outlet_address'],
+                    'outlet_latitude' => $log['transaction']['outlet']['outlet_latitude'],
+                    'outlet_longitude' => $log['transaction']['outlet']['outlet_longitude']
+                ];
+            }
+            $rating['rating'] = null;
+
+            if (!empty($log['id_doctor'])) {
+
+                $doctor = TransactionConsultation::join('doctors', 'doctors.id_doctor', 'transaction_consultations.id_doctor')
+                    ->where('transaction_consultations.id_doctor', $log['id_doctor'])->first();
+                $rating['detail_doctor'] = [
+                    'doctor_name' => $doctor->doctor_name ?? null,
+                ];
+
+                $rating['question_text'] = Setting::where('key','doctor_rating_question_text')->pluck('value_text')->first()?:"Bagaimana pengalaman konsultasi anda?";
+            }
+
+            $currentRating = $log;
+            $getPhotos = UserRatingPhoto::where('id_user_rating', $currentRating['id_user_rating'])->get()->toArray();
+            $photos = [];
+            foreach ($getPhotos as $dt){
+                $photos[] = $dt['url_user_rating_photo'];
+            }
+
+            if ($currentRating) {
+                $currentOption = explode(',', $currentRating['option_value']);
+                $rating['rating'] = [
+                    "rating_value" => $currentRating['rating_value'],
+                    "suggestion" => $currentRating['suggestion'],
+                    "option_value" => $currentOption,
+                    "photos" => $photos
+                ];
+            }
+
+            $ratingList[] = $rating;
+        }
+
+        $result = $ratingList;
+        return MyHelper::checkGet($result);
+    }
 }

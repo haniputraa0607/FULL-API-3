@@ -154,7 +154,7 @@ class Doctor extends Authenticatable
             
             if(in_array($day, $scheduleDay) == false){
                 $create = DoctorSchedule::create([
-                    'id_doctor' => $this->id_doctor,
+                    'id_doctor' => $id_doctor,
                     'day' => $day,
                     'order' => $order,
                     'is_active' => 0
