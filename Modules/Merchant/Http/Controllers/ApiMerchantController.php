@@ -1347,15 +1347,21 @@ class ApiMerchantController extends Controller
         }
 
         $list1 = MerchantLogBalance::join('transactions', 'transactions.id_transaction', 'merchant_log_balances.merchant_balance_id_reference')
+                    ->whereNotIn('merchant_balance_source', ['Withdrawal', 'Withdrawal Fee'])
                     ->where('id_merchant', $checkMerchant['id_merchant'])->select('merchant_log_balances.*');
         $list2 = MerchantLogBalance::join('bank_accounts', 'bank_accounts.id_bank_account', 'merchant_log_balances.merchant_balance_id_reference')
+                ->whereIn('merchant_balance_source', ['Withdrawal', 'Withdrawal Fee'])
                 ->where('id_merchant', $checkMerchant['id_merchant'])->select('merchant_log_balances.*');
 
         if(!empty($post['search_key'])){
-            $list1 = $list1->where('transaction_receipt_number', 'like', '%'.$post['search_key'].'%');
+            $list1 = $list1->where(function ($q) use($post){
+                $q->where('transaction_receipt_number', 'like', '%'.$post['search_key'].'%')
+                    ->orWhere('merchant_balance_source', 'like', '%'.$post['search_key'].'%');
+            }   );
             $list2 = $list2->where(function ($q) use($post){
                 $q->where('beneficiary_name', 'like', '%'.$post['search_key'].'%')
-                    ->orWhere('beneficiary_account', 'like', '%'.$post['search_key'].'%');
+                    ->orWhere('beneficiary_account', 'like', '%'.$post['search_key'].'%')
+                    ->orWhere('merchant_balance_source', 'like', '%'.$post['search_key'].'%');
             });
         }
 
@@ -1364,7 +1370,7 @@ class ApiMerchantController extends Controller
         foreach ($list['data']??[] as $key=>$dt){
             $transaction = [];
             $bankAccount = [];
-            if($dt['merchant_balance_source'] == 'Transaction Completed'){
+            if($dt['merchant_balance_source'] == 'Transaction Completed' || $dt['merchant_balance_source'] == 'Transaction Consultation Completed'){
                 $transaction = Transaction::where('id_transaction', $dt['merchant_balance_id_reference'])->first();
             }elseif($dt['merchant_balance_source'] == 'Withdrawal'){
                 $bankAccount =  BankAccount::join('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
