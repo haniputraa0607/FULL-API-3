@@ -33,7 +33,7 @@ class ApiDoctorSpecialistController extends Controller
      * @param Request $request
      * @return Response
      */
-    public function store(DoctorSpecialistCreate $request)
+    public function store(Request $request)
     {
         $post = $request->json()->all();
         unset($post['_token']);
