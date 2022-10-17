@@ -839,7 +839,7 @@ class ApiDoctorController extends Controller
                 $i += 1;
 
                 foreach($doctor_schedule as $key => $row) {
-                    if($row['day'] == $day) {
+                    if(strtolower($row['day'] == $day)) {
                         $row['date'] = $date;
                         $row['day'] = $dayId;
 
