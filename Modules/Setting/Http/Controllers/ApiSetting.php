@@ -1106,7 +1106,7 @@ class ApiSetting extends Controller
                 unlink($image['value']);
             }
             // base64 image,path,h,w,name,ext
-            $upload = MyHelper::uploadPhotoStrict($post['default_home_doctor_splash_screen'], $this->saveImage, 1080, 1920,'splash');
+            $upload = MyHelper::uploadPhotoStrict($post['default_home_doctor_splash_screen'], $this->saveImage, 1080, 1920,'splash_doctor');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $post['default_home_doctor_splash_screen'] = $upload['path'];

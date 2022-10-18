@@ -232,7 +232,29 @@ class ApiScheduleController extends Controller
             $date = date('l', strtotime($value['day']));
 
             $posts[$key]['day'] = $date;
+
+            //sorting session time
+            if(isset($value['session_time'])){                
+                usort($value['session_time'], function($a, $b) {
+                    return strtotime($a['start_time']) <=> strtotime($b['start_time']);
+                });
+
+                $posts[$key]['session_time'] = $value['session_time'];
+            }
+
+            //check same start_time
+            if(isset($value['session_time'])){
+                $check = [];
+                foreach ($value['session_time'] as $key => $time) {
+                    if(in_array($time['start_time'] ,$check)){
+                        return response()->json(['status'  => 'fail', 'result' => 'Start time can not be the same in one day']);
+                    }
+                    $check[] = $time['start_time'];
+                }
+            }
         }
+
+        // dd($posts);
  
         DB::beginTransaction();
         foreach($posts as $key => $post) {

@@ -2226,14 +2226,25 @@ class ApiTransactionConsultationController extends Controller
         }
 
         $where=$operator=='and'?'where':'orWhere';
-        // $subjects=['doctor_name', 'doctor_phone', 'doctor_session_price'];
-        // foreach ($subjects as $subject) {
-        //     if($rules2=$newRule[$subject]??false){
-        //         foreach ($rules2 as $rule) {
-        //             $query->$where($subject,$rule[0],$rule[1]);
-        //         }
-        //     }
-        // }
+        $subjects=['transaction_receipt_number'];
+        foreach ($subjects as $subject) {
+            if($rules2=$newRule[$subject]??false){
+                foreach ($rules2 as $rule) {
+                    $query->$where($subject,$rule[0],$rule[1]);
+                }
+            }
+        }
+
+        $subjects2=['consultation_status', 'consultation_type'];
+        foreach ($subjects2 as $subject) {
+            if($rules2=$newRule[$subject]??false){
+                foreach ($rules2 as $rule) {
+                    $query->{$where.'Has'}('consultation', function($query2) use ($rule, $where, $subject) {
+                        $query2->$where($subject,$rule[0],$rule[1]);
+                    });
+                }
+            }
+        }
 
         if($rules2=$newRule['outlet']??false){
             foreach ($rules2 as $rule) {
