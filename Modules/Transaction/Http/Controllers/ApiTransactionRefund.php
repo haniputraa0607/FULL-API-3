@@ -50,18 +50,16 @@ class ApiTransactionRefund extends Controller
         $refund_failed_process_balance = MyHelper::setting('refund_failed_process_balance');
         $rejectBalance = false;
         $point = 0;
-        $totalTransactions = Transaction::where('id_transaction_group', $trx['id_transaction_group'])->count();
         $transaction = Transaction::where('id_transaction', $trx['id_transaction'])->first();
 
         $multiple = TransactionMultiplePayment::where('id_transaction_group', $trx['id_transaction_group'])->get()->toArray();
-        $nominalBalanceEachTrx = 0;
+        $nominalBalanceEachTrx = TransactionPaymentBalance::where('id_transaction', $trx['id_transaction'])->first()['balance_nominal']??0;
 
         foreach ($multiple as $pay) {
             if ($pay['type'] == 'Balance') {
                 $payBalance = TransactionPaymentBalance::find($pay['id_payment']);
                 if(!empty($trx['refund_partial'])){
-                    $nominal = (int) ($payBalance['balance_nominal']/$totalTransactions);
-                    $nominalBalanceEachTrx = $nominal;
+                    $nominal = $nominalBalanceEachTrx;
                 }else{
                     $nominal = $payBalance['balance_nominal'];
                 }
