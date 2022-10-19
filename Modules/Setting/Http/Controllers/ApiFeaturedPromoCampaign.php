@@ -34,7 +34,7 @@ class ApiFeaturedPromoCampaign extends Controller
 		$post['date_end'] = date('Y-m-d H:i:s', strtotime($post['date_end']));
         $post['feature_type'] = $post['feature_type']??'home';
 
-        $create = FeaturedPromoCampaign::create($post);
+        $create = FeaturedPromoCampaign::updateOrCreate(['id_promo_campaign' => $post['id_promo_campaign'], 'feature_type' => $post['feature_type']],$post);
 
         return response()->json(MyHelper::checkCreate($create));
     }

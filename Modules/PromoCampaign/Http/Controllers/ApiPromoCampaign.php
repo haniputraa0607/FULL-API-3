@@ -4073,12 +4073,18 @@ class ApiPromoCampaign extends Controller
         $promo_campaign = PromoCampaign::select('id_promo_campaign', 'promo_title', 'promo_image', 'date_start', 'date_end', 'code_type', 'promo_description')
             ->where('date_end','>=',$now)
             ->where('date_start','<=',$now)
-            ->whereHas('brands',function($query){
-                $query->where('brand_active',1);
+            ->where(function ($q){
+                $q->whereHas('brands',function($query){
+                    $query->where('brand_active',1);
+                })->orWhereDoesntHave('brands');
             })
             ->where('promo_campaign_visibility', 'Visible')
             ->where('step_complete', 1)
             ->OrderBy('id_promo_campaign', 'DESC');
+
+        if(!empty($post['promo_type']) && $post['promo_type'] == 'merchant'){
+            $promo_campaign->where('promo_use_in', 'Product');
+        }
 
         if(isset($post['page'])){
             $promo_campaign = $promo_campaign->paginate($request->length ?: 10)->toArray();

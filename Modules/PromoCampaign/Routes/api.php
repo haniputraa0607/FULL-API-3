@@ -58,6 +58,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'pr
 // DEVELOPMENT
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'prefix' => 'promo-campaign'], function () {
     Route::post('validate', 'ApiPromoCampaign@validateCode');
+    Route::get('list-ongoing', 'ApiPromoCampaign@onGoingPromoCampaign');
     Route::post('list-ongoing', 'ApiPromoCampaign@onGoingPromoCampaign');
     Route::post('list-ongoing/detail', 'ApiPromoCampaign@detailOnGoingPromoCampaign');
 });
