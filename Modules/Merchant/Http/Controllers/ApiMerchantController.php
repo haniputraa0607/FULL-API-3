@@ -1390,6 +1390,19 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkGet($list));
     }
 
+    public function listSettingOption(Request $request){
+        $post = $request->json()->all();
+
+        $data = Merchant::whereIn('merchant_status', ['Active', 'Inactive'])
+            ->leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+            ->leftJoin('cities', 'outlets.id_city', 'cities.id_city')
+            ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
+            ->orderBy('merchants.created_at', 'desc');
+
+        $data = $data->get();
+        return response()->json(MyHelper::checkGet($data));
+    }
+    
     public function balanceTransfer($data){
         $fee = $data['fee'];
         $idMerchantBalance = $data['id_merchant_log_balance'];

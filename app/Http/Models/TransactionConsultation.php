@@ -9,6 +9,7 @@ namespace App\Http\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use Modules\UserRating\Entities\UserRating;
 
 /**
  * Class TransactionProduct
@@ -147,5 +148,31 @@ class TransactionConsultation extends \App\Http\Models\Template\TransactionServi
     public function getConsultationChatUrlAttribute()
     {
     	return url('api/consultation/detail/chat.html') . '?id_transaction=' . $this->id_transaction;
+    }
+
+	public function getIsRatedAttribute()
+    {
+		//get rating from consultation
+		$rating = UserRating::where('id_transaction', $this->id_transaction)->first();
+		
+		$is_rated = false;
+		if(!empty($rating)){
+			$is_rated = true;
+		}
+
+    	return $is_rated;
+    }
+
+	public function getRatingValueAttribute()
+    {
+    	//get rating value from consultation
+		$rating = UserRating::where('id_transaction', $this->id_transaction)->first();
+		
+		$rating_value = 0;
+		if(!empty($rating)){
+			$rating_value = $rating->rating_value;
+		}
+
+    	return $rating_value;
     }
 }

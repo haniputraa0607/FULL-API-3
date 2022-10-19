@@ -64,13 +64,13 @@ class Banner extends Model
 
 	public function getReferenceTitleAttribute($value)
 	{
-		if ($this->id_reference && !in_array($this->type, ['deals_detail', 'subscription_detail', 'my_voucher', 'edit_profile', 'order'])) {
+		if ($this->id_reference && !in_array($this->type, ['elearning', 'merchant_detail', 'product_detail', 'promo_detail', 'doctor_detail'])) {
 			switch ($this->type) {
-				case 'deals_detail':
+				case 'promo_detail':
 					return Deal::where('id_deals', $this->id_reference)->value('deals_title');
 					break;
-				case 'subscription_detail':
-					return Subscription::where('id_subscription', $this->id_reference)->value('subscription_title');
+				case 'merchant_detail':
+					return Merchant::where('id_merchant', $this->id_reference)->value('merchant_pic_name');
 					break;
 				case 'link':
 				case 'url':
