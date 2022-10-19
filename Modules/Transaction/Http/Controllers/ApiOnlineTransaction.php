@@ -167,18 +167,6 @@ class ApiOnlineTransaction extends Controller
             ]);
         }
 
-        if(isset($user['email'])){
-            $domain = substr($user['email'], strpos($user['email'], "@") + 1);
-            if(!filter_var($user['email'], FILTER_VALIDATE_EMAIL) ||
-                checkdnsrr($domain, 'MX') === false){
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Alamat email anda tidak valid, silahkan gunakan alamat email yang valid.']
-                ]);
-            }
-        }
-
         if (count($user['memberships']) > 0) {
             $post['membership_level']    = $user['memberships'][0]['membership_name'];
             $post['membership_promo_id'] = $user['memberships'][0]['benefit_promo_id'];
