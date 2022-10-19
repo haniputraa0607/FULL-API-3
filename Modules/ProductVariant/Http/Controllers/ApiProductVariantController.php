@@ -9,6 +9,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Http\Models\Product;
 use Illuminate\Support\Facades\Artisan;
+use App\Http\Models\TransactionProduct;
 use Modules\ProductVariant\Entities\ProductVariant;
 use DB;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +17,7 @@ use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 use Modules\ProductVariant\Entities\ProductVariantPivot;
+use Modules\ProductVariant\Entities\TransactionProductVariant;
 
 class ApiProductVariantController extends Controller
 {
@@ -207,16 +209,30 @@ class ApiProductVariantController extends Controller
      */
     public function destroy(Request $request)
     {
-        $id_product_variant = $request->json('id_product_variant');
-        $delete              = ProductVariant::where('id_product_variant', $id_product_variant)->delete();
-
-        if($delete){
-            $delete = $this->deleteChild($id_product_variant);
+        $post = $request->all();
+        $check = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
+                ->whereIn('transaction_product_variants.id_product_variant', $post['ids'])
+                ->pluck('product_variant_name')->toArray();
+        if(!empty($check)){
+            return response()->json(['status' => 'fail', 'messages' => ['Can not delete this variant : '.implode(',',$check).'. Variants already use in transaction.']]);
         }
-        //update all product
-        RefreshVariantTree::dispatch([])->allOnConnection('database');
 
-        return MyHelper::checkDelete($delete);
+        $delete = true;
+        foreach ($post['ids'] as $val){
+            $idProductVariantGroup = ProductVariantPivot::join('product_variant_groups', 'product_variant_groups.id_product_variant_group', 'product_variant_pivot.id_product_variant_group')
+                ->where('id_product_variant', $val)->pluck('product_variant_groups.id_product_variant_group')->toArray();
+            $check = TransactionProduct::whereIn('id_product_variant_group', $idProductVariantGroup)->first();
+
+            if($check <= 0 ){
+                $delete = ProductVariant::where('id_product_variant', $val)->delete();
+                if($delete){
+                    ProductVariantPivot::whereIn('id_product_variant_group', $idProductVariantGroup)->delete();
+                    ProductVariantGroup::whereIn('id_product_variant_group', $idProductVariantGroup)->delete();
+                }
+            }
+        }
+
+        return response()->json(MyHelper::checkDelete($delete));
     }
 
     public function deleteChild($id_parent){
@@ -318,5 +334,11 @@ class ApiProductVariantController extends Controller
         }
         $response = array_merge($response,$result['more_msg_extended']);
         return MyHelper::checkGet($response);
+    }
+
+    public function updateUseStatus(Request $request){
+        $post = $request->all();
+        $update = Product::where('id_product', $post['id_product'])->update(['product_variant_status' => $post['status']]);
+        return MyHelper::checkUpdate($update);
     }
 }

@@ -79,22 +79,6 @@ class ApiProductController extends Controller
                 $data['id_product_category'] = $post['id_product_category'];
             }
     	}
-    	if (isset($post['product_code'])) {
-    		$data['product_code'] = $post['product_code'];
-    	} else {
-            $data['product_code'] = MyHelper::createrandom(3);
-        }
-
-        if(isset($post['product_photo_detail'])){
-            $upload = MyHelper::uploadPhotoAllSize($post['product_photo_detail'], 'img/product/item/detail/', $data['product_code'].'-'.strtotime("now"));
-
-    	    if (isset($upload['status']) && $upload['status'] == "success") {
-    	        $data['product_photo_detail'] = $upload['path'];
-    	    }
-    	    else {
-    	        $data['product_photo_detail'] = null;
-    	    }
-        }
 
     	if (isset($post['product_name'])) {
     		$data['product_name'] = $post['product_name'];
@@ -120,38 +104,23 @@ class ApiProductController extends Controller
     	if (isset($post['product_order'])) {
     		$data['product_order'] = $post['product_order'];
     	}
-        if (isset($post['product_variant_status'])) {
-            $data['product_variant_status'] = 1;
-        }else{
-            $data['product_variant_status'] = 0;
+
+        if (isset($post['product_length'])) {
+            $data['product_length'] = $post['product_length'];
+        }
+
+        if (isset($post['product_width'])) {
+            $data['product_width'] = $post['product_width'];
+        }
+
+        if (isset($post['product_height'])) {
+            $data['product_height'] = $post['product_height'];
         }
 
         if (isset($post['need_recipe_status'])) {
             $data['need_recipe_status'] = $post['need_recipe_status'];
         }else{
             $data['need_recipe_status'] = 0;
-        }
-
-        if (isset($post['product_brands'])) {
-            if(($post['product_brands'][0]??false) == '*') {
-                $data['product_brands'] = Brand::select('id_brand')->pluck('id_brand')->toArray();
-            } else {
-                $data['product_brands'] = $post['product_brands'];
-            }
-        }
-
-        if($type == 'create' && !($data['product_brands']??false) && ($data['id_product_category']??false)){
-            $data['product_brands'] = ['0'];
-        }
-
-        // search position
-        if ($type == "create") {
-            if (isset($post['id_product_category'])) {
-                $data['position'] = $this->searchLastSorting($post['id_product_category']);
-            }
-            else {
-                $data['position'] = $this->searchLastSorting(null);
-            }
         }
 
     	return $data;
@@ -1002,7 +971,7 @@ class ApiProductController extends Controller
         }
 
         if(isset($post['pagination'])){
-            $product = $product->paginate(10);
+            $product = $product->orderBy('products.created_at', 'desc')->paginate(10);
         }else{
             $product = $product->get();
         }
@@ -1144,28 +1113,8 @@ class ApiProductController extends Controller
 
     	// check data
         DB::beginTransaction();
-        // promo_category
-        ProductProductPromoCategory::where('id_product',$post['id_product'])->delete();
-        ProductProductPromoCategory::insert(array_map(function($id_product_promo_category) use ($post) {
-            return [
-                'id_product' =>$post['id_product'],
-                'id_product_promo_category' => $id_product_promo_category
-            ];
-        },$post['id_product_promo_category']??[]));
-        unset($post['id_product_promo_category']);
-
     	$data = $this->checkInputProduct($post);
-
-        if (isset($post['product_code'])) {
-            if (!$this->cekUnique($post['id_product'], $post['product_code'])) {
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['product code already used.']
-                ]);
-            }
-        }
-
-        $data['product_visibility'] = 'Visible';
+        $data['product_visibility'] = $post['product_visibility'];
     	$save = Product::where('id_product', $post['id_product'])->update($data);
 
     	if($save){
@@ -1200,16 +1149,15 @@ class ApiProductController extends Controller
                 ProductWholesaler::insert($insertWholesaler);
             }
 
+            $code = Product::where('id_product', $post['id_product'])->first();
             if(isset($post['photo'])){
                 //delete all photo
-                $delete = $this->deletePhoto($post['id_product']);
-
-
+                $delete = $this->deletePhoto($post['id_product_photo']);
                     //create photo
-                    $upload = MyHelper::uploadPhotoAllSize($post['photo'], $this->saveImage);
+                    $upload = MyHelper::uploadPhotoAllSize($post['photo'], 'img/product/'.$code['product_code'].'/');
 
                     if (isset($upload['status']) && $upload['status'] == "success") {
-                        $dataPhoto['product_photo'] = $upload['path'];
+                        ProductPhoto::where('id_product', $post['id_product'])->where('id_product_photo', $post['id_product_photo'])->update(['product_photo' => $upload['path']]);
                     }
                     else {
                         $result = [
@@ -1219,26 +1167,21 @@ class ApiProductController extends Controller
 
                         return response()->json($result);
                     }
-
-                    $dataPhoto['id_product']          = $post['id_product'];
-                    $dataPhoto['product_photo_order'] = $this->cekUrutanPhoto($post['id_product']);
-                    $save                        = ProductPhoto::create($dataPhoto);
-
-
             }
 
-            if(isset($post['product_global_price']) && !empty($post['product_global_price'])){
-                if(strpos($post['product_global_price'], '.') === false){
-                    $globalPrice = str_replace(",","",$post['product_global_price']);
-                }else{
-                    $globalPrice = str_replace(".","",$post['product_global_price']);
-                }
+            if(isset($post['base_price']) && !empty($post['base_price'])){
+                $globalPrice = str_replace(".","",$post['base_price']);
 
                 ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']],
                     ['product_global_price' => (int)$globalPrice]);
             }
 
-            ProductDetail::where('id_product', $post['id_product'])->update(['product_detail_visibility' => $post['product_visibility']]);
+            $detailUpdate['product_detail_visibility'] = $post['product_visibility'];
+            if(isset($post['stock'])){
+                $detailUpdate['product_detail_stock_item'] = $post['stock'];
+                $detailUpdate['product_detail_stock_status'] = ($post['stock'] > 0 ? 'Available' : 'Sold Out');
+            }
+            ProductDetail::where('id_product', $post['id_product'])->update($detailUpdate);
         }
         if($save){
             DB::commit();
@@ -1255,17 +1198,23 @@ class ApiProductController extends Controller
      */
     function delete(Delete $request) {
         $product = Product::with('prices')->find($request->json('id_product'));
-
     	$check = $this->checkDeleteProduct($request->json('id_product'));
 
     	if ($check) {
     		// delete photo
-    		$deletePhoto = $this->deletePhoto($request->json('id_product'));
+    		$this->deletePhotoAll($request->json('id_product'));
 
     		// delete product
-    		$delete = Product::where('id_product', $request->json('id_product'))->delete();
+            $post['id_product'] = $request->json('id_product');
+            $delete = Product::where('id_product', $post['id_product'])->delete();
 
             if($delete){
+                ProductDetail::where('id_product', $post['id_product'])->delete();
+                ProductGlobalPrice::where('id_product', $post['id_product'])->delete();
+                $idProductVariantGroup = ProductVariantGroup::where('id_product', $post['id_product'])->pluck('id_product_variant_group')->toArray();
+                ProductVariantGroup::where('id_product', $post['id_product'])->delete();
+                ProductVariantGroupDetail::whereIn('id_product_variant_group', $idProductVariantGroup)->delete();
+
                 $result = [
                     'status' => 'success',
                     'product' => [
@@ -1298,6 +1247,19 @@ class ApiProductController extends Controller
      */
     function deletePhoto($id) {
         // info photo
+        $dataPhoto = ProductPhoto::where('id_product_photo', $id)->get()->toArray();
+
+        if (!empty($dataPhoto)) {
+            foreach ($dataPhoto as $key => $value) {
+                MyHelper::deletePhoto($value['product_photo']);
+            }
+        }
+
+    	return true;
+    }
+
+    function deletePhotoAll($id) {
+        // info photo
         $dataPhoto = ProductPhoto::where('id_product', $id)->get()->toArray();
 
         if (!empty($dataPhoto)) {
@@ -1306,9 +1268,7 @@ class ApiProductController extends Controller
             }
         }
 
-    	$delete = ProductPhoto::where('id_product', $id)->delete();
-
-    	return $delete;
+        return true;
     }
 
     /**
