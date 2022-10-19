@@ -101,6 +101,29 @@ class ApiHome extends Controller
         }
         $array = [];
 
+        //general array type
+        $arrayGeneral = [
+            'home', 
+            'membership', 
+            'point_history', 
+            'store', 
+            'consultation', 
+            'elearning', 
+            'product_recomendation_list',
+            'doctor_recomendation_list',
+            'deals_list',
+            'inbox',
+            'notification_notification',
+            'notification_promo',
+            'history_order',
+            'history_consultation',
+            'wishlist',
+            'privacy_policy',
+            'faq',
+            'enquires',
+            'featured_promo'
+        ];
+
         foreach ($banners as $key => $value) {
 
             $item['image_url']  = config('url.storage_url_api').$value->image;
@@ -134,7 +157,7 @@ class ApiHome extends Controller
                 $item['id_news'] = null;
                 $item['news_title'] = null;
                 $item['url']     = null;
-            } elseif (in_array($value->type, ['deals_list', 'subscription_list', 'my_voucher', 'edit_profile'])) {
+            } elseif (in_array($value->type, $arrayGeneral)) {
                 $item['type']         = $value->type;
                 unset($item['id_news']);
                 unset($item['news_title']);
