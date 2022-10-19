@@ -794,6 +794,10 @@ class ApiMerchantTransactionController extends Controller
             $orderID = $detail['order_id'];
         }
 
+        if($dropCounterStatus == 0){
+            $post['pickup_status'] = true;
+        }
+
         if($post['pickup_status'] == true){
             $post['pickup_time_start'] = (empty($post['pickup_time_start']) ? date('Y-m-d H:i:s'):$post['pickup_time_start']);
             $post['pickup_time_end'] = (empty($post['pickup_time_end']) ? date('Y-m-d H:i:s'):$post['pickup_time_end']);
