@@ -329,6 +329,9 @@ class ApiMerchantManagementController extends Controller
     public function merchantProductCreate(Request $request){
         $post = $request->all();
         $post['id_user'] = $request->user()->id;
+        if(!empty($post['id_outlet'])){
+            $post['id_user'] = Merchant::where('id_outlet', $post['id_outlet'])->first()['id_user']??null;
+        }
         return $this->productCreate($post);
     }
 
@@ -565,7 +568,12 @@ class ApiMerchantManagementController extends Controller
         $img = [];
         if(!empty($post['image'])){
             $image = $post['image'];
-            $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
+            if(!empty($post['admin'])){
+                $encode = $post['image'];
+            }else{
+                $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
+            }
+
             $upload = MyHelper::uploadPhotoAllSize($encode, 'img/product/'.$product['product_code'].'/');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
@@ -603,7 +611,7 @@ class ApiMerchantManagementController extends Controller
         ProductDetail::create([
             'id_product' => $idProduct,
             'id_outlet' => $checkMerchant['id_outlet'],
-            'product_detail_visibility' => 'Visible',
+            'product_detail_visibility' => $post['product_visibility']??'Visible',
             'product_detail_stock_status' => (empty($post['variants']) && empty($stockProduct)? 'Sold Out' : 'Available'),
             'product_detail_stock_item' => (empty($post['variants'])? $stockProduct : 0),
         ]);
@@ -1273,6 +1281,9 @@ class ApiMerchantManagementController extends Controller
     public function variantGroupUpdate(Request $request){
         $post = $request->all();
         $idUser = $request->user()->id;
+        if(!empty($post['admin'])){
+            $idUser = Merchant::where('id_merchant', $post['id_merchant'])->first()['id_user']??null;
+        }
 
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
         if (empty($checkMerchant)) {
@@ -1350,7 +1361,7 @@ class ApiMerchantManagementController extends Controller
                             'product_variant_group_code' => 'PV'.time().'-'.implode('', $idVariants),
                             'product_variant_group_name' => $combination['name'],
                             'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible'),
-                            'product_variant_group_price' => $combination['price']
+                            'product_variant_group_price' => str_replace('.','',$combination['price'])
                         ]);
                         $idProductVariantGroup = $variantGroup['id_product_variant_group'];
 
@@ -1376,7 +1387,7 @@ class ApiMerchantManagementController extends Controller
                 }else{
                     ProductVariantGroup::where('id_product_variant_group', $combination['id_product_variant_group'])->update([
                         'product_variant_group_name' => $combination['name'],
-                        'product_variant_group_price' => $combination['price'],
+                        'product_variant_group_price' => str_replace('.','',$combination['price']),
                         'product_variant_group_visibility' => (empty($combination['visibility']) ? 'Hidden' : 'Visible')
                     ]);
 
@@ -1431,7 +1442,7 @@ class ApiMerchantManagementController extends Controller
                         $insertWholesalerVariant[] = [
                             'id_product_variant_group' => $idProductVariantGroup,
                             'variant_wholesaler_minimum' => $wholesaler['minimum']??0,
-                            'variant_wholesaler_unit_price' => $wholesaler['unit_price']??0,
+                            'variant_wholesaler_unit_price' => str_replace('.','',$wholesaler['unit_price'])??0,
                             'created_at' => date('Y-m-d H:i:s'),
                             'updated_at' => date('Y-m-d H:i:s')
                         ];
@@ -1550,5 +1561,11 @@ class ApiMerchantManagementController extends Controller
                 ->whereNotNull('users.name')
                 ->select('id', 'name', 'phone')->get()->toArray();
         return response()->json(MyHelper::checkGet($list));
+    }
+
+    public function adminProductDetail(Request $request){
+        $post = $request->all();
+        $post['id_user'] = Merchant::where('id_merchant', $post['id_merchant'])->first()['id_user']??null;
+        return $this->productDetail($post);
     }
 }

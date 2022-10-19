@@ -115,6 +115,10 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::post('register/rejected/save', 'ApiMerchantController@registerRejected');
         Route::post('list-setting', 'ApiMerchantController@listSettingOption');
 
+        Route::post('be/product/variant/create-combination', 'ApiMerchantManagementController@variantCombination');
+        Route::post('be/product/create', 'ApiMerchantManagementController@merchantProductCreate');
+        Route::post('be/product/detail', 'ApiMerchantManagementController@adminProductDetail');
+        Route::post('be/product/variant/update', 'ApiMerchantManagementController@variantGroupUpdate');
         Route::post('list', 'ApiMerchantManagementController@list');
         Route::post('store', 'ApiMerchantManagementController@store');
         Route::post('detail', 'ApiMerchantManagementController@detail');
