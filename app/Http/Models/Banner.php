@@ -72,6 +72,12 @@ class Banner extends Model
 				case 'merchant_detail':
 					return Merchant::where('id_merchant', $this->id_reference)->value('merchant_pic_name');
 					break;
+				case 'product_detail':
+					return Product::where('id_product', $this->id_reference)->value('product_name');
+					break;
+				case 'doctor_detail':
+					return Product::where('id_doctor', $this->id_reference)->value('doctor_name');
+					break;
 				case 'link':
 				case 'url':
 					return $this->url;

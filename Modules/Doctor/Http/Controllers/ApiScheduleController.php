@@ -209,7 +209,7 @@ class ApiScheduleController extends Controller
     {
         $user = $request->user();
 
-        $doctor_schedule = DoctorSchedule::where('id_doctor', $user['id_doctor'])->with('schedule_time');
+        $doctor_schedule = DoctorSchedule::where('id_doctor', $user['id_doctor'])->with('schedule_time')->orderBy('order', 'ASC');
 
         $doctor_schedule = $doctor_schedule->get()->toArray();
 
