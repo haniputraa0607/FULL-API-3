@@ -1019,15 +1019,6 @@ class ApiMerchantTransactionController extends Controller
         $balance_nominal = $data['balance_nominal'];
         $balance_before = MerchantLogBalance::where('id_merchant', $data['id_merchant'])->sum('merchant_balance');
         $balance_after = $balance_before + $balance_nominal;
-        $checkLog = MerchantLogBalance::where('merchant_balance_source', 'Completed Transaction')->where('merchant_balance_id_reference', $data['id_transaction'])->where('id_merchant', $data['id_merchant'])->first();
-        if($checkLog){
-            $balance_before = $checkLog->balance_before;
-            if($balance_nominal == $checkLog->balance){
-                $balance_after = $checkLog->balance_after;
-            }else{
-                $balance_after = $balance_before + $balance_nominal;
-            }
-        }
 
         $LogBalance = [
             'id_merchant'                    => $data['id_merchant'],
@@ -1108,5 +1099,30 @@ class ApiMerchantTransactionController extends Controller
         }
 
         return response()->json($result);
+    }
+
+    public function autoCancel(){
+        $log = MyHelper::logCron('Auto cancel transaction');
+        try {
+            $currentDate = date('Y-m-d');
+
+            $transactions = Transaction::join('users', 'users.id', 'transactions.id_user')
+                ->where('transaction_status', 'Pending')
+                ->where('trasaction_type', 'Delivery')
+                ->where('transaction_maximum_date_process', '<', $currentDate)->get();
+
+            foreach ($transactions as $transaction){
+                $post = [
+                    'id_transaction' => $transaction['id_transaction'],
+                    'reject_reason' => 'Auto reject transaction'
+                ];
+                $transaction->triggerReject($post);
+            }
+
+            $log->success(['reject_count' => count($transactions)]);
+            return 'success';
+        }catch (\Exception $e) {
+            $log->fail($e->getMessage());
+        }
     }
 }

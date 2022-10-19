@@ -1481,7 +1481,7 @@ class ApiSetting extends Controller
                             $height = $img->height();
 
                             if($width == $height){
-                                $upload = MyHelper::uploadPhoto($imgEncode, $path = 'img/icon/');
+                                $upload = MyHelper::uploadPhotoStrict($imgEncode, $path = 'img/icon/', $width, $height);
 
                                 if ($upload['status'] == "success") {
                                     $mainMenu[$key]->icon1 = $upload['path'];
@@ -1506,7 +1506,7 @@ class ApiSetting extends Controller
                             $height = $img->height();
 
                             if($width == $height){
-                                $upload = MyHelper::uploadPhoto($imgEncode, $path = 'img/icon/');
+                                $upload = MyHelper::uploadPhotoStrict($imgEncode, $path = 'img/icon/', $width, $height);
 
                                 if ($upload['status'] == "success") {
                                     $mainMenu[$key]->icon2 = $upload['path'];
@@ -1552,7 +1552,7 @@ class ApiSetting extends Controller
                             $height = $img->height();
 
                             if($width == $height){
-                                $upload = MyHelper::uploadPhoto($imgEncode, $path = 'img/icon/');
+                                $upload = MyHelper::uploadPhotoStrict($imgEncode, $path = 'img/icon/', $width, $height);
 
                                 if ($upload['status'] == "success") {
                                     $homeMenu[$key]->icon = $upload['path'];
@@ -1594,7 +1594,7 @@ class ApiSetting extends Controller
                             $height = $img->height();
 
                             if($width == $height){
-                                $upload = MyHelper::uploadPhoto($imgEncode, $path = 'img/icon/');
+                                $upload = MyHelper::uploadPhotoStrict($imgEncode, $path = 'img/icon/', $width, $height);
 
                                 if ($upload['status'] == "success") {
                                     $otherMenu[$key]->icon= $upload['path'];

@@ -10,9 +10,9 @@ class Disburse extends Model
 	protected $primaryKey = 'id_disburse';
 
 	protected $fillable = [
+        'id_merchant_log_balance',
 	    'disburse_nominal',
         'disburse_fee',
-        'total_income_outlet',
         'id_bank_account',
 		'disburse_status',
         'beneficiary_bank_name',
@@ -27,9 +27,7 @@ class Disburse extends Model
         'notes',
         'reference_no',
         'old_reference_no',
-        'total_outlet',
-        'count_retry',
-        'send_email_status'
+        'count_retry'
 	];
 
     public function disburse_outlet()

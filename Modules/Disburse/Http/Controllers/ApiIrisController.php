@@ -13,6 +13,7 @@ use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\TransactionPaymentOvo;
 use App\Http\Models\TransactionProduct;
+use App\Http\Models\User;
 use App\Jobs\DisburseJob;
 use App\Jobs\SendEmailDisburseJob;
 use Cassandra\Exception\ExecutionException;
@@ -35,6 +36,7 @@ use Modules\Disburse\Entities\LogTopupIris;
 use Modules\Disburse\Entities\MDR;
 use Modules\Disburse\Entities\PromoPaymentGatewayTransaction;
 use Modules\Disburse\Entities\RulePromoPaymentGateway;
+use Modules\Merchant\Entities\MerchantLogBalance;
 use  Modules\UserFranchise\Entities\UserFranchisee;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
@@ -48,6 +50,7 @@ use Modules\Transaction\Entities\TransactionBundlingProduct;
 class ApiIrisController extends Controller
 {
     function __construct() {
+        $this->autocrm          = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->promo_payment_gateway="Modules\Disburse\Http\Controllers\ApiRulePromoPaymentGatewayController";
     }
 
@@ -92,7 +95,19 @@ class ApiIrisController extends Controller
 
             if($data){
                 if($status == 'completed' || $status == 'failed'){
-                    SendEmailDisburseJob::dispatch(['reference_no' => $reference_no])->onConnection('disbursequeue');
+                    MerchantLogBalance::where('id_merchant_log_balance', $check['id_merchant_log_balance'])->update(['merchant_balance_status' => $status]);
+
+                    $idMerchant = MerchantLogBalance::where('id_merchant_log_balance', $check['id_merchant_log_balance'])->first()['id_merchant']??null;
+                    $user = User::join('merchants', 'merchants.id_user', 'users.id')->where('id_merchant', $idMerchant)
+                            ->select('users.*')->first();
+                    app($this->autocrm)->SendAutoCRM(
+                        'Merchant Withdrawal',
+                        $user['phone'],
+                        [
+                            'amount' => number_format((int)$check['disburse_nominal'],0,",","."),
+                            'status' => $status
+                        ],null, false, false, 'merchant'
+                    );
                 }
 
                 $dataLog['response'] = json_encode(['status' => 'success']);

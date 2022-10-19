@@ -47,6 +47,7 @@ Route::group(['prefix' => 'merchant'], function () {
 
         Route::post('balance/detail', 'ApiMerchantController@balanceDetail');
         Route::post('balance/withdrawal', 'ApiMerchantController@balanceWithdrawal');
+        Route::post('balance/withdrawal/fee', 'ApiMerchantController@balanceWithdrawalFee');
 
         Route::group(['prefix' => 'management'], function () {
             Route::post('product/variant/create-combination', 'ApiMerchantManagementController@variantCombination');
@@ -115,11 +116,13 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::post('list-setting', 'ApiMerchantController@listSettingOption');
 
         Route::post('list', 'ApiMerchantManagementController@list');
+        Route::post('store', 'ApiMerchantManagementController@store');
         Route::post('detail', 'ApiMerchantManagementController@detail');
         Route::post('update', 'ApiMerchantManagementController@update');
         Route::post('delete', 'ApiMerchantManagementController@delete');
         Route::any('candidate/list', 'ApiMerchantManagementController@canditateList');
         Route::post('candidate/update', 'ApiMerchantManagementController@canditateUpdate');
+        Route::get('user/list-not-register', 'ApiMerchantManagementController@userListNotRegister');
 
         //withdrawal
         Route::any('withdrawal/list', 'ApiMerchantManagementController@withdrawalList');

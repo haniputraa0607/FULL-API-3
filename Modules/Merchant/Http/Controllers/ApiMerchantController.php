@@ -10,7 +10,9 @@ use App\Http\Models\Product;
 use App\Http\Models\ProductPhoto;
 use App\Http\Models\Subdistricts;
 use App\Http\Models\TransactionProduct;
+use App\Http\Models\User;
 use App\Http\Models\UserInbox;
+use App\Jobs\DisburseJob;
 use App\Lib\Shipper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -23,6 +25,7 @@ use Modules\Brand\Entities\BrandProduct;
 use Modules\Disburse\Entities\BankAccount;
 use Modules\Disburse\Entities\BankAccountOutlet;
 use Modules\Disburse\Entities\BankName;
+use Modules\Disburse\Entities\Disburse;
 use Modules\InboxGlobal\Http\Requests\MarkedInbox;
 use Modules\Merchant\Entities\Merchant;
 use Modules\Merchant\Entities\MerchantInbox;
@@ -478,7 +481,7 @@ class ApiMerchantController extends Controller
                 'merchant_pic_name' => $detail['merchant_pic_name'],
                 'merchant_pic_id_card_number' => $detail['merchant_pic_id_card_number'],
                 'merchant_pic_email' => $detail['merchant_pic_email'],
-                'merchant_pic_phone' => $detail['merchant_pic_phone']
+                'merchant_pic_phone' => substr_replace($detail['merchant_pic_phone'], '', 0, 1)
             ],
             'address' => $address
         ];
@@ -559,10 +562,29 @@ class ApiMerchantController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
+        $phone = $post['merchant_pic_phone'];
+        if(substr($phone, 0, 2) != 62 && substr($phone, 0, 1) != '0'){
+            $phone = '0'.$phone;
+        }
+
+        $phone = preg_replace("/[^0-9]/", "", $phone);
+
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
+
+        if (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail') {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Format nomor telepon tidak valid']
+            ]);
+        } elseif (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success') {
+            $phone = $checkPhoneFormat['phone'];
+        }
+
+
         $dataUpdate['merchant_pic_name'] = $post['merchant_pic_name'];
         $dataUpdate['merchant_pic_id_card_number'] = $post['merchant_pic_id_card_number'];
         $dataUpdate['merchant_pic_email'] = $post['merchant_pic_email'];
-        $dataUpdate['merchant_pic_phone'] = $post['merchant_pic_phone'];
+        $dataUpdate['merchant_pic_phone'] = $phone;
 
         $update = Merchant::where('id_merchant', $checkMerchant['id_merchant'])->update($dataUpdate);
         return response()->json(MyHelper::checkUpdate($update));
@@ -1164,7 +1186,7 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkGet($res));
     }
 
-    public function balanceWithdrawal(Request $request){
+    public function balanceWithdrawalFee(Request $request){
         $post = $request->json()->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
@@ -1174,6 +1196,10 @@ class ApiMerchantController extends Controller
 
         if(empty($post['id_bank_account']) || empty($post['amount_withdrawal'])){
             return response()->json(['status' => 'fail', 'messages' => ['Imcompleted data']]);
+        }
+
+        if($post['amount_withdrawal'] < 10000){
+            return response()->json(['status' => 'fail', 'messages' => ['Jumlah penarikan minumum '.number_format(10000, 0,",",".")]]);
         }
 
         if($post['amount_withdrawal'] <= 0){
@@ -1187,6 +1213,67 @@ class ApiMerchantController extends Controller
         }
 
         $checkBankAccount = BankAccount::join('bank_account_outlets', 'bank_account_outlets.id_bank_account', 'bank_accounts.id_bank_account')
+            ->join('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
+            ->where('bank_accounts.id_bank_account', $post['id_bank_account'])
+            ->where('id_outlet', $checkMerchant['id_outlet'])
+            ->first();
+
+        if(empty($checkBankAccount)){
+            return response()->json(['status' => 'fail', 'messages' => ['Bank account tidak ditemukan']]);
+        }
+
+        $amount = $post['amount_withdrawal'];
+        //calculate withdrawal fee
+        if(empty($checkBankAccount['withdrawal_fee_formula'])){
+            $formula = Setting::where('key', 'withdrawal_fee_global')->first()['value']??null;
+        }else{
+            $formula = $checkBankAccount['withdrawal_fee_formula'];
+        }
+
+        $fee = (!empty($formula) ? MyHelper::calculator($formula, ['amount' => $amount]) : 0);
+
+        $totalTransfer = $amount + $fee;
+        if($totalTransfer > $currentBalance){
+            return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo saat ini tidak mencukupi']]);
+        }
+
+        $result = [
+            'ammount' => 'Rp '.number_format($amount, 0,",","."),
+            'fee' => 'Rp '.number_format($fee, 0,",","."),
+            'total_withdrawal' => 'Rp '.number_format($totalTransfer, 0,",",".")
+        ];
+
+        return response()->json(['status' => 'success', 'result' => $result]);
+    }
+
+    public function balanceWithdrawal(Request $request){
+        $post = $request->json()->all();
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        if(empty($post['id_bank_account']) || empty($post['amount_withdrawal'])){
+            return response()->json(['status' => 'fail', 'messages' => ['Imcompleted data']]);
+        }
+
+        if($post['amount_withdrawal'] < 10000){
+            return response()->json(['status' => 'fail', 'messages' => ['Jumlah penarikan minumum '.number_format(10000, 0,",",".")]]);
+        }
+
+        if($post['amount_withdrawal'] <= 0){
+            return response()->json(['status' => 'fail', 'messages' => ['Jumlah penarikan tidak valid']]);
+        }
+
+        $currentBalance = MerchantLogBalance::where('id_merchant', $checkMerchant['id_merchant'])->sum('merchant_balance');
+
+        if($post['amount_withdrawal'] > $currentBalance){
+            return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo saat ini tidak mencukupi']]);
+        }
+
+        $checkBankAccount = BankAccount::join('bank_account_outlets', 'bank_account_outlets.id_bank_account', 'bank_accounts.id_bank_account')
+                            ->join('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
                             ->where('bank_accounts.id_bank_account', $post['id_bank_account'])
                             ->where('id_outlet', $checkMerchant['id_outlet'])
                             ->first();
@@ -1195,13 +1282,56 @@ class ApiMerchantController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Bank account tidak ditemukan']]);
         }
 
+        $amount = $post['amount_withdrawal'];
+        //calculate withdrawal fee
+        if(empty($checkBankAccount['withdrawal_fee_formula'])){
+            $formula = Setting::where('key', 'withdrawal_fee_global')->first()['value']??null;
+        }else{
+            $formula = $checkBankAccount['withdrawal_fee_formula'];
+        }
+
+        $fee = (!empty($formula) ? MyHelper::calculator($formula, ['amount' => $amount]) : 0);
+
+        $totalTransfer = $amount + $fee;
+        if($totalTransfer > $currentBalance){
+            return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo saat ini tidak mencukupi']]);
+        }
+
         $dt = [
             'id_merchant' => $checkMerchant['id_merchant'],
-            'balance_nominal' => -$post['amount_withdrawal'],
+            'balance_nominal' => -$amount,
             'id_transaction' => $post['id_bank_account'],
             'source' => 'Withdrawal'
         ];
         $saveBalanceMerchant = app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dt);
+
+        if(!empty($saveBalanceMerchant['id_merchant_log_balance'])){
+            $toSend = [
+                'beneficiary_name' => $checkBankAccount['beneficiary_name'],
+                'beneficiary_account' => $checkBankAccount['beneficiary_account'],
+                'beneficiary_bank' => $checkBankAccount['bank_code'],
+                'beneficiary_email' => $checkBankAccount['beneficiary_email'],
+                'amount' => $amount,
+                'notes' => 'Withdrawal '.date('d M Y H:i'),
+                'id_merchant_log_balance' => $saveBalanceMerchant['id_merchant_log_balance'],
+                'fee' => $fee,
+                'id_bank_account' => $checkBankAccount['id_bank_account']
+            ];
+
+            if(!empty(env('URL_IRIS'))){
+                DisburseJob::dispatch($toSend)->onConnection('disbursequeue');
+            }
+
+            if($fee > 0){
+                $dtFee = [
+                    'id_merchant' => $checkMerchant['id_merchant'],
+                    'balance_nominal' => -$fee,
+                    'id_transaction' => $saveBalanceMerchant['id_merchant_log_balance'],
+                    'source' => 'Withdrawal Fee'
+                ];
+                $saveBalanceMerchant = app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dtFee);
+            }
+        }
         return response()->json(MyHelper::checkUpdate($saveBalanceMerchant));
     }
 
@@ -1217,15 +1347,21 @@ class ApiMerchantController extends Controller
         }
 
         $list1 = MerchantLogBalance::join('transactions', 'transactions.id_transaction', 'merchant_log_balances.merchant_balance_id_reference')
+                    ->whereNotIn('merchant_balance_source', ['Withdrawal', 'Withdrawal Fee'])
                     ->where('id_merchant', $checkMerchant['id_merchant'])->select('merchant_log_balances.*');
         $list2 = MerchantLogBalance::join('bank_accounts', 'bank_accounts.id_bank_account', 'merchant_log_balances.merchant_balance_id_reference')
+                ->whereIn('merchant_balance_source', ['Withdrawal', 'Withdrawal Fee'])
                 ->where('id_merchant', $checkMerchant['id_merchant'])->select('merchant_log_balances.*');
 
         if(!empty($post['search_key'])){
-            $list1 = $list1->where('transaction_receipt_number', 'like', '%'.$post['search_key'].'%');
+            $list1 = $list1->where(function ($q) use($post){
+                $q->where('transaction_receipt_number', 'like', '%'.$post['search_key'].'%')
+                    ->orWhere('merchant_balance_source', 'like', '%'.$post['search_key'].'%');
+            }   );
             $list2 = $list2->where(function ($q) use($post){
                 $q->where('beneficiary_name', 'like', '%'.$post['search_key'].'%')
-                    ->orWhere('beneficiary_account', 'like', '%'.$post['search_key'].'%');
+                    ->orWhere('beneficiary_account', 'like', '%'.$post['search_key'].'%')
+                    ->orWhere('merchant_balance_source', 'like', '%'.$post['search_key'].'%');
             });
         }
 
@@ -1234,7 +1370,7 @@ class ApiMerchantController extends Controller
         foreach ($list['data']??[] as $key=>$dt){
             $transaction = [];
             $bankAccount = [];
-            if($dt['merchant_balance_source'] == 'Transaction Completed'){
+            if($dt['merchant_balance_source'] == 'Transaction Completed' || $dt['merchant_balance_source'] == 'Transaction Consultation Completed'){
                 $transaction = Transaction::where('id_transaction', $dt['merchant_balance_id_reference'])->first();
             }elseif($dt['merchant_balance_source'] == 'Withdrawal'){
                 $bankAccount =  BankAccount::join('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
@@ -1265,5 +1401,98 @@ class ApiMerchantController extends Controller
 
         $data = $data->get();
         return response()->json(MyHelper::checkGet($data));
+    }
+    
+    public function balanceTransfer($data){
+        $fee = $data['fee'];
+        $idMerchantBalance = $data['id_merchant_log_balance'];
+        $idBankAccount = $data['id_bank_account'];
+        unset($data['fee']);
+        unset($data['id_merchant_log_balance']);
+        $toSend = [$data];
+        $refNo = null;
+
+        $arrStatus = [
+            'queued' => 'Queued',
+            'processed' => 'Processed',
+            'completed' => 'Success',
+            'failed' => 'Fail',
+            'rejected' => 'Rejected'
+        ];
+
+        $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $toSend]);
+        if(isset($sendToIris['status']) && $sendToIris['status'] == 'success') {
+
+            if (isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])) {
+                $response = $sendToIris['response']['payouts'][0]??[];
+                if(!empty($response)){
+                    Disburse::create([
+                        'id_merchant_log_balance' => $idMerchantBalance,
+                        'disburse_nominal' => $data['amount'],
+                        'disburse_fee' => $fee,
+                        'id_bank_account' => $idBankAccount,
+                        'disburse_status' => $arrStatus[$response['status']],
+                        'beneficiary_bank_name' => $data['beneficiary_bank'],
+                        'beneficiary_account_number' => $data['beneficiary_account_number'],
+                        'beneficiary_name' => $data['beneficiary_name'],
+                        'request' => json_encode($data),
+                        'response' => json_encode($response),
+                        'notes' => $data['notes'],
+                        'reference_no' => $response['reference_no']
+                    ]);
+
+                    $refNo = $response['reference_no'];
+                    MerchantLogBalance::where('id_merchant_log_balance', $idMerchantBalance)->update(['merchant_balance_status' => 'Pending']);
+
+                    $idMerchant = MerchantLogBalance::where('id_merchant_log_balance', $idMerchantBalance)->first()['id_merchant']??null;
+                    $user = User::join('merchants', 'merchants.id_user', 'users.id')->where('id_merchant', $idMerchant)
+                        ->select('users.*')->first();
+                    app($this->autocrm)->SendAutoCRM(
+                        'Merchant Withdrawal',
+                        $user['phone'],
+                        [
+                            'amount' => number_format((int)$data['amount'],0,",","."),
+                            'status' => 'Pending'
+                        ],null, false, false, 'merchant'
+                    );
+                }
+            }
+        }elseif(isset($sendToIris['response']['errors']) && !empty($sendToIris['response']['errors'])){
+            $err = $sendToIris['response']['errors'][0]??[];
+            if(!empty($err)){
+                Disburse::create([
+                    'id_merchant_log_balance' => $idMerchantBalance,
+                    'disburse_nominal' => $data['amount'],
+                    'disburse_fee' => $fee,
+                    'id_bank_account' => $idBankAccount,
+                    'disburse_status' => 'Failed Create Payouts',
+                    'beneficiary_bank_name' => $data['beneficiary_bank'],
+                    'beneficiary_account_number' => $data['beneficiary_account_number'],
+                    'beneficiary_name' => $data['beneficiary_name'],
+                    'request' => json_encode($data),
+                    'error_message' => implode(',', $err),
+                    'notes' => $data['notes']
+                ]);
+            }
+        }
+
+        $settingApprover = Setting::where('key', 'disburse_auto_approve_setting')->first();
+        if(!empty($refNo) && $settingApprover && $settingApprover['value'] == 1){
+            $sendApprover = MyHelper::connectIris('Approver', 'POST','api/v1/payouts/approve', ['reference_nos' => [$refNo]], 1);
+
+            if(isset($sendApprov['status']) && $sendApprov['status'] == 'fail') {
+                $checkError = in_array("Partner does not have sufficient balance for the payout", $sendApprover['response']['errors']);
+
+                if ($checkError !== false) {
+                    Disburse::where('reference_no', $refNo)->update(['disburse_status' => 'Fail', 'error_code' => '009', 'error_message' => implode(',', $sendApprover['response']['errors'])]);
+                } else {
+                    Disburse::where('reference_no', $refNo)->update(['disburse_status' => 'Fail', 'error_message' => implode(',', $sendApprover['response']['errors'])]);
+                }
+            }else{
+                MerchantLogBalance::where('id_merchant_log_balance', $idMerchantBalance)->update(['merchant_balance_status' => 'On Progress']);
+            }
+        }
+
+        return 'success';
     }
 }

@@ -155,6 +155,8 @@ class ApiHome extends Controller
                 unset($item['id_news']);
                 unset($item['news_title']);
                 unset($item['url']);
+            } else {
+                $item['type']         = $value->type;
             }
             array_push($array, $item);
         }

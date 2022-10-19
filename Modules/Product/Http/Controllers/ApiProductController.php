@@ -1144,24 +1144,6 @@ class ApiProductController extends Controller
 
     	// check data
         DB::beginTransaction();
-        $brands=$post['product_brands']??false;
-        if(!$brands){
-            $brands = ['0'];
-            $post['product_brands'] = ['0'];
-        }
-        if(in_array('*', $post['product_brands'])){
-            $brands=Brand::select('id_brand')->get()->toArray();
-            $brands=array_column($brands, 'id_brand');
-        }
-        BrandProduct::where('id_product',$request->json('id_product'))->delete();
-        foreach ($brands as $id_brand) {
-            BrandProduct::create([
-                'id_product'=>$request->json('id_product'),
-                'id_brand'=>$id_brand,
-                'id_product_category'=>$request->json('id_product_category')
-            ]);
-        }
-        unset($post['product_brands']);
         // promo_category
         ProductProductPromoCategory::where('id_product',$post['id_product'])->delete();
         ProductProductPromoCategory::insert(array_map(function($id_product_promo_category) use ($post) {
@@ -2218,6 +2200,8 @@ class ApiProductController extends Controller
                 $list = $list->orderBy('total_rating', 'desc');
             }elseif($sorting == 'newest'){
                 $list = $list->orderBy('products.created_at', 'desc');
+            }elseif($sorting == 'recommendation'){
+                $list = $list->orderBy('products.product_recommendation_status', 'desc')->orderBy('products.product_name', 'asc');
             }
         }else{
             $list = $list->orderBy('product_count_transaction', 'desc');
@@ -2229,7 +2213,7 @@ class ApiProductController extends Controller
         }
 
         if(!empty($post['filter_category'])){
-            $list = $list->whereIn('id_product_category', $post['filter_category']);
+            $list = $list->whereIn('product_categories.id_product_category', $post['filter_category']);
         }
 
         if(!empty($post['filter_min_price'])){

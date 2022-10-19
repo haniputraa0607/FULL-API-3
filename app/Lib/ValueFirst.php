@@ -177,9 +177,6 @@ class ValueFirst
         try {
             $output = $client->request('POST', $url, ['body' => $jsonBody]);
             $output = json_decode($output->getBody(), true);
-            if(isset($output['token']) && !empty($output['token'])){
-                Setting::updateOrCreate(['key' => 'valuefirst_token'], ['value' => $output['expiryDate'], 'value_text' => $output['token']]);
-            }
             return $output;
         }catch (\GuzzleHttp\Exception\RequestException $e) {
             try{

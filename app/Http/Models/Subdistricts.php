@@ -40,4 +40,9 @@ class Subdistricts extends Model
         'subdistrict_latitude',
         'subdistrict_longitude'
 	];
+
+    public function district()
+    {
+        return $this->belongsTo(\App\Http\Models\Districts::class, 'id_district');
+    }
 }
