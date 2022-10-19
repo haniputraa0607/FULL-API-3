@@ -112,6 +112,7 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::post('register/approved/save', 'ApiMerchantController@registerApproved');
         Route::get('register/rejected/detail', 'ApiMerchantController@registerRejected');
         Route::post('register/rejected/save', 'ApiMerchantController@registerRejected');
+        Route::post('list-setting', 'ApiMerchantController@listSettingOption');
 
         Route::post('list', 'ApiMerchantManagementController@list');
         Route::post('detail', 'ApiMerchantManagementController@detail');

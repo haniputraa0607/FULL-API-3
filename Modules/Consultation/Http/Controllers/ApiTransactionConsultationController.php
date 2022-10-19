@@ -971,7 +971,9 @@ class ApiTransactionConsultationController extends Controller
             'transaction_consultation_chat_url' => $transaction_consultation_chat_url,
             'can_go_detail' => isset($canGoDetail) ? $canGoDetail : null,
             'button_detail' => isset($buttonDetail) ? $buttonDetail : null,
-            'consultation_text_description' => isset($consultationDescription) ? $consultationDescription : null
+            'consultation_text_description' => isset($consultationDescription) ? $consultationDescription : null,
+            'is_rated' => $transactionConsultation->is_rated,
+            'rating_value' => $transactionConsultation->rating_value
         ];
 
         return response()->json([
@@ -3275,7 +3277,7 @@ class ApiTransactionConsultationController extends Controller
                 'transaction_consultation_chat_url' => $user->id_doctor ? null : $transactionConsultation->consultation_chat_url,
                 'doctor_identity' => $transactionConsultation->doctor->infobip_identity,
                 'customer_identity' => $transactionConsultation->user->infobip_identity,
-                'token' => $user->getActiveToken(),
+                'token' => $user->getActiveToken()
             ]
         ];
     }
