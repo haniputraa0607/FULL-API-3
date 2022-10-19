@@ -795,7 +795,7 @@ class ApiMerchantTransactionController extends Controller
         }
 
         if($dropCounterStatus == 0){
-            $post['pickup_status'] == true;
+            $post['pickup_status'] = true;
         }
 
         if($post['pickup_status'] == true){
