@@ -16,18 +16,6 @@ class UserAgentControl
    */
   public function handle($request, Closure $next)
   {
-    if (strtolower(env('APP_ENV')) == 'production') {
-      if ($request->user()['level'] == "Customer") {
-        if (stristr($_SERVER['HTTP_USER_AGENT'], 'iOS') || stristr($_SERVER['HTTP_USER_AGENT'], 'okhttp')) {
-          return $next($request);
-        } else {
-            return response()->json(['error' => 'Unauthenticated action'], 403);
-        }
-      } else {
-        return $next($request);
-      }
-    } else {
       return $next($request);
-    }
   }
 }
