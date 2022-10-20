@@ -1483,18 +1483,11 @@ class PromoCampaignTools{
     		$promo_outlets = $promo_outlets->toArray();
     	}
 
-    	$outlet_brands 	= BrandOutlet::where('id_outlet', $id_outlet)->pluck('id_brand')->toArray();
-    	$check_brand 	= array_diff($promo_brands, $outlet_brands);
+    	$outlet_brands 	= BrandOutlet::where('id_outlet', $id_outlet)->first()['id_brand']??null;
 
-    	if ($brand_rule == 'or') {
-    		if (count($check_brand) == count($promo_brands)) {
-	    		return false;
-	    	}
-    	}else{
-	    	if (!empty($check_brand)) {
-    			return false;
-    		}
-    	}
+        if (!empty($promo_brands) && !in_array($outlet_brands, $promo_brands)) {
+            return false;
+        }
 
     	$outlet_by_group_filter = [];
     	foreach ($promo_outlet_groups as $val) {

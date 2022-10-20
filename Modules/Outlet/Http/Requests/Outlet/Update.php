@@ -21,7 +21,6 @@ class Update extends FormRequest
             'outlet_code'        => 'required|unique:outlets,outlet_code,'.$request->json('id_outlet').',id_outlet',
             'outlet_name'        => 'required',
             'outlet_address'     => '',
-            'id_city'            => 'required|integer',
             'outlet_postal_code' => '',
             'outlet_phone'       => '',
             'outlet_email'       => 'email',

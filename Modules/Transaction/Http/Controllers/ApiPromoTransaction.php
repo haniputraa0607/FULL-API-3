@@ -236,16 +236,12 @@ class ApiPromoTransaction extends Controller
                 $err = $codeErr??[];
                 $resPromoCode = [
                     'promo_code' 		=> $sharedPromoTrx['promo_campaign']['promo_code'] ?? null,
-                    'title' 			=> $applyCode['result']['title'] ?? null,
+                    'title' 			=> $applyCode['result']['title'] ?? $promoCode['result']->promo_code ?? null,
                     'text' 				=> array_map(function($v){
                         return trim(strip_tags($v));
                     },$err),
                     'remove_text' 		=> 'Batalkan penggunaan ' . ($sharedPromoTrx['promo_campaign']['promo_title'] ?? null)
                 ];
-
-                if (!empty($codeErr)) {
-                    $continueCheckOut = false;
-                }
 
                 $resPromo = $applyCode['result'] ?? null;
                 $discItemStatus = 0;
@@ -321,9 +317,9 @@ class ApiPromoTransaction extends Controller
                 $discDeliveryAll = $discDeliveryAll + $discDelivery;
             }
 
-            if(!empty($resPromoCode)){
-                $resPromoCode['is_error'] = (!empty($codeErr) ? true : false);
-            }
+            $resPromoCode['is_error'] = ($totalAllDisc <= 0 ? true : false);
+            $resPromoCode['text'] = ($totalAllDisc <= 0 ? $resPromoCode['text'] : []);
+            $continueCheckOut = ($totalAllDisc <= 0 ? false : true);
         }
 
         if($codeType == 'Discount bill'){
@@ -771,6 +767,15 @@ class ApiPromoTransaction extends Controller
             if (!$checkShipment) {
                 return $this->failResponse($promoName . ' tidak dapat digunakan untuk pengiriman ini');
             }
+        }
+
+        $id_outlet = $data['id_outlet'];
+        $promoBrand = $promo->{$promoSource . '_brands'}->pluck('id_brand')->toArray();
+        $promoOutlet = $promo->{$promoSource . '_outlets'};
+        $outlet = $pct->checkOutletBrandRule($id_outlet, $promo->is_all_outlet ?? 0, $promoOutlet, $promoBrand);
+
+        if (!$outlet) {
+            return $this->failResponse($promoName . ' tidak dapat digunakan di outlet ini');
         }
 
         if (request()->payment_detail) {
