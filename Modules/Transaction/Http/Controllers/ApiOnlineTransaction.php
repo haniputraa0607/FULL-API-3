@@ -167,6 +167,18 @@ class ApiOnlineTransaction extends Controller
             ]);
         }
 
+        if(isset($user['email'])){
+            $domain = substr($user['email'], strpos($user['email'], "@") + 1);
+            if(!filter_var($user['email'], FILTER_VALIDATE_EMAIL) ||
+                checkdnsrr($domain, 'MX') === false){
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Alamat email anda tidak valid, silahkan gunakan alamat email yang valid.']
+                ]);
+            }
+        }
+
         if (count($user['memberships']) > 0) {
             $post['membership_level']    = $user['memberships'][0]['membership_name'];
             $post['membership_promo_id'] = $user['memberships'][0]['benefit_promo_id'];
@@ -2478,7 +2490,7 @@ class ApiOnlineTransaction extends Controller
     		$showList = 1;
     		break;
     	}
-    	
+
     	return $showList;
     }
 
@@ -2519,6 +2531,14 @@ class ApiOnlineTransaction extends Controller
             $itemsCheck = $this->checkDataTransaction($post, 0, 1, 0, [], 0, $request->user()->id);
             $items = $itemsCheck['items'];
             $subtotal = $itemsCheck['subtotal'];
+            $dtNeedRecipe = $itemsCheck['data_need_recipe'];
+            if(!empty($dtNeedRecipe)){
+                return response()->json([
+                    'status' => 'fail',
+                    'messages' => $itemsCheck['error_messages']??'Produk membutuhkan resep',
+                    'data_need_recipe' => $dtNeedRecipe
+                ]);
+            }
 
             return response()->json(MyHelper::checkGet([
                 'items' => $items,
@@ -2539,6 +2559,7 @@ class ApiOnlineTransaction extends Controller
         $deliveryPrice = 0;
         $errorMsg = [];
         $weight = [];
+        $needRecipeData = [];
         $needRecipeStatus = 0;
 
         foreach ($items as $index=>$value){
@@ -2570,7 +2591,16 @@ class ApiOnlineTransaction extends Controller
                     }
 
                     if($product['need_recipe_status']){
-                        $needRecipeStatus = 1;
+                        if(!empty($from_cart)){
+                            $errorMsg[] = 'Produk '.$product['product_name'].' membutuhkan resep';
+                            $needRecipeData = [
+                                'id_product' => $product['id_product'],
+                                'product_name' => $product['product_name'],
+                                'product_code' => $product['product_code']
+                            ];
+                            unset($value['items'][$key]);
+                            continue;
+                        }
                     }
 
                     $product['product_price'] = 0;
@@ -2873,7 +2903,8 @@ class ApiOnlineTransaction extends Controller
             'available_checkout' => $availableCheckout,
             'error_messages' => implode('. ', array_unique($errorMsg)),
             'weight' => array_sum($weight),
-            'pupop_need_consultation' => ($canBuyStatus ? false:true)
+            'pupop_need_consultation' => ($canBuyStatus ? false:true),
+            'data_need_recipe' => $needRecipeData
         ];
     }
 
