@@ -242,14 +242,14 @@ class ApiScheduleController extends Controller
                 $posts[$key]['session_time'] = $value['session_time'];
             }
 
-            //check same start_time
+            //check same session time
             if(isset($value['session_time'])){
-                $check = [];
-                foreach ($value['session_time'] as $key => $time) {
-                    if(in_array($time['start_time'] ,$check)){
-                        return response()->json(['status'  => 'fail', 'result' => 'Start time can not be the same in one day']);
+                $endTime = null;
+                foreach ($posts[$key]['session_time'] as $key => $time) {
+                    if($time['start_time'] < $endTime){
+                        return response()->json(['status'  => 'fail', 'messages' => 'Session time can not be the same in one day']);
                     }
-                    $check[] = $time['start_time'];
+                    $endTime = $time['end_time'];
                 }
             }
         }
