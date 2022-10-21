@@ -574,7 +574,7 @@ class ApiMerchantManagementController extends Controller
                 $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
             }
 
-            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/product/'.$product['product_code'].'/');
+            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/product/');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $img[] = $upload['path'];
@@ -1460,6 +1460,13 @@ class ApiMerchantManagementController extends Controller
                 }
 
                 $priceVariant[] = $combination['price'];
+                $idVariantGroupAll[] = $idProductVariantGroup;
+            }
+            $allIDFromProduct = ProductVariantGroup::where('id_product', $post['id_product'])->pluck('id_product_variant_group')->toArray();
+            $diff = array_diff($allIDFromProduct, $idVariantGroupAll);
+            if(!empty($diff)){
+                ProductVariantPivot::whereIn('id_product_variant_group', $diff)->delete();
+                ProductVariantGroup::whereIn('id_product_variant_group', $diff)->delete();
             }
 
             $price = min($priceVariant);

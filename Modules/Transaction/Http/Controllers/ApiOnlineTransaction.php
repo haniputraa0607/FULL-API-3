@@ -2884,7 +2884,9 @@ class ApiOnlineTransaction extends Controller
                         $items[$index]['error_messages'] = implode('. ', array_unique($errorMsgSubgroup));
                     }
                 }else{
-                    $errorMsg[] = 'Stock produk habis';
+                    if(empty($errorMsg)){
+                        $errorMsg[] = 'Stock produk habis';
+                    }
                     unset($items[$index]);
                     continue;
                 }

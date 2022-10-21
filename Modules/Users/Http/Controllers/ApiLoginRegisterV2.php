@@ -1278,7 +1278,6 @@ class ApiLoginRegisterV2 extends Controller
     {
         $validate = Validator::make($request->json()->all(), [
             'provider' => ['required'],
-            'provider_id' => ['required'],
             'provider_name' => ['required'],
             'provider_email' => ['required', 'email'],
             'provider_token' => ['required'],
@@ -1287,7 +1286,7 @@ class ApiLoginRegisterV2 extends Controller
         if ($validate->fails()) {
             return response()->json([
                 'status' => 'fail',
-                'message' => $validate->errors()
+                'messages' => $validate->errors()
             ]);
         } else {
             $post = $validate->validated();
@@ -1298,12 +1297,11 @@ class ApiLoginRegisterV2 extends Controller
         } catch (BadResponseException $error) {
             return response()->json([
                 'status' => 'fail',
-                'message' => json_decode($error->getResponse()->getBody()->getContents(), true) ?? null
+                'messages' => json_decode($error->getResponse()->getBody()->getContents(), true) ?? null
             ]);
         }
 
         if (
-            $verified->id == $post['provider_id'] &&
             $verified->token == $post['provider_token'] &&
             $verified->name == $post['provider_name']
         ) {
@@ -1336,7 +1334,7 @@ class ApiLoginRegisterV2 extends Controller
         } else {
             return response()->json([
                 'status' => 'fail',
-                'message' => 'invalid credentials'
+                'messages' => 'invalid credentials'
             ]);
         }
     }
@@ -1345,7 +1343,6 @@ class ApiLoginRegisterV2 extends Controller
 
         $validate = Validator::make($request->json()->all(), [
             'provider' => ['required'],
-            'provider_id' => ['required'],
             'provider_token' => ['required'],
             'user_name' => ['required'],
             'user_email' => ['required', 'email'],
@@ -1356,7 +1353,7 @@ class ApiLoginRegisterV2 extends Controller
         if ($validate->fails()) {
             return response()->json([
                 'status' => 'fail',
-                'message' => $validate->errors()
+                'messages' => $validate->errors()
             ]);
         } else {
             $post = $validate->validated();
@@ -1380,12 +1377,11 @@ class ApiLoginRegisterV2 extends Controller
         } catch (BadResponseException $error) {
             return response()->json([
                 'status' => 'fail',
-                'message' => json_decode($error->getResponse()->getBody()->getContents(), true) ?? null
+                'messages' => json_decode($error->getResponse()->getBody()->getContents(), true) ?? null
             ]);
         }
 
         if (
-            $verified->id == $post['provider_id'] &&
             $verified->token == $post['provider_token'] &&
             $verified->name == $post['user_name']
         ) {
@@ -1397,7 +1393,7 @@ class ApiLoginRegisterV2 extends Controller
                 if(!empty($checkPhone)){
                     return response()->json([
                         'status' => 'fail',
-                        'message' => ['Nomor telepon sudah digunakan']
+                        'messages' => ['Nomor telepon sudah digunakan']
                     ]);
                 }
                 $new_user = User::create([
@@ -1414,7 +1410,7 @@ class ApiLoginRegisterV2 extends Controller
                 if(!empty($checkPhone)){
                     return response()->json([
                         'status' => 'fail',
-                        'message' => ['Nomor telepon sudah digunakan']
+                        'messages' => ['Nomor telepon sudah digunakan']
                     ]);
                 }
 
@@ -1430,8 +1426,7 @@ class ApiLoginRegisterV2 extends Controller
 
             UserSocialLogin::updateOrCreate([
                 'id_user' => $idUser,
-                'provider' => $post['provider'],
-                'provider_user_id' => $post['provider_id'],
+                'provider' => $post['provider']
             ],[
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
@@ -1441,7 +1436,7 @@ class ApiLoginRegisterV2 extends Controller
         } else {
             return response()->json([
                 'status' => 'fail',
-                'message' => 'invalid credentials'
+                'messages' => 'invalid credentials'
             ]);
         }
     }
@@ -1449,7 +1444,6 @@ class ApiLoginRegisterV2 extends Controller
     public function socialGetBearer(Request  $request){
         $validate = Validator::make($request->json()->all(), [
             'provider' => ['required'],
-            'provider_id' => ['required'],
             'provider_name' => ['required'],
             'provider_email' => ['required', 'email'],
             'provider_token' => ['required'],
@@ -1458,7 +1452,7 @@ class ApiLoginRegisterV2 extends Controller
         if ($validate->fails()) {
             return response()->json([
                 'status' => 'fail',
-                'message' => $validate->errors()
+                'messages' => $validate->errors()
             ]);
         } else {
             $post = $validate->validated();
@@ -1469,12 +1463,11 @@ class ApiLoginRegisterV2 extends Controller
         } catch (BadResponseException $error) {
             return response()->json([
                 'status' => 'fail',
-                'message' => json_decode($error->getResponse()->getBody()->getContents(), true) ?? null
+                'messages' => json_decode($error->getResponse()->getBody()->getContents(), true) ?? null
             ]);
         }
 
         if (
-            $verified->id == $post['provider_id'] &&
             $verified->token == $post['provider_token'] &&
             $verified->name == $post['provider_name']
         ) {
@@ -1482,16 +1475,16 @@ class ApiLoginRegisterV2 extends Controller
             if(empty($getUser)){
                 return response()->json([
                     'status' => 'fail',
-                    'message' => ['User tidak ditemukan']
+                    'messages' => ['User tidak ditemukan']
                 ]);
             }
 
-            $user_social = UserSocialLogin::where('id_user', $getUser['id'])->where('provider_user_id', $post['provider_id'])->first();
+            $user_social = UserSocialLogin::where('id_user', $getUser['id'])->where('provider', $post['provider'])->first();
 
             if(empty($user_social)){
                 return response()->json([
                     'status' => 'fail',
-                    'message' => ['User tidak ditemukan']
+                    'messages' => ['User tidak ditemukan']
                 ]);
             }
 
@@ -1502,7 +1495,7 @@ class ApiLoginRegisterV2 extends Controller
         } else {
             return response()->json([
                 'status' => 'fail',
-                'message' => 'invalid credentials'
+                'messages' => 'invalid credentials'
             ]);
         }
     }
