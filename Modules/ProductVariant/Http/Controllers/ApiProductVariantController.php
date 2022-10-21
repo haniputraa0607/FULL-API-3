@@ -10,6 +10,7 @@ use Illuminate\Routing\Controller;
 use App\Http\Models\Product;
 use Illuminate\Support\Facades\Artisan;
 use App\Http\Models\TransactionProduct;
+use Modules\Product\Entities\ProductDetail;
 use Modules\ProductVariant\Entities\ProductVariant;
 use DB;
 use Illuminate\Support\Facades\Log;
@@ -338,6 +339,11 @@ class ApiProductVariantController extends Controller
 
     public function updateUseStatus(Request $request){
         $post = $request->all();
+        if($post['status'] == 0){
+            ProductDetail::where('id_product', $post['id_product'])->update(['product_detail_stock_status' => 'Sold Out', 'product_detail_stock_item' => 0]);
+        }else{
+            ProductDetail::where('id_product', $post['id_product'])->update(['product_detail_stock_status' => 'Available', 'product_detail_stock_item' => 0]);
+        }
         $update = Product::where('id_product', $post['id_product'])->update(['product_variant_status' => $post['status']]);
         return MyHelper::checkUpdate($update);
     }
