@@ -55,7 +55,7 @@ class ExportPromoCodeJob implements ShouldQueue
 
 	        $sheets = new SheetCollection($generateExcel);
 
-	        $fileName = 'Promo_code_'.str_replace(" ","", $promo_campaign['campaign_name']);
+	        $fileName = urlencode('Promo_code_'.str_replace(" ","", $promo_campaign['campaign_name']));
 
 	        if($sheets){
 	            $folder1 = 'promo_campaign';
