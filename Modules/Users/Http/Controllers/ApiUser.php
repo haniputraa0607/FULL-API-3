@@ -2686,6 +2686,9 @@ class ApiUser extends Controller
                 $checkUser = User::where('phone', '=', $row)->get()->toArray();
                 if (!$checkUser) continue;
 
+                $check = Transaction::where('id_user', $checkUser[0]['id']??null)->count();
+                if ($check > 0) continue;
+
                 if ($checkUser[0]['level'] != 'Super Admin' && $checkUser[0]['level'] != 'Admin')
                     $action = User::where('phone', '=', $row)->delete();
                 else
@@ -2705,6 +2708,14 @@ class ApiUser extends Controller
             $checkUser = User::where('phone', '=', $post['phone'])->get()->toArray();
             if ($checkUser) {
                 if ($checkUser[0]['level'] != 'Super Admin' && $checkUser[0]['level'] != 'Admin') {
+                    $check = Transaction::where('id_user', $checkUser[0]['id'])->count();
+                    if($check > 0){
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'    => ['Can not delete user ' . $post['phone'].'. Because user have transactions.']
+                        ]);
+                    }
+
                     $deleteUser = User::where('phone', '=', $post['phone'])->delete();
 
                     if ($deleteUser) {
