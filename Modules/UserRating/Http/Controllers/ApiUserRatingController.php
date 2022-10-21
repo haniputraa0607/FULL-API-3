@@ -1517,11 +1517,8 @@ class ApiUserRatingController extends Controller
             ];
         }
 
-        if(empty($post['option_question'])){
-            return [
-                'status'=>'fail',
-                'messages'=>['Option question can not be empty']
-            ];
+        if(!empty($post['option_question'])){
+            $post['option_question'] = $post['option_question'];
         }
 
         if(!empty($post['option_value'])){
@@ -1565,7 +1562,7 @@ class ApiUserRatingController extends Controller
                     'transaction_date' => date('d F Y H:i',strtotime($trx->transaction_date)),
                     'rating_value' => (string) $post['rating_value'],
                     'suggestion' => $post['suggestion']??'',
-                    'question' => $post['option_question'],
+                    'question' => $post['option_question']??'',
                     'product_name' => $product['product_name'],
                     'selected_option' => implode(',',array_map(function($var){return trim($var,'"');},$post['option_value']??[]))
                 ];
@@ -1581,7 +1578,7 @@ class ApiUserRatingController extends Controller
                     'transaction_date' => date('d F Y H:i',strtotime($trx->transaction_date)),
                     'rating_value' => (string) $post['rating_value'],
                     'suggestion' => $post['suggestion']??'',
-                    'question' => $post['option_question'],
+                    'question' => $post['option_question']??'',
                     'selected_option' => implode(',',array_map(function($var){return trim($var,'"');},$post['option_value']??[]))
                 ];
                 app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('User Rating Doctor', $user->phone, $variables,null,true);
@@ -1596,7 +1593,7 @@ class ApiUserRatingController extends Controller
             'id_doctor' => $id_doctor,
             'rating_value' => $post['rating_value'],
             'suggestion' => $post['suggestion']??'',
-            'option_question' => $post['option_question'],
+            'option_question' => $post['option_question']??'',
             'option_value' => implode(',',array_map(function($var){return trim($var,'"');},$post['option_value']??[]))
         ];
 
