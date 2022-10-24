@@ -69,7 +69,7 @@ class ApiHomeController extends Controller
 
         //get doctor consultation
         $id = $doctor['id_doctor'];
-        $transaction = Transaction::with('consultation')->whereHas('consultation', function($query) use ($id){
+        $transaction = Transaction::with('consultation')->where('transaction_payment_status', 'Completed')->whereHas('consultation', function($query) use ($id){
             $query->where('id_doctor', $id)->onlySoon();
         })->get()->toArray();
 
