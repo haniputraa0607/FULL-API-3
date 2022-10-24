@@ -1478,17 +1478,8 @@ class ApiLoginRegisterV2 extends Controller
             $verified->token == $post['provider_token'] &&
             $verified->name == $post['provider_name']
         ) {
-            $getUser = User::where('email', $post['provider_email'])->first();
+            $getUser = User::where('email', $post['provider_email'])->where('phone_verified', 1)->first();
             if(empty($getUser)){
-                return response()->json([
-                    'status' => 'fail',
-                    'messages' => ['User tidak ditemukan']
-                ]);
-            }
-
-            $user_social = UserSocialLogin::where('id_user', $getUser['id'])->where('provider', $post['provider'])->first();
-
-            if(empty($user_social)){
                 return response()->json([
                     'status' => 'fail',
                     'messages' => ['User tidak ditemukan']
