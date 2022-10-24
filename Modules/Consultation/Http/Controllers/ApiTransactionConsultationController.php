@@ -2173,7 +2173,8 @@ class ApiTransactionConsultationController extends Controller
         if(!empty($recomendations)) {
             foreach($recomendations as $key => $recomendation){
                 $params = [
-                    'id_product' => $recomendation->id_product,$recomendations->id_user $id,
+                    'id_product' => $recomendation->id_product,$recomendations->id_user,
+                    'id_user' => $id,
                     'id_product_variant_group' =>$recomendation->id_product_variant_group
                 ];
 
