@@ -765,6 +765,9 @@ class ApiLoginRegisterV2 extends Controller
             if(!empty($data[0]['temporary_password'])){
                 $dtUpdate['password'] = $data[0]['temporary_password'];
                 $dtUpdate['temporary_password'] = NULL;
+                $dtUpdate['otp_forgot'] = NULL;
+                $dtUpdate['phone_verified'] = 1;
+                $dtUpdate['pin_changed'] = 1;
             }
 
             $update = User::where('id', '=', $data[0]['id'])->update($dtUpdate);
@@ -1434,8 +1437,6 @@ class ApiLoginRegisterV2 extends Controller
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ]);
-
-            User::where('id', '=', $idUser)->update(['otp_forgot' => null, 'phone_verified' => '1', 'pin_changed' => '1']);
 
             return response()->json(['status' => 'success']);
         } else {
