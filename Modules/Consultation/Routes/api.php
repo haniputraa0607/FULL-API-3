@@ -59,6 +59,7 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix
         Route::post('/drug-recomendation/download', 'ApiTransactionConsultationController@downloadDrugRecomendation');
     });
 });
+Route::get('consultation/detail/drug-recomendation/{consultation}/medical-prescription.pdf', 'ApiTransactionConsultationController@downloadDrugRecomendationById');
 
 Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-apps'], 'prefix' => 'doctor'], function () {
     Route::post('/consultation', 'ApiTransactionConsultationController@getHandledConsultation');

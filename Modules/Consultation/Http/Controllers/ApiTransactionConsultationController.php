@@ -1978,7 +1978,8 @@ class ApiTransactionConsultationController extends Controller
             'id_transaction_consultation' => $transactionConsultation['id_transaction_consultation'],
             'outlet' => $outlet,
             'items' => $items,
-            'remaining_recipe_redemption' =>  ($transactionConsultation->recipe_redemption_limit - $transactionConsultation->recipe_redemption_counter)
+            'remaining_recipe_redemption' =>  ($transactionConsultation->recipe_redemption_limit - $transactionConsultation->recipe_redemption_counter),
+            'medical_prescription_url' => url("api/consultation/detail/drug-recomendation/transactionConsultation[id_transaction_consultation]/medical-prescription.pdf"),
         ];
 
         return MyHelper::checkGet($result);
@@ -2106,6 +2107,122 @@ class ApiTransactionConsultationController extends Controller
         $output = $converter->convertTo('receipt_'.$transactionConsultation['recipe_code'].'.pdf');
 
         return response()->download($output);
+    }
+
+    public function downloadDrugRecomendationById(Request $request, TransactionConsultation $consultation)
+    {
+        $post = $request->json()->all();
+
+        $id = $request->user()->id;
+
+        //get Transaction Consultation Data
+        $consultation->load('doctor');
+        $transactionConsultation = $consultation;
+        if(empty($transactionConsultation)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaction Consultation Not Found']
+            ]);
+        }
+        $transactionConsultation = $transactionConsultation->toArray();
+
+        //get Doctor
+        $doctor = Doctor::with('specialists')->where('id_doctor', $transactionConsultation['id_doctor'])->first();
+        if(empty($doctor)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Doctor Not Found']
+            ]);
+        }
+        $doctor = $doctor->toArray();
+
+        //get User
+        $user = User::where('id', $transactionConsultation['id_user'])->first();
+        if(empty($user)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['User Not Found']
+            ]);
+        }
+        $user = $user->toArray();
+
+        $date = Carbon::parse($user['birthday']);
+        $now = Carbon::now();
+        $user['age'] = $date->diffInYears($now);
+
+        //get Transaction
+        $transaction = Transaction::where('id_transaction', $transactionConsultation['id_transaction'])->first();
+        if(empty($transaction)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Transaction Not Found']
+            ]);
+        }
+        $transaction = $transaction->toArray();
+
+        $recomendations = TransactionConsultationRecomendation::with('product')->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->onlyDrug()->get();
+        if(empty($recomendations)){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Receipt Not Found']
+            ]);
+        }
+
+
+        $items = [];
+        if(!empty($recomendations)) {
+            foreach($recomendations as $key => $recomendation){
+                $params = [
+                    'id_product' => $recomendation->id_product,
+                    'id_user' => $id,
+                    'id_product_variant_group' =>$recomendation->id_product_variant_group
+                ];
+
+                $detailProduct = app($this->product)->detailRecomendation($params);
+
+                //decode and implode usage rules time
+                $json = json_decode($recomendation->usage_rules_time);
+                $usageRules = null;
+                if(!empty($json)){
+                    $usageRules = implode(", ", $json);
+                }
+
+                $items[$key]['product_name'] = $detailProduct['result']['product_name'] ?? null;
+                $items[$key]['variant_name'] = $detailProduct['result']['variants']['product_variant_name'] ?? null;
+                $items[$key]['qty'] = $recomendation->qty_product ?? null;
+                $items[$key]['usage_rule'] = $recomendation->usage_rules ?? null;
+                $items[$key]['usage_rule_time'] = $usageRules ?? null;
+                $items[$key]['usage_rule_additional_time'] = $recomendation->usage_rules_additional_time ?? null;
+            }
+        }
+
+        //setting template 
+        $templateProcessor = new \PhpOffice\PhpWord\TemplateProcessor(public_path().'/download/template_receipt.docx');
+        $templateProcessor->setValue('doctor_name', $doctor['doctor_name']);
+        $templateProcessor->setValue('doctor_specialist_name', $doctor['specialists'][0]['doctor_specialist_name']);
+        $templateProcessor->setValue('doctor_practice_lisence_number', $doctor['registration_certificate_number']);
+        $templateProcessor->setValue('transaction_date', MyHelper::dateOnlyFormatInd($transaction['transaction_date']));
+        $templateProcessor->setValue('transaction_recipe_code', $transactionConsultation['recipe_code']);
+        $templateProcessor->cloneBlock('block_items', 0, true, false, $items);
+        $templateProcessor->setValue('customer_name', $user['name']);
+        $templateProcessor->setValue('customer_age', $user['age']);
+        $templateProcessor->setValue('customer_gender', $user['gender']);
+
+        if(!Storage::exists('receipt/docx')){
+            Storage::makeDirectory('receipt/docx');
+        }
+
+        $directory = storage_path('app/public/receipt/docx/receipt_'.$transactionConsultation['recipe_code'].'.docx');
+        $templateProcessor->saveAs($directory);
+
+        if(!Storage::exists('receipt/pdf')){
+            Storage::makeDirectory('receipt/pdf');
+        }
+    
+        $converter = new CustomOfficeConverter($directory, storage_path('app/public/receipt/pdf'), env('LIBREOFFICE_URL'), true);
+        $output = $converter->convertTo('receipt_'.$transactionConsultation['recipe_code'].'.pdf');
+
+        return response()->download($output, 'receipt_'.$transactionConsultation['recipe_code'].'.pdf');
     }
 
     public function updateRecomendation(Request $request)
