@@ -1108,6 +1108,7 @@ class ApiMerchantTransactionController extends Controller
     public function autoCancel(){
         $log = MyHelper::logCron('Auto cancel transaction');
         try {
+            $countSuccess = 0;
             $currentDate = date('Y-m-d');
 
             $transactions = Transaction::join('users', 'users.id', 'transactions.id_user')
@@ -1120,10 +1121,13 @@ class ApiMerchantTransactionController extends Controller
                     'id_transaction' => $transaction['id_transaction'],
                     'reject_reason' => 'Auto reject transaction'
                 ];
-                $transaction->triggerReject($post);
+                $check = $transaction->triggerReject($post);
+                if($check){
+                    $countSuccess++;
+                }
             }
 
-            $log->success(['reject_count' => count($transactions)]);
+            $log->success(['reject_count' => count($transactions), 'reject_count_success'=> $countSuccess]);
             return 'success';
         }catch (\Exception $e) {
             $log->fail($e->getMessage());

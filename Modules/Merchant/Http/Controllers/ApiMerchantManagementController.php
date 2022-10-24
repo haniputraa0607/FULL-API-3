@@ -513,10 +513,6 @@ class ApiMerchantManagementController extends Controller
             return ['status' => 'fail', 'messages' => ['Kategori tidak boleh kosong']];
         }
 
-        if(count($post['image_detail']??[]) > 3){
-            return ['status' => 'fail', 'messages' => ['You can upload maximum 3 image detail file']];
-        }
-
         $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $checkMerchant['id_outlet'])->first();
         if (!$outlet) {
             return [
@@ -779,10 +775,6 @@ class ApiMerchantManagementController extends Controller
 
             if(empty($post['id_product_category']) && empty($checkProduct['id_product_category'])){
                 return ['status' => 'fail', 'messages' => ['Kategori tidak boleh kosong']];
-            }
-
-            if(count($post['image_detail']??[]) > 3){
-                return ['status' => 'fail', 'messages' => ['You can upload maximum 3 image detail file']];
             }
 
             $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $checkMerchant['id_outlet'])->first();
