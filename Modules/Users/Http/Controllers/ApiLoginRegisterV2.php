@@ -1388,6 +1388,7 @@ class ApiLoginRegisterV2 extends Controller
             $check = User::where('email', $post['user_email'])->first();
 
             // create if only user does not registered in DB
+            $ps =  bcrypt($post['user_password']);
             if (empty($check)) {
                 $checkPhone = User::where('phone', $phone)->first();
                 if(!empty($checkPhone)){
@@ -1400,7 +1401,8 @@ class ApiLoginRegisterV2 extends Controller
                     'name' => $post['user_name'],
                     'email' => $post['user_email'],
                     'phone' => $phone,
-                    'temporary_password' => bcrypt($post['user_password']),
+                    'password' => $ps,
+                    'temporary_password' => $ps,
                     'email_verified' => 1
                 ]);
 
@@ -1417,7 +1419,8 @@ class ApiLoginRegisterV2 extends Controller
                 User::where('id', $check['id'])->update([
                     'name' => $post['user_name'],
                     'phone' => $phone,
-                    'temporary_password' => bcrypt($post['user_password']),
+                    'password' => $ps,
+                    'temporary_password' => $ps,
                     'email_verified' => 1
                 ]);
 
@@ -1431,6 +1434,8 @@ class ApiLoginRegisterV2 extends Controller
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ]);
+
+            User::where('id', '=', $idUser)->update(['otp_forgot' => null, 'phone_verified' => '1', 'pin_changed' => '1']);
 
             return response()->json(['status' => 'success']);
         } else {
