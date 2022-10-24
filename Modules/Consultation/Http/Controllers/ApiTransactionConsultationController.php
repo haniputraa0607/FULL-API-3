@@ -1902,7 +1902,7 @@ class ApiTransactionConsultationController extends Controller
                 $items[$key]['qty'] = $recomendation->qty_product ?? null;
                 $items[$key]['usage_rules'] = $recomendation->usage_rules ?? null;
                 $items[$key]['usage_rules_time'] = $recomendation->usage_rules_time ?? null;
-                $items[$key]['usage_rules_additional_time'] = $recomendation->usage_rules_additional ?? null;
+                $items[$key]['usage_rules_additional_time'] = $recomendation->usage_rules_additional_time ?? null;
                 $items[$key]['treatment_description'] = $recomendation->treatment_description ?? null;
             }
         }
@@ -1969,7 +1969,7 @@ class ApiTransactionConsultationController extends Controller
                 $items[$key]['qty'] = $recomendation->qty_product ?? null;
                 $items[$key]['usage_rules'] = $recomendation->usage_rules ?? null;
                 $items[$key]['usage_rules_time'] = $usageRules ?? null;
-                $items[$key]['usage_rules_additional_time'] = $recomendation->usage_rules_additional ?? null;
+                $items[$key]['usage_rules_additional_time'] = $recomendation->usage_rules_additional_time ?? null;
                 $items[$key]['treatment_description'] = $recomendation->treatment_description ?? null;
             }
         }
@@ -2324,7 +2324,7 @@ class ApiTransactionConsultationController extends Controller
                 $itemsRecomendationProduct[$key]['qty'] = $product->qty_product ?? null;
                 $itemsRecomendationProduct[$key]['usage_rules'] = $product->usage_rules ?? null;
                 $itemsRecomendationProduct[$key]['usage_rules_time'] = $product->usage_rules_time ?? null;
-                $itemsRecomendationProduct[$key]['usage_rules_additional_time'] = $product->usage_rules_additional ?? null;
+                $itemsRecomendationProduct[$key]['usage_rules_additional_time'] = $product->usage_rules_additional_time ?? null;
                 $itemsRecomendationProduct[$key]['treatment_description'] = $product->treatment_description ?? null;
             }
         }
@@ -2347,7 +2347,7 @@ class ApiTransactionConsultationController extends Controller
                 $itemsRecomendationDrug[$key]['qty'] = $drug->qty_product ?? null;
                 $itemsRecomendationDrug[$key]['usage_rules'] = $drug->usage_rules ?? null;
                 $itemsRecomendationDrug[$key]['usage_rules_time'] = $drug->usage_rules_time ?? null;
-                $itemsRecomendationDrug[$key]['usage_rules_additional_time'] = $drug->usage_rules_additional ?? null;
+                $itemsRecomendationDrug[$key]['usage_rules_additional_time'] = $drug->usage_rules_additional_time ?? null;
                 $itemsRecomendationDrug[$key]['treatment_description'] = $drug->treatment_description ?? null;
             }
         }
@@ -4100,7 +4100,7 @@ class ApiTransactionConsultationController extends Controller
                 $itemsProduct[$i][] = $recomendation->qty_product ?? null;
                 $itemsProduct[$i][] = $recomendation->usage_rules ?? null;
                 $itemsProduct[$i][] = $recomendation->usage_rules_time ?? null;
-                $itemsProduct[$i][] = $recomendation->usage_rules_additional ?? null;
+                $itemsProduct[$i][] = $recomendation->usage_rules_additional_time ?? null;
                 $itemsProduct[$i][] = $recomendation->treatment_description ?? null;
 
                 $i++;
@@ -4151,7 +4151,7 @@ class ApiTransactionConsultationController extends Controller
                 $itemsDrugs[$i][] = $recomendation->qty_product ?? null;
                 $itemsDrugs[$i][] = $recomendation->usage_rules ?? null;
                 $itemsDrugs[$i][] = $usageRules ?? null;
-                $itemsDrugs[$i][] = $recomendation->usage_rules_additional ?? null;
+                $itemsDrugs[$i][] = $recomendation->usage_rules_additional_time ?? null;
                 $itemsDrugs[$i][] = $recomendation->treatment_description ?? null;
 
                 $i++;
