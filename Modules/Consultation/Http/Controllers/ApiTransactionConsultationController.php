@@ -1979,7 +1979,7 @@ class ApiTransactionConsultationController extends Controller
             'outlet' => $outlet,
             'items' => $items,
             'remaining_recipe_redemption' =>  ($transactionConsultation->recipe_redemption_limit - $transactionConsultation->recipe_redemption_counter),
-            'medical_prescription_url' => url("api/consultation/detail/drug-recomendation/transactionConsultation[id_transaction_consultation]/medical-prescription.pdf"),
+            'medical_prescription_url' => url("api/consultation/detail/drug-recomendation/$transactionConsultation[id_transaction_consultation]/medical-prescription.pdf"),
         ];
 
         return MyHelper::checkGet($result);
@@ -2113,7 +2113,7 @@ class ApiTransactionConsultationController extends Controller
     {
         $post = $request->json()->all();
 
-        $id = $request->user()->id;
+        $id = $consultation->id_user;
 
         //get Transaction Consultation Data
         $consultation->load('doctor');
@@ -2173,8 +2173,7 @@ class ApiTransactionConsultationController extends Controller
         if(!empty($recomendations)) {
             foreach($recomendations as $key => $recomendation){
                 $params = [
-                    'id_product' => $recomendation->id_product,
-                    'id_user' => $id,
+                    'id_product' => $recomendation->id_product,$recomendations->id_user $id,
                     'id_product_variant_group' =>$recomendation->id_product_variant_group
                 ];
 
