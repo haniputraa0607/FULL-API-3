@@ -64,25 +64,25 @@ class Kernel extends ConsoleKernel
          * reject all transactions that outlets do not receive within a certain timeframe
          * run every minute
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@autoReject')->cron('* * * * *');
+        //$schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@autoReject')->cron('* * * * *');
 
         /**
          * set ready order that outlets do not ready within 5 minutes after pickup_at
          * run every minute
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@autoReadyOrder')->cron('* * * * *');
+        //$schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@autoReadyOrder')->cron('* * * * *');
 
         /**
          * cancel all pending deals that have been more than 5 minutes
          * run every 2 minute
          */
-        $schedule->call('Modules\Deals\Http\Controllers\ApiCronDealsController@cancel')->cron('*/2 * * * *');
+        //$schedule->call('Modules\Deals\Http\Controllers\ApiCronDealsController@cancel')->cron('*/2 * * * *');
 
         /**
          * cancel all pending subscription that have been more than 5 minutes
          * run every 2 minute
          */
-        $schedule->call('Modules\Subscription\Http\Controllers\ApiCronSubscriptionController@cancel')->cron('*/2 * * * *');
+        //$schedule->call('Modules\Subscription\Http\Controllers\ApiCronSubscriptionController@cancel')->cron('*/2 * * * *');
 
         /**
          * update all pickup transaction that have been more than 1 x 24 hours
@@ -134,22 +134,22 @@ class Kernel extends ConsoleKernel
         /**
          * To process diburse
          */
-        if(env('TYPE_CRON_DISBURSE') == 'monthly'){
-            $schedule->call('Modules\Disburse\Http\Controllers\ApiIrisController@disburse')->monthlyOn(env('DAY_CRON_DISBURSE'), env('TIME_CRON_DISBURSE'));
-        }elseif (env('TYPE_CRON_DISBURSE') == 'weekly'){
-            $schedule->call('Modules\Disburse\Http\Controllers\ApiIrisController@disburse')->weeklyOn(env('DAY_WEEK_CRON_DISBURSE'), env('TIME_CRON_DISBURSE'));
-        }elseif (env('TYPE_CRON_DISBURSE') == 'daily'){
-            $schedule->call('Modules\Disburse\Http\Controllers\ApiIrisController@disburse')->dailyAt(env('TIME_CRON_DISBURSE'));
-        }
+//        if(env('TYPE_CRON_DISBURSE') == 'monthly'){
+//            $schedule->call('Modules\Disburse\Http\Controllers\ApiIrisController@disburse')->monthlyOn(env('DAY_CRON_DISBURSE'), env('TIME_CRON_DISBURSE'));
+//        }elseif (env('TYPE_CRON_DISBURSE') == 'weekly'){
+//            $schedule->call('Modules\Disburse\Http\Controllers\ApiIrisController@disburse')->weeklyOn(env('DAY_WEEK_CRON_DISBURSE'), env('TIME_CRON_DISBURSE'));
+//        }elseif (env('TYPE_CRON_DISBURSE') == 'daily'){
+//            $schedule->call('Modules\Disburse\Http\Controllers\ApiIrisController@disburse')->dailyAt(env('TIME_CRON_DISBURSE'));
+//        }
 
         /**
          * To send email report trx
          */
-        $schedule->call('Modules\Disburse\Http\Controllers\ApiDisburseController@cronSendEmailDisburse')->dailyAt('02:00');
+        //$schedule->call('Modules\Disburse\Http\Controllers\ApiDisburseController@cronSendEmailDisburse')->dailyAt('02:00');
         /**
          * To send
          */
-        $schedule->call('Modules\Disburse\Http\Controllers\ApiDisburseController@shortcutRecap')->dailyAt('02:30');
+        //$schedule->call('Modules\Disburse\Http\Controllers\ApiDisburseController@shortcutRecap')->dailyAt('02:30');
         /**
          * Void failed transaction shopeepay
          */
@@ -172,37 +172,37 @@ class Kernel extends ConsoleKernel
          * Check the status of Gosend which is not updated after 5 minutes
          * run every 3 minutes
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiGosendController@cronCheckStatus')->cron('*/3 * * * *');
+        //$schedule->call('Modules\Transaction\Http\Controllers\ApiGosendController@cronCheckStatus')->cron('*/3 * * * *');
 
         /**
          * Check the status of Wehelpyou which is not updated after 3 minutes
          * run every 1 minutes
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiWehelpyouController@cronCheckStatus')->cron('*/1 * * * *');
+        //$schedule->call('Modules\Transaction\Http\Controllers\ApiWehelpyouController@cronCheckStatus')->cron('*/1 * * * *');
 
         /**
          * Auto reject order when driver not found > 30minutes
          * run every 5 minutes
          */
-        $schedule->call('Modules\OutletApp\Http\Controllers\ApiOutletApp@cronDriverNotFound')->cron('*/1 * * * *');
+        //$schedule->call('Modules\OutletApp\Http\Controllers\ApiOutletApp@cronDriverNotFound')->cron('*/1 * * * *');
 
         /**
          * Notif Order not Received/Rejected 
          * run every minute
          */
-        $schedule->call('Modules\OutletApp\Http\Controllers\ApiOutletApp@cronNotReceived')->everyMinute();
+        //$schedule->call('Modules\OutletApp\Http\Controllers\ApiOutletApp@cronNotReceived')->everyMinute();
 
         /**
          * Sync Bundling
          * run every day at
          */
-        $schedule->call('Modules\ProductBundling\Http\Controllers\ApiBundlingController@bundlingToday')->dailyAt(config('app.env') == 'staging' ? '05:16' : '04:00');
+        //$schedule->call('Modules\ProductBundling\Http\Controllers\ApiBundlingController@bundlingToday')->dailyAt(config('app.env') == 'staging' ? '05:16' : '04:00');
 
         /**
          * Auto reject order wehelpyou when driver not found > 10 minutes
          * run every 1 minutes
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiWehelpyouController@cronCancelDelivery')->cron('*/1 * * * *');
+        //$schedule->call('Modules\Transaction\Http\Controllers\ApiWehelpyouController@cronCancelDelivery')->cron('*/1 * * * *');
 
         /**
          * Get Tracking status
@@ -220,7 +220,7 @@ class Kernel extends ConsoleKernel
          * generate token value first
          * run every day at 06:30
          */
-        $schedule->call('Modules\Users\Http\Controllers\ApiLoginRegisterV2@generateToken')->dailyAt(config('app.env') == 'staging' ? '10:30' : '05:30');
+        $schedule->call('Modules\Users\Http\Controllers\ApiLoginRegisterV2@generateToken')->dailyAt('11:12');
 
         /**
          * To backup and truncate log database

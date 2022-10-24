@@ -1531,10 +1531,15 @@ class ApiLoginRegisterV2 extends Controller
                 $valueFirst = new ValueFirst();
                 $res = $valueFirst->generateToken($checkSetting['value_text']);
                 $response = $res;
-                $statusUpdate = 1;
 
-                if(!empty($response['token'])){
-                    Setting::updateOrCreate(['key' => 'valuefirst_token'], ['value' => $response['expiryDate'], 'value_text' => $response['token']]);
+                if(!empty($response['token']) && empty($checkSetting)){
+                    Setting::create([
+                        'key' => 'valuefirst_token',
+                        'value' => $response['expiryDate'], 'value_text' => $response['token']
+                    ]);
+                }elseif(!empty($response['token']) && !empty($checkSetting)){
+                    $statusUpdate = 1;
+                    Setting::where('key', 'valuefirst_token')->update(['value' => $response['expiryDate'], 'value_text' => $response['token']]);
                 }
             }
 
