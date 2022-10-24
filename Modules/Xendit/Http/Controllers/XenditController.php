@@ -452,11 +452,8 @@ class XenditController extends Controller
         CustomHttpClient::setIdReference($external_id);
         $method = strtoupper($method);
 
-        $redirect_url = str_replace(
-            ['%order_id%', '%type%'],
-            [urlencode($options['order_id'] ?? $external_id), $options['type'] ?? 'trx'],
-            $this->redirect_url
-        );
+        $tab = ($options['type'] == 'trx' ? 'order' : strtolower($options['type']));
+        $redirect_url = env('XENDIT_REDIRECT_URL').'history/'.$tab.'?type='.$options['type'].'&order_id='.urlencode($options['order_id'] ?? $external_id);
 
         $params = [
             'external_id'  => (string) $external_id,
