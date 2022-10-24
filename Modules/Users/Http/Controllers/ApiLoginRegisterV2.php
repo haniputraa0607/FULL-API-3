@@ -780,7 +780,8 @@ class ApiLoginRegisterV2 extends Controller
                     'status'    => 'success',
                     'result'    => [
                         'phone'    => $data[0]['phone'],
-                        'register' => ($data[0]['phone_verified'] == 0 && empty($data[0]['pin_changed']) ? true : false)
+                        'register' => ($data[0]['phone_verified'] == 0 && empty($data[0]['pin_changed']) ? true : false),
+                        'goto' => ($data[0]['phone_verified'] == 0 && empty($data[0]['pin_changed']) ? ($profile['email'] ? 'home' : 'register') : 'password_reset'),
                     ]
                 ];
             }else{
