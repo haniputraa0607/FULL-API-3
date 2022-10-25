@@ -3915,6 +3915,59 @@ class ApiUser extends Controller
             'id_subdistrict' => $dtSubdisctrict['id_subdistrict']??null,
         ]);
 
+        $currentData = User::where('id', $idUser)->first();
+
+        if ($update && $currentData['complete_profile'] != "1" && !empty($currentData['name'])
+            && !empty($currentData['email'])
+            && !empty($currentData['id_city'])
+            && !empty($currentData['id_subdistrict'])
+            && !empty($currentData['birthday'])
+            && !empty($currentData['address'])
+        ) {
+            DB::beginTransaction();
+            //get point
+            $complete_profile_cashback = 0;
+            $setting_profile_cashback = Setting::where('key', 'complete_profile_cashback')->first();
+            if (isset($setting_profile_cashback->value)) {
+                $complete_profile_cashback = $setting_profile_cashback->value;
+            }
+
+            /* add cashback */
+            $balance_nominal = $complete_profile_cashback;
+            // add log balance & update user balance
+            if ($balance_nominal != 0) {
+                $balanceController = new BalanceController();
+                $addLogBalance = $balanceController->addLogBalance($currentData['id'], $balance_nominal, null, "Welcome Point", 0);
+                if (!$addLogBalance) {
+                    DB::rollback();
+                    return [
+                        'status' => 'fail',
+                        'messages' => 'Failed to save data'
+                    ];
+                }
+            }
+
+            if ($balance_nominal ?? false) {
+                $send   = app($this->autocrm)->SendAutoCRM(
+                    'Complete User Profile Point Bonus',
+                    $currentData['phone'],
+                    [
+                        'received_point' => (string) $balance_nominal
+                    ]
+                );
+                if ($send != true) {
+                    DB::rollback();
+                    return response()->json([
+                        'status' => 'fail',
+                        'messages' => ['Failed Send notification to customer']
+                    ]);
+                }
+            }
+            $update = User::where('id', '=', $currentData['id'])->update(['complete_profile' => '1', 'complete_profile_date' => date('Y-m-d H:i:s')]);
+            $checkMembership = app($this->membership)->calculateMembership($currentData['phone']);
+            DB::commit();
+        }
+
         return response()->json(MyHelper::checkUpdate($update));
     }
 
