@@ -1882,9 +1882,9 @@ class ApiSetting extends Controller
     }
 
     public function faqEditDoctorApps(FaqEdit $request) {
-        $id = $request->json('id_faq');
+        $id = $request->json('id_faq_doctor');
 
-        $faq = FaqDoctor::where('id_faq', $id)->first();
+        $faq = FaqDoctor::where('id_faq_doctor', $id)->first();
 
         return response()->json(MyHelper::checkGet($faq));
     }
@@ -1892,18 +1892,43 @@ class ApiSetting extends Controller
     public function faqUpdateDoctorApps(FaqUpdate $request) {
         $post = $request->json()->all();
 
-        $update = FaqDoctor::where('id_faq', $post['id_faq'])->update($post);
+        $update = FaqDoctor::where('id_faq_doctor', $post['id_faq_doctor'])->update($post);
 
         return response()->json(MyHelper::checkUpdate($update));
     }
 
     public function faqDeleteDoctorApps(FaqDelete $request) {
-        $id = $request->json('id_faq');
+        $id = $request->json('id_faq_doctor');
 
-        $delete = FaqDoctor::where('id_faq', $id)->delete();
+        $delete = FaqDoctor::where('id_faq_doctor', $id)->delete();
 
         return response()->json(MyHelper::checkDelete($delete));
     }
+
+    public function faqSortUpdateDoctorApps(Request $request) {
+        $id_faq_doctor = $request->json('id_faq_doctor');
+        $number_list = 0;
+
+        foreach ($id_faq_doctor as $dt){
+            $status = FaqDoctor::where('id_faq_doctor', $dt)->update(['faq_number_list' => $number_list + 1]);
+            if(!$status){
+                $result = [
+                    'status' => 'fail'
+                ];
+                return response()->json($result);
+            }
+            $number_list++;
+        }
+
+        if($status){
+            $result = [
+                'status' => 'success'
+            ];
+        }
+
+        return response()->json($result);
+    }
+
 
     public function maxConsultationQuota(Request $request) {
         $post = $request->json()->all();
