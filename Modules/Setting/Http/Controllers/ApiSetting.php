@@ -1867,7 +1867,7 @@ class ApiSetting extends Controller
         }
     }
 
-    public function faqCreateDoctorApps(FaqCreate $request) {
+    public function faqCreateDoctorApps(Request $request) {
         $post = $request->json()->all();
 
         $faq = FaqDoctor::create($post);
@@ -1875,13 +1875,13 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkCreate($faq));
     }
 
-    public function faqListDoctorApps(FaqList $request) {
+    public function faqListDoctorApps(Request $request) {
         $faqList = FaqDoctor::orderBy('faq_number_list', 'ASC')->get()->toArray();
 
         return response()->json(MyHelper::checkGet($faqList));
     }
 
-    public function faqEditDoctorApps(FaqEdit $request) {
+    public function faqEditDoctorApps(Request $request) {
         $id = $request->json('id_faq_doctor');
 
         $faq = FaqDoctor::where('id_faq_doctor', $id)->first();
@@ -1889,7 +1889,7 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkGet($faq));
     }
 
-    public function faqUpdateDoctorApps(FaqUpdate $request) {
+    public function faqUpdateDoctorApps(Request $request) {
         $post = $request->json()->all();
 
         $update = FaqDoctor::where('id_faq_doctor', $post['id_faq_doctor'])->update($post);
@@ -1897,7 +1897,7 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function faqDeleteDoctorApps(FaqDelete $request) {
+    public function faqDeleteDoctorApps(Request $request) {
         $id = $request->json('id_faq_doctor');
 
         $delete = FaqDoctor::where('id_faq_doctor', $id)->delete();
