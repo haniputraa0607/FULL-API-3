@@ -81,6 +81,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('be/complete-profile', 'ApiSetting@completeProfile');
     Route::any('be/text_menu_list', 'ApiSetting@textMenuList');
     Route::any('be/faq', 'ApiSetting@faqList');
+    Route::any('be/faq-doctor', 'ApiSetting@faqListDoctorApps');
     Route::any('/intro', ['middleware' => 'feature_control:168', 'uses' => 'ApiTutorial@introList']);
     Route::post('/intro/save', ['middleware' => 'feature_control:169', 'uses' => 'ApiTutorial@introSave']);
     Route::post('email', 'ApiSetting@settingEmail');
@@ -115,6 +116,11 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('/faq/update', 'ApiSetting@faqUpdate');
     Route::post('/faq/delete', 'ApiSetting@faqDelete');
     Route::post('faq/sort/update', 'ApiSetting@faqSortUpdate');
+    Route::post('/faq-doctor/create', 'ApiSetting@faqCreateDoctorApps');
+    Route::post('/faq-doctor/edit', 'ApiSetting@faqEditDoctorApps');
+    Route::post('/faq-doctor/update', 'ApiSetting@faqUpdateDoctorApps');
+    Route::post('/faq-doctor/delete', 'ApiSetting@faqDeleteDoctorApps');
+    Route::post('faq-doctor/sort/update', 'ApiSetting@faqSortUpdateDoctorApps');
     Route::post('reset/{type}/update', 'ApiSetting@pointResetUpdate');// point reset
     Route::post('consultation/{type}/update', 'ApiSetting@consultationSettingUpdate');
 
