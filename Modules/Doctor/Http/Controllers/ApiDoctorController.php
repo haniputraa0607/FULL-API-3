@@ -20,6 +20,7 @@ use Modules\Doctor\Http\Requests\DoctorCreate;
 use Modules\UserRating\Entities\RatingOption;
 use Modules\UserRating\Entities\UserRating;
 use Modules\UserRating\Entities\UserRatingPhoto;
+use Modules\UserRating\Entities\UserRatingSummary;
 use Modules\Doctor\Http\Requests\doctor_pin_new_admin;
 use Validator;
 use Image;
@@ -540,7 +541,7 @@ class ApiDoctorController extends Controller
 		)
 		->first();
 
-		$summary = Doctor::where('id_doctor', $user->id_doctor)->get();
+		$summary = UserRatingSummary::where('id_doctor', $user->id_doctor)->get();
 		$summaryRating = [];
 		$summaryOption = [];
 		foreach ($summary as $val) {
@@ -573,15 +574,15 @@ class ApiDoctorController extends Controller
 			'total_customer' => (int) ($ratingDc['total_customer'] ?? null),
 			'total_rating' => (float) ($ratingDc['total_rating'] ?? null),
 			'rating_value' => [
-				'5' => (int) ($summaryRating['5'] ?? null),
-				'4' => (int) ($summaryRating['4'] ?? null),
-				'3' => (int) ($summaryRating['3'] ?? null),
-				'2' => (int) ($summaryRating['2'] ?? null),
-				'1' => (int) ($summaryRating['1'] ?? null)
+                ['rating' => '5', 'progress' => (int) ($summaryRating['5'] ?? 0)],
+                ['rating' => '4', 'progress' => (int) ($summaryRating['4'] ?? 0)],
+                ['rating' => '3', 'progress' => (int) ($summaryRating['3'] ?? 0)],
+                ['rating' => '2', 'progress' => (int) ($summaryRating['2'] ?? 0)],
+                ['rating' => '1', 'progress' => (int) ($summaryRating['1'] ?? 0)],
 			],
 			'rating_option' => $resOption
 		];
-		
+
 		return MyHelper::checkGet($res);
 	}
 
