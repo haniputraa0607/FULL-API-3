@@ -57,13 +57,8 @@ class ApiShipperController extends Controller
                 $statusDate = $t['created_date'];
                 $date = new \DateTime( $statusDate, new \DateTimeZone( 'UTC' ) );
                 $timeZone = $date->format('O');
-                if($timeZone != '+0000'){
-                    $convertWIB = $date->setTimezone( new \DateTimeZone( 'Asia/Jakarta' ) );
-                    $convertWIB = $convertWIB->format('Y-m-d H:i:s');
-                }else{
-                    $timeZone = '+0700';
-                    $convertWIB = $date->format('Y-m-d H:i:s');
-                }
+                $convertWIB = $date->setTimezone( new \DateTimeZone( 'Asia/Jakarta' ) );
+                $convertWIB = $convertWIB->format('Y-m-d H:i:s');
 
                 if($dtShipper['code'] != 1000){
                     TransactionShipmentTrackingUpdate::updateOrCreate(
@@ -129,13 +124,8 @@ class ApiShipperController extends Controller
         $statusDate = $body['status_date'];
         $date = new \DateTime( $statusDate, new \DateTimeZone( 'UTC' ) );
         $timeZone = $date->format('O');
-        if($timeZone != '+0000'){
-            $convertWIB = $date->setTimezone( new \DateTimeZone( 'Asia/Jakarta' ) );
-            $convertWIB = $convertWIB->format('Y-m-d H:i:s');
-        }else{
-            $timeZone = '+0700';
-            $convertWIB = $date->format('Y-m-d H:i:s');
-        }
+        $convertWIB = $date->setTimezone( new \DateTimeZone( 'Asia/Jakarta' ) );
+        $convertWIB = $convertWIB->format('Y-m-d H:i:s');
 
         $shipper = $body['external_status'];
         if($shipper['code'] != 1000){
