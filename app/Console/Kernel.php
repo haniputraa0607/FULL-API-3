@@ -56,9 +56,9 @@ class Kernel extends ConsoleKernel
 
         /**
          * cancel all pending transaction that have been more than 5 minutes
-         * run every 2 minute
+         * run every 5 minute
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@cron')->cron('*/2 * * * *');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@cron')->cron('*/5 * * * *');
 
         /**
          * reject all transactions that outlets do not receive within a certain timeframe
@@ -153,20 +153,20 @@ class Kernel extends ConsoleKernel
         /**
          * Void failed transaction shopeepay
          */
-        $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancel')->cron('*/1 * * * *');
+        //$schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancel')->cron('*/1 * * * *');
         /**
          * Void failed transaction deals shopeepay
          */
-        $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancelDeals')->cron('*/1 * * * *');
+        //$schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancelDeals')->cron('*/1 * * * *');
         /**
          * Void failed transaction subscription shopeepay
          */
-        $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancelSubscription')->cron('*/1 * * * *');
+        //$schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancelSubscription')->cron('*/1 * * * *');
 
         /**
          * process refund shopeepay at 06:00
          */
-        $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronRefund')->dailyAt(config('app.env') == 'staging' ? '05:37' : '03:05');
+        //$schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronRefund')->dailyAt(config('app.env') == 'staging' ? '05:37' : '03:05');
 
         /**
          * Check the status of Gosend which is not updated after 5 minutes
@@ -243,9 +243,9 @@ class Kernel extends ConsoleKernel
 
         /**
          * Auto cancel cancel
-         * run every day at 00:30
+         * run every day at 00:05
          */
-        $schedule->call('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController@autoCancel')->dailyAt(config('app.env') == 'staging' ? '10:00' : '00:30');
+        $schedule->call('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController@autoCancel')->dailyAt(config('app.env') == 'staging' ? '10:52' : '00:06');
     }
 
     /**
