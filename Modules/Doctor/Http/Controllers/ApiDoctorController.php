@@ -589,15 +589,18 @@ class ApiDoctorController extends Controller
 	{
 		$user = $request->user();
 		$comment = UserRating::where('user_ratings.id_doctor', $user->id_doctor)
+        ->join('users', 'users.id_user', 'user_ratings.id')
 		->leftJoin('transaction_consultations','user_ratings.id_transaction_consultation','transaction_consultations.id_transaction_consultation')
         ->leftJoin('transactions','transactions.id_transaction','transaction_consultations.id_transaction')
 		->whereNotNull('suggestion')
 		->where('suggestion', '!=', "")
 		->select(
+            'users.name',
 			'transactions.transaction_receipt_number as order_id',
             'user_ratings.id_user_rating',
 			'user_ratings.suggestion',
-			'user_ratings.created_at'
+			'user_ratings.created_at',
+            'user_ratings.is_anonymous',
 		)
 		->paginate($request->per_page ?? 10)
 		->toArray();
@@ -605,6 +608,10 @@ class ApiDoctorController extends Controller
 		$resData = [];
 		foreach ($comment['data'] ?? [] as $val) {
 			$val['created_at_indo'] = MyHelper::dateFormatInd($val['created_at'], true, false);
+            if ($val['is_anonymous']) {
+                $val['name'] = substr($val['name'],0,1) . '*****';
+            }
+            unset($val['is_anonymous']);
 			$resData[] = $val;
 		}
 
