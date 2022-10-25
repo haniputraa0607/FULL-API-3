@@ -589,7 +589,7 @@ class ApiDoctorController extends Controller
 	{
 		$user = $request->user();
 		$comment = UserRating::where('user_ratings.id_doctor', $user->id_doctor)
-        ->join('users', 'users.id_user', 'user_ratings.id')
+        ->join('users', 'users.id', 'user_ratings.id_user')
 		->leftJoin('transaction_consultations','user_ratings.id_transaction_consultation','transaction_consultations.id_transaction_consultation')
         ->leftJoin('transactions','transactions.id_transaction','transaction_consultations.id_transaction')
 		->whereNotNull('suggestion')
