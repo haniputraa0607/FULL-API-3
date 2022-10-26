@@ -1350,7 +1350,6 @@ class ApiUserRatingController extends Controller
 
         $unrated = UserRatingLog::where('id_transaction',$trx->id_transaction)->first();
         if(!$unrated){
-            (new ApiOutletApp)->insertUserCashback($trx);
             Transaction::where('id_transaction',$trx->id_transaction)->update(['show_rate_popup'=>0]);
         }
 
@@ -1649,7 +1648,6 @@ class ApiUserRatingController extends Controller
 
         $unrated = UserRatingLog::where('id_transaction',$trx->id_transaction)->first();
         if(!$unrated){
-            (new ApiOutletApp)->insertUserCashback($trx);
             Transaction::where('id_transaction',$trx->id_transaction)->update(['show_rate_popup'=>0]);
         }
 
