@@ -94,6 +94,7 @@ Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-
     Route::get('my/settings', ['uses' => 'ApiDoctorController@getMySettings']);
     Route::post('my/settings', ['uses' => 'ApiDoctorController@updateMySettings']);
     Route::get('my/profile', ['uses' => 'ApiDoctorController@myProfile']);
+    Route::post('pin/change', 'AuthDoctorController@changePinLoggedUser')->middleware(['decrypt_pin:pin_new','decrypt_pin:pin_old']);
 
     Route::post('submission/store', ['uses' => 'ApiDoctorController@submissionChangeDataStore']);
 

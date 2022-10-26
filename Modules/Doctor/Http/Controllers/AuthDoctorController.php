@@ -750,4 +750,36 @@ class AuthDoctorController extends Controller
     	}
     	return response()->json($result);
     }
+
+    function changePinLoggedUser(Request $request)
+    {
+
+        $phone = $request->json('phone');
+
+        $phone = preg_replace("/[^0-9]/", "", $phone);
+
+        $data = $request->user();
+
+        if(!password_verify($request->json('pin_old'), $data['password'])){
+            return response()->json([
+                'status'    => 'fail',
+                'messages'    => ['Current PIN doesn\'t match']
+            ]);
+        }
+
+        $pin    = bcrypt($request->json('pin_new'));
+        $update = Doctor::where('id_doctor', '=', $data['id_doctor'])->update(['password' => $pin]);
+
+        $user = Doctor::select('password',\DB::raw('0 as challenge_key'))->where('doctor_phone', $phone)->first();
+
+        $result = [
+            'status'    => 'success',
+            'result'    => [
+                'phone'    =>    $data['doctor_phone'],
+                'challenge_key' => $user->challenge_key
+            ]
+        ];
+
+        return response()->json($result);
+    }
 }
