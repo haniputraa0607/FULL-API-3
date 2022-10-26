@@ -498,12 +498,6 @@ class Transaction extends Model
             }	
         }
 
-        // return voucher
-        $update_voucher = app('\Modules\Deals\Http\Controllers\ApiDealsVoucher')->returnVoucher($this->id_transaction);
-
-        // return subscription
-        $update_subscription = app('\Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher')->returnSubscription($this->id_transaction);
-
     	// send notification
     	// TODO write notification logic here
         $user = User::where('id', $this->id_user)->first();

@@ -65,7 +65,7 @@ class ApiTransactionRefund extends Controller
                 }
 
                 if ($payBalance) {
-                    $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $nominal, $order['id_transaction'], 'Rejected Order Point', $nominal);
+                    $refund = app($this->balance)->addLogBalance($order['id_user'], $nominal, $order['id_transaction'], 'Rejected Order Point', $nominal);
                     if ($refund == false) {
                         return [
                             'status'   => 'fail',
@@ -91,7 +91,7 @@ class ApiTransactionRefund extends Controller
                     if(!empty($trx['refund_partial'])){
                         $amountXendit = $trx['refund_partial']-$nominalBalanceEachTrx;
                     }else{
-                        $amountXendit = $payXendit['amount']/100;
+                        $amountXendit = $payXendit['amount'];
                     }
 
                     if($doRefundPayment){
@@ -145,7 +145,7 @@ class ApiTransactionRefund extends Controller
                         $transaction->update([
                             'reject_type'   => 'point',
                         ]);
-                        $refund = app($this->balance)->addLogBalance($transaction['id_user'], $point = $amountXendit, $transaction['id_transaction'], 'Rejected Order', $amountXendit);
+                        $refund = app($this->balance)->addLogBalance($transaction['id_user'], $amountXendit, $transaction['id_transaction'], 'Rejected Order Xendit', $amountXendit);
                         if ($refund == false) {
                             return [
                                 'status'   => 'fail',
@@ -204,7 +204,7 @@ class ApiTransactionRefund extends Controller
                         $transaction->update([
                             'reject_type'   => 'point',
                         ]);
-                        $refund = app($this->balance)->addLogBalance( $transaction['id_user'], $point = $amountMidtrans, $transaction['id_transaction'], 'Rejected Order Midtrans', $amountMidtrans);
+                        $refund = app($this->balance)->addLogBalance( $transaction['id_user'], $amountMidtrans, $transaction['id_transaction'], 'Rejected Order Midtrans', $amountMidtrans);
                         if ($refund == false) {
                             return [
                                 'status'    => 'fail',

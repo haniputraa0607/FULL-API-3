@@ -1423,7 +1423,7 @@ class ApiHistoryController extends Controller
             }elseif($dt['source'] == 'Welcome Point'){
                 $title = 'Welcome Point';
                 $description = 'Total point didapatkan';
-            }elseif($dt['source'] == 'Rejected Order'){
+            }elseif(strpos($dt['source'],'Rejected Order') !== false){
                 $title = 'Pembatalan Order';
                 $description = 'Total point dikembalikan';
             }
