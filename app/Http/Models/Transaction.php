@@ -466,7 +466,20 @@ class Transaction extends Model
     	]);
 
     	$checkCountTrxGroup = TransactionGroup::where('id_transaction_group', $this->id_transaction_group)->count();
-    	if($checkCountTrxGroup > 1){
+    	if(isset($data['reject_reason']) && $data['reject_reason'] == 'Auto reject transaction from delivery'){
+            $grandTotal = $this->transaction_grandtotal - $this->transaction_shipment + $this->transaction_discount_delivery;
+            if($grandTotal > 0){
+                $refund = app('\Modules\Transaction\Http\Controllers\ApiTransactionRefund')->refundPayment([
+                    'id_transaction_group' => $this->id_transaction_group,
+                    'id_transaction' => $this->id_transaction,
+                    'refund_partial' => $grandTotal
+                ]);
+                if ($refund['status'] == 'fail') {
+                    DB::rollback();
+                    return false;
+                }
+            }
+        }elseif($checkCountTrxGroup > 1){
             $refund = app('\Modules\Transaction\Http\Controllers\ApiTransactionRefund')->refundPayment([
                 'id_transaction_group' => $this->id_transaction_group,
                 'id_transaction' => $this->id_transaction,
