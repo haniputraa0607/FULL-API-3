@@ -770,13 +770,11 @@ class AuthDoctorController extends Controller
         $pin    = bcrypt($request->json('pin_new'));
         $update = Doctor::where('id_doctor', '=', $data['id_doctor'])->update(['password' => $pin]);
 
-        $user = Doctor::select('password',\DB::raw('0 as challenge_key'))->where('doctor_phone', $phone)->first();
-
         $result = [
             'status'    => 'success',
             'result'    => [
                 'phone'    =>    $data['doctor_phone'],
-                'challenge_key' => $user->challenge_key
+                'challenge_key' => $data->challenge_key2
             ]
         ];
 
