@@ -888,7 +888,7 @@ class ApiNews extends Controller
             return response()->json(MyHelper::checkGet($res));
         }else{
             News::where('news_featured_status', 1)->update(['news_featured_status' => 0]);
-            $merged = array_merge($post['video'], $post['article'], $post['online_class']);
+            $merged = array_merge($post['video']??[], $post['article']??[], $post['online_class']??[]);
             $update = News::whereIn('id_news', $merged)->update(['news_featured_status' => 1]);
 
             return response()->json(MyHelper::checkUpdate($update));
