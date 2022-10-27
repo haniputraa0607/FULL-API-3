@@ -67,14 +67,12 @@ class ApiConfirm extends Controller
         }
 
         if ($check['transaction_payment_status'] == 'Completed' && ($check['transaction_payment_type'] == 'Balance' || $check['transaction_grandtotal'] == 0)) {
-            DB::rollback();
             return response()->json([
                 'status'   => 'success'
             ]);
         }
 
         if ($check['transaction_payment_status'] != 'Pending') {
-            DB::rollback();
             return response()->json([
                 'status'   => 'fail',
                 'messages' => ['Transaction already '.$check['transaction_payment_status']],
@@ -114,10 +112,6 @@ class ApiConfirm extends Controller
         }
 
         if ($post['payment_type'] == 'Midtrans') {
-            if (\Cache::has('midtrans_confirm_'.$check['id_transaction_group'])) {
-                return response()->json(\Cache::get('midtrans_confirm_'.$check['id_transaction_group']));
-            }
-
             $check->load('transactions.productTransaction.product');
 
             $productMidtrans   = [];
@@ -254,7 +248,7 @@ class ApiConfirm extends Controller
                     break;
             }
 
-            $insertNotifMidtrans = TransactionPaymentMidtran::create($dataNotifMidtrans);
+            $insertNotifMidtrans = TransactionPaymentMidtran::updateOrCreate(['id_transaction_group' => $check['id_transaction_group']],$dataNotifMidtrans);
             if (!$insertNotifMidtrans) {
                 return response()->json([
                     'status'   => 'fail',
@@ -285,7 +279,10 @@ class ApiConfirm extends Controller
 
             $methodPayment = $payment_id == 'SHOPEEPAY' ? 'charge' : 'token';
 
-            if ($check['transaction_type'] == 'Delivery') {
+            if (\Cache::has('midtrans_confirm_'.$check['id_transaction_group'])) {
+                $dataMidtrans = \Cache::get('midtrans_confirm_data_'.$check['id_transaction_group']);
+                $connectMidtrans = \Cache::get('midtrans_confirm_'.$check['id_transaction_group']);
+            }elseif ($check['transaction_type'] == 'Delivery') {
                 $dataMidtrans = array(
                     'transaction_details' => $transaction_details,
                     'customer_details'    => $dataUser,
@@ -337,6 +334,8 @@ class ApiConfirm extends Controller
                     ],
                 ]);
             }
+            \Cache::put('midtrans_confirm_data_'.$check['id_transaction_group'], $dataMidtrans, now()->addMinutes(10));
+            \Cache::put('midtrans_confirm_'.$check['id_transaction_group'], $connectMidtrans, now()->addMinutes(10));
 
             $dataMidtrans['items']            = $productMidtrans ?? [];
             $dataMidtrans['payment']          = $detailPayment ?? [];
@@ -354,7 +353,6 @@ class ApiConfirm extends Controller
                         'redirect_url_app'          => $connectMidtrans['actions'][0]['url'],
                     ]
                 ];
-                \Cache::put('midtrans_confirm_'.$check['id_transaction_group'], $response, now()->addMinutes(10));
             } else {
                 $dataEncode = [
                     'transaction_receipt_number' => $check['transaction_receipt_number'],
@@ -388,7 +386,6 @@ class ApiConfirm extends Controller
                 TransactionPaymentMidtran::where('id_transaction_group', $check['id_transaction_group'])->update(['token' => $connectMidtrans['token'], 'redirect_url' => $connectMidtrans['redirect_url']]);
             }
 
-            \Cache::put('midtrans_confirm_'.$check['id_transaction_group'], $response, now()->addMinutes(10));
             return response()->json($response);
         } elseif ($post['payment_type'] == 'Ovo') {
 
