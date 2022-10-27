@@ -3740,7 +3740,7 @@ class ApiTransactionConsultationController extends Controller
 
         $messageDate = MyHelper::indonesian_date_v2($message['created_at_infobip'] ?? time(), 'l, d F Y');
         if($transactionConsultation['consultation_status'] == 'ongoing'){
-            $remaining = strtotime($transactionConsultation['schedule_end_time']) - time();
+            $remaining = strtotime($transactionConsultation['schedule_date'] . ' ' . $transactionConsultation['schedule_end_time']) - time();
             if ($remaining < 0) $remaining = 0;
             $remaining -= 7 * 3600;
             $remainingTime = date('H:i:s', $remaining);
