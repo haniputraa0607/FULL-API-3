@@ -47,12 +47,13 @@ class ApiDoctorInbox extends Controller
 
     	$privates = $privates->get()->toArray();
 
-		foreach($privates as $private){
+		foreach($privates as $i => $private){
 			$content = [];
             $content['inbox_from_title']   = '';
 			$content['id_inbox'] 	 = $private['id_doctor_inboxes'];
 			$content['subject'] 	 = $private['inboxes_subject'];
 			$content['clickto'] 	 = $private['inboxes_clickto'];
+			$content['cancelled'] 	 = $i && !($i%6) ? true : false;
 
 			if($private['inboxes_id_reference']){
 				$content['id_reference'] = $private['inboxes_id_reference'];
@@ -105,7 +106,7 @@ class ApiDoctorInbox extends Controller
 
 			$content['created_at'] 	 = $private['inboxes_send_at'];
 
-			if($private['read'] === '0'){
+			if($private['read'] == '0'){
 				$content['status'] = 'unread';
 				$countUnread++;
 			}else{

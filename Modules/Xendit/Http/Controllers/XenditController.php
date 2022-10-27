@@ -599,4 +599,9 @@ class XenditController extends Controller
             return false;
         }
     }
+
+    public function landing()
+    {
+        return view('xendit::landing');
+    }
 }
