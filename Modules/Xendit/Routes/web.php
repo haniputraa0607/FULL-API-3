@@ -12,5 +12,5 @@
 */
 
 Route::prefix('xendit')->group(function() {
-    Route::post('landing', 'XenditController@landing')->name('landing_xendit');
+    Route::any('landing', 'XenditController@landing')->name('landing_xendit');
 });
