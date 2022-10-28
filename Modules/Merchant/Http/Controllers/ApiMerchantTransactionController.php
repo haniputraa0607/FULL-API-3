@@ -472,11 +472,9 @@ class ApiMerchantTransactionController extends Controller
 
             $user = User::where('id', $transaction['id_user'])->first();
             $outlet = Outlet::where('id_outlet', $transaction['id_outlet'])->first();
-            app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], [
+            app($this->autocrm)->SendAutoCRM('Transaction Accepted', $user['phone'], [
                 "outlet_name"      => $outlet['outlet_name'],
                 'id_transaction'   => $transaction['id_transaction'],
-                "id_reference"     => $transaction['transaction_receipt_number'] . ',' . $transaction['id_outlet'],
-                "transaction_date" => $transaction['transaction_date'],
                 'receipt_number'   => $transaction['transaction_receipt_number'],
             ]);
         }
@@ -696,7 +694,7 @@ class ApiMerchantTransactionController extends Controller
             }
         }
 
-        if($dropCounterStatus == 1 && (empty($post['pickup_time_start']) || empty($post['pickup_time_end']))){
+        if($post['pickup_status'] == true && (empty($post['pickup_time_start']) || empty($post['pickup_time_end']))){
             return response()->json(['status' => 'fail', 'messages' => ['Pickup time tidak boleh kosong']]);
         }
 
@@ -869,6 +867,15 @@ class ApiMerchantTransactionController extends Controller
         ];
 
         if($update ?? true){
+            $user = User::where('id', $detail['id_user'])->first();
+            app($this->autocrm)->SendAutoCRM('Transaction Delivery Confirm', $user['phone'], [
+                "date" => MyHelper::dateFormatInd($detail['transaction_date']),
+                'receipt_number'   => $detail['transaction_receipt_number'],
+                'delivery_number'   => $orderID,
+                'delivery_estimate'   => $detail['shipment_courier_etd'],
+                'id_transaction' => $detail['id_transaction']
+            ]);
+
             return response()->json(['status' => 'success', 'result' => [
                 'delivery_id' => $orderID,
                 'delivery_name' => $deliveryName,

@@ -582,11 +582,9 @@ class ApiAutoCrm extends Controller
                                     $dataOptional['id_reference'] = 0;
                                 }
                                 break;
-                            case 'history_outlet_service' :
-                            case 'history_home_service' :
-                            case 'history_online_shop' :
-                            case 'history_academy' :
-                            case 'history_payment':
+                            case 'history_order_detail' :
+                            case 'history_consultation_detail ' :
+                            case 'history_order' :
                             case 'History Transaction' :
                                 if($crm['autocrm_push_clickto'] == 'History Transaction' && !empty($inboxFrom)){
                                     $dataOptional['type'] = 'history_'.str_replace('-', '_', $inboxFrom);
@@ -838,11 +836,9 @@ class ApiAutoCrm extends Controller
                                 $inbox['inboxes_id_reference'] = 0;
                             }
                             break;
-                        case 'history_outlet_service' :
-                        case 'history_home_service' :
-                        case 'history_online_shop' :
-                        case 'history_academy' :
-                        case 'history_payment':
+                        case 'history_order_detail' :
+                        case 'history_consultation_detail ' :
+                        case 'history_order' :
                         case 'History Transaction' :
                             if($crm['autocrm_inbox_clickto'] == 'History Transaction' && !empty($inboxFrom)){
                                 $inbox['inboxes_clickto'] = 'history_'.str_replace('-', '_', $inboxFrom);

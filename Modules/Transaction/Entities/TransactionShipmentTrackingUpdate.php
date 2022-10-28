@@ -22,7 +22,8 @@ class TransactionShipmentTrackingUpdate extends Model
         'tracking_location',
         'tracking_date_time',
         'tracking_date_time_original',
-        'tracking_timezone'
+        'tracking_timezone',
+        'send_notification'
     ];
 
 }

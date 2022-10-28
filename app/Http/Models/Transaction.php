@@ -362,7 +362,6 @@ class Transaction extends Model
                 'tracking_date_time' => date('Y-m-d H:i:s')
             ]);
 
-            //app('\Modules\Transaction\Http\Controllers\ApiNotification')->notification($mid, $trx);
             $idMerchant = Merchant::where('id_outlet', $this->id_outlet)->first()['id_merchant']??null;
             $user = User::where('id', $this->id_user)->first();
             app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM(
@@ -379,6 +378,12 @@ class Transaction extends Model
         }
 
         $this->recalculateTaxandMDR();
+
+        app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Payment Status', $this->user->phone, [
+            "date" => MyHelper::dateFormatInd($this->transaction_date),
+            'receipt_number'   => $this->transaction_receipt_number,
+            'status'    => 'Pembayaran Berhasil'
+        ]);
 
         \DB::commit();
     	return true;
@@ -434,18 +439,11 @@ class Transaction extends Model
             app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->updateStockProduct($this->id_transaction, 'cancel');
         }
 
-    	// send notification
-    	// TODO write notification logic here
-    	app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM(
-        	'Transaction Expired', 
-        	$this->user->phone, 
-        	[
-	            'date' => $this->transaction_date,
-            	'outlet_name' => $this->outlet['outlet_name'],
-            	'detail' => $detail ?? null,
-            	'receipt_number' => $this->transaction_receipt_number
-	        ]
-	    );
+        app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Payment Status', $this->user->phone, [
+            "date" => MyHelper::dateFormatInd($this->transaction_Date),
+            'receipt_number'   => $this->transaction_receipt_number,
+            'status'    => 'Pembayaran Dibatalkan'
+        ]);
 
     	\DB::commit();
     	return true;
@@ -515,7 +513,7 @@ class Transaction extends Model
     	// TODO write notification logic here
         $user = User::where('id', $this->id_user)->first();
         $outlet = Outlet::where('id_outlet', $this->id_outlet)->first();
-        app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Order Reject', $user['phone'], [
+        app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Transaction Reject', $user['phone'], [
             "outlet_name"      => $outlet['outlet_name'],
             "id_reference"     => $this->transaction_receipt_number . ',' . $this->id_outlet,
             "transaction_date" => $this->transaction_date,
