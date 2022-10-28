@@ -62,6 +62,7 @@ class Midtrans {
         );
 
         if ($payment_detail) {
+            $payment_detail = str_replace('-', '_', $payment_detail);
             $dataMidtrans['enabled_payments'] = [$payment_detail];
         }
 
