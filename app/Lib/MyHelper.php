@@ -3095,7 +3095,9 @@ class MyHelper{
 	public static function decryptPIN($encrypted, $phone)
 	{
         $phone = str_replace('+', '0', $phone);
-        $phone = str_replace('62', '0', $phone);
+        if(substr($phone, 0, 2) == 62){
+            $phone = substr_replace($phone, '0', 0, 2);
+        }
 
 		$user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
 		if (!$user) {
