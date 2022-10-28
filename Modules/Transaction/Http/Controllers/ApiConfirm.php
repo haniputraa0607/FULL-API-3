@@ -243,8 +243,11 @@ class ApiConfirm extends Controller
                     $dataNotifMidtrans['payment_type'] = 'Shopeepay';
                     break;
 
+                case 'BANK_TRANSFER':
+                    $dataNotifMidtrans['payment_type'] = 'Bank Transfer';
+                    break;
                 default:
-                    $dataNotifMidtrans['payment_type'] = null;
+                    $dataNotifMidtrans['payment_type'] = $payment_id;
                     break;
             }
 

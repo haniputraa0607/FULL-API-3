@@ -2675,8 +2675,12 @@ class ApiTransaction extends Controller
         }
     }
 
-
     public function transactionDetail(TransactionDetail $request){
+        $result = $this->callTransactionDetail($request);
+        return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function callTransactionDetail($request){
         if ($request->json('transaction_receipt_number') !== null) {
             $trx = Transaction::where(['transaction_receipt_number' => $request->json('transaction_receipt_number')])->first();
             if($trx) {
@@ -2685,7 +2689,7 @@ class ApiTransaction extends Controller
                 return MyHelper::checkGet([]);
             }
         } else {
-            $id = $request->json('id_transaction');
+            $id = (empty($request->json('id_transaction')) ? $request->id_transaction: $request->json('id_transaction'));
         }
 
         $codeIndo = [
@@ -2721,7 +2725,7 @@ class ApiTransaction extends Controller
             ->leftJoin('cities','transaction_shipments.destination_id_city','=','cities.id_city')
             ->leftJoin('provinces','provinces.id_province','=','cities.id_province');
 
-        if(empty($request->json('admin'))){
+        if(empty($request->json('admin')) && empty($request->admin)){
             $transaction = $transaction->where('id_user', $request->user()->id);
         }
 
@@ -2897,7 +2901,7 @@ class ApiTransaction extends Controller
             'transaction_reject_at' => (!empty($transaction['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_reject_at'])), true) : null)
         ];
 
-        return response()->json(MyHelper::checkGet($result));
+        return $result;
     }
 
     // api/transaction/item

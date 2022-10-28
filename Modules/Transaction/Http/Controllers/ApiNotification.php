@@ -9,6 +9,8 @@ use App\Http\Models\TransactionPaymentOffline;
 use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use App\Jobs\FraudJobV2;
+use GuzzleHttp\Client as GuzzleHttpClient;
+use Illuminate\Support\Facades\Crypt;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\LogTopupMidtrans;
@@ -109,6 +111,11 @@ class ApiNotification extends Controller {
                 ]);
             }
 
+            if($transac['transaction_payment_status'] == 'Completed'){
+                DB::commit();
+                return response()->json(['status' => 'success']);
+            }
+
             // PROCESS
             $checkPayment = $this->checkPayment($transac, $midtrans);
             if (!$checkPayment) {
@@ -119,25 +126,8 @@ class ApiNotification extends Controller {
                 ]);
             }
 
-            // $sendNotif = $this->sendNotif($transac);
-            // if (!$sendNotif) {
-            //     return response()->json([
-            //         'status'   => 'fail',
-            //         'messages' => ['Transaction failed']
-            //     ]);
-            // }
-
             $checkType = TransactionMultiplePayment::where('id_transaction_group', $transac['id_transaction_group'])->get()->toArray();
             $column = array_column($checkType, 'type');
-
-            // $user = User::where('id', $newTrx['id_user'])->first();
-            // if (empty($user)) {
-            //     DB::rollback();
-            //     return response()->json([
-            //         'status'   => 'fail',
-            //         'messages' => ['Data Transaction Not Valid']
-            //     ]);
-            // }
 
             if ($midtrans['status_code'] == 200) {
                 if($midtrans['transaction_status'] == 'settlement' || ($midtrans['transaction_status'] == 'capture' && $midtrans['payment_type'] == 'credit_card')){
@@ -410,73 +400,26 @@ class ApiNotification extends Controller {
 
     function notification($mid, $trx)
     {
-        if(isset($trx['id_transaction_group'])){
-            $name    = $trx['user']['name'];
-            $phone   = $trx['user']['phone'];
-            $date    = $trx['transaction_date'];
-            $outlet  = $trx['outlet']['outlet_name']??'';
-            $receipt = $trx['transaction_receipt_number'];
-            $detail = $this->htmlDetailTrxSuccessV2($trx['id_transaction_group']);
-            $title = 'Sukses';
+        $phone   = $trx['user']['phone'];
+        $date    = $trx['transaction_date'];
+        $outlet  = $trx['outlet']['outlet_name']??'';
+        $receipt = $trx['transaction_receipt_number'];
+        $shipment = TransactionShipment::where('id_transaction', $trx['id_transaction'])->first();
+        $detail = $this->htmlDetailTrxSuccessV2($trx['id_transaction']);
+        $title = 'Sukses';
 
-            $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, [
-                'notif_type' => 'trx',
-                'header_label' => $title,
-                'id_transaction' => $trx['id_transaction_group'],
-                'date' => $trx['transaction_date'],
-                'status' => $trx['transaction_payment_status'],
-                'name'  => $trx->user->name,
-                'order_id' => $trx['order_id'],
-                'outlet_name' => Outlet::select('outlet_name')->join('transactions', 'transactions.id_outlet', 'outlets.id_outlet')->where('id_transaction_group', $trx['id_transaction_group'])->pluck('outlet_name')->join(', '),
-                'detail' => $detail,
-                'id_reference' => $trx['id_transaction_group'],
-                'autocrm_type'     => 'trx_group',
-                'data_optional' => []
-            ]);
-        }else{
-            $name    = $trx['user']['name'];
-            $phone   = $trx['user']['phone'];
-            $date    = $trx['transaction_date'];
-            $outlet  = $trx['outlet']['outlet_name'];
-            $receipt = $trx['transaction_receipt_number'];
-            $detail = $this->htmlDetailTrxSuccess($trx['id_transaction']);
-
-            $title = 'Sukses';
-
-            $trxPickup = TransactionPickup::where('id_transaction', $trx['id_transaction'])->first();
-            $dataOptional = [];
-            $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message','value_text'), true);
-
-            if($trxPickup && $trxPickup->pickup_type == 'set time') {
-                $replacer = [
-                    ['%name%', '%outlet_name%', '%receipt_number%', '%order_id%'],
-                    [$name, $outlet, $receipt, $mid['order_id']],
-                ];
-                $dataOptional = [
-                    'push_notif_local' => 1,
-                    'title_5mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? '5 menit Pesananmu siap lho'),
-                    'msg_5mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'hai %name%, siap - siap ke outlet %outlet_name% yuk. Pesananmu akan siap 5 menit lagi nih.'),
-                    'title_15mnt'      => str_replace($replacer[0], $replacer[1], $setting_msg['title_15mnt'] ?? '15 menit Pesananmu siap lho'),
-                    'msg_15mnt'        => str_replace($replacer[0], $replacer[1], $setting_msg['msg_15mnt'] ?? 'hai %name%, siap - siap ke outlet %outlet_name% yuk. Pesananmu akan siap 15 menit lagi nih.'),
-                    'pickup_time'       => $trxPickup->pickup_at,
-                ];
-
-            }
-
-            $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, [
-                'notif_type' => 'trx',
-                'header_label' => $title,
-                'id_transaction' => $trx['id_transaction'],
-                'date' => $trx['transaction_date'],
-                'status' => $trx['transaction_payment_status'],
-                'name'  => $trx->user->name,
-                'order_id' => $mid['order_id'],
-                'outlet_name' => $outlet,
-                'detail' => $detail,
-                'id_reference' => $mid['order_id'].','.$trx['id_outlet'],
-                'data_optional' => $dataOptional
-            ]);
-        }
+        $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $phone, [
+            'notif_type' => 'trx',
+            'header_label' => $title,
+            'id_transaction' => $trx['id_transaction'],
+            'date' => MyHelper::dateFormatInd($date),
+            'status' => 'Transaksi Selesai',
+            'delivery_number' => $shipment['order_id']??'',
+            'outlet_name' => $outlet,
+            'receipt_number' => $receipt,
+            'detail' => $detail,
+            'id_reference' => $trx['id_transaction'],
+        ]);
 
         return $send;
     }
@@ -2239,9 +2182,8 @@ Detail: ".$link['short'],
     }
 
     public function htmlDetailTrxSuccessV2($id){
-        $req = (object)['id_transaction' => $id, 'type' => 'trx_group', 'id_sub_trx' => null];
-        $data = app($this->transaction)->transactionGroupDetail($req)['result']??[];
-        $html = view('transaction::email.detail_transaction_success_v2')->with(compact('data'))->render();
+        $detail = app($this->transaction)->callTransactionDetail(new Request(['id_transaction' => $id, 'admin' => 1]));
+        $html = view('transaction::email.detail_transaction_success_v2', ['detail' => $detail])->render();
         return $html;
     }
 

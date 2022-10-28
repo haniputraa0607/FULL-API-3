@@ -35,7 +35,8 @@ class ApiShipperController extends Controller
             $getTransaction = Transaction::join('transaction_shipments', 'transaction_shipments.id_transaction', 'transactions.id_transaction')
                 ->whereIn('transaction_status', ['On Delivery'])
                 ->whereNotNull('transaction_shipments.order_id')
-                ->select('transaction_shipments.*')->get()->toArray();
+                ->whereNull('transaction_shipments.receive_at')
+                ->select('transaction_shipments.*', 'transactions.id_user', 'transaction_receipt_number')->get()->toArray();
 
             foreach ($getTransaction as $data){
                 $shipper = new Shipper();
@@ -87,8 +88,16 @@ class ApiShipperController extends Controller
                         }
 
                         if(in_array($dtShipper['code'], [2000, 3000, 2010])){
-                            $receiveat = (!empty($body['status_date']) ? date('Y-m-d H:i:s', strtotime($body['status_date'])) : date('Y-m-d H:i:s'));
-                            TransactionShipment::where('id_transaction', $data['id_transaction'])->update(['receive_at' => $receiveat]);
+                            $update = TransactionShipment::where('id_transaction', $data['id_transaction'])->update(['receive_at' => $convertWIB]);
+                            if($update){
+                                $trxShipment = TransactionShipment::where('id_transaction', $data['id_transaction'])->first();
+                                $user = User::where('id', $data['id_user'])->first();
+                                app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Transaction Delivery Received', $user['phone'], [
+                                    'receipt_number'   => $data['transaction_receipt_number'],
+                                    'delivery_number'    => $trxShipment['order_id'],
+                                    'received_at'    => MyHelper::dateFormatInd($trxShipment['receive_at']).' WIB'
+                                ]);
+                            }
                         }
                     }
                 }
@@ -109,7 +118,7 @@ class ApiShipperController extends Controller
 
         $dataLog= [
             'subject' => 'Webhook',
-            'id_transaction' => $transaction['id_transaction'],
+            'id_transaction' => $transaction['id_transaction']??null,
             'request' => json_encode($body),
             'request_url' => url()->current(),
             'response' => null
@@ -132,6 +141,8 @@ class ApiShipperController extends Controller
         $timeZone = $date->format('O');
         $convertWIB = $date->setTimezone( new \DateTimeZone( 'Asia/Jakarta' ) );
         $convertWIB = $convertWIB->format('Y-m-d H:i:s');
+        $user = User::where('id', $transaction['id_user'])->first();
+        $outlet = Outlet::where('id_outlet', $transaction['id_outlet'])->first();
 
         $shipper = $body['external_status'];
         if($shipper['code'] == '999'){
@@ -147,7 +158,7 @@ class ApiShipperController extends Controller
                 ]);
             }
         }elseif($shipper['code'] != 1000){
-            TransactionShipmentTrackingUpdate::updateOrCreate(
+            $updateTrack = TransactionShipmentTrackingUpdate::updateOrCreate(
                 [
                     'tracking_code' => $shipper['code'],
                     'id_transaction' => $transaction['id_transaction']
@@ -170,8 +181,32 @@ class ApiShipperController extends Controller
             }
 
             if(in_array($shipper['code'], [2000, 3000, 2010])){
-                $receiveat = (!empty($body['status_date']) ? date('Y-m-d H:i:s', strtotime($body['status_date'])) : date('Y-m-d H:i:s'));
-                TransactionShipment::where('id_transaction', $transaction['id_transaction'])->update(['receive_at' => $receiveat]);
+                $update = TransactionShipment::where('id_transaction', $transaction['id_transaction'])->update(['receive_at' => $convertWIB]);
+                if($update){
+                    $trxShipment = TransactionShipment::where('id_transaction', $transaction['id_transaction'])->first();
+                    app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Transaction Delivery Received', $user['phone'], [
+                        'receipt_number'   => $transaction['transaction_receipt_number'],
+                        'delivery_number'    => $trxShipment['order_id'],
+                        'received_at'    => MyHelper::dateFormatInd($trxShipment['receive_at']).' WIB'
+                    ]);
+                }
+            }else{
+                $trxShipment = TransactionShipment::where('id_transaction', $transaction['id_transaction'])->first();
+                $getCurrentTrack = TransactionShipmentTrackingUpdate::where('id_transaction_shipment_tracking_update', $updateTrack['id_transaction_shipment_tracking_update'])->first();
+                if(empty($getCurrentTrack['send_notification'])){
+                    $notif = app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Delivery Status Update', $user['phone'], [
+                        'receipt_number'  => $transaction['transaction_receipt_number'],
+                        'delivery_number' => $trxShipment['order_id'],
+                        'outlet_name'     => $outlet['outlet_name'],
+                        'delivery_status_content' => $getCurrentTrack['tracking_description'],
+                        'delivery_status_date' => MyHelper::dateFormatInd($getCurrentTrack['tracking_date_time']).' WIB'
+                    ]);
+
+                    if($notif){
+                        TransactionShipmentTrackingUpdate::where('id_transaction_shipment_tracking_update', $updateTrack['id_transaction_shipment_tracking_update'])
+                            ->update(['send_notification' => 1]);
+                    }
+                }
             }
         }
 
@@ -218,6 +253,9 @@ class ApiShipperController extends Controller
             $countTrxMerchant = $merchant['merchant_count_transaction']??0;
             Merchant::where('id_merchant', $idMerchant)->update(['merchant_count_transaction' => $countTrxMerchant+1]);
             Transaction::where('id_transaction', $transaction['id_transaction'])->update(['transaction_mdr_charged' => $settingmdrCharged]);
+
+            $transaction = Transaction::where('id_transaction', $transaction['id_transaction'])->with(['user', 'outlet'])->first();
+            app('\Modules\Transaction\Http\Controllers\ApiNotification')->notification([], $transaction);
         }
 
         return true;
