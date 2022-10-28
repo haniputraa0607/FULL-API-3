@@ -535,8 +535,8 @@ class AuthDoctorController extends Controller
             }
 
             if(!isset($checkRuleRequest['otp_timer']) && $checkRuleRequest == true){
-                // $pin = MyHelper::createRandomPIN(6, 'angka');
-                $pin = "777777";
+                $pin = MyHelper::createRandomPIN(6, 'angka');
+                // $pin = "777777";
                 $password = bcrypt($pin);
 
                 //get setting to set expired time for otp, if setting not exist expired default is 30 minutes
@@ -573,7 +573,6 @@ class AuthDoctorController extends Controller
                     false, false, 'doctor', null, true, $request->request_type
                 );
 
-                dd($autocrm);
             }elseif(isset($checkRuleRequest['otp_timer']) && $checkRuleRequest['otp_timer'] !== false){
                 $holdTime = $checkRuleRequest['otp_timer'];
             }
