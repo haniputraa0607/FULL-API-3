@@ -404,7 +404,8 @@ class Transaction extends Model
     	// update transaction payment cancelled
     	$this->update([
             'transaction_status' => 'Rejected',
-    		'transaction_payment_status' => 'Cancelled', 
+    		'transaction_payment_status' => 'Cancelled',
+            'transaction_reject_reason' => 'Pembayaran Dibatalkan',
     		'void_date' => date('Y-m-d H:i:s')
     	]);
 		MyHelper::updateFlagTransactionOnline($this, 'cancel', $this->user);

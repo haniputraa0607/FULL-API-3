@@ -1126,7 +1126,7 @@ class ApiMerchantTransactionController extends Controller
             foreach ($transactions as $transaction){
                 $post = [
                     'id_transaction' => $transaction['id_transaction'],
-                    'reject_reason' => 'Auto reject transaction'
+                    'reject_reason' => 'Pesanan tidak diproses'
                 ];
                 $check = $transaction->triggerReject($post);
                 if($check){

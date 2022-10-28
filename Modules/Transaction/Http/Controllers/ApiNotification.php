@@ -2182,10 +2182,8 @@ Detail: ".$link['short'],
     }
 
     public function htmlDetailTrxSuccessV2($id){
-        $http = new GuzzleHttpClient();
-
-        $data = app($this->transaction)->transactionDetail($req)['result']??[];
-        $html = view('transaction::email.detail_transaction_success_v2')->with(compact('data'))->render();
+        $detail = app($this->transaction)->callTransactionDetail(new Request(['id_transaction' => $id, 'admin' => 1]));
+        $html = view('transaction::email.detail_transaction_success_v2', ['detail' => $detail])->render();
         return $html;
     }
 

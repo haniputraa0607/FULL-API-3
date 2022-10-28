@@ -253,6 +253,9 @@ class ApiShipperController extends Controller
             $countTrxMerchant = $merchant['merchant_count_transaction']??0;
             Merchant::where('id_merchant', $idMerchant)->update(['merchant_count_transaction' => $countTrxMerchant+1]);
             Transaction::where('id_transaction', $transaction['id_transaction'])->update(['transaction_mdr_charged' => $settingmdrCharged]);
+
+            $transaction = Transaction::where('id_transaction', $transaction['id_transaction'])->with(['user', 'outlet'])->first();
+            app('\Modules\Transaction\Http\Controllers\ApiNotification')->notification([], $transaction);
         }
 
         return true;
