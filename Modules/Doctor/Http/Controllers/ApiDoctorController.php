@@ -680,7 +680,7 @@ class ApiDoctorController extends Controller
                 $doctorId = TransactionConsultation::where('id_transaction', $hc->id_transaction)->pluck('id_doctor');
                 $doctor = Doctor::whereIn('id_doctor', $doctorId)->with('outlet')->with('specialists')->first();
 
-                if(in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3) {
+                if(in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3 && $doctor) {
                     $recomendationDoctor[] = $doctor;
                 }
 
@@ -696,7 +696,7 @@ class ApiDoctorController extends Controller
             foreach($historyTransaction as $ht){
                 $doctor = Doctor::with('outlet')->with('specialists')->where('id_outlet', $ht->id_outlet)->first();
 
-                if(in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3) {
+                if(in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3 && $doctor) {
                     $recomendationDoctor[] = $doctor;
                 }
 
@@ -717,7 +717,7 @@ class ApiDoctorController extends Controller
         }
 
         foreach($doctorRecomendationDefault as $dr){
-            if(in_array($dr, $recomendationDoctor) == false && count($recomendationDoctor) < 4) {
+            if(in_array($dr, $recomendationDoctor) == false && count($recomendationDoctor) < 4 && $dr) {
                 $recomendationDoctor[] = $dr;
             }
 
