@@ -194,6 +194,7 @@ class ApiDoctorController extends Controller
                     "photos" => $photos
                 ];
             }
+            $doctors[$key]['practice_experience'] = str_replace('years', 'tahun', $doctor['practice_experience']??'');
             $doctors[$key]['ratings'] = $ratings;
             $doctors[$key]['count_rating'] = UserRating::where('id_doctor', $doctor['id_doctor'])->count();
     
