@@ -2818,7 +2818,7 @@ class ApiTransaction extends Controller
             $paymentMethod = $trxPaymentMidtrans['payment_type'].(!empty($trxPaymentMidtrans['bank']) ? ' ('.$trxPaymentMidtrans['bank'].')':'');
             $paymentMethod = str_replace(" ","_",$paymentMethod);
             $paymentLogo = config('payment_method.midtrans_'.strtolower($paymentMethod).'.logo');
-            $paymentType = 'Midtrans';
+            $paymentType = 'Xendit';//'Midtrans';
             if($transaction['transaction_status'] == 'Unpaid'){
                 $paymentURL = $trxPaymentMidtrans['redirect_url'];
                 $paymentToken = $trxPaymentMidtrans['token'];
