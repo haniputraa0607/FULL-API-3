@@ -704,7 +704,7 @@ class ApiOnlineTransaction extends Controller
             'error_messages' => implode('. ', array_unique($errorMsg))
         ];
 
-        $fake_request = new Request(['show_all' => 0]);
+        $fake_request = new Request(['show_all' => 0, 'from_check' => 1]);
         $result['available_payment'] = $this->availablePayment($fake_request)['result'] ?? [];
         $result = app($this->promo_trx)->applyPromoCheckout($result);
 
@@ -1678,7 +1678,7 @@ class ApiOnlineTransaction extends Controller
             }
             $payments[] = [
                 'code'            => $value['code'],
-                'payment_gateway' => $payment['payment_gateway'],
+                'payment_gateway' => (!empty($request->from_check) && $payment['payment_gateway'] == 'Midtrans' ? 'Xendit' : $payment['payment_gateway']),
                 'payment_method'  => $payment['payment_method'],
                 'logo'            => $payment['logo'],
                 'text'            => $payment['text'],

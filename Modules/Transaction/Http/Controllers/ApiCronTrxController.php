@@ -115,7 +115,7 @@ class ApiCronTrxController extends Controller
                         continue;
                     }
 
-                    $midtransStatus = Midtrans::status($singleTrx->transaction_group_date);
+                    $midtransStatus = Midtrans::status($singleTrx->id_transaction_group);
                     if(!empty($midtransStatus['status_code']) && $midtransStatus['status_code'] == 200){
                         $singleTrx->triggerPaymentCompleted();
                         continue;
