@@ -141,7 +141,7 @@ class ApiDoctorController extends Controller
     {
         $post = $request->json()->all();
 
-        $doctors = Doctor::with('outlet')->with('specialists')->orderBy('created_at', 'DESC');
+        $doctors = Doctor::where('is_active', 1)->with('outlet')->with('specialists')->orderBy('created_at', 'DESC');
 
         // get filter by id_doctor_specialist_category
         // if(isset($post['id_doctor_specialist_category'])){
@@ -678,7 +678,7 @@ class ApiDoctorController extends Controller
         if(!empty($historyConsultation)){
             foreach($historyConsultation as $hc){
                 $doctorId = TransactionConsultation::where('id_transaction', $hc->id_transaction)->pluck('id_doctor');
-                $doctor = Doctor::with('outlet')->with('specialists')->first();
+                $doctor = Doctor::whereIn('id_doctor', $doctorId)->with('outlet')->with('specialists')->first();
 
                 if(in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3) {
                     $recomendationDoctor[] = $doctor;
@@ -707,7 +707,7 @@ class ApiDoctorController extends Controller
         }
 
         //3. From Setting
-        $doctorRecomendationDefault = Doctor::with('outlet')->with('specialists')->where('doctor_recomendation_status', true)->get();
+        $doctorRecomendationDefault = Doctor::where('is_active', 1)->with('outlet')->with('specialists')->where('doctor_recomendation_status', true)->get();
 
         if(empty($doctorRecomendationDefault)){
             return response()->json([
