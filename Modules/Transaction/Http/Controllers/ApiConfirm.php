@@ -79,6 +79,10 @@ class ApiConfirm extends Controller
             ]);
         }
 
+        if(config('payment_method.midtrans_'.strtolower($post['payment_detail']).'.midtrans') == 1){
+            $post['payment_type'] = 'Midtrans';
+        }
+
         if ($post['payment_type'] && $post['payment_type'] != 'Balance') {
             $available_payment = app($this->trx)->availablePayment(new Request())['result'] ?? [];
             if (!in_array($post['payment_type'], array_column($available_payment, 'payment_gateway'))) {
