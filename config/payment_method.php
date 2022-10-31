@@ -7,8 +7,7 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_gopay.png',
         'text'            => 'GoPay',
-        'refund_time'     => 15,
-        'midtrans'        => 1
+        'refund_time'     => 15
     ],
     'midtrans_credit_card'    => [
         'payment_gateway' => 'Midtrans',
@@ -16,8 +15,7 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_creditcard.png',
         'text'            => 'Debit/Credit Card',
-        'refund_time'     => 15,
-        'midtrans'        => 1
+        'refund_time'     => 15
     ],
     'midtrans_bank_transfer'    => [
         'payment_gateway' => 'Midtrans',
@@ -25,8 +23,7 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_banktransfer.png',
         'text'            => 'Bank Transfer',
-        'refund_time'     => 15,
-        'midtrans'        => 1
+        'refund_time'     => 15
     ],
     'midtrans_akulaku'    => [
         'payment_gateway' => 'Midtrans',
@@ -34,8 +31,7 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_akulaku.png',
         'text'            => 'Akulaku',
-        'refund_time'     => 15,
-        'midtrans'        => 1
+        'refund_time'     => 15
     ],
     'midtrans_qris'    => [
         'payment_gateway' => 'Midtrans',
@@ -43,8 +39,7 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_shopeepay-qris.png',
         'text'            => 'ShopeePay/e-Wallet Lainnya',
-        'refund_time'     => 15,
-        'midtrans'        => 1
+        'refund_time'     => 15
     ],
     'ipay88_cc'      => [
         'payment_gateway' => 'Ipay88',
