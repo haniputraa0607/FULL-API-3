@@ -1005,35 +1005,43 @@ class ApiDoctorController extends Controller
     {
         $log = MyHelper::logCron('Update Doctor Status');
         try {
+            $earlyEnter = (Setting::where('key','consultation_starts_early')->value('value') ?? 0) * 60;
+            $lateEnter = (Setting::where('key','consultation_starts_late')->value('value')  ?? 0) * 60;
             $day = date('l');
             $now = date('H:i:s');
 
             //update doctor status to online
-            $doctorOnline = Doctor::whereHas('schedules', function($query) use ($day, $now) {
+            $doctorOnline = Doctor::whereHas('schedules', function($query) use ($day, $now, $earlyEnter, $lateEnter) {
                             $query->where('day', '=' , $day);
-                            $query->whereHas('schedule_time', function($query2) use ($now){
-                                $query2->whereTime('start_time', '<=' , $now);
+                            $query->whereHas('schedule_time', function($query2) use ($now, $earlyEnter, $lateEnter){
+                                $query2->whereTime('start_time', '<=' , date('H:i:s', time() + $earlyEnter));
                                 $query2->whereTime('end_time', '>=' , $now);  
                             });
-                        })->update(['doctor_status' => 'online']);
+                        })->pluck('id_doctor');
 
-            //update doctor status to offline
-            $doctorDoesntHaveDay = Doctor::whereDoesntHave('schedules', function($query) use ($day, $now) {
-                $query->where('day', '=' , $day);
-            })->update(['doctor_status' => 'offline']);
+            Doctor::whereIn('id_doctor', $doctorOnline)->update(['doctor_status' => 'Online']);
+            Doctor::whereNotIn('id_doctor', $doctorOnline)->update(['doctor_status' => 'Offline']);
 
-            $doctorDoesntHaveTime = Doctor::whereHas('schedules', function($query) use ($day, $now) {
-                $query->where('day', '=' , $day);
-                $query->whereDoesntHave('schedule_time', function($query2) use ($now){
-                    $query2->whereTime('start_time', '<=' , $now);
-                    $query2->whereTime('end_time', '>=' , $now);  
-                });
-            })->update(['doctor_status' => 'offline']);
-
-            //check if doctor have ongoing transaction
-            $idsDoctorBusy = TransactionConsultation::whereIn('consultation_status', ['ongoing', 'done'])->pluck('id_doctor')->toArray();
-
+            $idsDoctorBusy = TransactionConsultation::whereIn('consultation_status', ['ongoing'])->pluck('id_doctor')->toArray();
             $doctorBusy = Doctor::whereIn('id_doctor', $idsDoctorBusy)->update(['doctor_status' => 'busy']);
+
+            // //update doctor status to offline
+            // $doctorDoesntHaveDay = Doctor::whereDoesntHave('schedules', function($query) use ($day, $now) {
+            //     $query->where('day', '=' , $day);
+            // })->update(['doctor_status' => 'offline']);
+
+            // $doctorDoesntHaveTime = Doctor::whereHas('schedules', function($query) use ($day, $now) {
+            //     $query->where('day', '=' , $day);
+            //     $query->whereDoesntHave('schedule_time', function($query2) use ($now){
+            //         $query2->whereTime('start_time', '<=' , date('H:i:s', time() + $earlyEnter));
+            //         $query2->whereTime('end_time', '>=' , $now);  
+            //     });
+            // })->update(['doctor_status' => 'offline']);
+
+            // //check if doctor have ongoing transaction
+            // $idsDoctorBusy = TransactionConsultation::whereIn('consultation_status', ['ongoing', 'done'])->pluck('id_doctor')->toArray();
+
+            // $doctorBusy = Doctor::whereIn('id_doctor', $idsDoctorBusy)->update(['doctor_status' => 'busy']);
             
             $log->success(['status_update' => 'success']);
             return 'success';
