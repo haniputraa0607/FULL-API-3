@@ -79,7 +79,7 @@ class ApiConfirm extends Controller
             ]);
         }
 
-        if(config('payment_method.midtrans_'.strtolower($post['payment_detail']).'.midtrans') == 1){
+        if(config('payment_method.midtrans_'.strtolower($post['payment_detail']).'.payment_gateway') == 'Midtrans'){
             $post['payment_type'] = 'Midtrans';
         }
 

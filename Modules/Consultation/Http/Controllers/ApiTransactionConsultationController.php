@@ -202,7 +202,8 @@ class ApiTransactionConsultationController extends Controller
         $result = app($this->promo_trx)->applyPromoCheckoutConsultation($result);
 
         //get available payment
-        $available_payment = app($this->payment)->availablePayment(new Request())['result']??null;
+        $fake_request = new Request(['show_all' => 0, 'from_check' => 1]);
+        $available_payment = app($this->payment)->availablePayment($fake_request)['result']??null;
         $result['available_payment'] = $available_payment;
 
         $grandTotalNew = $result['grandtotal'];
