@@ -2078,6 +2078,7 @@ class ApiTransactionConsultationController extends Controller
                 $items[$key]['usage_rule'] = $recomendation->usage_rules ?? null;
                 $items[$key]['usage_rule_time'] = $usageRules ?? null;
                 $items[$key]['usage_rule_additional_time'] = $recomendation->usage_rules_additional_time ?? null;
+                $items[$key]['treatment_description'] = $recomendation->treatment_description ?? '-';
             }
         }
 

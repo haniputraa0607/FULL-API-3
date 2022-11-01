@@ -2156,6 +2156,9 @@ class ApiProductController extends Controller
                     ->orderBy('relate', 'desc');
             }elseif($sorting == 'best seller'){
                 $list = $list->orderBy('product_count_transaction', 'desc');
+                if(isset($post['all_best_seller']) && $post['all_best_seller']){
+                    $list = $list->where('product_count_transaction', '>', 0);
+                }
             }elseif($sorting == 'review'){
                 $list = $list->orderBy('total_rating', 'desc');
             }elseif($sorting == 'newest'){
