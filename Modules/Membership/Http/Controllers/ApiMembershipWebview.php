@@ -197,11 +197,15 @@ class ApiMembershipWebview extends Controller
 		// $result['next_membership_image'] = $nextMembershipImage;
 		if(isset($result['user_membership'])){
 			if($nextTrxType == 'count'){
-				$count_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')->count('transaction_grandtotal');
+				$count_transaction = Transaction::where('id_user', $post['id_user'])
+                    ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
+                    ->where('transaction_payment_status', 'Completed')->count('transaction_grandtotal');
 				$membershipUser['progress_now_text'] = MyHelper::requestNumber($count_transaction,'_CURRENCY');
 				$membershipUser['progress_now'] = (int) $count_transaction;
 			}elseif($nextTrxType == 'value'){
-				$subtotal_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')->sum('transaction_grandtotal');
+				$subtotal_transaction = Transaction::where('id_user', $post['id_user'])
+                    ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
+                    ->where('transaction_payment_status', 'Completed')->sum('transaction_grandtotal');
 				$membershipUser['progress_now_text'] = MyHelper::requestNumber($subtotal_transaction,'_CURRENCY');
 				$membershipUser['progress_now'] = (int) $subtotal_transaction;
 				$membershipUser['progress_active'] = ($subtotal_transaction / $nextTrx) * 100;
@@ -235,11 +239,15 @@ class ApiMembershipWebview extends Controller
 			$result['progress_active'] = 100;
 			$result['next_trx'] = 0;
 			if($allMembership[0]['membership_type'] == 'count'){
-				$count_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')->count('transaction_grandtotal');
+				$count_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')
+                    ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
+                    ->count('transaction_grandtotal');
 				$membershipUser['progress_now_text'] = MyHelper::requestNumber($count_transaction,'_CURRENCY');
 				$membershipUser['progress_now'] = (int) $count_transaction;
 			}elseif($allMembership[0]['membership_type'] == 'value'){
-				$subtotal_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')->sum('transaction_grandtotal');
+				$subtotal_transaction = Transaction::where('id_user', $post['id_user'])
+                    ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
+                    ->where('transaction_payment_status', 'Completed')->sum('transaction_grandtotal');
 				$membershipUser['progress_now_text'] = MyHelper::requestNumber($subtotal_transaction,'_CURRENCY');
 				$membershipUser['progress_now'] = (int) $subtotal_transaction;
 			}elseif($allMembership[0]['membership_type'] == 'balance'){

@@ -473,6 +473,7 @@ class ApiMembership extends Controller
 											->whereDate('transaction_date','>=',$date_start)
 											->whereDate('transaction_date','<=',date('Y-m-d', strtotime($check['retain_date'])))
 											->where('transaction_payment_status', 'Completed')
+                                            ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                                             ->whereNull('fraud_flag')
 											->count('transaction_grandtotal');
 
@@ -480,6 +481,7 @@ class ApiMembership extends Controller
 											->whereDate('transaction_date','>=',$date_start)
 											->whereDate('transaction_date','<=', date('Y-m-d', strtotime($check['retain_date'])))
 											->where('transaction_payment_status', 'Completed')
+                                            ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                                             ->whereNull('fraud_flag')
 											->sum('transaction_grandtotal');
 
@@ -641,11 +643,13 @@ class ApiMembership extends Controller
 				else{
 					$trx_count = Transaction::where('id_user',$check['id'])
 											->where('transaction_payment_status', 'Completed')
+                                            ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                                             ->whereNull('fraud_flag')
 											->count('transaction_grandtotal');
 
 					$trx_value = Transaction::where('id_user',$check['id'])
 											->where('transaction_payment_status', 'Completed')
+                                            ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                                             ->whereNull('fraud_flag')
 											->sum('transaction_grandtotal');
 
@@ -714,11 +718,13 @@ class ApiMembership extends Controller
 				//bisa langsung lompat membership
 				$trx_count = Transaction::where('id_user',$check['id'])
 											->where('transaction_payment_status', 'Completed')
+                                            ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                                             ->whereNull('fraud_flag')
 											->count('transaction_grandtotal');
 
 				$trx_value = Transaction::where('id_user',$check['id'])
 										->where('transaction_payment_status', 'Completed')
+                                        ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                                         ->whereNull('fraud_flag')
 										->sum('transaction_grandtotal');
 

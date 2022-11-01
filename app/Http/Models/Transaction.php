@@ -420,12 +420,6 @@ class Transaction extends Model
             }	
         }
 
-        // return voucher
-        $update_voucher = app('\Modules\Deals\Http\Controllers\ApiDealsVoucher')->returnVoucher($this->id_transaction);
-
-        // return subscription
-        $update_subscription = app('\Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher')->returnSubscription($this->id_transaction);
-
     	// trigger payment cancelled -> service
     	switch ($this->trasaction_type) {
     		case 'Pickup Order':
@@ -436,7 +430,7 @@ class Transaction extends Model
                 break;
     	}
 
-        if($this->trasaction_type == 'Delivery') {
+        if($this->trasaction_type == 'Delivery' && !empty($this->transaction_payment_type)) {
             app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->updateStockProduct($this->id_transaction, 'cancel');
         }
 

@@ -119,7 +119,7 @@ class ApiCronTrxController extends Controller
                     if(!empty($midtransStatus['status_code']) && $midtransStatus['status_code'] == 200){
                         $singleTrx->triggerPaymentCompleted();
                         continue;
-                    }elseif ((($midtransStatus['status'] ?? false) == 'fail' && ($midtransStatus['messages'][0] ?? false) == 'Midtrans payment not found') || in_array(($midtransStatus['response']['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || ($midtransStatus['status_code'] ?? false) == '404' ||
+                    }elseif ((($midtransStatus['status'] ?? false) == 'fail' && ($midtransStatus['messages'][0] ?? false) == 'Midtrans payment not found') || in_array(($midtransStatus['response']['transaction_status'] ?? $midtransStatus['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || ($midtransStatus['status_code'] ?? false) == '404' ||
                         (!empty($midtransStatus['payment_type']) && $midtransStatus['payment_type'] == 'gopay' && $midtransStatus['transaction_status'] == 'pending')) {
                         $connectMidtrans = Midtrans::expire($singleTrx->transaction_receipt_number);
 
@@ -143,17 +143,19 @@ class ApiCronTrxController extends Controller
                         continue;
                     }
 
-                    $status = app('Modules\Xendit\Http\Controllers\XenditController')->checkStatus($dtXendit->xendit_id, $dtXendit->type);
-                    if ($status && $status['status'] == 'PENDING') {
-                        $cancel = app('Modules\Xendit\Http\Controllers\XenditController')->expireInvoice($dtXendit['xendit_id']);
-                        if(!$cancel){
+                    if(!empty($dtXendit->xendit_id)){
+                        $status = app('Modules\Xendit\Http\Controllers\XenditController')->checkStatus($dtXendit->xendit_id, $dtXendit->type);
+                        if ($status && $status['status'] == 'PENDING') {
+                            $cancel = app('Modules\Xendit\Http\Controllers\XenditController')->expireInvoice($dtXendit['xendit_id']);
+                            if(!$cancel){
+                                continue;
+                            }
+                        }elseif($status && ($status['status'] == 'COMPLETED' || $status['status'] == 'PAID')){
+                            $singleTrx->triggerPaymentCompleted();
+                            continue;
+                        }else{
                             continue;
                         }
-                    }elseif($status && ($status['status'] == 'COMPLETED' || $status['status'] == 'PAID')){
-                        $singleTrx->triggerPaymentCompleted();
-                        continue;
-                    }else{
-                        continue;
                     }
                 }
 
