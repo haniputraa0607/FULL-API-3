@@ -1604,7 +1604,7 @@ class ApiOnlineTransaction extends Controller
         switch (strtolower($payment_type)) {
             case 'midtrans':
                 $midtransStatus = Midtrans::status($trx['id_transaction_group']);
-                if ((($midtransStatus['status'] ?? false) == 'fail' && ($midtransStatus['messages'][0] ?? false) == 'Midtrans payment not found') || in_array(($midtransStatus['response']['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure', 'pending']) || ($midtransStatus['status_code'] ?? false) == '404' ||
+                if ((($midtransStatus['status'] ?? false) == 'fail' && ($midtransStatus['messages'][0] ?? false) == 'Midtrans payment not found') || in_array(($midtransStatus['response']['transaction_status'] ?? $midtransStatus['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || ($midtransStatus['status_code'] ?? false) == '404' ||
                     (!empty($midtransStatus['payment_type']) && $midtransStatus['payment_type'] == 'gopay' && $midtransStatus['transaction_status'] == 'pending')) {
                     $connectMidtrans = Midtrans::expire($trx['transaction_receipt_number']);
 
@@ -1619,16 +1619,24 @@ class ApiOnlineTransaction extends Controller
                 ];
             case 'xendit':
                 $dtXendit = TransactionPaymentXendit::where('id_transaction_group', $trx['id_transaction_group'])->first();
-                $status = app('Modules\Xendit\Http\Controllers\XenditController')->checkStatus($dtXendit->xendit_id, $dtXendit->type);
+                if(empty($dtXendit->xendit_id)){
+                    $trx->triggerPaymentCancelled();
+                    return ['status'=>'success', 'result' => ['message' => 'Pembayaran berhasil dibatalkan']];
+                }else{
+                    $status = app('Modules\Xendit\Http\Controllers\XenditController')->checkStatus($dtXendit->xendit_id, $dtXendit->type);
 
-                if ($status && $status['status'] == 'PENDING' && !empty($status['id'])) {
-                    $cancel = app('Modules\Xendit\Http\Controllers\XenditController')->expireInvoice($status['id']);
+                    $getStatus = $status['status'] ?? $status[0]['status'] ?? 0;
+                    $getId = $status['id'] ?? $status[0]['id'] ?? null;
+                    if ($status && $getStatus == 'PENDING' && !empty($getId)) {
+                        $cancel = app('Modules\Xendit\Http\Controllers\XenditController')->expireInvoice($getId);
 
-                    if($cancel){
-                        $trx->triggerPaymentCancelled();
-                        return ['status'=>'success', 'result' => ['message' => 'Pembayaran berhasil dibatalkan']];
+                        if($cancel){
+                            $trx->triggerPaymentCancelled();
+                            return ['status'=>'success', 'result' => ['message' => 'Pembayaran berhasil dibatalkan']];
+                        }
                     }
                 }
+
                 return [
                     'status'=>'fail',
                     'messages' => ['Transaksi tidak dapat dibatalkan karena proses pembayaran sedang berlangsung']
