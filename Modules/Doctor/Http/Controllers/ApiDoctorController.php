@@ -678,7 +678,7 @@ class ApiDoctorController extends Controller
         if(!empty($historyConsultation)){
             foreach($historyConsultation as $hc){
                 $doctorId = TransactionConsultation::where('id_transaction', $hc->id_transaction)->pluck('id_doctor');
-                $doctor = Doctor::whereIn('id_doctor', $doctorId)->with('outlet')->with('specialists')->first();
+                $doctor = Doctor::where('is_active', 1)->whereIn('id_doctor', $doctorId)->with('outlet')->with('specialists')->first();
 
                 if(in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3 && $doctor) {
                     $recomendationDoctor[] = $doctor;
