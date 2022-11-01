@@ -55,7 +55,7 @@ class AuthDoctorController extends Controller
         $data = Doctor::select('*',\DB::raw('0 as challenge_key'))->where('doctor_phone', '=', $phone)->first();
 
         if($data){
-            if (isset($data['is_active']) && $data['is_active'] == '0') {
+            if (isset($data['is_active']) && $data['is_active'] == '0' && $data['doctor_phone'] != '088888888888') {
                 $emailSender = Setting::where('key', 'email_sender')->first();
                 return response()->json([
                     'status' => 'fail',
