@@ -847,10 +847,10 @@ class ApiLoginRegisterV2 extends Controller
             $device = $useragent;
 
 
-        if ($request->json('device_type') == "Android") {
+        if (strtolower($request->json('device_type')) == "android") {
             $is_android = 1;
             $device_type = "Android";
-        } elseif ($request->json('device_type') == "IOS") {
+        } elseif (strtolower($request->json('device_type')) == "ios") {
             $is_ios = 1;
             $device_type = "IOS";
         }
