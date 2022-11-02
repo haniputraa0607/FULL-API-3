@@ -378,6 +378,11 @@ class ApiTransactionConsultationController extends Controller
         // $post['discount'] = -$post['discount'];
         // $post['discount_delivery'] = -$post['discount_delivery'];
 
+        if (!($post['payment_type'] ?? false)) {
+            $post['payment_type'] = 'Balance';
+            $post['point_use'] = true;
+        }
+
         if (isset($post['payment_type']) && $post['payment_type'] == 'Balance') {
             $post['cashback'] = 0;
             $post['point']    = 0;
@@ -520,7 +525,7 @@ class ApiTransactionConsultationController extends Controller
             'transaction_grandtotal'      => $grandtotal,
             'transaction_point_earned'    => $post['point']??0,
             'transaction_cashback_earned' => $post['cashback'],
-            'trasaction_payment_type'     => $post['payment_type'],
+            'trasaction_payment_type'     => $paymentType,
             'transaction_payment_status'  => $post['transaction_payment_status'],
             'latitude'                    => $post['latitude'],
             'longitude'                   => $post['longitude'],
