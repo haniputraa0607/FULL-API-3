@@ -573,7 +573,7 @@ class ApiDoctorController extends Controller
 			'doctor_name' => $ratingDc['doctor_name'] ?? null,
 			'doctor_phone' => $ratingDc['doctor_phone'] ?? null,
 			'total_customer' => (int) ($ratingDc['total_customer'] ?? null),
-			'total_rating' => (float) ($ratingDc['total_rating'] ?? null),
+			'total_rating' => TransactionConsultation::where('id_doctor', $user->id_doctor)->whereIn('consultation_status', ['done','completed'])->count(),
 			'rating_value' => [
                 ['rating' => '5', 'progress' => (int) ($summaryRating['5'] ?? 0)],
                 ['rating' => '4', 'progress' => (int) ($summaryRating['4'] ?? 0)],

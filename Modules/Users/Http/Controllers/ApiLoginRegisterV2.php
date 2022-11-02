@@ -905,7 +905,7 @@ class ApiLoginRegisterV2 extends Controller
                         ->where('id_user', '=', $datauser[0]['id'])
                         ->get()
                         ->toArray();
-                    if (!$checkdevice) {
+                    if (!$checkdevice && !empty($device_id)) {
                         //not trusted device or new device
                         $createdevice = UserDevice::updateOrCreate(['device_id' => $device_id], [
                             'id_user'           => $datauser[0]['id'],

@@ -199,7 +199,7 @@ class ApiMembershipWebview extends Controller
 			if($nextTrxType == 'count'){
 				$count_transaction = Transaction::where('id_user', $post['id_user'])
                     ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
-                    ->where('transaction_payment_status', 'Completed')->count('transaction_grandtotal');
+                    ->where('transaction_payment_status', 'Completed')->distinct()->count('id_transaction_group');
 				$membershipUser['progress_now_text'] = MyHelper::requestNumber($count_transaction,'_CURRENCY');
 				$membershipUser['progress_now'] = (int) $count_transaction;
 			}elseif($nextTrxType == 'value'){
@@ -241,7 +241,7 @@ class ApiMembershipWebview extends Controller
 			if($allMembership[0]['membership_type'] == 'count'){
 				$count_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')
                     ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
-                    ->count('transaction_grandtotal');
+                    ->distinct()->count('id_transaction_group');
 				$membershipUser['progress_now_text'] = MyHelper::requestNumber($count_transaction,'_CURRENCY');
 				$membershipUser['progress_now'] = (int) $count_transaction;
 			}elseif($allMembership[0]['membership_type'] == 'value'){

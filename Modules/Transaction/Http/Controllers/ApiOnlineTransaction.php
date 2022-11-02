@@ -2676,9 +2676,16 @@ class ApiOnlineTransaction extends Controller
 
                     if($product['need_recipe_status'] == 1){
                         $idUser = request()->user()->id;
-                        $checkRecipe = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
-                            ->whereNotNull('completed_at')
-                            ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product'])->first();
+                        if(!empty($item['id_transaction_consultation'])){
+                            $checkRecipe = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
+                                ->whereNotNull('completed_at')
+                                ->where('transaction_consultation_recomendations.id_transaction_consultation', $item['id_transaction_consultation'])
+                                ->where('product_type', 'Drug')->where('id_product', $product['id_product'])->first();
+                        }else{
+                            $checkRecipe = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
+                                ->whereNotNull('completed_at')
+                                ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product'])->first();
+                        }
 
                         if(empty($checkRecipe)){
                             $canBuyStatus = false;
@@ -2942,7 +2949,8 @@ class ApiOnlineTransaction extends Controller
                     'id_product_variant_group' => $item['id_product_variant_group']??null,
                     'id_product_variant_group_wholesaler' => $item['id_product_variant_group_wholesaler']??null,
                     'id_product_wholesaler' => $item['id_product_wholesaler']??null,
-                    'note' => $item['note']
+                    'note' => $item['note'],
+                    'id_transaction_consultation' => $item['id_transaction_consultation']??null
                 ];
                 $pos = array_search($new_item, $new_items);
                 if($pos === false) {
@@ -3206,6 +3214,7 @@ class ApiOnlineTransaction extends Controller
             $productOutlet[$product['id_outlet']][] = [
                 "id_custom" => rand(pow(10, 4-1), pow(10, 4)-1),
                 "id_product" => $product['id_product'],
+                'id_transaction_consultation' => $post['id_transaction_consultation'],
                 "qty" => (int)$product['qty_product'],
                 "id_product_variant_group" => $product['id_product_variant_group'],
                 "id_product_variant_group_wholesaler" => null,
