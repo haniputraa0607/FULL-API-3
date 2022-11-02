@@ -2894,8 +2894,8 @@ class ApiTransaction extends Controller
                 'estimated' => $transaction['shipment_courier_etd']
             ],
             'user' => User::where('id', $transaction['id_user'])->select('name', 'email', 'phone')->first(),
-            'payment' => $paymentMethod??'',
-            'payment_logo' => $paymentLogo??'',
+            'payment' => $paymentMethod ?? '',
+            'payment_logo' => $paymentLogo ?? env('STORAGE_URL_API').'default_image/payment_method/default.png',
             'payment_type' => $paymentType,
             'payment_token' => $paymentToken,
             'payment_url' => $paymentURL,
