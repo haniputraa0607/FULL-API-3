@@ -1408,7 +1408,7 @@ class ApiHistoryController extends Controller
     {
         $post = $request->json()->all();
         $id = $request->user()->id;
-        $log = LogBalance::where('log_balances.id_user', $id)->where('balance','!=',0)->paginate($post['pagination_total_row']??10)->toArray();
+        $log = LogBalance::where('log_balances.id_user', $id)->where('balance','!=',0)->orderBy('id_log_balance', 'desc')->paginate($post['pagination_total_row']??10)->toArray();
 
         foreach ($log['data']??[] as $key=>$dt){
             $title = '';
