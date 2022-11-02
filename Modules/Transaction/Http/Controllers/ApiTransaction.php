@@ -3608,6 +3608,11 @@ class ApiTransaction extends Controller
             UserAddress::where('id_user', $request->user()->id)->update(['favorite' => 0]);
         }
 
+        $check = UserAddress::where('id_user', $request->user()->id)->first();
+        if(empty($check)){
+            $post['main_address'] = 1;
+        }
+
         $subdis = Subdistricts::where('id_subdistrict', $post['id_subdistrict'])->first();
         $idCity = Districts::where('id_district',$subdis['id_district']??null)->first()['id_city']??null;
 
