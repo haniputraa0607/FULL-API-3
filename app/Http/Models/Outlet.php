@@ -116,7 +116,7 @@ class Outlet extends Authenticatable
 
     public function getUrlOutletImageCoverAttribute() {
         if (empty($this->outlet_image_cover)) {
-            return config('url.storage_url_api').'img/default.jpg';
+            return config('url.storage_url_api').'default_image/outlet_cover.png';
         }
         else {
             return config('url.storage_url_api').$this->outlet_image_cover;
@@ -125,7 +125,7 @@ class Outlet extends Authenticatable
 
     public function getUrlOutletImageLogoPortraitAttribute() {
         if (empty($this->outlet_image_logo_portrait)) {
-            return 'img/default.jpg';
+            return config('url.storage_url_api').'default_image/outlet_logo_portrait.png';
         }
         else {
             return config('url.storage_url_api').$this->outlet_image_logo_portrait;
@@ -134,7 +134,7 @@ class Outlet extends Authenticatable
 
     public function getUrlOutletImageLogoLandscapeAttribute() {
         if (empty($this->outlet_image_logo_landscape)) {
-            return config('url.storage_url_api').'img/default.jpg';
+            return config('url.storage_url_api').'default_image/outlet_logo_lanscape.png';
         }
         else {
             return config('url.storage_url_api').$this->outlet_image_logo_landscape;
