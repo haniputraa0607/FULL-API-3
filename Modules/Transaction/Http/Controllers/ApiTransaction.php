@@ -2731,6 +2731,10 @@ class ApiTransaction extends Controller
 
         $transaction = $transaction->first();
 
+        if ($transaction['receive_at']) { // kalau sudah sampai tapi belum diselesaikan, codenya 7
+            $codeIndo['On Delivery']['code'] = 7;
+        }
+
         if(empty($transaction)){
             return response()->json(MyHelper::checkGet($transaction));
         }
