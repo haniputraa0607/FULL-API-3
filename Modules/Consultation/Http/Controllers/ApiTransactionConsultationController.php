@@ -1047,12 +1047,12 @@ class ApiTransactionConsultationController extends Controller
 
         if(env('BYPASS_VALIDASI') != true){
             //validasi doctor status
-            if(strtolower($doctor['doctor_status']) != "online"){
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Harap Tunggu Hingga Dokter Siap']
-                ]);
-            }
+            // if(strtolower($doctor['doctor_status']) != "online"){
+            //     return response()->json([
+            //         'status'    => 'fail',
+            //         'messages'  => ['Harap Tunggu Hingga Dokter Siap']
+            //     ]);
+            // }
 
             //validasi consultation status
             if($transactionConsultation['consultation_status'] != 'soon' && $transactionConsultation['consultation_status'] != 'ongoing'){
