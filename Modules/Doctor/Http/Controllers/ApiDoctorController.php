@@ -1008,6 +1008,7 @@ class ApiDoctorController extends Controller
         try {
             $earlyEnter = (Setting::where('key','consultation_starts_early')->value('value') ?? 0) * 60;
             $lateEnter = (Setting::where('key','consultation_starts_late')->value('value')  ?? 0) * 60;
+            $maxQuota = (Setting::where('key', 'max_consultation_quota')->value('value') ?? 1);
             $day = date('l');
             $now = date('H:i:s');
 
@@ -1023,7 +1024,10 @@ class ApiDoctorController extends Controller
             Doctor::whereIn('id_doctor', $doctorOnline)->update(['doctor_status' => 'Online']);
             Doctor::whereNotIn('id_doctor', $doctorOnline)->update(['doctor_status' => 'Offline']);
 
-            $idsDoctorBusy = TransactionConsultation::whereIn('consultation_status', ['ongoing'])->pluck('id_doctor')->toArray();
+            // SELECT id_doctor, count(*) FROM konsulin_db.transaction_consultations where consultation_status = 'ongoing' group by id_doctor;
+            $idsDoctorBusy = TransactionConsultation::selectRaw('id_doctor, count(*) as total')->where('consultation_status', 'ongoing')->groupBy('id_doctor')->having('total', '>=', $maxQuota)->pluck('id_doctor');
+
+
             $doctorBusy = Doctor::whereIn('id_doctor', $idsDoctorBusy)->update(['doctor_status' => 'busy']);
 
             // //update doctor status to offline
