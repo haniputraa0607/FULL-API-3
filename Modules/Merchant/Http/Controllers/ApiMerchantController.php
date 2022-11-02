@@ -657,12 +657,12 @@ class ApiMerchantController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
 
-        $arr = [0,1];
+        $arr = [1,1];
         shuffle($arr);
 
         if($arr[0]){
             return response()->json(['status' => 'success', 'result' => [
-                'beneficiary_name' => 'Nama',
+                'beneficiary_name' => $request->user()->name,
                 'beneficiary_account' => $post['beneficiary_account']
             ]]);
         }else{
@@ -690,7 +690,7 @@ class ApiMerchantController extends Controller
         if(empty($check)){
             $save = BankAccount::create([
                 'id_bank_name' => $post['id_bank_name'],
-                'beneficiary_name' => 'Beneficiary Name',
+                'beneficiary_name' => $request->user()->name,
                 'beneficiary_account' => $post['beneficiary_account']
                 ]);
             $check['id_bank_account'] = $save['id_bank_account'];
