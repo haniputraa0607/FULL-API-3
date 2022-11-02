@@ -101,7 +101,11 @@ class ApiMembershipWebview extends Controller
 				$result['user_membership']['membership_image'] = config('url.storage_url_api') . $result['user_membership']['membership_image'];
 				$result['user_membership']['membership_card'] = config('url.storage_url_api') . $result['user_membership']['membership_card'];
 				foreach($allMembership as $index => $dataMembership){
-					$allMembership[$index]['benefit_text']=json_decode($dataMembership['benefit_text'],true)[0]??"";
+					$allMembership[$index]['benefit_text_array'] = json_decode($dataMembership['benefit_text'],true) ?: [];
+					$allMembership[$index]['benefit_text'] = '';
+					foreach ($allMembership[$index]['benefit_text_array'] as $btk => $bt) {
+						$allMembership[$index]['benefit_text'] .= '(' . ($btk + 1) . ') ' . $bt . "; \r\n";
+					}
 					switch ($dataMembership['membership_type']) {
 						case 'count':
 							$allMembership[$index]['min_value'] 		= $dataMembership['min_total_count'];
