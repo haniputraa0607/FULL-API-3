@@ -491,7 +491,7 @@ class ApiTransactionConsultationController extends Controller
 
         $grandtotal = $post['grandtotal'];
 
-        TransactionGroup::where('id_transaction_group', $insertTransactionGroup['id_transaction_group'])->update([
+        $insertTransactionGroup->update([
             'transaction_subtotal' => $subtotal,
             'transaction_shipment' => $deliveryTotal,
             'transaction_grandtotal' => $grandtotal
