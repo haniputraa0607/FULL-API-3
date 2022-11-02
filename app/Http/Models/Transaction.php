@@ -323,12 +323,12 @@ class Transaction extends Model
      */
     public function triggerPaymentCompleted($data = [])
     {
-    	\DB::beginTransaction();
     	// check complete allowed
     	if ($this->transaction_payment_status != 'Pending') {
     		return $this->transaction_payment_status == 'Completed';
     	}
 
+        \DB::beginTransaction();
         $this->update([
             'transaction_status' => ($this->trasaction_type == 'Consultation' ? 'Completed' : 'Pending'),
             'transaction_payment_status' => 'Completed',
