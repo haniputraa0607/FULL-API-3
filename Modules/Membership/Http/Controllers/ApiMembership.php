@@ -475,7 +475,7 @@ class ApiMembership extends Controller
 											->where('transaction_payment_status', 'Completed')
                                             ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                                             ->whereNull('fraud_flag')
-											->count('transaction_grandtotal');
+                                            ->distinct()->count('id_transaction_group');
 
 					$trx_value = Transaction::where('id_user',$check['id'])
 											->whereDate('transaction_date','>=',$date_start)
@@ -645,7 +645,7 @@ class ApiMembership extends Controller
 											->where('transaction_payment_status', 'Completed')
                                             ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                                             ->whereNull('fraud_flag')
-											->count('transaction_grandtotal');
+                                            ->distinct()->count('id_transaction_group');
 
 					$trx_value = Transaction::where('id_user',$check['id'])
 											->where('transaction_payment_status', 'Completed')
@@ -720,7 +720,7 @@ class ApiMembership extends Controller
 											->where('transaction_payment_status', 'Completed')
                                             ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                                             ->whereNull('fraud_flag')
-											->count('transaction_grandtotal');
+                                            ->distinct()->count('id_transaction_group');
 
 				$trx_value = Transaction::where('id_user',$check['id'])
 										->where('transaction_payment_status', 'Completed')
@@ -980,15 +980,17 @@ class ApiMembership extends Controller
 		$users = User::all();
 		foreach($users as $datauser){
 
-			$trx_count = Transaction::where('id_user',$datauser->id)
-										->where('transaction_payment_status', 'Completed')
-                                        ->whereNull('fraud_flag')
-										->count('transaction_grandtotal');
+            $trx_count = Transaction::where('id_user',$datauser->id)
+                ->where('transaction_payment_status', 'Completed')
+                ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
+                ->whereNull('fraud_flag')
+                ->distinct()->count('id_transaction_group');
 
-			$trx_value = Transaction::where('id_user',$datauser->id)
-									->where('transaction_payment_status', 'Completed')
-                                    ->whereNull('fraud_flag')
-									->sum('transaction_grandtotal');
+            $trx_value = Transaction::where('id_user',$datauser->id)
+                ->where('transaction_payment_status', 'Completed')
+                ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
+                ->whereNull('fraud_flag')
+                ->sum('transaction_grandtotal');
 
 			$total_balance = LogBalance::where('id_user', $datauser->id)
 										->whereNotIn('source', ['Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])
