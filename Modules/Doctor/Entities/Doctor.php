@@ -114,7 +114,7 @@ class Doctor extends Authenticatable
         if(!empty($this->attributes['doctor_photo'])){
             $url_doctor_photo = env('STORAGE_URL_API').$this->attributes['doctor_photo'];
         } else {
-            $url_doctor_photo = null;
+            $url_doctor_photo = env('STORAGE_URL_API').'default_image/doctor.png';
         }
 
         return $url_doctor_photo;

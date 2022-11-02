@@ -3758,7 +3758,7 @@ class ApiOutletController extends Controller
                 'is_closed' => (empty($detail['outlet_is_closed']) ?false:true),
                 'id_outlet' => $detail['id_outlet'],
                 'outlet_name' => $detail['outlet_name'],
-                'outlet_description' => $detail['outlet_description'],
+                'outlet_description' => $detail['outlet_description'] ?: '-',
                 'outlet_image_cover' => $detail['url_outlet_image_cover'],
                 'outlet_image_logo_portrait' => $detail['url_outlet_image_logo_portrait'],
                 'product_newest' => $newestProduct,
