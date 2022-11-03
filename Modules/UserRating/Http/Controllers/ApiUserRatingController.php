@@ -1264,7 +1264,7 @@ class ApiUserRatingController extends Controller
                     'rating_value' => (string) $post['rating_value'],
                     'suggestion' => $post['suggestion']??'',
                     'question' => $post['option_question'],
-                    'product_name' => $product['product_name'],
+                    'product_name' => Product::where('id_product', $id_product)->first()['product_name']??'',
                     'selected_option' => implode(',',array_map(function($var){return trim($var,'"');},$post['option_value']??[]))
                 ];
                 app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('User Rating Product', $user->phone, $variables,null,true);
@@ -1562,7 +1562,7 @@ class ApiUserRatingController extends Controller
                     'rating_value' => (string) $post['rating_value'],
                     'suggestion' => $post['suggestion']??'',
                     'question' => $post['option_question']??'',
-                    'product_name' => $product['product_name'],
+                    'doctor_name' => Doctor::where('id_doctor', $id_doctor)->first()['doctor_name']??'',
                     'selected_option' => implode(',',array_map(function($var){return trim($var,'"');},$post['option_value']??[]))
                 ];
                 app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('User Rating Doctor', $user->phone, $variables,null,true);

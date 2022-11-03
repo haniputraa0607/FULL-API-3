@@ -2635,7 +2635,7 @@ Message :
                     'autocrm_forward_email' => NULL,
                     'autocrm_forward_email_subject' => NULL,
                     'autocrm_forward_email_content' => NULL,
-                    'custom_text_replace'=>'%otp%;',
+                    'custom_text_replace'=>'%doctor_name%;%receipt_number%;%outlet_name%;%transaction_date%;%rating_value%',
                     'created_at' => '2018-03-12 13:53:17',
                     'updated_at' => '2018-05-03 15:02:05',
                 ),
@@ -2665,7 +2665,7 @@ Message :
                     'autocrm_forward_email' => NULL,
                     'autocrm_forward_email_subject' => NULL,
                     'autocrm_forward_email_content' => NULL,
-                    'custom_text_replace'=>'%product_name%;%receipt_number%;%outlet_name%;%transaction_date%;%rating_value%;%suggestion%;%question%;%selected_option%',
+                    'custom_text_replace'=>'%product_name%;%receipt_number%;%outlet_name%;%transaction_date%;%rating_value%',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ),
