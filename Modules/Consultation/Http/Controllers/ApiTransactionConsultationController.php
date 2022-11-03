@@ -3705,6 +3705,13 @@ class ApiTransactionConsultationController extends Controller
                 'id_user_modifier' => $request->user()->id,
                 'user_modifier_type' => 'admin'
             ]);
+
+            $usere= User::where('id',$transactionConsultation['id_user'])->first();
+            app($this->autocrm)->SendAutoCRM('Reschedule Consultation', $usere->phone,
+                [
+                    'id_reference'    => $transactionConsultation['id_transaction_consultation']
+                ]
+            );
         }
 
         //update Transaction Consultation
