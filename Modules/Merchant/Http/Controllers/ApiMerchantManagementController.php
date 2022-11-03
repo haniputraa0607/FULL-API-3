@@ -1254,18 +1254,41 @@ class ApiMerchantManagementController extends Controller
                 ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $checkMerchant['id_outlet'])
                     ->update([
                         'product_detail_visibility' => $visibility,
-                        'product_detail_stock_status' => ($sumStock <= 0 ? 'Sold Out' : 'Available')
+                        'product_detail_stock_status' => ($sumStock <= 0 ? 'Sold Out' : 'Available'),
+                        'product_detail_stock_item' => 0
                     ]);
             }
             return response()->json(['status' => 'success']);
         }else{
             $stock = $post['stock']??0;
-            $update = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $checkMerchant['id_outlet'])
-                ->update([
-                    'product_detail_visibility' => (($post['visibility']??0) == 1 ? 'Visible' : 'Hidden'),
-                    'product_detail_stock_status' => (empty($stock) ? 'Sold Out': 'Available'),
-                    'product_detail_stock_item' => (int)$stock
-                ]);
+            $checkVariant = ProductVariantGroup::where('id_product', $product['id_product'])->get()->toArray();
+
+            if(count($checkVariant) > 1){
+                return response()->json(['status' => 'fail', 'messages' => ['Request param does not match']]);
+            }elseif(count($checkVariant) == 1){
+                $update = ProductVariantGroupDetail::where('id_product_variant_group', $checkVariant[0]['id_product_variant_group'])->where('id_outlet', $checkMerchant['id_outlet'])
+                    ->update([
+                        "product_variant_group_visibility" => (($post['visibility']??0) == 1 ? 'Visible' : 'Hidden'),
+                        'product_variant_group_stock_status' => (empty($stock) ? 'Sold Out': 'Available'),
+                        "product_variant_group_stock_item" => (int)$stock
+                    ]);
+
+                ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $checkMerchant['id_outlet'])
+                    ->update([
+                        'product_detail_visibility' => (($post['visibility']??0) == 1 ? 'Visible' : 'Hidden'),
+                        'product_detail_stock_status' => ($stock <= 0 ? 'Sold Out' : 'Available'),
+                        'product_detail_stock_item' => 0
+                    ]);
+            }else{
+                $update = ProductDetail::where('id_product', $product['id_product'])->where('id_outlet', $checkMerchant['id_outlet'])
+                    ->update([
+                        'product_detail_visibility' => (($post['visibility']??0) == 1 ? 'Visible' : 'Hidden'),
+                        'product_detail_stock_status' => (empty($stock) ? 'Sold Out': 'Available'),
+                        'product_detail_stock_item' => (int)$stock
+                    ]);
+            }
+
+
             return response()->json(MyHelper::checkUpdate($update));
         }
     }
