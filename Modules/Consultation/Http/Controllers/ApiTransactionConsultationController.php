@@ -55,7 +55,7 @@ class ApiTransactionConsultationController extends Controller
         $this->payment = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
         $this->location = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
         $this->doctor = "Modules\Doctor\Http\Controllers\ApiDoctorController";
-        $this->promo_trx 	 = "Modules\Transaction\Http\Controllers\ApiPromoTransaction";
+        $this->promo_trx     = "Modules\Transaction\Http\Controllers\ApiPromoTransaction";
         $this->product = "Modules\Product\Http\Controllers\ApiProductController";
         if (\Module::collections()->has('Autocrm')) {
             $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
@@ -509,13 +509,13 @@ class ApiTransactionConsultationController extends Controller
             'shipment_courier'            => $shipment_courier ?? null,
             'transaction_notes'           => $post['notes'],
             'transaction_subtotal'        => $subtotal,
-            'transaction_gross'  		  => $post['subtotal_final'],
+            'transaction_gross'           => $post['subtotal_final'],
             'transaction_shipment'        => $post['shipping'],
             'transaction_service'         => $post['service'],
             'transaction_discount'        => $post['total_discount']??0,
             'transaction_discount_delivery' => 0,
-            'transaction_discount_item' 	=> 0,
-            'transaction_discount_bill' 	=> $post['total_discount']??0,
+            'transaction_discount_item'     => 0,
+            'transaction_discount_bill'     => $post['total_discount']??0,
             'transaction_tax'             => $post['tax'],
             'transaction_grandtotal'      => $grandtotal,
             'transaction_point_earned'    => $post['point']??0,
@@ -927,8 +927,8 @@ class ApiTransactionConsultationController extends Controller
         } 
 
         $transactionDateId = Carbon::parse($transaction['transaction_date'])->locale('id');
-		$transactionDateId->settings(['formatFunction' => 'translatedFormat']);
-		$transactionDate = $transactionDateId->format('d F Y');
+        $transactionDateId->settings(['formatFunction' => 'translatedFormat']);
+        $transactionDate = $transactionDateId->format('d F Y');
 
         //badge setting
         //dd($transactionConsultation['consultation_status']);
@@ -1050,12 +1050,12 @@ class ApiTransactionConsultationController extends Controller
             // }
 
             //validasi consultation status
-            if($transactionConsultation['consultation_status'] != 'soon' && $transactionConsultation['consultation_status'] != 'ongoing'){
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Konsultasi Tidak bisa dimulai kembali']
-                ]);
-            }
+            // if($transactionConsultation['consultation_status'] != 'soon' && $transactionConsultation['consultation_status'] != 'ongoing'){
+            //     return response()->json([
+            //         'status'    => 'fail',
+            //         'messages'  => ['Konsultasi Tidak bisa dimulai kembali']
+            //     ]);
+            // }
 
             //validasi starts early
             $currentTime = Carbon::now()->format('Y-m-d H:i:s');
@@ -1144,14 +1144,16 @@ class ApiTransactionConsultationController extends Controller
             }
 
             //update transaction consultation
-            $consultation = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])
-            ->update([
-                'consultation_status' => "ongoing",
-                'consultation_start_at' => new DateTime
-            ]);
+            if ($transactionConsultation['consultation_status'] != 'completed') {
+                $consultation = TransactionConsultation::where('id_transaction', $transaction['consultation']['id_transaction'])
+                ->update([
+                    'consultation_status' => "ongoing",
+                    'consultation_start_at' => new DateTime
+                ]);
+            }
 
             //update doctor statuses
-            $doctor->update(['doctor_status' => "busy"]);
+            // $doctor->update(['doctor_status' => "busy"]);
             $doctor->save();
 
             $result = [
@@ -3047,7 +3049,7 @@ class ApiTransactionConsultationController extends Controller
                 $path = 'img/chat/'.$transaction['consultation']['id_conversation'].'/';
                 
                 $resource = $post['file'];
-				$save = Storage::disk(env('STORAGE'))->putFileAs($path, $resource, $pictName, 'public');
+                $save = Storage::disk(env('STORAGE'))->putFileAs($path, $resource, $pictName, 'public');
 
                 $content = [
                     "url" => env('STORAGE_URL_API').$path.$pictName,
@@ -3066,7 +3068,7 @@ class ApiTransactionConsultationController extends Controller
                 $path = 'file/chat/'.$transaction['consultation']['id_conversation'].'/';
                 
                 $resource = $post['file'];
-				$save = Storage::disk(env('STORAGE'))->putFileAs($path, $resource, $fileName, 'public');
+                $save = Storage::disk(env('STORAGE'))->putFileAs($path, $resource, $fileName, 'public');
 
                 $content = [
                     "url" => env('STORAGE_URL_API').$path.$fileName,
@@ -3756,7 +3758,7 @@ class ApiTransactionConsultationController extends Controller
             $remaining -= 7 * 3600;
             $remainingTime = date('H:i:s', $remaining);
         } else {
-            $remainingTime = date('H:i:s', strtotime('00:00:00'));
+            $remainingTime = '00:00:00';
         }
 
         // $dateId = Carbon::parse($message['created_at_infobip'])->locale('id');
@@ -3782,7 +3784,8 @@ class ApiTransactionConsultationController extends Controller
 
         $result = [
             'message_date' => $messageDate, //$dayId.', '.$chatDateId,
-            'remaining_time' => $remainingTime
+            'remaining_time' => $remainingTime,
+            'status' => $transactionConsultation
         ];
 
         return response()->json(MyHelper::checkGet($result));
