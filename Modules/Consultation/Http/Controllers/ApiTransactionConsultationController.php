@@ -262,7 +262,7 @@ class ApiTransactionConsultationController extends Controller
         //cek doctor exists
         $id_doctor = $post['doctor']['id_doctor'];
         $doctor = Doctor::with('outlet')->with('specialists')
-        ->where('id_doctor', $post['doctor']['id_doctor'])->onlyActive()
+        ->where('id_doctor', $post['doctor']['id_doctor'])
         ->first();
 
         if(empty($doctor)){
@@ -274,13 +274,13 @@ class ApiTransactionConsultationController extends Controller
         $doctor = $doctor->toArray();
 
         //cek doctor active
-        if(isset($doctor['is_active']) && $doctor['is_active'] == false){
-            DB::rollback();
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => ['Doctor Tutup Sesi Konsuling']
-            ]);
-        }
+        // if(isset($doctor['is_active']) && $doctor['is_active'] == false){
+        //     DB::rollback();
+        //     return response()->json([
+        //         'status'    => 'fail',
+        //         'messages'  => ['Doctor Tutup Sesi Konsuling']
+        //     ]);
+        // }
 
         //check session availability
         $picked_date = date('Y-m-d', strtotime($post['selected_schedule']['date']));
@@ -1162,7 +1162,8 @@ class ApiTransactionConsultationController extends Controller
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
-                'message' => 'Start Consultation Failed'
+                'message' => 'Start Consultation Failed',
+                'messages' => ['Start Consultation Failed']
             ];
             DB::rollBack();
             return response()->json($result);
@@ -1302,7 +1303,8 @@ class ApiTransactionConsultationController extends Controller
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
-                'message' => 'Done Consultation Failed'
+                'message' => 'Done Consultation Failed',
+                'messages' => ['Done Consultation Failed']
             ];
             DB::rollBack();
             return response()->json($result);
@@ -1456,7 +1458,8 @@ class ApiTransactionConsultationController extends Controller
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
-                'message' => 'Completed Consultation Failed'
+                'message' => 'Completed Consultation Failed',
+                'messages' => ['Completed Consultation Failed']
             ];
             DB::rollBack();
             return response()->json($result);
@@ -1832,9 +1835,11 @@ class ApiTransactionConsultationController extends Controller
                 'treatment_recomendation' => $post['treatment_recomendation']
             ]);
         } catch (\Exception $e) {
+            \Log::debug($e);
             $result = [
                 'status'  => 'fail',
-                'message' => 'Update disease and treatement failed'
+                'message' => 'Update disease and treatement failed',
+                'messages' => ['Update disease and treatement failed']
             ];
             DB::rollBack();
             return response()->json($result);
@@ -2284,9 +2289,11 @@ class ApiTransactionConsultationController extends Controller
             $oldRecomendation = TransactionConsultationRecomendation::where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->where('product_type', $post['type'])->delete();
             $items = $transactionConsultation->recomendation()->createMany($post['items']);
         } catch (\Exception $e) {
+            \Log::debug($e);
             $result = [
                 'status'  => 'fail',
-                'message' => 'Update disease and treatement failed'
+                'message' => 'Gagal update Rekomendasi',
+                'messages' => ['Gagal update Rekomendasi']
             ];
             DB::rollBack();
             return response()->json($result);
