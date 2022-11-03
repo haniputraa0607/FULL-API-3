@@ -403,6 +403,10 @@ class ApiPromoTransaction extends Controller
             }
         }
 
+        if(!empty($resPromoCode) && $resPromoCode['is_error'] && empty($resPromoCode['text']) && $codeType == 'Discount delivery'){
+            $resPromoCode['text'] = ['Silahkan pilih layanan pengiriman yang diinginkan'];
+        }
+
         $data['promo_code'] = $resPromoCode;
         if($totalAllDisc > 0){
             $data['summary_order'][] = [
