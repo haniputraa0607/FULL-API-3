@@ -24,8 +24,8 @@ class Step1PromoCampaignRequest extends FormRequest
             'id_promo_campaign'     => 'nullable',
 
             'code_type'             => 'required_unless:used_code_update,1',
-            // 'promo_code'            => 'sometimes|required_if:code_type,==,single|max:15|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u',
-            // 'prefix_code'           => 'sometimes|required_if:code_type,==,multiple|max:15|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u',
+            // 'promo_code'            => 'sometimes|required_if:code_type,==,single|max:30|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u',
+            // 'prefix_code'           => 'sometimes|required_if:code_type,==,multiple|max:30|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u',
             // 'number_last_code'      => 'sometimes|required_if:code_type,==,multiple|max:2',
             // 'limitation_usage'      => 'required_unless:used_code_update,1',
             'total_coupon'          => 'required_unless:used_code_update,1',
@@ -46,11 +46,11 @@ class Step1PromoCampaignRequest extends FormRequest
     protected function getValidatorInstance() {
         $validator = parent::getValidatorInstance();
 
-        $validator->sometimes('promo_code', 'required|max:15|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u', function($input) {
+        $validator->sometimes('promo_code', 'required|max:30|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u', function($input) {
             return ($input->code_type == 'single');
         });
 
-        $validator->sometimes('prefix_code', 'required|max:15|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u', function($input) {
+        $validator->sometimes('prefix_code', 'required|max:30|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u', function($input) {
             return ($input->code_type == 'multiple');
         });
 
