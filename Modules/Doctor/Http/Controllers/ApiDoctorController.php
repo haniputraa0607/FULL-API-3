@@ -326,7 +326,7 @@ class ApiDoctorController extends Controller
                         'Doctor Pin Sent',
                         $post['doctor_phone'],
                         [
-                            'pin' => $pin,
+                            'otp' => $pin,
                             'useragent' => $useragent,
                             'now' => date('Y-m-d H:i:s'),
                             'date_sent' => date('d-m-y H:i:s'),

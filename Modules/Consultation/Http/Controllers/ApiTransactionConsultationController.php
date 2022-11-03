@@ -2199,6 +2199,7 @@ class ApiTransactionConsultationController extends Controller
                 $items[$key]['usage_rule'] = $recomendation->usage_rules ?? null;
                 $items[$key]['usage_rule_time'] = $usageRules ?? null;
                 $items[$key]['usage_rule_additional_time'] = $recomendation->usage_rules_additional_time ?? null;
+                $items[$key]['treatment_description'] = (empty($recomendation->treatment_description) ? '-' : $recomendation->treatment_description);
             }
         }
 
@@ -3705,6 +3706,13 @@ class ApiTransactionConsultationController extends Controller
                 'id_user_modifier' => $request->user()->id,
                 'user_modifier_type' => 'admin'
             ]);
+
+            $usere= User::where('id',$transactionConsultation['id_user'])->first();
+            app($this->autocrm)->SendAutoCRM('Reschedule Consultation', $usere->phone,
+                [
+                    'id_reference'    => $transactionConsultation['id_transaction_consultation']
+                ]
+            );
         }
 
         //update Transaction Consultation
