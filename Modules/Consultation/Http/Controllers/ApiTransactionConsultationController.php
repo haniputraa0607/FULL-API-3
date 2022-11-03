@@ -2219,15 +2219,15 @@ class ApiTransactionConsultationController extends Controller
         $templateProcessor->setValue('customer_age', $user['age']);
         $templateProcessor->setValue('customer_gender', $user['gender']);
 
-        if(!Storage::exists('receipt/docx')){
-            Storage::makeDirectory('receipt/docx');
+        if(!Storage::disk('public')->exists('receipt/docx')){
+            Storage::disk('public')->makeDirectory('receipt/docx');
         }
 
         $directory = storage_path('app/public/receipt/docx/receipt_'.$transactionConsultation['recipe_code'].'.docx');
         $templateProcessor->saveAs($directory);
 
-        if(!Storage::exists('receipt/pdf')){
-            Storage::makeDirectory('receipt/pdf');
+        if(!Storage::disk('public')->exists('receipt/pdf')){
+            Storage::disk('public')->makeDirectory('receipt/pdf');
         }
     
         $converter = new CustomOfficeConverter($directory, storage_path('app/public/receipt/pdf'), env('LIBREOFFICE_URL'), true);
