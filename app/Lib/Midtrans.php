@@ -82,8 +82,8 @@ class Midtrans {
             'secure' => true,
         ];
 
-        $tab = ($type == 'trx' ? 'order' : strtolower($type));
-        $baseCallback = env('MIDTRANS_CALLBACK').'history/'.$tab.'?type='.$type.'&order_id='.urlencode($id);
+        $tab = ($type == 'trx' ? 'history/order' : 'page/consultation');
+        $baseCallback = env('MIDTRANS_CALLBACK').$tab.'?type='.$type.'&order_id='.urlencode($id);
         if (!$payment_detail || strtolower($payment_detail) == 'gopay') {
             $dataMidtrans['gopay'] = [
                 'enable_callback' => true,

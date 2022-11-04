@@ -262,7 +262,7 @@ class ApiTransactionConsultationController extends Controller
         //cek doctor exists
         $id_doctor = $post['doctor']['id_doctor'];
         $doctor = Doctor::with('outlet')->with('specialists')
-        ->where('id_doctor', $post['doctor']['id_doctor'])->onlyActive()
+        ->where('id_doctor', $post['doctor']['id_doctor'])
         ->first();
 
         if(empty($doctor)){
@@ -274,13 +274,13 @@ class ApiTransactionConsultationController extends Controller
         $doctor = $doctor->toArray();
 
         //cek doctor active
-        if(isset($doctor['is_active']) && $doctor['is_active'] == false){
-            DB::rollback();
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => ['Doctor Tutup Sesi Konsuling']
-            ]);
-        }
+        // if(isset($doctor['is_active']) && $doctor['is_active'] == false){
+        //     DB::rollback();
+        //     return response()->json([
+        //         'status'    => 'fail',
+        //         'messages'  => ['Doctor Tutup Sesi Konsuling']
+        //     ]);
+        // }
 
         //check session availability
         $picked_date = date('Y-m-d', strtotime($post['selected_schedule']['date']));
@@ -1162,7 +1162,8 @@ class ApiTransactionConsultationController extends Controller
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
-                'message' => 'Start Consultation Failed'
+                'message' => 'Start Consultation Failed',
+                'messages' => ['Start Consultation Failed']
             ];
             DB::rollBack();
             return response()->json($result);
@@ -1302,7 +1303,8 @@ class ApiTransactionConsultationController extends Controller
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
-                'message' => 'Done Consultation Failed'
+                'message' => 'Done Consultation Failed',
+                'messages' => ['Done Consultation Failed']
             ];
             DB::rollBack();
             return response()->json($result);
@@ -1456,7 +1458,8 @@ class ApiTransactionConsultationController extends Controller
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
-                'message' => 'Completed Consultation Failed'
+                'message' => 'Completed Consultation Failed',
+                'messages' => ['Completed Consultation Failed']
             ];
             DB::rollBack();
             return response()->json($result);
@@ -1832,9 +1835,11 @@ class ApiTransactionConsultationController extends Controller
                 'treatment_recomendation' => $post['treatment_recomendation']
             ]);
         } catch (\Exception $e) {
+            \Log::debug($e);
             $result = [
                 'status'  => 'fail',
-                'message' => 'Update disease and treatement failed'
+                'message' => 'Update disease and treatement failed',
+                'messages' => ['Update disease and treatement failed']
             ];
             DB::rollBack();
             return response()->json($result);
@@ -2215,15 +2220,15 @@ class ApiTransactionConsultationController extends Controller
         $templateProcessor->setValue('customer_age', $user['age']);
         $templateProcessor->setValue('customer_gender', $user['gender']);
 
-        if(!Storage::exists('receipt/docx')){
-            Storage::makeDirectory('receipt/docx');
+        if(!Storage::disk('public')->exists('receipt/docx')){
+            Storage::disk('public')->makeDirectory('receipt/docx');
         }
 
         $directory = storage_path('app/public/receipt/docx/receipt_'.$transactionConsultation['recipe_code'].'.docx');
         $templateProcessor->saveAs($directory);
 
-        if(!Storage::exists('receipt/pdf')){
-            Storage::makeDirectory('receipt/pdf');
+        if(!Storage::disk('public')->exists('receipt/pdf')){
+            Storage::disk('public')->makeDirectory('receipt/pdf');
         }
     
         $converter = new CustomOfficeConverter($directory, storage_path('app/public/receipt/pdf'), env('LIBREOFFICE_URL'), true);
@@ -2285,9 +2290,11 @@ class ApiTransactionConsultationController extends Controller
             $oldRecomendation = TransactionConsultationRecomendation::where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->where('product_type', $post['type'])->delete();
             $items = $transactionConsultation->recomendation()->createMany($post['items']);
         } catch (\Exception $e) {
+            \Log::debug($e);
             $result = [
                 'status'  => 'fail',
-                'message' => 'Update disease and treatement failed'
+                'message' => 'Gagal update Rekomendasi',
+                'messages' => ['Gagal update Rekomendasi']
             ];
             DB::rollBack();
             return response()->json($result);
@@ -3277,7 +3284,7 @@ class ApiTransactionConsultationController extends Controller
             'id_transaction' => $transaction['id_transaction'],
             'receipt_number_group' => TransactionGroup::where('id_transaction_group', $transaction['id_transaction_group'])->first()['transaction_receipt_number']??'',
             'transaction_receipt_number' => $transaction['transaction_receipt_number'],
-            'transaction_status' => $transaction['transaction_status']??'',
+            'transaction_status' => $transaction['transaction_payment_status'] == 'Completed' ? 'Completed' : $transaction['transaction_status'],
             'transaction_date' => MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_date'])), true),
             'transaction_consultation' => $consultation,
             'show_rate_popup' => $transaction['show_rate_popup'],
@@ -3286,7 +3293,7 @@ class ApiTransactionConsultationController extends Controller
             'outlet_logo' => (empty($transaction['outlet_image_logo_portrait']) ? config('url.storage_url_api').'img/default.jpg': config('url.storage_url_api').$transaction['outlet_image_logo_portrait']),
             'user' => User::where('id', $transaction['id_user'])->select('name', 'email', 'phone')->first(),
             'doctor' => $doctor,
-            'payment' => $paymentMethod??'',
+            'payment' => $paymentMethod??'Tidak ada pembayaran',
             'payment_logo' => $paymentLogo??env('STORAGE_URL_API').'default_image/payment_method/default.png',
             'payment_type' => $paymentType,
             'payment_token' => $paymentToken,
