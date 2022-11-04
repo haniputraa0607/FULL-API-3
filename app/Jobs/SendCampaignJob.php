@@ -509,6 +509,7 @@ class SendCampaignJob implements ShouldQueue
                     }
 
                     $inboxInsert['inboxes_send_at'] = date("Y-m-d H:i:s");
+                    $inboxInsert['inboxes_promotion_status'] = 1;
                     $inboxInsert['created_at'] = date("Y-m-d H:i:s");
                     $inboxInsert['updated_at'] = date("Y-m-d H:i:s");
                     $inbox[] = $inboxInsert;
