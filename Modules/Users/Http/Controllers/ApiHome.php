@@ -121,66 +121,40 @@ class ApiHome extends Controller
             'privacy_policy',
             'faq',
             'enquires',
-            'featured_promo'
+            'featured_promo_home',
+            'featured_promo_merchant'
         ];
 
         foreach ($banners as $key => $value) {
-
+            $item = [];
             $item['image_url']  = config('url.storage_url_api').$value->image;
             $item['type']       = 'none';
-            $item['id_news']    = $value->id_reference;
             $item['id_reference']    = $value->id_reference;
-            $item['news_title'] = "";
-            $item['url']        = $value->url;
 
-            if($item['url'] != null){
-                $item['type']       = 'link';
+            if($value->url != null){
+                $item['link']        = $value->url;
+                unset($item['id_reference']);
             }
 
-            if ($value->type == 'gofood') {
-                $item['type']       = 'news';
-                $item['news_title'] = $value->news->news_title;
-                // if news, generate webview news detail url
-                $item['url']        = config('url.api_url') .'news/webview/'. $value->id_news;
-            } elseif ($value->type == 'gofood') {
-                $item['type']       = 'gofood';
-                $item['id_news'] = 99999999;
-                $item['news_title'] = "GO-FOOD";
-                $item['url']     = config('url.app_url').'outlet/webview/gofood/list';
-            } elseif ($value->type == 'referral') {
-                $item['type']       = 'referral';
-                $item['id_news'] = 999999999;
-                $item['news_title'] = "Referral";
-                $item['url']     = config('url.api_url') . 'api/referral/webview';
-            } elseif ($value->type == 'order') {
+            if ($value->type == 'order') {
                 $item['type']       = 'order';
-                $item['id_news'] = null;
-                $item['news_title'] = null;
-                $item['url']     = null;
-            } elseif (in_array($value->type, $arrayGeneral)) {
-                $item['type']         = $value->type;
-                unset($item['id_news']);
-                unset($item['news_title']);
-                unset($item['url']);
-                unset($item['id_reference']);
             } elseif (in_array($value->type, ['deals_detail', 'subscription_detail'])) {
                 $item['type']         = $value->type;
-                unset($item['id_news']);
-                unset($item['news_title']);
+            } elseif ($value->id_reference && $value->type == 'elearning') {
+                $elearning = News::where('id_news', $value->id_reference)->first();
+                $item['type']         = $value->type;
+                $item['elearning_slug'] = (!empty($elearning['news_slug']) ? $elearning['news_slug'] : null);
+                $item['elearning_type'] = (!empty($elearning['news_type']) ? $elearning['news_type'] : null);
                 unset($item['url']);
-            } elseif ($value->id_reference && isset($value->news->news_title)) {
-                $item['type']       = 'news';
-                $item['news_title'] = $value->news->news_title;
-                // if news, generate webview news detail url
-                $item['url']        = config('url.api_url') .'news/webview/'. $value->id_reference;
+            } elseif (in_array($value->type, $arrayGeneral)) {
+                $item['type']         = $value->type;
+                unset($item['id_reference']);
             } elseif ($value->id_reference) {
                 $item['type']         = $value->type;
-                unset($item['id_news']);
-                unset($item['news_title']);
-                unset($item['url']);
             } else {
                 $item['type']         = $value->type;
             }
+
             array_push($array, $item);
         }
 

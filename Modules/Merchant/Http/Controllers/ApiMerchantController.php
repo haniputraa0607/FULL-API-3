@@ -1393,10 +1393,11 @@ class ApiMerchantController extends Controller
     public function listSettingOption(Request $request){
         $post = $request->json()->all();
 
-        $data = Merchant::whereIn('merchant_status', ['Active', 'Inactive'])
-            ->leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+        $data = Merchant::leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
             ->leftJoin('cities', 'outlets.id_city', 'cities.id_city')
             ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
+            ->where('merchant_status', 'Active')
+            ->where('outlet_status', 'Active')
             ->orderBy('merchants.created_at', 'desc');
 
         $data = $data->get();
