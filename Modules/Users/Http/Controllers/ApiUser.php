@@ -2784,20 +2784,27 @@ class ApiUser extends Controller
         $post = $request->json()->all();
 
         if (is_array($post['phone'])) {
-            $messages = "Users ";
+            $phoneUpdate = ['Users Has been Phone Verified :'];
             foreach ($post['phone'] as $row) {
                 $updateUser = User::where('phone', '=', $row)->update(['phone_verified' => 1]);
                 if ($updateUser) {
-                    $messages .= $row . ", ";
+                    $phoneUpdate[] = $row;
                 }
             }
-            $messages = substr($messages, 0, -2);
-            $messages .= " Has been Phone Verified";
 
-            $result = [
-                'status'    => 'success',
-                'result'    => [$messages]
-            ];
+            if(!empty($phoneUpdate)){
+
+                $result = [
+                    'status'    => 'success',
+                    'result'    => $phoneUpdate
+                ];
+            }else{
+                $result = [
+                    'status'    => 'fail',
+                    'messages'    => ['No data update']
+                ];
+            }
+
         } else {
             $result = [
                 'status'    => 'fail',
@@ -2812,20 +2819,26 @@ class ApiUser extends Controller
         $post = $request->json()->all();
 
         if (is_array($post['phone'])) {
-            $messages = "Users ";
+            $phoneUpdate = ['Users Has been Phone Unverified :'];
             foreach ($post['phone'] as $row) {
                 $updateUser = User::where('phone', '=', $row)->update(['phone_verified' => 0]);
                 if ($updateUser) {
-                    $messages .= $row . ", ";
+                    $phoneUpdate[] = $row;
                 }
             }
-            $messages = substr($messages, 0, -2);
-            $messages .= " Has been Phone Unverified";
 
-            $result = [
-                'status'    => 'success',
-                'result'    => [$messages]
-            ];
+            if(!empty($phoneUpdate)){
+
+                $result = [
+                    'status'    => 'success',
+                    'result'    => $phoneUpdate
+                ];
+            }else{
+                $result = [
+                    'status'    => 'fail',
+                    'messages'    => ['No data update']
+                ];
+            }
         } else {
             $result = [
                 'status'    => 'fail',
@@ -2840,20 +2853,26 @@ class ApiUser extends Controller
         $post = $request->json()->all();
 
         if (is_array($post['phone'])) {
-            $messages = "Users ";
+            $phoneUpdate = ['Users Has been Email Verified :'];
             foreach ($post['phone'] as $row) {
                 $updateUser = User::where('phone', '=', $row)->update(['email_verified' => 1]);
                 if ($updateUser) {
-                    $messages .= $row . ", ";
+                    $phoneUpdate[] = $row;
                 }
             }
-            $messages = substr($messages, 0, -2);
-            $messages .= " Has been Email Verified";
 
-            $result = [
-                'status'    => 'success',
-                'result'    => [$messages]
-            ];
+            if(!empty($phoneUpdate)){
+
+                $result = [
+                    'status'    => 'success',
+                    'result'    => $phoneUpdate
+                ];
+            }else{
+                $result = [
+                    'status'    => 'fail',
+                    'messages'    => ['No data update']
+                ];
+            }
         } else {
             $result = [
                 'status'    => 'fail',
@@ -2868,20 +2887,26 @@ class ApiUser extends Controller
         $post = $request->json()->all();
 
         if (is_array($post['phone'])) {
-            $messages = "Users ";
+            $phoneUpdate = ['Users Has been Email Unverified :'];
             foreach ($post['phone'] as $row) {
                 $updateUser = User::where('phone', '=', $row)->update(['email_verified' => 0]);
                 if ($updateUser) {
-                    $messages .= $row . ", ";
+                    $phoneUpdate[] = $row;
                 }
             }
-            $messages = substr($messages, 0, -2);
-            $messages .= " Has been Email Unverified";
 
-            $result = [
-                'status'    => 'success',
-                'result'    => [$messages]
-            ];
+            if(!empty($phoneUpdate)){
+
+                $result = [
+                    'status'    => 'success',
+                    'result'    => $phoneUpdate
+                ];
+            }else{
+                $result = [
+                    'status'    => 'fail',
+                    'messages'    => ['No data update']
+                ];
+            }
         } else {
             $result = [
                 'status'    => 'fail',
