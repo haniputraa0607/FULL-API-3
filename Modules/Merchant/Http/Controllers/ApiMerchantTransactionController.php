@@ -476,6 +476,7 @@ class ApiMerchantTransactionController extends Controller
                 "outlet_name"      => $outlet['outlet_name'],
                 'id_transaction'   => $transaction['id_transaction'],
                 'receipt_number'   => $transaction['transaction_receipt_number'],
+                'transaction_date'   => MyHelper::dateFormatInd($transaction['transaction_date'])
             ]);
         }
 
