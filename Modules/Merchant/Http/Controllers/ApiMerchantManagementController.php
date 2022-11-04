@@ -751,7 +751,7 @@ class ApiMerchantManagementController extends Controller
         if(!empty($post['variants']) && !empty($post['variant_status'])){
             $price = min($priceVariant);
         }
-        ProductGlobalPrice::where('id_product', $idProduct)->update(['product_global_price' => $price]);
+        ProductGlobalPrice::updateOrCreate(['id_product' => $idProduct], ['id_product' => $idProduct, 'product_global_price' => $price]);
         return response()->json(MyHelper::checkCreate($create));
     }
 
