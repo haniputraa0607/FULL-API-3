@@ -25,6 +25,8 @@ use App\Http\Models\CampaignWhatsappSent;
 use App\Http\Models\CampaignWhatsappSentContent;
 use App\Http\Models\News;
 use App\Http\Models\OauthAccessToken;
+use Modules\Doctor\Entities\Doctor;
+use Modules\PromoCampaign\Entities\PromoCampaign;
 use Modules\RedirectComplex\Entities\RedirectComplexReference;
 
 use App\Http\Models\PromotionSent;
@@ -254,41 +256,63 @@ class ApiCampaign extends Controller
 			$campaign['campaign_push_name_reference'] = "";
 
 			if($campaign['campaign_media_push'] == "Yes"){
-				if($campaign['campaign_push_clickto'] == "Product"){
+				if($campaign['campaign_push_clickto'] == "product_detail"){
 					if($campaign['campaign_push_id_reference'] != 0){
 						$q = Product::where('id_product','=',$campaign['campaign_push_id_reference'])->get()->first();
 						$campaign['campaign_push_name_reference'] = $q['product_name'];
 					}
 				}
 
-				if($campaign['campaign_push_clickto'] == "Outlet"){
+				if($campaign['campaign_push_clickto'] == "merchant_detail"){
 					if($campaign['campaign_push_id_reference'] != 0){
 						$q = Outlet::where('id_outlet','=',$campaign['campaign_push_id_reference'])->get()->first();
 						$campaign['campaign_push_name_reference'] = $q['outlet_name'];
 					}
 				}
-				elseif($campaign['campaign_push_clickto'] == "Complex"){
-					if($campaign['campaign_push_id_reference'] != 0){
-						$q = RedirectComplexReference::where('id_redirect_complex_reference','=',$campaign['campaign_push_id_reference'])->get()->first();
-						$campaign['campaign_push_name_reference'] = $q['name'];
-					}
-				}
+
+                if($campaign['campaign_push_clickto'] == "doctor_detail"){
+                    if($campaign['campaign_push_id_reference'] != 0){
+                        $q = Doctor::where('id_doctor','=',$campaign['campaign_push_id_reference'])->get()->first();
+                        $campaign['campaign_push_name_reference'] = $q['doctor_name'];
+                    }
+                }
+
+                if($campaign['campaign_push_clickto'] == "promo_detail"){
+                    if($campaign['campaign_push_id_reference'] != 0){
+                        $q = PromoCampaign::where('id_promo_campaign','=',$campaign['campaign_push_id_reference'])->get()->first();
+                        $campaign['campaign_push_name_reference'] = $q['promo_title'];
+                    }
+                }
 			}
 
 			if($campaign['campaign_media_inbox'] == "Yes"){
-				if($campaign['campaign_inbox_clickto'] == "Product"){
+				if($campaign['campaign_inbox_clickto'] == "product_detail"){
 					if($campaign['campaign_inbox_id_reference'] != 0){
 						$q = Product::where('id_product','=',$campaign['campaign_inbox_id_reference'])->get()->first();
 						$campaign['campaign_inbox_name_reference'] = $q['product_name'];
 					}
 				}
 
-				if($campaign['campaign_inbox_clickto'] == "Outlet"){
+				if($campaign['campaign_inbox_clickto'] == "merchant_detail"){
 					if($campaign['campaign_inbox_id_reference'] != 0){
 						$q = Outlet::where('id_outlet','=',$campaign['campaign_inbox_id_reference'])->get()->first();
 						$campaign['campaign_inbox_name_reference'] = $q['outlet_name'];
 					}
 				}
+
+                if($campaign['campaign_inbox_clickto'] == "doctor_detail"){
+                    if($campaign['campaign_inbox_id_reference'] != 0){
+                        $q = Doctor::where('id_doctor','=',$campaign['campaign_inbox_id_reference'])->get()->first();
+                        $campaign['campaign_inbox_name_reference'] = $q['doctor_name'];
+                    }
+                }
+
+                if($campaign['campaign_inbox_clickto'] == "promo_detail"){
+                    if($campaign['campaign_inbox_id_reference'] != 0){
+                        $q = PromoCampaign::where('id_promo_campaign','=',$campaign['campaign_inbox_id_reference'])->get()->first();
+                        $campaign['campaign_inbox_name_reference'] = $q['promo_title'];
+                    }
+                }
 			}
 
 			$result = [
