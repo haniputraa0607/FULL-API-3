@@ -7,6 +7,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
 use App\Http\Models\Setting;
+use App\Http\Models\OauthAccessToken;
 
 use Modules\Doctor\Entities\Doctor;
 use Modules\Doctor\Entities\DoctorDeviceLogin;
