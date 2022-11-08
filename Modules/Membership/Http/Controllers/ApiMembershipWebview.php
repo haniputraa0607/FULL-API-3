@@ -200,25 +200,33 @@ class ApiMembershipWebview extends Controller
 		$membershipUser['next_level'] = $nextMembershipName;
 		// $result['next_membership_image'] = $nextMembershipImage;
 		if(isset($result['user_membership'])){
+            $maxProg = $allMembership[$indexNow + 1]['min_value']??$allMembership[$indexNow]['min_value']??0;
+
 			if($nextTrxType == 'count'){
 				$count_transaction = Transaction::where('id_user', $post['id_user'])
                     ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
+                    ->whereNull('fraud_flag')
                     ->where('transaction_payment_status', 'Completed')->distinct()->count('id_transaction_group');
-				$membershipUser['progress_now_text'] = MyHelper::requestNumber($count_transaction,'_CURRENCY');
-				$membershipUser['progress_now'] = (int) $count_transaction;
+                $count_final = (!empty($maxProg) && $count_transaction > $maxProg ? $maxProg : $count_transaction);
+				$membershipUser['progress_now_text'] = MyHelper::requestNumber($count_final,'_CURRENCY');
+				$membershipUser['progress_now'] = (int) $count_final;
+                $membershipUser['value_now'] = (int) $count_transaction;
 			}elseif($nextTrxType == 'value'){
 				$subtotal_transaction = Transaction::where('id_user', $post['id_user'])
                     ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
+                    ->whereNull('fraud_flag')
                     ->where('transaction_payment_status', 'Completed')->sum('transaction_grandtotal');
-				$membershipUser['progress_now_text'] = MyHelper::requestNumber($subtotal_transaction,'_CURRENCY');
-				$membershipUser['progress_now'] = (int) $subtotal_transaction;
-				$membershipUser['progress_active'] = ($subtotal_transaction / $nextTrx) * 100;
-				// $result['next_trx']		= $subtotal_transaction - $nextTrx;
+                $subtotal_final = (!empty($maxProg) && $subtotal_transaction > $maxProg ? $maxProg : $subtotal_transaction);
+				$membershipUser['progress_now_text'] = MyHelper::requestNumber($subtotal_final,'_CURRENCY');
+				$membershipUser['progress_now'] = (int) $subtotal_final;
+				$membershipUser['progress_active'] = ($subtotal_final / $nextTrx) * 100;
+                $membershipUser['value_now'] = (int) $subtotal_transaction;
 			}elseif($nextTrxType == 'balance'){
 				$total_balance = LogBalance::where('id_user', $post['id_user'])->whereNotIn('source', [ 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal', 'Point Injection', 'Welcome Point'])->where('balance', '>', 0)->sum('balance');
 				$membershipUser['progress_now_text'] = MyHelper::requestNumber($total_balance,'_CURRENCY');
 				$membershipUser['progress_now'] = (int) $total_balance;
 				$membershipUser['progress_active'] = ($total_balance / $nextTrx) * 100;
+                $membershipUser['value_now'] = (int) $total_balance;
 				// $result['next_trx']		= $nextTrx - $total_balance;
 			}elseif($nextTrxType == 'achievement'){
 				$total_achievement = DB::table('achievement_users')
@@ -240,24 +248,32 @@ class ApiMembershipWebview extends Controller
 		$result['all_membership'] = $allMembership;
 		//user dengan level tertinggi
 		if($nextMembershipName == ""){
+            $maxProg = $allMembership[$indexNow + 1]['min_value']??$allMembership[$indexNow]['min_value']??0;
 			$result['progress_active'] = 100;
 			$result['next_trx'] = 0;
 			if($allMembership[0]['membership_type'] == 'count'){
 				$count_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')
+                    ->whereNull('fraud_flag')
                     ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                     ->distinct()->count('id_transaction_group');
-				$membershipUser['progress_now_text'] = MyHelper::requestNumber($count_transaction,'_CURRENCY');
-				$membershipUser['progress_now'] = (int) $count_transaction;
+                $count_final = (!empty($maxProg) && $count_transaction > $maxProg ? $maxProg : $count_transaction);
+				$membershipUser['progress_now_text'] = MyHelper::requestNumber($count_final,'_CURRENCY');
+				$membershipUser['progress_now'] = (int) $count_final;
+                $membershipUser['value_now'] = (int) $count_transaction;
 			}elseif($allMembership[0]['membership_type'] == 'value'){
 				$subtotal_transaction = Transaction::where('id_user', $post['id_user'])
                     ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
+                    ->whereNull('fraud_flag')
                     ->where('transaction_payment_status', 'Completed')->sum('transaction_grandtotal');
-				$membershipUser['progress_now_text'] = MyHelper::requestNumber($subtotal_transaction,'_CURRENCY');
-				$membershipUser['progress_now'] = (int) $subtotal_transaction;
+                $subtotal_final = (!empty($maxProg) && $subtotal_transaction > $maxProg ? $maxProg : $subtotal_transaction);
+				$membershipUser['progress_now_text'] = MyHelper::requestNumber($subtotal_final,'_CURRENCY');
+				$membershipUser['progress_now'] = (int) $subtotal_final;
+                $membershipUser['value_now'] = (int) $subtotal_transaction;
 			}elseif($allMembership[0]['membership_type'] == 'balance'){
 				$total_balance = LogBalance::where('id_user', $post['id_user'])->whereNotIn('source', ['Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal', 'Point Injection', 'Welcome Point'])->where('balance', '>', 0)->sum('balance');
 				$membershipUser['progress_now_text'] = MyHelper::requestNumber($total_balance,'_CURRENCY');
 				$membershipUser['progress_now'] = (int) $total_balance;
+                $membershipUser['value_now'] = (int) $total_balance;
 			}elseif($allMembership[0]['membership_type'] == 'achievement'){
 				$total_achievement = DB::table('achievement_users')
 				->join('achievement_details', 'achievement_users.id_achievement_detail', '=', 'achievement_details.id_achievement_detail')
