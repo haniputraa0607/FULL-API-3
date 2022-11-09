@@ -74,6 +74,14 @@ class ApiLoginRegisterV2 extends Controller
             $phone = $checkPhoneFormat['phone'];
         }
 
+        $checkPrevDelete = User::where('phone', '=', $phone.'-deleted')->first();
+        if(!empty($checkPrevDelete)){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Anda tidak bisa mendaftar menggunakan nomor '.$phone.'. Silahkan hubungi Admin untuk mengembalikan akun Anda.']
+            ]);
+        }
+
         $data = User::select('*',\DB::raw('0 as challenge_key'))->with('city')->where('phone', '=', $phone)->get()->toArray();
 
         if (isset($data[0]['is_suspended']) && $data[0]['is_suspended'] == '1') {
@@ -1286,6 +1294,14 @@ class ApiLoginRegisterV2 extends Controller
             'provider_email' => ['required', 'email'],
             'provider_token' => ['required'],
         ]);
+
+        $checkPrevDelete = User::where('email', '=', $request->json('provider_email').'-deleted')->first();
+        if(!empty($checkPrevDelete)){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Anda tidak bisa mendaftar menggunakan email '.$request->json('provider_email').'. Silahkan hubungi Admin untuk mengembalikan akun Anda.']
+            ]);
+        }
 
         if ($validate->fails()) {
             return response()->json([

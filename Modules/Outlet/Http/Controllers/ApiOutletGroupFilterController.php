@@ -170,7 +170,6 @@ class ApiOutletGroupFilterController extends Controller
             }
 
             DB::commit();
-            SyncronPlasticTypeOutlet::dispatch([])->onQueue('high')->allOnConnection('database');
             return response()->json(['status' => 'success']);
         }
     }
@@ -285,7 +284,6 @@ class ApiOutletGroupFilterController extends Controller
             }
 
             DB::commit();
-            SyncronPlasticTypeOutlet::dispatch([])->onQueue('high')->allOnConnection('database');
             return response()->json(['status' => 'success']);
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
