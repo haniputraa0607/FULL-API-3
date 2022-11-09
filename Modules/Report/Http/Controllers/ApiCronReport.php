@@ -535,7 +535,7 @@ class ApiCronReport extends Controller
                     	ON (transactions.id_transaction = trans_p.id_transaction) 
                     WHERE transaction_date BETWEEN "'. date('Y-m-d', strtotime($date)) .' 00:00:00" 
                     AND "'. date('Y-m-d', strtotime($date)) .' 23:59:59"
-                    AND transaction_status = "Completed"
+                    AND transaction_payment_status = "Completed"
                     GROUP BY transactions.id_outlet,trx_type
                 '));
 
@@ -703,7 +703,7 @@ class ApiCronReport extends Controller
 						WHERE transactions.transaction_date BETWEEN "'. date('Y-m-d', strtotime(is_array($date) ? $date[0] : $date)) .' 00:00:00" 
                         AND "'. date('Y-m-d', strtotime(is_array($date) ? $date[1] : $date)) .' 23:59:59"
                         AND transactions.id_outlet = "'. $outlet .'"
-                        AND transaction_status = "Completed"
+                        AND transaction_payment_status = "Completed"
                         GROUP BY trx_date, transaction_products.id_product, products.id_product_category, transaction_products.id_product_variant_group, transaction_products.id_brand
                         ORDER BY trx_date asc, transaction_products.id_product ASC
                     '));
@@ -1045,7 +1045,7 @@ class ApiCronReport extends Controller
 		                	ON (transactions.id_transaction = trans_p.id_transaction) 
 						WHERE transaction_date BETWEEN "'. $start .' 00:00:00" 
 						AND "'. $end .' 23:59:59"
-						AND transaction_status = "Completed"
+						AND transaction_payment_status = "Completed"
 						GROUP BY transactions.id_outlet
 					'));
 
@@ -1169,7 +1169,7 @@ class ApiCronReport extends Controller
                         WHERE MONTH(transactions.transaction_date) = "'. $month .'" 
                     	AND YEAR(transactions.transaction_date) ="'. $year .'"
                         AND transactions.id_outlet = "'. $outlet .'"
-                        AND transaction_status = "Completed"
+                        AND transaction_payment_status = "Completed"
                         GROUP BY id_product,id_brand
                         ORDER BY id_product ASC
                     '));
@@ -1224,7 +1224,7 @@ class ApiCronReport extends Controller
 					LEFT JOIN products ON transaction_products.id_product = products.id_product
                     WHERE MONTH(transactions.transaction_date) = "'. $month .'" 
                     AND YEAR(transactions.transaction_date) ="'. $year .'"
-                    AND transaction_status = "Completed"
+                    AND transaction_payment_status = "Completed"
                     GROUP BY id_product
                     ORDER BY id_product ASC
                 '));

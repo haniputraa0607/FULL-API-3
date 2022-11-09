@@ -497,12 +497,12 @@ class ApiDashboardSetting extends Controller
 							$url = 'gender=female';
 						}
 					}
-					if(strpos($card['card_name'], 'Verified') !== false){
+                    if(strpos($card['card_name'], 'Not Verified') !== false){
+                        $value = $value->where('phone_verified', '=', '0');
+                    }elseif(strpos($card['card_name'], 'Verified') !== false){
 						$value = $value->where('phone_verified', '=', '1');
 					}
-					if(strpos($card['card_name'], 'Not Verified') !== false){
-						$value = $value->where('phone_verified', '=', '0');
-					}
+
 					if(strpos($card['card_name'], 'Android') !== false){
 						$value = $value->where('android_device', '!=', '');
 						if($url){
@@ -529,29 +529,29 @@ class ApiDashboardSetting extends Controller
 				}
 				
 				elseif(strpos($card['card_name'], 'Transaction') !== false){
-					$value = DailyReportTrx::whereDate('trx_date', '<=', $end)->whereDate('trx_date', '>=', $start);
+					$value = Transaction::whereDate('transaction_date', '<=', $end)->whereDate('transaction_date', '>=', $start)->where('transaction_payment_status', 'Completed');
 
 					if(strpos($card['card_name'], 'Online Transaction')!==false){
-						$value->where('trx_type','Online');
+						$value->where('trasaction_type','Online');
 					}
 
 					if(strpos($card['card_name'], 'Offline Transaction Member')!==false){
-						$value->where('trx_type','Offline Member');
+						$value->where('trasaction_type','Offline Member');
 					}
 
 					if(strpos($card['card_name'], 'Offline Transaction Non Member')!==false){
-						$value->where('trx_type','Offline Non Member');
+						$value->where('trasaction_type','Offline Non Member');
 					}
 
 					if(strpos($card['card_name'], 'Total')!==false&&strpos($card['card_name'], 'Count')!==false){
-						$value = $value->sum('trx_count');
+						$value = $value->count('id_transaction');
 					}
 					if(strpos($card['card_name'], 'Total')!==false&&strpos($card['card_name'], 'Value')!==false){
-						$value = $value->sum('trx_grand');
+						$value = $value->sum('transaction_grandtotal');
 					}
 					if(strpos($card['card_name'], 'Average')!==false&&strpos($card['card_name'], 'per Day')===false){
-						$sum = $value->sum('trx_grand');
-						$count = $value->sum('trx_count');
+						$sum = $value->sum('transaction_grandtotal');
+						$count = $value->count('id_transaction');
 						if($sum > 0 && $count > 0){
 							$value = (int) $sum/$count;
 						}else{
@@ -559,8 +559,8 @@ class ApiDashboardSetting extends Controller
 						}
 					}
 					if(strpos($card['card_name'], 'Average per Day')!==false){
-						$sum = $value->sum('trx_grand');
-						$count = $value->get()->groupBy('trx_date')->count();
+						$sum = $value->sum('transaction_grandtotal');
+						$count = $value->get()->groupBy('transaction_date')->count();
 						if($sum > 0 && $count > 0){
 							$value = (int) $sum/$count;
 						}else{
