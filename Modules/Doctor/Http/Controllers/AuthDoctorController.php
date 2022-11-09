@@ -255,18 +255,6 @@ class AuthDoctorController extends Controller
                 }
             }
 
-            if (\Module::collections()->has('Autocrm')) {
-                $autocrm = app($this->autocrm)->SendAutoCRM(
-                    'Login Success',
-                    $phone,
-                    [
-                        'ip' => $ip,
-                        'useragent' => $useragent,
-                        'now' => date('Y-m-d H:i:s')
-                    ]
-                );
-            }
-
             if ($datauser[0]['pin_changed'] == '0') {
                 $res['pin_changed'] = false;
             } else {
@@ -661,9 +649,6 @@ class AuthDoctorController extends Controller
 
     		$update = Doctor::where('id_doctor', '=', $data[0]['id_doctor'])->update(['otp_valid_time' => NULL]);
     		if ($update) {
-    			if (\Module::collections()->has('Autocrm')) {
-    				$autocrm = app($this->autocrm)->SendAutoCRM('Pin Verify', $phone, null, null, false, false, 'doctor');
-    			}
     			$result = [
     				'status'    => 'success',
     				'result'    => [
@@ -722,12 +707,9 @@ class AuthDoctorController extends Controller
     		$update = Doctor::where('id_doctor', '=', $data['id_doctor'])->update(['password' => $pin, 'otp_forgot' => null]);
     		if (\Module::collections()->has('Autocrm')) {
     			if ($data['first_update_password'] < 1) {
-    				$autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed', $phone, null, null, false, false, 'doctor');
     				$changepincount = $data['first_update_password'] + 1;
     				$update = Doctor::where('id_doctor', '=', $data['id_doctor'])->update(['first_update_password' => $changepincount]);
     			} else {
-    				$autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed Forgot Password', $phone, null, null, false, false, 'doctor');
-
     				$del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
     				->where('oauth_access_tokens.user_id', $data['id_doctor'])->where('oauth_access_token_providers.provider', 'doctor')->delete();
     			}
