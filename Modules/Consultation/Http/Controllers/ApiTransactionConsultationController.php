@@ -2519,7 +2519,7 @@ class ApiTransactionConsultationController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Doctor Outlet Not Found']]);
         }
 
-        $consultation = TransactionConsultation::where('id_transaction_consultation', $post['id_transaction_consultation']??null)->first();
+        $consultation = TransactionConsultation::where('id_transaction', $post['id_transaction']??null)->first();
         $post['referal_code'] = $consultation['referral_code']??null;
 
         //if referral code outlet not empty
@@ -2652,7 +2652,7 @@ class ApiTransactionConsultationController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Doctor Outlet Not Found']]);
         }
 
-        $consultation = TransactionConsultation::where('id_transaction_consultation', $post['id_transaction_consultation']??null)->first();
+        $consultation = TransactionConsultation::where('id_transaction', $post['id_transaction']??null)->first();
         $post['referal_code'] = $consultation['referral_code']??null;
 
         //if referral code outlet not empty
