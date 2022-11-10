@@ -1113,6 +1113,20 @@ class ApiMerchantTransactionController extends Controller
         return response()->json($result);
     }
 
+    public function getTotalTransactionPending(Request $request){
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if(empty($checkMerchant)){
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+        $idOutlet = $checkMerchant['id_outlet'];
+
+        $count = Transaction::where('transaction_status', 'Pending')
+            ->where('id_outlet', $idOutlet)->count();
+
+        return response()->json(['status' => 'success', 'result' => $count]);
+    }
+
     public function autoCancel(){
         $log = MyHelper::logCron('Auto cancel transaction');
         try {

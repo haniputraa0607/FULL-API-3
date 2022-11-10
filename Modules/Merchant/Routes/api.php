@@ -101,6 +101,7 @@ Route::group(['prefix' => 'merchant'], function () {
             Route::post('delivery/confirm', 'ApiMerchantTransactionController@confirmDeliveryTransaction');
             Route::post('delivery/update-status', 'ApiMerchantTransactionController@dummyUpdateStatusDelivery');
             Route::post('delivery/tracking', 'ApiMerchantTransactionController@deliveryTracking');
+            Route::get('total-pending', 'ApiMerchantTransactionController@getTotalTransactionPending');
         });
     });
 

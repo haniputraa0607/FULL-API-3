@@ -2519,6 +2519,9 @@ class ApiTransactionConsultationController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Doctor Outlet Not Found']]);
         }
 
+        $consultation = TransactionConsultation::where('id_transaction', $post['id_transaction']??null)->first();
+        $post['referal_code'] = $consultation['referral_code']??null;
+
         //if referral code outlet not empty
         if(!empty($post['referal_code'])){
             $idOutlet = Outlet::where('outlet_referral_code', $post['referal_code'])->first()['id_outlet']??null;
@@ -2649,10 +2652,18 @@ class ApiTransactionConsultationController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Doctor Outlet Not Found']]);
         }
 
+        $consultation = TransactionConsultation::where('id_transaction', $post['id_transaction']??null)->first();
+        $post['referal_code'] = $consultation['referral_code']??null;
+
         //if referral code outlet not empty
         if(!empty($post['referal_code'])){
-            $idOutlet = Outlet::where('outlet_code', $post['referal_code'])->first()['id_outlet']??null;
-            if(empty($idMerchant)){
+            $idOutlet = Outlet::where('outlet_referral_code', $post['referal_code'])->first()['id_outlet']??null;
+
+            if(empty($idOutlet)) {
+                $idOutlet = Outlet::where('outlet_code', $post['referal_code'])->first()['id_outlet']??null;
+            }
+
+            if(empty($idOutlet)){
                 return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
             }
 
