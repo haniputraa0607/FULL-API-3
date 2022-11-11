@@ -1946,7 +1946,10 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
-        $outlet_referral_code = !empty($transaction->outlet->outlet_referral_code) ? $transaction->outlet->outlet_referral_code : $transaction->outlet->outlet_code;
+        $outlet_referral_code = $transactionConsultation['referral_code']??null;
+        if(empty($outlet_referral_code)){
+            $outlet_referral_code = !empty($transaction->outlet->outlet_referral_code) ? $transaction->outlet->outlet_referral_code : $transaction->outlet->outlet_code;
+        }
 
         $outlet = [
             "outlet_name" => $transaction->outlet->outlet_name,

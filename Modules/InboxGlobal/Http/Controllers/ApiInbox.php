@@ -259,6 +259,7 @@ class ApiInbox extends Controller
             $content['type'] 		 = 'private';
             $content['id_inbox'] 	 = $private['id_user_inboxes'];
             $content['subject'] 	 = $private['inboxes_subject'];
+            $content['content'] = $private['inboxes_content'];
             $content['clickto'] 	 = $private['inboxes_clickto'];
 
             if($private['inboxes_id_reference']){
@@ -278,12 +279,6 @@ class ApiInbox extends Controller
                     $content['url'] = config('url.app_url').'news/webview/'.$news->id_news;
                 }
 
-            }
-
-            if($content['clickto'] == 'Content'){
-                $content['content'] = $private['inboxes_content'];
-            }else{
-                $content['content']	= null;
             }
 
             if($content['clickto'] == 'Link'){
