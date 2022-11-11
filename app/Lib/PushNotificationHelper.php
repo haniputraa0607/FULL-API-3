@@ -67,7 +67,7 @@ class PushNotificationHelper{
     }
 
     // based on field Users Table
-    public static function searchDeviceToken($type, $value, $recipient_type) {
+    public static function searchDeviceToken($type, $value, $recipient_type = null) {
         $result = [];
 
         if($recipient_type == 'doctor'){
