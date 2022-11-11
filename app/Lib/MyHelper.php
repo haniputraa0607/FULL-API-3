@@ -3270,4 +3270,38 @@ class MyHelper{
         $formula = preg_replace('/([a-zA-Z][a-zA-Z0-9_]*)/', '$$1', $formula);
         return 'return '. $formula . ';';
     }
+
+    /**
+     * Merubah tanggal waktu timezone server menjadi sesuai timezone yang dibutuhkan
+     * @param  string|integer $timeserver datetime to adjust
+     * @param  integer $timezone   time difference with utc (WIB=7, WITA=8, WIT=9)
+     * @param  string $format     requested datetime format,
+     * @param  bool $indo     format as indonesian,
+     * @return string|integer             return date string or unix timestamp if $format == null
+     */
+    public static function adjustTimezone($timeserver, $timezone = null, $format = null, $indo = false)
+    {
+        if (is_null($timezone)) {
+            $user = request()->user();
+            if ($user) {
+                $timezone = $user->user_time_zone_utc ? ($user->user_time_zone_utc == 0 ? 7 : $user->user_time_zone_utc) : 7;
+            } else {
+                $timezone = 7;
+            }
+        }
+
+        if (!is_numeric($timeserver)) {
+            $timeserver = strtotime($timeserver);
+        }
+
+        $time = $timeserver + (($timezone - 7) * 3600);
+
+        if ($format) {
+            if ($indo) {
+                return self::indonesian_date_v2($time, $format);
+            }
+            return date($format, $time);
+        }
+        return $time;
+    }
 }

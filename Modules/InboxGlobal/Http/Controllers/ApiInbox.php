@@ -72,6 +72,7 @@ class ApiInbox extends Controller
 				$content['type'] 		 = 'global';
 				$content['id_inbox'] 	 = $global['id_inbox_global'];
 				$content['subject'] 	 = app($this->autocrm)->TextReplace($global['inbox_global_subject'], $user['phone']);
+                $content['content']      = app($this->autocrm)->TextReplace($global['inbox_global_content'], $user['phone']);
 				$content['clickto'] 	 = $global['inbox_global_clickto'];
 
 
@@ -87,12 +88,6 @@ class ApiInbox extends Controller
 						$content['news_title'] = $news->news_title;
 						$content['url'] = config('url.app_url').'news/webview/'.$news->id_news;
 					}
-				}
-
-				if($content['clickto'] == 'Content'){
-					$content['content'] = app($this->autocrm)->TextReplace($global['inbox_global_content'], $user['phone']);
-				}else{
-					$content['content']	= null;
 				}
 
 				if($content['clickto'] == 'Link'){
@@ -137,6 +132,7 @@ class ApiInbox extends Controller
 			$content['type'] 		 = 'private';
 			$content['id_inbox'] 	 = $private['id_user_inboxes'];
 			$content['subject'] 	 = $private['inboxes_subject'];
+            $content['content'] = $private['inboxes_content'];
 			$content['clickto'] 	 = $private['inboxes_clickto'];
 
 			if($private['inboxes_id_reference']){
@@ -156,12 +152,6 @@ class ApiInbox extends Controller
 					$content['url'] = config('url.app_url').'news/webview/'.$news->id_news;
 				}
 
-			}
-
-			if($content['clickto'] == 'Content'){
-				$content['content'] = $private['inboxes_content'];
-			}else{
-				$content['content']	= null;
 			}
 
 			if($content['clickto'] == 'Link'){

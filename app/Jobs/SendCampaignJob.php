@@ -488,11 +488,8 @@ class SendCampaignJob implements ShouldQueue
                     $inboxInsert['id_campaign'] = $campaign['id_campaign'];
                     $inboxInsert['id_user']     = $receipient['id'];
                     $inboxInsert['inboxes_subject'] = app($autocrm)->TextReplace($campaign['campaign_inbox_subject'], $receipient['id'], null, 'id');
+                    $inboxInsert['inboxes_content'] = app($autocrm)->TextReplace($campaign['campaign_inbox_content'], $receipient['id'], null, 'id');
                     $inboxInsert['inboxes_clickto'] = $campaign['campaign_inbox_clickto'];
-
-                    if($campaign['campaign_inbox_clickto'] == 'Content'){
-                        $inboxInsert['inboxes_content'] = app($autocrm)->TextReplace($campaign['campaign_inbox_content'], $receipient['id'], null, 'id');
-                    }
 
                     if($campaign['campaign_inbox_clickto'] == 'Link'){
                         $inboxInsert['inboxes_link'] = $campaign['campaign_inbox_link'];
