@@ -2144,6 +2144,14 @@ class ApiProductController extends Controller
             $list = $list->where('product_categories.id_product_category', $post['id_product_category']);
         }
 
+        if(isset($post['all_best_seller']) && $post['all_best_seller']){
+            $list = $list->where('product_count_transaction', '>', 0);
+        }
+
+        if(isset($post['all_recommendation']) && $post['all_recommendation']){
+            $list = $list->where('product_recommendation_status', 1);
+        }
+
         $defaultSelect = 1;
         if(!empty($post['filter_sorting'])){
             $sorting = $post['filter_sorting'];
@@ -2156,9 +2164,6 @@ class ApiProductController extends Controller
                     ->orderBy('relate', 'desc');
             }elseif($sorting == 'best seller'){
                 $list = $list->orderBy('product_count_transaction', 'desc');
-                if(isset($post['all_best_seller']) && $post['all_best_seller']){
-                    $list = $list->where('product_count_transaction', '>', 0);
-                }
             }elseif($sorting == 'review'){
                 $list = $list->orderBy('total_rating', 'desc');
             }elseif($sorting == 'newest'){
