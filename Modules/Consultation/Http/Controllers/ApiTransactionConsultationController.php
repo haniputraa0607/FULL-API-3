@@ -1946,16 +1946,22 @@ class ApiTransactionConsultationController extends Controller
             ]);
         }
 
-        $outlet_referral_code = $transactionConsultation['referral_code']??null;
-        if(empty($outlet_referral_code)){
+        if(!empty($transactionConsultation['referral_code'])){
+            $outlet = Outlet::where('outlet_referral_code', $transactionConsultation['referral_code'])->first();
+            $outlet_referral_code = $transactionConsultation['referral_code'];
+            $outlet = [
+                "outlet_name" => $outlet['outlet_name'],
+                "outlet_address" => $outlet['outlet_full_address'],
+                "outlet_referral_code" => '#'.$outlet_referral_code
+            ];
+        }else{
             $outlet_referral_code = !empty($transaction->outlet->outlet_referral_code) ? $transaction->outlet->outlet_referral_code : $transaction->outlet->outlet_code;
+            $outlet = [
+                "outlet_name" => $transaction->outlet->outlet_name,
+                "outlet_address" => $transaction->outlet->OutletFullAddress,
+                "outlet_referral_code" => '#'.$outlet_referral_code
+            ];
         }
-
-        $outlet = [
-            "outlet_name" => $transaction->outlet->outlet_name,
-            "outlet_address" => $transaction->outlet->OutletFullAddress,
-            "outlet_referral_code" => '#'.$outlet_referral_code
-        ];
 
         //get recomendation
         $recomendations = TransactionConsultationRecomendation::with('product')->where('id_transaction_consultation', $transactionConsultation['id_transaction_consultation'])->onlyDrug()->get();
