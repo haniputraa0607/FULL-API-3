@@ -43,6 +43,7 @@ Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent'
         Route::post('profile/update-password', 'ApiUser@profileUpdatePassword')->middleware(['decrypt_pin:password_old','decrypt_pin:password_new']);
         Route::post('profile/update', 'ApiUser@profileUpdate');
         Route::post('profile/delete', 'ApiUser@userDelete')->middleware('decrypt_pin');
+        Route::get('status/count', 'ApiUser@statusAllCount');
     });
 
     Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
