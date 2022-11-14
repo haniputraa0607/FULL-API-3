@@ -957,7 +957,9 @@ class ApiDoctorController extends Controller
 
     public function listAllOutletWithDoctor(Request $request)
     {
-        $outlets = Outlet::with('doctors')->where('outlet_status', 'active')->get();
+        $outlets = Outlet::with(['doctors' => function ($query) {
+            $query->where('is_active', 1);
+        }])->where('outlet_status', 'active')->get();
 
         if(empty($outlets)){
             return response()->json([
@@ -969,6 +971,7 @@ class ApiDoctorController extends Controller
         $result = [];
 
         foreach($outlets as $key => $outlet){
+            if (!$outlet->doctors->count()) continue;
             $outletData = [
                 'id_outlet' => $outlet->id_outlet,
                 'outlet_name' => $outlet->outlet_name,
