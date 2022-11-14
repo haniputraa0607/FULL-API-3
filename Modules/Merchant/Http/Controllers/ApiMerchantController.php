@@ -888,31 +888,66 @@ class ApiMerchantController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Type can not be empty']]);
         }
 
-        $result = [];
-        if($post['type'] == 'weekly'){
-            $result = $this->statisticsWeekly($checkMerchant['id_outlet']);
-        }elseif($post['type'] == 'monthly'){
-            $result = $this->statisticsMonthly($checkMerchant['id_outlet']);
-        }elseif($post['type'] == 'yearly'){
-            $result = $this->statisticsYearly($checkMerchant['id_outlet']);
+        $totalDays = 0;
+        $date = [];
+        if(!empty($post['start_date']) && !empty($post['end_date'])){
+            $start = strtotime(date('Y-m-d', strtotime($post['start_date'])));
+            $end = strtotime(date('Y-m-d', strtotime($post['end_date'])));
+            $datediff = $end - $start;
+            $totalDays = (int)round($datediff / (60 * 60 * 24));
+
+            $date = [
+                'start_date' => date('Y-m-d', strtotime($post['start_date'])),
+                'end_date' => date('Y-m-d', strtotime($post['end_date'])),
+                'total_days' => $totalDays
+            ];
         }
 
-        return response()->json(MyHelper::checkGet($result));
+        $result = [];
+        if($post['type'] == 'daily'){
+            $result = $this->statisticsDaily($checkMerchant['id_outlet'], $date);
+        }elseif($post['type'] == 'weekly'){
+            $result = $this->statisticsWeekly($checkMerchant['id_outlet'], $date);
+        }elseif($post['type'] == 'monthly'){
+            $result = $this->statisticsMonthly($checkMerchant['id_outlet'], $date);
+        }elseif($post['type'] == 'yearly'){
+            $result = $this->statisticsYearly($checkMerchant['id_outlet'], $date);
+        }
+
+        if(!empty($result['status'])){
+            return response()->json($result);
+        }else{
+            return response()->json(MyHelper::checkGet($result));
+        }
     }
 
-    public function statisticsWeekly($id_outlet){
-        $currentDate = date('Y-m-d');
-        $start = date('Y-m-d', strtotime('-6 day', strtotime($currentDate)));
-        $end = $currentDate;
+    public function statisticsDaily($id_outlet, $date){
+        if(!empty($date)){
+            $start = $date['start_date'];
+            $end = $date['end_date'];
+            $currentDate = $end;
+            $totalDays = $date['total_days'];
+        }else{
+            $currentDate = date('Y-m-d');
+            $totalDays = 6;
+            $start = date('Y-m-d', strtotime('-6 day', strtotime($currentDate)));
+            $end = $currentDate;
+        }
+
+        if($totalDays > 31){
+            return ['status' => 'fail', 'messages' => ['Range tanggal yang bisa dipilih maksimal 31 hari lalu']];
+        }
+
         $grandTotal = 0;
         $transactions = Transaction::where('id_outlet', $id_outlet)->where('transaction_status', 'Completed')
                     ->whereDate('transaction_date', '>=', $start)->whereDate('transaction_date', '<=', $end)
-                    ->select('transaction_date', 'transaction_grandtotal')->get()->toArray();
+                    ->select(DB::raw('DATE(transaction_date) as date'), DB::raw('SUM(transaction_grandtotal) AS value'))
+                    ->groupBy(DB::raw('DATE(transaction_date)'))->get()->toArray();
 
         $resultDate = [];
         foreach ($transactions as $trx){
-            $grandTotal = $grandTotal + $trx['transaction_grandtotal'];
-            $date = date('Y-m-d', strtotime($trx['transaction_date']));
+            $grandTotal = $grandTotal + (int)$trx['value'];
+            $date = date('Y-m-d', strtotime($trx['date']));
             if(!empty($resultDate[$date])){
                 $resultDate[$date] = $resultDate[$date] + 1;
             }else{
@@ -921,7 +956,7 @@ class ApiMerchantController extends Controller
         }
 
         $data = [];
-        for($i=0;$i<=6;$i++){
+        for($i=0;$i<=$totalDays;$i++){
             $date = date('Y-m-d', strtotime('-'.$i.' day', strtotime($currentDate)));
             $data[] = [
                 'key' => MyHelper::dateFormatInd($date, false, false),
@@ -937,13 +972,85 @@ class ApiMerchantController extends Controller
         return $result;
     }
 
-    public function statisticsMonthly($id_outlet){
+    public function statisticsWeekly($id_outlet, $date){
+        if(!empty($date)){
+            $start = $date['start_date'];
+            $end = $date['end_date'];
+            $currentDate = $end;
+        }else{
+            $currentDate = date('Y-m-d');
+            $start = date('Y-m-d', strtotime('-2 months', strtotime($currentDate)));
+            $end = $currentDate;
+        }
+
+        $datediff = strtotime($end) - strtotime($start);
+        $totalWeek = (int)round($datediff / 604800);
+
+        if(($datediff / 604800) >= 9){
+            return ['status' => 'fail', 'messages' => ['Range tanggal yang bisa dipilih maksimal 2 bulan lalu']];
+        }
+
+        $grandTotal = 0;
+        $transactions = Transaction::where('id_outlet', $id_outlet)->where('transaction_status', 'Completed')
+            ->whereDate('transaction_date', '>=', $start)->whereDate('transaction_date', '<=', $end)
+            ->select(DB::raw('DATE(transaction_date) as date'), DB::raw('SUM(transaction_grandtotal) AS value'))
+            ->groupBy(DB::raw('DATE(transaction_date)'))->get()->toArray();
+
+        $resultDate = [];
+        foreach ($transactions as $trx){
+            $grandTotal = $grandTotal + (int)$trx['value'];
+            $date = date("Y-m-d", strtotime('monday this week', strtotime($trx['date'])));
+            if(!empty($resultDate[$date])){
+                $resultDate[$date] = $resultDate[$date] + 1;
+            }else{
+                $resultDate[$date] = 1;
+            }
+        }
+
+        $data = [];
+        for($i=0;$i<$totalWeek;$i++){
+            $date = date('Y-m-d', strtotime('-'.$i.' week', strtotime($currentDate)));
+            $date = date("Y-m-d", strtotime('monday this week', strtotime($date)));
+            $data[] = [
+                'key' => MyHelper::dateFormatInd($date, false, false),
+                'value' => $resultDate[$date]??0
+            ];
+        }
+
+        $result = [
+            'revenue_text' => 'Pendapatan '.MyHelper::dateFormatInd($start, false, false).' sampai '.MyHelper::dateFormatInd($end, false, false),
+            'revenue_value' => 'Rp '.number_format((int)$grandTotal,0,",","."),
+            'data' => $data
+        ];
+        return $result;
+    }
+
+    public function statisticsMonthly($id_outlet, $date){
+        if(!empty($date)){
+            $dateQuery = $date['end_date'];
+            $ts1 = strtotime($date['start_date']);
+            $ts2 = strtotime($date['end_date']);
+            $year1 = date('Y', $ts1);
+            $year2 = date('Y', $ts2);
+            $month1 = date('m', $ts1);
+            $month2 = date('m', $ts2);
+
+            $totalMonth = (($year2 - $year1) * 12) + ($month2 - $month1);
+        }else{
+            $dateQuery = date('Y-m-d');
+            $totalMonth = 12;
+        }
+
+        if($totalMonth > 12){
+            return ['status' => 'fail', 'messages' => ['Range tanggal yang bisa dipilih maksimal 12 bulan lalu']];
+        }
+
         $data = [];
         $grandTotal = 0;
         $start = '';
         $end = '';
-        for ($i = 1; $i <= 12; $i++) {
-            $date = date("Y-m-01", strtotime( date( 'Y-m-01' )." -$i months"));
+        for ($i = 0; $i <= $totalMonth; $i++) {
+            $date = date("Y-m-01", strtotime( $dateQuery." -$i months"));
             if($i==1){
                 $end = $date;
             }elseif($i==12){
@@ -954,13 +1061,14 @@ class ApiMerchantController extends Controller
 
             $month = date('m', strtotime($date));
             $year = date('Y', strtotime($date));
-            $value = MonthlyReportTrx::where('id_outlet', $id_outlet)
-                    ->where('trx_month', $month)
-                    ->where('trx_year', $year)->first();
-            $grandTotal = $grandTotal + (int)($value['trx_grand']??0);
+            $value = Transaction::where('id_outlet', $id_outlet)->where('transaction_status', 'Completed')
+                    ->whereMonth('transaction_date', $month)
+                    ->whereYear('transaction_date', $year)
+                    ->select(DB::raw('SUM(transaction_grandtotal) as value'), DB::raw('COUNT(id_transaction) as count'))->first();
+            $grandTotal = $grandTotal + (int)($value['value']??0);
             $data[] = [
                 'key' => $monthFormat,
-                'value' => (int)$value['trx_count']??0
+                'value' => (int)$value['count']??0
             ];
         }
 
@@ -977,20 +1085,30 @@ class ApiMerchantController extends Controller
         return $result;
     }
 
-    public function statisticsYearly($id_outlet){
-        $currentYear = date('Y');
+    public function statisticsYearly($id_outlet, $date){
+        if(!empty($date)){
+            $currentYear = date('Y', strtotime($date['end_date']));
+            $totalYear = (int)$currentYear - (int)date('Y', strtotime($date['start_date']));
+        }else{
+            $currentYear = date('Y');
+            $totalYear = 5;
+        }
+
+        if($totalYear > 5){
+            return ['status' => 'fail', 'messages' => ['Range tanggal yang bisa dipilih maksimal 5 tahun lalu']];
+        }
+
         $data = [];
         $grandTotal = 0;
-        for ($i = 1; $i <= 12; $i++) {
+        for ($i = 0; $i <= $totalYear; $i++) {
             $year = $currentYear-$i;
-            $value = MonthlyReportTrx::where('id_outlet', $id_outlet)
-                    ->where('trx_year', $year)->sum('trx_count');
-            $valueGrand = MonthlyReportTrx::where('id_outlet', $id_outlet)
-                ->where('trx_year', $year)->sum('trx_grand');
-            $grandTotal = $grandTotal + (int)$valueGrand;
+            $value = Transaction::where('id_outlet', $id_outlet)->where('transaction_status', 'Completed')
+                ->whereYear('transaction_date', $year)
+                ->select(DB::raw('SUM(transaction_grandtotal) as value'), DB::raw('COUNT(id_transaction) as count'))->first();
+            $grandTotal = $grandTotal + (int)($value['value']??0);
             $data[] = [
                 'key' => $year,
-                'value' => (int)$value
+                'value' => (int)$value['count']??0
             ];
         }
 

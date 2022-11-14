@@ -2052,6 +2052,22 @@ class ApiTransactionConsultationController extends Controller
         $date = Carbon::parse($user['birthday']);
         $now = Carbon::now();
         $user['age'] = $date->diffInYears($now);
+        $age = [];
+
+        if(!empty($user['gender'])){
+            $gender = ($user['gender'] == 'Female' ? 'Wanita':'Pria');
+            $gender = (empty($user['age']) ? 'Jenis Kelamin:'.$gender : 'Usia: '.$gender);
+            $age[] = $gender;
+        }
+
+        if(!empty($user['age'])){
+            $age[] = (empty($user['gender']) ? 'Usia: '.$user['age'].' Tahun' : $user['age'].' Tahun');
+        }
+
+        if(empty($age)){
+            $age[] = 'Umur: -';
+        }
+        $dataAge = implode(', ',$age);
 
         //get Transaction
         $transaction = Transaction::where('id_transaction', $transactionConsultation['id_transaction'])->first();
@@ -2109,8 +2125,7 @@ class ApiTransactionConsultationController extends Controller
         $templateProcessor->setValue('transaction_recipe_code', $transactionConsultation['recipe_code']);
         $templateProcessor->cloneBlock('block_items', 0, true, false, $items);
         $templateProcessor->setValue('customer_name', $user['name']);
-        $templateProcessor->setValue('customer_age', $user['age']);
-        $templateProcessor->setValue('customer_gender', $user['gender']);
+        $templateProcessor->setValue('age', $dataAge);
 
         if(!Storage::exists('receipt/docx')){
             Storage::makeDirectory('receipt/docx');
@@ -2169,6 +2184,22 @@ class ApiTransactionConsultationController extends Controller
         $date = Carbon::parse($user['birthday']);
         $now = Carbon::now();
         $user['age'] = $date->diffInYears($now);
+        $age = [];
+
+        if(!empty($user['gender'])){
+            $gender = ($user['gender'] == 'Female' ? 'Wanita':'Pria');
+            $gender = (empty($user['age']) ? 'Jenis Kelamin:'.$gender : 'Usia: '.$gender);
+            $age[] = $gender;
+        }
+
+        if(!empty($user['age'])){
+            $age[] = (empty($user['gender']) ? 'Usia: '.$user['age'].' Tahun' : $user['age'].' Tahun');
+        }
+
+        if(empty($age)){
+            $age[] = 'Umur: -';
+        }
+        $dataAge = implode(', ',$age);
 
         //get Transaction
         $transaction = Transaction::where('id_transaction', $transactionConsultation['id_transaction'])->first();
@@ -2226,8 +2257,7 @@ class ApiTransactionConsultationController extends Controller
         $templateProcessor->setValue('transaction_recipe_code', $transactionConsultation['recipe_code']);
         $templateProcessor->cloneBlock('block_items', 0, true, false, $items);
         $templateProcessor->setValue('customer_name', $user['name']);
-        $templateProcessor->setValue('customer_age', $user['age']);
-        $templateProcessor->setValue('customer_gender', $user['gender']);
+        $templateProcessor->setValue('age', $dataAge);
 
         if(!Storage::disk('public')->exists('receipt/docx')){
             Storage::disk('public')->makeDirectory('receipt/docx');

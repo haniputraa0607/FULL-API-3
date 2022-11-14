@@ -2,6 +2,8 @@
 
 namespace Modules\Users\Http\Controllers;
 
+use Modules\Merchant\Entities\Merchant;
+use App\Http\Models\TransactionConsultation;
 use App\Http\Models\UsersDeviceLogin;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -4103,5 +4105,85 @@ class ApiUser extends Controller
         }
 
         return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function statusAllCount(Request $request){
+        $idUser = $request->user()->id;
+
+        $typeConsultation = 'boolean';
+        $valueConsultation = false;
+        $consultation = TransactionConsultation::where('id_user', $idUser)->whereIn('consultation_status', ['ongoing', 'soon'])->count();
+        if($consultation > 0){
+            $typeConsultation = 'integer';
+            $valueConsultation = $consultation;
+        }
+
+        $typeNotification = 'boolean';
+        $valueNotification = false;
+        $notification = UserInbox::where('id_user', $idUser)->where('read', 0)->count();
+        if($notification > 0){
+            $typeNotification = 'integer';
+            $valueNotification = $notification;
+        }
+
+        $typeHistory = 'boolean';
+        $valueHistory = false;
+        $history = Transaction::where('id_user', $idUser)->whereIn('transaction_status', ['Unpaid','Pending'])->count();
+        if($history > 0){
+            $typeHistory = 'integer';
+            $valueHistory = $history;
+        }
+
+        $typeProfile = 'boolean';
+        $valueProfile = false;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        $idOutlet = $checkMerchant['id_outlet']??null;
+
+        $profile = Transaction::where('transaction_status', 'Pending')->where('id_outlet', $idOutlet)->count();
+        if($profile > 0){
+            $typeProfile = 'integer';
+            $valueProfile = $profile;
+        }
+
+        $res = [
+            'store' => [
+                'type' => 'boolean',
+                'value' => false
+            ],
+            'consultation' => [
+                'type' => $typeConsultation,
+                'value' => $valueConsultation
+            ],
+            'elearning' => [
+                'type' => 'boolean',
+                'value' => false
+            ],
+            'home' => [
+                'type' => 'boolean',
+                'value' => false
+            ],
+            'notification' => [
+                'type' => $typeNotification,
+                'value' => $valueNotification
+            ],
+            'history' => [
+                'type' => $typeHistory,
+                'value' => $valueHistory
+            ],
+            'profile' => [
+                'type' => $typeProfile,
+                'value' => $valueProfile
+            ],
+            'myoutlet' => [
+                'type' => $typeProfile,
+                'value' => $valueProfile
+            ],
+            'favorite' => [
+                'type' => 'boolean',
+                'value' => false
+            ],
+        ];
+
+        return response()->json(MyHelper::checkGet($res));
     }
 }
