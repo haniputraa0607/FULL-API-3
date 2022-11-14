@@ -1807,9 +1807,10 @@ class ApiProductController extends Controller
             $checkRecipe = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
                 ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product'])->first();
             $maxQty = ($checkRecipe['recipe_redemption_limit']??0) * ($checkRecipe['qty_product']??0);
+            $qtyCanBuy = $maxQty - $checkRecipe['qty_product_redeem'];
 
-            if(empty($checkRecipe) || (!empty($checkRecipe) && $checkRecipe['qty_product_redeem'] >= $maxQty)){
-                $product['can_buy_status'] = false;
+            if(!empty($checkRecipe) && $qtyCanBuy > 0){
+                $product['need_recipe_status'] = 0;
             }
         }
 
