@@ -903,10 +903,6 @@ class ApiMerchantController extends Controller
             ];
         }
 
-        if($totalDays > 31){
-            return response()->json(['status' => 'fail', 'messages' => ['Range tanggal yang bisa dipilih maksimal 31 hari lalu']]);
-        }
-
         $result = [];
         if($post['type'] == 'daily'){
             $result = $this->statisticsDaily($checkMerchant['id_outlet'], $date);
@@ -918,7 +914,11 @@ class ApiMerchantController extends Controller
             $result = $this->statisticsYearly($checkMerchant['id_outlet'], $date);
         }
 
-        return response()->json(MyHelper::checkGet($result));
+        if(!empty($result['status'])){
+            return response()->json($result);
+        }else{
+            return response()->json(MyHelper::checkGet($result));
+        }
     }
 
     public function statisticsDaily($id_outlet, $date){
@@ -932,6 +932,10 @@ class ApiMerchantController extends Controller
             $totalDays = 6;
             $start = date('Y-m-d', strtotime('-6 day', strtotime($currentDate)));
             $end = $currentDate;
+        }
+
+        if($totalDays > 31){
+            return ['status' => 'fail', 'messages' => ['Range tanggal yang bisa dipilih maksimal 31 hari lalu']];
         }
 
         $grandTotal = 0;
@@ -982,6 +986,10 @@ class ApiMerchantController extends Controller
         $datediff = strtotime($end) - strtotime($start);
         $totalWeek = (int)round($datediff / 604800);
 
+        if(($datediff / 604800) >= 9){
+            return ['status' => 'fail', 'messages' => ['Range tanggal yang bisa dipilih maksimal 2 bulan lalu']];
+        }
+
         $grandTotal = 0;
         $transactions = Transaction::where('id_outlet', $id_outlet)->where('transaction_status', 'Completed')
             ->whereDate('transaction_date', '>=', $start)->whereDate('transaction_date', '<=', $end)
@@ -1000,7 +1008,7 @@ class ApiMerchantController extends Controller
         }
 
         $data = [];
-        for($i=0;$i<=$totalWeek;$i++){
+        for($i=0;$i<$totalWeek;$i++){
             $date = date('Y-m-d', strtotime('-'.$i.' week', strtotime($currentDate)));
             $date = date("Y-m-d", strtotime('monday this week', strtotime($date)));
             $data[] = [
@@ -1020,15 +1028,28 @@ class ApiMerchantController extends Controller
     public function statisticsMonthly($id_outlet, $date){
         if(!empty($date)){
             $dateQuery = $date['end_date'];
+            $ts1 = strtotime($date['start_date']);
+            $ts2 = strtotime($date['end_date']);
+            $year1 = date('Y', $ts1);
+            $year2 = date('Y', $ts2);
+            $month1 = date('m', $ts1);
+            $month2 = date('m', $ts2);
+
+            $totalMonth = (($year2 - $year1) * 12) + ($month2 - $month1);
         }else{
             $dateQuery = date('Y-m-d');
+            $totalMonth = 12;
+        }
+
+        if($totalMonth > 12){
+            return ['status' => 'fail', 'messages' => ['Range tanggal yang bisa dipilih maksimal 12 bulan lalu']];
         }
 
         $data = [];
         $grandTotal = 0;
         $start = '';
         $end = '';
-        for ($i = 1; $i <= 6; $i++) {
+        for ($i = 0; $i <= $totalMonth; $i++) {
             $date = date("Y-m-01", strtotime( $dateQuery." -$i months"));
             if($i==1){
                 $end = $date;
@@ -1067,13 +1088,19 @@ class ApiMerchantController extends Controller
     public function statisticsYearly($id_outlet, $date){
         if(!empty($date)){
             $currentYear = date('Y', strtotime($date['end_date']));
+            $totalYear = (int)$currentYear - (int)date('Y', strtotime($date['start_date']));
         }else{
             $currentYear = date('Y');
+            $totalYear = 5;
+        }
+
+        if($totalYear > 5){
+            return ['status' => 'fail', 'messages' => ['Range tanggal yang bisa dipilih maksimal 5 tahun lalu']];
         }
 
         $data = [];
         $grandTotal = 0;
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i <= $totalYear; $i++) {
             $year = $currentYear-$i;
             $value = Transaction::where('id_outlet', $id_outlet)->where('transaction_status', 'Completed')
                 ->whereYear('transaction_date', $year)
