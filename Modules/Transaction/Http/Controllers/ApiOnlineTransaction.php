@@ -2627,19 +2627,6 @@ class ApiOnlineTransaction extends Controller
                         $product = $product->toArray();
                     }
 
-                    if ($product['need_recipe_status']) {
-                        if (!empty($from_cart)) {
-                            $errorMsg[] = 'Produk ' . $product['product_name'] . ' membutuhkan resep';
-                            $needRecipeData = [
-                                'id_product' => $product['id_product'],
-                                'product_name' => $product['product_name'],
-                                'product_code' => $product['product_code']
-                            ];
-                            unset($value['items'][$key]);
-                            continue;
-                        }
-                    }
-
                     $product['product_price'] = 0;
                     $productGlobalPrice = ProductGlobalPrice::where('id_product', $item['id_product'])->first();
                     if ($productGlobalPrice) {
@@ -2719,6 +2706,16 @@ class ApiOnlineTransaction extends Controller
                         if (empty($checkRecipe)) {
                             $canBuyStatus = false;
                             $error = 'Produk membutuhkan resep, silahkan lakukan konsultasi terlebih dahulu';
+                            if (!empty($from_cart)) {
+                                $errorMsg[] = 'Produk ' . $product['product_name'] . ' membutuhkan resep';
+                                $needRecipeData = [
+                                    'id_product' => $product['id_product'],
+                                    'product_name' => $product['product_name'],
+                                    'product_code' => $product['product_code']
+                                ];
+                                unset($value['items'][$key]);
+                                continue;
+                            }
                         } else {
                             $maxQty = ($checkRecipe['recipe_redemption_limit'] ?? 0) * ($checkRecipe['qty_product'] ?? 0);
                             $qtyCanBuy = $maxQty - $checkRecipe['qty_product_redeem'];
@@ -2726,6 +2723,16 @@ class ApiOnlineTransaction extends Controller
                             if ($item['qty'] > $qtyCanBuy) {
                                 $canBuyStatus = false;
                                 $error = 'Produk membutuhkan resep, silahkan lakukan konsultasi terlebih dahulu';
+                                if (!empty($from_cart)) {
+                                    $errorMsg[] = 'Produk ' . $product['product_name'] . ' membutuhkan resep';
+                                    $needRecipeData = [
+                                        'id_product' => $product['id_product'],
+                                        'product_name' => $product['product_name'],
+                                        'product_code' => $product['product_code']
+                                    ];
+                                    unset($value['items'][$key]);
+                                    continue;
+                                }
                             }
                         }
                     }
