@@ -1333,7 +1333,8 @@ class ApiMerchantController extends Controller
         }
 
         $res = [
-            'current_balance' => 'Rp ' . number_format($currentBalance, 0, ",", "."),
+            'current_balance' => (int)$currentBalance,
+            'current_balance_text' => 'Rp ' . number_format($currentBalance, 0, ",", "."),
             'history' => $history
         ];
 
