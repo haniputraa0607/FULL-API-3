@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class ManualPayment
- * 
+ *
  * @property int $id_manual_payment
  * @property string $is_virtual_account
  * @property string $manual_payment_name
@@ -20,36 +20,36 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $account_name
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \Illuminate\Database\Eloquent\Collection $manual_payment_methods
  *
  * @package App\Models
  */
 class ManualPayment extends Model
 {
-	protected $primaryKey = 'id_manual_payment';
+    protected $primaryKey = 'id_manual_payment';
 
-	protected $appends  = ['manual_payment_logo_url'];
+    protected $appends  = ['manual_payment_logo_url'];
 
-	protected $fillable = [
-		'is_virtual_account',
-		'manual_payment_name',
-		'manual_payment_logo',
-		'account_number',
-		'account_name'
-	];
+    protected $fillable = [
+        'is_virtual_account',
+        'manual_payment_name',
+        'manual_payment_logo',
+        'account_number',
+        'account_name'
+    ];
 
-	public function manual_payment_methods()
-	{
-		return $this->hasMany(\App\Http\Models\ManualPaymentMethod::class, 'id_manual_payment');
-	}
+    public function manual_payment_methods()
+    {
+        return $this->hasMany(\App\Http\Models\ManualPaymentMethod::class, 'id_manual_payment');
+    }
 
-	public function getManualPaymentLogoUrlAttribute() {
-		if (empty($this->manual_payment_logo)) {
-            return config('url.storage_url_api').'img/logo.jpg';
+    public function getManualPaymentLogoUrlAttribute()
+    {
+        if (empty($this->manual_payment_logo)) {
+            return config('url.storage_url_api') . 'img/logo.jpg';
+        } else {
+            return config('url.storage_url_api') . $this->manual_payment_logo;
         }
-        else {
-            return config('url.storage_url_api').$this->manual_payment_logo;
-        }
-	}
+    }
 }

@@ -10,9 +10,9 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
 
     Route::post('delete', ['middleware' => 'feature_control:158', 'uses' => 'ApiBrandController@destroy']);
     Route::group(['prefix' => 'delete'], function () {
-        Route::post('outlet', ['middleware' => 'feature_control:158', 'uses' =>'ApiBrandController@destroyOutlet']);
-        Route::post('product', ['middleware' => 'feature_control:158', 'uses' =>'ApiBrandController@destroyProduct']);
-        Route::post('deals', ['middleware' => 'feature_control:158', 'uses' =>'ApiBrandController@destroyDeals']);
+        Route::post('outlet', ['middleware' => 'feature_control:158', 'uses' => 'ApiBrandController@destroyOutlet']);
+        Route::post('product', ['middleware' => 'feature_control:158', 'uses' => 'ApiBrandController@destroyProduct']);
+        Route::post('deals', ['middleware' => 'feature_control:158', 'uses' => 'ApiBrandController@destroyDeals']);
     });
     Route::post('outlet/list', 'ApiBrandController@outletList');
     Route::post('product/list', 'ApiBrandController@productList');

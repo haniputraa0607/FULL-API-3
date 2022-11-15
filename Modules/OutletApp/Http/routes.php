@@ -1,7 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:outlet-app', 'outlet_device_location', 'log_activities_outlet_apps'], 'prefix' => 'api/outletapp', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()
-{
+Route::group(['middleware' => ['auth:outlet-app', 'outlet_device_location', 'log_activities_outlet_apps'], 'prefix' => 'api/outletapp', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function () {
     Route::any('/update-token', 'ApiOutletApp@updateToken');
     Route::any('/delete-token', 'ApiOutletApp@deleteToken');
     Route::any('/order', 'ApiOutletApp@listOrder');
@@ -44,8 +43,7 @@ Route::group(['middleware' => ['auth:outlet-app', 'outlet_device_location', 'log
     Route::post('product-plastic/sold-out', 'ApiOutletApp@productPlasticSoldOut')->middleware('validateUserOutlet:Update Stock Status');
 });
 
-Route::group(['middleware' => ['auth_client', 'auth_pos'], 'prefix' => 'api/pos', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()
-{
+Route::group(['middleware' => ['auth_client', 'auth_pos'], 'prefix' => 'api/pos', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function () {
     Route::any('/update-token', 'ApiOutletApp@updateToken');
     Route::any('/delete-token', 'ApiOutletApp@deleteToken');
     Route::any('/order', 'ApiOutletApp@listOrder');
@@ -88,8 +86,7 @@ Route::group(['middleware' => ['auth_client', 'auth_pos'], 'prefix' => 'api/pos'
     Route::post('product-plastic/sold-out', 'ApiOutletApp@productPlasticSoldOut')->middleware('validateUserOutlet:Update Stock Status');
 });
 
-Route::group(['prefix' => 'api/outletapp', 'middleware' => 'log_activities_outlet_apps', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()
-{
+Route::group(['prefix' => 'api/outletapp', 'middleware' => 'log_activities_outlet_apps', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function () {
     Route::post('order/detail/view', 'ApiOutletApp@detailWebviewPage');
-    Route::any('splash','ApiOutletApp@splash');
+    Route::any('splash', 'ApiOutletApp@splash');
 });

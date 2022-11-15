@@ -6,16 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class LogOvoDeals extends Model
 {
-	/**
-	 * The database name used by the model.
-	 *
-	 * @var string
-	 */
-	protected $connection = 'mysql2';
-	
+    /**
+     * The database name used by the model.
+     *
+     * @var string
+     */
+    protected $connection = 'mysql2';
+
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'log_ovo_deals';

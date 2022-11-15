@@ -187,7 +187,7 @@ class Kernel extends ConsoleKernel
         //$schedule->call('Modules\OutletApp\Http\Controllers\ApiOutletApp@cronDriverNotFound')->cron('*/1 * * * *');
 
         /**
-         * Notif Order not Received/Rejected 
+         * Notif Order not Received/Rejected
          * run every minute
          */
         //$schedule->call('Modules\OutletApp\Http\Controllers\ApiOutletApp@cronNotReceived')->everyMinute();
@@ -236,7 +236,7 @@ class Kernel extends ConsoleKernel
         $schedule->call('Modules\Consultation\Http\Controllers\ApiTransactionConsultationController@cronAutoEndConsultation')->everyMinute();
 
         /**
-         * Update doctor status to online or offline 
+         * Update doctor status to online or offline
          * run every 5 minute
          */
         $schedule->call('Modules\Doctor\Http\Controllers\ApiDoctorController@cronUpdateDoctorStatus')->everyMinute();
@@ -255,7 +255,7 @@ class Kernel extends ConsoleKernel
      */
     protected function commands()
     {
-        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__ . '/Commands');
 
         require base_path('routes/console.php');
     }

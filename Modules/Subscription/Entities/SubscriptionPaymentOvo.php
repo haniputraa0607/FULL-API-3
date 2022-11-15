@@ -11,7 +11,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class SubscriptionPaymentOvo
- * 
+ *
  * @property int $id_subscription_payment_ovo
  * @property int $id_subscription
  * @property int $amount
@@ -30,46 +30,46 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  * @property string $payment_type
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \Modules\Subscription\Entities\Subscription $subscription
  *
  * @package Modules\Subscription\Entities
  */
 class SubscriptionPaymentOvo extends Eloquent
 {
-	protected $primaryKey = 'id_subscription_payment_ovo';
+    protected $primaryKey = 'id_subscription_payment_ovo';
 
-	protected $casts = [
-		'id_subscription' => 'int',
-		'amount' => 'int',
-		'cash_used' => 'int',
-		'ovo_points_earned' => 'int',
-		'cash_balance' => 'int',
-		'full_name' => 'int',
-		'ovo_points_used' => 'int',
-		'ovo_points_balance' => 'int'
-	];
+    protected $casts = [
+        'id_subscription' => 'int',
+        'amount' => 'int',
+        'cash_used' => 'int',
+        'ovo_points_earned' => 'int',
+        'cash_balance' => 'int',
+        'full_name' => 'int',
+        'ovo_points_used' => 'int',
+        'ovo_points_balance' => 'int'
+    ];
 
-	protected $fillable = [
-		'id_subscription',
-		'amount',
-		'trace_number',
-		'approval_code',
-		'response_code',
-		'batch_no',
-		'phone',
-		'ovoid',
-		'cash_used',
-		'ovo_points_earned',
-		'cash_balance',
-		'full_name',
-		'ovo_points_used',
-		'ovo_points_balance',
-		'payment_type'
-	];
+    protected $fillable = [
+        'id_subscription',
+        'amount',
+        'trace_number',
+        'approval_code',
+        'response_code',
+        'batch_no',
+        'phone',
+        'ovoid',
+        'cash_used',
+        'ovo_points_earned',
+        'cash_balance',
+        'full_name',
+        'ovo_points_used',
+        'ovo_points_balance',
+        'payment_type'
+    ];
 
-	public function subscription()
-	{
-		return $this->belongsTo(\Modules\Subscription\Entities\Subscription::class, 'id_subscription');
-	}
+    public function subscription()
+    {
+        return $this->belongsTo(\Modules\Subscription\Entities\Subscription::class, 'id_subscription');
+    }
 }

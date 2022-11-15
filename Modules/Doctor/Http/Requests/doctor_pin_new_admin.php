@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class doctor_pin_new_admin extends FormRequest
+class DoctorPinNewAdmin extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,10 +23,10 @@ class doctor_pin_new_admin extends FormRequest
      *
      * @return array
      */
-	public function rules()
-	{
-		return [
-			'password_new'	=> 'required|string|min:8|max:20|confirmed',
+    public function rules()
+    {
+        return [
+            'password_new'  => 'required|string|min:8|max:20|confirmed',
         ];
     }
 

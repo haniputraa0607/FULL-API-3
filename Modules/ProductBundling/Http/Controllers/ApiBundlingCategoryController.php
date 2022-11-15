@@ -19,7 +19,7 @@ class ApiBundlingCategoryController extends Controller
      * @return Response
      */
 
-    function listCategory(Request $request)
+    public function listCategory(Request $request)
     {
         $post = $request->json()->all();
 
@@ -37,12 +37,11 @@ class ApiBundlingCategoryController extends Controller
         return response()->json(MyHelper::checkGet($list));
     }
 
-    function getData($post = [])
+    public function getData($post = [])
     {
         $category = BundlingCategory::with(['parentCategory'])->select('*');
 
         if (isset($post['id_parent_category'])) {
-
             if (is_null($post['id_parent_category']) || $post['id_parent_category'] == 0) {
                 $category->master();
             } else {
@@ -65,7 +64,7 @@ class ApiBundlingCategoryController extends Controller
         $post = $request->json()->all();
         $bundlingCategory = BundlingCategory::orderBy('bundling_category_order', 'asc');
 
-        if(isset($post['id_parent_category'])){
+        if (isset($post['id_parent_category'])) {
             $bundlingCategory = $bundlingCategory->where('id_parent_category', $post['id_parent_category']);
         }
 
@@ -73,7 +72,7 @@ class ApiBundlingCategoryController extends Controller
         return MyHelper::checkGet($bundlingCategory);
     }
 
-    function checkInputCategory($post = [], $type = "update")
+    public function checkInputCategory($post = [], $type = "update")
     {
         $data = [];
 
@@ -83,7 +82,7 @@ class ApiBundlingCategoryController extends Controller
 
         if (isset($post['bundling_category_description'])) {
             $data['bundling_category_description'] = $post['bundling_category_description'];
-        }else{
+        } else {
             $data['bundling_category_description'] = "";
         }
 
@@ -96,7 +95,7 @@ class ApiBundlingCategoryController extends Controller
         return $data;
     }
 
-    function create(Request $request)
+    public function create(Request $request)
     {
 
         $post = $request->json()->all();
@@ -114,7 +113,7 @@ class ApiBundlingCategoryController extends Controller
         return response()->json(MyHelper::checkCreate($create));
     }
 
-    function update(Request $request)
+    public function update(Request $request)
     {
         // info
         $dataCategory = BundlingCategory::where('id_bundling_category', $request->json('id_bundling_category'))->get()->toArray();
@@ -139,7 +138,7 @@ class ApiBundlingCategoryController extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    function delete(Request $request)
+    public function delete(Request $request)
     {
 
         $id = $request->json('id_bundling_category');
@@ -157,7 +156,7 @@ class ApiBundlingCategoryController extends Controller
         }
     }
 
-    function checkDeleteParent($id)
+    public function checkDeleteParent($id)
     {
         $check = BundlingCategory::where('id_parent_category', $id)->count();
 
@@ -168,7 +167,7 @@ class ApiBundlingCategoryController extends Controller
         }
     }
 
-    function checkDeleteBundling($id)
+    public function checkDeleteBundling($id)
     {
         $check = Bundling::where('id_bundling_category', $id)->count();
 

@@ -22,11 +22,10 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::get('delete/{id}', 'PaymentMethodController@destroy');
 
     //outlet different payment method
-    Route::group(['prefix' => 'outlet'], function(){
+    Route::group(['prefix' => 'outlet'], function () {
         Route::post('different-payment-method/list/{id}', 'PaymentMethodController@getDifferentPaymentMethod');
         Route::post('different-payment-method/update', 'PaymentMethodController@updateDifferentPaymentMethod');
     });
-    
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'payment-method-category'], function () {

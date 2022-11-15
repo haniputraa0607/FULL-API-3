@@ -16,8 +16,8 @@ class Create extends FormRequest
     public function rules()
     {
         $rules = [
-            'is_online'        			=> 'nullable',
-            'is_offline'       			=> 'nullable',
+            'is_online'                 => 'nullable',
+            'is_offline'                => 'nullable',
             'deals_type'                => 'required|in:Deals,Hidden,Point,Spin,Subscription,WelcomeVoucher,Promotion,Quest',
             'deals_voucher_type'        => 'nullable|in:Auto generated,List Vouchers,Unlimited',
             'deals_promo_id'            => 'nullable',
@@ -28,7 +28,7 @@ class Create extends FormRequest
             'deals_image'               => '',
             'deals_video'               => '',
             'id_product'                => 'nullable|integer',
-            'deals_start'               => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"|after_or_equal:'.date('Y-m-d').'',
+            'deals_start'               => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"|after_or_equal:' . date('Y-m-d') . '',
             'deals_end'                 => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"|after_or_equal:deals_start',
             'deals_publish_start'       => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"',
             'deals_publish_end'         => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"|after_or_equal:deals_publish_start',
@@ -42,11 +42,11 @@ class Create extends FormRequest
             'id_outlet'                 => 'sometimes|array'
         ];
 
-        if( $this->deals_voucher_start && in_array($this->deals_type, ['WelcomeVoucher', 'Deals']) ){
-        	$rules['deals_voucher_start']	= 'nullable|date|date_format:"Y-m-d H:i:s"|after:deals_start';
-        	$rules['deals_voucher_expired']	= 'nullable|date|date_format:"Y-m-d H:i:s"|after:deals_voucher_start';
-        }else{
-        	$rules['deals_voucher_expired']	= 'nullable|date|date_format:"Y-m-d H:i:s"|after:'.date('Y-m-d H:i:s').'';
+        if ($this->deals_voucher_start && in_array($this->deals_type, ['WelcomeVoucher', 'Deals'])) {
+            $rules['deals_voucher_start']   = 'nullable|date|date_format:"Y-m-d H:i:s"|after:deals_start';
+            $rules['deals_voucher_expired'] = 'nullable|date|date_format:"Y-m-d H:i:s"|after:deals_voucher_start';
+        } else {
+            $rules['deals_voucher_expired'] = 'nullable|date|date_format:"Y-m-d H:i:s"|after:' . date('Y-m-d H:i:s') . '';
         }
 
         return $rules;
@@ -73,12 +73,12 @@ class Create extends FormRequest
     }
 
     public function attributes()
-	{
-		$attributes = [
-            'deals_voucher_expired'		=> 'Voucher Expiry',
-            'deals_voucher_start'		=> 'Voucher Start Date'
+    {
+        $attributes = [
+            'deals_voucher_expired'     => 'Voucher Expiry',
+            'deals_voucher_start'       => 'Voucher Start Date'
         ];
 
-	    return $attributes;
-	}
+        return $attributes;
+    }
 }

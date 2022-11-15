@@ -11,13 +11,13 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class DealsPromotionOutletGroup
- * 
+ *
  * @property int $id_deals_promotion_outlet_group
  * @property int $id_deals
  * @property int $id_outlet_group
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \App\Models\DealsPromotionTemplate $deals_promotion_template
  * @property \App\Models\OutletGroup $outlet_group
  *
@@ -25,25 +25,25 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  */
 class DealsPromotionOutletGroup extends Eloquent
 {
-	protected $primaryKey = 'id_deals_promotion_outlet_group';
+    protected $primaryKey = 'id_deals_promotion_outlet_group';
 
-	protected $casts = [
-		'id_deals' => 'int',
-		'id_outlet_group' => 'int'
-	];
+    protected $casts = [
+        'id_deals' => 'int',
+        'id_outlet_group' => 'int'
+    ];
 
-	protected $fillable = [
-		'id_deals',
-		'id_outlet_group'
-	];
+    protected $fillable = [
+        'id_deals',
+        'id_outlet_group'
+    ];
 
-	public function deals_promotion_template()
-	{
-		return $this->belongsTo(\Modules\Promotion\Entities\DealsPromotionTemplate::class, 'id_deals');
-	}
+    public function deals_promotion_template()
+    {
+        return $this->belongsTo(\Modules\Promotion\Entities\DealsPromotionTemplate::class, 'id_deals');
+    }
 
-	public function outlet_group()
-	{
-		return $this->belongsTo(\Modules\Outlet\Entities\OutletGroup::class, 'id_outlet_group');
-	}
+    public function outlet_group()
+    {
+        return $this->belongsTo(\Modules\Outlet\Entities\OutletGroup::class, 'id_outlet_group');
+    }
 }

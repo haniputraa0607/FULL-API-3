@@ -16,7 +16,7 @@ class MyVoucherStatus extends FormRequest
     public function rules()
     {
         return [
-            'id_deals_user'	=> 'required'
+            'id_deals_user' => 'required'
         ];
     }
 

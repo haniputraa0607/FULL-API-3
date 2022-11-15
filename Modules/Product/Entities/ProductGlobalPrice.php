@@ -15,7 +15,8 @@ class ProductGlobalPrice extends Model
         'updated_at'
     ];
 
-    public function product(){
+    public function product()
+    {
         return $this->belongsTo(App\Http\Models\Product::class, 'id_product');
     }
 }

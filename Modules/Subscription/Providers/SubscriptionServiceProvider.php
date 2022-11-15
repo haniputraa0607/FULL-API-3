@@ -39,10 +39,11 @@ class SubscriptionServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('subscription.php'),
+            __DIR__ . '/../Config/config.php' => config_path('subscription.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'subscription'
+            __DIR__ . '/../Config/config.php',
+            'subscription'
         );
     }
 
@@ -55,11 +56,11 @@ class SubscriptionServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/subscription');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/subscription';
@@ -78,7 +79,7 @@ class SubscriptionServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'subscription');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'subscription');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'subscription');
         }
     }
 

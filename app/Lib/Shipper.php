@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Lib;
 
 use Guzzle\Http\EntityBody;
@@ -8,9 +9,10 @@ use Guzzle\Http\Exception\ServerErrorResponseException;
 use GuzzleHttp\Client;
 use Modules\Transaction\Entities\LogShipper;
 
-class Shipper {
-
-    public static function sendRequest($subject, $method, $url, $body){
+class Shipper
+{
+    public static function sendRequest($subject, $method, $url, $body)
+    {
         $jsonBody = json_encode($body);
 
         $header = [
@@ -22,13 +24,13 @@ class Shipper {
             'headers' => $header
         ]);
 
-        $urlApi = config('deliveryshipper.base_url').$url;
+        $urlApi = config('deliveryshipper.base_url') . $url;
 
         try {
             $output = $client->request($method, $urlApi, ['body' => $jsonBody]);
             $output = json_decode($output->getBody(), true);
 
-            $dataLog= [
+            $dataLog = [
                 'subject' => $subject,
                 'request' => $jsonBody,
                 'request_url' => $urlApi,
@@ -36,15 +38,15 @@ class Shipper {
             ];
             LogShipper::create($dataLog);
             return ['status' => 'success', 'response' => $output];
-        }catch (\GuzzleHttp\Exception\RequestException $e) {
-            $dataLog= [
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            $dataLog = [
                 'subject' => $subject,
                 'request' => $jsonBody,
                 'request_url' => $urlApi
             ];
 
-            try{
-                if($e->getResponse()){
+            try {
+                if ($e->getResponse()) {
                     $response = $e->getResponse()->getBody()->getContents();
                     $dataLog['response'] = $response;
                     LogShipper::create($dataLog);
@@ -53,8 +55,7 @@ class Shipper {
                 $dataLog['response'] = 'Check your internet connection.';
                 LogShipper::create($dataLog);
                 return ['status' => 'fail', 'response' => ['Check your internet connection.']];
-            }
-            catch(Exception $e){
+            } catch (Exception $e) {
                 $dataLog['response'] = 'Check your internet connection.';
                 LogShipper::create($dataLog);
                 return ['status' => 'fail', 'response' => ['Check your internet connection.']];
@@ -62,14 +63,15 @@ class Shipper {
         }
     }
 
-    public static function listPrice($data, $listAvailable){
+    public static function listPrice($data, $listAvailable)
+    {
         $logo = [];
         $dtRate = [];
 
-        foreach($data['pricings']??[] as $value){
+        foreach ($data['pricings'] ?? [] as $value) {
             $logisticCode = strtolower($value['logistic']['code']);
             $rateType = strtolower($value['rate']['type']);
-            $dtRate[$logisticCode.'_'.$rateType] = [
+            $dtRate[$logisticCode . '_' . $rateType] = [
                 'price' => $value['final_price'],
                 'rate_id' => $value['rate']['id'],
                 'insurance_fee' => $value['insurance_fee'],
@@ -81,19 +83,19 @@ class Shipper {
         }
 
         $finalResult = [];
-        foreach ($listAvailable as $delivery){
-            if(isset($logo[$delivery['delivery_method']])){
+        foreach ($listAvailable as $delivery) {
+            if (isset($logo[$delivery['delivery_method']])) {
                 $service = [];
-                foreach ($delivery['service'] as $s){
+                foreach ($delivery['service'] as $s) {
                     $codeSearch = $s['code'];
-                    if(isset($dtRate[$codeSearch])){
+                    if (isset($dtRate[$codeSearch])) {
                         $min = $dtRate[$codeSearch]['min_day'];
                         $max = $dtRate[$codeSearch]['max_day'];
                         $estimated = '';
-                        if($min == $max){
-                            $estimated = $max.' hari';
-                        }else{
-                            $estimated = $min.'-'.$max.' hari';
+                        if ($min == $max) {
+                            $estimated = $max . ' hari';
+                        } else {
+                            $estimated = $min . '-' . $max . ' hari';
                         }
 
                         $service[] = [
@@ -112,7 +114,7 @@ class Shipper {
                 $finalResult[] = [
                     "delivery_name" => $delivery['delivery_name'],
                     "delivery_method" => $delivery['delivery_method'],
-                    "logo" => empty($logo[$delivery['delivery_method']]) ? $delivery['logo']: $logo[$delivery['delivery_method']],
+                    "logo" => empty($logo[$delivery['delivery_method']]) ? $delivery['logo'] : $logo[$delivery['delivery_method']],
                     "service" => $service
                 ];
             }
@@ -121,4 +123,3 @@ class Shipper {
         return $finalResult;
     }
 }
-?>

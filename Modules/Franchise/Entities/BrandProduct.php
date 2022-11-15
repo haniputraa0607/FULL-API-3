@@ -17,7 +17,8 @@ class BrandProduct extends Model
         'id_product_category'
     ];
 
-    public function products(){
+    public function products()
+    {
         return $this->belongsTo(\App\Http\Models\Product::class, 'id_product', 'id_product');
     }
 }

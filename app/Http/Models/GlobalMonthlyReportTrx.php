@@ -6,10 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class GlobalMonthlyReportTrx extends Model
 {
-	protected $connection = 'mysql';
+    protected $connection = 'mysql';
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'global_monthly_report_trx';

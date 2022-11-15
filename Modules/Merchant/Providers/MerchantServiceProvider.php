@@ -39,10 +39,11 @@ class MerchantServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('merchant.php'),
+            __DIR__ . '/../Config/config.php' => config_path('merchant.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'merchant'
+            __DIR__ . '/../Config/config.php',
+            'merchant'
         );
     }
 
@@ -55,11 +56,11 @@ class MerchantServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/merchant');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/merchant';
@@ -78,7 +79,7 @@ class MerchantServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'merchant');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'merchant');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'merchant');
         }
     }
 

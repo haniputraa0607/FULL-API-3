@@ -11,6 +11,6 @@
 |
 */
 
-Route::prefix('transactionqueue')->group(function() {
+Route::prefix('transactionqueue')->group(function () {
     Route::get('/', 'TransactionQueueController@index');
 });

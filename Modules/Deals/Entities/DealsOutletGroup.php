@@ -11,13 +11,13 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class DealsOutletGroup
- * 
+ *
  * @property int $id_deals_outlet_group
  * @property int $id_deals
  * @property int $id_outlet_group
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \App\Models\Deal $deal
  * @property \App\Models\OutletGroup $outlet_group
  *
@@ -25,25 +25,25 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  */
 class DealsOutletGroup extends Eloquent
 {
-	protected $primaryKey = 'id_deals_outlet_group';
+    protected $primaryKey = 'id_deals_outlet_group';
 
-	protected $casts = [
-		'id_deals' => 'int',
-		'id_outlet_group' => 'int'
-	];
+    protected $casts = [
+        'id_deals' => 'int',
+        'id_outlet_group' => 'int'
+    ];
 
-	protected $fillable = [
-		'id_deals',
-		'id_outlet_group'
-	];
+    protected $fillable = [
+        'id_deals',
+        'id_outlet_group'
+    ];
 
-	public function deal()
-	{
-		return $this->belongsTo(\Modules\Deals\Entities\Deal::class, 'id_deals');
-	}
+    public function deal()
+    {
+        return $this->belongsTo(\Modules\Deals\Entities\Deal::class, 'id_deals');
+    }
 
-	public function outlet_group()
-	{
-		return $this->belongsTo(\Modules\Outlet\Entities\OutletGroup::class, 'id_outlet_group');
-	}
+    public function outlet_group()
+    {
+        return $this->belongsTo(\Modules\Outlet\Entities\OutletGroup::class, 'id_outlet_group');
+    }
 }

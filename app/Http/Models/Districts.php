@@ -11,13 +11,13 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class City
- * 
+ *
  * @property int $id_city
  * @property int $id_province
  * @property string $city_name
  * @property string $city_type
  * @property string $city_postal_code
- * 
+ *
  * @property \App\Http\Models\Province $province
  * @property \Illuminate\Database\Eloquent\Collection $outlets
  * @property \Illuminate\Database\Eloquent\Collection $transaction_shipments
@@ -29,12 +29,12 @@ use Illuminate\Database\Eloquent\Model;
 class Districts extends Model
 {
     protected $table = 'districts';
-	protected $primaryKey = 'id_district';
-	public $timestamps = false;
+    protected $primaryKey = 'id_district';
+    public $timestamps = false;
 
-	protected $fillable = [
-		'id_district_external',
+    protected $fillable = [
+        'id_district_external',
         'id_city',
-		'district_name'
-	];
+        'district_name'
+    ];
 }

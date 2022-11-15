@@ -11,13 +11,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class BankMethod extends Model
 {
-	protected $table = 'bank_methods';
+    protected $table = 'bank_methods';
 
-	protected $primaryKey = 'id_bank_method';
-	
-	protected $fillable   = [
-		'method',
-		'created_at',
-		'updated_at'
-	];
+    protected $primaryKey = 'id_bank_method';
+
+    protected $fillable   = [
+        'method',
+        'created_at',
+        'updated_at'
+    ];
 }

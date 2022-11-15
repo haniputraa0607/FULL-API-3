@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Greeting
- * 
+ *
  * @property int $id_greetings
  * @property string $when
  * @property string $greeting
@@ -23,11 +23,11 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Greeting extends Model
 {
-	protected $primaryKey = 'id_greetings';
+    protected $primaryKey = 'id_greetings';
 
-	protected $fillable = [
-		'when',
-		'greeting',
-		'greeting2'
-	];
+    protected $fillable = [
+        'when',
+        'greeting',
+        'greeting2'
+    ];
 }

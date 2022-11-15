@@ -5,9 +5,7 @@ namespace Modules\Deals\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Lib\MyHelper;
-
 use App\Http\Models\Deal;
 use App\Http\Models\DealsOutlet;
 use App\Http\Models\DealsPaymentManual;
@@ -15,25 +13,22 @@ use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\User;
-
 use DB;
-
 use Modules\Deals\Http\Requests\Deals\Create;
 use Modules\Deals\Http\Requests\Deals\Update;
 use Modules\Deals\Http\Requests\Deals\Delete;
-
 use Illuminate\Support\Facades\Schema;
 
 class ApiHiddenDeals extends Controller
 {
-
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
         $this->deals        = "Modules\Deals\Http\Controllers\ApiDeals";
         $this->dealsVoucher = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->dealsClaim = "Modules\Deals\Http\Controllers\ApiDealsClaim";
         $this->user     = "Modules\Users\Http\Controllers\ApiUser";
-        if(\Module::collections()->has('Autocrm')) {
+        if (\Module::collections()->has('Autocrm')) {
             $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         }
     }
@@ -42,9 +37,10 @@ class ApiHiddenDeals extends Controller
 
 
     /* CREATE REQUEST */
-    function createReq(Create $request) {
+    public function createReq(Create $request)
+    {
         DB::beginTransaction();
-        $post = $request->json()->all();        
+        $post = $request->json()->all();
         $to   = $this->cekUser($post['to']);
 
         $post['deals_total_voucher'] = count($to);
@@ -62,12 +58,11 @@ class ApiHiddenDeals extends Controller
                     DB::rollback();
                     return response()->json(MyHelper::checkCreate($claim));
                 }
-                $send = app($this->autocrm)->SendAutoCRM('Create Inject Voucher', $request->user()->phone, $post,null,true);
-            }
-            else {
+                $send = app($this->autocrm)->SendAutoCRM('Create Inject Voucher', $request->user()->phone, $post, null, true);
+            } else {
                 DB::rollback();
                 return response()->json([
-                    'status' => 'fail', 
+                    'status' => 'fail',
                     'messages' => ['empty recipient']
                 ]);
             }
@@ -83,26 +78,25 @@ class ApiHiddenDeals extends Controller
      * @param  array<int>   $to             array of id_user
      * @return bool         true/false
      */
-    function autoClaimedAssign($deals, $to) {
-        $ret=false;
+    public function autoClaimedAssign($deals, $to)
+    {
+        $ret = false;
         foreach ($to as $key => $user) {
             $voucher = app($this->dealsVoucher)->generateVoucher($deals->id_deals, 1, 1);
 
             if ($voucher) {
                 $userVoucher = app($this->dealsClaim)->createVoucherUser($user, $voucher->id_deals_voucher, $deals);
                 // return first voucher
-                if(!$ret){
-                    $ret=$userVoucher;
+                if (!$ret) {
+                    $ret = $userVoucher;
                 }
 
                 if ($userVoucher) {
                     continue;
-                }
-                else {
+                } else {
                     return false;
                 }
-            }
-            else {
+            } else {
                 return false;
             }
         }
@@ -110,7 +104,8 @@ class ApiHiddenDeals extends Controller
     }
 
     /* CEK USER */
-    function cekUser($phone, $id_deals=[]) {
+    public function cekUser($phone, $id_deals = [])
+    {
         $phone = array_filter(explode(",", $phone));
 
         $user = User::select('id')->whereIn('phone', $phone)->get()->toArray();
@@ -120,11 +115,11 @@ class ApiHiddenDeals extends Controller
 
             if (!empty($id_deals)) {
                 foreach ($user as $key => $value) {
-                    // $deals = DealsUser::join('deals_vouchers', 'deals_users.id_deals_voucher', '=', 'deals_vouchers.id_deals_voucher')->where('id_user', $value)->where('deals_vouchers.id_deals', $id_deals)->first();    
+                    // $deals = DealsUser::join('deals_vouchers', 'deals_users.id_deals_voucher', '=', 'deals_vouchers.id_deals_voucher')->where('id_user', $value)->where('deals_vouchers.id_deals', $id_deals)->first();
                     $dataUser = User::find($value);
 
                     $checkLimitUser = app($this->dealsClaim)->checkUserClaimed($dataUser, $id_deals);
-                    if($checkLimitUser == false){
+                    if ($checkLimitUser == false) {
                         unset($user[$key]);
                     }
                 }
@@ -135,15 +130,16 @@ class ApiHiddenDeals extends Controller
     }
 
     /* AUTO ASSIGN DEALS*/
-    function autoAssign(Request $request) {
+    public function autoAssign(Request $request)
+    {
         DB::beginTransaction();
 
         $post = $request->json()->all();
 
         $users = [];
-        if(isset($post['conditions'])){
+        if (isset($post['conditions'])) {
             $users = app($this->user)->UserFilter($post['conditions']);
-            if(isset($users['status']) && $users['status'] == 'success'){
+            if (isset($users['status']) && $users['status'] == 'success') {
                 $users = $users['result'];
             }
         }
@@ -152,84 +148,79 @@ class ApiHiddenDeals extends Controller
 
         if (empty($deals)) {
             return response()->json(MyHelper::checkGet($deals));
-        }
-        else {
-        	if ($deals['step_complete'] != 1) {
-            	return response()->json(['status' => 'fail', 'messages' => 'Deals is not complete']);
-        	}
+        } else {
+            if ($deals['step_complete'] != 1) {
+                return response()->json(['status' => 'fail', 'messages' => 'Deals is not complete']);
+            }
             $countUser = 0;
             $countVoucher = 0;
-            foreach($users as $datauser){
+            foreach ($users as $datauser) {
                 $amount = 1;
-                if(isset($post['amount'])){
-                   $amount = $post['amount'];    
+                if (isset($post['amount'])) {
+                    $amount = $post['amount'];
                 }
 
-                if($datauser['phone']??false){
+                if ($datauser['phone'] ?? false) {
                     $user = $this->cekUser($datauser['phone'], $request->json('id_deals'));
-                }else{
+                } else {
                     $user = '';
                 }
                 if (!empty($user)) {
-                    $first_deal=null;
-                    for($i = 1; $i<= $amount; $i++){
+                    $first_deal = null;
+                    for ($i = 1; $i <= $amount; $i++) {
                         // AUTO GENERATE
                         if ($deals->deals_voucher_type == "Auto generated") {
                             // LIMIT USER
                             $user = $this->limitAvailableUser($deals, $user);
                             if ($user) {
                                 $claim = $this->autoClaimedAssign($deals, $user);
-                                if(!$first_deal){
-                                    $first_deal=$claim;
+                                if (!$first_deal) {
+                                    $first_deal = $claim;
                                 }
                                 if (!$claim) {
                                     DB::rollback();
                                     return response()->json(MyHelper::checkUpdate($claim));
                                 }
                                 $countVoucher++;
-                            }
-                            else {
+                            } else {
                                 DB::rollback();
                                 return response()->json([
                                     'status'   => 'fail',
                                     'messages' => ['Voucher runs out']
                                 ]);
                             }
-                        }
+                        } elseif ($deals->deals_voucher_type == "Unlimited") {
                         // UNLIMITED
-                        elseif ($deals->deals_voucher_type == "Unlimited") {
                             // UPDATE DEALS
                             $claim = $this->autoClaimedAssign($deals, $user);
-    
+
                             if (!$claim) {
                                 DB::rollback();
                                 return response()->json(MyHelper::checkUpdate($claim));
                             }
                             $countVoucher++;
-                        }
+                        } else {
                         // WITH VOUCHER
-                        else {
                             // DB::rollback();
                             // return response()->json([
                             //     'status'   => 'fail',
                             //     'messages' => ['Voucher is not free.']
                             // ]);
                             $voucher = $this->checkVoucherRegistered($deals->id_deals);
-        
+
                             if ($voucher) {
                                 // BATAS
                                 $batas = $this->limit($voucher, $user);
-        
+
                                 $claim = $this->claimedWithVoucher($deals, $user, $voucher);
-    
+
                                 if (!$claim) {
                                     DB::rollback();
                                     return response()->json(MyHelper::checkUpdate($claim));
                                 }
 
                                 $countVoucher++;
-                            }
-                            else {
+                            } else {
                                 DB::rollback();
                                 return response()->json([
                                     'status'   => 'fail',
@@ -245,8 +236,10 @@ class ApiHiddenDeals extends Controller
                     //         'messages' => ['All user already claimed.']
                     //     ]);
                     // }
-                    
-                    $autocrm = app($this->autocrm)->SendAutoCRM('Receive Inject Voucher', $datauser['phone'],
+
+                    $autocrm = app($this->autocrm)->SendAutoCRM(
+                        'Receive Inject Voucher',
+                        $datauser['phone'],
                         [
                             'deals_title'      => $deals->deals_title,
                             'id_deals_user'    => $first_deal['id_deals_user'],
@@ -259,12 +252,12 @@ class ApiHiddenDeals extends Controller
             }
 
             // UPDATE DEALS
-            if($deals->deals_voucher_type == "Unlimited"){
+            if ($deals->deals_voucher_type == "Unlimited") {
                 $updateDeals = Deal::where('id_deals', $deals->id_deals)->update([
                     'deals_total_claimed' => $deals->deals_total_claimed + $countVoucher,
                     'deals_total_voucher' => $deals->deals_total_voucher + $countVoucher
                 ]);
-            }else{
+            } else {
                 $updateDeals = Deal::where('id_deals', $deals->id_deals)->update([
                     'deals_total_claimed' => $deals->deals_total_claimed + $countVoucher
                 ]);
@@ -274,7 +267,7 @@ class ApiHiddenDeals extends Controller
                 DB::rollback();
                 return response()->json(MyHelper::checkUpdate($updateDeals));
             }
-            
+
             DB::commit();
             return response()->json([
                 "status" => "success",
@@ -287,15 +280,15 @@ class ApiHiddenDeals extends Controller
     }
 
     /* LIMIT */
-    function limit($voucher, $user) {
+    public function limit($voucher, $user)
+    {
         $totalVoucher = count($voucher);
         $totalUser    = count($user);
 
         // SET LIMIT
         if ($totalVoucher > $totalUser) {
             $batas = $totalUser;
-        }
-        else {
+        } else {
             $batas = $totalVoucher;
         }
 
@@ -303,47 +296,47 @@ class ApiHiddenDeals extends Controller
     }
 
     /* LIMIT AVAILABLE USER */
-    function limitAvailableUser($deals, $user) {
+    public function limitAvailableUser($deals, $user)
+    {
         // if ($deals->deals_type == "Deals") {
-            // CEK TOTAL VOUCHER SENT 
+            // CEK TOTAL VOUCHER SENT
             $voucher = DealsVoucher::where('id_deals', $deals->id_deals)->count();
 
-            if ($deals->deals_total_voucher < $voucher || $deals->deals_total_voucher == $voucher) {
-                return false;
-            }
+        if ($deals->deals_total_voucher < $voucher || $deals->deals_total_voucher == $voucher) {
+            return false;
+        } else {
             // IF DEALS MORE THAN USED
-            else {
-                // LIMITATION
-                $limit = $deals->deals_total_voucher - $voucher;
+            // LIMITATION
+            $limit = $deals->deals_total_voucher - $voucher;
 
-                if (count($user) > $limit) {
-                    $batas = $limit;
-                }
-                else {
-                    $batas = count($user); 
-                }
-
-                // REGISTER USER
-                $fixedUser = [];
-                
-                for ($i=0; $i < $batas; $i++) { 
-                    array_push($fixedUser, $user[$i]);
-                }
-
-                // ASSIGN USERFIXED
-                $user = $fixedUser;
+            if (count($user) > $limit) {
+                $batas = $limit;
+            } else {
+                $batas = count($user);
             }
+
+            // REGISTER USER
+            $fixedUser = [];
+
+            for ($i = 0; $i < $batas; $i++) {
+                array_push($fixedUser, $user[$i]);
+            }
+
+            // ASSIGN USERFIXED
+            $user = $fixedUser;
+        }
         // }
 
         return array_values($user);
     }
 
     /* CLAIM WITH VOUCHER */
-    function claimedWithVoucher($deals, $user, $voucher) {
+    public function claimedWithVoucher($deals, $user, $voucher)
+    {
 
         $batas = $this->limit($voucher, $user);
 
-        for ($i=0; $i < $batas; $i++) { 
+        for ($i = 0; $i < $batas; $i++) {
             // UPDATE STATUS VOUCHER
             $updateStatusVoucher = app($this->dealsVoucher)->update($voucher[$i], ['deals_voucher_status' => 'Sent']);
 
@@ -353,12 +346,10 @@ class ApiHiddenDeals extends Controller
 
                 if ($claim) {
                     continue;
+                } else {
+                    return false;
                 }
-                else {
-                    return false;    
-                }
-            }
-            else {
+            } else {
                 return false;
             }
         }
@@ -367,7 +358,8 @@ class ApiHiddenDeals extends Controller
     }
 
     /* CHECK VOUCHER */
-    function checkVoucherRegistered($id_deals) {
+    public function checkVoucherRegistered($id_deals)
+    {
         $voucher = DealsVoucher::where('id_deals', $id_deals)->where('deals_voucher_status', '=', 'Available')->get()->toArray();
 
         if (!empty($voucher)) {

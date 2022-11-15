@@ -6,10 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Schema;
-
 use App\Lib\MyHelper;
 use App\Lib\Midtrans;
-
 use App\Http\Models\TopupNominal;
 use App\Http\Models\User;
 use App\Http\Models\Setting;
@@ -20,7 +18,6 @@ use App\Http\Models\UsersMembership;
 use App\Http\Models\Outlet;
 use App\Http\Models\LogTopupMidtrans;
 use App\Http\Models\ManualPaymentMethod;
-
 use Hash;
 use DB;
 
@@ -29,7 +26,8 @@ class NewTopupController extends Controller
     private $model = 'App\Http\Models\\';
     public $saveImage = "img/topup/manual/";
 
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
         $this->pos     = "Modules\POS\Http\Controllers\ApiPOS";
         $this->balance = "Modules\Balance\Http\Controllers\BalanceController";
@@ -44,9 +42,9 @@ class NewTopupController extends Controller
         $canInput = false;
 
         $api = app($this->pos)->checkApi($post['api_key'], $post['api_secret']);
-        if ($api['status'] != 'success') { 
-            return response()->json($api); 
-        } 
+        if ($api['status'] != 'success') {
+            return response()->json($api);
+        }
 
         if (!isset($post['type'])) {
             $post['type'] = 'POS';
@@ -94,7 +92,7 @@ class NewTopupController extends Controller
         DB::beginTransaction();
 
         $post = $request->json()->all();
-        $post['receipt'] = 'TOP-'.date('sYmdHs');
+        $post['receipt'] = 'TOP-' . date('sYmdHs');
 
         if (!isset($post['user_type'])) {
             return $this->topupPos($post);
@@ -162,8 +160,7 @@ class NewTopupController extends Controller
 
             if (isset($save['status']) && $save['status'] == "success") {
                 $post['payment_receipt_image'] = $save['path'];
-            }
-            else {
+            } else {
                 DB::rollback();
                 return response()->json([
                     'status'   => 'fail',
@@ -335,7 +332,7 @@ class NewTopupController extends Controller
         $api = app($this->pos)->checkApi($post['api_key'], $post['api_secret']);
         if ($api['status'] != 'success') {
             DB::rollback();
-            return response()->json($api); 
+            return response()->json($api);
         }
 
         $checkOutlet = Outlet::where('outlet_code', $post['store_code'])->first();
@@ -349,15 +346,15 @@ class NewTopupController extends Controller
 
         $qr = $post['uid'];
         $timestamp = substr($qr, 0, 10);
-        $phoneqr = str_replace($timestamp,'',$qr);
+        $phoneqr = str_replace($timestamp, '', $qr);
 
         $time = date('Y-m-d h:i:s', strtotime('+10 minutes', strtotime(date('Y-m-d h:i:s', $timestamp))));
         if (date('Y-m-d h:i:s') > $time) {
             DB::rollback();
-            return response()->json(['status' => 'fail', 'messages' => ['Mohon refresh qrcode dan ulangi scan member']]); 
+            return response()->json(['status' => 'fail', 'messages' => ['Mohon refresh qrcode dan ulangi scan member']]);
         }
 
-        $user = User::where('phone', $phoneqr)->first(); 
+        $user = User::where('phone', $phoneqr)->first();
         if (empty($user)) {
             DB::rollback();
             return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
@@ -593,9 +590,9 @@ class NewTopupController extends Controller
                 'membership_cashback_percentage' => $check['membership_cashback_percentage']
             ];
         }
-        
+
         $encodeCheck = json_encode($dataHash);
-        
+
         if (MyHelper::decrypt2019($check['enc']) == $encodeCheck) {
             return true;
         }
@@ -679,7 +676,7 @@ class NewTopupController extends Controller
 
         // $encodeCheck = utf8_encode(json_encode(($dataHashBalance)));
         // $enc = MyHelper::encryptkhususnew($encodeCheck);
-        
+
         $enc = base64_encode((json_encode($dataHashBalance)));
 
         $checkUpdateEnc->enc = $enc;

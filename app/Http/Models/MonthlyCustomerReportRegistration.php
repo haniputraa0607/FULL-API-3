@@ -6,10 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class MonthlyCustomerReportRegistration extends Model
 {
-	protected $connection = 'mysql';
+    protected $connection = 'mysql';
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'monthly_customer_report_registration';
@@ -38,7 +38,7 @@ class MonthlyCustomerReportRegistration extends Model
         'cust_adult',
         'cust_old'
     ];
-	
+
     public function membership()
     {
         return $this->belongsTo(Membership::class, 'id_membership', 'id_membership')->select('id_membership', 'membership_name');

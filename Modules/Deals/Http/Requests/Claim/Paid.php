@@ -21,9 +21,9 @@ class Paid extends FormRequest
         return [
         'id_deals'               => 'required|integer',
         'payment_deals'          => 'required|in:midtrans,manual,balance,ovo,ipay88,shopeepay',
-        'id_manual_payment'      => ['required_if:payment_deals,manual', new InManualPayment],
-        'id_bank_method'         => ['required_if:payment_deals,manual', new InBankMethod],
-        'id_bank'                => ['required_if:payment_deals,manual', new InBanks],
+        'id_manual_payment'      => ['required_if:payment_deals,manual', new InManualPayment()],
+        'id_bank_method'         => ['required_if:payment_deals,manual', new InBankMethod()],
+        'id_bank'                => ['required_if:payment_deals,manual', new InBanks()],
         'payment_date'           => 'required_if:payment_deals,manual',
         'payment_time'           => 'required_if:payment_deals,manual',
         'payment_bank'           => 'required_if:payment_deals,manual',

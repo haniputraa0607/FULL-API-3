@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class ProductCategory
- * 
+ *
  * @property int $id_product_category
  * @property int $id_parent_category
  * @property int $product_category_order
@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $product_category_photo
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \App\Http\Models\ProductCategory $product_category
  * @property \Illuminate\Database\Eloquent\Collection $product_categories
  * @property \Illuminate\Database\Eloquent\Collection $products
@@ -30,59 +30,62 @@ use Illuminate\Database\Eloquent\Model;
 class ProductCategory extends Model
 {
     protected $connection = 'mysql3';
-	protected $primaryKey = 'id_product_category';
+    protected $primaryKey = 'id_product_category';
 
-	protected $casts = [
-		'id_parent_category' => 'int',
-		'product_category_order' => 'int'
-	];
-protected $appends  = ['url_product_category_photo'];
-	protected $fillable = [
-		'id_parent_category',
-		'product_category_order',
-		'product_category_name',
-		'product_category_description',
-		'product_category_photo'
-	];
+    protected $casts = [
+        'id_parent_category' => 'int',
+        'product_category_order' => 'int'
+    ];
+    protected $appends  = ['url_product_category_photo'];
+    protected $fillable = [
+        'id_parent_category',
+        'product_category_order',
+        'product_category_name',
+        'product_category_description',
+        'product_category_photo'
+    ];
 
-	public function product_category()
-	{
-		return $this->belongsTo(\App\Http\Models\ProductCategory::class, 'id_parent_category');
-	}
+    public function product_category()
+    {
+        return $this->belongsTo(\App\Http\Models\ProductCategory::class, 'id_parent_category');
+    }
 
-	public function product_categories()
-	{
-		return $this->hasMany(\App\Http\Models\ProductCategory::class, 'id_parent_category');
-	}
+    public function product_categories()
+    {
+        return $this->hasMany(\App\Http\Models\ProductCategory::class, 'id_parent_category');
+    }
 
-	public function products()
-	{
-		return $this->hasMany(\App\Http\Models\Product::class, 'id_product_category');
-	}
-	
-	public function parentCategory()
+    public function products()
+    {
+        return $this->hasMany(\App\Http\Models\Product::class, 'id_product_category');
+    }
+
+    public function parentCategory()
     {
         return $this->belongsTo(ProductCategory::class, 'id_parent_category', 'id_product_category');
     }
 
-    public function getUrlProductCategoryPhotoAttribute() {
+    public function getUrlProductCategoryPhotoAttribute()
+    {
         if (empty($this->product_category_photo)) {
-            return config('url.storage_url_api').'img/default.jpg';
-        }
-        else {
-            return config('url.storage_url_api').$this->product_category_photo;
+            return config('url.storage_url_api') . 'img/default.jpg';
+        } else {
+            return config('url.storage_url_api') . $this->product_category_photo;
         }
     }
 
-    public function scopeId($query, $id) {
+    public function scopeId($query, $id)
+    {
         return $query->where('id_product_category', $id);
     }
 
-    public function scopeParents($query, $id) {
+    public function scopeParents($query, $id)
+    {
         return $query->where('id_parent_category', $id);
     }
 
-    public function scopeMaster($query) {
+    public function scopeMaster($query)
+    {
         return $query->whereNull('id_parent_category');
     }
 }

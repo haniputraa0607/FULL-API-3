@@ -9,7 +9,7 @@ class AchievementUser extends Model
     protected $table = 'achievement_users';
 
     protected $primaryKey = 'id_achievement_user';
-    
+
     protected $fillable = [
         'id_achievement_detail',
         'id_user',

@@ -11,11 +11,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class DealTotal extends Model
 {
-	protected $primaryKey = 'id_deals_total';
+    protected $primaryKey = 'id_deals_total';
     protected $table = 'deals_total';
 
-	protected $fillable = [
-		'id_deals',
-		'deals_total'
-	];
+    protected $fillable = [
+        'id_deals',
+        'deals_total'
+    ];
 }

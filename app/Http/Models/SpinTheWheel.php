@@ -8,13 +8,13 @@ class SpinTheWheel extends Model
 {
     protected $primaryKey = 'id_spin_the_wheel';
 
-	protected $fillable = [
-		'id_deals',
-		'value'
-	];
+    protected $fillable = [
+        'id_deals',
+        'value'
+    ];
 
-	public function deals()
-	{
-		return $this->hasOne(\App\Http\Models\Deal::class, 'id_deals', 'id_deals');
-	}
+    public function deals()
+    {
+        return $this->hasOne(\App\Http\Models\Deal::class, 'id_deals', 'id_deals');
+    }
 }

@@ -8,9 +8,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-
 use Modules\Users\Http\Controllers\ApiUser;
-
 use App\Http\Models\Campaign;
 use App\Http\Models\CampaignRuleView;
 use App\Http\Models\User;
@@ -18,8 +16,13 @@ use DB;
 
 class SendCampaignCalculationSuccessJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-    protected $data,$camp;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
+    protected $data;
+    protected $camp;
 
     /**
      * Create a new job instance.
@@ -28,7 +31,7 @@ class SendCampaignCalculationSuccessJob implements ShouldQueue
      */
     public function __construct($data)
     {
-        $this->data=$data;
+        $this->data = $data;
     }
 
     /**
@@ -40,9 +43,9 @@ class SendCampaignCalculationSuccessJob implements ShouldQueue
     {
         $all_token = $this->data['all_token'];
         $phones = $this->data['recipient'];
-        foreach ($this->data['error_token'] as $error_token){
+        foreach ($this->data['error_token'] as $error_token) {
             $check = array_search($error_token, $all_token);
-            if($check !== false){
+            if ($check !== false) {
                 unset($all_token[$check]);
             }
         }
@@ -53,7 +56,7 @@ class SendCampaignCalculationSuccessJob implements ShouldQueue
                 ->groupBy('phone')->pluck('phone')->toArray();
 
         $insertData = [];
-        foreach ($getUserSuccess as $phone){
+        foreach ($getUserSuccess as $phone) {
             $insertData[] = [
                 'id_campaign' => $this->data['id_campaign'],
                 'push_sent_to' => $phone,
@@ -67,7 +70,7 @@ class SendCampaignCalculationSuccessJob implements ShouldQueue
         DB::table('campaigns')
             ->where('id_campaign', $this->data['id_campaign'])
             ->update([
-                'campaign_push_count_sent' => DB::raw('campaign_push_count_sent + '.count($getUserSuccess))
+                'campaign_push_count_sent' => DB::raw('campaign_push_count_sent + ' . count($getUserSuccess))
             ]);
         return 'success';
     }

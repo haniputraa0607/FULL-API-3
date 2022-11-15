@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class TextReplace
- * 
+ *
  * @property int $id_text_replace
  * @property string $keyword
  * @property string $reference
@@ -26,14 +26,14 @@ use Illuminate\Database\Eloquent\Model;
  */
 class TextReplace extends Model
 {
-	protected $primaryKey = 'id_text_replace';
+    protected $primaryKey = 'id_text_replace';
 
-	protected $fillable = [
-		'keyword',
-		'reference',
-		'type',
-		'default_value',
-		'custom_rule',
-		'status'
-	];
+    protected $fillable = [
+        'keyword',
+        'reference',
+        'type',
+        'default_value',
+        'custom_rule',
+        'status'
+    ];
 }

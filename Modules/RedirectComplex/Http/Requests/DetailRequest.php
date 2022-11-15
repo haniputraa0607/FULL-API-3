@@ -16,11 +16,11 @@ class DetailRequest extends FormRequest
     public function rules()
     {
         return [
-            'id_reference'	=>'required',
-            'latitude'		=>'required',
-            'longitude'		=>'required',
-            'device_id'		=>'required',
-            'device_type'	=>'required'
+            'id_reference'  => 'required',
+            'latitude'      => 'required',
+            'longitude'     => 'required',
+            'device_id'     => 'required',
+            'device_type'   => 'required'
         ];
     }
 

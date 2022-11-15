@@ -16,11 +16,13 @@ class Shift extends Model
         'cash_difference',
     ];
 
-    public function outlet(){
+    public function outlet()
+    {
         return $this->belongsTo('App\Http\Models\Outlet', 'id_outlet');
     }
 
-    public function user_outletapp(){
+    public function user_outletapp()
+    {
         return $this->belongsTo('App\Http\Models\UserOutletApp', 'id_user_outletapp');
     }
 }

@@ -16,8 +16,8 @@ class CreateQuinosUser extends FormRequest
     public function rules()
     {
         return [
-            'username'		=> 'required|unique:quinos_users,username',
-            'password'	    => 'required',
+            'username'      => 'required|unique:quinos_users,username',
+            'password'      => 'required',
         ];
     }
 

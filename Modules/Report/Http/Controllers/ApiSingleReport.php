@@ -5,29 +5,23 @@ namespace Modules\Report\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\DailyReportTrx;
 use App\Http\Models\MonthlyReportTrx;
 use App\Http\Models\GlobalDailyReportTrx;
 use App\Http\Models\GlobalMonthlyReportTrx;
-
 use App\Http\Models\DailyReportTrxMenu;
 use App\Http\Models\MonthlyReportTrxMenu;
 use App\Http\Models\GlobalDailyReportTrxMenu;
 use App\Http\Models\GlobalMonthlyReportTrxMenu;
-
 use App\Http\Models\DailyCustomerReportRegistration;
 use App\Http\Models\MonthlyCustomerReportRegistration;
-
 use App\Http\Models\DailyMembershipReport;
 use App\Http\Models\MonthlyMembershipReport;
-
 use App\Http\Models\DealsUser;
 use App\Http\Models\Deal;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\Membership;
-
 use App\Lib\MyHelper;
 use DB;
 
@@ -81,7 +75,7 @@ class ApiSingleReport extends Controller
     {
         $post = $request->json()->all();
 
-        if ($post['time_type']!='day' && $post['time_type']!='month' && $post['time_type']!='year') {
+        if ($post['time_type'] != 'day' && $post['time_type'] != 'month' && $post['time_type'] != 'year') {
             return response()->json([
                 'status' => 'fail',
                 'messages' => ['Invalid time type']
@@ -89,7 +83,7 @@ class ApiSingleReport extends Controller
         }
 
         $data = $this->getTrxReport($request, 0);
-        
+
         $getProducts = $this->getProductReport($request, 0);
         $data['products'] = $getProducts['products'];
 
@@ -106,10 +100,10 @@ class ApiSingleReport extends Controller
     }
 
     // get trx report
-    public function getTrxReport(Request $request, $flag=1)
+    public function getTrxReport(Request $request, $flag = 1)
     {
         $post = $request->json()->all();
-        if (isset($post['trx_id_outlet']) && $post['trx_id_outlet']!=0) {
+        if (isset($post['trx_id_outlet']) && $post['trx_id_outlet'] != 0) {
             $params['id_outlet'] = $post['trx_id_outlet'];
         }
 
@@ -157,12 +151,12 @@ class ApiSingleReport extends Controller
                     $chart_date = date('d M', strtotime($item['trx_date']));
                     break;
                 case 'month':
-                    $item_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) ." ". $item['trx_year'];
+                    $item_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) . " " . $item['trx_year'];
                     $chart_date = date('F', mktime(0, 0, 0, $item['trx_month'], 10));
                     break;
                 case 'year':
-                    $item_date = $item['trx_month'] ."-". $item['trx_year'];
-                    $chart_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) ." ". $item['trx_year'];
+                    $item_date = $item['trx_month'] . "-" . $item['trx_year'];
+                    $chart_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) . " " . $item['trx_year'];
                     break;
                 default:
                     break;
@@ -181,7 +175,7 @@ class ApiSingleReport extends Controller
             $trx_age_chart[] = $this->ageChart($chart_date, $item);
             $trx_device_chart[] = $this->deviceChart($chart_date, $item);
             $trx_provider_chart[] = $this->providerChart($chart_date, $item);
-            
+
             // trx card data
             $total_idr += $item['trx_grand'];
             $total_qty += $item['trx_count'];
@@ -191,8 +185,7 @@ class ApiSingleReport extends Controller
         // trx
         if ($total_qty > 0) {
             $average_idr = round($total_idr / $total_qty, 2);
-        }
-        else{
+        } else {
             $average_idr = 0;
         }
         $data['transactions']['data'] = $transactions;
@@ -201,31 +194,30 @@ class ApiSingleReport extends Controller
         $data['transactions']['trx_age_chart'] = $trx_age_chart;
         $data['transactions']['trx_device_chart'] = $trx_device_chart;
         $data['transactions']['trx_provider_chart'] = $trx_provider_chart;
-        $data['transactions']['total_idr'] = number_format($total_idr , 0, '', ',');
-        $data['transactions']['total_qty'] = number_format($total_qty , 0, '', ',');
-        $data['transactions']['average_idr'] = number_format($average_idr , 0, '', ',');
-        $data['transactions']['total_male'] = number_format($total_male , 0, '', ',');
-        $data['transactions']['total_female'] = number_format($total_female , 0, '', ',');
+        $data['transactions']['total_idr'] = number_format($total_idr, 0, '', ',');
+        $data['transactions']['total_qty'] = number_format($total_qty, 0, '', ',');
+        $data['transactions']['average_idr'] = number_format($average_idr, 0, '', ',');
+        $data['transactions']['total_male'] = number_format($total_male, 0, '', ',');
+        $data['transactions']['total_female'] = number_format($total_female, 0, '', ',');
 
-        if ($flag==1) {
+        if ($flag == 1) {
             // if called as api
             return response()->json(MyHelper::checkGet($data));
-        }
-        else{
+        } else {
             // if called in controller
             return $data;
         }
     }
 
     // get product report
-    public function getProductReport(Request $request, $flag=1)
+    public function getProductReport(Request $request, $flag = 1)
     {
         $post = $request->json()->all();
 
-        if (isset($post['product_id_outlet']) && $post['product_id_outlet']!=0) {
+        if (isset($post['product_id_outlet']) && $post['product_id_outlet'] != 0) {
             $params['id_outlet'] = $post['product_id_outlet'];
         }
-        if (isset($post['id_product']) && $post['id_product']!=0) {
+        if (isset($post['id_product']) && $post['id_product'] != 0) {
             $params['id_product'] = $post['id_product'];
         }
 
@@ -254,7 +246,7 @@ class ApiSingleReport extends Controller
                 break;
         }
 
-        $product_total_nominal= 0;
+        $product_total_nominal = 0;
         $product_total_qty    = 0;
         $product_total_male   = 0;
         $product_total_female = 0;
@@ -264,7 +256,7 @@ class ApiSingleReport extends Controller
         $product_age_chart = [];
         $product_device_chart = [];
         $product_provider_chart = [];
-        
+
         foreach ($products as $key => $item) {
             switch ($post['time_type']) {
                 case 'day':
@@ -272,12 +264,12 @@ class ApiSingleReport extends Controller
                     $chart_date = date('d M', strtotime($item['trx_date']));
                     break;
                 case 'month':
-                    $item_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) ." ". $item['trx_year'];
+                    $item_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) . " " . $item['trx_year'];
                     $chart_date = date('F', mktime(0, 0, 0, $item['trx_month'], 10));
                     break;
                 case 'year':
-                    $item_date = $item['trx_month'] ."-". $item['trx_year'];
-                    $chart_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) ." ". $item['trx_year'];
+                    $item_date = $item['trx_month'] . "-" . $item['trx_year'];
+                    $chart_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) . " " . $item['trx_year'];
                     break;
                 default:
                     break;
@@ -285,7 +277,7 @@ class ApiSingleReport extends Controller
 
             $products[$key]['number'] = $key + 1;
             $products[$key]['date'] = $item_date;
-            
+
             // product chart data
             $product_chart[] = [
                 'date'       => $chart_date,
@@ -309,23 +301,22 @@ class ApiSingleReport extends Controller
         $data['products']['product_age_chart'] = $product_age_chart;
         $data['products']['product_device_chart'] = $product_device_chart;
         $data['products']['product_provider_chart'] = $product_provider_chart;
-        $data['products']['product_total_nominal'] = number_format($product_total_nominal , 0, '', ',');
-        $data['products']['product_total_qty'] = number_format($product_total_qty , 0, '', ',');
-        $data['products']['product_total_male'] = number_format($product_total_male , 0, '', ',');
-        $data['products']['product_total_female'] = number_format($product_total_female , 0, '', ',');
+        $data['products']['product_total_nominal'] = number_format($product_total_nominal, 0, '', ',');
+        $data['products']['product_total_qty'] = number_format($product_total_qty, 0, '', ',');
+        $data['products']['product_total_male'] = number_format($product_total_male, 0, '', ',');
+        $data['products']['product_total_female'] = number_format($product_total_female, 0, '', ',');
 
-        if ($flag==1) {
+        if ($flag == 1) {
             // if called as api
             return response()->json(MyHelper::checkGet($data));
-        }
-        else{
+        } else {
             // if called in controller
             return $data;
         }
     }
-    
+
     // get registration report
-    public function getRegReport(Request $request, $flag=1)
+    public function getRegReport(Request $request, $flag = 1)
     {
         $post = $request->json()->all();
 
@@ -356,7 +347,7 @@ class ApiSingleReport extends Controller
 
         $reg_total_male   = 0;
         $reg_total_female = 0;
-        $reg_total_android= 0;
+        $reg_total_android = 0;
         $reg_total_ios    = 0;
 
         $reg_gender_chart = [];
@@ -372,12 +363,12 @@ class ApiSingleReport extends Controller
                     $chart_date = date('d M', strtotime($item['reg_date']));
                     break;
                 case 'month':
-                    $item_date = date('M', mktime(0, 0, 0, $item['reg_month'], 10)) ." ". $item['reg_year'];
+                    $item_date = date('M', mktime(0, 0, 0, $item['reg_month'], 10)) . " " . $item['reg_year'];
                     $chart_date = date('F', mktime(0, 0, 0, $item['reg_month'], 10));
                     break;
                 case 'year':
-                    $item_date = $item['reg_month'] ."-". $item['reg_year'];
-                    $chart_date = date('M', mktime(0, 0, 0, $item['reg_month'], 10)) ." ". $item['reg_year'];
+                    $item_date = $item['reg_month'] . "-" . $item['reg_year'];
+                    $chart_date = date('M', mktime(0, 0, 0, $item['reg_month'], 10)) . " " . $item['reg_year'];
                     break;
                 default:
                     break;
@@ -390,7 +381,7 @@ class ApiSingleReport extends Controller
             $reg_age_chart[] = $this->ageChart($chart_date, $item);
             $reg_device_chart[] = $this->deviceChart($chart_date, $item);
             $reg_provider_chart[] = $this->providerChart($chart_date, $item);
-            
+
             // reg card data
             $reg_total_male += $item['cust_male'];
             $reg_total_female += $item['cust_female'];
@@ -403,20 +394,20 @@ class ApiSingleReport extends Controller
         $data['registrations']['reg_age_chart'] = $reg_age_chart;
         $data['registrations']['reg_device_chart'] = $reg_device_chart;
         $data['registrations']['reg_provider_chart'] = $reg_provider_chart;
-        $data['registrations']['reg_total_male'] = number_format($reg_total_male , 0, '', ',');
-        $data['registrations']['reg_total_female'] = number_format($reg_total_female , 0, '', ',');
-        $data['registrations']['reg_total_android'] = number_format($reg_total_android , 0, '', ',');
-        $data['registrations']['reg_total_ios'] = number_format($reg_total_ios , 0, '', ',');
+        $data['registrations']['reg_total_male'] = number_format($reg_total_male, 0, '', ',');
+        $data['registrations']['reg_total_female'] = number_format($reg_total_female, 0, '', ',');
+        $data['registrations']['reg_total_android'] = number_format($reg_total_android, 0, '', ',');
+        $data['registrations']['reg_total_ios'] = number_format($reg_total_ios, 0, '', ',');
 
         return $data;
     }
 
     // get membership report
-    public function getMembershipReport(Request $request, $flag=1)
+    public function getMembershipReport(Request $request, $flag = 1)
     {
         $post = $request->json()->all();
 
-        if (isset($post['id_membership']) && $post['id_membership']!=0) {
+        if (isset($post['id_membership']) && $post['id_membership'] != 0) {
             $params['id_membership'] = $post['id_membership'];
         }
 
@@ -448,7 +439,7 @@ class ApiSingleReport extends Controller
         // membership
         $mem_total_male   = 0;
         $mem_total_female = 0;
-        $mem_total_android= 0;
+        $mem_total_android = 0;
         $mem_total_ios    = 0;
 
         $mem_chart = [];
@@ -464,12 +455,12 @@ class ApiSingleReport extends Controller
                     $chart_date = date('d M', strtotime($item['mem_date']));
                     break;
                 case 'month':
-                    $item_date = date('M', mktime(0, 0, 0, $item['mem_month'], 10)) ." ". $item['mem_year'];
+                    $item_date = date('M', mktime(0, 0, 0, $item['mem_month'], 10)) . " " . $item['mem_year'];
                     $chart_date = date('F', mktime(0, 0, 0, $item['mem_month'], 10));
                     break;
                 case 'year':
-                    $item_date = $item['mem_month'] ."-". $item['mem_year'];
-                    $chart_date = date('M', mktime(0, 0, 0, $item['mem_month'], 10)) ." ". $item['mem_year'];
+                    $item_date = $item['mem_month'] . "-" . $item['mem_year'];
+                    $chart_date = date('M', mktime(0, 0, 0, $item['mem_month'], 10)) . " " . $item['mem_year'];
                     break;
                 default:
                     break;
@@ -477,18 +468,18 @@ class ApiSingleReport extends Controller
 
             $memberships[$key]['number'] = $key + 1;
             $memberships[$key]['date'] = $item_date;
-            
+
             // membership chart data
             $mem_chart[] = [
                 'date'      => $chart_date,
-                'cust_total'=> (is_null($item['cust_total']) ? 0 : $item['cust_total']),
+                'cust_total' => (is_null($item['cust_total']) ? 0 : $item['cust_total']),
             ];
 
             $mem_gender_chart[] = $this->genderChart($chart_date, $item);
             $mem_age_chart[] = $this->ageChart($chart_date, $item);
             $mem_device_chart[] = $this->deviceChart($chart_date, $item);
             $mem_provider_chart[] = $this->providerChart($chart_date, $item);
-            
+
             // membership card data
             $mem_total_male += $item['cust_male'];
             $mem_total_female += $item['cust_female'];
@@ -502,30 +493,29 @@ class ApiSingleReport extends Controller
         $data['memberships']['mem_age_chart'] = $mem_age_chart;
         $data['memberships']['mem_device_chart'] = $mem_device_chart;
         $data['memberships']['mem_provider_chart'] = $mem_provider_chart;
-        $data['memberships']['mem_total_male'] = number_format($mem_total_male , 0, '', ',');
-        $data['memberships']['mem_total_female'] = number_format($mem_total_female , 0, '', ',');
-        $data['memberships']['mem_total_android'] = number_format($mem_total_android , 0, '', ',');
-        $data['memberships']['mem_total_ios'] = number_format($mem_total_ios , 0, '', ',');
+        $data['memberships']['mem_total_male'] = number_format($mem_total_male, 0, '', ',');
+        $data['memberships']['mem_total_female'] = number_format($mem_total_female, 0, '', ',');
+        $data['memberships']['mem_total_android'] = number_format($mem_total_android, 0, '', ',');
+        $data['memberships']['mem_total_ios'] = number_format($mem_total_ios, 0, '', ',');
 
-        if ($flag==1) {
+        if ($flag == 1) {
             // if called as api
             return response()->json(MyHelper::checkGet($data));
-        }
-        else{
+        } else {
             // if called in controller
             return $data;
         }
     }
 
     // get voucher report
-    public function getVoucherReport(Request $request, $flag=1)
+    public function getVoucherReport(Request $request, $flag = 1)
     {
         $post = $request->json()->all();
 
-        if (isset($post['voucher_id_outlet']) && $post['voucher_id_outlet']!=0) {
+        if (isset($post['voucher_id_outlet']) && $post['voucher_id_outlet'] != 0) {
             $params['id_outlet'] = $post['voucher_id_outlet'];
         }
-        if (isset($post['id_deals']) && $post['id_deals']!=0) {
+        if (isset($post['id_deals']) && $post['id_deals'] != 0) {
             $params['id_deals'] = $post['id_deals'];
         }
 
@@ -580,7 +570,7 @@ class ApiSingleReport extends Controller
                 default:
                     break;
             }
-            
+
             $vouchers[$key]['number'] = $key + 1;
             $vouchers[$key]['date'] = $item_date;
 
@@ -593,7 +583,7 @@ class ApiSingleReport extends Controller
             $voucher_age_chart[] = $this->ageChart($chart_date, $item);
             $voucher_device_chart[] = $this->deviceChart($chart_date, $item);
             $voucher_provider_chart[] = $this->providerChart($chart_date, $item);
-            
+
             // voucher card data
             $voucher_total_qty += $item['voucher_count'];
             $voucher_total_male += $item['cust_male'];
@@ -606,17 +596,16 @@ class ApiSingleReport extends Controller
         $data['vouchers']['voucher_age_chart'] = $voucher_age_chart;
         $data['vouchers']['voucher_device_chart'] = $voucher_device_chart;
         $data['vouchers']['voucher_provider_chart'] = $voucher_provider_chart;
-        $data['vouchers']['voucher_total_qty'] = number_format($voucher_total_qty , 0, '', ',');
-        $data['vouchers']['voucher_total_male'] = number_format($voucher_total_male , 0, '', ',');
-        $data['vouchers']['voucher_total_female'] = number_format($voucher_total_female , 0, '', ',');
+        $data['vouchers']['voucher_total_qty'] = number_format($voucher_total_qty, 0, '', ',');
+        $data['vouchers']['voucher_total_male'] = number_format($voucher_total_male, 0, '', ',');
+        $data['vouchers']['voucher_total_female'] = number_format($voucher_total_female, 0, '', ',');
         // $data['vouchers']['voucher_total_android'] = number_format($voucher_total_android , 0, '', ',');
         // $data['vouchers']['voucher_total_ios'] = number_format($voucher_total_ios , 0, '', ',');
 
-        if ($flag==1) {
+        if ($flag == 1) {
             // if called as api
             return response()->json(MyHelper::checkGet($data));
-        }
-        else{
+        } else {
             // if called in controller
             return $data;
         }
@@ -675,8 +664,7 @@ class ApiSingleReport extends Controller
             $trans = DailyReportTrx::with('outlet')
                 ->where('id_outlet', $params['id_outlet'])
                 ->whereBetween('trx_date', [date('Y-m-d', strtotime($params['start_date'])), date('Y-m-d', strtotime($params['end_date']))]);
-        }
-        else {
+        } else {
             $trans = GlobalDailyReportTrx::whereBetween('trx_date', [date('Y-m-d', strtotime($params['start_date'])), date('Y-m-d', strtotime($params['end_date']))]);
         }
 
@@ -685,7 +673,7 @@ class ApiSingleReport extends Controller
         return $trans;
     }
     // get transaction report by month
-    public function trxMonth($params) 
+    public function trxMonth($params)
     {
         // with outlet
         if (isset($params['id_outlet'])) {
@@ -693,29 +681,27 @@ class ApiSingleReport extends Controller
                 ->where('id_outlet', $params['id_outlet'])
                 ->where('trx_year', $params['year'])
                 ->whereBetween('trx_month', [$params['start_month'], $params['end_month']]);
-        }
-        else {
+        } else {
             $trans = GlobalMonthlyReportTrx::where('trx_year', $params['year'])
                 ->whereBetween('trx_month', [$params['start_month'], $params['end_month']]);
         }
-        
+
         $trans = $trans->orderBy('trx_month')->get()->toArray();
 
         return $trans;
     }
     // get transaction report by year
-    public function trxYear($params) 
+    public function trxYear($params)
     {
         // with outlet
         if (isset($params['id_outlet'])) {
             $trans = MonthlyReportTrx::with('outlet')
                 ->where('id_outlet', $params['id_outlet'])
                 ->whereBetween('trx_year', [$params['start_year'], $params['end_year']]);
-        }
-        else {
+        } else {
             $trans = GlobalMonthlyReportTrx::whereBetween('trx_year', [$params['start_year'], $params['end_year']]);
         }
-        
+
         $trans = $trans->orderBy('trx_year')->orderBy('trx_month')->get()->toArray();
 
         return $trans;
@@ -729,8 +715,7 @@ class ApiSingleReport extends Controller
         if (isset($params['id_outlet'])) {
             $data = DailyReportTrxMenu::with('product')
                 ->where('id_outlet', $params['id_outlet']);
-        }
-        else {
+        } else {
             $data = GlobalDailyReportTrxMenu::with('product');
         }
 
@@ -748,14 +733,13 @@ class ApiSingleReport extends Controller
         return $data;
     }
     // get product report by month
-    public function productMonth($params) 
+    public function productMonth($params)
     {
         // with outlet
         if (isset($params['id_outlet'])) {
             $data = MonthlyReportTrxMenu::with('product')
                 ->where('id_outlet', $params['id_outlet']);
-        }
-        else {
+        } else {
             $data = GlobalMonthlyReportTrxMenu::with('product');
         }
 
@@ -764,7 +748,7 @@ class ApiSingleReport extends Controller
             $product = Product::select('id_product')->first();
             $params['id_product'] = $product->id_product;
         }
-        
+
         $data = $data->where('id_product', $params['id_product'])
                 ->where('trx_year', $params['year'])
                 ->whereBetween('trx_month', [$params['start_month'], $params['end_month']])
@@ -773,14 +757,13 @@ class ApiSingleReport extends Controller
         return $data;
     }
     // get product report by year
-    public function productYear($params) 
+    public function productYear($params)
     {
         // with outlet
         if (isset($params['id_outlet'])) {
             $data = MonthlyReportTrxMenu::with('product')
                 ->where('id_outlet', $params['id_outlet']);
-        }
-        else {
+        } else {
             $data = GlobalMonthlyReportTrxMenu::with('product');
         }
 
@@ -789,7 +772,7 @@ class ApiSingleReport extends Controller
             $product = Product::select('id_product')->first();
             $params['id_product'] = $product->id_product;
         }
-        
+
         $data = $data->where('id_product', $params['id_product'])
             ->whereBetween('trx_year', [$params['start_year'], $params['end_year']])
             ->orderBy('trx_year')->orderBy('trx_month')->get()->toArray();
@@ -802,7 +785,7 @@ class ApiSingleReport extends Controller
     public function registrationDay($params)
     {
         $data = DailyCustomerReportRegistration::whereBetween('reg_date', [
-                date('Y-m-d', strtotime($params['start_date'])), 
+                date('Y-m-d', strtotime($params['start_date'])),
                 date('Y-m-d', strtotime($params['end_date']))
             ])
             ->orderBy('reg_date')
@@ -811,7 +794,7 @@ class ApiSingleReport extends Controller
         return $data;
     }
     // get registration report by month
-    public function registrationMonth($params) 
+    public function registrationMonth($params)
     {
         $data = MonthlyCustomerReportRegistration::where('reg_year', $params['year'])
             ->whereBetween('reg_month', [$params['start_month'], $params['end_month']])
@@ -821,7 +804,7 @@ class ApiSingleReport extends Controller
         return $data;
     }
     // get registration report by year
-    public function registrationYear($params) 
+    public function registrationYear($params)
     {
         $data = MonthlyCustomerReportRegistration::whereBetween('reg_year', [$params['start_year'], $params['end_year']])
             ->orderBy('reg_year')
@@ -844,7 +827,7 @@ class ApiSingleReport extends Controller
         $data = DailyMembershipReport::with('membership')
                 ->where('id_membership', $params['id_membership'])
                 ->whereBetween('mem_date', [
-                    date('Y-m-d', strtotime($params['start_date'])), 
+                    date('Y-m-d', strtotime($params['start_date'])),
                     date('Y-m-d', strtotime($params['end_date']))
                 ])
                 ->orderBy('mem_date')->get()->toArray();
@@ -852,7 +835,7 @@ class ApiSingleReport extends Controller
         return $data;
     }
     // get membership report by month
-    public function membershipMonth($params) 
+    public function membershipMonth($params)
     {
         // set default membership
         if (!isset($params['id_membership'])) {
@@ -869,7 +852,7 @@ class ApiSingleReport extends Controller
         return $data;
     }
     // get membership report by year
-    public function membershipYear($params) 
+    public function membershipYear($params)
     {
         // set default membership
         if (!isset($params['id_membership'])) {
@@ -893,13 +876,11 @@ class ApiSingleReport extends Controller
             $start_date = $params['start_date'] . " 00:00:00";
             $end_date = $params['end_date'] . " 23:59:59";
             $date_format = 'Y-m-d';
-        }
-        else if (isset($params['start_month']) && isset($params['end_month']) && isset($params['year'])) {
+        } elseif (isset($params['start_month']) && isset($params['end_month']) && isset($params['year'])) {
             $start_date = date('Y-m-d 00:00:00', mktime(0, 0, 0, $params['start_month'], 1, $params['year']));
             $end_date = date('Y-m-t 23:59:59', mktime(0, 0, 0, $params['end_month'], 1, $params['year']));
             $date_format = 'Y-m';
-        }
-        else if (isset($params['start_year']) && isset($params['end_year'])) {
+        } elseif (isset($params['start_year']) && isset($params['end_year'])) {
             $start_date = date('Y-m-d 00:00:00', mktime(0, 0, 0, 1, 1, $params['start_year']));
             $end_date = date('Y-m-t 23:59:59', mktime(0, 0, 0, 12, 31, $params['end_year']));
             $date_format = 'Y-m';
@@ -911,8 +892,16 @@ class ApiSingleReport extends Controller
             ->join('deals_vouchers', 'deals_users.id_deals_voucher', '=', 'deals_vouchers.id_deals_voucher')
             ->join('outlets', 'deals_users.id_outlet', '=', 'outlets.id_outlet')
             ->select(
-                'deals_users.id_deals_user', 'deals_users.id_deals_voucher', 'deals_users.id_user', 'deals_users.id_outlet', 'deals_users.used_at',
-                'users.gender', 'users.birthday', 'users.provider', 'users.android_device', 'users.ios_device',
+                'deals_users.id_deals_user',
+                'deals_users.id_deals_voucher',
+                'deals_users.id_user',
+                'deals_users.id_outlet',
+                'deals_users.used_at',
+                'users.gender',
+                'users.birthday',
+                'users.provider',
+                'users.android_device',
+                'users.ios_device',
                 'deals_vouchers.id_deals',
                 'outlets.outlet_name'
             );
@@ -924,13 +913,13 @@ class ApiSingleReport extends Controller
         if (isset($params['id_deals'])) {
             $data = $data->where('deals_vouchers.id_deals', $params['id_deals']);
         }
-        
+
         /*$data = $data->whereBetween('deals_users.used_at', [$start_date, $end_date])
             ->orderBy('deals_users.used_at')->get()->toArray();*/
 
         $data = $data->whereBetween('deals_users.used_at', [$start_date, $end_date])
             ->orderBy('deals_users.used_at')->get()
-            ->groupBy(function($item) use($date_format) {
+            ->groupBy(function ($item) use ($date_format) {
                 return $item->used_at->format($date_format);
             });
 
@@ -940,7 +929,7 @@ class ApiSingleReport extends Controller
     }
 
     // calculate age, gender, device, and provider
-    public function calculateVoucherReport($data) 
+    public function calculateVoucherReport($data)
     {
         $user_vouchers = [];
 
@@ -981,12 +970,11 @@ class ApiSingleReport extends Controller
                 $temp['cust_tri'] += ($item['provider'] == 'Tri' ? 1 : 0);
                 $temp['cust_axis'] += ($item['provider'] == 'Axis' ? 1 : 0);
                 $temp['cust_smart'] += ($item['provider'] == 'Smart' ? 1 : 0);
-                
-                $temp['cust_teens'] += (($age>=11 && $age<=17 ) ? 1 : 0);
-                $temp['cust_young_adult'] += (($age>=18 && $age<=24 ) ? 1 : 0);
-                $temp['cust_adult'] += (($age>=25 && $age<=34 ) ? 1 : 0);
-                $temp['cust_old'] += (($age>=35 && $age<=100 ) ? 1 : 0);
 
+                $temp['cust_teens'] += (($age >= 11 && $age <= 17 ) ? 1 : 0);
+                $temp['cust_young_adult'] += (($age >= 18 && $age <= 24 ) ? 1 : 0);
+                $temp['cust_adult'] += (($age >= 25 && $age <= 34 ) ? 1 : 0);
+                $temp['cust_old'] += (($age >= 35 && $age <= 100 ) ? 1 : 0);
             }
             $user_vouchers[] = $temp;
         }

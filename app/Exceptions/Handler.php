@@ -50,14 +50,15 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Exception $exception)
     {
-        if ($exception instanceof \Laravel\Passport\Exceptions\MissingScopeException)
-        {
+        if ($exception instanceof \Laravel\Passport\Exceptions\MissingScopeException) {
             return response()->json(['error' => 'Unauthenticated'], 403);
         } elseif ($exception instanceof \Illuminate\Auth\AuthenticationException) {
             return response()->json(['error' => 'Unauthenticated.'], 401);
         } elseif ($exception instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException && !app()->environment('production')) {
             $result = app('App\Http\Controllers\MockAPI')->mock($request);
-            if ($result) return response($result);
+            if ($result) {
+                return response($result);
+            }
             return response([
                 'status' => 'fail',
                 'messages' => ['resource not found']

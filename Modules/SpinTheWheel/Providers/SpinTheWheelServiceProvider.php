@@ -46,10 +46,11 @@ class SpinTheWheelServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('spinthewheel.php'),
+            __DIR__ . '/../Config/config.php' => config_path('spinthewheel.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'spinthewheel'
+            __DIR__ . '/../Config/config.php',
+            'spinthewheel'
         );
     }
 
@@ -62,11 +63,11 @@ class SpinTheWheelServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/spinthewheel');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/spinthewheel';
@@ -85,7 +86,7 @@ class SpinTheWheelServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'spinthewheel');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'spinthewheel');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'spinthewheel');
         }
     }
 

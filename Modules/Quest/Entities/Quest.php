@@ -32,7 +32,7 @@ class Quest extends Model
         'user_rule_parameter',
         'user_rule_operator'
     ];
-    
+
     public function getImageUrlAttribute($value)
     {
         return $value ? env('STORAGE_URL_API') . $value : null;
@@ -101,7 +101,7 @@ class Quest extends Model
             ->where('is_active', 1)
             ->orderBy('order')
             ->get()
-            ->each(function($item) use ($replacer) {
+            ->each(function ($item) use ($replacer) {
                 $item->content = str_replace(array_keys($replacer), array_values($replacer), $item->content);
             })
             ->toArray();
@@ -115,18 +115,18 @@ class Quest extends Model
         $date_end = MyHelper::indonesian_date_v2($this->date_end, $value ? 'd F Y, H:i' : 'd F Y');
         if ($this->claimed_status) {
             return [
-                'text' => 'Selesai '.MyHelper::indonesian_date_v2($this['redemption_date'], $value ? 'd F Y, H:i' : 'd F Y'),
+                'text' => 'Selesai ' . MyHelper::indonesian_date_v2($this['redemption_date'], $value ? 'd F Y, H:i' : 'd F Y'),
                 'code' => 2
             ];
         }
         if ($this->date_start > $now) {
             return [
-                'text' => 'Dimulai pada '.$date_start,
+                'text' => 'Dimulai pada ' . $date_start,
                 'code' => 0,
             ];
         } elseif ($this->date_start <= $now && $this->date_end >= $now) {
             return [
-                'text' => 'Berlaku sampai '.$date_end,
+                'text' => 'Berlaku sampai ' . $date_end,
                 'code' => 1,
             ];
         } else {
@@ -137,7 +137,7 @@ class Quest extends Model
                 $stop_reason = $stop_reason ? "\n karena $stop_reason" : '';
             }
             return [
-                'text' => 'Berakhir pada '.$date_end,
+                'text' => 'Berakhir pada ' . $date_end,
                 'stop_reason' => $stop_reason,
                 'code' => -1,
             ];

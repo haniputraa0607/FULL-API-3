@@ -43,11 +43,11 @@ class ApiMerchantExternalManagementController extends Controller
 
     public static function checkApi($request)
     {
-        $key = $request['api_key']??null;
-        $secret = $request['api_secret']??null;
-        $merchantCode = $request['merchant_code']??null;
+        $key = $request['api_key'] ?? null;
+        $secret = $request['api_secret'] ?? null;
+        $merchantCode = $request['merchant_code'] ?? null;
 
-        if(empty($merchantCode)){
+        if (empty($merchantCode)) {
             return ['status' => 'fail', 'messages' => ['merhant code can not be empty']];
         }
 
@@ -55,8 +55,8 @@ class ApiMerchantExternalManagementController extends Controller
             return ['status' => 'fail', 'messages' => ['api_key and api_secret can not be empty']];
         }
 
-        $idOutlet = Outlet::where('outlet_code', $merchantCode)->first()['id_outlet']??null;
-        if(empty($idOutlet)){
+        $idOutlet = Outlet::where('outlet_code', $merchantCode)->first()['id_outlet'] ?? null;
+        if (empty($idOutlet)) {
             return ['status' => 'fail', 'messages' => ['merhant not found']];
         }
 
@@ -72,13 +72,14 @@ class ApiMerchantExternalManagementController extends Controller
         unset($request['api_secret']);
         unset($request['merchant_code']);
 
-        $idUser = Merchant::where('id_outlet', $idOutlet)->first()['id_user']??null;
+        $idUser = Merchant::where('id_outlet', $idOutlet)->first()['id_user'] ?? null;
         $request['id_user'] = $idUser;
         $request['id_outlet'] = $idOutlet;
         return ['status' => 'success', 'result' => $request];
     }
 
-    public function listProductCategory(Request $request){
+    public function listProductCategory(Request $request)
+    {
         $post = $request->json()->all();
         $api = $this->checkApi($post);
         if ($api['status'] != 'success') {
@@ -88,7 +89,8 @@ class ApiMerchantExternalManagementController extends Controller
         return app($this->product_category)->listCategoryCustomerApps();
     }
 
-    public function productList(Request $request){
+    public function productList(Request $request)
+    {
         $post = $request->json()->all();
         $api = $this->checkApi($post);
         if ($api['status'] != 'success') {
@@ -98,7 +100,8 @@ class ApiMerchantExternalManagementController extends Controller
         return app($this->merchant_management)->productList($api['result']);
     }
 
-    public function productCreate(Request $request){
+    public function productCreate(Request $request)
+    {
         $post = $request->all();
         $api = $this->checkApi($post);
         if ($api['status'] != 'success') {
@@ -108,7 +111,8 @@ class ApiMerchantExternalManagementController extends Controller
         return app($this->merchant_management)->productCreate($api['result']);
     }
 
-    public function productUpdate(Request $request){
+    public function productUpdate(Request $request)
+    {
         $post = $request->all();
         $api = $this->checkApi($post);
         if ($api['status'] != 'success') {
@@ -118,7 +122,8 @@ class ApiMerchantExternalManagementController extends Controller
         return app($this->merchant_management)->productUpdate($api['result']);
     }
 
-    public function productDetail(Request $request){
+    public function productDetail(Request $request)
+    {
         $post = $request->all();
         $api = $this->checkApi($post);
         if ($api['status'] != 'success') {
@@ -128,7 +133,8 @@ class ApiMerchantExternalManagementController extends Controller
         return app($this->merchant_management)->productDetail($api['result']);
     }
 
-    public function productDelete(Request $request){
+    public function productDelete(Request $request)
+    {
         $post = $request->all();
         $api = $this->checkApi($post);
         if ($api['status'] != 'success') {
@@ -138,7 +144,8 @@ class ApiMerchantExternalManagementController extends Controller
         return app($this->merchant_management)->productDelete($api['result']);
     }
 
-    public function productPhotoDelete(Request $request){
+    public function productPhotoDelete(Request $request)
+    {
         $post = $request->all();
         $api = $this->checkApi($post);
         if ($api['status'] != 'success') {
@@ -148,7 +155,8 @@ class ApiMerchantExternalManagementController extends Controller
         return app($this->merchant_management)->productPhotoDelete($api['result']);
     }
 
-    public function variantDelete(Request $request){
+    public function variantDelete(Request $request)
+    {
         $post = $request->all();
         $api = $this->checkApi($post);
         if ($api['status'] != 'success') {
@@ -158,7 +166,8 @@ class ApiMerchantExternalManagementController extends Controller
         return app($this->merchant_management)->variantDelete($api['result']);
     }
 
-    public function productStockDetail(Request $request){
+    public function productStockDetail(Request $request)
+    {
         $post = $request->all();
         $api = $this->checkApi($post);
         if ($api['status'] != 'success') {

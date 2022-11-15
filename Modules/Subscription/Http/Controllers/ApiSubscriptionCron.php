@@ -5,10 +5,8 @@ namespace Modules\Subscription\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Lib\MyHelper;
 use App\Lib\Midtrans;
-
 use Modules\Subscription\Entities\Subscription;
 use Modules\Subscription\Entities\FeaturedSubscription;
 use Modules\Subscription\Entities\SubscriptionOutlet;
@@ -19,8 +17,7 @@ use App\Http\Models\LogBalance;
 
 class ApiSubscriptionCron extends Controller
 {
-
-    function __construct()
+    public function __construct()
     {
         date_default_timezone_set('Asia/Jakarta');
         ini_set('max_execution_time', 0);
@@ -28,8 +25,8 @@ class ApiSubscriptionCron extends Controller
         $this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
     }
 
-    
-    function cron(Request $request)
+
+    public function cron(Request $request)
     {
         $now       = date('Y-m-d H:i:s');
 
@@ -41,7 +38,7 @@ class ApiSubscriptionCron extends Controller
 
         foreach ($getSubs as $key => $value) {
             $singleSubs = SubscriptionUser::where('id_subscription_user', '=', $value->id_subscription_user)->with('subscription')->first();
-            
+
             if (empty($singleSubs)) {
                 continue;
             }
@@ -58,8 +55,8 @@ class ApiSubscriptionCron extends Controller
             $singleSubs->void_date = $now;
             $singleSubs->save();
 
-            $subscription = Subscription::where('id_subscription','=', $singleSubs->id_subscription)->first();
-            $subscription->subscription_bought = $subscription->subscription_bought-1;
+            $subscription = Subscription::where('id_subscription', '=', $singleSubs->id_subscription)->first();
+            $subscription->subscription_bought = $subscription->subscription_bought - 1;
             $subscription->save();
 
             if (!$singleSubs) {
@@ -72,7 +69,9 @@ class ApiSubscriptionCron extends Controller
                 $reversal = app($this->balance)->addLogBalance($singleSubs->id_user, abs($value['balance']), $singleSubs->subscription_user_receipt_number, 'Reversal', $singleSubs->subscription_price_cash);
                 $user = User::where('id', $singleSubs->id_user)->first();
 
-                $send = app($this->autocrm)->SendAutoCRM('Buy Subscription Failed Point Refund', $user->phone,
+                $send = app($this->autocrm)->SendAutoCRM(
+                    'Buy Subscription Failed Point Refund',
+                    $user->phone,
                     [
                         "subscription_title"        => $singleSubs->subscription['subscription_title'],
                         "subscription_price_cash"   => $singleSubs->subscription_price_cash,
@@ -82,7 +81,7 @@ class ApiSubscriptionCron extends Controller
 
                     ]
                 );
-                if($send != true){
+                if ($send != true) {
                     DB::rollback();
                     return response()->json([
                             'status' => 'fail',
@@ -94,5 +93,4 @@ class ApiSubscriptionCron extends Controller
 
         return response()->json(['success']);
     }
-
 }

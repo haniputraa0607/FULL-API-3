@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Lib;
 
 use Image;
@@ -9,7 +10,6 @@ use App\Http\Models\Transaction;
 use App\Http\Models\LogPoint;
 use App\Http\Models\UsersMembership;
 use App\Http\Models\Membership as ModelMembership;
-
 use App\Http\Requests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -19,30 +19,29 @@ use Guzzle\Http\EntityBody;
 use Guzzle\Http\Message\Request;
 use Guzzle\Http\Message\Response;
 use Guzzle\Http\Exception\ServerErrorResponseException;
-
 use LaravelFCM\Message\OptionsBuilder;
 use LaravelFCM\Message\PayloadDataBuilder;
 use LaravelFCM\Message\PayloadNotificationBuilder;
 use FCM;
 use App\Lib\MyHelper;
 
-class Membership {
-
-    public function __construct() 
+class Membership
+{
+    public function __construct()
     {
         date_default_timezone_set('Asia/Jakarta');
     }
 
     /* CALCULATE */
-    static function calculate($id_user=null, $phone=null) 
+    public static function calculate($id_user = null, $phone = null)
     {
         DB::beginTransaction();
-        $id_user = Self::getuser($id_user, $phone);
+        $id_user = self::getuser($id_user, $phone);
 
         if ($id_user) {
             // CEK TRANSAKSI
-            if ($trx = Self::callTransaction($id_user)) {
-                if (Self::callMembership($id_user, $trx)) {
+            if ($trx = self::callTransaction($id_user)) {
+                if (self::callMembership($id_user, $trx)) {
                     DB::commit();
                     return true;
                 }
@@ -54,7 +53,7 @@ class Membership {
     }
 
     /* ID USER */
-    static function getUser($id_user=null, $phone=null) 
+    public static function getUser($id_user = null, $phone = null)
     {
         if (!is_null($phone)) {
             $id_user = User::where('phone', $phone)->first();
@@ -71,13 +70,12 @@ class Membership {
 
 
     /* TRANSAKSI */
-    static function callTransaction($id_user) 
+    public static function callTransaction($id_user)
     {
         $dataTrans = [];
         $transaction = Transaction::where('id_user', $id_user)->where('transaction_payment_status', 'Completed')->get()->toArray();
 
         if ($transaction) {
-
             $trx = array_column($transaction, 'transaction_grandtotal');
 
             $dataTrans = [
@@ -90,7 +88,7 @@ class Membership {
     }
 
     /* MEMBERSHIT */
-    static function callMembership($id_user, $trx)
+    public static function callMembership($id_user, $trx)
     {
         $membership = ModelMembership::orderBy('min_total_value', 'ASC')->get()->toArray();
 
@@ -102,12 +100,11 @@ class Membership {
                 $dataUser['id_user'] = $id_user;
 
                 if ($trx['trxAmount'] >= $value['min_total_value'] && $trx['trxCount'] >= $value['min_total_count']) {
-                    
                     foreach ($value as $k => $v) {
                         $dataUser[$k] = $v;
                     }
 
-                    $dataUser['retain_date'] = date('Y-m-d', strtotime("+ ".$value['retain_days']."days"));
+                    $dataUser['retain_date'] = date('Y-m-d', strtotime("+ " . $value['retain_days'] . "days"));
                 }
             }
 
@@ -126,8 +123,7 @@ class Membership {
                     if ($save) {
                         return true;
                     }
-                }
-                else {
+                } else {
                     return true;
                 }
             }

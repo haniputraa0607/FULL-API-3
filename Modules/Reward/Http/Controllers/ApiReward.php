@@ -5,29 +5,27 @@ namespace Modules\Reward\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\Reward;
 use App\Http\Models\RewardUser;
 use App\Http\Models\User;
 use App\Http\Models\LogPoint;
-
 use Modules\Reward\Http\Requests\Create;
 use Modules\Reward\Http\Requests\Detail;
 use Modules\Reward\Http\Requests\Update;
 use Modules\Reward\Http\Requests\Buy;
 use Modules\Reward\Http\Requests\WinnerChoosen;
-
 use App\Lib\MyHelper;
 use DB;
 
 class ApiReward extends Controller
 {
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
     }
     public $saveImage = "img/reward/";
 
-    function create(Create $request)
+    public function create(Create $request)
     {
         $post = $request->json()->all();
 
@@ -35,12 +33,12 @@ class ApiReward extends Controller
         if (!file_exists($this->saveImage)) {
             mkdir($this->saveImage, 0777, true);
         }
-        $upload = MyHelper::uploadPhotoStrict($post['reward_image'], $this->saveImage, 300, 300);;
+        $upload = MyHelper::uploadPhotoStrict($post['reward_image'], $this->saveImage, 300, 300);
+        ;
 
         if (isset($upload['status']) && $upload['status'] == "success") {
             $post['reward_image'] = $upload['path'];
-        }
-        else {
+        } else {
             $result = [
                 'status'   => 'fail',
                 'messages' => ['fail upload image']
@@ -59,7 +57,8 @@ class ApiReward extends Controller
         return response()->json(MyHelper::checkCreate($reward));
     }
 
-    function list(Request $request){
+    public function list(Request $request)
+    {
         $post = $request->json()->all();
 
         $reward = Reward::with('reward_user.user');
@@ -70,24 +69,22 @@ class ApiReward extends Controller
         $reward = $reward->get();
 
         if (isset($post['id_reward'])) {
-
             //set winner when reward end
-            if(date('Y-m-d', strtotime($reward[0]['reward_end'])) < date('Y-m-d') && $reward[0]['winner_type'] != 'Choosen'){
+            if (date('Y-m-d', strtotime($reward[0]['reward_end'])) < date('Y-m-d') && $reward[0]['winner_type'] != 'Choosen') {
                 //check participant
                 $participant = $reward[0]->reward_user->count('id_user');
-                if($participant > 0){
+                if ($participant > 0) {
                     //chek winner has been set
                     $winner = $reward[0]->winner->count('id_user');
-                    if($winner <= 0){
+                    if ($winner <= 0) {
                         $setWinner = $this->setWinner($reward[0]->id_reward);
-                        if((isset($setWinner['status']) && $setWinner['status'] == 'fail') || !isset($setWinner['status'])){
+                        if ((isset($setWinner['status']) && $setWinner['status'] == 'fail') || !isset($setWinner['status'])) {
                             return response()->json($setWinner);
                         }
-                        
+
                         $reward = Reward::with('reward_user.user')->where('id_reward', $post['id_reward'])->get();
                     }
                 }
-
             }
             $reward[0]['reward_total_coupon'] = $reward[0]->reward_user->sum('total_coupon');
             $reward[0]['reward_total_user'] = $reward[0]->reward_user->count('id_user');
@@ -96,12 +93,12 @@ class ApiReward extends Controller
         return response()->json(MyHelper::checkGet($reward));
     }
 
-    function update(Update $request)
+    public function update(Update $request)
     {
         $post = $request->json()->all();
 
         $reward = Reward::find($post['id_reward']);
-        if(!$reward){
+        if (!$reward) {
             $result = [
                 'status'   => 'fail',
                 'messages' => ['Reward not found.']
@@ -110,7 +107,7 @@ class ApiReward extends Controller
             return response()->json($result);
         }
         //upload image
-        if(isset($post['reward_image'])){
+        if (isset($post['reward_image'])) {
             //delete old image
             if (!empty($reward->reward_image)) {
                 $delete = MyHelper::deletePhoto($reward->reward_image);
@@ -120,13 +117,12 @@ class ApiReward extends Controller
             $upload = MyHelper::uploadPhotoStrict($post['reward_image'], $this->saveImage, 300, 300);
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $post['reward_image'] = $upload['path'];
-            }
-            else {
+            } else {
                 $result = [
                     'status'   => 'fail',
                     'messages' => ['fail upload image']
                 ];
-    
+
                 return response()->json($result);
             }
         }
@@ -141,11 +137,12 @@ class ApiReward extends Controller
         return response()->json(MyHelper::checkUpdate($reward));
     }
 
-    function delete(Detail $request){
+    public function delete(Detail $request)
+    {
         $post = $request->json()->all();
 
         $reward = Reward::find($post['id_reward']);
-        if(!$reward){
+        if (!$reward) {
             $result = [
                 'status'   => 'fail',
                 'messages' => ['Reward not found.']
@@ -156,7 +153,7 @@ class ApiReward extends Controller
 
         //cek reward user
         $reward_user = RewardUser::where('id_reward', $post['id_reward'])->get();
-        if(count($reward_user) > 0){
+        if (count($reward_user) > 0) {
             return response()->json([
                 'status' => 'fail',
                 'messages' => ['Reward already used.']
@@ -172,14 +169,15 @@ class ApiReward extends Controller
         return response()->json(MyHelper::checkDelete($delete));
     }
 
-    function buyCoupon(Buy $request){
+    public function buyCoupon(Buy $request)
+    {
         $post = $request->json()->all();
         $user = $request->user();
         $now = date('Y-m-d');
 
         //cek reward
         $reward = Reward::find($post['id_reward']);
-        if(!$reward){
+        if (!$reward) {
             $result = [
                 'status'   => 'fail',
                 'messages' => ['Reward not found.']
@@ -188,8 +186,8 @@ class ApiReward extends Controller
             return response()->json($result);
         }
 
-        //cek reward start & reward end  
-        if($now < $reward['reward_start'] || $now > $reward['reward_end']){
+        //cek reward start & reward end
+        if ($now < $reward['reward_start'] || $now > $reward['reward_end']) {
             $result = [
                 'status'   => 'fail',
                 'messages' => ['Reward not available.']
@@ -202,7 +200,7 @@ class ApiReward extends Controller
         $point = LogPoint::where('id_user', $user['id'])->sum('point');
         $pointNeeded = $reward['reward_coupon_point'] * $post['total_coupon'];
 
-        if($point < $pointNeeded){
+        if ($point < $pointNeeded) {
             $result = [
                 'status'   => 'fail',
                 'messages' => ['User points are not enough.']
@@ -215,17 +213,17 @@ class ApiReward extends Controller
 
         //insert reward user
         $rewardUser = RewardUser::where('id_user', $user['id'])->where('id_reward', $reward['id_reward'])->first();
-        if(!$rewardUser){
+        if (!$rewardUser) {
             $new['id_user'] = $user['id'];
             $new['id_reward'] = $reward['id_reward'];
             $new['total_coupon'] = $post['total_coupon'];
             $rewardUser = RewardUser::create($new);
-        }else{
+        } else {
             $rewardUser->total_coupon = $rewardUser->total_coupon + $post['total_coupon'];
             $rewardUser->update();
         }
 
-        if(!$rewardUser){
+        if (!$rewardUser) {
             DB::rollBack();
             $result = [
                 'status'   => 'fail',
@@ -244,7 +242,7 @@ class ApiReward extends Controller
         $log['reward_total_coupon'] = $post['total_coupon'];
 
         $log = LogPoint::create($log);
-        if(!$log){
+        if (!$log) {
             DB::rollBack();
             $result = [
                 'status'   => 'fail',
@@ -257,7 +255,7 @@ class ApiReward extends Controller
         //update user point
         $sumPoint = LogPoint::where('id_user', $user['id'])->sum('point');
         $update = User::where('id', $user['id'])->update(['points' => $sumPoint]);
-        if(!$log){
+        if (!$log) {
             DB::rollBack();
             $result = [
                 'status'   => 'fail',
@@ -274,16 +272,17 @@ class ApiReward extends Controller
             'result' => $return
         ];
         return response()->json($result);
-
     }
 
-    function listActive(){
+    public function listActive()
+    {
         $now = date('Y-m-d');
         $reward = Reward::where('reward_publish_start', '<=', $now)->where('reward_publish_end', '>=', $now)->get();
         return response()->json(MyHelper::checkGet($reward));
     }
 
-    function myCoupon(Request $request){
+    public function myCoupon(Request $request)
+    {
         $now = date('Y-m-d');
         $reward = Reward::join('reward_users', 'rewards.id_reward', 'reward_users.id_reward')
                         ->where('reward_start', '<=', $now)
@@ -293,11 +292,12 @@ class ApiReward extends Controller
         return response()->json(MyHelper::checkGet($reward));
     }
 
-    function setWinner($id_reward){
+    public function setWinner($id_reward)
+    {
         DB::beginTransaction();
         //cek reward
         $reward = Reward::find($id_reward);
-        if(!$reward){
+        if (!$reward) {
             $result = [
                 'status'   => 'fail',
                 'messages' => ['Reward not found.']
@@ -306,25 +306,24 @@ class ApiReward extends Controller
             return $result;
         }
 
-        if($reward['winner_type'] == 'Highest Coupon'){
+        if ($reward['winner_type'] == 'Highest Coupon') {
             $id_user = RewardUser::where('id_reward', $reward->id_reward)->limit($reward->count_winner)->orderBy('total_coupon', 'DESC')->get()->pluck('id_user');
-        }else if($reward->winner_type == 'Random'){
+        } elseif ($reward->winner_type == 'Random') {
             $rewardUser = RewardUser::where('id_reward', $reward->id_reward)->get();
             $win = array();
-            foreach ($rewardUser as $index=>$value)
-            {
+            foreach ($rewardUser as $index => $value) {
                 $win = array_merge($win, array_fill(0, $value['total_coupon'], $value['id_user']));
             }
 
             $random = array_rand($win, $reward->count_winner);
-            foreach($random as $i => $rand){
+            foreach ($random as $i => $rand) {
                 $id_user[] = $win[$rand];
             }
         }
-        
+
         //set winner
         $winner = RewardUser::whereIn('id_user', $id_user)->where('id_reward', $reward->id_reward)->update(['is_winner' => '1']);
-        if(!$winner){
+        if (!$winner) {
             DB::rollBack();
             $result = [
                 'status'   => 'fail',
@@ -345,13 +344,14 @@ class ApiReward extends Controller
         return $result;
     }
 
-    function setWinnerChoosen(WinnerChoosen $request){
+    public function setWinnerChoosen(WinnerChoosen $request)
+    {
         $post = $request->json()->all();
 
         DB::beginTransaction();
         //cek reward
         $reward = Reward::find($post['id_reward']);
-        if(!$reward){
+        if (!$reward) {
             $result = [
                 'status'   => 'fail',
                 'messages' => ['Reward not found.']
@@ -362,7 +362,7 @@ class ApiReward extends Controller
 
         //set winner
         $winner = RewardUser::whereIn('id_user', $post['id_user'])->where('id_reward', $reward->id_reward)->update(['is_winner' => '1']);
-        if(!$winner){
+        if (!$winner) {
             DB::rollBack();
             $result = [
                 'status'   => 'fail',

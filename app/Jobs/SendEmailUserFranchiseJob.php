@@ -22,7 +22,11 @@ use App\Lib\MyHelper;
 
 class SendEmailUserFranchiseJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
     protected $data;
     /**
      * Create a new job instance.
@@ -41,16 +45,16 @@ class SendEmailUserFranchiseJob implements ShouldQueue
      */
     public function handle()
     {
-        foreach ($this->data as $data){
+        foreach ($this->data as $data) {
             $pin = MyHelper::createrandom(6);
             $user = UserFranchise::where('id_user_franchise', $data)->first();
             $updatePin = UserFranchise::where('id_user_franchise', $data)->update(['password' => bcrypt($pin)]);
             $franchiseOutlet = UserFranchiseOultet::join('outlets', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
-                ->where('id_user_franchise' , $data)->first();
-            $outletCode = $franchiseOutlet['outlet_name']??null;
-            $outletName = $franchiseOutlet['outlet_code']??null;
+                ->where('id_user_franchise', $data)->first();
+            $outletCode = $franchiseOutlet['outlet_name'] ?? null;
+            $outletName = $franchiseOutlet['outlet_code'] ?? null;
 
-            if($updatePin){
+            if ($updatePin) {
                 $autocrm = app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM(
                     'New User Franchise',
                     $user['username'],
@@ -61,7 +65,12 @@ class SendEmailUserFranchiseJob implements ShouldQueue
                         'url' => env('URL_PORTAL_MITRA'),
                         'outlet_code' => $outletCode,
                         'outlet_name' => $outletName
-                    ], null, false, false, 'franchise', 1
+                    ],
+                    null,
+                    false,
+                    false,
+                    'franchise',
+                    1
                 );
             }
         }

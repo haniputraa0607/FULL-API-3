@@ -31,12 +31,14 @@ class Bundling extends Model
         'end_date'
     ];
 
-    public function getImageAttribute($value) {
-        return config('url.storage_url_api').$value;
+    public function getImageAttribute($value)
+    {
+        return config('url.storage_url_api') . $value;
     }
 
-    public function getImageDetailAttribute($value) {
-        return config('url.storage_url_api').$value;
+    public function getImageDetailAttribute($value)
+    {
+        return config('url.storage_url_api') . $value;
     }
 
     public function user()
@@ -44,25 +46,30 @@ class Bundling extends Model
         return $this->hasOne(User::class, 'created_by');
     }
 
-    public function bundling_product(){
+    public function bundling_product()
+    {
         return $this->hasMany(BundlingProduct::class, 'id_bundling', 'id_bundling')
         ->join('products', 'bundling_product.id_product', 'products.id_product');
     }
 
-    public function bundling_periode_day(){
+    public function bundling_periode_day()
+    {
         return $this->hasMany(BundlingPeriodeDay::class, 'id_bundling', 'id_bundling');
     }
-    
-    public function outlets(){
-		return $this->belongsToMany(Outlet::class, 'bundling_outlet', 'id_bundling', 'id_outlet');
+
+    public function outlets()
+    {
+        return $this->belongsToMany(Outlet::class, 'bundling_outlet', 'id_bundling', 'id_outlet');
     }
-    
-    public function bundling_outlet(){
+
+    public function bundling_outlet()
+    {
         return $this->hasMany(BundlingOutlet::class, 'id_bundling', 'id_bundling')
         ->join('outlets', 'bundling_outlet.id_outlet', 'outlets.id_outlet');
     }
 
-    public function bundling_outlet_group(){
+    public function bundling_outlet_group()
+    {
         return $this->hasMany(BundlingOutletGroup::class, 'id_bundling', 'id_bundling');
     }
 

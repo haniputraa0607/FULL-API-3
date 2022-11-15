@@ -46,10 +46,11 @@ class ShipmentServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('shipment.php'),
+            __DIR__ . '/../Config/config.php' => config_path('shipment.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'shipment'
+            __DIR__ . '/../Config/config.php',
+            'shipment'
         );
     }
 
@@ -62,11 +63,11 @@ class ShipmentServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/shipment');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/shipment';
@@ -85,7 +86,7 @@ class ShipmentServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'shipment');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'shipment');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'shipment');
         }
     }
 

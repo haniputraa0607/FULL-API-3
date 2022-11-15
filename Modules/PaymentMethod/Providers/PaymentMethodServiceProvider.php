@@ -39,10 +39,11 @@ class PaymentMethodServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('paymentmethod.php'),
+            __DIR__ . '/../Config/config.php' => config_path('paymentmethod.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'paymentmethod'
+            __DIR__ . '/../Config/config.php',
+            'paymentmethod'
         );
     }
 
@@ -55,11 +56,11 @@ class PaymentMethodServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/paymentmethod');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/paymentmethod';
@@ -78,7 +79,7 @@ class PaymentMethodServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'paymentmethod');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'paymentmethod');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'paymentmethod');
         }
     }
 

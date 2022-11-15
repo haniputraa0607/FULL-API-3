@@ -7,15 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 class DailyCheckPromoCode extends Model
 {
     /**
-	 * The database name used by the model.
-	 *
-	 * @var string
-	 */
-	protected $connection = 'mysql2';
-	
+     * The database name used by the model.
+     *
+     * @var string
+     */
+    protected $connection = 'mysql2';
+
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'daily_check_promo_code';
@@ -29,7 +29,7 @@ class DailyCheckPromoCode extends Model
         'device_id',
         'promo_code',
         'ip',
-        'created_at', 
+        'created_at',
         'updated_at'
     ];
 }

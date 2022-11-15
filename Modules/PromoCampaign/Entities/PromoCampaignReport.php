@@ -11,7 +11,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class PromoCampaignReport
- * 
+ *
  * @property int $id_promo_campaign_report
  * @property int $id_promo_campaign_promo_code
  * @property int $id_user
@@ -24,7 +24,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  * @property int $id_promo_campaign
- * 
+ *
  * @property \Modules\PromoCampaign\Entities\PromoCampaign $promo_campaign
  * @property \Modules\PromoCampaign\Entities\Outlet $outlet
  * @property \Modules\PromoCampaign\Entities\PromoCampaignPromoCode $promo_campaign_promo_code
@@ -35,51 +35,51 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  */
 class PromoCampaignReport extends Eloquent
 {
-	protected $primaryKey = 'id_promo_campaign_report';
+    protected $primaryKey = 'id_promo_campaign_report';
 
-	protected $casts = [
-		'id_promo_campaign_promo_code' => 'int',
-		'id_user' => 'int',
-		'id_transaction' => 'int',
-		'id_outlet' => 'int',
-		'id_promo_campaign' => 'int'
-	];
+    protected $casts = [
+        'id_promo_campaign_promo_code' => 'int',
+        'id_user' => 'int',
+        'id_transaction' => 'int',
+        'id_outlet' => 'int',
+        'id_promo_campaign' => 'int'
+    ];
 
-	protected $fillable = [
-		'id_promo_campaign_promo_code',
-		'id_user',
-		'id_transaction',
+    protected $fillable = [
+        'id_promo_campaign_promo_code',
+        'id_user',
+        'id_transaction',
         'id_transaction_group',
-		'id_outlet',
-		'device_id',
-		'device_type',
-		'user_name',
-		'user_phone',
-		'id_promo_campaign'
-	];
+        'id_outlet',
+        'device_id',
+        'device_type',
+        'user_name',
+        'user_phone',
+        'id_promo_campaign'
+    ];
 
-	public function promo_campaign()
-	{
-		return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaign::class, 'id_promo_campaign');
-	}
+    public function promo_campaign()
+    {
+        return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaign::class, 'id_promo_campaign');
+    }
 
-	public function outlet()
-	{
-		return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet');
-	}
+    public function outlet()
+    {
+        return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet');
+    }
 
-	public function promo_campaign_promo_code()
-	{
-		return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaignPromoCode::class, 'id_promo_campaign_promo_code');
-	}
+    public function promo_campaign_promo_code()
+    {
+        return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaignPromoCode::class, 'id_promo_campaign_promo_code');
+    }
 
-	public function transaction()
-	{
-		return $this->belongsTo(\App\Http\Models\Transaction::class, 'id_transaction');
-	}
+    public function transaction()
+    {
+        return $this->belongsTo(\App\Http\Models\Transaction::class, 'id_transaction');
+    }
 
-	public function user()
-	{
-		return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
-	}
+    public function user()
+    {
+        return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
+    }
 }

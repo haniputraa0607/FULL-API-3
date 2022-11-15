@@ -39,10 +39,11 @@ class RedirectComplexServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('redirectcomplex.php'),
+            __DIR__ . '/../Config/config.php' => config_path('redirectcomplex.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'redirectcomplex'
+            __DIR__ . '/../Config/config.php',
+            'redirectcomplex'
         );
     }
 
@@ -55,11 +56,11 @@ class RedirectComplexServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/redirectcomplex');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/redirectcomplex';
@@ -78,7 +79,7 @@ class RedirectComplexServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'redirectcomplex');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'redirectcomplex');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'redirectcomplex');
         }
     }
 

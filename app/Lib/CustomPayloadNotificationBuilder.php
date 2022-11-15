@@ -24,5 +24,4 @@ class CustomPayloadNotificationBuilder extends PayloadNotificationBuilder
     {
         return new CustomPayloadNotification($this);
     }
-
 }

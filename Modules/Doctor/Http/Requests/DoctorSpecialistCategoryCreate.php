@@ -11,7 +11,7 @@ class DoctorSpecialistCategoryCreate extends FormRequest
     public function rules()
     {
         return [
-            'doctor_specialist_category_name'=>'required|string'
+            'doctor_specialist_category_name' => 'required|string'
         ];
     }
 

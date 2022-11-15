@@ -5,6 +5,7 @@ namespace App\Http\Requests\users;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
+
 class UserUpdateByPhone extends FormRequest
 {
     /**
@@ -28,7 +29,7 @@ class UserUpdateByPhone extends FormRequest
             'phone' => 'required|string|min:8|max:15',
             'name' => 'required|string',
             'email' => 'required|sometimes|email',
-			'password' => 'required|numeric|digits:6',
+            'password' => 'required|numeric|digits:6',
             'gender' => 'required|in:Male,Female',
             'id_village' => 'required|sometimes|exists:villages,id_village',
             'address' => 'required|sometimes|max:255',
@@ -47,5 +48,4 @@ class UserUpdateByPhone extends FormRequest
     {
         return $this->json()->all();
     }
-
 }

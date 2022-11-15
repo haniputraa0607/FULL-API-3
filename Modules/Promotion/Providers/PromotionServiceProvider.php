@@ -46,10 +46,11 @@ class PromotionServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('promotion.php'),
+            __DIR__ . '/../Config/config.php' => config_path('promotion.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'promotion'
+            __DIR__ . '/../Config/config.php',
+            'promotion'
         );
     }
 
@@ -62,11 +63,11 @@ class PromotionServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/promotion');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/promotion';
@@ -85,7 +86,7 @@ class PromotionServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'promotion');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'promotion');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'promotion');
         }
     }
 

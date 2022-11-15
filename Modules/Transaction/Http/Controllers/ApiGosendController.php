@@ -15,7 +15,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
-
 use DB;
 
 class ApiGosendController extends Controller
@@ -64,9 +63,9 @@ class ApiGosendController extends Controller
         }
          **/
         $auth = $request->header('Authorization');
-        $preset_auth = Setting::select('value')->where('key','gosend_auth_token')->pluck('value')->first();
-        if($preset_auth && $auth !== $preset_auth){
-            return response()->json(['status'=>'fail','messages'=>'Invalid Token'],401);
+        $preset_auth = Setting::select('value')->where('key', 'gosend_auth_token')->pluck('value')->first();
+        if ($preset_auth && $auth !== $preset_auth) {
+            return response()->json(['status' => 'fail','messages' => 'Invalid Token'], 401);
         }
         $post = $request->json()->all();
         $tpg  = TransactionPickupGoSend::where('go_send_order_no', $post['booking_id'] ?? '')->where('latest_status', '<>', 'delivered')->first();
@@ -90,7 +89,7 @@ class ApiGosendController extends Controller
                 ];
                 $response_code = 200;
                 $toUpdate      = ['latest_status' => $post['status']];
-                if($post['receiver_name'] ?? '') {
+                if ($post['receiver_name'] ?? '') {
                     $toUpdate['receiver_name'] = $post['receiver_name'];
                 }
                 if (!in_array(strtolower($post['status']), ['confirmed', 'no_driver', 'cancelled']) && (empty($tpg->live_tracking_url) || empty($tpg->driver_id) || empty($tpg->driver_name) || empty($tpg->driver_phone) || empty($tpg->driver_photo) || empty($tpg->vehicle_number))) {
@@ -130,19 +129,19 @@ class ApiGosendController extends Controller
                     if ($status['vehicleNumber'] ?? false) {
                         $toUpdate['vehicle_number'] = $status['vehicleNumber'];
                     }
-                    if(strpos(env('GO_SEND_URL'), 'integration')){
-                        $toUpdate['driver_id']      = $toUpdate['driver_id']??'00510001';
-                        $toUpdate['driver_phone']   = $toUpdate['driver_phone']??'08111251307';
-                        $toUpdate['driver_name']    = $toUpdate['driver_name']??'Anton Lucarus';
-                        $toUpdate['driver_photo']   = $toUpdate['driver_photo']??'http://beritatrans.com/cms/wp-content/uploads/2020/02/images4-553x400.jpeg';
-                        $toUpdate['vehicle_number'] = $toUpdate['vehicle_number']??'AB 2641 XY';                        
+                    if (strpos(env('GO_SEND_URL'), 'integration')) {
+                        $toUpdate['driver_id']      = $toUpdate['driver_id'] ?? '00510001';
+                        $toUpdate['driver_phone']   = $toUpdate['driver_phone'] ?? '08111251307';
+                        $toUpdate['driver_name']    = $toUpdate['driver_name'] ?? 'Anton Lucarus';
+                        $toUpdate['driver_photo']   = $toUpdate['driver_photo'] ?? 'http://beritatrans.com/cms/wp-content/uploads/2020/02/images4-553x400.jpeg';
+                        $toUpdate['vehicle_number'] = $toUpdate['vehicle_number'] ?? 'AB 2641 XY';
                     }
-                } elseif (strtolower($post['status']) == 'confirmed'){
+                } elseif (strtolower($post['status']) == 'confirmed') {
                     $toUpdate['driver_id']      = null;
                     $toUpdate['driver_phone']   = null;
                     $toUpdate['driver_name']    = null;
                     $toUpdate['driver_photo']   = null;
-                    $toUpdate['vehicle_number'] = null;                        
+                    $toUpdate['vehicle_number'] = null;
                 }
                 $tpg->update($toUpdate);
                 $trx = Transaction::where('transactions.id_transaction', $id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by', 'GO-SEND')->first();
@@ -151,7 +150,7 @@ class ApiGosendController extends Controller
                     if ($trx->cashback_insert_status != 1) {
                         //send notif to customer
                         $user = User::find($trx->id_user);
-                        $trx->load('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers','promo_campaign_promo_code','promo_campaign_promo_code.promo_campaign');
+                        $trx->load('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers', 'promo_campaign_promo_code', 'promo_campaign_promo_code.promo_campaign');
                         $newTrx    = $trx;
                         $checkType = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->get()->toArray();
                         $column    = array_column($checkType, 'type');
@@ -161,7 +160,6 @@ class ApiGosendController extends Controller
                         \Modules\OutletApp\Jobs\AchievementCheck::dispatch(['id_transaction' => $trx->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
 
                         if (!in_array('Balance', $column) || $use_referral) {
-
                             $promo_source = null;
                             if ($newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers) {
                                 if ($newTrx->id_promo_campaign_promo_code) {
@@ -182,7 +180,6 @@ class ApiGosendController extends Controller
                                     ]);
                                 }
                             }
-
                         }
 
                         $newTrx->update(['cashback_insert_status' => 1]);
@@ -190,7 +187,7 @@ class ApiGosendController extends Controller
                         DB::commit();
                     }
                     $status = GoSend::getStatus($post['booking_id'], true);
-                    $arrived_at = date('Y-m-d H:i:s', ($status['orderClosedTime']??false)?strtotime($status['orderClosedTime']):time());
+                    $arrived_at = date('Y-m-d H:i:s', ($status['orderClosedTime'] ?? false) ? strtotime($status['orderClosedTime']) : time());
                     TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
                     $dataSave       = [
                         'id_transaction'                => $id_transaction,

@@ -30,9 +30,9 @@ class ApiProductModifierController extends Controller
     public function index(Request $request)
     {
         $post   = $request->json()->all();
-        $promod = (new ProductModifier)->newQuery();
+        $promod = (new ProductModifier())->newQuery();
         $promod->whereNotIn('type', ['Modifier Group']);
-        if($request->order_position){
+        if ($request->order_position) {
             $promod->orderBy('product_modifier_order', 'asc');
         }
         if ($post['rule'] ?? false) {
@@ -257,7 +257,7 @@ class ApiProductModifierController extends Controller
     {
         $post      = $request->json()->all();
         $id_outlet = $request->json('id_outlet');
-        if($id_outlet){
+        if ($id_outlet) {
             $brands    = BrandOutlet::select('id_brand')->where('id_outlet', $id_outlet)->get()->pluck('id_brand');
         }
         if ($id_outlet) {
@@ -273,15 +273,15 @@ class ApiProductModifierController extends Controller
                     $join->on('product_modifiers.id_product_modifier', '=', 'product_modifier_prices.id_product_modifier');
                     $join->where('product_modifier_prices.id_outlet', '=', $id_outlet);
                 })->where(function ($query) use ($id_outlet) {
-                $query->where('product_modifier_prices.id_outlet', $id_outlet);
-                $query->orWhereNull('product_modifier_prices.id_outlet');
-            })->groupBy('product_modifiers.id_product_modifier');
+                    $query->where('product_modifier_prices.id_outlet', $id_outlet);
+                    $query->orWhereNull('product_modifier_prices.id_outlet');
+                })->groupBy('product_modifiers.id_product_modifier');
         } else {
             $data = ProductModifier::leftJoin('product_modifier_brands', 'product_modifier_brands.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
                 ->whereNotIn('type', ['Modifier Group'])
                 ->select('product_modifiers.id_product_modifier', 'product_modifiers.code', 'product_modifiers.text', 'product_modifier_global_prices.product_modifier_price')->leftJoin('product_modifier_global_prices', function ($join) use ($id_outlet) {
-                $join->on('product_modifiers.id_product_modifier', '=', 'product_modifier_global_prices.id_product_modifier');
-            })->groupBy('product_modifiers.id_product_modifier');
+                    $join->on('product_modifiers.id_product_modifier', '=', 'product_modifier_global_prices.id_product_modifier');
+                })->groupBy('product_modifiers.id_product_modifier');
         }
         if ($post['rule'] ?? false) {
             $filter = $this->filterList($data, $post['rule'], $post['operator'] ?? 'and');
@@ -348,10 +348,9 @@ class ApiProductModifierController extends Controller
                     ];
                 }
             }
-
         }
         DB::commit();
-        if(!empty($request->json('type')) && $request->json('type') == 'modifiergroup'){
+        if (!empty($request->json('type')) && $request->json('type') == 'modifiergroup') {
             RefreshVariantTree::dispatch(['type' => 'refresh_product'])->allOnConnection('database');
         }
         return ['status' => 'success'];
@@ -369,12 +368,12 @@ class ApiProductModifierController extends Controller
                 $query->orWhereIn('id_brand', $brands);
             })
             ->select('product_modifiers.id_product_modifier', 'product_modifiers.code', 'product_modifiers.text', 'product_modifier_details.product_modifier_visibility', 'product_modifier_details.product_modifier_status', 'product_modifier_details.product_modifier_stock_status')->leftJoin('product_modifier_details', function ($join) use ($id_outlet) {
-            $join->on('product_modifiers.id_product_modifier', '=', 'product_modifier_details.id_product_modifier');
-            $join->where('product_modifier_details.id_outlet', '=', $id_outlet);
-        })->where(function ($query) use ($id_outlet) {
-            $query->where('product_modifier_details.id_outlet', $id_outlet);
-            $query->orWhereNull('product_modifier_details.id_outlet');
-        })->groupBy('product_modifiers.id_product_modifier');
+                $join->on('product_modifiers.id_product_modifier', '=', 'product_modifier_details.id_product_modifier');
+                $join->where('product_modifier_details.id_outlet', '=', $id_outlet);
+            })->where(function ($query) use ($id_outlet) {
+                $query->where('product_modifier_details.id_outlet', $id_outlet);
+                $query->orWhereNull('product_modifier_details.id_outlet');
+            })->groupBy('product_modifiers.id_product_modifier');
 
         if ($post['rule'] ?? false) {
             $filter = $this->filterList($data, $post['rule'], $post['operator'] ?? 'and');
@@ -423,7 +422,7 @@ class ApiProductModifierController extends Controller
         }
         DB::commit();
 
-        if(!empty($request->json('type')) && $request->json('type') == 'modifiergroup'){
+        if (!empty($request->json('type')) && $request->json('type') == 'modifiergroup') {
             RefreshVariantTree::dispatch(['type' => 'refresh_product'])->allOnConnection('database');
         }
         return ['status' => 'success'];
@@ -452,7 +451,8 @@ class ApiProductModifierController extends Controller
         return ['total' => $total, 'filtered' => $filtered];
     }
 
-    public function positionAssign(Request $request){
+    public function positionAssign(Request $request)
+    {
         $post = $request->json()->all();
 
         if (!isset($post['modifier_ids'])) {
@@ -463,7 +463,7 @@ class ApiProductModifierController extends Controller
         }
         // update position
         foreach ($post['modifier_ids'] as $key => $id) {
-            $update = ProductModifier::find($id)->update(['product_modifier_order'=>$key+1]);
+            $update = ProductModifier::find($id)->update(['product_modifier_order' => $key + 1]);
         }
 
         return ['status' => 'success'];
@@ -479,7 +479,7 @@ class ApiProductModifierController extends Controller
     {
         foreach ($request->product_modifiers ?: [] as $id_product_modifier => $id_brands) {
             ProductModifierInventoryBrand::where('id_product_modifier', $id_product_modifier)->delete();
-            $toInsert = array_map(function($id_brand) use ($id_product_modifier) {
+            $toInsert = array_map(function ($id_brand) use ($id_product_modifier) {
                 return ['id_brand' => $id_brand, 'id_product_modifier' => $id_product_modifier];
             }, $id_brands);
             ProductModifierInventoryBrand::insert($toInsert);
@@ -492,49 +492,49 @@ class ApiProductModifierController extends Controller
         $newRule = [];
         $total   = $query->count();
 
-        $query->where(function($query) use ($rules, $operator) {
-        	$where = $operator == 'and' ? 'where' : 'orWhere';
-        	$whereHas = $operator == 'and' ? 'whereHas' : 'orWhereHas';
-	        foreach ($rules as $var) {
-	        	$subject = $var['subject'];
-	            $operator = $var['operator'] ?? '=';
-	            $parameter = $var['parameter'] ?? '';
+        $query->where(function ($query) use ($rules, $operator) {
+            $where = $operator == 'and' ? 'where' : 'orWhere';
+            $whereHas = $operator == 'and' ? 'whereHas' : 'orWhereHas';
+            foreach ($rules as $var) {
+                $subject = $var['subject'];
+                $operator = $var['operator'] ?? '=';
+                $parameter = $var['parameter'] ?? '';
 
-	            if ($operator == 'like') {
-	                $parameter = '%' . $parameter . '%';
-	            }
+                if ($operator == 'like') {
+                    $parameter = '%' . $parameter . '%';
+                }
 
-	        	$main_subjects = ['code', 'text', 'type', 'visibility', 'product_modifier_visibility'];
-	            if (in_array($subject, $main_subjects)) {
-	                $query->$where($subject, $operator, $parameter);
-	            }
+                $main_subjects = ['code', 'text', 'type', 'visibility', 'product_modifier_visibility'];
+                if (in_array($subject, $main_subjects)) {
+                    $query->$where($subject, $operator, $parameter);
+                }
 
-	            $extra_subjects = ['modifier_type'];
-	            if (in_array($subject, $extra_subjects)) {
-	            	$extra_operators = ['id_brand', 'id_product', 'id_product_category'];
-	            	if (in_array($operator, $extra_operators)) {
-		            	$extra_rules = [
-		            		'id_brand' => ['brands', 'product_modifier_brands.id_brand'],
-		            		'id_product' => ['products', 'product_modifier_products.id_product'],
-		            		'id_product_category' => ['product_categories', 'product_modifier_product_categories.id_product_category']
-		            	];
+                $extra_subjects = ['modifier_type'];
+                if (in_array($subject, $extra_subjects)) {
+                    $extra_operators = ['id_brand', 'id_product', 'id_product_category'];
+                    if (in_array($operator, $extra_operators)) {
+                        $extra_rules = [
+                            'id_brand' => ['brands', 'product_modifier_brands.id_brand'],
+                            'id_product' => ['products', 'product_modifier_products.id_product'],
+                            'id_product_category' => ['product_categories', 'product_modifier_product_categories.id_product_category']
+                        ];
 
-		            	$table = $extra_rules[$operator][0];
-		            	$foreign = $extra_rules[$operator][1];
+                        $table = $extra_rules[$operator][0];
+                        $foreign = $extra_rules[$operator][1];
 
-		            	$query->$where(function($q) use ($subject, $parameter, $table, $foreign) {
-	        				$q->where($subject, 'Specific')
-				    			->whereHas($table, function($q2) use ($foreign, $parameter){
-				    				$q2->where($foreign, $parameter);
-				    			});
-		            	});
-	            	}else{
-	                	$query->$where($subject, '=', $operator);
-	            	}
-	            }
-	        }
+                        $query->$where(function ($q) use ($subject, $parameter, $table, $foreign) {
+                            $q->where($subject, 'Specific')
+                                ->whereHas($table, function ($q2) use ($foreign, $parameter) {
+                                    $q2->where($foreign, $parameter);
+                                });
+                        });
+                    } else {
+                        $query->$where($subject, '=', $operator);
+                    }
+                }
+            }
         });
-        
+
         $filtered = $query->count();
         return ['total' => $total, 'filtered' => $filtered];
     }

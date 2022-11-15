@@ -1,13 +1,11 @@
 <?php
 
-Route::group(['middleware' => ['api', 'log_activities', 'user_agent'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
+Route::group(['middleware' => ['api', 'log_activities', 'user_agent'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {
     Route::get('/courier', 'ApiSetting@settingCourier');
     Route::get('phone-number', 'ApiSetting@settingPhoneNumber');
 });
 
-Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
+Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {
     Route::any('/intro/home', 'ApiTutorial@introHomeFrontend');
     Route::any('/faq', 'ApiSetting@faqList');
     Route::get('/webview/faq', 'ApiSetting@faqWebview');
@@ -16,8 +14,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('webview', 'ApiSetting@settingWebview');
 
     // complete profile
-    Route::group(['prefix' => 'complete-profile'], function()
-    {
+    Route::group(['prefix' => 'complete-profile'], function () {
         Route::get('/', 'ApiSetting@getCompleteProfile');
         Route::post('/', 'ApiSetting@completeProfile');
         Route::post('/success-page', 'ApiSetting@completeProfileSuccessPage');
@@ -25,29 +22,25 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
 
     Route::post('/free-delivery', 'ApiSetting@updateFreeDelivery');
     Route::post('/go-send-package-detail', 'ApiSetting@updateGoSendPackage');
-
 });
 
-Route::group(['middleware' => ['auth:doctor-apps', 'log_activities', 'user_agent', 'scopes:doctor-apps'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
+Route::group(['middleware' => ['auth:doctor-apps', 'log_activities', 'user_agent', 'scopes:doctor-apps'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {
     Route::any('/faq-doctor-apps', 'ApiSetting@faqListDoctorApps');
 });
 
-Route::group(['middleware' => ['auth_client', 'log_activities', 'user_agent'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
+Route::group(['middleware' => ['auth_client', 'log_activities', 'user_agent'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {
     Route::any('/', 'ApiSetting@settingList');
     Route::get('/faq', 'ApiSetting@faqList');
     Route::any('/default_home', 'ApiSetting@homeNotLogin');
     Route::any('/default_home_doctor', 'ApiSetting@homeDoctorNotLogin');
-	Route::get('/navigation', 'ApiSetting@Navigation');
-	Route::get('/navigation-logo', 'ApiSetting@NavigationLogo');
-	Route::get('/navigation-sidebar', 'ApiSetting@NavigationSidebar');
+    Route::get('/navigation', 'ApiSetting@Navigation');
+    Route::get('/navigation-logo', 'ApiSetting@NavigationLogo');
+    Route::get('/navigation-sidebar', 'ApiSetting@NavigationSidebar');
     Route::get('/navigation-navbar', 'ApiSetting@NavigationNavbar');
     Route::any('outletapp/splash-screen', 'ApiSetting@splashScreenOutletApps');
 });
 
-Route::group(['middleware' => ['auth_client', 'log_activities', 'user_agent'], 'prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
+Route::group(['middleware' => ['auth_client', 'log_activities', 'user_agent'], 'prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {
     Route::get('/list', 'ApiVersion@getVersion');
     Route::post('/update', 'ApiVersion@updateVersion');
 });
@@ -57,13 +50,11 @@ Route::group(['prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Co
     Route::post('/doctor-app', 'ApiDoctorAppVersion@index');
 });
 
-Route::group(['namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
+Route::group(['namespace' => 'Modules\Setting\Http\Controllers'], function () {
     Route::any('terms-of-service', 'ApiSetting@viewTOS');
 });
 
-Route::group([ 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
+Route::group([ 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {
     Route::any('webview/{key}', 'ApiSettingWebview@aboutWebview');
     Route::any('/faq/webview', 'ApiSettingWebview@faqWebviewView');
     Route::any('detail/{key}', 'ApiSettingWebview@aboutDetail');
@@ -72,8 +63,7 @@ Route::group([ 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\C
     Route::any('/text_menu_list', 'ApiSetting@textMenuList');
 });
 
-Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
+Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {
     Route::any('whatsapp', 'ApiSetting@settingWhatsApp');
     Route::any('be/celebrate_list', 'ApiSetting@celebrateList');
     Route::any('be/jobs_list', 'ApiSetting@jobsList');
@@ -88,7 +78,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::any('email/update', 'ApiSetting@emailUpdate');
     Route::get('email', 'ApiSetting@getSettingEmail');
     Route::post('/update', 'ApiSetting@settingUpdate');
-    Route::post('/update2','ApiSetting@update');
+    Route::post('/update2', 'ApiSetting@update');
 
     Route::get('/get/{key}', 'ApiSetting@get');
     Route::any('/', 'ApiSetting@settingList');
@@ -140,8 +130,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('time-expired/update', ['uses' => 'ApiSetting@updateTimeExpired']);
     Route::get('time-expired', ['uses' => 'ApiSetting@timeExpired']);
 
-    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'dashboard'], function()
-    {
+    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'dashboard'], function () {
         Route::any('', 'ApiDashboardSetting@getDashboard');
         Route::get('list', 'ApiDashboardSetting@getListDashboard');
         Route::post('update', 'ApiDashboardSetting@updateDashboard');
@@ -153,8 +142,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     });
 
     // banner
-    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'banner'], function()
-    {
+    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'banner'], function () {
         Route::get('list', ['middleware' => 'feature_control:144', 'uses' => 'ApiBanner@index']);
         Route::post('create', ['middleware' => 'feature_control:145', 'uses' => 'ApiBanner@create']);
         Route::post('update', ['middleware' => 'feature_control:146', 'uses' => 'ApiBanner@update']);
@@ -163,8 +151,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     });
 
     // featured_deal
-    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'featured_deal'], function()
-    {
+    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'featured_deal'], function () {
         Route::get('list', 'ApiFeaturedDeal@index');
         Route::post('create', 'ApiFeaturedDeal@create');
         Route::post('update', 'ApiFeaturedDeal@update');
@@ -173,8 +160,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     });
 
     // featured subscription
-    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'featured_subscription'], function()
-    {
+    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'featured_subscription'], function () {
         Route::get('list', 'ApiFeaturedSubscription@index');
         Route::post('create', 'ApiFeaturedSubscription@create');
         Route::post('update', 'ApiFeaturedSubscription@update');
@@ -183,8 +169,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     });
 
     // featured promo campaign
-    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'featured_promo_campaign'], function()
-    {
+    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'featured_promo_campaign'], function () {
         Route::get('list-merchant', 'ApiFeaturedPromoCampaign@indexMerchant');
         Route::get('list', 'ApiFeaturedPromoCampaign@index');
         Route::post('create', 'ApiFeaturedPromoCampaign@create');
@@ -197,21 +182,18 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('/max-consultation/update', 'ApiSetting@maxConsultationQuota');
 });
 
-Route::group(['prefix' => 'api/timesetting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
+Route::group(['prefix' => 'api/timesetting', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {
     Route::get('/', 'ApiGreetings@listTimeSetting');
     Route::post('/', 'ApiGreetings@updateTimeSetting');
 });
 
-Route::group(['prefix' => 'api/background', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
+Route::group(['prefix' => 'api/background', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {
     Route::any('/', 'ApiBackground@listBackground');
     Route::post('create', 'ApiBackground@createBackground');
     Route::post('delete', 'ApiBackground@deleteBackground');
 });
 
-Route::group(['prefix' => 'api/greetings', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
+Route::group(['prefix' => 'api/greetings', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {
     Route::any('/', 'ApiGreetings@listGreetings');
     Route::post('selected', 'ApiGreetings@selectGreetings');
     Route::post('create', 'ApiGreetings@createGreetings');

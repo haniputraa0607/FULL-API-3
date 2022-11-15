@@ -4,10 +4,14 @@ namespace Modules\Plastic\Http\Controllers;
 
 class Plastic
 {
+    public $id_product;
+    public $product_name;
+    public $product_capacity;
+    public $product_type;
+    public $total_used;
 
-    public $id_product, $product_name, $product_capacity, $product_type, $total_used;
-
-    function __construct($data){
+    public function __construct($data)
+    {
         $this->id_product = $data['id_product'];
         $this->product_name = $data['product_name'];
         $this->product_capacity = $data['product_capacity'];

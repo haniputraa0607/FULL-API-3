@@ -11,7 +11,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class GlobalDailyReportTrxModifier
- * 
+ *
  * @property int $id_global_daily_report_trx_modifier
  * @property \Carbon\Carbon $trx_date
  * @property int $id_product_modifier
@@ -40,54 +40,54 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  */
 class GlobalDailyReportTrxModifier extends Eloquent
 {
-	protected $table = 'global_daily_report_trx_modifier';
-	protected $primaryKey = 'id_global_daily_report_trx_modifier';
+    protected $table = 'global_daily_report_trx_modifier';
+    protected $primaryKey = 'id_global_daily_report_trx_modifier';
 
-	protected $casts = [
-		'id_product_modifier' => 'int',
-		'total_rec' => 'int',
-		'total_qty' => 'int',
-		'total_nominal' => 'int',
-		'cust_male' => 'int',
-		'cust_female' => 'int',
-		'cust_android' => 'int',
-		'cust_ios' => 'int',
-		'cust_telkomsel' => 'int',
-		'cust_xl' => 'int',
-		'cust_indosat' => 'int',
-		'cust_tri' => 'int',
-		'cust_axis' => 'int',
-		'cust_smart' => 'int',
-		'cust_teens' => 'int',
-		'cust_young_adult' => 'int',
-		'cust_adult' => 'int',
-		'cust_old' => 'int'
-	];
+    protected $casts = [
+        'id_product_modifier' => 'int',
+        'total_rec' => 'int',
+        'total_qty' => 'int',
+        'total_nominal' => 'int',
+        'cust_male' => 'int',
+        'cust_female' => 'int',
+        'cust_android' => 'int',
+        'cust_ios' => 'int',
+        'cust_telkomsel' => 'int',
+        'cust_xl' => 'int',
+        'cust_indosat' => 'int',
+        'cust_tri' => 'int',
+        'cust_axis' => 'int',
+        'cust_smart' => 'int',
+        'cust_teens' => 'int',
+        'cust_young_adult' => 'int',
+        'cust_adult' => 'int',
+        'cust_old' => 'int'
+    ];
 
-	protected $dates = [
-		'trx_date'
-	];
+    protected $dates = [
+        'trx_date'
+    ];
 
-	protected $fillable = [
-		'trx_date',
-		'id_product_modifier',
-		'text',
-		'total_rec',
-		'total_qty',
-		'total_nominal',
-		'cust_male',
-		'cust_female',
-		'cust_android',
-		'cust_ios',
-		'cust_telkomsel',
-		'cust_xl',
-		'cust_indosat',
-		'cust_tri',
-		'cust_axis',
-		'cust_smart',
-		'cust_teens',
-		'cust_young_adult',
-		'cust_adult',
-		'cust_old'
-	];
+    protected $fillable = [
+        'trx_date',
+        'id_product_modifier',
+        'text',
+        'total_rec',
+        'total_qty',
+        'total_nominal',
+        'cust_male',
+        'cust_female',
+        'cust_android',
+        'cust_ios',
+        'cust_telkomsel',
+        'cust_xl',
+        'cust_indosat',
+        'cust_tri',
+        'cust_axis',
+        'cust_smart',
+        'cust_teens',
+        'cust_young_adult',
+        'cust_adult',
+        'cust_old'
+    ];
 }

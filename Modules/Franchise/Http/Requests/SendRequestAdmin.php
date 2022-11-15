@@ -17,9 +17,9 @@ class SendRequestAdmin extends FormRequest
     {
         return [
             'id_outlet' => 'required',
-            'address'	=> 'nullable',
-            'latitude'	=> 'nullable',
-            'longitude'	=> 'nullable'
+            'address'   => 'nullable',
+            'latitude'  => 'nullable',
+            'longitude' => 'nullable'
         ];
     }
 

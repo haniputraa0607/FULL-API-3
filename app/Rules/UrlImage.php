@@ -33,14 +33,14 @@ class UrlImage implements Rule
 
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-        if($code == 200){
+        if ($code == 200) {
             $allowedContentTypes = [
                 'image/jpeg', 'image/jpg', 'image/png'
             ];
 
             $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 
-            if(in_array($contentType,$allowedContentTypes)){
+            if (in_array($contentType, $allowedContentTypes)) {
                 $isValid = true;
             }
         }

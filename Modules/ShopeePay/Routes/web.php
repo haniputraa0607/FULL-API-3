@@ -11,6 +11,6 @@
 |
 */
 
-Route::prefix('shopeepay')->group(function() {
+Route::prefix('shopeepay')->group(function () {
     Route::get('/', 'ShopeePayController@index');
 });

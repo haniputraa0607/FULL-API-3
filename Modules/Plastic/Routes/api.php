@@ -13,8 +13,7 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'product-plastic'], function()
-{
+Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'product-plastic'], function () {
     Route::any('list', 'ApiProductPlasticController@index');
     Route::post('store', 'ApiProductPlasticController@store');
     Route::post('detail', 'ApiProductPlasticController@detail');
@@ -43,8 +42,7 @@ Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'sco
     Route::post('update-use-plastic-product-variant', 'ApiProductPlasticController@updateUsePlasticProductVariant');
 });
 
-Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'plastic-type'], function()
-{
+Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'plastic-type'], function () {
     Route::any('list', 'ApiPlasticTypeController@index');
     Route::post('store', 'ApiPlasticTypeController@store');
     Route::post('detail', 'ApiPlasticTypeController@detail');

@@ -6,10 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Schema;
-
 use App\Lib\MyHelper;
 use App\Lib\Midtrans;
-
 use App\Http\Models\TopupNominal;
 use App\Http\Models\User;
 use App\Http\Models\Setting;
@@ -20,7 +18,6 @@ use App\Http\Models\UsersMembership;
 use App\Http\Models\Outlet;
 use App\Http\Models\LogTopupMidtrans;
 use App\Http\Models\ManualPaymentMethod;
-
 use Hash;
 use DB;
 
@@ -29,7 +26,8 @@ class TopupController extends Controller
     private $model = 'App\Http\Models\\';
     public $saveImage = "img/topup/manual/";
 
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
         $this->pos     = "Modules\POS\Http\Controllers\ApiPOS";
         $this->balance = "Modules\Balance\Http\Controllers\BalanceController";
@@ -44,9 +42,9 @@ class TopupController extends Controller
         $canInput = false;
 
         $api = app($this->pos)->checkApi($post['api_key'], $post['api_secret']);
-        if ($api['status'] != 'success') { 
-            return response()->json($api); 
-        } 
+        if ($api['status'] != 'success') {
+            return response()->json($api);
+        }
 
         if (!isset($post['type'])) {
             $post['type'] = 'POS';
@@ -106,7 +104,6 @@ class TopupController extends Controller
                 return $this->topupCustomer($post);
             }
         }
-
     }
 
     public function topupCustomer($post)
@@ -143,7 +140,7 @@ class TopupController extends Controller
         $api = app($this->pos)->checkApi($post['api_key'], $post['api_secret']);
         if ($api['status'] != 'success') {
             DB::rollback();
-            return response()->json($api); 
+            return response()->json($api);
         }
 
         $checkOutlet = Outlet::where('outlet_code', $post['store_code'])->first();
@@ -157,15 +154,15 @@ class TopupController extends Controller
 
         $qr = $post['uid'];
         $timestamp = substr($qr, 0, 10);
-        $phoneqr = str_replace($timestamp,'',$qr);
+        $phoneqr = str_replace($timestamp, '', $qr);
 
         $time = date('Y-m-d h:i:s', strtotime('+10 minutes', strtotime(date('Y-m-d h:i:s', $timestamp))));
         if (date('Y-m-d h:i:s') > $time) {
             // DB::rollback();
-            // return response()->json(['status' => 'fail', 'messages' => ['Mohon refresh qrcode dan ulangi scan member']]); 
+            // return response()->json(['status' => 'fail', 'messages' => ['Mohon refresh qrcode dan ulangi scan member']]);
         }
 
-        $user = User::where('phone', $phoneqr)->first(); 
+        $user = User::where('phone', $phoneqr)->first();
         if (empty($user)) {
             DB::rollback();
             return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
@@ -298,9 +295,9 @@ class TopupController extends Controller
 
         /* QR CODE */
         $qr      = $checkLog->otp;
-        $qr      = urlencode("#".MyHelper::encryptQRCode($qr)."#");
-        
-        $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
+        $qr      = urlencode("#" . MyHelper::encryptQRCode($qr) . "#");
+
+        $qrCode = 'https://chart.googleapis.com/chart?chl=' . $qr . '&chs=250x250&cht=qr&chld=H%7C0';
         $qrCode = html_entity_decode($qrCode);
 
         DB::commit();
@@ -380,7 +377,8 @@ class TopupController extends Controller
         $checkUpdate = LogTopup::where('id_log_topup', $checkLogTopup['id_log_topup'])->first();
         if (!$checkUpdate) {
             DB::rollback();
-            return response()->json(['status' => 'fail', 'messages' => ['Transaction topup failed']]);        }
+            return response()->json(['status' => 'fail', 'messages' => ['Transaction topup failed']]);
+        }
 
         $checkUpdate->enc = $enc;
         $checkUpdate->update();
@@ -461,7 +459,6 @@ class TopupController extends Controller
         return response()->json([
             'status' => 'success'
         ]);
-
     }
 
     public function topupConfirmManual($post)
@@ -486,8 +483,7 @@ class TopupController extends Controller
 
             if (isset($save['status']) && $save['status'] == "success") {
                 $post['payment_receipt_image'] = $save['path'];
-            }
-            else {
+            } else {
                 DB::rollback();
                 return response()->json([
                     'status'   => 'fail',
@@ -527,7 +523,7 @@ class TopupController extends Controller
                 ]);
             }
 
-            
+
 
             DB::commit();
             return response()->json([
@@ -602,7 +598,7 @@ class TopupController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Confirm topup failed']]);
         }
 
-        $receipt = 'TOP-'.date('YmdHisis');
+        $receipt = 'TOP-' . date('YmdHisis');
 
         $connectMidtrans = Midtrans::token($receipt, $checkLog['nominal_bayar'], $dataUser);
 
@@ -664,7 +660,7 @@ class TopupController extends Controller
         }
 
         $check = $className::where('id_user', $id_user)->orderBy('created_at', 'DESC')->first();
-        
+
         if (empty($check) || empty($check['enc'])) {
             return true;
         }

@@ -5,7 +5,6 @@ namespace Modules\Transaction\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\User;
 use App\Http\Models\LogTopup;
 use App\Http\Models\LogTopupMidtrans;
@@ -15,18 +14,17 @@ use App\Http\Models\ManualPaymentMethod;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionPaymentBalance;
-
 use DB;
 use App\Lib\MyHelper;
 use App\Lib\Midtrans;
-
 use Modules\Transaction\Http\Requests\Transaction\ConfirmPayment;
 
 class ApiTransactionProductionController extends Controller
 {
     public $saveImage = "img/payment/manual/";
 
-    public function confirmTransaction2(ConfirmPayment $request) {
+    public function confirmTransaction2(ConfirmPayment $request)
+    {
         DB::beginTransaction();
         $post = $request->json()->all();
         $user = User::where('id', $request->user()->id)->first();
@@ -78,7 +76,7 @@ class ApiTransactionProductionController extends Controller
             ];
             array_push($dataDetailProduct, $dataShip);
         }
-        
+
         if ($check['transaction_service'] > 0) {
             $dataService = [
                 'id'       => null,
@@ -192,7 +190,7 @@ class ApiTransactionProductionController extends Controller
                     'customer_details'    => $dataUser,
                 );
 
-                $connectMidtrans = Midtrans::tokenPro($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $ship=null, $dataDetailProduct);
+                $connectMidtrans = Midtrans::tokenPro($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $ship = null, $dataDetailProduct);
             }
 
             if (empty($connectMidtrans['token'])) {
@@ -279,7 +277,7 @@ class ApiTransactionProductionController extends Controller
                     ]);
                 }
             }
-            
+
             if (isset($post['payment_receipt_image'])) {
                 if (!file_exists($this->saveImage)) {
                     mkdir($this->saveImage, 0777, true);
@@ -289,8 +287,7 @@ class ApiTransactionProductionController extends Controller
 
                 if (isset($save['status']) && $save['status'] == "success") {
                     $post['payment_receipt_image'] = $save['path'];
-                }
-                else {
+                } else {
                     DB::rollback();
                     return response()->json([
                         'status'   => 'fail',
@@ -347,7 +344,6 @@ class ApiTransactionProductionController extends Controller
                 'status' => 'success',
                 'result' => $check
             ]);
-            
         }
     }
 }

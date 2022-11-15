@@ -46,10 +46,11 @@ class AdvertServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('advert.php'),
+            __DIR__ . '/../Config/config.php' => config_path('advert.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'advert'
+            __DIR__ . '/../Config/config.php',
+            'advert'
         );
     }
 
@@ -62,11 +63,11 @@ class AdvertServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/advert');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/advert';
@@ -85,7 +86,7 @@ class AdvertServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'advert');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'advert');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'advert');
         }
     }
 

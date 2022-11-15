@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class DisburseOutletTransaction extends Model
 {
     protected $table = 'disburse_outlet_transactions';
-	protected $primaryKey = 'id_disburse_transaction';
+    protected $primaryKey = 'id_disburse_transaction';
 
-	protected $fillable = [
-	    'id_disburse_outlet',
+    protected $fillable = [
+        'id_disburse_outlet',
         'id_transaction',
         'income_central',
         'income_central_old',
@@ -50,5 +50,5 @@ class DisburseOutletTransaction extends Model
         'charged_promo_payment_gateway',
         'charged_promo_payment_gateway_central',
         'charged_promo_payment_gateway_outlet'
-	];
+    ];
 }

@@ -5,7 +5,7 @@ namespace Modules\Consultation\Entities;
 use Illuminate\Database\Eloquent\Model;
 
 class TransactionConsultationMessage extends Model
-{ 
+{
     protected $table = 'transaction_consultation_messages';
     protected $primaryKey = 'id_transaction_consultation_message';
 

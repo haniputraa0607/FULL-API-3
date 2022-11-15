@@ -11,17 +11,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class CampaignWhatsappSentContent extends Model
 {
-	protected $primaryKey = 'id_campaign_whatsapp_sent_content';
+    protected $primaryKey = 'id_campaign_whatsapp_sent_content';
 
-	protected $fillable = [
-		'id_campaign_whatsapp_sent',
-		'content_type',
-		'content'
-	];
+    protected $fillable = [
+        'id_campaign_whatsapp_sent',
+        'content_type',
+        'content'
+    ];
 
-	public function campaign_whatsapp_sent()
-	{
-		return $this->belongsTo(\App\Http\Models\CampaignWhatsappContent::class, 'id_campaign_whatsapp_sent', 'id_campaign_whatsapp_sent');
-	}
-
+    public function campaign_whatsapp_sent()
+    {
+        return $this->belongsTo(\App\Http\Models\CampaignWhatsappContent::class, 'id_campaign_whatsapp_sent', 'id_campaign_whatsapp_sent');
+    }
 }

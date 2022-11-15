@@ -5,7 +5,6 @@ namespace Modules\Transaction\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\Setting;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
@@ -19,13 +18,13 @@ use App\Http\Models\ProductModifierGlobalPrice;
 use Modules\ProductBundling\Entities\BundlingProduct;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use App\Lib\MyHelper;
-
 use DB;
 use Modules\ProductVariant\Entities\ProductVariantGroupSpecialPrice;
 
 class ApiSettingTransactionV2 extends Controller
 {
-    public function setting($value) {
+    public function setting($value)
+    {
         $setting = Setting::where('key', $value)->first();
 
         if (empty($setting->value)) {
@@ -35,7 +34,8 @@ class ApiSettingTransactionV2 extends Controller
         return $setting->value;
     }
 
-    public function grandTotal() {
+    public function grandTotal()
+    {
         $grandTotal = $this->setting('transaction_grand_total_order');
 
         $grandTotal = explode(',', $grandTotal);
@@ -49,81 +49,95 @@ class ApiSettingTransactionV2 extends Controller
         return $grandTotal;
     }
 
-    public function discount() {
+    public function discount()
+    {
         $discount = $this->setting('transaction_discount_formula');
         return $discount;
     }
 
-    public function tax() {
+    public function tax()
+    {
         $tax = $this->setting('transaction_tax_formula');
 
         $tax = preg_replace('/\s+/', '', $tax);
         return $tax;
     }
 
-    public function service() {
+    public function service()
+    {
         $service = $this->setting('transaction_service_formula');
 
         $service = preg_replace('/\s+/', '', $service);
         return $service;
     }
 
-    public function point() {
+    public function point()
+    {
         $point = $this->setting('point_acquisition_formula');
 
         $point = preg_replace('/\s+/', '', $point);
         return $point;
     }
 
-    public function cashback() {
+    public function cashback()
+    {
         $cashback = $this->setting('cashback_acquisition_formula');
 
         $cashback = preg_replace('/\s+/', '', $cashback);
         return $cashback;
     }
 
-    public function pointCount() {
+    public function pointCount()
+    {
         $point = $this->setting('point_acquisition_formula');
         return $point;
     }
 
-    public function cashbackCount() {
+    public function cashbackCount()
+    {
         $cashback = $this->setting('cashback_acquisition_formula');
         return $cashback;
     }
 
-    public function pointValue() {
+    public function pointValue()
+    {
         $point = $this->setting('point_conversion_value');
         return $point;
     }
 
-    public function cashbackValue() {
+    public function cashbackValue()
+    {
         $cashback = $this->setting('cashback_conversion_value');
         return $cashback;
     }
 
-    public function cashbackValueMax() {
+    public function cashbackValueMax()
+    {
         $cashback = $this->setting('cashback_maximum');
         return $cashback;
     }
 
-    public function serviceValue() {
+    public function serviceValue()
+    {
         $service = $this->setting('service');
         return $service;
     }
 
-    public function taxValue() {
+    public function taxValue()
+    {
         $tax = $this->setting('tax');
         return $tax;
     }
 
-    public function convertFormula($value) {
+    public function convertFormula($value)
+    {
         $convert = $this->$value();
 
         return $convert;
     }
 
-    public function countTransaction($value, &$data,&$discount_promo=[]) {
+    public function countTransaction($value, &$data, &$discount_promo = [])
+    {
         $subtotal = isset($data['subtotal']) ? $data['subtotal'] : 0;
         $service  = isset($data['service']) ? $data['service'] : 0;
         $tax      = isset($data['tax']) ? $data['tax'] : 0;
@@ -137,7 +151,7 @@ class ApiSettingTransactionV2 extends Controller
 
         // return $data;
         if ($value == 'subtotal') {
-            $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet',$data['id_outlet'])->first();
+            $outlet = Outlet::select('id_outlet', 'outlet_different_price')->where('id_outlet', $data['id_outlet'])->first();
             $different_price = $outlet->outlet_different_price;
             $dataSubtotal = [];
             $dataSubtotalFinal = [];
@@ -148,8 +162,8 @@ class ApiSettingTransactionV2 extends Controller
                 $loopable = &$data['item'];
             }
             foreach ($loopable as $keyData => &$valueData) {
-                $this_discount=0;
-                $this_discount=$valueData['discount']??0;
+                $this_discount = 0;
+                $this_discount = $valueData['discount'] ?? 0;
 
                 // if($discount_promo){
                 //     foreach ($discount_promo['item']??[] as $disc) {
@@ -169,14 +183,14 @@ class ApiSettingTransactionV2 extends Controller
                 }
 
                 // $productPrice = ProductPrice::where(['id_product' => $valueData['id_product'], 'id_outlet' => $data['id_outlet']])->first();
-                if($different_price){
+                if ($different_price) {
                     $productPrice = ProductSpecialPrice::where(['id_product' => $valueData['id_product'], 'id_outlet' => $data['id_outlet']])->first();
-                    if($productPrice){
+                    if ($productPrice) {
                         $productPrice['product_price'] = $productPrice['product_special_price'];
                     }
-                }else{
+                } else {
                     $productPrice = ProductGlobalPrice::where(['id_product' => $valueData['id_product']])->first();
-                    if($productPrice){
+                    if ($productPrice) {
                         $productPrice['product_price'] = $productPrice['product_global_price'];
                     }
                 }
@@ -189,7 +203,7 @@ class ApiSettingTransactionV2 extends Controller
                     ]);
                 }
 
-                if($productPrice['product_price'] == null){
+                if ($productPrice['product_price'] == null) {
                     return response()->json([
                         'status'    => 'fail',
                         'messages'  => ['Price Product Not Valid'],
@@ -200,7 +214,7 @@ class ApiSettingTransactionV2 extends Controller
                 if ($valueData['id_product_variant_group'] ?? false) {
                     $product_variant_group = ProductVariantGroup::where('product_variant_groups.id_product_variant_group', $valueData['id_product_variant_group']);
                     if ($different_price) {
-                        $product_variant_group->join('product_variant_group_special_prices', function($join) use ($data) {
+                        $product_variant_group->join('product_variant_group_special_prices', function ($join) use ($data) {
                             $join->on('product_variant_group_special_prices.id_product_variant_group', '=', 'product_variant_groups.id_product_variant_group')
                                 ->where('id_outlet', $data['id_outlet']);
                         })->select('product_variant_groups.id_product_variant_group', 'product_variant_groups.id_product', 'product_variant_group_special_prices.product_variant_group_price');
@@ -216,7 +230,7 @@ class ApiSettingTransactionV2 extends Controller
                         ]);
                     }
                     $variantTree = Product::getVariantTree($valueData['id_product'], $outlet);
-                    $variants = Product::getVariantPrice($product_variant_group, $variantTree['variants_tree']??[]);
+                    $variants = Product::getVariantPrice($product_variant_group, $variantTree['variants_tree'] ?? []);
                     if (!$variants) {
                         $valueData['variants'] = [];
                     } else {
@@ -230,14 +244,14 @@ class ApiSettingTransactionV2 extends Controller
                 }
                 $valueData['transaction_product_price'] = $productPrice['product_price'];
                 foreach ($valueData['modifiers'] as $modifier) {
-                    $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
-                    $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
-                    if($different_price){
-                        $mod_price = ProductModifierPrice::select('product_modifier_price')->where('id_outlet',$data['id_outlet'])->where('id_product_modifier',$id_product_modifier)->pluck('product_modifier_price')->first()?:0;
-                    }else{
-                        $mod_price = ProductModifierGlobalPrice::select('product_modifier_price')->where('id_product_modifier',$id_product_modifier)->pluck('product_modifier_price')->first()?:0;
+                    $id_product_modifier = is_numeric($modifier) ? $modifier : $modifier['id_product_modifier'];
+                    $qty_product_modifier = is_numeric($modifier) ? 1 : $modifier['qty'];
+                    if ($different_price) {
+                        $mod_price = ProductModifierPrice::select('product_modifier_price')->where('id_outlet', $data['id_outlet'])->where('id_product_modifier', $id_product_modifier)->pluck('product_modifier_price')->first() ?: 0;
+                    } else {
+                        $mod_price = ProductModifierGlobalPrice::select('product_modifier_price')->where('id_product_modifier', $id_product_modifier)->pluck('product_modifier_price')->first() ?: 0;
                     }
-                    $mod_subtotal += $mod_price*$qty_product_modifier;
+                    $mod_subtotal += $mod_price * $qty_product_modifier;
                 }
                 // $price = $productPrice['product_price_base'] * $valueData['qty'];
                 // remove discount from substotal
@@ -248,27 +262,27 @@ class ApiSettingTransactionV2 extends Controller
                 array_push($dataSubtotalFinal, $price);
 
                 if (isset($dataSubtotalPerBrand[$valueData['id_brand']])) {
-                	$dataSubtotalPerBrand[$valueData['id_brand']] += $price;
-                }else{
-                	$dataSubtotalPerBrand[$valueData['id_brand']] = $price;
+                    $dataSubtotalPerBrand[$valueData['id_brand']] += $price;
+                } else {
+                    $dataSubtotalPerBrand[$valueData['id_brand']] = $price;
                 }
             }
 
             $bundlingNotIncludePromo = [];
             $totalDiscountBundling = 0;
-            if(isset($data['item_bundling_detail']) && !empty($data['item_bundling_detail'])){
-                $productBundling = &$data['item_bundling_detail']??[];
-                foreach ($productBundling as $keyBundling => &$valueBundling){
+            if (isset($data['item_bundling_detail']) && !empty($data['item_bundling_detail'])) {
+                $productBundling = &$data['item_bundling_detail'] ?? [];
+                foreach ($productBundling as $keyBundling => &$valueBundling) {
                     $bundlingNoDiscount = 0;
                     $bundlingBasePrice = 0;
                     $totalDiscount = 0;
                     $mod_subtotal = 0;
-                    foreach ($valueBundling['products'] as &$p){
+                    foreach ($valueBundling['products'] as &$p) {
                         $getProduct = BundlingProduct::join('products', 'products.id_product', 'bundling_product.id_product')
                             ->leftJoin('product_global_price as pgp', 'pgp.id_product', '=', 'products.id_product')
                             ->join('bundling', 'bundling.id_bundling', 'bundling_product.id_bundling')
                             ->where('bundling_product.id_bundling_product', $p['id_bundling_product'])
-                            ->select('pgp.product_global_price',  'products.product_variant_status', 'products.product_name', 'bundling_product.*', 'bundling.*')
+                            ->select('pgp.product_global_price', 'products.product_variant_status', 'products.product_name', 'bundling_product.*', 'bundling.*')
                             ->first();
 
                         if (empty($getProduct)) {
@@ -279,21 +293,21 @@ class ApiSettingTransactionV2 extends Controller
                             ]);
                         }
 
-                        if($getProduct['product_variant_status'] && !empty($getProduct['id_product_variant_group'])){
-                            if($outlet['outlet_different_price'] == 1){
-                                $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $getProduct['id_product_variant_group'])->where('id_outlet', $outlet['id_outlet'])->first()['product_variant_group_price']??0;
-                            }else{
-                                $price = ProductVariantGroup::where('id_product_variant_group', $getProduct['id_product_variant_group'])->first()['product_variant_group_price']??0;
+                        if ($getProduct['product_variant_status'] && !empty($getProduct['id_product_variant_group'])) {
+                            if ($outlet['outlet_different_price'] == 1) {
+                                $price = ProductVariantGroupSpecialPrice::where('id_product_variant_group', $getProduct['id_product_variant_group'])->where('id_outlet', $outlet['id_outlet'])->first()['product_variant_group_price'] ?? 0;
+                            } else {
+                                $price = ProductVariantGroup::where('id_product_variant_group', $getProduct['id_product_variant_group'])->first()['product_variant_group_price'] ?? 0;
                             }
-                        }elseif(!empty($getProduct['id_product'])){
-                            if($outlet['outlet_different_price'] == 1){
-                                $price = ProductSpecialPrice::where('id_product', $getProduct['id_product'])->where('id_outlet', $outlet['id_outlet'])->first()['product_special_price']??0;
-                            }else{
-                                $price = ProductGlobalPrice::where('id_product', $getProduct['id_product'])->first()['product_global_price']??0;
+                        } elseif (!empty($getProduct['id_product'])) {
+                            if ($outlet['outlet_different_price'] == 1) {
+                                $price = ProductSpecialPrice::where('id_product', $getProduct['id_product'])->where('id_outlet', $outlet['id_outlet'])->first()['product_special_price'] ?? 0;
+                            } else {
+                                $price = ProductGlobalPrice::where('id_product', $getProduct['id_product'])->first()['product_global_price'] ?? 0;
                             }
                         }
 
-                        if(empty($price)){
+                        if (empty($price)) {
                             return response()->json([
                                 'status'    => 'fail',
                                 'messages'  => ['Price Bundling Product Not Valid'],
@@ -302,14 +316,14 @@ class ApiSettingTransactionV2 extends Controller
                             ]);
                         }
 
-                        if($different_price){
+                        if ($different_price) {
                             $productPrice = ProductSpecialPrice::where(['id_product' => $getProduct['id_product'], 'id_outlet' => $outlet['id_outlet']])->first();
-                            if($productPrice){
+                            if ($productPrice) {
                                 $productBasePrice = $productPrice['product_special_price'];
                             }
-                        }else{
+                        } else {
                             $productPrice = ProductGlobalPrice::where(['id_product' => $getProduct['id_product']])->first();
-                            if($productPrice){
+                            if ($productPrice) {
                                 $productBasePrice = $productPrice['product_global_price'];
                             }
                         }
@@ -317,7 +331,7 @@ class ApiSettingTransactionV2 extends Controller
                         if ($getProduct['product_variant_status'] && $getProduct['id_product_variant_group'] ?? false) {
                             $product_variant_group = ProductVariantGroup::where('product_variant_groups.id_product_variant_group', $getProduct['id_product_variant_group']);
                             if ($different_price) {
-                                $product_variant_group->join('product_variant_group_special_prices', function($join) use ($data) {
+                                $product_variant_group->join('product_variant_group_special_prices', function ($join) use ($data) {
                                     $join->on('product_variant_group_special_prices.id_product_variant_group', '=', 'product_variant_groups.id_product_variant_group')
                                         ->where('id_outlet', $data['id_outlet']);
                                 })->select('product_variant_groups.id_product_variant_group', 'product_variant_groups.id_product', 'product_variant_group_special_prices.product_variant_group_price');
@@ -333,10 +347,10 @@ class ApiSettingTransactionV2 extends Controller
                                 ]);
                             }
                             $variantTree = Product::getVariantTree($getProduct['id_product'], $outlet);
-                            $variants = Product::getVariantPrice($product_variant_group, $variantTree['variants_tree']??[]);
+                            $variants = Product::getVariantPrice($product_variant_group, $variantTree['variants_tree'] ?? []);
                             if (!$variants) {
                                 $p['trx_variants'] = [];
-                            }else{
+                            } else {
                                 $p['trx_variants'] = $variants;
                             }
                             $productBasePrice = $variantTree['base_price'] ?? $productBasePrice;
@@ -347,29 +361,29 @@ class ApiSettingTransactionV2 extends Controller
                         }
 
                         $totalMod = 0;
-                        foreach ($p['modifiers']??[] as $modifier) {
-                            $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
-                            $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
-                            if($different_price){
-                                $mod_price = ProductModifierPrice::select('product_modifier_price')->where('id_outlet',$data['id_outlet'])->where('id_product_modifier',$id_product_modifier)->pluck('product_modifier_price')->first()?:0;
+                        foreach ($p['modifiers'] ?? [] as $modifier) {
+                            $id_product_modifier = is_numeric($modifier) ? $modifier : $modifier['id_product_modifier'];
+                            $qty_product_modifier = is_numeric($modifier) ? 1 : $modifier['qty'];
+                            if ($different_price) {
+                                $mod_price = ProductModifierPrice::select('product_modifier_price')->where('id_outlet', $data['id_outlet'])->where('id_product_modifier', $id_product_modifier)->pluck('product_modifier_price')->first() ?: 0;
                                 $totalMod = $totalMod + $mod_price;
-                            }else{
-                                $mod_price = ProductModifierGlobalPrice::select('product_modifier_price')->where('id_product_modifier',$id_product_modifier)->pluck('product_modifier_price')->first()?:0;
+                            } else {
+                                $mod_price = ProductModifierGlobalPrice::select('product_modifier_price')->where('id_product_modifier', $id_product_modifier)->pluck('product_modifier_price')->first() ?: 0;
                                 $totalMod = $totalMod + $mod_price;
                             }
                         }
 
                         $price = (float)$price;
                         //calculate discount produk
-                        if(strtolower($getProduct['bundling_product_discount_type']) == 'nominal'){
+                        if (strtolower($getProduct['bundling_product_discount_type']) == 'nominal') {
                             $discount = $getProduct['bundling_product_discount'];
                             $calculate = ($price - $getProduct['bundling_product_discount']);
-                        }else{
-                            $discount = $price*($getProduct['bundling_product_discount']/100);
-                            $discount = ($discount > $getProduct['bundling_product_maximum_discount'] &&  $getProduct['bundling_product_maximum_discount'] > 0? $getProduct['bundling_product_maximum_discount']:$discount);
+                        } else {
+                            $discount = $price * ($getProduct['bundling_product_discount'] / 100);
+                            $discount = ($discount > $getProduct['bundling_product_maximum_discount'] &&  $getProduct['bundling_product_maximum_discount'] > 0 ? $getProduct['bundling_product_maximum_discount'] : $discount);
                             $calculate = ($price - $discount);
                         }
-                        $totalProduct = $p['product_qty']*$valueBundling['bundling_qty'];
+                        $totalProduct = $p['product_qty'] * $valueBundling['bundling_qty'];
                         $subtotalNoDiscount = ($price  + $totalMod) * $totalProduct;
                         $p['transaction_product_price'] = $productBasePrice;
                         $p['transaction_product_bundling_discount'] = $discount;
@@ -385,10 +399,10 @@ class ApiSettingTransactionV2 extends Controller
                         $mod_subtotal = $mod_subtotal + ($totalMod * $p['product_qty'] * $valueBundling['bundling_qty']);
                         $bundlingNoDiscount = $bundlingNoDiscount + $subtotalNoDiscount;
 
-                        if($getProduct['bundling_promo_status'] == 1){
+                        if ($getProduct['bundling_promo_status'] == 1) {
                             if (isset($dataSubtotalPerBrand[$p['id_brand']])) {
                                 $dataSubtotalPerBrand[$p['id_brand']] += (($calculate  + $totalMod) * $p['product_qty']) * $valueBundling['bundling_qty'];
-                            }else{
+                            } else {
                                 $dataSubtotalPerBrand[$p['id_brand']] = (($calculate  + $totalMod) * $p['product_qty']) * $valueBundling['bundling_qty'];
                             }
                             $bundlingNotIncludePromo[] = $valueBundling['bundling_name'];
@@ -406,9 +420,9 @@ class ApiSettingTransactionV2 extends Controller
             }
 
             return [
-            	'subtotal' => $dataSubtotal,
+                'subtotal' => $dataSubtotal,
                 'subtotal_final' => $dataSubtotalFinal,
-            	'subtotal_per_brand' => $dataSubtotalPerBrand,
+                'subtotal_per_brand' => $dataSubtotalPerBrand,
                 'total_discount_bundling' => $totalDiscountBundling,
                 'bundling_not_include_promo' => implode(',', array_unique($bundlingNotIncludePromo))
             ];
@@ -434,9 +448,9 @@ class ApiSettingTransactionV2 extends Controller
             //         }
             //     }
             // }
-            foreach ($discount_promo['item']??$data['item'] as $keyData => $valueData) {
-                $this_discount=0;
-                $this_discount=$valueData['discount']??0;
+            foreach ($discount_promo['item'] ?? $data['item'] as $keyData => $valueData) {
+                $this_discount = 0;
+                $this_discount = $valueData['discount'] ?? 0;
                 // if($discount_promo){
                 //     foreach ($discount_promo['item']??[] as $disc) {
                 //         if($disc['id_product']==$valueData['id_product']){
@@ -456,7 +470,6 @@ class ApiSettingTransactionV2 extends Controller
 
             $count = (eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $serviceFormula) . ';'));
             return $count;
-
         }
 
         if ($value == 'shipping') {
@@ -506,7 +519,6 @@ class ApiSettingTransactionV2 extends Controller
             // }
 
             // return $productTax;
-
         }
 
         if ($value == 'point') {
@@ -516,7 +528,6 @@ class ApiSettingTransactionV2 extends Controller
 
             $count = floor(eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $pointFormula) . ';'));
             return $count;
-
         }
 
         if ($value == 'cashback') {
@@ -561,15 +572,15 @@ class ApiSettingTransactionV2 extends Controller
                     'messages' => ['Menu tidak ditemukan']
                 ]);
             }
-            $different_price = Outlet::select('outlet_different_price')->where('id_outlet',$data['id_outlet'])->pluck('outlet_different_price')->first();
-            if($different_price){
+            $different_price = Outlet::select('outlet_different_price')->where('id_outlet', $data['id_outlet'])->pluck('outlet_different_price')->first();
+            if ($different_price) {
                 $productPrice = ProductSpecialPrice::where(['id_product' => $valueData['id_product'], 'id_outlet' => $data['id_outlet']])->first();
-                if($productPrice){
+                if ($productPrice) {
                     $productPrice['product_price'] = $productPrice['product_special_price'];
                 }
-            }else{
+            } else {
                 $productPrice = ProductGlobalPrice::where(['id_product' => $valueData['id_product']])->first();
-                if($productPrice){
+                if ($productPrice) {
                     $productPrice['product_price'] = $productPrice['product_global_price'];
                 }
             }
@@ -645,15 +656,15 @@ class ApiSettingTransactionV2 extends Controller
             }
 
             // $priceProduct = ProductPrice::where('id_product', $valueData['id_product'])->where('id_outlet', $data['id_outlet'])->first();
-            $different_price = Outlet::select('outlet_different_price')->where('id_outlet',$data['id_outlet'])->pluck('outlet_different_price')->first();
-            if($different_price){
+            $different_price = Outlet::select('outlet_different_price')->where('id_outlet', $data['id_outlet'])->pluck('outlet_different_price')->first();
+            if ($different_price) {
                 $productPrice = ProductSpecialPrice::where(['id_product' => $valueData['id_product'], 'id_outlet' => $data['id_outlet']])->first();
-                if($productPrice){
+                if ($productPrice) {
                     $productPrice['product_price'] = $productPrice['product_special_price'];
                 }
-            }else{
+            } else {
                 $productPrice = ProductGlobalPrice::where(['id_product' => $valueData['id_product']])->first();
-                if($productPrice){
+                if ($productPrice) {
                     $productPrice['product_price'] = $productPrice['product_global_price'];
                 }
             }
@@ -709,43 +720,45 @@ class ApiSettingTransactionV2 extends Controller
         return $countSemen;
     }
 
-    public function getrandomstring($length = 120) {
+    public function getrandomstring($length = 120)
+    {
 
-       global $template;
-       settype($template, "string");
+        global $template;
+        settype($template, "string");
 
-       $template = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        $template = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-       settype($length, "integer");
-       settype($rndstring, "string");
-       settype($a, "integer");
-       settype($b, "integer");
+        settype($length, "integer");
+        settype($rndstring, "string");
+        settype($a, "integer");
+        settype($b, "integer");
 
-       for ($a = 0; $a <= $length; $a++) {
+        for ($a = 0; $a <= $length; $a++) {
                $b = rand(0, strlen($template) - 1);
                $rndstring .= $template[$b];
-       }
+        }
 
-       return $rndstring;
+        return $rndstring;
     }
 
-    public function getrandomnumber($length) {
+    public function getrandomnumber($length)
+    {
 
-       global $template;
-       settype($template, "string");
+        global $template;
+        settype($template, "string");
 
-       $template = "0987654321";
+        $template = "0987654321";
 
-       settype($length, "integer");
-       settype($rndstring, "string");
-       settype($a, "integer");
-       settype($b, "integer");
+        settype($length, "integer");
+        settype($rndstring, "string");
+        settype($a, "integer");
+        settype($b, "integer");
 
-       for ($a = 0; $a <= $length; $a++) {
+        for ($a = 0; $a <= $length; $a++) {
                $b = rand(0, strlen($template) - 1);
                $rndstring .= $template[$b];
-       }
+        }
 
-       return $rndstring;
+        return $rndstring;
     }
 }

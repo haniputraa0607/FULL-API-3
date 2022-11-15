@@ -25,8 +25,8 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('report', ['middleware' => 'feature_control:211', 'uses' => 'ApiUserFeedbackController@report']);
     Route::post('report/outlet', ['middleware' => 'feature_control:211', 'uses' => 'ApiUserFeedbackController@reportOutlet']);
     // Route::post('delete', 'ApiUserFeedbackController@destroy');
-    Route::group(['prefix'=>'rating-item'],function(){
-	    Route::get('/', ['middleware' => 'feature_control:212', 'uses' => 'ApiRatingItemController@index']);
-	    Route::post('update', ['middleware' => 'feature_control:213', 'uses' => 'ApiRatingItemController@update']);
+    Route::group(['prefix' => 'rating-item'], function () {
+        Route::get('/', ['middleware' => 'feature_control:212', 'uses' => 'ApiRatingItemController@index']);
+        Route::post('update', ['middleware' => 'feature_control:213', 'uses' => 'ApiRatingItemController@update']);
     });
 });

@@ -54,7 +54,7 @@ return [
             'engine' => 'InnoDB',
         ],
 
-		'mysql2' => [
+        'mysql2' => [
             'driver' => 'mysql',
             'host' => env('DB2_HOST', '127.0.0.1'),
             'port' => env('DB2_PORT', '3306'),
@@ -69,7 +69,7 @@ return [
             'engine' => 'InnoDB',
         ],
 
-		'mysql3' => [
+        'mysql3' => [
             'driver' => 'mysql',
             'host' => env('DB3_HOST', '127.0.0.1'),
             'port' => env('DB3_PORT', '3306'),

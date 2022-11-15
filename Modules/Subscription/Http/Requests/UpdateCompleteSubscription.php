@@ -16,7 +16,7 @@ class UpdateCompleteSubscription extends FormRequest
     public function rules()
     {
         return [
-            'id_subscription' 	=> 'required'
+            'id_subscription'   => 'required'
         ];
     }
 

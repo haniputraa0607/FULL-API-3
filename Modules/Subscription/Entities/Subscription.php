@@ -12,7 +12,7 @@ use App\Lib\MyHelper;
 
 /**
  * Class Subscription
- * 
+ *
  * @property int $id_subscription
  * @property string $subscription_title
  * @property string $subscription_sub_title
@@ -35,7 +35,7 @@ use App\Lib\MyHelper;
  * @property bool $is_all_outlet
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \Illuminate\Database\Eloquent\Collection $featured_subscriptions
  * @property \Illuminate\Database\Eloquent\Collection $outlets
  * @property \Illuminate\Database\Eloquent\Collection $users
@@ -44,54 +44,54 @@ use App\Lib\MyHelper;
  */
 class Subscription extends Eloquent
 {
-	protected $primaryKey = 'id_subscription';
+    protected $primaryKey = 'id_subscription';
 
-	protected $casts = [
-		'subscription_price_point' => 'int',
-		'subscription_price_cash' => 'float',
-		'subscription_bought' => 'int',
-		'subscription_total' => 'int',
-		'subscription_day_valid' => 'int',
-		'subscription_voucher_total' => 'int',
-		'subscription_voucher_nominal' => 'int',
-		'subscription_minimal_transaction' => 'int',
-		'is_all_outlet' => 'bool'
-	];
+    protected $casts = [
+        'subscription_price_point' => 'int',
+        'subscription_price_cash' => 'float',
+        'subscription_bought' => 'int',
+        'subscription_total' => 'int',
+        'subscription_day_valid' => 'int',
+        'subscription_voucher_total' => 'int',
+        'subscription_voucher_nominal' => 'int',
+        'subscription_minimal_transaction' => 'int',
+        'is_all_outlet' => 'bool'
+    ];
 
-	protected $dates = [
-		'subscription_start',
-		'subscription_end',
-		'subscription_publish_start',
-		'subscription_publish_end'
-	];
+    protected $dates = [
+        'subscription_start',
+        'subscription_end',
+        'subscription_publish_start',
+        'subscription_publish_end'
+    ];
 
-	protected $fillable = [
-	    'id_brand',
-		'subscription_title',
-		'subscription_sub_title',
-		'subscription_image',
-		'subscription_start',
-		'subscription_end',
-		'subscription_publish_start',
-		'subscription_publish_end',
-		'subscription_price_point',
-		'subscription_price_cash',
-		'subscription_description',
-		'subscription_bought',
-		'subscription_total',
-		'user_limit',
-		'subscription_voucher_duration',
-		'subscription_voucher_start',
-		'subscription_voucher_expired',
-		'subscription_voucher_total',
-		'subscription_voucher_nominal',
-		'subscription_voucher_percent',
-		'subscription_voucher_percent_max',
-		'subscription_minimal_transaction',
-		'daily_usage_limit',
-		'new_purchase_after',
-		'is_all_outlet',
-		'subscription_step_complete',
+    protected $fillable = [
+        'id_brand',
+        'subscription_title',
+        'subscription_sub_title',
+        'subscription_image',
+        'subscription_start',
+        'subscription_end',
+        'subscription_publish_start',
+        'subscription_publish_end',
+        'subscription_price_point',
+        'subscription_price_cash',
+        'subscription_description',
+        'subscription_bought',
+        'subscription_total',
+        'user_limit',
+        'subscription_voucher_duration',
+        'subscription_voucher_start',
+        'subscription_voucher_expired',
+        'subscription_voucher_total',
+        'subscription_voucher_nominal',
+        'subscription_voucher_percent',
+        'subscription_voucher_percent_max',
+        'subscription_minimal_transaction',
+        'daily_usage_limit',
+        'new_purchase_after',
+        'is_all_outlet',
+        'subscription_step_complete',
         'charged_central',
         'charged_outlet',
         'subscription_type',
@@ -102,153 +102,156 @@ class Subscription extends Eloquent
         'brand_rule',
         'product_type',
         'promo_description'
-	];
+    ];
 
-	protected $appends  = [
-		'url_subscription_image', 
-		'subscription_status', 
-		'subscription_price_type', 
-		'subscription_price_pretty',
-		'url_webview'
-	];
+    protected $appends  = [
+        'url_subscription_image',
+        'subscription_status',
+        'subscription_price_type',
+        'subscription_price_pretty',
+        'url_webview'
+    ];
 
-	public function getUrlWebviewAttribute() {
-		return config('url.app_api_url') ."api/webview/subscription/". $this->id_subscription;
-	}
+    public function getUrlWebviewAttribute()
+    {
+        return config('url.app_api_url') . "api/webview/subscription/" . $this->id_subscription;
+    }
 
-	public function getSubscriptionPricePrettyAttribute() {
-	    $pretty = "Gratis";
-		if ($this->subscription_price_point) {
-            $pretty = MyHelper::requestNumber($this->subscription_price_point,'_POINT');
-        }
-        elseif ($this->subscription_price_cash) {
-            $pretty = MyHelper::requestNumber($this->subscription_price_cash,'_CURRENCY');
-        }
-        return $pretty;
-	}
-
-	public function getSubscriptionVoucherBenefitPrettyAttribute() {
-	    $pretty = null;
-		if ($this->subscription_voucher_nominal) {
-            $pretty = MyHelper::requestNumber($this->subscription_voucher_nominal,'_CURRENCY');
-        }
-        elseif ($this->subscription_voucher_percent) {
-            $pretty = $this->subscription_voucher_percent.'%';
+    public function getSubscriptionPricePrettyAttribute()
+    {
+        $pretty = "Gratis";
+        if ($this->subscription_price_point) {
+            $pretty = MyHelper::requestNumber($this->subscription_price_point, '_POINT');
+        } elseif ($this->subscription_price_cash) {
+            $pretty = MyHelper::requestNumber($this->subscription_price_cash, '_CURRENCY');
         }
         return $pretty;
-	}
+    }
 
-	public function getSubscriptionVoucherMaxBenefitPrettyAttribute() {
-	    $pretty = null;
-	    if ($this->subscription_voucher_percent_max) {
-            $pretty = MyHelper::requestNumber($this->subscription_voucher_percent_max,'_CURRENCY');
+    public function getSubscriptionVoucherBenefitPrettyAttribute()
+    {
+        $pretty = null;
+        if ($this->subscription_voucher_nominal) {
+            $pretty = MyHelper::requestNumber($this->subscription_voucher_nominal, '_CURRENCY');
+        } elseif ($this->subscription_voucher_percent) {
+            $pretty = $this->subscription_voucher_percent . '%';
         }
         return $pretty;
-	}
+    }
 
-	public function getSubscriptionMinimalTransactionPrettyAttribute() {
-	    $pretty = null;
-	    if ($this->subscription_minimal_transaction) {
-            $pretty = MyHelper::requestNumber($this->subscription_minimal_transaction,'_CURRENCY');
+    public function getSubscriptionVoucherMaxBenefitPrettyAttribute()
+    {
+        $pretty = null;
+        if ($this->subscription_voucher_percent_max) {
+            $pretty = MyHelper::requestNumber($this->subscription_voucher_percent_max, '_CURRENCY');
         }
         return $pretty;
-	}
+    }
 
-	public function getSubscriptionPriceTypeAttribute() {
-	    $type = "free";
-	    // if ($this->subscription_price_point && $this->subscription_price_cash) {
+    public function getSubscriptionMinimalTransactionPrettyAttribute()
+    {
+        $pretty = null;
+        if ($this->subscription_minimal_transaction) {
+            $pretty = MyHelper::requestNumber($this->subscription_minimal_transaction, '_CURRENCY');
+        }
+        return $pretty;
+    }
+
+    public function getSubscriptionPriceTypeAttribute()
+    {
+        $type = "free";
+        // if ($this->subscription_price_point && $this->subscription_price_cash) {
      //        $type = "all";
-	    // }
-		if ($this->subscription_price_point) {
+        // }
+        if ($this->subscription_price_point) {
             $type = "point";
-        }
-        else if ($this->subscription_price_cash) {
+        } elseif ($this->subscription_price_cash) {
             $type = "nominal";
         }
         return $type;
-	}
+    }
 
-	public function getSubscriptionStatusAttribute() {
-	    $status = "";
-		if (date('Y-m-d H:i:s', strtotime($this->subscription_start)) <= date('Y-m-d H:i:s') && date('Y-m-d H:i:s', strtotime($this->subscription_end)) > date('Y-m-d H:i:s')) {
+    public function getSubscriptionStatusAttribute()
+    {
+        $status = "";
+        if (date('Y-m-d H:i:s', strtotime($this->subscription_start)) <= date('Y-m-d H:i:s') && date('Y-m-d H:i:s', strtotime($this->subscription_end)) > date('Y-m-d H:i:s')) {
             $status = "available";
-        }
-        else if (date('Y-m-d H:i:s', strtotime($this->subscription_start)) > date('Y-m-d H:i:s')) {
+        } elseif (date('Y-m-d H:i:s', strtotime($this->subscription_start)) > date('Y-m-d H:i:s')) {
             $status = "soon";
-        }
-        else if (date('Y-m-d H:i:s', strtotime($this->subscription_end)) < date('Y-m-d H:i:s')) {
+        } elseif (date('Y-m-d H:i:s', strtotime($this->subscription_end)) < date('Y-m-d H:i:s')) {
             $status = "expired";
         }
         return $status;
-	}
+    }
 
 
-	// ATTRIBUTE IMAGE URL
-	public function getUrlSubscriptionImageAttribute() {
-		if (empty($this->subscription_image)) {
-            return config('url.storage_url_api').'img/default.jpg';
+    // ATTRIBUTE IMAGE URL
+    public function getUrlSubscriptionImageAttribute()
+    {
+        if (empty($this->subscription_image)) {
+            return config('url.storage_url_api') . 'img/default.jpg';
+        } else {
+            return config('url.storage_url_api') . $this->subscription_image;
         }
-        else {
-            return config('url.storage_url_api').$this->subscription_image;
-        }
-	}
+    }
 
-	public function featured_subscriptions()
-	{
-		return $this->hasMany(\Modules\Subscription\Entities\FeaturedSubscription::class, 'id_subscription');
-	}
+    public function featured_subscriptions()
+    {
+        return $this->hasMany(\Modules\Subscription\Entities\FeaturedSubscription::class, 'id_subscription');
+    }
 
-	public function outlets()
-	{
-		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'subscription_outlets', 'id_subscription', 'id_outlet')
-					->withPivot('id_subscription_outlets')
-					->withTimestamps();
-	}
+    public function outlets()
+    {
+        return $this->belongsToMany(\App\Http\Models\Outlet::class, 'subscription_outlets', 'id_subscription', 'id_outlet')
+                    ->withPivot('id_subscription_outlets')
+                    ->withTimestamps();
+    }
 
-	public function users()
-	{
-		return $this->belongsToMany(\App\Http\Models\User::class, 'subscription_users', 'id_subscription', 'id_user')
-					->withPivot('id_subscription_user', 'bought_at', 'subscription_expired_at')
-					->withTimestamps();
-	}
+    public function users()
+    {
+        return $this->belongsToMany(\App\Http\Models\User::class, 'subscription_users', 'id_subscription', 'id_user')
+                    ->withPivot('id_subscription_user', 'bought_at', 'subscription_expired_at')
+                    ->withTimestamps();
+    }
 
-	public function subscription_payment_midtrans()
-	{
-		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionPaymentMidtran::class, 'id_subscription');
-	}
+    public function subscription_payment_midtrans()
+    {
+        return $this->hasMany(\Modules\Subscription\Entities\SubscriptionPaymentMidtran::class, 'id_subscription');
+    }
 
-	public function subscription_content()
-	{
-		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionContent::class, 'id_subscription');
-	}
+    public function subscription_content()
+    {
+        return $this->hasMany(\Modules\Subscription\Entities\SubscriptionContent::class, 'id_subscription');
+    }
 
-	public function subscription_users()
-	{
-		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionUser::class, 'id_subscription');
-	}
+    public function subscription_users()
+    {
+        return $this->hasMany(\Modules\Subscription\Entities\SubscriptionUser::class, 'id_subscription');
+    }
 
-	public function subscription_products()
-	{
-		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionProduct::class, 'id_subscription');
-	}
+    public function subscription_products()
+    {
+        return $this->hasMany(\Modules\Subscription\Entities\SubscriptionProduct::class, 'id_subscription');
+    }
 
-	public function outlets_active()
-	{
-		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'subscription_outlets', 'id_subscription', 'id_outlet')->where('outlet_status', 'Active');
-	}
+    public function outlets_active()
+    {
+        return $this->belongsToMany(\App\Http\Models\Outlet::class, 'subscription_outlets', 'id_subscription', 'id_outlet')->where('outlet_status', 'Active');
+    }
 
-	public function products()
-	{
-		return $this->belongsToMany(\App\Http\Models\Product::class, 'subscription_products', 'id_subscription', 'id_product')
-					->withPivot('id_subscription_product')
-					->withTimestamps();
-	}
+    public function products()
+    {
+        return $this->belongsToMany(\App\Http\Models\Product::class, 'subscription_products', 'id_subscription', 'id_product')
+                    ->withPivot('id_subscription_product')
+                    ->withTimestamps();
+    }
 
-    public function brand(){
-		return $this->belongsTo(\Modules\Brand\Entities\Brand::class,'id_brand');
-	}
+    public function brand()
+    {
+        return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
+    }
 
-	public function subscription_shipment_method()
+    public function subscription_shipment_method()
     {
         return $this->hasMany(\Modules\Subscription\Entities\SubscriptionShipmentMethod::class, 'id_subscription', 'id_subscription');
     }
@@ -258,17 +261,18 @@ class Subscription extends Eloquent
         return $this->hasMany(\Modules\Subscription\Entities\SubscriptionPaymentMethod::class, 'id_subscription', 'id_subscription');
     }
 
-    public function brands(){
-		return $this->belongsToMany(\Modules\Brand\Entities\Brand::class,'subscription_brands','id_subscription','id_brand');
-	}
+    public function brands()
+    {
+        return $this->belongsToMany(\Modules\Brand\Entities\Brand::class, 'subscription_brands', 'id_subscription', 'id_brand');
+    }
 
-	public function subscription_brands()
-	{
+    public function subscription_brands()
+    {
         return $this->hasMany(\Modules\Subscription\Entities\SubscriptionBrand::class, 'id_subscription', 'id_subscription');
-	}
+    }
 
-	public function outlet_groups()
-	{
-		return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'subscription_outlet_groups', 'id_subscription', 'id_outlet_group');
-	}
+    public function outlet_groups()
+    {
+        return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'subscription_outlet_groups', 'id_subscription', 'id_outlet_group');
+    }
 }

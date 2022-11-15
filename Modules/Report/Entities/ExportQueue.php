@@ -11,7 +11,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class DailyReportPayment
- * 
+ *
  * @property int $id_daily_report_payment
  * @property \Carbon\Carbon $trx_date
  * @property int $payment_count
@@ -23,14 +23,14 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  */
 class ExportQueue extends Eloquent
 {
-	protected $table = 'export_queues';
-	protected $primaryKey = 'id_export_queue';
+    protected $table = 'export_queues';
+    protected $primaryKey = 'id_export_queue';
 
-	protected $fillable = [
-		'id_user',
-		'filter',
-		'report_type',
-		'url_export',
-		'status_export'
-	];
+    protected $fillable = [
+        'id_user',
+        'filter',
+        'report_type',
+        'url_export',
+        'status_export'
+    ];
 }

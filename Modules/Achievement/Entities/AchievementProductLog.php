@@ -9,7 +9,7 @@ class AchievementProductLog extends Model
     protected $table = 'achievement_product_logs';
 
     protected $primaryKey = 'id_achievement_product_log';
-    
+
     protected $fillable = [
         'id_achievement_group',
         'id_achievement_detail',

@@ -5,32 +5,31 @@ namespace Modules\Outlet\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\Outlet;
 use App\Http\Models\OutletDoctor;
 use App\Http\Models\OutletDoctorSchedule;
 use App\Http\Models\OutletHoliday;
 use App\Http\Models\OutletPhoto;
 use App\Http\Models\City;
-
 use App\Lib\MyHelper;
 use Validator;
 use Hash;
 use DB;
 use Mail;
-
 use Modules\Outlet\Http\Requests\Sync;
 
 class ApiSyncOutletController extends Controller
 {
     public $saveImage = "img/outlet/";
 
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
     }
 
     /* CEK  INPUTAN */
-    function checkInputOutlet($post=[]) {
+    public function checkInputOutlet($post = [])
+    {
         $data = [];
 
         if (isset($post['outlet_code'])) {
@@ -48,8 +47,7 @@ class ApiSyncOutletController extends Controller
         // khususon city
         if (isset($post['id_city']) && !empty($post['id_city'])) {
             $data['id_city'] = $post['id_city'];
-        }
-        else {
+        } else {
             $data['id_city'] = 501;
         }
 
@@ -62,7 +60,7 @@ class ApiSyncOutletController extends Controller
         if (isset($post['outlet_email'])) {
             $data['outlet_email'] = $post['outlet_email'];
         }
-       
+
         if (isset($post['outlet_open_hours'])) {
             $data['outlet_open_hours'] = $post['outlet_open_hours'];
         }
@@ -75,8 +73,9 @@ class ApiSyncOutletController extends Controller
     }
 
     /* search city */
-    function searchCity($city) {
-        $cityId = City::where('city_name', 'LIKE', '%'.$city.'%')->first();
+    public function searchCity($city)
+    {
+        $cityId = City::where('city_name', 'LIKE', '%' . $city . '%')->first();
 
         if (!empty($cityId)) {
             return $cityId->id_city;
@@ -84,7 +83,8 @@ class ApiSyncOutletController extends Controller
     }
 
     /* SYNC */
-    function sync(Sync $request) {
+    public function sync(Sync $request)
+    {
         $outlet = $request->json('outlet');
         $data_pin = [];
 
@@ -102,13 +102,12 @@ class ApiSyncOutletController extends Controller
                     $data_pin[] = ['id_outlet' => $outlet->id_outlet, 'data' => $pin];
                 }
                 continue;
-            }
-            else {
+            } else {
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['fail to sync']
                 ]);
-            }    
+            }
         }
 
         MyHelper::updateOutletFile($data_pin);
@@ -117,6 +116,4 @@ class ApiSyncOutletController extends Controller
             'status' => 'success'
         ]);
     }
-
-
 }

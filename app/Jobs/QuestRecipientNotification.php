@@ -11,18 +11,21 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-
 use Modules\Quest\Entities\Quest;
 use Modules\Quest\Entities\QuestUser;
 use Modules\Users\Http\Controllers\ApiUser;
-
 use App\Http\Models\Campaign;
 use App\Http\Models\CampaignRuleView;
 
 class QuestRecipientNotification implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-    protected $data,$camp;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
+    protected $data;
+    protected $camp;
 
     /**
      * Create a new job instance.
@@ -31,7 +34,7 @@ class QuestRecipientNotification implements ShouldQueue
      */
     public function __construct($data)
     {
-        $this->data=$data;
+        $this->data = $data;
     }
 
     /**
@@ -41,33 +44,33 @@ class QuestRecipientNotification implements ShouldQueue
      */
     public function handle()
     {
-        $id_quest=$this->data['id_quest'];
+        $id_quest = $this->data['id_quest'];
         $dataQuest = Quest::where('id_quest', $id_quest)->first();
-        $crm = Autocrm::where('autocrm_title','=','Quest Voucher Ended')->first();
+        $crm = Autocrm::where('autocrm_title', '=', 'Quest Voucher Ended')->first();
 
-        if(!empty($crm)){
+        if (!empty($crm)) {
             $crm['status_forwad'] = 0;
-            $variables =[
+            $variables = [
                 'quest_name' => $dataQuest['name'],
                 'deals_title' => $this->data['deals']['deals_title']
             ];
             $subject = $this->textReplace($crm['autocrm_forward_email_subject'], $variables);
             $content = $this->textReplace($crm['autocrm_forward_email_content'], $variables);
 
-            $users = QuestUser::leftJoin('quest_user_redemptions', function($join) {
+            $users = QuestUser::leftJoin('quest_user_redemptions', function ($join) {
                     $join->on('quest_user_redemptions.id_quest', 'quest_users.id_quest')
                         ->whereColumn('quest_user_redemptions.id_user', 'quest_users.id_user');
-                })
+            })
                 ->join('users', 'users.id', 'quest_users.id_user')
                 ->where('date_end', '>', date('Y-m-d'))
                 ->where('quest_users.id_quest', $id_quest)
-                ->where( function($query){
+                ->where(function ($query) {
                     $query->whereNull('id_quest_user_redemption')
                         ->orWhere('redemption_status', 0);
                 })->groupBy('users.phone')->select('users.phone')
-                ->chunk(600, function ($users) use ($id_quest,$subject,$content,$crm){
+                ->chunk(600, function ($users) use ($id_quest, $subject, $content, $crm) {
                     $recipient = [];
-                    foreach ($users as $val){
+                    foreach ($users as $val) {
                         $recipient[] = $val->phone;
                     }
                     $data = [
@@ -81,7 +84,7 @@ class QuestRecipientNotification implements ShouldQueue
                     $crm['status_forwad'] = 1;
                 });
 
-            if($crm['status_forwad'] == 1 && $crm['autocrm_forward_toogle'] == 1){
+            if ($crm['status_forwad'] == 1 && $crm['autocrm_forward_toogle'] == 1) {
                 $this->sendForwardNotification([
                     'autoresponse' => $crm,
                     'subject' => $subject,
@@ -93,23 +96,24 @@ class QuestRecipientNotification implements ShouldQueue
         return true;
     }
 
-    public function sendForwardNotification($data){
+    public function sendForwardNotification($data)
+    {
         $crm = $data['autoresponse'];
         $autocrmTitle = $crm['autocrm_title'];
-        $exparr = explode(';',str_replace(',',';',$crm['autocrm_forward_email']));
-        foreach($exparr as $email){
-            $n	 = explode('@',$email);
+        $exparr = explode(';', str_replace(',', ';', $crm['autocrm_forward_email']));
+        foreach ($exparr as $email) {
+            $n   = explode('@', $email);
             $name = $n[0];
 
-            $to		 = $email;
+            $to      = $email;
 
             // get setting email
             $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
             $setting = array();
             foreach ($getSetting as $key => $value) {
-                if($value['key'] == 'email_setting_url'){
+                if ($value['key'] == 'email_setting_url') {
                     $setting[$value['key']]  = (array)json_decode($value['value_text']);
-                }else{
+                } else {
                     $setting[$value['key']] = $value['value'];
                 }
             }
@@ -122,41 +126,41 @@ class QuestRecipientNotification implements ShouldQueue
                 'html_message' => $content,
                 'setting' => $setting
             );
-            try{
-                Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$autocrmTitle,$crm)
-                {
+            try {
+                Mail::send('emails.test', $data, function ($message) use ($to, $subject, $name, $setting, $autocrmTitle, $crm) {
                     $message->to($to, $name)->subject($subject);
-                    if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                    if (!empty($setting['email_from']) && !empty($setting['email_sender'])) {
                         $message->from($setting['email_sender'], $setting['email_from']);
-                    }else if(!empty($setting['email_sender'])){
+                    } elseif (!empty($setting['email_sender'])) {
                         $message->from($setting['email_sender']);
                     }
 
-                    if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+                    if (!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])) {
                         $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-                    }else if(!empty($setting['email_reply_to'])){
+                    } elseif (!empty($setting['email_reply_to'])) {
                         $message->replyTo($setting['email_reply_to']);
                     }
 
-                    if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+                    if (!empty($setting['email_cc']) && !empty($setting['email_cc_name'])) {
                         $message->cc($setting['email_cc'], $setting['email_cc_name']);
                     }
 
-                    if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+                    if (!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])) {
                         $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
                     }
                 });
-            }catch(\Exception $e){
+            } catch (\Exception $e) {
                 \Log::error($e);
             }
         }
     }
 
-    public function textReplace($text, $variables){
-        if(!empty($variables)){
-            foreach($variables as $key => $var){
-                if(is_string($var)){
-                    $text = str_replace('%'.$key.'%',$var, $text);
+    public function textReplace($text, $variables)
+    {
+        if (!empty($variables)) {
+            foreach ($variables as $key => $var) {
+                if (is_string($var)) {
+                    $text = str_replace('%' . $key . '%', $var, $text);
                 }
             }
         }

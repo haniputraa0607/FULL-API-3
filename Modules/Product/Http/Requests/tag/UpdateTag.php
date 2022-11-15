@@ -5,8 +5,8 @@ namespace Modules\Product\Http\Requests\tag;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Http\Request; 
- 
+use Illuminate\Http\Request;
+
 class UpdateTag extends FormRequest
 {
     /**
@@ -18,7 +18,7 @@ class UpdateTag extends FormRequest
     {
         return [
             'id_tag'   => 'required|integer',
-            'tag_name' => 'required|unique:tags,tag_name,'.$request->json('id_tag').',id_tag'
+            'tag_name' => 'required|unique:tags,tag_name,' . $request->json('id_tag') . ',id_tag'
         ];
     }
 

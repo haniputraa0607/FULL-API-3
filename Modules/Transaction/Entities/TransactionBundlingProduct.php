@@ -19,5 +19,4 @@ class TransactionBundlingProduct extends Model
         'transaction_bundling_product_qty',
         'transaction_bundling_product_total_discount'
     ];
-
 }

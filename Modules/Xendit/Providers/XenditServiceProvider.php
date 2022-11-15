@@ -39,10 +39,11 @@ class XenditServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('xendit.php'),
+            __DIR__ . '/../Config/config.php' => config_path('xendit.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'xendit'
+            __DIR__ . '/../Config/config.php',
+            'xendit'
         );
     }
 
@@ -55,11 +56,11 @@ class XenditServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/xendit');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/xendit';
@@ -78,7 +79,7 @@ class XenditServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'xendit');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'xendit');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'xendit');
         }
     }
 

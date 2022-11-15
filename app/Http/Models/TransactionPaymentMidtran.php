@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class TransactionPaymentMidtran
- * 
+ *
  * @property int $id_transaction_payment
  * @property int $id_transaction
  * @property string $masked_card
@@ -30,43 +30,43 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $status_message
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \App\Http\Models\Transaction $transaction
  *
  * @package App\Models
  */
 class TransactionPaymentMidtran extends Model
 {
-	protected $primaryKey = 'id_transaction_payment';
+    protected $primaryKey = 'id_transaction_payment';
 
-	protected $casts = [
-		'id_transaction' => 'int'
-	];
+    protected $casts = [
+        'id_transaction' => 'int'
+    ];
 
-	protected $fillable = [
-		'id_transaction',
+    protected $fillable = [
+        'id_transaction',
         'id_transaction_group',
         'token',
         'redirect_url',
-		'masked_card',
-		'approval_code',
-		'bank',
-		'eci',
-		'store',
-		'transaction_time',
-		'gross_amount',
-		'order_id',
-		'payment_type',
-		'signature_key',
-		'status_code',
-		'vt_transaction_id',
-		'transaction_status',
-		'fraud_status',
-		'status_message'
-	];
+        'masked_card',
+        'approval_code',
+        'bank',
+        'eci',
+        'store',
+        'transaction_time',
+        'gross_amount',
+        'order_id',
+        'payment_type',
+        'signature_key',
+        'status_code',
+        'vt_transaction_id',
+        'transaction_status',
+        'fraud_status',
+        'status_message'
+    ];
 
-	public function transaction()
-	{
-		return $this->belongsTo(\App\Http\Models\Transaction::class, 'id_transaction');
-	}
+    public function transaction()
+    {
+        return $this->belongsTo(\App\Http\Models\Transaction::class, 'id_transaction');
+    }
 }

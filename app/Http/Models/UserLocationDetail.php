@@ -18,36 +18,35 @@ class UserLocationDetail extends Model
 {
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'user_location_details';
-    
-	protected $primaryKey = 'id_user_location_detail';
+
+    protected $primaryKey = 'id_user_location_detail';
     /**
      * @var array
      */
     protected $fillable = [
-        'id_user', 
-        'id_reference', 
-        'id_outlet', 
-        'outlet_code', 
-        'outlet_name', 
-        'activity', 
-        'action', 
+        'id_user',
+        'id_reference',
+        'id_outlet',
+        'outlet_code',
+        'outlet_name',
+        'activity',
+        'action',
         'latitude',
-        'longitude', 
-        'response_json', 
-        'street_address', 
-        'route', 
-        'administrative_area_level_5', 
-        'administrative_area_level_4', 
-        'administrative_area_level_3', 
-        'administrative_area_level_2', 
+        'longitude',
+        'response_json',
+        'street_address',
+        'route',
+        'administrative_area_level_5',
+        'administrative_area_level_4',
+        'administrative_area_level_3',
+        'administrative_area_level_2',
         'administrative_area_level_1',
         'country',
         'postal_code',
         'formatted_address'
     ];
-
 }

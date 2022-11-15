@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
-
 use Modules\Doctor\Entities\DoctorSchedule;
 use Modules\Doctor\Entities\TimeSchedule;
 use Validator;
@@ -23,7 +22,7 @@ class ApiScheduleController extends Controller
         $post = $request->json()->all();
         unset($post['_token']);
 
-        if(empty($post['id_doctor'])){
+        if (empty($post['id_doctor'])) {
             return response()->json([
                 'status'    => 'fail',
                 'messages'  => ['Id doctor can not be empty']
@@ -49,22 +48,22 @@ class ApiScheduleController extends Controller
 
         //collect id_doctor_schedules
         $ids_doctor_schedule = [];
-        foreach($post['schedules'] as $sec){
-            if (isset($sec['id_doctor_schedule'])) {                
+        foreach ($post['schedules'] as $sec) {
+            if (isset($sec['id_doctor_schedule'])) {
                 $ids_doctor_schedule[] = $sec['id_doctor_schedule'];
             }
         }
 
         //get Deleted Schedule
         $idDeletedSchedule = DoctorSchedule::where('id_doctor', $post['id_doctor'])->whereNotIn('id_doctor_schedule', $ids_doctor_schedule)->pluck('id_doctor_schedule')->toArray();
-        
-        if(!empty($idDeletedSchedule)){
+
+        if (!empty($idDeletedSchedule)) {
             $deleteTime = TimeSchedule::whereIn('id_doctor_schedule', $idDeletedSchedule)->delete();
             $deletedSchedule = DoctorSchedule::whereIn('id_doctor_schedule', $idDeletedSchedule)->delete();
         }
- 
+
         DB::beginTransaction();
-        foreach($post['schedules'] as $key => $schedule) {
+        foreach ($post['schedules'] as $key => $schedule) {
             if (isset($schedule['id_doctor_schedule'])) {
                 //try update schedule
                 $postSchedule = [
@@ -72,7 +71,7 @@ class ApiScheduleController extends Controller
                     'day' => $schedule['day'],
                     'is_active' => $schedule['is_active']
                 ];
-                $updateSchedule = DoctorSchedule::where('id_doctor_schedule', $schedule['id_doctor_schedule'])->update($postSchedule); 
+                $updateSchedule = DoctorSchedule::where('id_doctor_schedule', $schedule['id_doctor_schedule'])->update($postSchedule);
 
                 $getSchedule = DoctorSchedule::where('id_doctor_schedule', $schedule['id_doctor_schedule'])->first();
                 //drop and save schedule time
@@ -81,7 +80,6 @@ class ApiScheduleController extends Controller
                     $getSchedule->schedule_time()->createMany($schedule['session_time']);
                 }
                 try {
-                    
                 } catch (\Exception $e) {
                     $result = [
                         'status'  => 'fail',
@@ -109,7 +107,6 @@ class ApiScheduleController extends Controller
 
                 $schedule = $saveSchedule;
                 try {
-                    
                 } catch (\Exception $e) {
                     $result = [
                         'status'  => 'fail',
@@ -137,12 +134,12 @@ class ApiScheduleController extends Controller
         try {
             //TO DO add valdation when exists in doctor schedule time
             $id_doctor_schedule = $request->json('id_doctor_schedule');
-            
+
             $doctorSchedule = DoctorSchedule::where('id_doctor_schedule', $id_doctor_schedule)->first();
-            
+
             //delete data child table
             $doctorSchedule->schedule_time()->delete();
-            
+
             //delete data table
             $delete = $doctorSchedule->delete();
             return response()->json(MyHelper::checkDelete($delete));
@@ -163,7 +160,7 @@ class ApiScheduleController extends Controller
     {
         $post = $request->json()->all();
 
-        if(empty($post['id_doctor'])){
+        if (empty($post['id_doctor'])) {
             return response()->json([
                 'status'    => 'fail',
                 'messages'  => ['Id doctor can not be empty']
@@ -177,8 +174,8 @@ class ApiScheduleController extends Controller
         $schedule = array();
         $i = 0;
         $test = array();
-        while(count($schedule) < 4){
-            if($i > 0) {
+        while (count($schedule) < 4) {
+            if ($i > 0) {
                 $date = date("Y-m-d", strtotime("+$i day"));
                 $day = strtolower(date("l", strtotime($date)));
                 $test[] = $date;
@@ -189,8 +186,8 @@ class ApiScheduleController extends Controller
             }
             $i += 1;
 
-            foreach($doctor_schedule as $row) {
-                if($row['day'] == $day) {
+            foreach ($doctor_schedule as $row) {
+                if ($row['day'] == $day) {
                     $row['date'] = $date;
                     $schedule[] = $row;
                 }
@@ -215,7 +212,7 @@ class ApiScheduleController extends Controller
 
         return response()->json(['status'  => 'success', 'result' => $doctor_schedule]);
     }
-    
+
     /**
      * Remove the specified resource from storage.
      * @param int $id
@@ -228,14 +225,14 @@ class ApiScheduleController extends Controller
         $user = $request->user();
 
         //translate day to english day
-        foreach($posts as $key => $value){
+        foreach ($posts as $key => $value) {
             $date = date('l', strtotime($value['day']));
 
             $posts[$key]['day'] = $date;
 
             //sorting session time
-            if(isset($value['session_time'])){                
-                usort($value['session_time'], function($a, $b) {
+            if (isset($value['session_time'])) {
+                usort($value['session_time'], function ($a, $b) {
                     return strtotime($a['start_time']) <=> strtotime($b['start_time']);
                 });
 
@@ -243,10 +240,10 @@ class ApiScheduleController extends Controller
             }
 
             //check same session time
-            if(isset($value['session_time'])){
+            if (isset($value['session_time'])) {
                 $endTime = null;
                 foreach ($posts[$key]['session_time'] as $key => $time) {
-                    if($time['start_time'] < $endTime){
+                    if ($time['start_time'] < $endTime) {
                         return response()->json(['status'  => 'fail', 'messages' => 'Session time can not be the same in one day']);
                     }
                     $endTime = $time['end_time'];
@@ -255,9 +252,9 @@ class ApiScheduleController extends Controller
         }
 
         // dd($posts);
- 
+
         DB::beginTransaction();
-        foreach($posts as $key => $post) {
+        foreach ($posts as $key => $post) {
             if (isset($post['id_doctor_schedule'])) {
                 try {
                     //try update schedule
@@ -266,7 +263,7 @@ class ApiScheduleController extends Controller
                         'day' => $post['day'],
                         'is_active' => $post['is_active']
                     ];
-                    $updateSchedule = DoctorSchedule::where('id_doctor_schedule', $post['id_doctor_schedule'])->update($postSchedule); 
+                    $updateSchedule = DoctorSchedule::where('id_doctor_schedule', $post['id_doctor_schedule'])->update($postSchedule);
 
                     $schedule = DoctorSchedule::where('id_doctor_schedule', $post['id_doctor_schedule'])->first();
                     //drop and save schedule time

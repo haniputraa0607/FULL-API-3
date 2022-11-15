@@ -39,10 +39,11 @@ class TransactionQueueServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('transactionqueue.php'),
+            __DIR__ . '/../Config/config.php' => config_path('transactionqueue.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'transactionqueue'
+            __DIR__ . '/../Config/config.php',
+            'transactionqueue'
         );
     }
 
@@ -55,11 +56,11 @@ class TransactionQueueServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/transactionqueue');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/transactionqueue';
@@ -78,7 +79,7 @@ class TransactionQueueServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'transactionqueue');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'transactionqueue');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'transactionqueue');
         }
     }
 

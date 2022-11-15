@@ -24,7 +24,7 @@ class ApiReportTransactionController extends Controller
 {
     public function product(Request $request)
     {
-        if (($request->rule['9998']['parameter']??false) == ($request->rule['9999']['parameter']??false) && ($request->rule['9998']['parameter']??false) == date('Y-m-d')) {
+        if (($request->rule['9998']['parameter'] ?? false) == ($request->rule['9999']['parameter'] ?? false) && ($request->rule['9998']['parameter'] ?? false) == date('Y-m-d')) {
             $date = date('Y-m-d');
             $result = \DB::table(\DB::raw("
                 (SELECT 
@@ -72,14 +72,14 @@ class ApiReportTransactionController extends Controller
 
         if (is_array($orders = $request->order)) {
             $columns = [
-                'trx_date', 
-                'product_name', 
-                'variant_name', 
+                'trx_date',
+                'product_name',
+                'variant_name',
                 'name_brand',
                 'product_category_name',
-                'total_qty', 
-                'total_nominal', 
-                'total_product_discount', 
+                'total_qty',
+                'total_nominal',
+                'total_product_discount',
                 'id_report_trx_menu',
             ];
 
@@ -113,7 +113,7 @@ class ApiReportTransactionController extends Controller
 
     public function productSummary(Request $request)
     {
-        if (($request->rule['9998']['parameter']??false) == ($request->rule['9999']['parameter']??false) && ($request->rule['9998']['parameter']??false) == date('Y-m-d')) {
+        if (($request->rule['9998']['parameter'] ?? false) == ($request->rule['9999']['parameter'] ?? false) && ($request->rule['9998']['parameter'] ?? false) == date('Y-m-d')) {
             $date = date('Y-m-d');
             $result = \DB::table(\DB::raw("
                 (SELECT 
@@ -144,12 +144,12 @@ class ApiReportTransactionController extends Controller
                 GROUP BY DATE(transaction_date) , transaction_products.id_product , transaction_products.id_product_variant_group) as daily_report_trx_menu
             "));
         } else {
-            $result = new DailyReportTrxMenu;
+            $result = new DailyReportTrxMenu();
         }
 
         $result = $result->select(
-        	'product_name', 
-        	\DB::raw('
+            'product_name',
+            \DB::raw('
         		COUNT(DISTINCT product_variants.product_variant_name) as total_variant, 
         		SUM(total_qty) / CASE WHEN COUNT(DISTINCT product_variants.product_variant_name) != 0 
         			THEN COUNT(DISTINCT product_variants.product_variant_name) 
@@ -179,13 +179,13 @@ class ApiReportTransactionController extends Controller
 
         if (is_array($orders = $request->order)) {
             $columns = [
-                'product_name', 
-                'variant_name', 
+                'product_name',
+                'variant_name',
                 'name_brand',
                 'product_category_name',
-                'total_qty', 
-                'total_nominal', 
-                'total_product_discount', 
+                'total_qty',
+                'total_nominal',
+                'total_product_discount',
                 'id_report_trx_menu',
             ];
 
@@ -196,7 +196,7 @@ class ApiReportTransactionController extends Controller
             }
         }
 
-        $result->groupBy('product_name','daily_report_trx_menu.id_product_variant_group');
+        $result->groupBy('product_name', 'daily_report_trx_menu.id_product_variant_group');
         $result->orderBy('id_report_trx_menu', 'DESC');
 
         if ($request->return_builder) {
@@ -236,12 +236,12 @@ class ApiReportTransactionController extends Controller
             }
             $new_rule[$var['subject']][] = $var1;
         }
-        $model->where(function($model2) use ($model, $where, $new_rule){
+        $model->where(function ($model2) use ($model, $where, $new_rule) {
             $inner = ['id_product', 'id_product_variant_group', 'total_qty', 'total_nominal', 'id_brand', 'id_product_category'];
             foreach ($inner as $col_name) {
                 if ($rules = $new_rule[$col_name] ?? false) {
                     foreach ($rules as $rul) {
-                        $model2->$where('daily_report_trx_menu.'.$col_name, $rul['operator'], $rul['parameter']);
+                        $model2->$where('daily_report_trx_menu.' . $col_name, $rul['operator'], $rul['parameter']);
                     }
                 }
             }
@@ -249,7 +249,7 @@ class ApiReportTransactionController extends Controller
             $col_name = 'id_product_variants';
             if ($rules = $new_rule[$col_name] ?? false) {
                 foreach ($rules as $rul) {
-                    $model2->{$where.'In'}('daily_report_trx_menu.id_product_variant_group', function($model3) use ($rul) {
+                    $model2->{$where . 'In'}('daily_report_trx_menu.id_product_variant_group', function ($model3) use ($rul) {
                         $model3->selectRaw("id_product_variant_group from (SELECT `product_variant_groups`.`id_product_variant_group`,
                                 CONCAT(',', GROUP_CONCAT(id_product_variant), ',') AS variant_ids
                             FROM `product_variant_groups` 
@@ -258,7 +258,7 @@ class ApiReportTransactionController extends Controller
                             GROUP BY `product_variant_groups`.`id_product_variant_group`) as t1
                         ");
                         foreach ($rul['parameter'] as $id_variant) {
-                            $model3->where('variant_ids', 'like',"%,$id_variant,%");
+                            $model3->where('variant_ids', 'like', "%,$id_variant,%");
                         }
                     });
                 }
@@ -281,7 +281,7 @@ class ApiReportTransactionController extends Controller
 
     public function modifier(Request $request)
     {
-        if (($request->rule['9998']['parameter']??false) == ($request->rule['9999']['parameter']??false) && ($request->rule['9998']['parameter']??false) == date('Y-m-d')) {
+        if (($request->rule['9998']['parameter'] ?? false) == ($request->rule['9999']['parameter'] ?? false) && ($request->rule['9998']['parameter'] ?? false) == date('Y-m-d')) {
             $date = date('Y-m-d');
             $result = \DB::table(\DB::raw("
                 (SELECT 
@@ -306,13 +306,13 @@ class ApiReportTransactionController extends Controller
                 GROUP BY DATE(transaction_date) , transaction_product_modifiers.id_product_modifier) as daily_report_trx_modifier
             "))
                 ->select('trx_date', 'product_modifiers.text', 'total_qty', 'total_nominal', 'id_report_trx_modifier')
-                ->join('product_modifiers', function($join) {
+                ->join('product_modifiers', function ($join) {
                     $join->on('product_modifiers.id_product_modifier', 'daily_report_trx_modifier.id_product_modifier')
                         ->where('modifier_type', '<>', 'Modifier Group');
                 });
         } else {
             $result = DailyReportTrxModifier::select('trx_date', 'product_modifiers.text', 'total_qty', 'total_nominal', 'id_report_trx_modifier')
-                ->join('product_modifiers', function($join) {
+                ->join('product_modifiers', function ($join) {
                     $join->on('product_modifiers.id_product_modifier', 'daily_report_trx_modifier.id_product_modifier')
                         ->where('modifier_type', '<>', 'Modifier Group');
                 });
@@ -327,10 +327,10 @@ class ApiReportTransactionController extends Controller
 
         if (is_array($orders = $request->order)) {
             $columns = [
-                'trx_date', 
-                'text', 
-                'total_qty', 
-                'total_nominal', 
+                'trx_date',
+                'text',
+                'total_qty',
+                'total_nominal',
                 'id_report_trx_modifier',
             ];
 
@@ -364,7 +364,7 @@ class ApiReportTransactionController extends Controller
 
     public function modifierSummary(Request $request)
     {
-        if (($request->rule['9998']['parameter']??false) == ($request->rule['9999']['parameter']??false) && ($request->rule['9998']['parameter']??false) == date('Y-m-d')) {
+        if (($request->rule['9998']['parameter'] ?? false) == ($request->rule['9999']['parameter'] ?? false) && ($request->rule['9998']['parameter'] ?? false) == date('Y-m-d')) {
             $date = date('Y-m-d');
             $result = \DB::table(\DB::raw("
                 (SELECT 
@@ -389,13 +389,13 @@ class ApiReportTransactionController extends Controller
                 GROUP BY DATE(transaction_date) , transaction_product_modifiers.id_product_modifier) as daily_report_trx_modifier
             "))
                 ->select('product_modifiers.text', \DB::raw('SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal'))
-                ->join('product_modifiers', function($join) {
+                ->join('product_modifiers', function ($join) {
                     $join->on('product_modifiers.id_product_modifier', 'daily_report_trx_modifier.id_product_modifier')
                         ->where('modifier_type', '<>', 'Modifier Group');
                 });
         } else {
             $result = DailyReportTrxModifier::select('product_modifiers.text', \DB::raw('SUM(total_qty) as total_qty, SUM(total_nominal) as total_nominal'))
-                ->join('product_modifiers', function($join) {
+                ->join('product_modifiers', function ($join) {
                     $join->on('product_modifiers.id_product_modifier', 'daily_report_trx_modifier.id_product_modifier')
                         ->where('modifier_type', '<>', 'Modifier Group');
                 });
@@ -410,9 +410,9 @@ class ApiReportTransactionController extends Controller
 
         if (is_array($orders = $request->order)) {
             $columns = [
-                'text', 
-                'total_qty', 
-                'total_nominal', 
+                'text',
+                'total_qty',
+                'total_nominal',
             ];
 
             foreach ($orders as $column) {
@@ -462,12 +462,12 @@ class ApiReportTransactionController extends Controller
             }
             $new_rule[$var['subject']][] = $var1;
         }
-        $model->where(function($model2) use ($model, $where, $new_rule){
+        $model->where(function ($model2) use ($model, $where, $new_rule) {
             $inner = ['id_product_modifier', 'total_qty', 'total_nominal'];
             foreach ($inner as $col_name) {
                 if ($rules = $new_rule[$col_name] ?? false) {
                     foreach ($rules as $rul) {
-                        $model2->$where('daily_report_trx_modifier.'.$col_name, $rul['operator'], $rul['parameter']);
+                        $model2->$where('daily_report_trx_modifier.' . $col_name, $rul['operator'], $rul['parameter']);
                     }
                 }
             }
@@ -517,7 +517,8 @@ class ApiReportTransactionController extends Controller
      * @param Request $request
      * return Response
      */
-    public function listProductExport(Request $request) {
+    public function listProductExport(Request $request)
+    {
         // return $request->all();
         $result = ExportFranchiseQueue::where('report_type', ExportFranchiseQueue::REPORT_TYPE_REPORT_TRANSACTION_PRODUCT)->where('id_user_franchise', $request->user()->id_user_franchise);
         if ($request->id_outlet) {
@@ -567,7 +568,8 @@ class ApiReportTransactionController extends Controller
         return MyHelper::checkDelete($delete);
     }
 
-    public function exportProductExcel($queue){
+    public function exportProductExcel($queue)
+    {
         $filter = (array)json_decode($queue['filter'], true);
 
         $filter['rule'][] = [
@@ -598,12 +600,12 @@ class ApiReportTransactionController extends Controller
         $rand_string = MyHelper::createrandom(5);
 
         $excelFile = "Report_Transaction_Product_{$queue->id_export_franchise_queue}_{$rand_string}.xlsx";
-        $directory = 'franchise/report/transaction/'.$excelFile;
+        $directory = 'franchise/report/transaction/' . $excelFile;
 
         $store  = (new FilterResultExport($data, $filter, 'Product Transaction'))->store($directory);
 
         if ($store) {
-            $path = storage_path('app/'.$directory);
+            $path = storage_path('app/' . $directory);
             $contents = File::get($path);
             if (config('configs.STORAGE') != 'local') {
                 $store = Storage::disk(config('configs.STORAGE'))->put($directory, $contents, 'public');
@@ -644,7 +646,8 @@ class ApiReportTransactionController extends Controller
      * @param Request $request
      * return Response
      */
-    public function listModifierExport(Request $request) {
+    public function listModifierExport(Request $request)
+    {
         // return $request->all();
         $result = ExportFranchiseQueue::where('report_type', ExportFranchiseQueue::REPORT_TYPE_REPORT_TRANSACTION_MODIFIER)->where('id_user_franchise', $request->user()->id_user_franchise);
         if ($request->id_outlet) {
@@ -694,7 +697,8 @@ class ApiReportTransactionController extends Controller
         return MyHelper::checkDelete($delete);
     }
 
-    public function exportModifierExcel($queue){
+    public function exportModifierExcel($queue)
+    {
         $filter = (array)json_decode($queue['filter'], true);
 
         $filter['rule'][] = [
@@ -723,12 +727,12 @@ class ApiReportTransactionController extends Controller
         $rand_string = MyHelper::createrandom(5);
 
         $excelFile = "Report_Transaction_Topping_{$queue->id_export_franchise_queue}_{$rand_string}.xlsx";
-        $directory = 'franchise/report/transaction/'.$excelFile;
+        $directory = 'franchise/report/transaction/' . $excelFile;
 
         $store  = (new FilterResultExport($data, $filter, 'Topping Transaction'))->store($directory);
 
         if ($store) {
-            $path = storage_path('app/'.$directory);
+            $path = storage_path('app/' . $directory);
             $contents = File::get($path);
             if (config('configs.STORAGE') != 'local') {
                 $store = Storage::disk(config('configs.STORAGE'))->put($directory, $contents, 'public');
@@ -745,19 +749,19 @@ class ApiReportTransactionController extends Controller
             case 'products':
                 $result = Product::showAllProduct()->select('id_product', 'product_name')->get();
                 break;
-            
+
             case 'brands':
                 $result = Brand::select('id_brand', 'name_brand')->get();
                 break;
-            
+
             case 'product_categories':
                 $result = ProductCategory::select('id_product_category', 'product_category_name')->get();
                 break;
-            
+
             case 'product_variant_groups':
                 $result = ProductVariantGroup::select('id_product_variant_group', 'product_variant_group_code as product_variant_group_name')->get();
                 break;
-            
+
             case 'product_variants':
                 $variants = ProductVariant::select('id_product_variant', 'product_variant_name', 'id_parent')->whereNotNull('id_parent')->with('parent')->get();
                 $result = [];
@@ -778,11 +782,10 @@ class ApiReportTransactionController extends Controller
             case 'product_variants_raw':
                 $result = ProductVariant::select('id_product_variant', 'product_variant_name')->get();
                 break;
-            
+
             case 'modifiers':
                 $result = ProductModifier::select('id_product_modifier', 'text')->where('modifier_type', '<>', 'Modifier Group')->get();
                 break;
-            
         }
         return MyHelper::checkGet($result);
     }

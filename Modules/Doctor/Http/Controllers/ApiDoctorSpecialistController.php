@@ -6,12 +6,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
-
 use Modules\Doctor\Entities\DoctorSpecialist;
 use Modules\Doctor\Http\Requests\DoctorSpecialistCreate;
 use Validator;
 use DB;
-
 
 class ApiDoctorSpecialistController extends Controller
 {
@@ -37,7 +35,7 @@ class ApiDoctorSpecialistController extends Controller
     {
         $post = $request->json()->all();
         unset($post['_token']);
-        
+
         DB::beginTransaction();
         if (isset($post['id_doctor_specialist'])) {
             try {
@@ -87,7 +85,7 @@ class ApiDoctorSpecialistController extends Controller
      * @return Response
      */
     public function destroy(Request $request)
-    {   
+    {
         try {
             $id_doctor_specialist = $request->json('id_doctor_specialist');
             $specialist_pivot_exists = DoctorSpecialist::join('doctors_specialists_pivots', 'doctors_specialists.id_doctor_specialist', '=', 'doctors_specialists_pivots.id_doctor_specialist')

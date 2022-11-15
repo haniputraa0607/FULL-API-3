@@ -47,10 +47,11 @@ class OutletAppServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('outletapp.php'),
+            __DIR__ . '/../Config/config.php' => config_path('outletapp.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'outletapp'
+            __DIR__ . '/../Config/config.php',
+            'outletapp'
         );
     }
 
@@ -63,11 +64,11 @@ class OutletAppServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/outletapp');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/outletapp';
@@ -86,7 +87,7 @@ class OutletAppServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'outletapp');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'outletapp');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'outletapp');
         }
     }
 

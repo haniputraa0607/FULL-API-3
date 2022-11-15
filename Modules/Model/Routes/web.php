@@ -11,6 +11,6 @@
 |
 */
 
-Route::prefix('model')->group(function() {
+Route::prefix('model')->group(function () {
     Route::get('/', 'ModelController@index');
 });

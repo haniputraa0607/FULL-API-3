@@ -27,7 +27,11 @@ use Illuminate\Support\Facades\Cache;
 
 class RefreshVariantTree implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
     protected $data;
     /**
      * Create a new job instance.
@@ -46,12 +50,12 @@ class RefreshVariantTree implements ShouldQueue
      */
     public function handle()
     {
-        if(isset($this->data['type']) && $this->data['type'] == 'specific_product'){
+        if (isset($this->data['type']) && $this->data['type'] == 'specific_product') {
             $getAllOutlets = Outlet::get();
-            foreach ($getAllOutlets as $o){
+            foreach ($getAllOutlets as $o) {
                 Product::refreshVariantTree($this->data['id_product'], $o);
             }
-        }else{
+        } else {
             Cache::flush();
         }
 

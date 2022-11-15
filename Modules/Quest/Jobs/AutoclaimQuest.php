@@ -7,7 +7,6 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-
 use Modules\Quest\Entities\QuestDetail;
 use Modules\Quest\Entities\QuestUser;
 use Modules\Quest\Entities\QuestUserDetail;
@@ -15,7 +14,11 @@ use Illuminate\Http\Request;
 
 class AutoclaimQuest implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
     protected $quest;
     protected $users;
     /**

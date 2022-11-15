@@ -9,7 +9,7 @@ class AchievementGroup extends Model
     protected $table = 'achievement_groups';
 
     protected $primaryKey = 'id_achievement_group';
-    
+
     protected $fillable = [
         'id_achievement_category',
         'name',
@@ -25,7 +25,8 @@ class AchievementGroup extends Model
         'is_calculate'
     ];
 
-    public function getIdAchievementGroupAttribute($value) {
+    public function getIdAchievementGroupAttribute($value)
+    {
         return \App\Lib\MyHelper::encSlug($value);
     }
 

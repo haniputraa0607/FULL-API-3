@@ -46,10 +46,11 @@ class NewsServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('news.php'),
+            __DIR__ . '/../Config/config.php' => config_path('news.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'news'
+            __DIR__ . '/../Config/config.php',
+            'news'
         );
     }
 
@@ -62,11 +63,11 @@ class NewsServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/news');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/news';
@@ -85,7 +86,7 @@ class NewsServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'news');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'news');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'news');
         }
     }
 

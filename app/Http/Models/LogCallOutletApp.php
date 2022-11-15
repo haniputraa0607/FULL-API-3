@@ -16,16 +16,16 @@ use Illuminate\Database\Eloquent\Model;
  */
 class LogCallOutletApp extends Model
 {
-	/**
-	 * The database name used by the model.
-	 *
-	 * @var string
-	 */
-	protected $connection = 'mysql2';
-	
+    /**
+     * The database name used by the model.
+     *
+     * @var string
+     */
+    protected $connection = 'mysql2';
+
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'log_call_outlet_apps';
@@ -34,5 +34,4 @@ class LogCallOutletApp extends Model
      * @var array
      */
     protected $fillable = ['id_log_call_outlet_app', 'outlet_code', 'outlet', 'phone', 'user', 'request', 'response_status', 'response', 'ip', 'useragent', 'created_at', 'updated_at'];
-
 }

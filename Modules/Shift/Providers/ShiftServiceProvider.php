@@ -39,10 +39,11 @@ class ShiftServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('shift.php'),
+            __DIR__ . '/../Config/config.php' => config_path('shift.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'shift'
+            __DIR__ . '/../Config/config.php',
+            'shift'
         );
     }
 
@@ -55,11 +56,11 @@ class ShiftServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/shift');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/shift';
@@ -78,7 +79,7 @@ class ShiftServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'shift');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'shift');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'shift');
         }
     }
 

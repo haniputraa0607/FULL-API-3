@@ -16,9 +16,9 @@ class UpdateRequest extends FormRequest
     public function rules()
     {
         return [
-            'id_featured_subscription'	=> 'required|exists:featured_subscriptions,id_featured_subscription',
-            'id_subscription'			=> 'required|exists:subscriptions,id_subscription',
-            'date_end'					=> 'required|date|after_or_equal:date_start',
+            'id_featured_subscription'  => 'required|exists:featured_subscriptions,id_featured_subscription',
+            'id_subscription'           => 'required|exists:subscriptions,id_subscription',
+            'date_end'                  => 'required|date|after_or_equal:date_start',
         ];
     }
 

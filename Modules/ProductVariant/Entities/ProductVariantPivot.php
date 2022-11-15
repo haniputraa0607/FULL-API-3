@@ -16,10 +16,12 @@ class ProductVariantPivot extends Model
         'id_product_variant_group'
     ];
 
-    public function product_variant() {
+    public function product_variant()
+    {
         return $this->belongsTo(ProductVariant::class, 'id_product_variant');
     }
-    public function product_variant_simple() {
+    public function product_variant_simple()
+    {
         return $this->belongsTo(ProductVariant::class, 'id_product_variant')->select('id_product_variant', 'id_product_variant_pivot', 'product_variant_name');
     }
 }

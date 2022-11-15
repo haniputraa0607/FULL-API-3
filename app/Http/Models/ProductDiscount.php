@@ -8,11 +8,12 @@
 namespace App\Http\Models;
 
 use Illuminate\Database\Eloquent\Model;
+
 // use Carbon;
 
 /**
  * Class ProductDiscount
- * 
+ *
  * @property int $id_product_discount
  * @property int $id_product
  * @property int $discount_percentage
@@ -24,41 +25,41 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $discount_days
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \App\Http\Models\Product $product
  *
  * @package App\Models
  */
 class ProductDiscount extends Model
 {
-	protected $primaryKey = 'id_product_discount';
+    protected $primaryKey = 'id_product_discount';
 
-	protected $casts = [
-		'id_product' => 'int',
-		'discount_percentage' => 'int',
-		'discount_nominal' => 'int'
-	];
+    protected $casts = [
+        'id_product' => 'int',
+        'discount_percentage' => 'int',
+        'discount_nominal' => 'int'
+    ];
 
-	protected $dates = [
-		'discount_start' => 'datetime:Y-m-d',
-		'discount_end' => 'datetime:Y-m-d',
-		'discount_time_start' => 'datetime:H:i:s',
-		'discount_time_end' => 'datetime:H:i:s'
-	];
+    protected $dates = [
+        'discount_start' => 'datetime:Y-m-d',
+        'discount_end' => 'datetime:Y-m-d',
+        'discount_time_start' => 'datetime:H:i:s',
+        'discount_time_end' => 'datetime:H:i:s'
+    ];
 
-	protected $fillable = [
-		'id_product',
-		'discount_percentage',
-		'discount_nominal',
-		'discount_start',
-		'discount_end',
-		'discount_time_start',
-		'discount_time_end',
-		'discount_days'
-	];
+    protected $fillable = [
+        'id_product',
+        'discount_percentage',
+        'discount_nominal',
+        'discount_start',
+        'discount_end',
+        'discount_time_start',
+        'discount_time_end',
+        'discount_days'
+    ];
 
-	public function product()
-	{
-		return $this->belongsTo(\App\Http\Models\Product::class, 'id_product');
-	}
+    public function product()
+    {
+        return $this->belongsTo(\App\Http\Models\Product::class, 'id_product');
+    }
 }

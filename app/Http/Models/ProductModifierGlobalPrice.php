@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProductModifierGlobalPrice extends Model
 {
-	protected $primaryKey = 'id_product_modifier_global_price';
+    protected $primaryKey = 'id_product_modifier_global_price';
     protected $fillable = [
-    	'id_product_modifier',
-    	'product_modifier_price'
+        'id_product_modifier',
+        'product_modifier_price'
     ];
 }

@@ -14,7 +14,10 @@ use Modules\MokaPOS\Entities\OutletMokaPOS;
 
 class SyncOutlet implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     protected $data;
     /**

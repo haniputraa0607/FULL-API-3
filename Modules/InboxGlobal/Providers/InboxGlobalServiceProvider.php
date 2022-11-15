@@ -46,10 +46,11 @@ class InboxGlobalServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('inboxglobal.php'),
+            __DIR__ . '/../Config/config.php' => config_path('inboxglobal.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'inboxglobal'
+            __DIR__ . '/../Config/config.php',
+            'inboxglobal'
         );
     }
 
@@ -62,11 +63,11 @@ class InboxGlobalServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/inboxglobal');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/inboxglobal';
@@ -85,7 +86,7 @@ class InboxGlobalServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'inboxglobal');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'inboxglobal');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'inboxglobal');
         }
     }
 

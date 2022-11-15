@@ -7,7 +7,6 @@ use Modules\Report\Entities\ExportQueue;
 use App\Http\Models\Setting;
 use App\Http\Models\User;
 use Modules\Franchise\Entities\ExportFranchiseQueue;
-
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
@@ -24,7 +23,11 @@ use Symfony\Component\HttpFoundation\Request;
 
 class ExportFranchiseJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
     protected $data;
     /**
      * Create a new job instance.
@@ -45,13 +48,13 @@ class ExportFranchiseJob implements ShouldQueue
     {
         $queue = ExportFranchiseQueue::where('id_export_franchise_queue', $this->data->id_export_franchise_queue)->where('status_export', 'Running')->first();
 
-        if(!empty($queue)){
+        if (!empty($queue)) {
             $generateExcel = false;
-            if ( $queue['report_type'] == 'Transaction' ) {
+            if ($queue['report_type'] == 'Transaction') {
                 app('Modules\Franchise\Http\Controllers\ApiTransactionFranchiseController')->exportExcel($queue);
-            } elseif ( $queue['report_type'] == ExportFranchiseQueue::REPORT_TYPE_REPORT_TRANSACTION_PRODUCT ) {
+            } elseif ($queue['report_type'] == ExportFranchiseQueue::REPORT_TYPE_REPORT_TRANSACTION_PRODUCT) {
                 app('Modules\Franchise\Http\Controllers\ApiReportTransactionController')->exportProductExcel($queue);
-            } elseif ( $queue['report_type'] == ExportFranchiseQueue::REPORT_TYPE_REPORT_TRANSACTION_MODIFIER ) {
+            } elseif ($queue['report_type'] == ExportFranchiseQueue::REPORT_TYPE_REPORT_TRANSACTION_MODIFIER) {
                 app('Modules\Franchise\Http\Controllers\ApiReportTransactionController')->exportModifierExcel($queue);
             }
         }

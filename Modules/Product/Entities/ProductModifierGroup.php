@@ -29,7 +29,7 @@ class ProductModifierGroup extends Model
     }
 
     public function inventory_brand()
-	{
-		return $this->hasMany(ProductModifierGroupInventoryBrand::class,'id_product_modifier_group');
-	}
+    {
+        return $this->hasMany(ProductModifierGroupInventoryBrand::class, 'id_product_modifier_group');
+    }
 }

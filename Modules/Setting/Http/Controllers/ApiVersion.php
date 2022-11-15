@@ -6,10 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Modules\Setting\Http\Requests\Version\VersionList;
-
 use App\Http\Models\Setting;
 use Modules\Setting\Entities\Version;
-
 use App\Lib\MyHelper;
 use DB;
 
@@ -19,18 +17,18 @@ class ApiVersion extends Controller
     {
         /*Start check status maintenance mode for apps*/
         $getMaintenance = Setting::where('key', 'maintenance_mode')->first();
-        if($getMaintenance && $getMaintenance['value'] == 1){
+        if ($getMaintenance && $getMaintenance['value'] == 1) {
             $dt = (array)json_decode($getMaintenance['value_text']);
             $message = $dt['message'];
-            if($dt['image'] != ""){
-                $url_image = config('url.storage_url_api').$dt['image'];
-            }else{
-                $url_image = config('url.storage_url_api').'img/maintenance/default.png';
+            if ($dt['image'] != "") {
+                $url_image = config('url.storage_url_api') . $dt['image'];
+            } else {
+                $url_image = config('url.storage_url_api') . 'img/maintenance/default.png';
             }
             return response()->json([
                 'status' => 'fail',
                 'messages' => [$message],
-                'maintenance' => config('url.api_url') ."api/maintenance-mode",
+                'maintenance' => config('url.api_url') . "api/maintenance-mode",
                 'data_maintenance' => [
                     'url_image' => $url_image,
                     'text' => $message
@@ -61,9 +59,15 @@ class ApiVersion extends Controller
             $device = $post['device'];
         } else {
             $agent = $_SERVER['HTTP_USER_AGENT'];
-            if (stristr($agent, 'okhttp')) $device = 'android';
-            if (stristr($agent, 'android')) $device = 'android';
-            if (stristr($agent, 'ios')) $device = 'ios';
+            if (stristr($agent, 'okhttp')) {
+                $device = 'android';
+            }
+            if (stristr($agent, 'android')) {
+                $device = 'android';
+            }
+            if (stristr($agent, 'ios')) {
+                $device = 'ios';
+            }
         }
         if ($device != null) {
             if ($device == 'android') {
@@ -143,7 +147,7 @@ class ApiVersion extends Controller
         }
     }
 
-    function getVersion()
+    public function getVersion()
     {
         $display = Setting::where('key', 'LIKE', 'version%')->get();
         $android = Version::select('app_type', 'app_version', 'rules')->orderBy('app_version', 'desc')->where('app_type', 'Android')->get()->toArray();
@@ -168,7 +172,7 @@ class ApiVersion extends Controller
         return response()->json(MyHelper::checkGet($result));
     }
 
-    function updateVersion(Request $request)
+    public function updateVersion(Request $request)
     {
         $post = $request->json()->all();
         DB::beginTransaction();
@@ -228,20 +232,20 @@ class ApiVersion extends Controller
                     Version::where('app_type', $key)->delete();
                     foreach ($reindex as $value) {
                         if (!isset($versionLast)) {
-                            $version = new Version;
+                            $version = new Version();
                             $version->app_version = $value['app_version'];
                             $version->app_type = $value['app_type'];
                             $version->rules = $value['rules'];
                             $version->save();
                         } else {
                             if (in_array($value['app_version'], $versionLast)) {
-                                $version = new Version;
+                                $version = new Version();
                                 $version->app_version = $value['app_version'];
                                 $version->app_type = $value['app_type'];
                                 $version->rules = $value['rules'];
                                 $version->save();
                             } else {
-                                $version = new Version;
+                                $version = new Version();
                                 $version->app_version = $value['app_version'];
                                 $version->app_type = $value['app_type'];
                                 $version->rules = 0;

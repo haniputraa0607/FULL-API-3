@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
-
 use Modules\Doctor\Entities\DoctorService;
 use Modules\Doctor\Http\Requests\DoctorServiceCreate;
 use Validator;
@@ -87,7 +86,7 @@ class ApiDoctorServiceController extends Controller
      */
     public function destroy(Request $request)
     {
-        try { 
+        try {
             $id_doctor_service = $request->json('id_doctor_service');
             $doctorService = DoctorService::where('id_doctor_service', $id_doctor_service)->first();
             $delete = $doctorService->delete();

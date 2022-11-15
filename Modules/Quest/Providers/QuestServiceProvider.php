@@ -39,10 +39,11 @@ class QuestServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('quest.php'),
+            __DIR__ . '/../Config/config.php' => config_path('quest.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'quest'
+            __DIR__ . '/../Config/config.php',
+            'quest'
         );
     }
 
@@ -55,11 +56,11 @@ class QuestServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/quest');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/quest';
@@ -78,7 +79,7 @@ class QuestServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'quest');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'quest');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'quest');
         }
     }
 

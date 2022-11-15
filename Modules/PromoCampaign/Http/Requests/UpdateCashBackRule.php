@@ -15,12 +15,12 @@ class UpdateCashBackRule extends FormRequest
      */
     public function rules()
     {
-        $rules=[
-            'promo_code_checkbox'   	=> 'nullable',
+        $rules = [
+            'promo_code_checkbox'       => 'nullable',
             'voucher_online_checkbox'   => 'nullable',
             'voucher_offline_checkbox'  => 'nullable',
-            'subscription_checkbox'  	=> 'nullable',
-            'update'					=> 'required'
+            'subscription_checkbox'     => 'nullable',
+            'update'                    => 'required'
         ];
 
         return $rules;

@@ -16,9 +16,9 @@ class CreateRequest extends FormRequest
     public function rules()
     {
         return [
-            'id_product'=>'exists:products,id_product',
-            'id_brand'=>'exists:brands,id_brand',
-            'id_outlet'=>'exists:outlets,id_outlet',
+            'id_product' => 'exists:products,id_product',
+            'id_brand' => 'exists:brands,id_brand',
+            'id_outlet' => 'exists:outlets,id_outlet',
         ];
     }
 

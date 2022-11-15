@@ -9,7 +9,6 @@ use App\Http\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use Modules\Brand\Entities\Brand;
 use Modules\Brand\Entities\BrandOutlet;
 use Modules\Brand\Entities\BrandProduct;
@@ -19,7 +18,7 @@ use Illuminate\Support\Facades\Route;
 
 class ApiBrandController extends Controller
 {
-    function __construct()
+    public function __construct()
     {
         date_default_timezone_set('Asia/Jakarta');
     }
@@ -86,16 +85,16 @@ class ApiBrandController extends Controller
             }
 
             try {
-                $defaultBrand = $post['default_brand_status']??null;
+                $defaultBrand = $post['default_brand_status'] ?? null;
                 unset($post['default_brand_status']);
 
                 Brand::where('id_brand', $post['id_brand'])->update($post);
 
-                $checkSetting = Setting::where('key', 'default_brand')->first()['value']??null;
-                if(!empty($defaultBrand)){
+                $checkSetting = Setting::where('key', 'default_brand')->first()['value'] ?? null;
+                if (!empty($defaultBrand)) {
                     $default = $post['id_brand'];
                     Setting::updateOrCreate(['key' => 'default_brand'], ['value' => $default]);
-                }elseif(empty($defaultBrand) && $checkSetting == $post['id_brand']){
+                } elseif (empty($defaultBrand) && $checkSetting == $post['id_brand']) {
                     Setting::updateOrCreate(['key' => 'default_brand'], ['value' => null]);
                 }
             } catch (\Exception $e) {
@@ -115,7 +114,7 @@ class ApiBrandController extends Controller
             ]);
 
             $checkCode = Brand::where('code_brand', $post['code_brand'])->first();
-            if(!empty($checkCode)){
+            if (!empty($checkCode)) {
                 $result = [
                     'status'  => 'fail',
                     'messages' => ['Failed create brand. Code already use.']
@@ -125,12 +124,12 @@ class ApiBrandController extends Controller
             }
 
             try {
-                $defaultBrand = $post['default_brand_status']??null;
+                $defaultBrand = $post['default_brand_status'] ?? null;
                 unset($post['default_brand_status']);
 
                 $save = Brand::create($post);
 
-                if(!empty($defaultBrand)){
+                if (!empty($defaultBrand)) {
                     Setting::updateOrCreate(['key' => 'default_brand'], ['value' => $save['id_brand']]);
                 }
             } catch (\Exception $e) {
@@ -155,16 +154,16 @@ class ApiBrandController extends Controller
         $post = $request->json()->all();
 
         $getBrand = Brand::with([
-        	'brand_outlet.outlets', 
-        	'brand_product' => function($q) {
-        		$q->whereHas('products');
-        	},
-        	'brand_product.products',
+            'brand_outlet.outlets',
+            'brand_product' => function ($q) {
+                $q->whereHas('products');
+            },
+            'brand_product.products',
         ])
         ->where('id_brand', $post['id_brand'])->get()->first();
 
         $getBrand['brand_deal'] = Deal::where('id_brand', $post['id_brand'])->get()->toArray();
-        $default = Setting::where('key', 'default_brand')->first()['value']??NULL;
+        $default = Setting::where('key', 'default_brand')->first()['value'] ?? null;
         $getBrand['default_brand_status'] = ($default == $post['id_brand'] ? 1 : 0);
         return response()->json(['status'  => 'success', 'result' => $getBrand]);
     }
@@ -176,7 +175,7 @@ class ApiBrandController extends Controller
     public function destroy(Request $request)
     {
         try {
-            $product_exists = Product::join('brand_product', 'products.id_product', 'brand_product.id_product')->where('id_brand',$request->json('id_brand'))->exists();
+            $product_exists = Product::join('brand_product', 'products.id_product', 'brand_product.id_product')->where('id_brand', $request->json('id_brand'))->exists();
             if ($product_exists) {
                 return response()->json([
                     'status' => 'fail',
@@ -231,16 +230,16 @@ class ApiBrandController extends Controller
 
     public function listBrand(Request $request)
     {
-        $currentPath= Route::getFacadeRoot()->current()->uri();
+        $currentPath = Route::getFacadeRoot()->current()->uri();
         $post = $request->json()->all();
-        $brand = Brand::select('id_brand','brand_active', 'name_brand', 'logo_brand', 'image_brand')->orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
+        $brand = Brand::select('id_brand', 'brand_active', 'name_brand', 'logo_brand', 'image_brand')->orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
 
-        if(strpos($currentPath, 'be') === false){
-            $brand = $brand->where('brand_visibility' , 1);
+        if (strpos($currentPath, 'be') === false) {
+            $brand = $brand->where('brand_visibility', 1);
         }
 
-        if($request->json('active')){
-            $brand->where('brand_active',1);
+        if ($request->json('active')) {
+            $brand->where('brand_active', 1);
         }
         if (isset($_GET['page'])) {
             $brand = $brand->paginate(10)->toArray();
@@ -259,15 +258,15 @@ class ApiBrandController extends Controller
             $loop=&$data;
         }
         //get default image
-        if($inactive_image=Setting::where('key','inactive_image_brand')->pluck('value')->first()){
-            $inactive_image=config('url.storage_url_api').$inactive_image;
-        }else{
-            $inactive_image='';
+        if ($inactive_image = Setting::where('key', 'inactive_image_brand')->pluck('value')->first()) {
+            $inactive_image = config('url.storage_url_api') . $inactive_image;
+        } else {
+            $inactive_image = '';
         }
         //replace if inactive
         foreach ($loop as &$bran) {
-            if(!$bran['brand_active']){
-                $bran['image_brand']=$inactive_image;
+            if (!$bran['brand_active']) {
+                $bran['image_brand'] = $inactive_image;
             }
         }
         //return
@@ -310,11 +309,11 @@ class ApiBrandController extends Controller
     public function productStore(Request $request)
     {
         $post = $request->json()->all();
-        $post = array_map(function($var){
-            $id_product_category = BrandProduct::select('id_product_category')->where('id_product',$var['id_product'])->orderBy('id_product_category')->pluck('id_product_category')->first();
+        $post = array_map(function ($var) {
+            $id_product_category = BrandProduct::select('id_product_category')->where('id_product', $var['id_product'])->orderBy('id_product_category')->pluck('id_product_category')->first();
             $var['id_product_category'] = $id_product_category;
             return $var;
-        },$post);
+        }, $post);
         try {
             $create = BrandProduct::insert($post);
             return response()->json(MyHelper::checkDelete($create));
@@ -326,76 +325,81 @@ class ApiBrandController extends Controller
         }
     }
 
-    public function reOrder(Request $request){
-        if (($order=$request->post('order'))&&is_array($order)) {
+    public function reOrder(Request $request)
+    {
+        if (($order = $request->post('order')) && is_array($order)) {
             \DB::beginTransaction();
-            $start=$request->post('data_start')??0;
+            $start = $request->post('data_start') ?? 0;
             foreach ($order as $id) {
                 $start++;
-                $update=['order_brand'=>$start];
-                $save=Brand::find($id)->update($update);
-                if(!$save){
+                $update = ['order_brand' => $start];
+                $save = Brand::find($id)->update($update);
+                if (!$save) {
                     \DB::rollBack();
                     return [
-                        'status'=>'fail',
-                        'messages'=>['Update brand fail']
+                        'status' => 'fail',
+                        'messages' => ['Update brand fail']
                     ];
                 }
             }
             \DB::commit();
             return [
-                'status'=>'success'
+                'status' => 'success'
             ];
         }
         return [
-            'status'=>'fail',
-            'messages'=>['No brand updated']
+            'status' => 'fail',
+            'messages' => ['No brand updated']
         ];
     }
-    public function inactiveImage(Request $request){
+    public function inactiveImage(Request $request)
+    {
         $post = $request->json()->all();
 
         if (isset($post['logo_brand'])) {
-            $upload = MyHelper::uploadPhoto($post['logo_brand'], $path = 'img/brand/',null,'default_logo');
+            $upload = MyHelper::uploadPhoto($post['logo_brand'], $path = 'img/brand/', null, 'default_logo');
             if ($upload['status'] == "success") {
                 $logo_brand = $upload['path'];
-                Setting::updateOrCreate(['key'=>'inactive_logo_brand'],['value'=>$logo_brand]);
+                Setting::updateOrCreate(['key' => 'inactive_logo_brand'], ['value' => $logo_brand]);
             } else {
-                $messages[]='fail upload logo';
+                $messages[] = 'fail upload logo';
             }
         }
 
         if (isset($post['image_brand'])) {
-            $upload = MyHelper::uploadPhoto($post['image_brand'], $path = 'img/brand/image/',null,'default_image');
+            $upload = MyHelper::uploadPhoto($post['image_brand'], $path = 'img/brand/image/', null, 'default_image');
             if ($upload['status'] == "success") {
                 $image_brand = $upload['path'];
-                Setting::updateOrCreate(['key'=>'inactive_image_brand'],['value'=>$image_brand]);
+                Setting::updateOrCreate(['key' => 'inactive_image_brand'], ['value' => $image_brand]);
             } else {
-                $messages[]='fail upload image';
+                $messages[] = 'fail upload image';
             }
         }
 
-        if($messages??false){
+        if ($messages ?? false) {
             return [
-                'status'=>'fail',
-                'messages'=>$messages
+                'status' => 'fail',
+                'messages' => $messages
             ];
         }
-        return ['status'=>'success'];
+        return ['status' => 'success'];
     }
 
-    public function switchStatus(Request $request){
-        $save=Brand::where('id_brand',$request->json('id_brand'))->update(['brand_active'=>$request->json('brand_active')=="true"?1:0]);
+    public function switchStatus(Request $request)
+    {
+        $save = Brand::where('id_brand', $request->json('id_brand'))->update(['brand_active' => $request->json('brand_active') == "true" ? 1 : 0]);
         return MyHelper::checkUpdate($save);
     }
 
-    public function switchVisibility(Request $request){
-        $save=Brand::where('id_brand',$request->json('id_brand'))->update(['brand_visibility'=>$request->json('brand_visibility')=="true"?1:0]);
+    public function switchVisibility(Request $request)
+    {
+        $save = Brand::where('id_brand', $request->json('id_brand'))->update(['brand_visibility' => $request->json('brand_visibility') == "true" ? 1 : 0]);
         return MyHelper::checkUpdate($save);
     }
 
-    public function defaultBrand(){
-        $value =  Setting::where('key', 'default_brand')->first()['value']??null;
+    public function defaultBrand()
+    {
+        $value =  Setting::where('key', 'default_brand')->first()['value'] ?? null;
         return MyHelper::checkGet($value);
     }
 }

@@ -5,14 +5,11 @@ namespace Modules\Users\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\User;
 use App\Http\Models\Setting;
 use App\Http\Models\LogPoint;
 use App\Http\Models\LogBalance;
-
 use Modules\Balance\Http\Controllers\BalanceController;
-
 use App\Lib\MyHelper;
 use DB;
 use Hash;
@@ -20,12 +17,13 @@ use Auth;
 
 class ApiWebviewUser extends Controller
 {
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
         $this->membership    = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
-    
+
     // update profile, point, balance
     public function completeProfile(Request $request)
     {
@@ -35,13 +33,13 @@ class ApiWebviewUser extends Controller
 
         DB::beginTransaction();
             $update = User::where('id', $user->id)->update($post);
-            if ( !$update ) {
-                DB::rollback();
-                return [
-                    'status' => 'fail',
-                    'messages' => 'Failed to save data'
-                ];
-            }
+        if (!$update) {
+            DB::rollback();
+            return [
+                'status' => 'fail',
+                'messages' => 'Failed to save data'
+            ];
+        }
 
             $user = User::with('memberships')->where('id', $user->id)->first();
 
@@ -53,21 +51,21 @@ class ApiWebviewUser extends Controller
             /*if (isset($setting_profile_point->value)) {
                 $complete_profile_point = $setting_profile_point->value;
             }*/
-            if (isset($setting_profile_cashback->value)) {
-                $complete_profile_cashback = $setting_profile_cashback->value;
-            }
+        if (isset($setting_profile_cashback->value)) {
+            $complete_profile_cashback = $setting_profile_cashback->value;
+        }
 
             // membership level
             $level = null;
             $point_percentage = 0;
             // $cashback_percentage = 0;
             $user_member = $user->toArray();
-            if (isset($user_member['memberships'][0]['membership_name'])) {
-                $level = $user_member['memberships'][0]['membership_name'];
-            }
-            if (isset($user_member['memberships'][0]['benefit_point_multiplier'])) {
-                $point_percentage = $user_member['memberships'][0]['benefit_point_multiplier'];
-            }
+        if (isset($user_member['memberships'][0]['membership_name'])) {
+            $level = $user_member['memberships'][0]['membership_name'];
+        }
+        if (isset($user_member['memberships'][0]['benefit_point_multiplier'])) {
+            $point_percentage = $user_member['memberships'][0]['benefit_point_multiplier'];
+        }
 
             /*** uncomment this if point feature is active
             // add point
@@ -96,27 +94,29 @@ class ApiWebviewUser extends Controller
             $addLogBalance = $balanceController->addLogBalance($user->id, $balance_nominal, null, "Completing User Profile", 0);
 
             // if ( !($user_update && $insert_log_point && $addLogBalance) ) {
-            if ( !$addLogBalance ) {
-                DB::rollback();
-                return [
-                    'status' => 'fail',
-                    'messages' => 'Failed to save data'
-                ];
-            }
-            if($balance_nominal??false){
-                $send   = app($this->autocrm)->SendAutoCRM('Complete User Profile Point Bonus', $user->phone, 
-                    [
-                        'received_point' => (string) $balance_nominal
+        if (!$addLogBalance) {
+            DB::rollback();
+            return [
+                'status' => 'fail',
+                'messages' => 'Failed to save data'
+            ];
+        }
+        if ($balance_nominal ?? false) {
+            $send   = app($this->autocrm)->SendAutoCRM(
+                'Complete User Profile Point Bonus',
+                $user->phone,
+                [
+                    'received_point' => (string) $balance_nominal
                     ]
-                );
-                if($send != true){
-                    DB::rollback();
-                    return response()->json([
-                        'status' => 'fail',
-                        'messages' => ['Failed Send notification to customer']
-                    ]);
-                }
+            );
+            if ($send != true) {
+                DB::rollback();
+                return response()->json([
+                    'status' => 'fail',
+                    'messages' => ['Failed Send notification to customer']
+                ]);
             }
+        }
             $checkMembership = app($this->membership)->calculateMembership($user->phone);
         DB::commit();
         // get user profile success page content

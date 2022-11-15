@@ -6,10 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class DailyReportTrx extends Model
 {
-	protected $connection = 'mysql3';
+    protected $connection = 'mysql3';
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'daily_report_trx';
@@ -54,8 +54,8 @@ class DailyReportTrx extends Model
         'first_trx_time',
         'last_trx_time'
     ];
-	
-	/**
+
+    /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function outlet()

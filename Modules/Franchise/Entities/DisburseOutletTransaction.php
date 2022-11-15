@@ -1,16 +1,17 @@
 <?php
 
 namespace Modules\Franchise\Entities;
+
 use Illuminate\Database\Eloquent\Model;
 
 class DisburseOutletTransaction extends Model
 {
     protected $connection = 'mysql3';
     protected $table = 'disburse_outlet_transactions';
-	protected $primaryKey = 'id_disburse_transaction';
+    protected $primaryKey = 'id_disburse_transaction';
 
-	protected $fillable = [
-	    'id_disburse_outlet',
+    protected $fillable = [
+        'id_disburse_outlet',
         'id_transaction',
         'income_central',
         'income_outlet',
@@ -37,5 +38,5 @@ class DisburseOutletTransaction extends Model
         'charged_promo_outlet',
         'charged_subscription_central',
         'charged_subscription_outlet'
-	];
+    ];
 }

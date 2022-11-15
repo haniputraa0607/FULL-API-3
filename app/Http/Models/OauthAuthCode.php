@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class OauthAuthCode
- * 
+ *
  * @property string $id
  * @property int $user_id
  * @property int $client_id
@@ -23,24 +23,24 @@ use Illuminate\Database\Eloquent\Model;
  */
 class OauthAuthCode extends Model
 {
-	public $incrementing = false;
-	public $timestamps = false;
+    public $incrementing = false;
+    public $timestamps = false;
 
-	protected $casts = [
-		'user_id' => 'int',
-		'client_id' => 'int',
-		'revoked' => 'bool'
-	];
+    protected $casts = [
+        'user_id' => 'int',
+        'client_id' => 'int',
+        'revoked' => 'bool'
+    ];
 
-	protected $dates = [
-		'expires_at'
-	];
+    protected $dates = [
+        'expires_at'
+    ];
 
-	protected $fillable = [
-		'user_id',
-		'client_id',
-		'scopes',
-		'revoked',
-		'expires_at'
-	];
+    protected $fillable = [
+        'user_id',
+        'client_id',
+        'scopes',
+        'revoked',
+        'expires_at'
+    ];
 }

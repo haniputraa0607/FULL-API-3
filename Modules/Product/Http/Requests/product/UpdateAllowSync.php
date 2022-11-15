@@ -13,31 +13,31 @@ class UpdateAllowSync extends FormRequest
     *
     * @return array
     */
-   public function rules()
-   {
-       return [
+    public function rules()
+    {
+        return [
            "id_product"          => "required|integer",
            "product_allow_sync"  => "required",
-       ];
-   }
+        ];
+    }
 
    /**
     * Determine if the user is authorized to make this request.
     *
     * @return bool
     */
-   public function authorize()
-   {
-       return true;
-   }
+    public function authorize()
+    {
+        return true;
+    }
 
-   protected function failedValidation(Validator $validator)
+    protected function failedValidation(Validator $validator)
     {
         throw new HttpResponseException(response()->json(['status' => 'fail', 'messages'  => $validator->errors()->all()], 200));
     }
 
-   protected function validationData()
-   {
-       return $this->json()->all();
-   }
+    protected function validationData()
+    {
+        return $this->json()->all();
+    }
 }

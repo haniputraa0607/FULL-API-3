@@ -16,7 +16,7 @@ use Modules\MokaPOS\Jobs\SyncProductOutlet;
 
 class ApiMokaPOS extends Controller
 {
-    function curlMoka($data, $url, $header, $request)
+    public function curlMoka($data, $url, $header, $request)
     {
         if (is_null($header)) {
             $header = [
@@ -49,7 +49,7 @@ class ApiMokaPOS extends Controller
         return $hasil;
     }
 
-    function setAuthToken($data)
+    public function setAuthToken($data)
     {
         $dt = json_encode([
             "client_id"     => $data['application_id'],

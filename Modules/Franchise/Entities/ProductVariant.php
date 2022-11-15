@@ -53,16 +53,16 @@ class ProductVariant extends Model
         }
         $variants_raw = $variants_raw->get();
         $variants = [];
-        $variants_raw->each(function($each) use (&$variants) {
+        $variants_raw->each(function ($each) use (&$variants) {
             $variants[$each->id_product_variant] = $each;
         });
-        if(!$variants) {
+        if (!$variants) {
             return [];
         }
         // pc = parent child
         $pc = [];
         foreach ($variants as $key => $variant) {
-            $id_parent = $variant->id_parent?:'_root';
+            $id_parent = $variant->id_parent ?: '_root';
             if (!isset($pc[$id_parent]['product_variant_name'])) {
                 if ($id_parent == '_root') {
                     $parent = [
@@ -71,9 +71,9 @@ class ProductVariant extends Model
                         'product_variant_order' => 0,
                     ];
                 } else {
-                    $parent = $variants[$id_parent]??null;
+                    $parent = $variants[$id_parent] ?? null;
                     if (!$parent) {
-                        $parent = ProductVariant::select($to_select)->where('id_product_variant',$id_parent)->first();
+                        $parent = ProductVariant::select($to_select)->where('id_product_variant', $id_parent)->first();
                         self::addToParent($parent, $pc, $variants);
                     }
                     $parent = $parent->toArray();
@@ -84,11 +84,11 @@ class ProductVariant extends Model
         }
 
         $starter = array_shift($pc['_root']['childs']);
-        while($pc['_root']['childs'] && !isset($pc[$starter['id_product_variant']])) {
+        while ($pc['_root']['childs'] && !isset($pc[$starter['id_product_variant']])) {
             $starter = array_shift($pc['_root']['childs']);
         }
 
-        if(!($starter) || !isset($pc[$starter['id_product_variant']])) {
+        if (!($starter) || !isset($pc[$starter['id_product_variant']])) {
             return [];
         }
 
@@ -97,15 +97,16 @@ class ProductVariant extends Model
         $starter['childs'] = $pc[$starter['id_product_variant']]['childs'];
 
         foreach ($starter['childs'] as &$child) {
-            $child->variant = self::getVariantChildren($child,$pc);
+            $child->variant = self::getVariantChildren($child, $pc);
             $child = $child->toArray();
         }
 
         return $starter;
     }
 
-    protected static function getVariantChildren($variant, $variants) {
-        if ($childs = $variants[$variant['id_product_variant']]['childs']?? false) {
+    protected static function getVariantChildren($variant, $variants)
+    {
+        if ($childs = $variants[$variant['id_product_variant']]['childs'] ?? false) {
             foreach ($childs as $key => $child) {
                 $child->variant = self::getVariantChildren($child, $variants);
                 $childs[$key] = $child->toArray();
@@ -115,25 +116,25 @@ class ProductVariant extends Model
             return $variant_res;
         } elseif ($variants['_root']['childs']) {
             $starter = array_shift($variants['_root']['childs']);
-            while($variants['_root']['childs'] && !isset($variants[$starter['id_product_variant']])) {
+            while ($variants['_root']['childs'] && !isset($variants[$starter['id_product_variant']])) {
                 $starter = array_shift($variants['_root']['childs']);
             }
-            foreach ($variants[$starter['id_product_variant']]['childs']??[] as $key => $child) {
+            foreach ($variants[$starter['id_product_variant']]['childs'] ?? [] as $key => $child) {
                 $child->variant = self::getVariantChildren($child, $variants);
                 $variants[$starter['id_product_variant']]['childs'][$key] = $child->toArray();
             }
-            return $variants[$starter['id_product_variant']]??null;
+            return $variants[$starter['id_product_variant']] ?? null;
         }
         return null;
     }
 
-    protected static function addToParent($variant,&$pc,$variants)
+    protected static function addToParent($variant, &$pc, $variants)
     {
         if (!isset($pc[$variant['id_parent']])) {
             if (isset($variants[$variant['id_parent']])) {
                 $pc[$variant['id_parent']] = $variants[$variant['id_parent']]->toArray();
             } else {
-                $pc[$variant['id_parent']] = ProductVariant::where('id_parent',$variant['id_parent'])->first()->toArray();
+                $pc[$variant['id_parent']] = ProductVariant::where('id_parent', $variant['id_parent'])->first()->toArray();
             }
             $pc[$variant['id_parent']]['childs'] = [];
         }

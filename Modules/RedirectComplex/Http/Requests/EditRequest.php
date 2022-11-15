@@ -16,7 +16,7 @@ class EditRequest extends FormRequest
     public function rules()
     {
         return [
-            'id_redirect_complex_reference'		=>'required'
+            'id_redirect_complex_reference'     => 'required'
         ];
     }
 

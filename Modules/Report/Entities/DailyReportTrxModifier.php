@@ -11,7 +11,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class DailyReportTrxModifier
- * 
+ *
  * @property int $id_report_trx_modifier
  * @property \Carbon\Carbon $trx_date
  * @property int $id_outlet
@@ -42,63 +42,63 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  */
 class DailyReportTrxModifier extends Eloquent
 {
-	protected $table = 'daily_report_trx_modifier';
-	protected $primaryKey = 'id_report_trx_modifier';
+    protected $table = 'daily_report_trx_modifier';
+    protected $primaryKey = 'id_report_trx_modifier';
 
-	protected $casts = [
-		'id_outlet' => 'int',
-		'id_brand' => 'int',
-		'id_product_modifier' => 'int',
-		'total_rec' => 'int',
-		'total_qty' => 'int',
-		'total_nominal' => 'int',
-		'cust_male' => 'int',
-		'cust_female' => 'int',
-		'cust_android' => 'int',
-		'cust_ios' => 'int',
-		'cust_telkomsel' => 'int',
-		'cust_xl' => 'int',
-		'cust_indosat' => 'int',
-		'cust_tri' => 'int',
-		'cust_axis' => 'int',
-		'cust_smart' => 'int',
-		'cust_teens' => 'int',
-		'cust_young_adult' => 'int',
-		'cust_adult' => 'int',
-		'cust_old' => 'int'
-	];
+    protected $casts = [
+        'id_outlet' => 'int',
+        'id_brand' => 'int',
+        'id_product_modifier' => 'int',
+        'total_rec' => 'int',
+        'total_qty' => 'int',
+        'total_nominal' => 'int',
+        'cust_male' => 'int',
+        'cust_female' => 'int',
+        'cust_android' => 'int',
+        'cust_ios' => 'int',
+        'cust_telkomsel' => 'int',
+        'cust_xl' => 'int',
+        'cust_indosat' => 'int',
+        'cust_tri' => 'int',
+        'cust_axis' => 'int',
+        'cust_smart' => 'int',
+        'cust_teens' => 'int',
+        'cust_young_adult' => 'int',
+        'cust_adult' => 'int',
+        'cust_old' => 'int'
+    ];
 
-	protected $dates = [
-		'trx_date'
-	];
+    protected $dates = [
+        'trx_date'
+    ];
 
-	protected $fillable = [
-		'trx_date',
-		'id_outlet',
-		'id_brand',
-		'id_product_modifier',
-		'text',
-		'total_rec',
-		'total_qty',
-		'total_nominal',
-		'cust_male',
-		'cust_female',
-		'cust_android',
-		'cust_ios',
-		'cust_telkomsel',
-		'cust_xl',
-		'cust_indosat',
-		'cust_tri',
-		'cust_axis',
-		'cust_smart',
-		'cust_teens',
-		'cust_young_adult',
-		'cust_adult',
-		'cust_old'
-	];
+    protected $fillable = [
+        'trx_date',
+        'id_outlet',
+        'id_brand',
+        'id_product_modifier',
+        'text',
+        'total_rec',
+        'total_qty',
+        'total_nominal',
+        'cust_male',
+        'cust_female',
+        'cust_android',
+        'cust_ios',
+        'cust_telkomsel',
+        'cust_xl',
+        'cust_indosat',
+        'cust_tri',
+        'cust_axis',
+        'cust_smart',
+        'cust_teens',
+        'cust_young_adult',
+        'cust_adult',
+        'cust_old'
+    ];
 
-	public function brand()
+    public function brand()
     {
-		return $this->belongsTo(\Modules\Brand\Entities\Brand::class,'id_brand');
-	}
+        return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
+    }
 }

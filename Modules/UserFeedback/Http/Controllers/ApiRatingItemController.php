@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Modules\UserFeedback\Entities\RatingItem;
-
 use App\Lib\MyHelper;
 
 class ApiRatingItemController extends Controller
@@ -29,16 +28,16 @@ class ApiRatingItemController extends Controller
     public function store(Request $request)
     {
         $post = $request->json()->all();
-        $upload = MyHelper::uploadPhoto($post['image'],'img/rating_item/');
-        if($upload['status']!='success'){
+        $upload = MyHelper::uploadPhoto($post['image'], 'img/rating_item/');
+        if ($upload['status'] != 'success') {
             return [
                 'status' => 'fail',
                 'messages' => ['Fail upload file']
             ];
         }
         $post['image'] = $upload['path'];
-        $upload2 = MyHelper::uploadPhoto($post['image_selected'],'img/rating_item/');
-        if($upload['status']!='success'){
+        $upload2 = MyHelper::uploadPhoto($post['image_selected'], 'img/rating_item/');
+        if ($upload['status'] != 'success') {
             return [
                 'status' => 'fail',
                 'messages' => ['Fail upload file']
@@ -57,19 +56,19 @@ class ApiRatingItemController extends Controller
      */
     public function update(Request $request)
     {
-        $rating_item = $request->json('rating_item')?:[];
+        $rating_item = $request->json('rating_item') ?: [];
         \DB::beginTransaction();
-        if(count($rating_item)==2){
-            RatingItem::where('rating_value',0)->delete();
+        if (count($rating_item) == 2) {
+            RatingItem::where('rating_value', 0)->delete();
         }
         foreach ($rating_item as $item) {
             $data_update = [
                 'text' => $item['text'],
                 'order' => $item['order']
             ];
-            if($item['image']??false){
-                $upload = MyHelper::uploadPhotoStrict($item['image'],'img/rating_item/',100,100);
-                if($upload['status']!='success'){
+            if ($item['image'] ?? false) {
+                $upload = MyHelper::uploadPhotoStrict($item['image'], 'img/rating_item/', 100, 100);
+                if ($upload['status'] != 'success') {
                     \DB::rollback();
                     return [
                         'status' => 'fail',
@@ -78,9 +77,9 @@ class ApiRatingItemController extends Controller
                 }
                 $data_update['image'] = $upload['path'];
             }
-            if($item['image_selected']??false){
-                $upload = MyHelper::uploadPhotoStrict($item['image_selected'],'img/rating_item/',100,100);
-                if($upload['status']!='success'){
+            if ($item['image_selected'] ?? false) {
+                $upload = MyHelper::uploadPhotoStrict($item['image_selected'], 'img/rating_item/', 100, 100);
+                if ($upload['status'] != 'success') {
                     \DB::rollback();
                     return [
                         'status' => 'fail',
@@ -90,15 +89,15 @@ class ApiRatingItemController extends Controller
                 $data_update['image_selected'] = $upload['path'];
             }
             $update = RatingItem::updateOrCreate([
-                'rating_value'=>$item['rating_value']
-            ],$data_update);
-            if(!$update){
+                'rating_value' => $item['rating_value']
+            ], $data_update);
+            if (!$update) {
                 \DB::rollback();
                 return MyHelper::checkUpdate($update);
             }
         }
         \DB::commit();
-        return ['status'=>'success'];
+        return ['status' => 'success'];
     }
 
     /**
@@ -109,7 +108,7 @@ class ApiRatingItemController extends Controller
     public function destroy($id)
     {
         $id_rating_item = $request->json('id_rating_item');
-        $delete = RatingItem::where('id_rating_item',$id_rating_item)->delete();
+        $delete = RatingItem::where('id_rating_item', $id_rating_item)->delete();
         return MyHelper::checkDelete($delete);
     }
 }

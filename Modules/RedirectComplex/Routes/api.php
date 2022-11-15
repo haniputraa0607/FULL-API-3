@@ -17,11 +17,11 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'pr
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be'], 'prefix' => 'redirect-complex'], function () {
-	Route::group(['prefix' => 'be'], function () {
-	    Route::get('list', 'ApiRedirectComplex@index');
-	    Route::post('edit', 'ApiRedirectComplex@edit');
-	    Route::post('list/active', 'ApiRedirectComplex@listActive');
-	});
+    Route::group(['prefix' => 'be'], function () {
+        Route::get('list', 'ApiRedirectComplex@index');
+        Route::post('edit', 'ApiRedirectComplex@edit');
+        Route::post('list/active', 'ApiRedirectComplex@listActive');
+    });
     Route::post('create', 'ApiRedirectComplex@create');
     Route::post('update', 'ApiRedirectComplex@update');
     Route::post('delete', 'ApiRedirectComplex@delete');

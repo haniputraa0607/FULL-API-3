@@ -16,14 +16,14 @@ class UpdateContentRequest extends FormRequest
     public function rules()
     {
         return [
-            'id_deals'           	=> 'required',
-            'content_title'      	=> 'required',
-            'id_deals_content'   	=> '',
-            'id_content_detail'  	=> '',
-            'visible'            	=> '',
-            'content_detail'     	=> '',
+            'id_deals'              => 'required',
+            'content_title'         => 'required',
+            'id_deals_content'      => '',
+            'id_content_detail'     => '',
+            'visible'               => '',
+            'content_detail'        => '',
             'content_detail_order'  => '',
-            'deals_description'  	=> ''
+            'deals_description'     => ''
         ];
     }
 

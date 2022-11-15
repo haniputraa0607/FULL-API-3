@@ -41,7 +41,6 @@ class ApiCronSubscriptionController extends Controller
             }
             $count = 0;
             foreach ($getTrx as $key => $singleTrx) {
-
                 $user = User::where('id', $singleTrx->id_user)->first();
                 if (empty($user)) {
                     continue;
@@ -126,7 +125,6 @@ class ApiCronSubscriptionController extends Controller
 
                 $count++;
                 DB::commit();
-
             }
             $log->success($count);
             return [$count];
@@ -135,5 +133,4 @@ class ApiCronSubscriptionController extends Controller
             $log->fail($e->getMessage());
         }
     }
-
 }

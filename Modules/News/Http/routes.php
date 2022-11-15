@@ -1,13 +1,11 @@
 <?php
 
-Route::group(['middleware' => ['auth:api','user_agent', 'scopes:apps', 'log_activities'], 'prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controllers'], function()
-{
+Route::group(['middleware' => ['auth:api','user_agent', 'scopes:apps', 'log_activities'], 'prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controllers'], function () {
     Route::any('list', 'ApiNews@listNews');
     Route::any('category', 'ApiNewsCategoryController@index');
 });
 
-Route::group(['prefix' => 'api/news', 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:apps'], 'namespace' => 'Modules\News\Http\Controllers'], function()
-{
+Route::group(['prefix' => 'api/news', 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:apps'], 'namespace' => 'Modules\News\Http\Controllers'], function () {
         Route::any('list/test', 'ApiNews@listNews');
         // Route::any('list/web', 'ApiNews@listNews');
         // Route::any('list', 'ApiNews@listNews');
@@ -16,13 +14,11 @@ Route::group(['prefix' => 'api/news', 'middleware' => ['log_activities', 'auth:a
 });
 
 
-Route::group(['prefix' => 'news', 'namespace' => 'Modules\News\Http\Controllers','middleware' => ['auth:api', 'scopes:apps']], function()
-{
+Route::group(['prefix' => 'news', 'namespace' => 'Modules\News\Http\Controllers','middleware' => ['auth:api', 'scopes:apps']], function () {
     Route::any('/webview/{id}', 'ApiNewsWebview@detail');
 });
 
-Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes:be'], 'prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controllers'], function()
-{
+Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes:be'], 'prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controllers'], function () {
     Route::get('featured', 'ApiNews@featured');
     Route::post('featured', 'ApiNews@featured');
 
@@ -44,7 +40,7 @@ Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes
     Route::post('position/assign', ['uses' => 'ApiNews@positionNews']);
 
     Route::any('be/category', ['middleware' => 'feature_control:164', 'uses' => 'ApiNewsCategoryController@index']);
-    Route::group(['prefix'=>'category'], function() {
+    Route::group(['prefix' => 'category'], function () {
         Route::post('create', ['middleware' => 'feature_control:165', 'uses' => 'ApiNewsCategoryController@store']);// create news category
         Route::post('update', ['middleware' => 'feature_control:166', 'uses' => 'ApiNewsCategoryController@update']);// update news category
         Route::post('delete', ['middleware' => 'feature_control:167', 'uses' => 'ApiNewsCategoryController@destroy']);// delete news category
@@ -52,8 +48,7 @@ Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes
     });
 });
 
-Route::group(['middleware' => ['auth:api','user_agent', 'scopes:apps', 'log_activities'], 'prefix' => 'api/e-learning', 'namespace' => 'Modules\News\Http\Controllers'], function()
-{
+Route::group(['middleware' => ['auth:api','user_agent', 'scopes:apps', 'log_activities'], 'prefix' => 'api/e-learning', 'namespace' => 'Modules\News\Http\Controllers'], function () {
     Route::any('home', 'ApiElearning@home');
     Route::any('video', 'ApiElearning@videoList');
     Route::post('video/detail', 'ApiElearning@videoDetail');

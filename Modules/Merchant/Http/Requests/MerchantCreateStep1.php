@@ -23,14 +23,14 @@ class MerchantCreateStep1 extends FormRequest
      *
      * @return array
      */
-	public function rules()
-	{
-		return [
-			'merchant_name'		        => 'required|string',
-			'merchant_phone'		    => 'required|string',
+    public function rules()
+    {
+        return [
+            'merchant_name'             => 'required|string',
+            'merchant_phone'            => 'required|string',
             'id_province'               => 'required|int',
             'id_city'                   => 'required|int',
-			'merchant_address'          => 'required'
+            'merchant_address'          => 'required'
         ];
     }
 

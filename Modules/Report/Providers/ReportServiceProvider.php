@@ -46,10 +46,11 @@ class ReportServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('report.php'),
+            __DIR__ . '/../Config/config.php' => config_path('report.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'report'
+            __DIR__ . '/../Config/config.php',
+            'report'
         );
     }
 
@@ -62,11 +63,11 @@ class ReportServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/report');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/report';
@@ -85,7 +86,7 @@ class ReportServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'report');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'report');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'report');
         }
     }
 

@@ -8,25 +8,23 @@ use Illuminate\Routing\Controller;
 use App\Http\Models\News;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
-
 use App\Lib\MyHelper;
 
 class ApiNewsWebview extends Controller
 {
-
     public function test()
     {
         return view('error', ['msg' => 'testing']);
     }
     public function detail(Request $request, $id)
     {
-        $news = News::with('newsOutlet','newsOutlet.outlet','newsProduct','newsProduct.product')->find($id)->toArray();
+        $news = News::with('newsOutlet', 'newsOutlet.outlet', 'newsProduct', 'newsProduct.product')->find($id)->toArray();
         $totalOutlet = 0;
         $outlet = Outlet::get()->toArray();
         if ($outlet) {
             $totalOutlet = count($outlet);
         }
-        
+
         $totalOutletNews = 0;
 
         $totalProduct = 0;
@@ -34,27 +32,27 @@ class ApiNewsWebview extends Controller
         if ($product) {
             $totalProduct = count($product);
         }
-        
+
         $totalProductNews = 0;
-        
+
         if ($news) {
             // return $news['result'];
             $totalOutletNews = count($news['news_outlet']);
             $totalProductNews = count($news['news_product']);
             return view('news::webview.news', ['news' => [$news], 'total_outlet' => $totalOutlet, 'total_outlet_news' => $totalOutletNews, 'total_product' => $totalProduct, 'total_product_news' => $totalProductNews]);
-        }else {
+        } else {
             return view('error', ['msg' => 'Something went wrong, try again']);
         }
     }
     public function detailNews(Request $request)
     {
-        $news = News::with('newsOutlet','newsOutlet.outlet','newsProduct.product.photos')->find($request->id_news)->toArray();
+        $news = News::with('newsOutlet', 'newsOutlet.outlet', 'newsProduct.product.photos')->find($request->id_news)->toArray();
         $totalOutlet = 0;
         $outlet = Outlet::get()->toArray();
         if ($outlet) {
             $totalOutlet = count($outlet);
         }
-        
+
         $totalOutletNews = 0;
 
         $totalProduct = 0;
@@ -62,11 +60,11 @@ class ApiNewsWebview extends Controller
         if ($product) {
             $totalProduct = count($product);
         }
-        
+
         $totalProductNews = 0;
-        
+
         if ($news) {
-            $news['news_image_dalam'] = config('url.storage_url_api').$news['news_image_dalam'];
+            $news['news_image_dalam'] = config('url.storage_url_api') . $news['news_image_dalam'];
             $news['news_video'] = (is_null($news['news_video'])) ? [] : explode(';', $news['news_video']);
             $news['news_post_date_indo'] = (is_null($news['news_post_date'])) ? '' : MyHelper::indonesian_date_v2($news['news_post_date'], 'd F Y H:i');
             $totalOutletNews = count($news['news_outlet']);
@@ -85,16 +83,16 @@ class ApiNewsWebview extends Controller
                 unset($news['news_product']);
                 foreach ($newsProduct as $keyProduct => $valProduct) {
                     $news['news_product'][$keyProduct]['product_name']  = $valProduct['product']['product_name'];
-                    $news['news_product'][$keyProduct]['product_image'] = config('url.storage_url_api').($valProduct['product']['photos'][0]['product_photo']??'img/product/item/default.png');
+                    $news['news_product'][$keyProduct]['product_image'] = config('url.storage_url_api') . ($valProduct['product']['photos'][0]['product_photo'] ?? 'img/product/item/default.png');
                 }
             }
-            
+
             //$news['news_post_date'] = date('l, d F Y  H:i', strtotime($news['news_post_date']));
             $news['news_post_date'] = date('Y-m-d H:i:s', strtotime($news['news_post_date']));
-            if($news['news_event_date_start'] != null && $news['news_event_time_end'] != null){
+            if ($news['news_event_date_start'] != null && $news['news_event_time_end'] != null) {
                 $news['news_event_date'] = date('d', strtotime($news['news_event_date_start'])) . ' - ' . date('d F Y', strtotime($news['news_event_date_end']));
             }
-            if($news['news_event_time_start'] != null && $news['news_event_time_end'] != null){
+            if ($news['news_event_time_start'] != null && $news['news_event_time_end'] != null) {
                 $news['news_event_hours'] = date('H:i', strtotime($news['news_event_time_start'])) . ' - ' . date('H:i', strtotime($news['news_event_time_end']));
             }
             unset($news['news_publish_date']);
@@ -108,9 +106,9 @@ class ApiNewsWebview extends Controller
             unset($news['url_form']);
             unset($news['updated_at']);
             unset($news['created_at']);
-            
+
             return response()->json(MyHelper::checkGet($news));
-        }else {
+        } else {
             return response()->json(['status' => 'fail','message' => 'Something went wrong, try again']);
         }
     }

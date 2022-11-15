@@ -12,32 +12,30 @@ use App\Http\Models\LogPoint;
 use App\Http\Models\Reservation;
 use App\Http\Models\LogActivitiesApps;
 use App\Http\Models\Product;
-
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use Modules\Report\Http\Requests\DetailReport;
-
 use App\Lib\MyHelper;
 use Validator;
 use Hash;
 use DB;
 use Mail;
 
-
 class ApiReport extends Controller
 {
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
     }
-	
-    public function global(Request $request){
+
+    public function global(Request $request)
+    {
         $post = $request->json()->all();
 
         if ($post['date_start'] > $post['date_end']) {
             return response()->json([
-                'status'    => 'fail', 
+                'status'    => 'fail',
                 'messages'    => 'Date start must be smaller than date end'
             ]);
         }
@@ -47,7 +45,7 @@ class ApiReport extends Controller
         $nominal = $transaction->sum('transaction_grandtotal');
         $total_transaction = $transaction->count();
 
-        $group = $transaction->get()->groupBy(function($date) {
+        $group = $transaction->get()->groupBy(function ($date) {
             return \Carbon\Carbon::parse($date->transaction_date)->format('d-M-y');
         });
 
@@ -58,11 +56,11 @@ class ApiReport extends Controller
         if (count($group) == 0) {
             $average = 0;
         } else {
-            $average = $nominal/count($group);
+            $average = $nominal / count($group);
         }
 
         $point = LogPoint::orderBy('id_log_point');
-        
+
         $total_redem = $point->count();
         $pointMin = LogPoint::where('source', 'voucher')->sum('point');
         $pointPlus = LogPoint::where('source', 'transaction')->sum('point');
@@ -96,20 +94,20 @@ class ApiReport extends Controller
         ];
 
         return response()->json(MyHelper::checkGet($data));
-
     }
 
-    public function customerSummary(Request $request) {
+    public function customerSummary(Request $request)
+    {
         $post = $request->json()->all();
-		$all_user = User::count();
-		
-		$all_super_admin = User::where('level', 'Super Admin')->count();
-		$all_admin = User::where('level', 'Admin')->count();
-		$all_verified = User::where('level', 'Customer')->where('phone_verified', '1')->count();
-		$all_not_verified = User::where('level', 'Customer')->where('phone_verified', '0')->count();
-		$all_customer = User::where('level', 'Customer')->count();
-		$all_doctor = User::where('level', 'Doctor')->count();
-		
+        $all_user = User::count();
+
+        $all_super_admin = User::where('level', 'Super Admin')->count();
+        $all_admin = User::where('level', 'Admin')->count();
+        $all_verified = User::where('level', 'Customer')->where('phone_verified', '1')->count();
+        $all_not_verified = User::where('level', 'Customer')->where('phone_verified', '0')->count();
+        $all_customer = User::where('level', 'Customer')->count();
+        $all_doctor = User::where('level', 'Doctor')->count();
+
         $new_customer = User::where('level', 'Customer')
                               ->where('created_at', '<=', date('Y-m-d H:i:s'))
                               ->where('created_at', '>=', date('Y-m-d', strtotime("- 7 days")))
@@ -149,9 +147,7 @@ class ApiReport extends Controller
 
             if (isset($post['from'])) {
                 if ($post['from'] == 'apps') {
-                    
                 } else {
-
                 }
             }
 
@@ -168,11 +164,11 @@ class ApiReport extends Controller
             }
 
             if (isset($age_start) && isset($age_end)) {
-                $dataCustomer = $dataCustomer->whereYear('birthday', '>=', date('Y-m-d', strtotime('-'.$age_end.' years'))->whereYear('birthday', '<=', date('Y-m-d', strtotime('-'.$age_start.' years'))));
+                $dataCustomer = $dataCustomer->whereYear('birthday', '>=', date('Y-m-d', strtotime('-' . $age_end . ' years'))->whereYear('birthday', '<=', date('Y-m-d', strtotime('-' . $age_start . ' years'))));
             }
 
             if (isset($post['regis_date_start']) && isset($post['regis_date_end'])) {
-                $dataCustomer = $dataCustomer->where('created_at', '>=', $post['regis_date_start'].' 00:00:00')->where('created_at', '<=', $post['regis_date_end'].' 00:00:00');
+                $dataCustomer = $dataCustomer->where('created_at', '>=', $post['regis_date_start'] . ' 00:00:00')->where('created_at', '<=', $post['regis_date_end'] . ' 00:00:00');
             }
 
             if (isset($post['device'])) {
@@ -184,15 +180,15 @@ class ApiReport extends Controller
             }
 
             if (isset($post['name'])) {
-                $dataCustomer = $dataCustomer->where('name', 'like', '%'.$post['name'].'%');
+                $dataCustomer = $dataCustomer->where('name', 'like', '%' . $post['name'] . '%');
             }
 
             if (isset($post['email'])) {
-                $dataCustomer = $dataCustomer->where('email', 'like', '%'.$post['email'].'%');
+                $dataCustomer = $dataCustomer->where('email', 'like', '%' . $post['email'] . '%');
             }
 
             if (isset($post['phone'])) {
-                $dataCustomer = $dataCustomer->where('phone', 'like', '%'.$post['phone'].'%');
+                $dataCustomer = $dataCustomer->where('phone', 'like', '%' . $post['phone'] . '%');
             }
 
             if (isset($post['point_start']) && isset($post['point_end'])) {
@@ -219,14 +215,11 @@ class ApiReport extends Controller
 
             if ($age >= 11 && $age <= 17) {
                 $teens++;
-            }
-            else if ($age >= 18 && $age <= 24) {
+            } elseif ($age >= 18 && $age <= 24) {
                 $young_adult++;
-            }
-            else if ($age >= 25 && $age <= 34) {
+            } elseif ($age >= 25 && $age <= 34) {
                 $adult++;
-            }
-            else if ($age >= 35 && $age <= 100) {
+            } elseif ($age >= 35 && $age <= 100) {
                 $old++;
             }
         }
@@ -244,7 +237,7 @@ class ApiReport extends Controller
             'all_customer'    => $all_customer,
             'all_doctor'      => $all_doctor,
             'all_verified'    => $all_verified,
-            'all_not_verified'=> $all_not_verified,
+            'all_not_verified' => $all_not_verified,
             'linked_cust'     => $count_link_customer,
             'android_cust'    => $android_customer,
             'ios_customer'    => $ios_customer,
@@ -257,19 +250,20 @@ class ApiReport extends Controller
         return response()->json(MyHelper::checkGet($data));
     }
 
-    public function customerDetail(DetailReport $request) {
+    public function customerDetail(DetailReport $request)
+    {
         $id = $request->json('phone');
         $type = $request->json('type');
         $log = [];
         $user = User::with('city.province', 'memberships')->where('phone', $id)->first();
-        if($type == 'log'){
+        if ($type == 'log') {
             $dataType = LogActivitiesApps::where('phone', $id)->orderBy('id_log_activities_apps', 'DESC')->paginate(10)->toArray();
-        }elseif($type == 'transactions'){
+        } elseif ($type == 'transactions') {
             $dataType = Transaction::where('id_user', $user->id)->orderBy('transaction_date', 'DESC')->paginate(10)->toArray();
-        }elseif($type == 'point'){
+        } elseif ($type == 'point') {
             $dataType = LogPoint::with('transaction')->where('id_user', $user->id)->orderBy('id_log_point', 'DESC')->paginate(10)->toArray();
         }
-       
+
         foreach ($user->point as $key => $value) {
             $value->detail_product = $value->detailProduct;
         }
@@ -280,10 +274,10 @@ class ApiReport extends Controller
                 'messages'  => 'User not found'
             ]);
         }
-       
+
         $countVoucher = 0;
         $countTrx = 0;
-        if($type == 'point'){
+        if ($type == 'point') {
             $countVoucher = LogPoint::where(['id_user' => $user['id'], 'source' => 'voucher'])->get()->count();
             $countTrx = LogPoint::where(['id_user' => $user['id'], 'source' => 'transaction'])->get()->count();
         }
@@ -301,12 +295,13 @@ class ApiReport extends Controller
         ]);
     }
 
-    public function product(Request $request) {
+    public function product(Request $request)
+    {
         $post = $request->json()->all();
         $product = Product::orderBy('id_product');
 
-        $start = $post['date_start'].' 00:00:00';
-        $end = $post['date_end'].' 23:59:59';
+        $start = $post['date_start'] . ' 00:00:00';
+        $end = $post['date_end'] . ' 23:59:59';
 
         if (empty($product->get())) {
             return response()->json([
@@ -318,9 +313,9 @@ class ApiReport extends Controller
         $list = $product->get()->toArray();
         $select = $product->first();
 
-        $total = DB::select(DB::raw("SELECT SUM(transaction_products.transaction_product_qty) as qty, transaction_products.id_transaction_product, transaction_products.transaction_product_qty, transactions.transaction_date, transactions.transaction_payment_status, products.product_name FROM transaction_products, transactions, products WHERE transaction_products.id_transaction = transactions.id_transaction AND transaction_products.id_product = products.id_product AND transactions.transaction_payment_status = 'Success' AND transactions.transaction_date >= '".$start."' AND transactions.transaction_date <= '".$end."' AND transaction_products.id_product = '".$select['id_product']."' GROUP BY CAST(transactions.transaction_date AS DATE)"));
+        $total = DB::select(DB::raw("SELECT SUM(transaction_products.transaction_product_qty) as qty, transaction_products.id_transaction_product, transaction_products.transaction_product_qty, transactions.transaction_date, transactions.transaction_payment_status, products.product_name FROM transaction_products, transactions, products WHERE transaction_products.id_transaction = transactions.id_transaction AND transaction_products.id_product = products.id_product AND transactions.transaction_payment_status = 'Success' AND transactions.transaction_date >= '" . $start . "' AND transactions.transaction_date <= '" . $end . "' AND transaction_products.id_product = '" . $select['id_product'] . "' GROUP BY CAST(transactions.transaction_date AS DATE)"));
 
-        $recuring = DB::select(DB::raw("SELECT COUNT(transaction_products.id_transaction_product) as qty, transaction_products.id_transaction_product, transaction_products.transaction_product_qty, transactions.transaction_date, transactions.transaction_payment_status, products.product_name FROM transaction_products, transactions, products WHERE transaction_products.id_transaction = transactions.id_transaction AND transaction_products.id_product = products.id_product AND transactions.transaction_date >= '".$start."' AND transactions.transaction_date <= '".$end."' AND transactions.transaction_payment_status = 'Success' AND transaction_products.id_product = '".$select['id_product']."' GROUP BY CAST(transactions.transaction_date AS DATE)"));
+        $recuring = DB::select(DB::raw("SELECT COUNT(transaction_products.id_transaction_product) as qty, transaction_products.id_transaction_product, transaction_products.transaction_product_qty, transactions.transaction_date, transactions.transaction_payment_status, products.product_name FROM transaction_products, transactions, products WHERE transaction_products.id_transaction = transactions.id_transaction AND transaction_products.id_product = products.id_product AND transactions.transaction_date >= '" . $start . "' AND transactions.transaction_date <= '" . $end . "' AND transactions.transaction_payment_status = 'Success' AND transaction_products.id_product = '" . $select['id_product'] . "' GROUP BY CAST(transactions.transaction_date AS DATE)"));
 
         $data = [
             'total_product' => $total,
@@ -335,13 +330,14 @@ class ApiReport extends Controller
         ]);
     }
 
-    public function productDetail(Request $request) {
+    public function productDetail(Request $request)
+    {
         $post = $request->json()->all();
         // return $post;
         $product = Product::orderBy('id_product');
 
-        $start = $post['date_start'].' 00:00:00';
-        $end = $post['date_end'].' 23:59:59';
+        $start = $post['date_start'] . ' 00:00:00';
+        $end = $post['date_end'] . ' 23:59:59';
 
         if (empty($product->get())) {
             return response()->json([
@@ -360,10 +356,10 @@ class ApiReport extends Controller
             ]);
         }
 
-        $total = DB::select(DB::raw("SELECT SUM(transaction_products.transaction_product_qty) as qty, transaction_products.id_transaction_product, transaction_products.transaction_product_qty, transactions.transaction_date, transactions.transaction_payment_status, products.product_name FROM transaction_products, transactions, products WHERE transaction_products.id_transaction = transactions.id_transaction AND transaction_products.id_product = products.id_product AND transactions.transaction_payment_status = 'Success' AND transactions.transaction_date >= '".$start."' AND transactions.transaction_date <= '".$end."' AND transaction_products.id_product = '".$select['id_product']."' GROUP BY CAST(transactions.transaction_date AS DATE)"));
+        $total = DB::select(DB::raw("SELECT SUM(transaction_products.transaction_product_qty) as qty, transaction_products.id_transaction_product, transaction_products.transaction_product_qty, transactions.transaction_date, transactions.transaction_payment_status, products.product_name FROM transaction_products, transactions, products WHERE transaction_products.id_transaction = transactions.id_transaction AND transaction_products.id_product = products.id_product AND transactions.transaction_payment_status = 'Success' AND transactions.transaction_date >= '" . $start . "' AND transactions.transaction_date <= '" . $end . "' AND transaction_products.id_product = '" . $select['id_product'] . "' GROUP BY CAST(transactions.transaction_date AS DATE)"));
         // return $total;
 
-        $recuring = DB::select(DB::raw("SELECT COUNT(transaction_products.id_transaction_product) as qty, transaction_products.id_transaction_product, transaction_products.transaction_product_qty, transactions.transaction_date, transactions.transaction_payment_status, products.product_name FROM transaction_products, transactions, products WHERE transaction_products.id_transaction = transactions.id_transaction AND transaction_products.id_product = products.id_product AND transactions.transaction_date >= '".$start."' AND transactions.transaction_date <= '".$end."' AND transactions.transaction_payment_status = 'Success' AND transaction_products.id_product = '".$select['id_product']."' GROUP BY CAST(transactions.transaction_date AS DATE)"));
+        $recuring = DB::select(DB::raw("SELECT COUNT(transaction_products.id_transaction_product) as qty, transaction_products.id_transaction_product, transaction_products.transaction_product_qty, transactions.transaction_date, transactions.transaction_payment_status, products.product_name FROM transaction_products, transactions, products WHERE transaction_products.id_transaction = transactions.id_transaction AND transaction_products.id_product = products.id_product AND transactions.transaction_date >= '" . $start . "' AND transactions.transaction_date <= '" . $end . "' AND transactions.transaction_payment_status = 'Success' AND transaction_products.id_product = '" . $select['id_product'] . "' GROUP BY CAST(transactions.transaction_date AS DATE)"));
 
         $data = [
             'total_product' => $total,

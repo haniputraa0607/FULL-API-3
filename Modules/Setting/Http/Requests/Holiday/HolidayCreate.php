@@ -11,7 +11,7 @@ class HolidayCreate extends FormRequest
     public function rules()
     {
         return [
-           
+
         ];
     }
 

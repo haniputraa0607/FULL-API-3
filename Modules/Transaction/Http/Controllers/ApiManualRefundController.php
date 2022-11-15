@@ -11,13 +11,12 @@ use Modules\Transaction\Entities\ManualRefund;
 
 class ApiManualRefundController extends Controller
 {
-
     public function listFailedVoidPayment(Request $request)
     {
         $result = Transaction::select('transactions.id_transaction_group', 'transactions.id_transaction', 'transaction_date', 'transaction_receipt_number', 'users.name', 'users.phone', 'transaction_multiple_payments.type as trasaction_payment_type', 'transaction_grandtotal', 'need_manual_void', 'outlets.outlet_name', 'outlet_code', 'manual_refunds.refund_date', 'manual_refunds.note', 'manual_refunds.images', 'validator.name as validator_name', 'validator.phone as validator_phone', 'failed_void_reason', 'trasaction_type', 'manual_refunds.created_at as confirm_at', \DB::raw('refund_requirement as manual_refund_nominal'))
             ->join('users', 'users.id', 'transactions.id_user')
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-            ->join('transaction_multiple_payments', function($query) {
+            ->join('transaction_multiple_payments', function ($query) {
                 $query->on('transaction_multiple_payments.id_transaction_group', 'transactions.id_transaction_group')
                     ->where('type', '<>', 'Balance');
             })
@@ -36,13 +35,13 @@ class ApiManualRefundController extends Controller
 
         if (is_array($orders = $request->order)) {
             $columns = [
-                'transaction_date', 
-                'transaction_receipt_number', 
-                'name', 
+                'transaction_date',
+                'transaction_receipt_number',
+                'name',
                 'phone',
                 'trasaction_payment_type',
-                'transaction_grandtotal', 
-                'manual_refund_nominal', 
+                'transaction_grandtotal',
+                'manual_refund_nominal',
             ];
 
             foreach ($orders as $column) {
@@ -55,9 +54,9 @@ class ApiManualRefundController extends Controller
 
         if ($request->page) {
             $result = $result->paginate($request->length ?: 15);
-            $result->each(function($item) {
-                $item->images = array_map(function($item) {
-                    return config('url.storage_url_api').$item;
+            $result->each(function ($item) {
+                $item->images = array_map(function ($item) {
+                    return config('url.storage_url_api') . $item;
                 }, json_decode($item->images) ?? []);
             });
             $result = $result->toArray();
@@ -84,7 +83,7 @@ class ApiManualRefundController extends Controller
             }
             $new_rule[$var['subject']][] = $var1;
         }
-        $model->where(function($model2) use ($model, $where, $new_rule){
+        $model->where(function ($model2) use ($model, $where, $new_rule) {
             $inner = ['transaction_receipt_number', 'order_id'];
             foreach ($inner as $col_name) {
                 if ($rules = $new_rule[$col_name] ?? false) {
@@ -98,7 +97,7 @@ class ApiManualRefundController extends Controller
             foreach ($inner as $col_name) {
                 if ($rules = $new_rule[$col_name] ?? false) {
                     foreach ($rules as $rul) {
-                        $model2->$where('users.'.$col_name, $rul['operator'], $rul['parameter']);
+                        $model2->$where('users.' . $col_name, $rul['operator'], $rul['parameter']);
                     }
                 }
             }
@@ -107,7 +106,7 @@ class ApiManualRefundController extends Controller
             foreach ($inner as $col_name) {
                 if ($rules = $new_rule[$col_name] ?? false) {
                     foreach ($rules as $rul) {
-                        $model2->$where('transactions.'.$col_name, $rul['operator'], $rul['parameter']);
+                        $model2->$where('transactions.' . $col_name, $rul['operator'], $rul['parameter']);
                     }
                 }
             }

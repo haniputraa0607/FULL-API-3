@@ -7,16 +7,19 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-
 use Modules\Users\Http\Controllers\ApiUser;
-
 use App\Http\Models\Campaign;
 use App\Http\Models\CampaignRuleView;
 
 class SendCampaignNow implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-    protected $data,$camp;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
+    protected $data;
+    protected $camp;
 
     /**
      * Create a new job instance.
@@ -25,8 +28,8 @@ class SendCampaignNow implements ShouldQueue
      */
     public function __construct($data)
     {
-        $this->camp="Modules\Campaign\Http\Controllers\ApiCampaign";
-        $this->data=$data;
+        $this->camp = "Modules\Campaign\Http\Controllers\ApiCampaign";
+        $this->data = $data;
     }
 
     /**
@@ -36,8 +39,8 @@ class SendCampaignNow implements ShouldQueue
      */
     public function handle()
     {
-        $id_campaign=$this->data['id_campaign'];
-        $getCampaign = Campaign::where('id_campaign','=',$id_campaign)->first()->toArray();
+        $id_campaign = $this->data['id_campaign'];
+        $getCampaign = Campaign::where('id_campaign', '=', $id_campaign)->first()->toArray();
         $send = app($this->camp)->sendCampaignInternal($getCampaign);
 
         return $send;

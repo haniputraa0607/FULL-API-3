@@ -56,10 +56,11 @@ class ApiMerchantTransactionController extends Controller
         $this->merchant = "Modules\Merchant\Http\Controllers\ApiMerchantController";
     }
 
-    public function statusCount(Request $request){
+    public function statusCount(Request $request)
+    {
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
@@ -85,11 +86,12 @@ class ApiMerchantTransactionController extends Controller
         return response()->json(MyHelper::checkGet($result));
     }
 
-    public function listTransaction(Request $request){
+    public function listTransaction(Request $request)
+    {
         $post = $request->json()->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
         $idOutlet = $checkMerchant['id_outlet'];
@@ -124,66 +126,66 @@ class ApiMerchantTransactionController extends Controller
             ]
         ];
 
-        $transactions = Transaction::leftJoin('transaction_shipments','transaction_shipments.id_transaction','=','transactions.id_transaction')
-                        ->leftJoin('cities','transaction_shipments.destination_id_city','=','cities.id_city')
+        $transactions = Transaction::leftJoin('transaction_shipments', 'transaction_shipments.id_transaction', '=', 'transactions.id_transaction')
+                        ->leftJoin('cities', 'transaction_shipments.destination_id_city', '=', 'cities.id_city')
                         ->where('trasaction_type', 'Delivery')
                         ->where('id_outlet', $idOutlet);
 
-        if(!empty($post['status'])){
-            $status = ($post['status'] == 'new' ? 'Pending': $post['status']);
+        if (!empty($post['status'])) {
+            $status = ($post['status'] == 'new' ? 'Pending' : $post['status']);
             $transactions = $transactions->where('transaction_status', $status);
         }
 
-        if(!empty($post['search_receipt_number_order_id'])){
-            $transactions = $transactions->where(function ($q) use($post){
-                $q->where('transaction_receipt_number', 'like', '%'.$post['search_receipt_number_order_id'].'%')
-                    ->orWhere('transaction_shipments.order_id', 'like', '%'.$post['search_receipt_number_order_id'].'%');
+        if (!empty($post['search_receipt_number_order_id'])) {
+            $transactions = $transactions->where(function ($q) use ($post) {
+                $q->where('transaction_receipt_number', 'like', '%' . $post['search_receipt_number_order_id'] . '%')
+                    ->orWhere('transaction_shipments.order_id', 'like', '%' . $post['search_receipt_number_order_id'] . '%');
             });
         }
 
-        $transactions = $transactions->orderBy('transactions.transaction_date', 'desc')->paginate($post['pagination_total_row']??10)->toArray();
+        $transactions = $transactions->orderBy('transactions.transaction_date', 'desc')->paginate($post['pagination_total_row'] ?? 10)->toArray();
 
-        foreach ($transactions['data']??[] as $key=>$value){
+        foreach ($transactions['data'] ?? [] as $key => $value) {
             $countAllProduct = TransactionProduct::where('id_transaction', $value['id_transaction'])->count();
-            $countAllProduct = $countAllProduct-1;
+            $countAllProduct = $countAllProduct - 1;
             $product = TransactionProduct::where('id_transaction', $value['id_transaction'])
                 ->join('products', 'products.id_product', 'transaction_products.id_product')->first();
             $variant = '';
-            if(!empty($product['id_product_variant_group'])){
+            if (!empty($product['id_product_variant_group'])) {
                 $variant = ProductVariantPivot::join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
                     ->where('id_product_variant_group', $product['id_product_variant_group'])->pluck('product_variant_name')->toArray();
                 $variant = implode(', ', $variant);
             }
 
-            $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first()['url_product_photo']??config('url.storage_url_api').'img/default.jpg';
+            $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first()['url_product_photo'] ?? config('url.storage_url_api') . 'img/default.jpg';
             $transactions['data'][$key] = [
                 'id_transaction' => $value['id_transaction'],
                 'transaction_receipt_number' => $value['transaction_receipt_number'],
-                'transaction_status_code' => $codeIndo[$value['transaction_status']]['code']??'',
-                'transaction_status_text' => $codeIndo[$value['transaction_status']]['text']??'',
+                'transaction_status_code' => $codeIndo[$value['transaction_status']]['code'] ?? '',
+                'transaction_status_text' => $codeIndo[$value['transaction_status']]['text'] ?? '',
                 'transaction_grandtotal' => $value['transaction_grandtotal'],
                 'product_name' => $product['product_name'],
                 'product_qty' => $product['transaction_product_qty'],
-                'another_product_qty' => (empty($countAllProduct) ? null:$countAllProduct),
-                'product_image' => (empty($image) ? config('url.storage_url_api').'img/default.jpg': $image),
+                'another_product_qty' => (empty($countAllProduct) ? null : $countAllProduct),
+                'product_image' => (empty($image) ? config('url.storage_url_api') . 'img/default.jpg' : $image),
                 'product_variants' => $variant,
                 'delivery_city' => $value['city_name'],
                 'delivery_method' => strtoupper($value['shipment_courier']),
                 'delivery_service' => ucfirst($value['shipment_courier_service']),
-                'maximum_date_process' => (!empty($value['transaction_maximum_date_process'])? MyHelper::dateFormatInd($value['transaction_maximum_date_process'], false, false):''),
-                'maximum_date_delivery' => (!empty($value['transaction_maximum_date_delivery'])? MyHelper::dateFormatInd($value['transaction_maximum_date_delivery'], false, false):''),
+                'maximum_date_process' => (!empty($value['transaction_maximum_date_process']) ? MyHelper::dateFormatInd($value['transaction_maximum_date_process'], false, false) : ''),
+                'maximum_date_delivery' => (!empty($value['transaction_maximum_date_delivery']) ? MyHelper::dateFormatInd($value['transaction_maximum_date_delivery'], false, false) : ''),
                 'estimated_delivery' => '',
                 'reject_at' => (!empty($value['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($value['transaction_reject_at'])), true) : null),
-                'reject_reason' => (!empty($value['transaction_reject_reason'])? $value['transaction_reject_reason']:''),
+                'reject_reason' => (!empty($value['transaction_reject_reason']) ? $value['transaction_reject_reason'] : ''),
             ];
             $ratings = null;
 
             $getRatings = UserRating::where('id_transaction', $value['id_transaction'])->where('id_product', $product['id_product'])->first();
 
-            if(!empty($getRatings)){
+            if (!empty($getRatings)) {
                 $getPhotos = UserRatingPhoto::where('id_user_rating', $getRatings['id_user_rating'])->get()->toArray();
                 $photos = [];
-                foreach ($getPhotos as $dt){
+                foreach ($getPhotos as $dt) {
                     $photos[] = $dt['url_user_rating_photo'];
                 }
                 $currentOption = explode(',', $getRatings['option_value']);
@@ -195,9 +197,9 @@ class ApiMerchantTransactionController extends Controller
                 ];
             }
 
-            if($value['show_rate_popup'] == 1 && $value['transaction_status'] == 'Completed'){
-                $transactions['data'][$key]['transaction_status_code'] = $codeIndo['Unreview']['code']??'';
-                $transactions['data'][$key]['transaction_status_text'] = $codeIndo['Unreview']['text']??'';
+            if ($value['show_rate_popup'] == 1 && $value['transaction_status'] == 'Completed') {
+                $transactions['data'][$key]['transaction_status_code'] = $codeIndo['Unreview']['code'] ?? '';
+                $transactions['data'][$key]['transaction_status_text'] = $codeIndo['Unreview']['text'] ?? '';
             }
 
             $transactions['data'][$key]['ratings'] = $ratings;
@@ -205,17 +207,18 @@ class ApiMerchantTransactionController extends Controller
         return response()->json(MyHelper::checkGet($transactions));
     }
 
-    public function detailTransaction(TransactionDetail $request){
+    public function detailTransaction(TransactionDetail $request)
+    {
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
         $idOutlet = $checkMerchant['id_outlet'];
 
         if ($request->json('transaction_receipt_number') !== null) {
             $trx = Transaction::where(['transaction_receipt_number' => $request->json('transaction_receipt_number')])->first();
-            if($trx) {
+            if ($trx) {
                 $id = $trx->id_transaction;
             } else {
                 return MyHelper::checkGet([]);
@@ -256,39 +259,39 @@ class ApiMerchantTransactionController extends Controller
         ];
 
         $transaction = Transaction::where(['transactions.id_transaction' => $id])
-            ->leftJoin('transaction_shipments','transaction_shipments.id_transaction','=','transactions.id_transaction')
-            ->leftJoin('cities','transaction_shipments.destination_id_city','=','cities.id_city')
-            ->leftJoin('provinces','provinces.id_province','=','cities.id_province')->first();
+            ->leftJoin('transaction_shipments', 'transaction_shipments.id_transaction', '=', 'transactions.id_transaction')
+            ->leftJoin('cities', 'transaction_shipments.destination_id_city', '=', 'cities.id_city')
+            ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')->first();
 
-        if(empty($transaction)){
+        if (empty($transaction)) {
             return response()->json(MyHelper::checkGet($transaction));
         }
 
-        if($idOutlet != $transaction['id_outlet']){
+        if ($idOutlet != $transaction['id_outlet']) {
             return MyHelper::checkGet([]);
         }
 
         $transactionProducts = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
             ->where('id_transaction', $id)
-            ->with(['variants'=> function($query){
-                $query->select('id_transaction_product','transaction_product_variants.id_product_variant','transaction_product_variants.id_product_variant','product_variants.product_variant_name', 'transaction_product_variant_price')
-                    ->join('product_variants','product_variants.id_product_variant','=','transaction_product_variants.id_product_variant');
+            ->with(['variants' => function ($query) {
+                $query->select('id_transaction_product', 'transaction_product_variants.id_product_variant', 'transaction_product_variants.id_product_variant', 'product_variants.product_variant_name', 'transaction_product_variant_price')
+                    ->join('product_variants', 'product_variants.id_product_variant', '=', 'transaction_product_variants.id_product_variant');
             }])
             ->select('transaction_products.*', 'products.product_name')->get()->toArray();
 
         $products = [];
-        foreach ($transactionProducts as $value){
-            $image = ProductPhoto::where('id_product', $value['id_product'])->orderBy('product_photo_order', 'asc')->first()['url_product_photo']??config('url.storage_url_api').'img/default.jpg';
+        foreach ($transactionProducts as $value) {
+            $image = ProductPhoto::where('id_product', $value['id_product'])->orderBy('product_photo_order', 'asc')->first()['url_product_photo'] ?? config('url.storage_url_api') . 'img/default.jpg';
             $products[] = [
                 'id_product' => $value['id_product'],
                 'product_name' => $value['product_name'],
                 'product_qty' => $value['transaction_product_qty'],
                 'need_recipe_status' =>  $value['transaction_product_recipe_status'],
-                'product_total_price' => 'Rp '. number_format((int)$value['transaction_product_subtotal'],0,",","."),
+                'product_total_price' => 'Rp ' . number_format((int)$value['transaction_product_subtotal'], 0, ",", "."),
                 'discount_all' => (int)$value['transaction_product_discount_all'],
-                'discount_all_text' => 'Rp '.number_format((int)$value['transaction_product_discount_all'],0,",","."),
+                'discount_all_text' => 'Rp ' . number_format((int)$value['transaction_product_discount_all'], 0, ",", "."),
                 'discount_each_product' => (int)$value['transaction_product_base_discount'],
-                'discount_each_product_text' => 'Rp '.number_format((int)$value['transaction_product_base_discount'],0,",","."),
+                'discount_each_product_text' => 'Rp ' . number_format((int)$value['transaction_product_base_discount'], 0, ",", "."),
                 'note' => $value['transaction_product_note'],
                 'variants' => implode(', ', array_column($value['variants'], 'product_variant_name')),
                 'image' => $image
@@ -298,43 +301,43 @@ class ApiMerchantTransactionController extends Controller
         $paymentDetail = [
             [
                 'text' => 'Subtotal',
-                'value' => 'Rp '. number_format((int)$transaction['transaction_subtotal'],0,",",".")
+                'value' => 'Rp ' . number_format((int)$transaction['transaction_subtotal'], 0, ",", ".")
             ],
             [
                 'text' => 'Biaya Kirim',
-                'value' => 'Rp '. number_format((int)$transaction['transaction_shipment'],0,",",".")
+                'value' => 'Rp ' . number_format((int)$transaction['transaction_shipment'], 0, ",", ".")
             ]
         ];
 
-        if($transaction['transaction_service'] > 0){
+        if ($transaction['transaction_service'] > 0) {
             $paymentDetail[] = [
                 'text' => 'Biaya Layanan',
-                'value' => 'Rp '. number_format((int)$transaction['transaction_service'],0,",",".")
+                'value' => 'Rp ' . number_format((int)$transaction['transaction_service'], 0, ",", ".")
             ];
         }
 
-        if($transaction['transaction_tax'] > 0){
+        if ($transaction['transaction_tax'] > 0) {
             $paymentDetail[] = [
                 'text' => 'Pajak',
-                'value' => 'Rp '. number_format((int)$transaction['transaction_tax'],0,",",".")
+                'value' => 'Rp ' . number_format((int)$transaction['transaction_tax'], 0, ",", ".")
             ];
         }
-        
 
-        if(!empty($transaction['transaction_discount'])){
-            $codePromo = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $transaction['id_promo_campaign_promo_code'])->first()['promo_code']??'';
+
+        if (!empty($transaction['transaction_discount'])) {
+            $codePromo = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $transaction['id_promo_campaign_promo_code'])->first()['promo_code'] ?? '';
             $paymentDetail[] = [
-                'text' => 'Discount'.(!empty($transaction['transaction_discount_delivery'])? ' Biaya Kirim':'').(!empty($codePromo) ?' ('.$codePromo.')' : ''),
-                'value' => '-Rp '. number_format((int)abs($transaction['transaction_discount']),0,",",".")
+                'text' => 'Discount' . (!empty($transaction['transaction_discount_delivery']) ? ' Biaya Kirim' : '') . (!empty($codePromo) ? ' (' . $codePromo . ')' : ''),
+                'value' => '-Rp ' . number_format((int)abs($transaction['transaction_discount']), 0, ",", ".")
             ];
         }
 
         $grandTotal = $transaction['transaction_grandtotal'];
-        $trxPaymentBalance = TransactionPaymentBalance::where('id_transaction', $transaction['id_transaction'])->first()['balance_nominal']??0;
-        if(!empty($trxPaymentBalance)){
+        $trxPaymentBalance = TransactionPaymentBalance::where('id_transaction', $transaction['id_transaction'])->first()['balance_nominal'] ?? 0;
+        if (!empty($trxPaymentBalance)) {
             $paymentDetail[] = [
                 'text' => 'Point yang digunakan',
-                'value' => '-'.number_format($trxPaymentBalance,0,",",".")
+                'value' => '-' . number_format($trxPaymentBalance, 0, ",", ".")
             ];
             $grandTotal = $grandTotal - $trxPaymentBalance;
         }
@@ -342,14 +345,14 @@ class ApiMerchantTransactionController extends Controller
         $trxPaymentMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $transaction['id_transaction_group'])->first();
         $trxPaymentXendit = TransactionPaymentXendit::where('id_transaction_group', $transaction['id_transaction_group'])->first();
 
-        if(!empty($trxPaymentMidtrans)){
-            $paymentMethod = $trxPaymentMidtrans['payment_type'].(!empty($trxPaymentMidtrans['bank']) ? ' ('.$trxPaymentMidtrans['bank'].')':'');
-            $paymentMethod = str_replace(" ","_",$paymentMethod);
-            $paymentLogo = config('payment_method.midtrans_'.strtolower($paymentMethod).'.logo');
-        }elseif(!empty($trxPaymentXendit)){
+        if (!empty($trxPaymentMidtrans)) {
+            $paymentMethod = $trxPaymentMidtrans['payment_type'] . (!empty($trxPaymentMidtrans['bank']) ? ' (' . $trxPaymentMidtrans['bank'] . ')' : '');
+            $paymentMethod = str_replace(" ", "_", $paymentMethod);
+            $paymentLogo = config('payment_method.midtrans_' . strtolower($paymentMethod) . '.logo');
+        } elseif (!empty($trxPaymentXendit)) {
             $paymentMethod = $trxPaymentXendit['type'];
-            $paymentMethod = str_replace(" ","_",$paymentMethod);
-            $paymentLogo = config('payment_method.xendit_'.strtolower($paymentMethod).'.logo');
+            $paymentMethod = str_replace(" ", "_", $paymentMethod);
+            $paymentLogo = config('payment_method.xendit_' . strtolower($paymentMethod) . '.logo');
         }
 
         $district = Districts::join('subdistricts', 'subdistricts.id_district', 'districts.id_district')
@@ -367,30 +370,30 @@ class ApiMerchantTransactionController extends Controller
 
         $tracking = [];
         $trxTracking = TransactionShipmentTrackingUpdate::where('id_transaction', $id)->orderBy('tracking_date_time', 'desc')->orderBy('id_transaction_shipment_tracking_update', 'desc')->get()->toArray();
-        foreach ($trxTracking as $value){
+        foreach ($trxTracking as $value) {
             $trackingDate = date('Y-m-d H:i', strtotime($value['tracking_date_time']));
             $timeZone = 'WIB';
-            if(!empty($value['tracking_timezone']) && $value['tracking_timezone'] == '+0800'){
-                $trackingDate = date('Y-m-d H:i', strtotime('+ 1 hour',strtotime($value['tracking_date_time'])));
+            if (!empty($value['tracking_timezone']) && $value['tracking_timezone'] == '+0800') {
+                $trackingDate = date('Y-m-d H:i', strtotime('+ 1 hour', strtotime($value['tracking_date_time'])));
                 $timeZone = 'WITA';
-            }elseif(!empty($value['tracking_timezone']) && $value['tracking_timezone'] == '+0900'){
-                $trackingDate = date('Y-m-d H:i', strtotime('+ 2 hour',strtotime($value['tracking_date_time'])));
+            } elseif (!empty($value['tracking_timezone']) && $value['tracking_timezone'] == '+0900') {
+                $trackingDate = date('Y-m-d H:i', strtotime('+ 2 hour', strtotime($value['tracking_date_time'])));
                 $timeZone = 'WIT';
             }
 
             $tracking[] = [
-                'date' => MyHelper::dateFormatInd($trackingDate, true).' '.$timeZone,
+                'date' => MyHelper::dateFormatInd($trackingDate, true) . ' ' . $timeZone,
                 'description' => $value['tracking_description']
             ];
         }
 
-    
+
         $ratings = [];
         $getRatings = UserRating::where('id_transaction', $transaction['id_transaction'])->get()->toArray();
-        foreach ($getRatings as $rating){
+        foreach ($getRatings as $rating) {
             $getPhotos = UserRatingPhoto::where('id_user_rating', $rating['id_user_rating'])->get()->toArray();
             $photos = [];
-            foreach ($getPhotos as $dt){
+            foreach ($getPhotos as $dt) {
                 $photos[] = $dt['url_user_rating_photo'];
             }
 
@@ -403,35 +406,35 @@ class ApiMerchantTransactionController extends Controller
             ];
         }
 
-        if($transaction['transaction_status'] == 'Completed' && $transaction['show_rate_popup'] == 1){
+        if ($transaction['transaction_status'] == 'Completed' && $transaction['show_rate_popup'] == 1) {
             $transaction['transaction_status'] = 'Unreview';
         }
 
         $result = [
             'id_transaction' => $id,
             'transaction_receipt_number' => $transaction['transaction_receipt_number'],
-            'transaction_status_code' => $codeIndo[$transaction['transaction_status']]['code']??'',
-            'transaction_status_text' => $codeIndo[$transaction['transaction_status']]['text']??'',
+            'transaction_status_code' => $codeIndo[$transaction['transaction_status']]['code'] ?? '',
+            'transaction_status_text' => $codeIndo[$transaction['transaction_status']]['text'] ?? '',
             'transaction_date' => MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_date'])), true),
             'transaction_products' => $products,
             'show_rate_popup' => $transaction['show_rate_popup'],
             'address' => $address,
-            'transaction_grandtotal' => 'Rp '. number_format((int)$grandTotal,0,",","."),
+            'transaction_grandtotal' => 'Rp ' . number_format((int)$grandTotal, 0, ",", "."),
             'delivery' => [
                 'delivery_id' => $transaction['order_id'],
                 'delivery_method' => strtoupper($transaction['shipment_courier']),
                 'delivery_service' => ucfirst($transaction['shipment_courier_service']),
-                'delivery_price' => 'Rp '. number_format((int)$transaction['transaction_shipment'],0,",","."),
+                'delivery_price' => 'Rp ' . number_format((int)$transaction['transaction_shipment'], 0, ",", "."),
                 'delivery_tracking' => $tracking,
                 'pickup_code' => $transaction['shipment_pickup_code'],
                 'pickup_time_start' => date('Y-m-d H:i:s', strtotime($transaction['shipment_pickup_time_start'])),
                 'pickup_time_end' => date('Y-m-d H:i:s', strtotime($transaction['shipment_pickup_time_end'])),
                 'estimated' => $transaction['shipment_courier_etd']
             ],
-            'payment' => $paymentMethod??'',
-            'payment_logo' => $paymentLogo??'',
+            'payment' => $paymentMethod ?? '',
+            'payment_logo' => $paymentLogo ?? '',
             'payment_detail' => $paymentDetail,
-            'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? 'Mendapatkan +'.number_format((int)$transaction['transaction_cashback_earned'],0,",",".").' Points Dari Transaksi ini' : ''),
+            'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? 'Mendapatkan +' . number_format((int)$transaction['transaction_cashback_earned'], 0, ",", ".") . ' Points Dari Transaksi ini' : ''),
             'transaction_reject_reason' => $transaction['transaction_reject_reason'],
             'transaction_reject_at' => (!empty($transaction['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_reject_at'])), true) : null),
             'ratings' => $ratings
@@ -440,30 +443,31 @@ class ApiMerchantTransactionController extends Controller
         return response()->json(MyHelper::checkGet($result));
     }
 
-    public function acceptTransaction(Request $request){
+    public function acceptTransaction(Request $request)
+    {
         $post = $request->json()->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
         $idOutlet = $checkMerchant['id_outlet'];
 
-        if(empty($post['id_transaction'])){
+        if (empty($post['id_transaction'])) {
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
 
         $transaction = Transaction::where('id_outlet', $idOutlet)
                         ->where('id_transaction', $post['id_transaction'])
                         ->where('transaction_status', 'Pending')->with(['outlet', 'user'])->first();
-        if(empty($transaction)){
+        if (empty($transaction)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data order tidak ditemukan']]);
         }
 
         $update = Transaction::where('id_transaction', $transaction['id_transaction'])
-                ->update(['transaction_status' => 'On Progress', 'transaction_maximum_date_delivery' => date('Y-m-d', strtotime(date('Y-m-d'). ' + 5 days'))]);
+                ->update(['transaction_status' => 'On Progress', 'transaction_maximum_date_delivery' => date('Y-m-d', strtotime(date('Y-m-d') . ' + 5 days'))]);
 
-        if($update){
+        if ($update) {
             TransactionShipmentTrackingUpdate::create([
                 'id_transaction' => $transaction['id_transaction'],
                 'tracking_description' => 'Paket sedang dikemas oleh penjual dan akan dikirim',
@@ -483,29 +487,30 @@ class ApiMerchantTransactionController extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function rejectTransaction(Request $request){
+    public function rejectTransaction(Request $request)
+    {
         $post = $request->json()->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
         $idOutlet = $checkMerchant['id_outlet'];
 
-        if(empty($post['id_transaction']) || empty($post['reject_reason'])){
+        if (empty($post['id_transaction']) || empty($post['reject_reason'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Incompleted data']]);
         }
 
         $transaction = Transaction::where('id_outlet', $idOutlet)
             ->where('id_transaction', $post['id_transaction'])
             ->where('transaction_status', 'Pending')->first();
-        if(empty($transaction)){
+        if (empty($transaction)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data order tidak ditemukan']]);
         }
 
         $reject = $transaction->triggerReject($post);
 
-        if(!$reject){
+        if (!$reject) {
             return response()->json([
                 'status'   => 'fail',
                 'messages' => ['Reject transaction failed'],
@@ -515,16 +520,17 @@ class ApiMerchantTransactionController extends Controller
         return response()->json(['status' => 'success']);
     }
 
-    public function requestDeliveryTransaction(Request $request){
+    public function requestDeliveryTransaction(Request $request)
+    {
         $post = $request->json()->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
         $idOutlet = $checkMerchant['id_outlet'];
 
-        if(empty($post['id_transaction'])){
+        if (empty($post['id_transaction'])) {
             return response()->json(['status' => 'fail', 'messages' => ['ID transaction can not be empty']]);
         }
 
@@ -535,11 +541,11 @@ class ApiMerchantTransactionController extends Controller
             ->where('transactions.id_outlet', $idOutlet)
             ->where('transactions.id_transaction', $post['id_transaction'])
             ->where('transaction_status', 'On Progress')->first();
-        if(empty($detail)){
+        if (empty($detail)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data order tidak ditemukan']]);
         }
 
-        if(!empty($detail['order_id'])){
+        if (!empty($detail['order_id'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Sedang menunggu pickup']]);
         }
 
@@ -560,22 +566,22 @@ class ApiMerchantTransactionController extends Controller
             'phone_number' => $detail['outlet_phone']
         ];
 
-        $description = Setting::where('key', 'delivery_request_description')->first()['value_text']??'';
+        $description = Setting::where('key', 'delivery_request_description')->first()['value_text'] ?? '';
 
         $deliveryList = app($this->merchant)->availableDelivery($detail['id_outlet']);
         $deliveryName = '';
         $deliveryLogo = '';
         $dropCounterStatus = 1;
         $showListPickup = 1;
-        foreach ($deliveryList as $value){
-            if($value['delivery_method'] == $detail['shipment_courier']){
+        foreach ($deliveryList as $value) {
+            if ($value['delivery_method'] == $detail['shipment_courier']) {
                 $deliveryName =  $value['delivery_name'];
                 $deliveryLogo = $value['logo'];
 
-                foreach ($value['service'] as $s){
-                    if($s['code'] == $detail['shipment_courier_code']){
-                        $dropCounterStatus = $s['drop_counter_status']??1;
-                        $showListPickup = $s['drop_counter_status']??1;
+                foreach ($value['service'] as $s) {
+                    if ($s['code'] == $detail['shipment_courier_code']) {
+                        $dropCounterStatus = $s['drop_counter_status'] ?? 1;
+                        $showListPickup = $s['drop_counter_status'] ?? 1;
                         break;
                     }
                 }
@@ -594,16 +600,17 @@ class ApiMerchantTransactionController extends Controller
         ]]);
     }
 
-    public function listTimePickupDelivery(Request $request){
+    public function listTimePickupDelivery(Request $request)
+    {
         $post = $request->json()->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
         $idOutlet = $checkMerchant['id_outlet'];
 
-        if(empty($post['id_transaction'])){
+        if (empty($post['id_transaction'])) {
             return response()->json(['status' => 'fail', 'messages' => ['ID transaction can not be empty']]);
         }
 
@@ -612,13 +619,13 @@ class ApiMerchantTransactionController extends Controller
             ->where('transactions.id_outlet', $idOutlet)
             ->where('transactions.id_transaction', $post['id_transaction'])
             ->where('transaction_status', 'On Progress')->first();
-        if(empty($detail)){
+        if (empty($detail)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data order tidak ditemukan']]);
         }
 
         $timeZoneOutlet = City::join('provinces', 'provinces.id_province', 'cities.id_province')
-                ->where('id_city', $detail['id_city'])->first()['time_zone_utc']??null;
-        if(empty($timeZoneOutlet)){
+                ->where('id_city', $detail['id_city'])->first()['time_zone_utc'] ?? null;
+        if (empty($timeZoneOutlet)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data timezone can not be empty']]);
         }
 
@@ -630,15 +637,15 @@ class ApiMerchantTransactionController extends Controller
 
         $dtRequestTimezone = $timeZone[$timeZoneOutlet];
         $shipper = new Shipper();
-        $listTime = $shipper->sendRequest('Pickup Time List', 'GET', 'pickup/timeslot?time_zone='.$dtRequestTimezone, []);
+        $listTime = $shipper->sendRequest('Pickup Time List', 'GET', 'pickup/timeslot?time_zone=' . $dtRequestTimezone, []);
 
-        if(empty($listTime['response']['data']['time_slots'])){
+        if (empty($listTime['response']['data']['time_slots'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Timeslot not available']]);
         }
 
         $res = $listTime['response']['data']['time_slots'];
         $result = [];
-        foreach ($res as $value){
+        foreach ($res as $value) {
             $start = date('Y-m-d H:i:s', strtotime($value['start_time']));
             $end = date('Y-m-d H:i:s', strtotime($value['end_time']));
 
@@ -652,16 +659,17 @@ class ApiMerchantTransactionController extends Controller
     }
 
 
-    public function confirmDeliveryTransaction(Request $request){
+    public function confirmDeliveryTransaction(Request $request)
+    {
         $post = $request->json()->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
         $idOutlet = $checkMerchant['id_outlet'];
 
-        if(empty($post['id_transaction']) || !isset($post['pickup_status'])){
+        if (empty($post['id_transaction']) || !isset($post['pickup_status'])) {
             return response()->json(['status' => 'fail', 'messages' => ['ID transaction and pickup status can not be empty']]);
         }
 
@@ -673,21 +681,21 @@ class ApiMerchantTransactionController extends Controller
             ->where('transactions.id_transaction', $post['id_transaction'])
             ->where('transaction_status', 'On Progress')
             ->first();
-        if(empty($detail)){
+        if (empty($detail)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data order tidak ditemukan']]);
         }
 
-        if(!empty($detail['order_id']) && !empty($detail['shipment_pickup_code'])){
+        if (!empty($detail['order_id']) && !empty($detail['shipment_pickup_code'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Sedang menunggu pickup']]);
         }
 
         $deliveryList = app($this->merchant)->availableDelivery($detail['id_outlet']);
         $dropCounterStatus = 1;
-        foreach ($deliveryList as $value){
-            if($value['delivery_method'] == $detail['shipment_courier']){
-                foreach ($value['service'] as $s){
-                    if($s['code'] == $detail['shipment_courier_code']){
-                        $dropCounterStatus = $s['drop_counter_status']??1;
+        foreach ($deliveryList as $value) {
+            if ($value['delivery_method'] == $detail['shipment_courier']) {
+                foreach ($value['service'] as $s) {
+                    if ($s['code'] == $detail['shipment_courier_code']) {
+                        $dropCounterStatus = $s['drop_counter_status'] ?? 1;
                         break;
                     }
                 }
@@ -695,7 +703,7 @@ class ApiMerchantTransactionController extends Controller
             }
         }
 
-        if($post['pickup_status'] == true && (empty($post['pickup_time_start']) || empty($post['pickup_time_end']))){
+        if ($post['pickup_status'] == true && (empty($post['pickup_time_start']) || empty($post['pickup_time_end']))) {
             return response()->json(['status' => 'fail', 'messages' => ['Pickup time tidak boleh kosong']]);
         }
 
@@ -704,12 +712,12 @@ class ApiMerchantTransactionController extends Controller
                 ->get()->toArray();
 
         $products = [];
-        foreach ($items as $value){
+        foreach ($items as $value) {
             $productName = $value['product_name'];
-            if(!empty($value['id_product_variant_group'])){
+            if (!empty($value['id_product_variant_group'])) {
                 $variants = ProductVariant::join('product_variant_pivot', 'product_variant_pivot.id_product_variant', 'product_variants.id_product_variant')
                             ->where('id_product_variant_group', $value['id_product_variant_group'])->pluck('product_variant_name')->toArray();
-                $productName = $productName.'('.implode(" ", $variants).')';
+                $productName = $productName . '(' . implode(" ", $variants) . ')';
             }
 
             $products[] = [
@@ -721,18 +729,18 @@ class ApiMerchantTransactionController extends Controller
 
         $subdistrictOutlet = Subdistricts::where('id_subdistrict', $detail['depart_id_subdistrict'])
             ->join('districts', 'districts.id_district', 'subdistricts.id_district')->first();
-        if(empty($subdistrictOutlet)){
+        if (empty($subdistrictOutlet)) {
             return response()->json(['status' => 'fail', 'messages' => ['Empty district outlet']]);
         }
 
         $shipper = new Shipper();
-        if(empty($detail['order_id'])){
+        if (empty($detail['order_id'])) {
             $latOutlet = $subdistrictOutlet['subdistrict_latitude'];
             $lngOutlet = $subdistrictOutlet['subdistrict_longitude'];
 
             $subdistrictCustomer = Subdistricts::where('id_subdistrict', $detail['destination_id_subdistrict'])
                 ->join('districts', 'districts.id_district', 'subdistricts.id_district')->first();
-            if(empty($subdistrictCustomer)){
+            if (empty($subdistrictCustomer)) {
                 return response()->json(['status' => 'fail', 'messages' => ['Empty district customer']]);
             }
             $latCustomer = $subdistrictCustomer['subdistrict_latitude'];
@@ -773,13 +781,13 @@ class ApiMerchantTransactionController extends Controller
                     "weight" => $detail['shipment_total_weight'],
                     "items" => $products,
                     "price" => $detail['transaction_subtotal'],
-                    "package_type" => (int)Setting::where('key', 'default_package_type_delivery')->first()['value']??3
+                    "package_type" => (int)Setting::where('key', 'default_package_type_delivery')->first()['value'] ?? 3
                 ],
                 "payment_type" => "postpay"
             ];
 
             $orderDelivery = $shipper->sendRequest('Order', 'POST', 'order', $dtOrderShipment);
-            if(empty($orderDelivery['response']['data']['order_id'])){
+            if (empty($orderDelivery['response']['data']['order_id'])) {
                 return response()->json(['status' => 'fail', 'messages' => ['Failed request to third party']]);
             }
 
@@ -789,21 +797,21 @@ class ApiMerchantTransactionController extends Controller
                 ->update([
                     'order_id' => $orderID
                 ]);
-        }else{
+        } else {
             $orderID = $detail['order_id'];
         }
 
-        if($dropCounterStatus == 0){
+        if ($dropCounterStatus == 0) {
             $post['pickup_status'] = true;
         }
 
-        if($post['pickup_status'] == true){
-            $post['pickup_time_start'] = (empty($post['pickup_time_start']) ? date('Y-m-d H:i:s'):$post['pickup_time_start']);
-            $post['pickup_time_end'] = (empty($post['pickup_time_end']) ? date('Y-m-d H:i:s'):$post['pickup_time_end']);
+        if ($post['pickup_status'] == true) {
+            $post['pickup_time_start'] = (empty($post['pickup_time_start']) ? date('Y-m-d H:i:s') : $post['pickup_time_start']);
+            $post['pickup_time_end'] = (empty($post['pickup_time_end']) ? date('Y-m-d H:i:s') : $post['pickup_time_end']);
             //pickup request
             $timeZoneOutlet = City::join('provinces', 'provinces.id_province', 'cities.id_province')
-                    ->where('id_city', $detail['id_city'])->first()['time_zone_utc']??null;
-            if(empty($timeZoneOutlet)){
+                    ->where('id_city', $detail['id_city'])->first()['time_zone_utc'] ?? null;
+            if (empty($timeZoneOutlet)) {
                 return response()->json(['status' => 'fail', 'messages' => ['Data timezone can not be empty']]);
             }
 
@@ -826,12 +834,12 @@ class ApiMerchantTransactionController extends Controller
             ];
 
             $pickupDelivery = $shipper->sendRequest('Request Pickup', 'POST', 'pickup/timeslot', $dtPickupShipment);
-            if(empty($pickupDelivery['response']['data']['order_activations'])){
+            if (empty($pickupDelivery['response']['data']['order_activations'])) {
                 return response()->json(['status' => 'fail', 'messages' => ['Failed request pickup to third party']]);
             }
             $devPickup = $pickupDelivery['response']['data'];
 
-            $pickupCode = $devPickup['order_activations'][0]['pickup_code']??null;
+            $pickupCode = $devPickup['order_activations'][0]['pickup_code'] ?? null;
             $update = TransactionShipment::where('id_transaction', $detail['id_transaction'])
                 ->update([
                     'shipment_pickup_time_start' => date('Y-m-d H:i:s', strtotime($post['pickup_time_start'])),
@@ -840,15 +848,15 @@ class ApiMerchantTransactionController extends Controller
                 ]);
         }
 
-        if(!empty($orderID)){
+        if (!empty($orderID)) {
             Transaction::where('id_transaction', $detail['id_transaction'])->update(['transaction_status' => 'On Delivery']);
         }
 
         $deliveryList = app($this->merchant)->availableDelivery($detail['id_outlet']);
         $deliveryName = '';
         $deliveryLogo = '';
-        foreach ($deliveryList as $value){
-            if($value['delivery_method'] == $detail['shipment_courier']){
+        foreach ($deliveryList as $value) {
+            if ($value['delivery_method'] == $detail['shipment_courier']) {
                 $deliveryName =  $value['delivery_name'];
                 $deliveryLogo = $value['logo'];
                 break;
@@ -867,7 +875,7 @@ class ApiMerchantTransactionController extends Controller
             'postal_code' => $detail['outlet_postal_code']
         ];
 
-        if($update ?? true){
+        if ($update ?? true) {
             $user = User::where('id', $detail['id_user'])->first();
             app($this->autocrm)->SendAutoCRM('Transaction Delivery Confirm', $user['phone'], [
                 "date" => MyHelper::dateFormatInd($detail['transaction_date']),
@@ -885,15 +893,16 @@ class ApiMerchantTransactionController extends Controller
                 'outlet_phone' => $detail['outlet_phone'],
                 'address' => $address
             ]]);
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['Failed update']]);
         }
     }
 
-    public function dummyUpdateStatusDelivery(Request $request){
+    public function dummyUpdateStatusDelivery(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(empty($post['id_transaction']) || empty($post['status_code'])){
+        if (empty($post['id_transaction']) || empty($post['status_code'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Incompleted data']]);
         }
 
@@ -902,7 +911,7 @@ class ApiMerchantTransactionController extends Controller
             ->leftJoin('cities', 'cities.id_city', 'outlets.id_city')
             ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
             ->where('transactions.id_transaction', $post['id_transaction'])->first();
-        if(empty($detail)){
+        if (empty($detail)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data order tidak ditemukan']]);
         }
 
@@ -910,17 +919,17 @@ class ApiMerchantTransactionController extends Controller
             1 => 'Paket Anda sudah dibawa oleh kurir',
             2 => 'Paket Anda sedang dalam perjalanan',
             3 => 'Paket Anda sedang diantar kealamat tujuan',
-            4 => 'Paket Anda sudah diterima oleh '.$detail['destination_name'],
+            4 => 'Paket Anda sudah diterima oleh ' . $detail['destination_name'],
             5 => 'Paket sudah diterima'
         ];
 
-        if(empty($filterCode[$post['status_code']])){
+        if (empty($filterCode[$post['status_code']])) {
             return response()->json(['status' => 'fail', 'messages' => ['Status code tidak ditemukan']]);
         }
 
-        if($post['status_code'] == 1){
+        if ($post['status_code'] == 1) {
             Transaction::where('id_transaction', $detail['id_transaction'])->update(['transaction_status' => 'On Delivery']);
-        }elseif($post['status_code'] == 5){
+        } elseif ($post['status_code'] == 5) {
             $detail->triggerTransactionCompleted();
         }
 
@@ -928,23 +937,24 @@ class ApiMerchantTransactionController extends Controller
             'id_transaction' => $detail['id_transaction'],
             'shipment_order_id' => $detail['order_id'],
             'tracking_description' => $filterCode[$post['status_code']],
-            'tracking_date_time' => date('Y-m-d H:i:s', strtotime(date('Y-m-d H:i:s'). ' + 2 minutes'))
+            'tracking_date_time' => date('Y-m-d H:i:s', strtotime(date('Y-m-d H:i:s') . ' + 2 minutes'))
         ]);
 
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function deliveryTracking(Request $request){
+    public function deliveryTracking(Request $request)
+    {
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
         $idOutlet = $checkMerchant['id_outlet'];
 
         if ($request->json('transaction_receipt_number') !== null) {
             $trx = Transaction::where(['transaction_receipt_number' => $request->json('transaction_receipt_number')])->first();
-            if($trx) {
+            if ($trx) {
                 $id = $trx->id_transaction;
             } else {
                 return MyHelper::checkGet([]);
@@ -985,33 +995,33 @@ class ApiMerchantTransactionController extends Controller
         ];
 
         $transaction = Transaction::where(['transactions.id_transaction' => $id])
-            ->leftJoin('transaction_shipments','transaction_shipments.id_transaction','=','transactions.id_transaction')
-            ->leftJoin('cities','transaction_shipments.destination_id_city','=','cities.id_city')
-            ->leftJoin('provinces','provinces.id_province','=','cities.id_province')->first();
+            ->leftJoin('transaction_shipments', 'transaction_shipments.id_transaction', '=', 'transactions.id_transaction')
+            ->leftJoin('cities', 'transaction_shipments.destination_id_city', '=', 'cities.id_city')
+            ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')->first();
 
-        if(empty($transaction)){
+        if (empty($transaction)) {
             return response()->json(MyHelper::checkGet($transaction));
         }
 
-        if($idOutlet != $transaction['id_outlet']){
+        if ($idOutlet != $transaction['id_outlet']) {
             return MyHelper::checkGet([]);
         }
 
         $tracking = [];
         $trxTracking = TransactionShipmentTrackingUpdate::where('id_transaction', $id)->orderBy('tracking_date_time', 'desc')->orderBy('id_transaction_shipment_tracking_update', 'desc')->get()->toArray();
-        foreach ($trxTracking as $value){
+        foreach ($trxTracking as $value) {
             $trackingDate = date('Y-m-d H:i', strtotime($value['tracking_date_time']));
             $timeZone = 'WIB';
-            if(!empty($value['tracking_timezone']) && $value['tracking_timezone'] == '+0800'){
-                $trackingDate = date('Y-m-d H:i', strtotime('+ 1 hour',strtotime($value['tracking_date_time'])));
+            if (!empty($value['tracking_timezone']) && $value['tracking_timezone'] == '+0800') {
+                $trackingDate = date('Y-m-d H:i', strtotime('+ 1 hour', strtotime($value['tracking_date_time'])));
                 $timeZone = 'WITA';
-            }elseif(!empty($value['tracking_timezone']) && $value['tracking_timezone'] == '+0900'){
-                $trackingDate = date('Y-m-d H:i', strtotime('+ 2 hour',strtotime($value['tracking_date_time'])));
+            } elseif (!empty($value['tracking_timezone']) && $value['tracking_timezone'] == '+0900') {
+                $trackingDate = date('Y-m-d H:i', strtotime('+ 2 hour', strtotime($value['tracking_date_time'])));
                 $timeZone = 'WIT';
             }
 
             $tracking[] = [
-                'date' => MyHelper::dateFormatInd($trackingDate, true).' '.$timeZone,
+                'date' => MyHelper::dateFormatInd($trackingDate, true) . ' ' . $timeZone,
                 'description' => $value['tracking_description']
             ];
         }
@@ -1020,14 +1030,15 @@ class ApiMerchantTransactionController extends Controller
             'delivery_id' => $transaction['order_id'],
             'delivery_method' => strtoupper($transaction['shipment_courier']),
             'delivery_service' => ucfirst($transaction['shipment_courier_service']),
-            'delivery_price' => 'Rp '. number_format((int)$transaction['transaction_shipment'],0,",","."),
+            'delivery_price' => 'Rp ' . number_format((int)$transaction['transaction_shipment'], 0, ",", "."),
             'delivery_tracking' => $tracking
         ];
 
         return response()->json(MyHelper::checkGet($result));
     }
 
-    public function insertBalanceMerchant($data){
+    public function insertBalanceMerchant($data)
+    {
         $balance_nominal = $data['balance_nominal'];
         $balance_before = MerchantLogBalance::where('id_merchant', $data['id_merchant'])->sum('merchant_balance');
         $balance_after = $balance_before + $balance_nominal;
@@ -1043,9 +1054,9 @@ class ApiMerchantTransactionController extends Controller
             'updated_at'                     => date('Y-m-d H:i:s')
         ];
 
-        if($balance_nominal < 0){
+        if ($balance_nominal < 0) {
             $create = MerchantLogBalance::updateOrCreate($LogBalance);
-        }else{
+        } else {
             $create = MerchantLogBalance::updateOrCreate(['id_merchant' => $data['id_merchant'], 'merchant_balance_id_reference' => $data['id_transaction'], 'merchant_balance_source' => $data['source']], $LogBalance);
         }
 
@@ -1057,7 +1068,7 @@ class ApiMerchantTransactionController extends Controller
     {
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
         $idOutlet = $checkMerchant['id_outlet'];
@@ -1065,58 +1076,59 @@ class ApiMerchantTransactionController extends Controller
         $transaction = Transaction::where('transaction_receipt_number', $request->json('transaction_receipt_number'))
         ->where('id_outlet', $idOutlet)->first();
 
-        if(empty($transaction)){
+        if (empty($transaction)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data transaksi tidak ditemukan']]);
         }
 
         $productSubtotalFinal = $transaction['transaction_subtotal'] - $transaction['transaction_discount_item'];
         $detailProduct = [
-            'product_subtotal' => 'Rp '. number_format((int)$transaction['transaction_subtotal'],0,",","."),
-            'product_subtotal_final' => 'Rp '. number_format((int)$productSubtotalFinal,0,",","."),
+            'product_subtotal' => 'Rp ' . number_format((int)$transaction['transaction_subtotal'], 0, ",", "."),
+            'product_subtotal_final' => 'Rp ' . number_format((int)$productSubtotalFinal, 0, ",", "."),
         ];
 
-        if($transaction['transaction_discount_item'] > 0){
-            $detailProduct['discount'] =  'Rp '. number_format((int)$transaction['transaction_discount_item'],0,",",".");
-            $detailProduct['merchant_charged'] =  '-Rp '. number_format((int)$transaction['discount_charged_outlet'],0,",",".");
+        if ($transaction['transaction_discount_item'] > 0) {
+            $detailProduct['discount'] =  'Rp ' . number_format((int)$transaction['transaction_discount_item'], 0, ",", ".");
+            $detailProduct['merchant_charged'] =  '-Rp ' . number_format((int)$transaction['discount_charged_outlet'], 0, ",", ".");
         }
 
-        if($transaction['transaction_discount_bill'] > 0){
-            $detailProduct['discount'] =  'Rp '. number_format((int)$transaction['transaction_discount_bill'],0,",",".");
-            $detailProduct['merchant_charged'] =  '-Rp '. number_format((int)$transaction['discount_charged_outlet'],0,",",".");
+        if ($transaction['transaction_discount_bill'] > 0) {
+            $detailProduct['discount'] =  'Rp ' . number_format((int)$transaction['transaction_discount_bill'], 0, ",", ".");
+            $detailProduct['merchant_charged'] =  '-Rp ' . number_format((int)$transaction['discount_charged_outlet'], 0, ",", ".");
         }
 
         $customerPay = $transaction['transaction_shipment'] - $transaction['transaction_discount_delivery'];
         $deliveryDetail = [
-            'delivery_price' => 'Rp '. number_format((int)$transaction['transaction_shipment'],0,",","."),
-            'customer_pay' => 'Rp '. number_format((int)$customerPay,0,",","."),
+            'delivery_price' => 'Rp ' . number_format((int)$transaction['transaction_shipment'], 0, ",", "."),
+            'customer_pay' => 'Rp ' . number_format((int)$customerPay, 0, ",", "."),
         ];
 
-        if($transaction['transaction_discount_delivery'] > 0){
-            $deliveryDetail['discount'] =  'Rp '. number_format((int)$transaction['transaction_discount_delivery'],0,",",".");
-            $deliveryDetail['merchant_charged'] =  '-Rp '. number_format((int)$transaction['discount_charged_outlet'],0,",",".");
+        if ($transaction['transaction_discount_delivery'] > 0) {
+            $deliveryDetail['discount'] =  'Rp ' . number_format((int)$transaction['transaction_discount_delivery'], 0, ",", ".");
+            $deliveryDetail['merchant_charged'] =  '-Rp ' . number_format((int)$transaction['discount_charged_outlet'], 0, ",", ".");
         }
 
         $result = [
-            'grandtotal' => 'Rp '. number_format((int)$transaction['transaction_grandtotal'],0,",","."),
+            'grandtotal' => 'Rp ' . number_format((int)$transaction['transaction_grandtotal'], 0, ",", "."),
             'product_detail' => $detailProduct,
-            'delivery_detail' =>$deliveryDetail,
+            'delivery_detail' => $deliveryDetail,
         ];
 
-        if($transaction['transaction_tax'] > 0){
-            $result['tax'] = '-Rp '. number_format((int)$transaction['transaction_tax'],0,",",".");
+        if ($transaction['transaction_tax'] > 0) {
+            $result['tax'] = '-Rp ' . number_format((int)$transaction['transaction_tax'], 0, ",", ".");
         }
 
-        if($transaction['transaction_service'] > 0){
-            $result['service'] = '-Rp '. number_format((int)$transaction['transaction_service'],0,",",".");
+        if ($transaction['transaction_service'] > 0) {
+            $result['service'] = '-Rp ' . number_format((int)$transaction['transaction_service'], 0, ",", ".");
         }
 
         return response()->json($result);
     }
 
-    public function getTotalTransactionPending(Request $request){
+    public function getTotalTransactionPending(Request $request)
+    {
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
         $idOutlet = $checkMerchant['id_outlet'];
@@ -1127,7 +1139,8 @@ class ApiMerchantTransactionController extends Controller
         return response()->json(['status' => 'success', 'result' => $count]);
     }
 
-    public function autoCancel(){
+    public function autoCancel()
+    {
         $log = MyHelper::logCron('Auto cancel transaction');
         try {
             $countSuccess = 0;
@@ -1138,20 +1151,20 @@ class ApiMerchantTransactionController extends Controller
                 ->where('trasaction_type', 'Delivery')
                 ->where('transaction_maximum_date_process', '<', $currentDate)->get();
 
-            foreach ($transactions as $transaction){
+            foreach ($transactions as $transaction) {
                 $post = [
                     'id_transaction' => $transaction['id_transaction'],
                     'reject_reason' => 'Pesanan tidak diproses'
                 ];
                 $check = $transaction->triggerReject($post);
-                if($check){
+                if ($check) {
                     $countSuccess++;
                 }
             }
 
-            $log->success(['reject_count' => count($transactions), 'reject_count_success'=> $countSuccess]);
+            $log->success(['reject_count' => count($transactions), 'reject_count_success' => $countSuccess]);
             return 'success';
-        }catch (\Exception $e) {
+        } catch (\Exception $e) {
             $log->fail($e->getMessage());
         }
     }

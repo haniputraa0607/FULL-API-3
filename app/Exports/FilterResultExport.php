@@ -18,23 +18,24 @@ use Modules\ProductVariant\Entities\ProductVariant;
 use App\Http\Models\Outlet;
 use Modules\Brand\Entities\Brand;
 
-class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, WithTitle, WithColumnFormatting
+class FilterResultExport implements FromArray, ShouldAutoSize, WithEvents, WithTitle, WithColumnFormatting
 {
     use Exportable;
+
     protected $data;
-	protected $title;
+    protected $title;
     protected $filter;
     protected $padding;
     protected $header;
     protected $columnFormats;
     protected $loadedData = [];
 
-	public function __construct($data, $filter, $title = '', $columnFormats = null)
-	{
+    public function __construct($data, $filter, $title = '', $columnFormats = null)
+    {
         if (!$data) {
             $data = [['Result' => 'No data found']];
         }
-		$this->data = $data;
+        $this->data = $data;
         $this->title = $title;
         $this->filter = $filter;
         $this->columnFormats = $columnFormats;
@@ -42,8 +43,8 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
         $this->header[] = ['Filter applied'];
         if (is_array($this->filter['rule']) && $this->filter['rule']) {
             $this->header[] = ['Valid when all conditions are met'];
-            foreach ($this->filter['rule']??[] as $rule) {
-                if (!isset($rule['parameter']) || is_null($rule['parameter']) || !($rule['hide']??'')) {
+            foreach ($this->filter['rule'] ?? [] as $rule) {
+                if (!isset($rule['parameter']) || is_null($rule['parameter']) || !($rule['hide'] ?? '')) {
                     continue;
                 }
                 $this->header[] = $this->filterPrettier([
@@ -52,12 +53,12 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
                     $rule['parameter']
                 ]);
             }
-            if (($this->filter['operator']??'and') == 'or') {
+            if (($this->filter['operator'] ?? 'and') == 'or') {
                 $this->header[] = ['Valid when minimum one condition is met'];
                 $this->padding += 1;
             }
-            foreach ($this->filter['rule']??[] as $rule) {
-                if (!isset($rule['parameter']) || is_null($rule['parameter']) || ($rule['hide']??'')) {
+            foreach ($this->filter['rule'] ?? [] as $rule) {
+                if (!isset($rule['parameter']) || is_null($rule['parameter']) || ($rule['hide'] ?? '')) {
                     continue;
                 }
                 $this->header[] = $this->filterPrettier([
@@ -72,7 +73,7 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
         $this->header[] = [''];
 
         $this->padding = 3 + count($this->header);
-	}
+    }
 
     /**
     * @return \Illuminate\Support\Collection
@@ -86,7 +87,7 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
 
         $header = array_merge($header, $this->header);
 
-        $header[] = array_keys($this->data[0]??[]);
+        $header[] = array_keys($this->data[0] ?? []);
         return array_merge($header, $this->data);
     }
 
@@ -103,12 +104,12 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
      */
     public function registerEvents(): array
     {
-        if (!count($this->data[0]??[])) {
+        if (!count($this->data[0] ?? [])) {
             return [];
         }
         $padding_top = $this->padding;
         return [
-            AfterSheet::class    => function(AfterSheet $event) use ($padding_top) {
+            AfterSheet::class    => function (AfterSheet $event) use ($padding_top) {
                 $last = count($this->data);
                 $styleArray = [
                     'borders' => [
@@ -136,9 +137,9 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
                         ],
                     ],
                 ];
-                $x_coor = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($this->data[0]??[]));
-                $event->sheet->getStyle('A'. $padding_top .':'.$x_coor.($last+$padding_top))->applyFromArray($styleArray);
-                $headRange = 'A'.$padding_top.':'.$x_coor.$padding_top;
+                $x_coor = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($this->data[0] ?? []));
+                $event->sheet->getStyle('A' . $padding_top . ':' . $x_coor . ($last + $padding_top))->applyFromArray($styleArray);
+                $headRange = 'A' . $padding_top . ':' . $x_coor . $padding_top;
                 $event->sheet->getStyle($headRange)->applyFromArray($styleHead);
                 $event->sheet->mergeCells('A1:I1');
                 $event->sheet->getStyle('A1:I1')->applyFromArray([
@@ -170,15 +171,15 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
                             'argb' => 'FFFFFFFF',
                         ],
                     ],
-                ]);            
-                $event->sheet->getStyle('A3:C'.($padding_top - 2))->applyFromArray([
+                ]);
+                $event->sheet->getStyle('A3:C' . ($padding_top - 2))->applyFromArray([
                     'borders' => [
                         'allBorders' => [
                             'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
                             'color' => ['rgb' => '000000'],
                         ]
                     ],
-                ]);            
+                ]);
             },
         ];
     }
@@ -198,23 +199,25 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
         ];
     }
 
-    protected function loadOnce($key, $closures) {
-        return function() use ($key, $closures) {
+    protected function loadOnce($key, $closures)
+    {
+        return function () use ($key, $closures) {
             if (!isset($this->loadedData[$key])) {
                 $this->loadedData[$key] = $closures();
             }
-            return $this->loadedData[$key];            
+            return $this->loadedData[$key];
         };
     }
 
-    protected function filterPrettier($rule) {
+    protected function filterPrettier($rule)
+    {
         $filters = [
             'id_outlet' => [
                 'label' => 'Outlet',
-                'data' => $this->loadOnce('id_outlets', function() {
+                'data' => $this->loadOnce('id_outlets', function () {
                     $itemRaw = Outlet::select('id_outlet as id_item', 'outlet_name as item_name')->get();
                     $items = [];
-                    $itemRaw->each(function($item) use (&$items) {
+                    $itemRaw->each(function ($item) use (&$items) {
                         $items[$item->id_item] = $item->item_name;
                     });
                     return $items;
@@ -222,10 +225,10 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
             ],
             'id_product' => [
                 'label' => 'Product',
-                'data' => $this->loadOnce('id_products', function() {
+                'data' => $this->loadOnce('id_products', function () {
                     $productRaw = Product::select('id_product', 'product_name')->get();
                     $products = [];
-                    $productRaw->each(function($item) use (&$products) {
+                    $productRaw->each(function ($item) use (&$products) {
                         $products[$item->id_product] = $item->product_name;
                     });
                     return $products;
@@ -236,10 +239,10 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
             ],
             'id_brand' => [
                 'label' => 'Brand',
-                'data' => $this->loadOnce('id_brands', function() {
+                'data' => $this->loadOnce('id_brands', function () {
                     $itemRaw = Brand::select('id_brand as id_item', 'name_brand as item_name')->get();
                     $items = [];
-                    $itemRaw->each(function($item) use (&$items) {
+                    $itemRaw->each(function ($item) use (&$items) {
                         $items[$item->id_item] = $item->item_name;
                     });
                     return $items;
@@ -247,10 +250,10 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
             ],
             'id_product_category' => [
                 'label' => 'Category',
-                'data' => $this->loadOnce('id_product_categories', function() {
+                'data' => $this->loadOnce('id_product_categories', function () {
                     $itemRaw = ProductCategory::select('id_product_category as id_item', 'product_category_name as item_name')->get();
                     $items = [];
-                    $itemRaw->each(function($item) use (&$items) {
+                    $itemRaw->each(function ($item) use (&$items) {
                         $items[$item->id_item] = $item->item_name;
                     });
                     return $items;
@@ -258,10 +261,10 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
             ],
             'id_product_variant_group' => [
                 'label' => 'Product Variant Group Code',
-                'data' => $this->loadOnce('id_product_variant_groups', function() {
+                'data' => $this->loadOnce('id_product_variant_groups', function () {
                     $itemRaw = ProductVariantGroup::select('id_product_variant_group as id_item', 'product_variant_group_code as item_name')->get();
                     $items = [];
-                    $itemRaw->each(function($item) use (&$items) {
+                    $itemRaw->each(function ($item) use (&$items) {
                         $items[$item->id_item] = $item->item_name;
                     });
                     return $items;
@@ -269,16 +272,16 @@ class FilterResultExport implements FromArray,  ShouldAutoSize, WithEvents, With
             ],
             'id_product_variants' => [
                 'label' => 'Product Variant',
-                'render' => function($value) {
-                    $variants = $this->loadOnce('id_product_variants', function() {
+                'render' => function ($value) {
+                    $variants = $this->loadOnce('id_product_variants', function () {
                         $itemRaw = ProductVariant::select('id_product_variant as id_item', 'product_variant_name as item_name')->get();
                         $items = [];
-                        $itemRaw->each(function($item) use (&$items) {
+                        $itemRaw->each(function ($item) use (&$items) {
                             $items[$item->id_item] = $item->item_name;
                         });
                         return $items;
                     })();
-                    $value = implode(', ', array_map(function($val) use ($variants) {
+                    $value = implode(', ', array_map(function ($val) use ($variants) {
                         return $variants[$val] ?? '';
                     }, $value));
                     return $value;

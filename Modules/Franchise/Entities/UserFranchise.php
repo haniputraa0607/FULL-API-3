@@ -11,28 +11,30 @@ use Hash;
 
 class UserFranchise extends Authenticatable
 {
-    use Notifiable, HasMultiAuthApiTokens;
+    use Notifiable;
+    use HasMultiAuthApiTokens;
 
     protected $table = 'user_franchises';
     protected $primaryKey = 'id_user_franchise';
 
-    public function findForPassport($email) {
+    public function findForPassport($email)
+    {
         return $this->where('username', $email)->first();
     }
     protected $appends = ['password_default_decrypt'];
-	protected $fillable = [
-		'id_user_franchise_seed',
+    protected $fillable = [
+        'id_user_franchise_seed',
         'username',
-	    'phone',
+        'phone',
         'name',
         'level',
-		'email',
+        'email',
         'user_franchise_status',
         'password',
         'password_default_plain_text',
         'user_franchise_type',
         'first_update_password'
-	];
+    ];
 
     public function getPasswordDefaultDecryptAttribute()
     {

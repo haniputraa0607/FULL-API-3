@@ -40,10 +40,11 @@ class IPay88ServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('ipay88.php'),
+            __DIR__ . '/../Config/config.php' => config_path('ipay88.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'ipay88'
+            __DIR__ . '/../Config/config.php',
+            'ipay88'
         );
     }
 
@@ -56,11 +57,11 @@ class IPay88ServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/ipay88');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/ipay88';
@@ -79,7 +80,7 @@ class IPay88ServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'ipay88');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'ipay88');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'ipay88');
         }
     }
 

@@ -50,29 +50,29 @@ class ApiMerchantController extends Controller
     {
         $post = $request->json()->all();
 
-        if(empty($post)){
-            $setting = Setting::where('key', 'merchant_register_intoduction')->first()['value_text']??null;
+        if (empty($post)) {
+            $setting = Setting::where('key', 'merchant_register_intoduction')->first()['value_text'] ?? null;
             $setting = (array)json_decode($setting);
 
             $detail = [];
-            if(!empty($setting)){
-                $detail['image'] = (empty($setting['image']) ? '' : config('url.storage_url_api').$setting['image']);
+            if (!empty($setting)) {
+                $detail['image'] = (empty($setting['image']) ? '' : config('url.storage_url_api') . $setting['image']);
                 $detail['title'] = $setting['title'];
                 $detail['description'] = $setting['description'];
                 $detail['button_text'] = $setting['button_text'];
             }
 
             return response()->json(MyHelper::checkGet($detail));
-        }else{
-            $setting = Setting::where('key', 'merchant_register_intoduction')->first()['value_text']??null;
+        } else {
+            $setting = Setting::where('key', 'merchant_register_intoduction')->first()['value_text'] ?? null;
             $setting = (array)json_decode($setting);
-            $image = $setting['image']??'';
-            if(!empty($post['image'])){
+            $image = $setting['image'] ?? '';
+            if (!empty($post['image'])) {
                 $upload = MyHelper::uploadPhotoStrict($post['image'], 'img/', 720, 360, 'merchant_introduction_image');
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
-                    $image = $upload['path'].'?'.time();
-                }else{
+                    $image = $upload['path'] . '?' . time();
+                } else {
                     $image = '';
                 }
             }
@@ -91,29 +91,29 @@ class ApiMerchantController extends Controller
     {
         $post = $request->json()->all();
 
-        if(empty($post)){
-            $setting = Setting::where('key', 'merchant_register_success')->first()['value_text']??null;
+        if (empty($post)) {
+            $setting = Setting::where('key', 'merchant_register_success')->first()['value_text'] ?? null;
             $setting = (array)json_decode($setting);
 
             $detail = [];
-            if(!empty($setting)){
-                $detail['image'] = (empty($setting['image']) ? '' : config('url.storage_url_api').$setting['image']);
+            if (!empty($setting)) {
+                $detail['image'] = (empty($setting['image']) ? '' : config('url.storage_url_api') . $setting['image']);
                 $detail['title'] = $setting['title'];
                 $detail['description'] = $setting['description'];
                 $detail['button_text'] = $setting['button_text'];
             }
 
             return response()->json(MyHelper::checkGet($detail));
-        }else{
-            $setting = Setting::where('key', 'merchant_register_success')->first()['value_text']??null;
+        } else {
+            $setting = Setting::where('key', 'merchant_register_success')->first()['value_text'] ?? null;
             $setting = (array)json_decode($setting);
-            $image = $setting['image']??'';
-            if(!empty($post['image'])){
+            $image = $setting['image'] ?? '';
+            if (!empty($post['image'])) {
                 $upload = MyHelper::uploadPhotoStrict($post['image'], 'img/', 500, 500, 'merchant_success_image');
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
-                    $image = $upload['path'].'?'.time();
-                }else{
+                    $image = $upload['path'] . '?' . time();
+                } else {
                     $image = '';
                 }
             }
@@ -132,29 +132,29 @@ class ApiMerchantController extends Controller
     {
         $post = $request->json()->all();
 
-        if(empty($post)){
-            $setting = Setting::where('key', 'merchant_register_approved')->first()['value_text']??null;
+        if (empty($post)) {
+            $setting = Setting::where('key', 'merchant_register_approved')->first()['value_text'] ?? null;
             $setting = (array)json_decode($setting);
 
             $detail = [];
-            if(!empty($setting)){
-                $detail['image'] = (empty($setting['image']) ? '' : config('url.storage_url_api').$setting['image']);
+            if (!empty($setting)) {
+                $detail['image'] = (empty($setting['image']) ? '' : config('url.storage_url_api') . $setting['image']);
                 $detail['title'] = $setting['title'];
                 $detail['description'] = $setting['description'];
                 $detail['button_text'] = $setting['button_text'];
             }
 
             return response()->json(MyHelper::checkGet($detail));
-        }else{
-            $setting = Setting::where('key', 'merchant_register_approved')->first()['value_text']??null;
+        } else {
+            $setting = Setting::where('key', 'merchant_register_approved')->first()['value_text'] ?? null;
             $setting = (array)json_decode($setting);
-            $image = $setting['image']??'';
-            if(!empty($post['image'])){
+            $image = $setting['image'] ?? '';
+            if (!empty($post['image'])) {
                 $upload = MyHelper::uploadPhotoStrict($post['image'], 'img/', 500, 500, 'merchant_approved_image');
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
-                    $image = $upload['path'].'?'.time();
-                }else{
+                    $image = $upload['path'] . '?' . time();
+                } else {
                     $image = '';
                 }
             }
@@ -173,28 +173,28 @@ class ApiMerchantController extends Controller
     {
         $post = $request->json()->all();
 
-        if(empty($post)){
-            $setting = Setting::where('key', 'merchant_register_rejected')->first()['value_text']??null;
+        if (empty($post)) {
+            $setting = Setting::where('key', 'merchant_register_rejected')->first()['value_text'] ?? null;
             $setting = (array)json_decode($setting);
 
             $detail = [];
-            if(!empty($setting)){
-                $detail['image'] = (empty($setting['image']) ? '' : config('url.storage_url_api').$setting['image']);
+            if (!empty($setting)) {
+                $detail['image'] = (empty($setting['image']) ? '' : config('url.storage_url_api') . $setting['image']);
                 $detail['title'] = $setting['title'];
                 $detail['description'] = $setting['description'];
             }
 
             return response()->json(MyHelper::checkGet($detail));
-        }else{
-            $setting = Setting::where('key', 'merchant_register_rejected')->first()['value_text']??null;
+        } else {
+            $setting = Setting::where('key', 'merchant_register_rejected')->first()['value_text'] ?? null;
             $setting = (array)json_decode($setting);
-            $image = $setting['image']??'';
-            if(!empty($post['image'])){
+            $image = $setting['image'] ?? '';
+            if (!empty($post['image'])) {
                 $upload = MyHelper::uploadPhotoStrict($post['image'], 'img/', 500, 500, 'merchant_rejected_image');
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
-                    $image = $upload['path'].'?'.time();
-                }else{
+                    $image = $upload['path'] . '?' . time();
+                } else {
                     $image = '';
                 }
             }
@@ -208,15 +208,16 @@ class ApiMerchantController extends Controller
         }
     }
 
-    public function registerSubmitStep1(MerchantCreateStep1 $request){
+    public function registerSubmitStep1(MerchantCreateStep1 $request)
+    {
         $post = $request->json()->all();
         $idUser = $request->user()->id;
         $checkData = Merchant::where('id_user', $idUser)->first();
         $phone = $request->json('merchant_phone');
 
         $phone = preg_replace("/[^0-9]/", "", $phone);
-        if(substr($phone, 0, 2) != 62 && substr($phone, 0, 1) != '0'){
-            $phone = '0'.$phone;
+        if (substr($phone, 0, 2) != 62 && substr($phone, 0, 1) != '0') {
+            $phone = '0' . $phone;
         }
         $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
 
@@ -229,46 +230,46 @@ class ApiMerchantController extends Controller
             $phone = $checkPhoneFormat['phone'];
         }
 
-        if(empty($checkData)) {
+        if (empty($checkData)) {
             $check = Outlet::where('outlet_phone', $post['merchant_phone'])->first();
 
-            if(!empty($check)){
+            if (!empty($check)) {
                 return response()->json(['status' => 'fail', 'messages' => ['Nomor telepon sudah terdaftar']]);
             }
 
             DB::beginTransaction();
 
-            $create = Merchant::create(["id_user" =>$request->user()->id]);
-            if(!$create){
+            $create = Merchant::create(["id_user" => $request->user()->id]);
+            if (!$create) {
                 return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan data merchant']]);
             }
 
-            $lastOutlet = Outlet::orderBy('outlet_code', 'desc')->first()['outlet_code']??'';
+            $lastOutlet = Outlet::orderBy('outlet_code', 'desc')->first()['outlet_code'] ?? '';
             $lastOutlet = substr($lastOutlet, -5);
             $lastOutlet = (int)$lastOutlet;
-            $countCode = $lastOutlet+1;
+            $countCode = $lastOutlet + 1;
             $dataCreateOutlet = [
-                "outlet_code" => 'M'.sprintf("%06d", $countCode),
+                "outlet_code" => 'M' . sprintf("%06d", $countCode),
                 "outlet_name" => $post['merchant_name'],
                 "outlet_license_number" => $post['merchant_license_number'],
                 "outlet_email" => (empty($post['merchant_email']) ? null : $post['merchant_email']),
                 "outlet_phone" => $phone,
                 "id_city" => $post['id_city'],
-                "id_subdistrict" => $post['id_subdistrict']??null,
+                "id_subdistrict" => $post['id_subdistrict'] ?? null,
                 "outlet_address" => $post['merchant_address'],
                 "outlet_postal_code" => (empty($post['merchant_postal_code']) ? null : $post['merchant_postal_code'])
             ];
 
             $createOutlet = Outlet::create($dataCreateOutlet);
-            if(!$createOutlet){
+            if (!$createOutlet) {
                 DB::rollback();
                 return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan data outlet']]);
             }
 
-            $defaultBrand = Setting::where('key', 'default_brand')->first()['value']??null;
-            if(!empty($defaultBrand)){
+            $defaultBrand = Setting::where('key', 'default_brand')->first()['value'] ?? null;
+            if (!empty($defaultBrand)) {
                 $checkBrand = Brand::where('id_brand', $defaultBrand)->first();
-                if(!empty($checkBrand)){
+                if (!empty($checkBrand)) {
                     BrandOutlet::create(['id_outlet' => $createOutlet['id_outlet'], 'id_brand' => $defaultBrand]);
                 }
             }
@@ -277,14 +278,14 @@ class ApiMerchantController extends Controller
 
             DB::commit();
             return response()->json(MyHelper::checkCreate($create));
-        }else{
+        } else {
             $checkPhone = Outlet::where('outlet_phone', $phone)->whereNotIn('id_outlet', [$checkData['id_outlet']])->first();
 
-            if(!empty($checkPhone)){
+            if (!empty($checkPhone)) {
                 return response()->json(['status' => 'fail', 'messages' => ['Nomor telepon sudah terdaftar']]);
             }
 
-            $getPostalCode = Subdistricts::where('id_subdistrict', $post['id_subdistrict']??null)->first()['subdistrict_postal_code']??null;
+            $getPostalCode = Subdistricts::where('id_subdistrict', $post['id_subdistrict'] ?? null)->first()['subdistrict_postal_code'] ?? null;
 
             $dataUpdateOutlet = [
                 "outlet_name" => $post['merchant_name'],
@@ -292,13 +293,13 @@ class ApiMerchantController extends Controller
                 "outlet_email" => (empty($post['merchant_email']) ? null : $post['merchant_email']),
                 "outlet_phone" => $phone,
                 "id_city" => $post['id_city'],
-                "id_subdistrict" => $post['id_subdistrict']??null,
+                "id_subdistrict" => $post['id_subdistrict'] ?? null,
                 "outlet_address" => $post['merchant_address'],
                 "outlet_postal_code" => $getPostalCode
             ];
 
             $update = Outlet::where('id_outlet', $checkData['id_outlet'])->update($dataUpdateOutlet);
-            if(!$update){
+            if (!$update) {
                 return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan data outlet']]);
             }
 
@@ -306,12 +307,13 @@ class ApiMerchantController extends Controller
         }
     }
 
-    public function registerSubmitStep2(MerchantCreateStep2 $request){
+    public function registerSubmitStep2(MerchantCreateStep2 $request)
+    {
         $post = $request->json()->all();
         $idUser = $request->user()->id;
 
         $checkData = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkData)){
+        if (empty($checkData)) {
             return response()->json([
                 'status' => 'fail',
                 'messages' => ['Data Toko/Perusahaan tidak ditemukan']
@@ -351,7 +353,7 @@ class ApiMerchantController extends Controller
         ];
 
         $update = Merchant::where('id_merchant', $checkData['id_merchant'])->update($dataUpdate);
-        if($update){
+        if ($update) {
             $autocrm = app($this->autocrm)->SendAutoCRM(
                 'Register Merchant',
                 $request->user()->phone,
@@ -368,10 +370,11 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function registerDetail(Request $request){
+    public function registerDetail(Request $request)
+    {
         $idUser = $request->user()->id;
         $checkData = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkData)){
+        if (empty($checkData)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
@@ -398,7 +401,7 @@ class ApiMerchantController extends Controller
         ];
 
         $detail['step_2'] = null;
-        if($checkData['merchant_completed_step'] == 1){
+        if ($checkData['merchant_completed_step'] == 1) {
             $detail['step_2'] = [
                 "merchant_pic_name" => $checkData['merchant_pic_name'],
                 "merchant_pic_id_card_number" => $checkData['merchant_pic_id_card_number'],
@@ -409,29 +412,30 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkGet($detail));
     }
 
-    public function holiday(Request $request){
+    public function holiday(Request $request)
+    {
         $post = $request->json()->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
-        if(empty($post)){
-            $status = Outlet::where('id_outlet', $checkMerchant['id_outlet'])->first()['outlet_is_closed']??0;
-            $res = ['status' => (empty($status) ? false: true)];
+        if (empty($post)) {
+            $status = Outlet::where('id_outlet', $checkMerchant['id_outlet'])->first()['outlet_is_closed'] ?? 0;
+            $res = ['status' => (empty($status) ? false : true)];
             return response()->json(MyHelper::checkGet($res));
-        }else{
+        } else {
             $update = Outlet::where('id_outlet', $checkMerchant['id_outlet'])->update(['outlet_is_closed' => ($post['status'] ? 1 : 0)]);
             return response()->json(MyHelper::checkUpdate($update));
         }
-
     }
 
-    public function profileDetail(Request $request){
+    public function profileDetail(Request $request)
+    {
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
@@ -445,7 +449,7 @@ class ApiMerchantController extends Controller
             ->select('merchants.*', 'provinces.id_province', 'outlets.*', 'city_name', 'province_name', 'districts.*', 'subdistrict_name')
             ->first();
 
-        if(empty($detail)){
+        if (empty($detail)) {
             return response()->json(['status' => 'fail', 'messages' => ['Detail merchant tidak ditemukan']]);
         }
 
@@ -466,16 +470,16 @@ class ApiMerchantController extends Controller
 
         $detail = [
             'outlet' => [
-                'is_active' => ($detail['outlet_status'] == 'Active' ? true:false),
-                'is_closed' => (empty($detail['outlet_is_closed']) ?false:true),
+                'is_active' => ($detail['outlet_status'] == 'Active' ? true : false),
+                'is_closed' => (empty($detail['outlet_is_closed']) ? false : true),
                 'merchant_name' => $detail['outlet_name'],
                 'merchant_description' => $detail['outlet_description'],
                 'merchant_license_number' => $detail['outlet_license_number'],
                 "merchant_email" => $detail['outlet_email'],
                 "merchant_phone" => substr_replace($detail['outlet_phone'], '', 0, 1),
                 "city_name" => $detail['city_name'],
-                "image_cover" => (!empty($detail['outlet_image_cover']) ? config('url.storage_url_api').$detail['outlet_image_cover']: ''),
-                "image_logo_portrait" => (!empty($detail['outlet_image_logo_portrait']) ? config('url.storage_url_api').$detail['outlet_image_logo_portrait']: '')
+                "image_cover" => (!empty($detail['outlet_image_cover']) ? config('url.storage_url_api') . $detail['outlet_image_cover'] : ''),
+                "image_logo_portrait" => (!empty($detail['outlet_image_logo_portrait']) ? config('url.storage_url_api') . $detail['outlet_image_logo_portrait'] : '')
             ],
             'pic' => [
                 'merchant_pic_name' => $detail['merchant_pic_name'],
@@ -489,17 +493,18 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkGet($detail));
     }
 
-    public function profileOutletUpdate(Request $request){
+    public function profileOutletUpdate(Request $request)
+    {
         $post = $request->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
         $phone = $post['merchant_phone'];
-        if(substr($phone, 0, 2) != 62 && substr($phone, 0, 1) != '0'){
-            $phone = '0'.$phone;
+        if (substr($phone, 0, 2) != 62 && substr($phone, 0, 1) != '0') {
+            $phone = '0' . $phone;
         }
 
         $phone = preg_replace("/[^0-9]/", "", $phone);
@@ -516,28 +521,28 @@ class ApiMerchantController extends Controller
         }
 
         $dtOutlet = Outlet::where('id_outlet', $checkMerchant['id_outlet'])->first();
-        if(empty($post['merchant_license_number'])){
+        if (empty($post['merchant_license_number'])) {
             $checkLicense = Outlet::where('outlet_license_number', $post['merchant_license_number'])->whereNotIn('id_outlet', [$checkMerchant['id_outlet']])->first();
-            if(!empty($checkLicense)){
-                return response()->json(['status' => 'fail', 'messages' => ['License number already use with outlet : '.$checkLicense['outlet_name']]]);
+            if (!empty($checkLicense)) {
+                return response()->json(['status' => 'fail', 'messages' => ['License number already use with outlet : ' . $checkLicense['outlet_name']]]);
             }
         }
 
         $dataUpdate = [];
-        if(!empty($post['image_cover'])){
+        if (!empty($post['image_cover'])) {
             $image = $post['image_cover'];
             $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/outlet/'.$dtOutlet['outlet_code'].'/');
+            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/outlet/' . $dtOutlet['outlet_code'] . '/');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $dataUpdate['outlet_image_cover'] = $upload['path'];
             }
         }
 
-        if(!empty($post['image_logo_portrait'])){
+        if (!empty($post['image_logo_portrait'])) {
             $image = $post['image_logo_portrait'];
             $encode = base64_encode(fread(fopen($image, "r"), filesize($image)));
-            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/outlet/'.$dtOutlet['outlet_code'].'/');
+            $upload = MyHelper::uploadPhotoAllSize($encode, 'img/outlet/' . $dtOutlet['outlet_code'] . '/');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $dataUpdate['outlet_image_logo_portrait'] = $upload['path'];
@@ -546,7 +551,7 @@ class ApiMerchantController extends Controller
 
         $dataUpdate['outlet_name'] = $post['merchant_name'];
         $dataUpdate['outlet_description'] = $post['merchant_description'];
-        $dataUpdate['outlet_license_number'] = $post['merchant_license_number']??null;
+        $dataUpdate['outlet_license_number'] = $post['merchant_license_number'] ?? null;
         $dataUpdate['outlet_email'] = $post['merchant_email'];
         $dataUpdate['outlet_phone'] = $phone;
 
@@ -554,17 +559,18 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function profilePICUpdate(Request $request){
+    public function profilePICUpdate(Request $request)
+    {
         $post = $request->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
         $phone = $post['merchant_pic_phone'];
-        if(substr($phone, 0, 2) != 62 && substr($phone, 0, 1) != '0'){
-            $phone = '0'.$phone;
+        if (substr($phone, 0, 2) != 62 && substr($phone, 0, 1) != '0') {
+            $phone = '0' . $phone;
         }
 
         $phone = preg_replace("/[^0-9]/", "", $phone);
@@ -590,16 +596,17 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function addressDetail(Request $request){
+    public function addressDetail(Request $request)
+    {
         $post = $request->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
 
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
-        if(empty($post)){
+        if (empty($post)) {
             $data = Merchant::leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
                 ->leftJoin('cities', 'outlets.id_city', 'cities.id_city')
                 ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
@@ -608,7 +615,7 @@ class ApiMerchantController extends Controller
                 ->where('id_merchant', $checkMerchant['id_merchant'])
                 ->select('merchants.*', 'provinces.id_province', 'outlets.*', 'districts.id_district')
                 ->first();
-            if(empty($data)){
+            if (empty($data)) {
                 return response()->json(['status' => 'fail', 'messages' => ['Data tidak ditemukan']]);
             }
 
@@ -624,15 +631,15 @@ class ApiMerchantController extends Controller
             ];
 
             return response()->json(MyHelper::checkGet($detail));
-        }else{
-            $getPostalCode = Subdistricts::where('id_subdistrict', $post['id_subdistrict']??null)->first()['subdistrict_postal_code']??null;
+        } else {
+            $getPostalCode = Subdistricts::where('id_subdistrict', $post['id_subdistrict'] ?? null)->first()['subdistrict_postal_code'] ?? null;
 
             $dataUpdate = [
-                'outlet_latitude' => $post['latitude']??null,
-                'outlet_longitude' => $post['longitude']??null,
-                'id_city' => $post['id_city']??null,
-                'id_subdistrict' => $post['id_subdistrict']??null,
-                'outlet_address' => $post['address']??null,
+                'outlet_latitude' => $post['latitude'] ?? null,
+                'outlet_longitude' => $post['longitude'] ?? null,
+                'id_city' => $post['id_city'] ?? null,
+                'id_subdistrict' => $post['id_subdistrict'] ?? null,
+                'outlet_address' => $post['address'] ?? null,
                 'outlet_postal_code' => $getPostalCode
             ];
 
@@ -643,54 +650,56 @@ class ApiMerchantController extends Controller
 
     public function bankList(){
         $list = BankName::select('id_bank_name', 'bank_code', 'bank_name', 'bank_image')->get()->toArray();
-        foreach ($list as $key=>$val){
-            $list[$key]['bank_image'] = (empty($val['bank_image']) ? config('url.storage_url_api').'img/default.jpg': config('url.storage_url_api').$val['bank_image']);
+        foreach ($list as $key=> $val){
+            $list[$key]['bank_image'] = (empty($val['bank_image']) ? config('url.storage_url_api') . 'img/default.jpg' : config('url.storage_url_api') . $val['bank_image']);
         }
         return response()->json(MyHelper::checkGet($list));
     }
 
-    public function bankAccountCheck(Request $request){
+    public function bankAccountCheck(Request $request)
+    {
         $post = $request->all();
 
-        if(empty($post['beneficiary_account'])){
+        if (empty($post['beneficiary_account'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Account number can not be empty']]);
         }
 
-        if(empty($post['id_bank_name'])){
+        if (empty($post['id_bank_name'])) {
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
 
         $arr = [1,1];
         shuffle($arr);
 
-        if($arr[0]){
+        if ($arr[0]) {
             return response()->json(['status' => 'success', 'result' => [
                 'beneficiary_name' => $request->user()->name,
                 'beneficiary_account' => $post['beneficiary_account']
             ]]);
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['Akun tidak ditemukan']]);
         }
     }
 
-    public function bankAccountCreate(Request $request){
+    public function bankAccountCreate(Request $request)
+    {
         $post = $request->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
-        if(empty($post['beneficiary_account'])){
+        if (empty($post['beneficiary_account'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Account number can not be empty']]);
         }
 
-        if(empty($post['id_bank_name'])){
+        if (empty($post['id_bank_name'])) {
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
 
         $check = BankAccount::where('beneficiary_account', $post['beneficiary_account'])->first();
-        if(empty($check)){
+        if (empty($check)) {
             $save = BankAccount::create([
                 'id_bank_name' => $post['id_bank_name'],
                 'beneficiary_name' => $request->user()->name,
@@ -703,16 +712,17 @@ class ApiMerchantController extends Controller
             'id_bank_account' => $check['id_bank_account'],
             'id_outlet' => $checkMerchant['id_outlet']
         ], [
-            'created_at' =>date('Y-m-d H:i:s'),
-            'updated_at' =>date('Y-m-d H:i:s')
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
         ]);
         return response()->json(MyHelper::checkUpdate($save));
     }
 
-    public function bankAccountList(Request $request){
+    public function bankAccountList(Request $request)
+    {
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
@@ -728,10 +738,11 @@ class ApiMerchantController extends Controller
         return response()->json(['status' => 'success' , 'result' => $list]);
     }
 
-    public function bankAccountDelete(Request $request){
+    public function bankAccountDelete(Request $request)
+    {
         $post = $request->all();
 
-        if(empty($post['id_bank_account'])){
+        if (empty($post['id_bank_account'])) {
             return response()->json([
                 'status' => 'fail',
                 'messages' => ['ID can not be empty']
@@ -739,7 +750,7 @@ class ApiMerchantController extends Controller
         }
 
         $delete = BankAccount::where('id_bank_account', $post['id_bank_account'])->delete();
-        if($delete){
+        if ($delete) {
             BankAccountOutlet::where('id_bank_account', $post['id_bank_account'])->delete();
         }
 
@@ -758,51 +769,52 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkGet($res));
     }
 
-    public function availableDelivery($id_outlet, $available_check = 0){
-        $post = New Request();
+    public function availableDelivery($id_outlet, $available_check = 0)
+    {
+        $post = new Request();
         $availableDelivery = app($this->online_trx)->listAvailableDelivery($post);
-        if(isset($availableDelivery['status']) && $availableDelivery['status'] == 'fail'){
+        if (isset($availableDelivery['status']) && $availableDelivery['status'] == 'fail') {
             return response()->json(['status' => 'fail', 'messages' => ['List delivery not found']]);
         }
 
         $deliveryOutlet = DeliveryOutlet::where('id_outlet', $id_outlet)->where('show_status', 1)
                         ->select('code', 'available_status', 'available_status')->get()->toArray();
 
-        $delivery = $availableDelivery['result']['delivery']??[];
+        $delivery = $availableDelivery['result']['delivery'] ?? [];
         $res = [];
-        foreach ($delivery as $key => $val){
-            if($val['available_status'] == 0){
+        foreach ($delivery as $key => $val) {
+            if ($val['available_status'] == 0) {
                 continue;
             }
             $service = [];
-            foreach ($val['service'] as $s){
-                $check = array_search($s['code'], array_column($deliveryOutlet,'code'));
+            foreach ($val['service'] as $s) {
+                $check = array_search($s['code'], array_column($deliveryOutlet, 'code'));
                 $available = 0;
-                if($check === false && $s['available_status'] == 1){
+                if ($check === false && $s['available_status'] == 1) {
                     $available = 1;
-                }else if($s['available_status'] == 1){
+                } elseif ($s['available_status'] == 1) {
                     $available = 1;
                 }
 
                 $outletVisibility = 1;
-                if($check !== false){
+                if ($check !== false) {
                     $outletVisibility = $deliveryOutlet[$check]['available_status'];
                 }
 
-                if ($available == 1 && ($available_check == 0 || ($available_check == 1 && $outletVisibility == 1))){
+                if ($available == 1 && ($available_check == 0 || ($available_check == 1 && $outletVisibility == 1))) {
                     $service[] = [
                         "code" => $s['code'],
                         "service_name" => $s['service_name'],
-                        "active_status" => $deliveryOutlet[$check]['available_status']??1,
-                        "drop_counter_status" => $s['drop_counter_status']??1
+                        "active_status" => $deliveryOutlet[$check]['available_status'] ?? 1,
+                        "drop_counter_status" => $s['drop_counter_status'] ?? 1
                     ];
                 }
             }
 
-            if(!empty($service)){
+            if (!empty($service)) {
                 $res[] = [
                     "delivery_name" => $val['delivery_name'],
-                    "delivery_method" =>$val['delivery_method'],
+                    "delivery_method" => $val['delivery_method'],
                     "logo" => $val['logo'],
                     "service" => $service
                 ];
@@ -812,19 +824,20 @@ class ApiMerchantController extends Controller
         return $res;
     }
 
-    public function deliverySettingUpdate(Request $request){
+    public function deliverySettingUpdate(Request $request)
+    {
         $post = $request->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
-        if(empty($post['code'])){
+        if (empty($post['code'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Code can not be empty']]);
         }
 
-        if(!isset($post['active_status'])){
+        if (!isset($post['active_status'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Status can not be empty']]);
         }
 
@@ -833,20 +846,21 @@ class ApiMerchantController extends Controller
             'id_outlet' => $checkMerchant['id_outlet']
         ], [
             'available_status' => $post['active_status'],
-            'created_at' =>date('Y-m-d H:i:s'),
-            'updated_at' =>date('Y-m-d H:i:s')
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
         ]);
         return response()->json(MyHelper::checkUpdate($save));
     }
 
-    public function shareMessage(Request $request){
+    public function shareMessage(Request $request)
+    {
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
-        $message = Setting::where('key', 'merchant_share_message')->first()['value_text']??'';
+        $message = Setting::where('key', 'merchant_share_message')->first()['value_text'] ?? '';
         $url = str_replace('id', $checkMerchant['id_outlet'], env('URL_SHARE'));
 
         $result = [
@@ -856,15 +870,17 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkGet($result));
     }
 
-    public function helpPage(){
-        $helpPage = Setting::where('key', 'merchant_help_page')->first()['value']??'';
-        return response()->json(MyHelper::checkGet(['url' => config('url.api_url').'api/custom-page/webview/'.$helpPage]));
+    public function helpPage()
+    {
+        $helpPage = Setting::where('key', 'merchant_help_page')->first()['value'] ?? '';
+        return response()->json(MyHelper::checkGet(['url' => config('url.api_url') . 'api/custom-page/webview/' . $helpPage]));
     }
 
-    public function summaryOrder(Request $request){
+    public function summaryOrder(Request $request)
+    {
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
@@ -883,21 +899,22 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkGet($result));
     }
 
-    public function statisticsOrder(Request $request){
+    public function statisticsOrder(Request $request)
+    {
         $post = $request->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
-        if(empty($post['type'])){
+        if (empty($post['type'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Type can not be empty']]);
         }
 
         $totalDays = 0;
         $date = [];
-        if(!empty($post['start_date']) && !empty($post['end_date'])){
+        if (!empty($post['start_date']) && !empty($post['end_date'])) {
             $start = strtotime(date('Y-m-d', strtotime($post['start_date'])));
             $end = strtotime(date('Y-m-d', strtotime($post['end_date'])));
             $datediff = $end - $start;
@@ -909,43 +926,44 @@ class ApiMerchantController extends Controller
                 'total_days' => $totalDays
             ];
 
-            if($start > $end){
+            if ($start > $end) {
                 return response()->json(['status' => 'fail', 'messages' => ['Tanggal mulai harus lebih kecil dari tanggal berakhir']]);
             }
         }
 
         $result = [];
-        if($post['type'] == 'daily'){
+        if ($post['type'] == 'daily') {
             $result = $this->statisticsDaily($checkMerchant['id_outlet'], $date);
-        }elseif($post['type'] == 'weekly'){
+        } elseif ($post['type'] == 'weekly') {
             $result = $this->statisticsWeekly($checkMerchant['id_outlet'], $date);
-        }elseif($post['type'] == 'monthly'){
+        } elseif ($post['type'] == 'monthly') {
             $result = $this->statisticsMonthly($checkMerchant['id_outlet'], $date);
-        }elseif($post['type'] == 'yearly'){
+        } elseif ($post['type'] == 'yearly') {
             $result = $this->statisticsYearly($checkMerchant['id_outlet'], $date);
         }
 
-        if(!empty($result['status'])){
+        if (!empty($result['status'])) {
             return response()->json($result);
-        }else{
+        } else {
             return response()->json(MyHelper::checkGet($result));
         }
     }
 
-    public function statisticsDaily($id_outlet, $date){
-        if(!empty($date)){
+    public function statisticsDaily($id_outlet, $date)
+    {
+        if (!empty($date)) {
             $start = $date['start_date'];
             $end = $date['end_date'];
             $currentDate = $end;
             $totalDays = $date['total_days'];
-        }else{
+        } else {
             $currentDate = date('Y-m-d');
             $totalDays = 6;
             $start = date('Y-m-d', strtotime('-6 day', strtotime($currentDate)));
             $end = $currentDate;
         }
 
-        if($totalDays > 31){
+        if ($totalDays > 31) {
             return ['status' => 'fail', 'messages' => ['Range tanggal yang bisa dipilih maksimal 31 hari lalu']];
         }
 
@@ -956,39 +974,40 @@ class ApiMerchantController extends Controller
                     ->groupBy(DB::raw('DATE(transaction_date)'))->get()->toArray();
 
         $resultDate = [];
-        foreach ($transactions as $trx){
+        foreach ($transactions as $trx) {
             $grandTotal = $grandTotal + (int)$trx['value'];
             $date = date('Y-m-d', strtotime($trx['date']));
-            if(!empty($resultDate[$date])){
+            if (!empty($resultDate[$date])) {
                 $resultDate[$date] = $resultDate[$date] + 1;
-            }else{
+            } else {
                 $resultDate[$date] = 1;
             }
         }
 
         $data = [];
-        for($i=0;$i<=$totalDays;$i++){
-            $date = date('Y-m-d', strtotime('-'.$i.' day', strtotime($currentDate)));
+        for ($i = 0; $i <= $totalDays; $i++) {
+            $date = date('Y-m-d', strtotime('-' . $i . ' day', strtotime($currentDate)));
             $data[] = [
                 'key' => MyHelper::dateFormatInd($date, false, false),
-                'value' => $resultDate[$date]??0
+                'value' => $resultDate[$date] ?? 0
             ];
         }
 
         $result = [
-            'revenue_text' => 'Pendapatan '.MyHelper::dateFormatInd($start, false, false).' sampai '.MyHelper::dateFormatInd($end, false, false),
-            'revenue_value' => 'Rp '.number_format((int)$grandTotal,0,",","."),
+            'revenue_text' => 'Pendapatan ' . MyHelper::dateFormatInd($start, false, false) . ' sampai ' . MyHelper::dateFormatInd($end, false, false),
+            'revenue_value' => 'Rp ' . number_format((int)$grandTotal, 0, ",", "."),
             'data' => $data
         ];
         return $result;
     }
 
-    public function statisticsWeekly($id_outlet, $date){
-        if(!empty($date)){
+    public function statisticsWeekly($id_outlet, $date)
+    {
+        if (!empty($date)) {
             $start = $date['start_date'];
             $end = $date['end_date'];
             $currentDate = $end;
-        }else{
+        } else {
             $currentDate = date('Y-m-d');
             $start = date('Y-m-d', strtotime('-2 months', strtotime($currentDate)));
             $end = $currentDate;
@@ -997,7 +1016,7 @@ class ApiMerchantController extends Controller
         $datediff = strtotime($end) - strtotime($start);
         $totalWeek = (int)round($datediff / 604800);
 
-        if(($datediff / 604800) >= 9){
+        if (($datediff / 604800) >= 9) {
             return ['status' => 'fail', 'messages' => ['Range tanggal yang bisa dipilih maksimal 2 bulan lalu']];
         }
 
@@ -1008,36 +1027,37 @@ class ApiMerchantController extends Controller
             ->groupBy(DB::raw('DATE(transaction_date)'))->get()->toArray();
 
         $resultDate = [];
-        foreach ($transactions as $trx){
+        foreach ($transactions as $trx) {
             $grandTotal = $grandTotal + (int)$trx['value'];
             $date = date("Y-m-d", strtotime('monday this week', strtotime($trx['date'])));
-            if(!empty($resultDate[$date])){
+            if (!empty($resultDate[$date])) {
                 $resultDate[$date] = $resultDate[$date] + 1;
-            }else{
+            } else {
                 $resultDate[$date] = 1;
             }
         }
 
         $data = [];
-        for($i=0;$i<$totalWeek;$i++){
-            $date = date('Y-m-d', strtotime('-'.$i.' week', strtotime($currentDate)));
+        for ($i = 0; $i < $totalWeek; $i++) {
+            $date = date('Y-m-d', strtotime('-' . $i . ' week', strtotime($currentDate)));
             $date = date("Y-m-d", strtotime('monday this week', strtotime($date)));
             $data[] = [
                 'key' => MyHelper::dateFormatInd($date, false, false),
-                'value' => $resultDate[$date]??0
+                'value' => $resultDate[$date] ?? 0
             ];
         }
 
         $result = [
-            'revenue_text' => 'Pendapatan '.MyHelper::dateFormatInd($start, false, false).' sampai '.MyHelper::dateFormatInd($end, false, false),
-            'revenue_value' => 'Rp '.number_format((int)$grandTotal,0,",","."),
+            'revenue_text' => 'Pendapatan ' . MyHelper::dateFormatInd($start, false, false) . ' sampai ' . MyHelper::dateFormatInd($end, false, false),
+            'revenue_value' => 'Rp ' . number_format((int)$grandTotal, 0, ",", "."),
             'data' => $data
         ];
         return $result;
     }
 
-    public function statisticsMonthly($id_outlet, $date){
-        if(!empty($date)){
+    public function statisticsMonthly($id_outlet, $date)
+    {
+        if (!empty($date)) {
             $dateQuery = $date['end_date'];
             $ts1 = strtotime($date['start_date']);
             $ts2 = strtotime($date['end_date']);
@@ -1047,12 +1067,12 @@ class ApiMerchantController extends Controller
             $month2 = date('m', $ts2);
 
             $totalMonth = (($year2 - $year1) * 12) + ($month2 - $month1);
-        }else{
+        } else {
             $dateQuery = date('Y-m-d');
             $totalMonth = 12;
         }
 
-        if($totalMonth > 12){
+        if ($totalMonth > 12) {
             return ['status' => 'fail', 'messages' => ['Range tanggal yang bisa dipilih maksimal 12 bulan lalu']];
         }
 
@@ -1061,10 +1081,10 @@ class ApiMerchantController extends Controller
         $start = '';
         $end = '';
         for ($i = 0; $i <= $totalMonth; $i++) {
-            $date = date("Y-m-01", strtotime( $dateQuery." -$i months"));
-            if($i==0){
+            $date = date("Y-m-01", strtotime($dateQuery . " -$i months"));
+            if ($i == 0) {
                 $end = $date;
-            }elseif($i==$totalMonth){
+            } elseif ($i == $totalMonth) {
                 $start = $date;
             }
             $monthFormat = MyHelper::dateFormatInd($date, false, false);
@@ -1076,10 +1096,10 @@ class ApiMerchantController extends Controller
                     ->whereMonth('transaction_date', $month)
                     ->whereYear('transaction_date', $year)
                     ->select(DB::raw('SUM(transaction_grandtotal) as value'), DB::raw('COUNT(id_transaction) as count'))->first();
-            $grandTotal = $grandTotal + (int)($value['value']??0);
+            $grandTotal = $grandTotal + (int)($value['value'] ?? 0);
             $data[] = [
                 'key' => $monthFormat,
-                'value' => (int)$value['count']??0
+                'value' => (int)$value['count'] ?? 0
             ];
         }
 
@@ -1089,53 +1109,55 @@ class ApiMerchantController extends Controller
         $end = str_replace('01', '', $end);
 
         $result = [
-            'revenue_text' => 'Pendapatan'.$start.' sampai '.$end,
-            'revenue_value' => 'Rp '.number_format((int)$grandTotal,0,",","."),
+            'revenue_text' => 'Pendapatan' . $start . ' sampai ' . $end,
+            'revenue_value' => 'Rp ' . number_format((int)$grandTotal, 0, ",", "."),
             'data' => $data
         ];
         return $result;
     }
 
-    public function statisticsYearly($id_outlet, $date){
-        if(!empty($date)){
+    public function statisticsYearly($id_outlet, $date)
+    {
+        if (!empty($date)) {
             $currentYear = date('Y', strtotime($date['end_date']));
             $totalYear = (int)$currentYear - (int)date('Y', strtotime($date['start_date']));
-        }else{
+        } else {
             $currentYear = date('Y');
             $totalYear = 5;
         }
 
-        if($totalYear > 5){
+        if ($totalYear > 5) {
             return ['status' => 'fail', 'messages' => ['Range tanggal yang bisa dipilih maksimal 5 tahun lalu']];
         }
 
         $data = [];
         $grandTotal = 0;
         for ($i = 0; $i <= $totalYear; $i++) {
-            $year = $currentYear-$i;
+            $year = $currentYear - $i;
             $value = Transaction::where('id_outlet', $id_outlet)->where('transaction_status', 'Completed')
                 ->whereYear('transaction_date', $year)
                 ->select(DB::raw('SUM(transaction_grandtotal) as value'), DB::raw('COUNT(id_transaction) as count'))->first();
-            $grandTotal = $grandTotal + (int)($value['value']??0);
+            $grandTotal = $grandTotal + (int)($value['value'] ?? 0);
             $data[] = [
                 'key' => $year,
-                'value' => (int)$value['count']??0
+                'value' => (int)$value['count'] ?? 0
             ];
         }
 
         $result = [
             'revenue_text' => 'Pendapatan',
-            'revenue_value' => 'Rp '.number_format((int)$grandTotal,0,",","."),
+            'revenue_value' => 'Rp ' . number_format((int)$grandTotal, 0, ",", "."),
             'data' => $data
         ];
 
         return $result;
     }
 
-    public function inboxList(Request $request){
+    public function inboxList(Request $request)
+    {
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
@@ -1143,61 +1165,60 @@ class ApiMerchantController extends Controller
         $countUnread = 0;
         $countInbox = 0;
         $arrDate = [];
-        $max_date = date('Y-m-d',time() - ((Setting::select('value')->where('key','inbox_max_days')->pluck('value')->first()?:30) * 86400));
-        $privates = MerchantInbox::where('id_merchant','=',$checkMerchant['id_merchant'])->whereDate('inboxes_send_at','>',$max_date)->get()->toArray();
+        $max_date = date('Y-m-d', time() - ((Setting::select('value')->where('key', 'inbox_max_days')->pluck('value')->first() ?: 30) * 86400));
+        $privates = MerchantInbox::where('id_merchant', '=', $checkMerchant['id_merchant'])->whereDate('inboxes_send_at', '>', $max_date)->get()->toArray();
 
-        foreach($privates as $private){
+        foreach ($privates as $private) {
             $content = [];
-            $content['id_inbox'] 	 = $private['id_merchant_inboxes'];
-            $content['subject'] 	 = $private['inboxes_subject'];
-            $content['clickto'] 	 = $private['inboxes_clickto'];
+            $content['id_inbox']     = $private['id_merchant_inboxes'];
+            $content['subject']      = $private['inboxes_subject'];
+            $content['clickto']      = $private['inboxes_clickto'];
 
-            if($private['inboxes_id_reference']){
+            if ($private['inboxes_id_reference']) {
                 $content['id_reference'] = $private['inboxes_id_reference'];
-            }else{
+            } else {
                 $content['id_reference'] = 0;
             }
 
-            if($content['clickto']=='Deals Detail'){
+            if ($content['clickto'] == 'Deals Detail') {
                 $content['id_brand'] = $private['id_brand'];
             }
 
-            if($content['clickto'] == 'News'){
+            if ($content['clickto'] == 'News') {
                 $news = News::find($private['inboxes_id_reference']);
-                if($news){
+                if ($news) {
                     $content['news_title'] = $news->news_title;
-                    $content['url'] = config('url.app_url').'news/webview/'.$news->id_news;
+                    $content['url'] = config('url.app_url') . 'news/webview/' . $news->id_news;
                 }
-
             }
 
-            if($content['clickto'] == 'Content'){
+            if ($content['clickto'] == 'Content') {
                 $content['content'] = $private['inboxes_content'];
-            }else{
-                $content['content']	= null;
+            } else {
+                $content['content'] = null;
             }
 
-            if($content['clickto'] == 'Link'){
+            if ($content['clickto'] == 'Link') {
                 $content['link'] = $private['inboxes_link'];
-            }else{
+            } else {
                 $content['link'] = null;
             }
 
-            $content['created_at'] 	 = $private['inboxes_send_at'];
+            $content['created_at']   = $private['inboxes_send_at'];
 
-            if($private['read'] === '0'){
+            if ($private['read'] === '0') {
                 $content['status'] = 'unread';
                 $countUnread++;
-            }else{
+            } else {
                 $content['status'] = 'read';
             }
 
-            if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
+            if (!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)) {
                 $arrDate[] = date('Y-m-d', strtotime($content['created_at']));
                 $temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
                 $temp['list'][0] =  $content;
                 $arrInbox[] = $temp;
-            }else{
+            } else {
                 $position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
                 $arrInbox[$position]['list'][] = $content;
             }
@@ -1205,27 +1226,27 @@ class ApiMerchantController extends Controller
             $countInbox++;
         }
 
-        if(isset($arrInbox) && !empty($arrInbox)) {
+        if (isset($arrInbox) && !empty($arrInbox)) {
             foreach ($arrInbox as $key => $value) {
-                usort($arrInbox[$key]['list'], function($a, $b){
+                usort($arrInbox[$key]['list'], function ($a, $b) {
                     $t1 = strtotime($a['created_at']);
                     $t2 = strtotime($b['created_at']);
                     return $t2 - $t1;
                 });
             }
 
-            usort($arrInbox, function($a, $b){
+            usort($arrInbox, function ($a, $b) {
                 $t1 = strtotime($a['created']);
                 $t2 = strtotime($b['created']);
                 return $t2 - $t1;
             });
 
-            foreach ($arrInbox as $key=>$data){
+            foreach ($arrInbox as $key => $data) {
                 $currentDate = date('d/m/Y');
                 $dateConvert = date('d/m/Y', strtotime($data['created']));
-                if($currentDate == $dateConvert){
+                if ($currentDate == $dateConvert) {
                     $date =  'Hari ini';
-                }else{
+                } else {
                     $date = $dateConvert;
                 }
                 $arrInbox[$key]['created'] = $date;
@@ -1248,15 +1269,16 @@ class ApiMerchantController extends Controller
         return response()->json($result);
     }
 
-    public function inboxMarked(Request $request){
+    public function inboxMarked(Request $request)
+    {
         $post = $request->json()->all();
         $inbox = MerchantInbox::where('id_merchant_inboxes', $post['id_inbox'])->first();
-        if(!empty($inbox)){
+        if (!empty($inbox)) {
             MerchantInbox::where('id_merchant_inboxes', $post['id_inbox'])->update(['read' => '1']);
             $result = [
                 'status'  => 'success'
             ];
-        }else{
+        } else {
             $result = [
                 'status'  => 'fail',
                 'messages'  => ['Inbox not found']
@@ -1265,38 +1287,40 @@ class ApiMerchantController extends Controller
         return response()->json($result);
     }
 
-    public function inboxMarkedAll(Request $request){
+    public function inboxMarkedAll(Request $request)
+    {
         $update = MerchantInbox::where('id_merchant', $request->id_merchant)->update(['read' => 1]);
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function balanceDetail(Request $request){
+    public function balanceDetail(Request $request)
+    {
         $post = $request->json()->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
         $currentBalance = MerchantLogBalance::where('id_merchant', $checkMerchant['id_merchant'])->sum('merchant_balance');
         $history = MerchantLogBalance::where('id_merchant', $checkMerchant['id_merchant'])->orderBy('created_at', 'desc');
 
-        if(!empty($post['history_date_start']) && !empty($post['history_date_end'])){
+        if (!empty($post['history_date_start']) && !empty($post['history_date_end'])) {
             $history = $history->whereDate('created_at', '>=', date('Y-m-d', strtotime($post['history_date_start'])))
                 ->whereDate('created_at', '<=', date('Y-m-d', strtotime($post['history_date_end'])));
         }
 
-        $history = $history->paginate($post['pagination_total_row']??15)->toArray();
+        $history = $history->paginate($post['pagination_total_row'] ?? 15)->toArray();
 
-        foreach ($history['data']??[] as $key=>$dt){
-            if($dt['merchant_balance'] < 0){
+        foreach ($history['data'] ?? [] as $key => $dt) {
+            if ($dt['merchant_balance'] < 0) {
                 $title = 'Penarikan Saldo';
                 $des = 'Total saldo terpakai';
-                $nominal = '-Rp '.number_format(abs($dt['merchant_balance']),0,",",".");
-            }else{
+                $nominal = '-Rp ' . number_format(abs($dt['merchant_balance']), 0, ",", ".");
+            } else {
                 $title = 'Saldo Masuk';
                 $des = 'Total saldo didapat';
-                $nominal = 'Rp '.number_format($dt['merchant_balance'],0,",",".");
+                $nominal = 'Rp ' . number_format($dt['merchant_balance'], 0, ",", ".");
             }
             $history['data'][$key] = [
                 'date' => MyHelper::dateFormatInd($dt['created_at'], false),
@@ -1308,36 +1332,37 @@ class ApiMerchantController extends Controller
         }
 
         $res = [
-            'current_balance' => 'Rp '.number_format($currentBalance,0,",","."),
+            'current_balance' => 'Rp ' . number_format($currentBalance, 0, ",", "."),
             'history' => $history
         ];
 
         return response()->json(MyHelper::checkGet($res));
     }
 
-    public function balanceWithdrawalFee(Request $request){
+    public function balanceWithdrawalFee(Request $request)
+    {
         $post = $request->json()->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
-        if(empty($post['id_bank_account']) || empty($post['amount_withdrawal'])){
+        if (empty($post['id_bank_account']) || empty($post['amount_withdrawal'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Imcompleted data']]);
         }
 
-        if($post['amount_withdrawal'] < 10000){
-            return response()->json(['status' => 'fail', 'messages' => ['Jumlah penarikan minumum '.number_format(10000, 0,",",".")]]);
+        if ($post['amount_withdrawal'] < 10000) {
+            return response()->json(['status' => 'fail', 'messages' => ['Jumlah penarikan minumum ' . number_format(10000, 0, ",", ".")]]);
         }
 
-        if($post['amount_withdrawal'] <= 0){
+        if ($post['amount_withdrawal'] <= 0) {
             return response()->json(['status' => 'fail', 'messages' => ['Jumlah penarikan tidak valid']]);
         }
 
         $currentBalance = MerchantLogBalance::where('id_merchant', $checkMerchant['id_merchant'])->sum('merchant_balance');
 
-        if($post['amount_withdrawal'] > $currentBalance){
+        if ($post['amount_withdrawal'] > $currentBalance) {
             return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo saat ini tidak mencukupi']]);
         }
 
@@ -1347,57 +1372,58 @@ class ApiMerchantController extends Controller
             ->where('id_outlet', $checkMerchant['id_outlet'])
             ->first();
 
-        if(empty($checkBankAccount)){
+        if (empty($checkBankAccount)) {
             return response()->json(['status' => 'fail', 'messages' => ['Bank account tidak ditemukan']]);
         }
 
         $amount = $post['amount_withdrawal'];
         //calculate withdrawal fee
-        if(empty($checkBankAccount['withdrawal_fee_formula'])){
-            $formula = Setting::where('key', 'withdrawal_fee_global')->first()['value']??null;
-        }else{
+        if (empty($checkBankAccount['withdrawal_fee_formula'])) {
+            $formula = Setting::where('key', 'withdrawal_fee_global')->first()['value'] ?? null;
+        } else {
             $formula = $checkBankAccount['withdrawal_fee_formula'];
         }
 
         $fee = (!empty($formula) ? MyHelper::calculator($formula, ['amount' => $amount]) : 0);
 
         $totalTransfer = $amount + $fee;
-        if($totalTransfer > $currentBalance){
+        if ($totalTransfer > $currentBalance) {
             return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo saat ini tidak mencukupi']]);
         }
 
         $result = [
-            'ammount' => 'Rp '.number_format($amount, 0,",","."),
-            'fee' => 'Rp '.number_format($fee, 0,",","."),
-            'total_withdrawal' => 'Rp '.number_format($totalTransfer, 0,",",".")
+            'ammount' => 'Rp ' . number_format($amount, 0, ",", "."),
+            'fee' => 'Rp ' . number_format($fee, 0, ",", "."),
+            'total_withdrawal' => 'Rp ' . number_format($totalTransfer, 0, ",", ".")
         ];
 
         return response()->json(['status' => 'success', 'result' => $result]);
     }
 
-    public function balanceWithdrawal(Request $request){
+    public function balanceWithdrawal(Request $request)
+    {
         $post = $request->json()->all();
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
-        if(empty($post['id_bank_account']) || empty($post['amount_withdrawal'])){
+        if (empty($post['id_bank_account']) || empty($post['amount_withdrawal'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Imcompleted data']]);
         }
 
-        if($post['amount_withdrawal'] < 10000){
-            return response()->json(['status' => 'fail', 'messages' => ['Jumlah penarikan minumum '.number_format(10000, 0,",",".")]]);
+        if ($post['amount_withdrawal'] < 10000) {
+            return response()->json(['status' => 'fail', 'messages' => ['Jumlah penarikan minumum ' . number_format(10000, 0, ",", ".")]]);
         }
 
-        if($post['amount_withdrawal'] <= 0){
+        if ($post['amount_withdrawal'] <= 0) {
             return response()->json(['status' => 'fail', 'messages' => ['Jumlah penarikan tidak valid']]);
         }
 
         $currentBalance = MerchantLogBalance::where('id_merchant', $checkMerchant['id_merchant'])->sum('merchant_balance');
 
-        if($post['amount_withdrawal'] > $currentBalance){
+        if ($post['amount_withdrawal'] > $currentBalance) {
             return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo saat ini tidak mencukupi']]);
         }
 
@@ -1407,22 +1433,22 @@ class ApiMerchantController extends Controller
                             ->where('id_outlet', $checkMerchant['id_outlet'])
                             ->first();
 
-        if(empty($checkBankAccount)){
+        if (empty($checkBankAccount)) {
             return response()->json(['status' => 'fail', 'messages' => ['Bank account tidak ditemukan']]);
         }
 
         $amount = $post['amount_withdrawal'];
         //calculate withdrawal fee
-        if(empty($checkBankAccount['withdrawal_fee_formula'])){
-            $formula = Setting::where('key', 'withdrawal_fee_global')->first()['value']??null;
-        }else{
+        if (empty($checkBankAccount['withdrawal_fee_formula'])) {
+            $formula = Setting::where('key', 'withdrawal_fee_global')->first()['value'] ?? null;
+        } else {
             $formula = $checkBankAccount['withdrawal_fee_formula'];
         }
 
         $fee = (!empty($formula) ? MyHelper::calculator($formula, ['amount' => $amount]) : 0);
 
         $totalTransfer = $amount + $fee;
-        if($totalTransfer > $currentBalance){
+        if ($totalTransfer > $currentBalance) {
             return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo saat ini tidak mencukupi']]);
         }
 
@@ -1448,11 +1474,11 @@ class ApiMerchantController extends Controller
                 'id_bank_account' => $checkBankAccount['id_bank_account']
             ];
 
-            if(!empty(env('URL_IRIS'))){
+            if (!empty(env('URL_IRIS'))) {
                 DisburseJob::dispatch($toSend)->onConnection('disbursequeue');
             }
 
-            if($fee > 0){
+            if ($fee > 0) {
                 $dtFee = [
                     'id_merchant' => $checkMerchant['id_merchant'],
                     'balance_nominal' => -$fee,
@@ -1477,14 +1503,15 @@ class ApiMerchantController extends Controller
         }
     }
 
-    public function balanceList(Request $request){
+    public function balanceList(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(empty($post['id_outlet'])){
+        if (empty($post['id_outlet'])) {
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
         $checkMerchant = Merchant::where('id_outlet', $post['id_outlet'])->first();
-        if(empty($checkMerchant)){
+        if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
@@ -1495,26 +1522,26 @@ class ApiMerchantController extends Controller
                 ->whereIn('merchant_balance_source', ['Withdrawal', 'Withdrawal Fee'])
                 ->where('id_merchant', $checkMerchant['id_merchant'])->select('merchant_log_balances.*');
 
-        if(!empty($post['search_key'])){
-            $list1 = $list1->where(function ($q) use($post){
-                $q->where('transaction_receipt_number', 'like', '%'.$post['search_key'].'%')
-                    ->orWhere('merchant_balance_source', 'like', '%'.$post['search_key'].'%');
-            }   );
-            $list2 = $list2->where(function ($q) use($post){
-                $q->where('beneficiary_name', 'like', '%'.$post['search_key'].'%')
-                    ->orWhere('beneficiary_account', 'like', '%'.$post['search_key'].'%')
-                    ->orWhere('merchant_balance_source', 'like', '%'.$post['search_key'].'%');
+        if (!empty($post['search_key'])) {
+            $list1 = $list1->where(function ($q) use ($post) {
+                $q->where('transaction_receipt_number', 'like', '%' . $post['search_key'] . '%')
+                    ->orWhere('merchant_balance_source', 'like', '%' . $post['search_key'] . '%');
+            });
+            $list2 = $list2->where(function ($q) use ($post) {
+                $q->where('beneficiary_name', 'like', '%' . $post['search_key'] . '%')
+                    ->orWhere('beneficiary_account', 'like', '%' . $post['search_key'] . '%')
+                    ->orWhere('merchant_balance_source', 'like', '%' . $post['search_key'] . '%');
             });
         }
 
         $list = $list1->unionAll($list2)->orderBy('created_at', 'desc')->paginate(15)->toArray();
 
-        foreach ($list['data']??[] as $key=>$dt){
+        foreach ($list['data'] ?? [] as $key => $dt) {
             $transaction = [];
             $bankAccount = [];
-            if($dt['merchant_balance_source'] == 'Transaction Completed' || $dt['merchant_balance_source'] == 'Transaction Consultation Completed'){
+            if ($dt['merchant_balance_source'] == 'Transaction Completed' || $dt['merchant_balance_source'] == 'Transaction Consultation Completed') {
                 $transaction = Transaction::where('id_transaction', $dt['merchant_balance_id_reference'])->first();
-            }elseif($dt['merchant_balance_source'] == 'Withdrawal'){
+            } elseif ($dt['merchant_balance_source'] == 'Withdrawal') {
                 $bankAccount =  BankAccount::join('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
                     ->where('bank_accounts.id_bank_account', $dt['merchant_balance_id_reference'])
                     ->first();
@@ -1532,7 +1559,8 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkGet($list));
     }
 
-    public function listSettingOption(Request $request){
+    public function listSettingOption(Request $request)
+    {
         $post = $request->json()->all();
 
         $data = Merchant::leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
@@ -1545,8 +1573,9 @@ class ApiMerchantController extends Controller
         $data = $data->get();
         return response()->json(MyHelper::checkGet($data));
     }
-    
-    public function balanceTransfer($data){
+
+    public function balanceTransfer($data)
+    {
         $fee = $data['fee'];
         $idMerchantBalance = $data['id_merchant_log_balance'];
         $idBankAccount = $data['id_bank_account'];
@@ -1563,12 +1592,11 @@ class ApiMerchantController extends Controller
             'rejected' => 'Rejected'
         ];
 
-        $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $toSend]);
-        if(isset($sendToIris['status']) && $sendToIris['status'] == 'success') {
-
+        $sendToIris = MyHelper::connectIris('Payouts', 'POST', 'api/v1/payouts', ['payouts' => $toSend]);
+        if (isset($sendToIris['status']) && $sendToIris['status'] == 'success') {
             if (isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])) {
-                $response = $sendToIris['response']['payouts'][0]??[];
-                if(!empty($response)){
+                $response = $sendToIris['response']['payouts'][0] ?? [];
+                if (!empty($response)) {
                     Disburse::create([
                         'id_merchant_log_balance' => $idMerchantBalance,
                         'disburse_nominal' => $data['amount'],
@@ -1587,22 +1615,26 @@ class ApiMerchantController extends Controller
                     $refNo = $response['reference_no'];
                     MerchantLogBalance::where('id_merchant_log_balance', $idMerchantBalance)->update(['merchant_balance_status' => 'Pending']);
 
-                    $idMerchant = MerchantLogBalance::where('id_merchant_log_balance', $idMerchantBalance)->first()['id_merchant']??null;
+                    $idMerchant = MerchantLogBalance::where('id_merchant_log_balance', $idMerchantBalance)->first()['id_merchant'] ?? null;
                     $user = User::join('merchants', 'merchants.id_user', 'users.id')->where('id_merchant', $idMerchant)
                         ->select('users.*')->first();
                     app($this->autocrm)->SendAutoCRM(
                         'Merchant Withdrawal',
                         $user['phone'],
                         [
-                            'amount' => number_format((int)$data['amount'],0,",","."),
+                            'amount' => number_format((int)$data['amount'], 0, ",", "."),
                             'status' => 'Pending'
-                        ],null, false, false, 'merchant'
+                        ],
+                        null,
+                        false,
+                        false,
+                        'merchant'
                     );
                 }
             }
-        }elseif(isset($sendToIris['response']['errors']) && !empty($sendToIris['response']['errors'])){
-            $err = $sendToIris['response']['errors'][0]??[];
-            if(!empty($err)){
+        } elseif (isset($sendToIris['response']['errors']) && !empty($sendToIris['response']['errors'])) {
+            $err = $sendToIris['response']['errors'][0] ?? [];
+            if (!empty($err)) {
                 Disburse::create([
                     'id_merchant_log_balance' => $idMerchantBalance,
                     'disburse_nominal' => $data['amount'],
@@ -1620,10 +1652,10 @@ class ApiMerchantController extends Controller
         }
 
         $settingApprover = Setting::where('key', 'disburse_auto_approve_setting')->first();
-        if(!empty($refNo) && $settingApprover && $settingApprover['value'] == 1){
-            $sendApprover = MyHelper::connectIris('Approver', 'POST','api/v1/payouts/approve', ['reference_nos' => [$refNo]], 1);
+        if (!empty($refNo) && $settingApprover && $settingApprover['value'] == 1) {
+            $sendApprover = MyHelper::connectIris('Approver', 'POST', 'api/v1/payouts/approve', ['reference_nos' => [$refNo]], 1);
 
-            if(isset($sendApprov['status']) && $sendApprov['status'] == 'fail') {
+            if (isset($sendApprov['status']) && $sendApprov['status'] == 'fail') {
                 $checkError = in_array("Partner does not have sufficient balance for the payout", $sendApprover['response']['errors']);
 
                 if ($checkError !== false) {
@@ -1631,7 +1663,7 @@ class ApiMerchantController extends Controller
                 } else {
                     Disburse::where('reference_no', $refNo)->update(['disburse_status' => 'Fail', 'error_message' => implode(',', $sendApprover['response']['errors'])]);
                 }
-            }else{
+            } else {
                 MerchantLogBalance::where('id_merchant_log_balance', $idMerchantBalance)->update(['merchant_balance_status' => 'On Progress']);
             }
         }

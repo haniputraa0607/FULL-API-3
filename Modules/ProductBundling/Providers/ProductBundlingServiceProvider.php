@@ -39,10 +39,11 @@ class ProductBundlingServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('productbundling.php'),
+            __DIR__ . '/../Config/config.php' => config_path('productbundling.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'productbundling'
+            __DIR__ . '/../Config/config.php',
+            'productbundling'
         );
     }
 
@@ -55,11 +56,11 @@ class ProductBundlingServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/productbundling');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/productbundling';
@@ -78,7 +79,7 @@ class ProductBundlingServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'productbundling');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'productbundling');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'productbundling');
         }
     }
 

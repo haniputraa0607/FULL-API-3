@@ -6,7 +6,6 @@ use Illuminate\Contracts\View\View;
 use Maatwebsite\Excel\Concerns\FromView;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
-
 class TransactionBladeExport implements FromView, WithTitle
 {
     private $data;

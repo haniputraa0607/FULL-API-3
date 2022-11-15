@@ -17,14 +17,19 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use DateTime;
 use DB;
-
 use Illuminate\Support\Facades\Log;
 use Modules\Transaction\Entities\TransactionGroup;
 
 class FraudJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-    protected $user,$data,$type;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
+    protected $user;
+    protected $data;
+    protected $type;
     /**
      * Create a new job instance.
      *
@@ -44,16 +49,16 @@ class FraudJob implements ShouldQueue
      */
     public function handle()
     {
-        if($this->type == 'transaction'){
+        if ($this->type == 'transaction') {
             $dataTrx = TransactionGroup::where('id_transaction_group', $this->data['id_transaction_group'])->first();
             $dataUser = User::where('id', $this->data['id_user'])->with('memberships')->first();
 
             app('Modules\SettingFraud\Http\Controllers\ApiFraud')->checkFraudTrxOnline($dataUser, $dataTrx);
-        }elseif ($this->type == 'referral user'){
+        } elseif ($this->type == 'referral user') {
             app('Modules\SettingFraud\Http\Controllers\ApiFraud')->fraudCheckReferralUser($this->data);
-        }elseif ($this->type == 'referral'){
+        } elseif ($this->type == 'referral') {
             app('Modules\SettingFraud\Http\Controllers\ApiFraud')->fraudCheckReferral($this->data);
-        }elseif ($this->type == 'transaction_in_between'){
+        } elseif ($this->type == 'transaction_in_between') {
             app('Modules\SettingFraud\Http\Controllers\ApiFraud')->cronFraudInBetween($this->user);
         }
 

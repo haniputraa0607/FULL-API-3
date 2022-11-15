@@ -21,7 +21,9 @@ use Modules\PromoCampaign\Entities\PromoCampaignHaveTag;
 use Modules\PromoCampaign\Entities\PromoCampaignTag;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
 use Modules\PromoCampaign\Entities\UserReferralCode;
-use Modules\PromoCampaign\Entities\UserPromo;;
+use Modules\PromoCampaign\Entities\UserPromo;
+
+;
 use Modules\Transaction\Entities\TransactionPromo;
 use Modules\PromoCampaign\Entities\PromoCampaignShipmentMethod;
 use Modules\PromoCampaign\Entities\PromoCampaignPaymentMethod;
@@ -59,8 +61,8 @@ use Hash;
 
 class ApiPromoTransaction extends Controller
 {
-
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
 
         $this->online_trx = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
@@ -88,7 +90,7 @@ class ApiPromoTransaction extends Controller
             ->get()
             ->toArray();
 
-        $result = array_map(function($var) {
+        $result = array_map(function ($var) {
             return [
                 'id_deals' => $var['deal_voucher']['id_deals'],
                 'voucher_expired_at' => $var['voucher_expired_at'],
@@ -99,7 +101,7 @@ class ApiPromoTransaction extends Controller
                 'url_deals_image' => $var['deal_voucher']['deal']['url_deals_image'],
                 'is_used' => $var['is_used'],
                 'date_expired_indo' => MyHelper::adjustTimezone($var['voucher_expired_at'], $user->user_time_zone_utc ?? 7, 'd F Y', true),
-                'time_expired_indo' => 'pukul '.date('H:i', strtotime($var['voucher_expired_at'])),
+                'time_expired_indo' => 'pukul ' . date('H:i', strtotime($var['voucher_expired_at'])),
                 'text' => null,
                 'is_error' => false
             ];
@@ -113,7 +115,7 @@ class ApiPromoTransaction extends Controller
         $bearerToken = request()->bearerToken();
         $tokenId = (new Parser())->parse($bearerToken)->getHeader('jti');
         $getOauth = OauthAccessToken::find($tokenId);
-        $scopeUser = str_replace(str_split('[]""'),"",$getOauth['scopes']);
+        $scopeUser = str_replace(str_split('[]""'), "", $getOauth['scopes']);
 
         return $scopeUser;
     }
@@ -185,9 +187,9 @@ class ApiPromoTransaction extends Controller
             }
         }
 
-        $validPayment = $data['available_payment']??[];
+        $validPayment = $data['available_payment'] ?? [];
         if (!empty($codePayment)) {
-            foreach ($data['available_payment']??[] as $key=>$payment) {
+            foreach ($data['available_payment'] ?? [] as $key => $payment) {
                 if (!in_array($payment['payment_method'], $codePayment)) {
                     unset($validPayment[$key]);
                 }
@@ -195,17 +197,17 @@ class ApiPromoTransaction extends Controller
         }
         $validPayment = array_values($validPayment);
 
-        if(isset($data['subtotal'])){
+        if (isset($data['subtotal'])) {
             $sharedPromoTrx['subtotal'] = $data['subtotal'];
         }
 
         $totalAllDisc = 0;
         $discDeliveryAll = 0;
         if (isset($userPromo['promo_campaign'])) {
-            if(!empty($promoCampaign)){
+            if (!empty($promoCampaign)) {
                 //check product rule
                 $checkItemPromo = $this->checkRuleItem($data, $promoCampaign);
-                if(!$checkItemPromo['status']){
+                if (!$checkItemPromo['status']) {
                     $codeErr = $checkItemPromo['message'];
                 }
 
@@ -213,12 +215,12 @@ class ApiPromoTransaction extends Controller
                 $allOutlet = array_unique(array_column($data['items'], 'id_outlet'));
                 $promoBrands = PromoCampaignBrand::where('id_promo_campaign', $promoCampaign->id_promo_campaign)->pluck('id_brand')->toArray();
                 $outletBrand = BrandOutlet::whereIn('id_outlet', $allOutlet)->pluck('id_brand')->toArray();
-                $checkBrand 	= array_diff($promoBrands, $outletBrand);
+                $checkBrand     = array_diff($promoBrands, $outletBrand);
 
                 $statusCheckBrand = true;
-                if(!empty($promoBrands) && $promoCampaign->brand_rule == 'or' && count($checkBrand) == count($promoBrands)) {
+                if (!empty($promoBrands) && $promoCampaign->brand_rule == 'or' && count($checkBrand) == count($promoBrands)) {
                     $statusCheckBrand = false;
-                }elseif(!empty($promoBrands) && $promoCampaign->brand_rule == 'and' && !empty($checkBrand)){
+                } elseif (!empty($promoBrands) && $promoCampaign->brand_rule == 'and' && !empty($checkBrand)) {
                     $statusCheckBrand = false;
                 }
 
@@ -227,33 +229,33 @@ class ApiPromoTransaction extends Controller
                 }
             }
 
-            foreach ($data['items'] as $key=>$dt){
+            foreach ($data['items'] as $key => $dt) {
                 if (empty($codeErr)) {
                     $applyCode = $this->applyPromoCode($userPromo['promo_campaign']->id_reference, $dt);
                     $codeErr = $applyCode['messages'] ?? $codeErr;
                 }
 
-                $err = $codeErr??[];
+                $err = $codeErr ?? [];
                 $resPromoCode = [
-                    'promo_code' 		=> $sharedPromoTrx['promo_campaign']['promo_code'] ?? null,
-                    'title' 			=> $applyCode['result']['title'] ?? $promoCode['result']->promo_code ?? null,
-                    'text' 				=> array_map(function($v){
+                    'promo_code'        => $sharedPromoTrx['promo_campaign']['promo_code'] ?? null,
+                    'title'             => $applyCode['result']['title'] ?? $promoCode['result']->promo_code ?? null,
+                    'text'              => array_map(function ($v) {
                         return trim(strip_tags($v));
-                    },$err),
-                    'remove_text' 		=> 'Batalkan penggunaan ' . ($sharedPromoTrx['promo_campaign']['promo_title'] ?? null)
+                    }, $err),
+                    'remove_text'       => 'Batalkan penggunaan ' . ($sharedPromoTrx['promo_campaign']['promo_title'] ?? null)
                 ];
 
                 $resPromo = $applyCode['result'] ?? null;
                 $discItemStatus = 0;
-                if(!empty($resPromo['promo_type']) && ($resPromo['promo_type'] == 'Product discount' || $resPromo['promo_type'] == 'Tier discount')){
+                if (!empty($resPromo['promo_type']) && ($resPromo['promo_type'] == 'Product discount' || $resPromo['promo_type'] == 'Tier discount')) {
                     $sharedPromo = TemporaryDataManager::create('promo_trx');
 
                     $itemsFinal = [];
-                    if(!empty($sharedPromo['items'])){
+                    if (!empty($sharedPromo['items'])) {
                         $discItemStatus = 1;
-                        foreach ($sharedPromo['items'] as $index=>$it){
+                        foreach ($sharedPromo['items'] as $index => $it) {
                             $explode = explode('-', $index);
-                            if($explode[0] == $dt['id_outlet'] && $it['is_promo'] == 1){
+                            if ($explode[0] == $dt['id_outlet'] && $it['is_promo'] == 1) {
                                 $newPrice = $it['new_price'];
                                 $totalDiscount = $it['total_discount'];
                                 $baseDiscount = $it['base_discount'];
@@ -266,15 +268,15 @@ class ApiPromoTransaction extends Controller
                                 unset($it['not_get_discount']);
 
                                 $it['product_price_after_discount'] = $newPrice;
-                                $it['product_price_after_discount_text'] = 'Rp '.number_format($newPrice,0,",",".");
+                                $it['product_price_after_discount_text'] = 'Rp ' . number_format($newPrice, 0, ",", ".");
                                 $it['product_price_subtotal_after_discount'] = $it['product_price_subtotal'] - $totalDiscount;
-                                $it['product_price_subtotal_after_discount_text'] = 'Rp '.number_format($it['product_price_subtotal_after_discount'],0,",",".");
+                                $it['product_price_subtotal_after_discount_text'] = 'Rp ' . number_format($it['product_price_subtotal_after_discount'], 0, ",", ".");
                                 $it['total_discount'] = $totalDiscount;
                                 $it['base_discount_each_item'] = $baseDiscount;
                                 $it['qty_discount'] = $qtyDiscount;
 
                                 $itemsFinal[] = $it;
-                            }else{
+                            } else {
                                 unset($it['promo_qty']);
                                 unset($it['new_price']);
                                 unset($it['total_discount']);
@@ -289,30 +291,30 @@ class ApiPromoTransaction extends Controller
                     }
                 }
 
-                $disc = $resPromo['discount']??0;
-                $discDelivery = $resPromo['discount_delivery']??0;
+                $disc = $resPromo['discount'] ?? 0;
+                $discDelivery = $resPromo['discount_delivery'] ?? 0;
                 $discAll = $disc + $discDelivery;
                 $subTotalPromo = $dt['subtotal'] - $discAll;
-                $data['items'][$key]['items'] = $itemsFinal??$dt['items'];
+                $data['items'][$key]['items'] = $itemsFinal ?? $dt['items'];
                 $data['items'][$key]['items_subtotal'] = $dt['items_subtotal'];
 
-                if($disc > 0){
+                if ($disc > 0) {
                     $data['items'][$key]['discount'] = $discAll;
-                    $data['items'][$key]['discount_text'] = 'Rp -'.number_format($discAll,0,",",".");
-                    $data['items'][$key]['discount_bill_status'] = ($discItemStatus == 0 && empty($discDelivery) ? 1: 0);
+                    $data['items'][$key]['discount_text'] = 'Rp -' . number_format($discAll, 0, ",", ".");
+                    $data['items'][$key]['discount_bill_status'] = ($discItemStatus == 0 && empty($discDelivery) ? 1 : 0);
                 }
 
-                if($discDelivery > 0){
+                if ($discDelivery > 0) {
                     $data['items'][$key]['discount_delivery'] = $discAll;
-                    $data['items'][$key]['discount_delivery_text'] = 'Rp -'.number_format($discAll,0,",",".");
+                    $data['items'][$key]['discount_delivery_text'] = 'Rp -' . number_format($discAll, 0, ",", ".");
                 }
 
-                if(!empty($discAll)){
+                if (!empty($discAll)) {
                     $data['items'][$key]['subtotal_promo'] = $subTotalPromo;
-                    $data['items'][$key]['subtotal_promo_text'] = 'Rp '.number_format($subTotalPromo,0,",",".");
+                    $data['items'][$key]['subtotal_promo_text'] = 'Rp ' . number_format($subTotalPromo, 0, ",", ".");
                 }
 
-                $data['items'][$key]['id_promo_campaign_promo_code'] = $resPromo['id_promo_campaign_promo_code']??null;
+                $data['items'][$key]['id_promo_campaign_promo_code'] = $resPromo['id_promo_campaign_promo_code'] ?? null;
                 $totalAllDisc = $totalAllDisc + $discAll;
                 $discDeliveryAll = $discDeliveryAll + $discDelivery;
             }
@@ -322,101 +324,100 @@ class ApiPromoTransaction extends Controller
             $continueCheckOut = ($totalAllDisc <= 0 ? false : true);
         }
 
-        if($codeType == 'Discount bill'){
-            if($promoCampaign['promo_campaign_discount_bill_rules']['discount_type'] == 'Percent'){
-                $maxDiscountBill = $promoCampaign['promo_campaign_discount_bill_rules']['max_percent_discount']??null;
-            }else{
-                $maxDiscountBill = $promoCampaign['promo_campaign_discount_bill_rules']['discount_value']??null;
+        if ($codeType == 'Discount bill') {
+            if ($promoCampaign['promo_campaign_discount_bill_rules']['discount_type'] == 'Percent') {
+                $maxDiscountBill = $promoCampaign['promo_campaign_discount_bill_rules']['max_percent_discount'] ?? null;
+            } else {
+                $maxDiscountBill = $promoCampaign['promo_campaign_discount_bill_rules']['discount_value'] ?? null;
             }
-            if(!empty($maxDiscountBill) && $totalAllDisc > $maxDiscountBill){
+            if (!empty($maxDiscountBill) && $totalAllDisc > $maxDiscountBill) {
                 $totalAllDisc = 0;
                 $subtotal = $data['subtotal'];
                 $lastDiscount = $maxDiscountBill;
                 $count = count($data['items']);
 
-                foreach ($data['items'] as $key=>$dt){
+                foreach ($data['items'] as $key => $dt) {
                     $index = $key + 1;
                     $sub = $dt['subtotal'];
                     $finalDiscount = 0;
 
-                    foreach ($dt['items'] as $item){
-                        $discItem = (int)($item['product_price_subtotal']/$subtotal * $maxDiscountBill);
+                    foreach ($dt['items'] as $item) {
+                        $discItem = (int)($item['product_price_subtotal'] / $subtotal * $maxDiscountBill);
                         $finalDiscount = $finalDiscount + $discItem;
                     }
 
-                    if($count == $index){
+                    if ($count == $index) {
                         $finalDiscount = $lastDiscount;
-                    }else{
+                    } else {
                         $lastDiscount = $lastDiscount - $finalDiscount;
                     }
 
-                    if($discItem > 0){
+                    if ($discItem > 0) {
                         $data['items'][$key]['discount'] = $finalDiscount;
-                        $data['items'][$key]['discount_text'] = 'Rp -'.number_format($finalDiscount,0,",",".");
+                        $data['items'][$key]['discount_text'] = 'Rp -' . number_format($finalDiscount, 0, ",", ".");
                         $subTotalPromo = $sub - $finalDiscount;
                         $data['items'][$key]['subtotal_promo'] = $subTotalPromo;
-                        $data['items'][$key]['subtotal_promo_text'] = 'Rp '.number_format($subTotalPromo,0,",",".");
+                        $data['items'][$key]['subtotal_promo_text'] = 'Rp ' . number_format($subTotalPromo, 0, ",", ".");
                     }
 
-                    $totalAllDisc = $totalAllDisc+$finalDiscount;
+                    $totalAllDisc = $totalAllDisc + $finalDiscount;
                 }
             }
-        }
-        elseif ($codeType == 'Discount delivery'){
-            if($promoCampaign['promo_campaign_discount_delivery_rules']['discount_type'] == 'Percent'){
-                $maxDiscountDelivery = $promoCampaign['promo_campaign_discount_delivery_rules']['max_percent_discount']??null;
-            }else{
-                $maxDiscountDelivery = $promoCampaign['promo_campaign_discount_delivery_rules']['discount_value']??null;
+        } elseif ($codeType == 'Discount delivery') {
+            if ($promoCampaign['promo_campaign_discount_delivery_rules']['discount_type'] == 'Percent') {
+                $maxDiscountDelivery = $promoCampaign['promo_campaign_discount_delivery_rules']['max_percent_discount'] ?? null;
+            } else {
+                $maxDiscountDelivery = $promoCampaign['promo_campaign_discount_delivery_rules']['discount_value'] ?? null;
             }
 
-            if(!empty($maxDiscountDelivery) && $totalAllDisc > $maxDiscountDelivery){
+            if (!empty($maxDiscountDelivery) && $totalAllDisc > $maxDiscountDelivery) {
                 $totalAllDisc = 0;
                 $subtotal = $data['total_delivery'];
                 $lastDiscount = $maxDiscountDelivery;
                 $count = count($data['items']);
 
-                foreach ($data['items'] as $key=>$dt){
+                foreach ($data['items'] as $key => $dt) {
                     $index = $key + 1;
                     $sub = $dt['subtotal'];
-                    $deliveryPrice = $dt['delivery_price']['shipment_price']??0;
-                    if($deliveryPrice > 0){
-                        $discItem = (int)($deliveryPrice/$subtotal * $maxDiscountDelivery);
+                    $deliveryPrice = $dt['delivery_price']['shipment_price'] ?? 0;
+                    if ($deliveryPrice > 0) {
+                        $discItem = (int)($deliveryPrice / $subtotal * $maxDiscountDelivery);
 
-                        if($count == $index){
+                        if ($count == $index) {
                             $discItem = $lastDiscount;
-                        }else{
+                        } else {
                             $lastDiscount = $lastDiscount - $discItem;
                         }
 
-                        if($discItem > 0){
+                        if ($discItem > 0) {
                             $data['items'][$key]['discount_delivery'] = $discItem;
-                            $data['items'][$key]['discount_delivery_text'] = 'Rp -'.number_format($discItem,0,",",".");
+                            $data['items'][$key]['discount_delivery_text'] = 'Rp -' . number_format($discItem, 0, ",", ".");
                             $subTotalPromo = $sub - $discItem;
                             $data['items'][$key]['subtotal_promo'] = $subTotalPromo;
-                            $data['items'][$key]['subtotal_promo_text'] = 'Rp '.number_format($subTotalPromo,0,",",".");
+                            $data['items'][$key]['subtotal_promo_text'] = 'Rp ' . number_format($subTotalPromo, 0, ",", ".");
                         }
 
                         $discDeliveryAll = $discDeliveryAll + $discItem;
-                        $totalAllDisc = $totalAllDisc+$discItem;
+                        $totalAllDisc = $totalAllDisc + $discItem;
                     }
                 }
             }
         }
 
-        if(!empty($resPromoCode) && $resPromoCode['is_error'] && empty($resPromoCode['text']) && $codeType == 'Discount delivery'){
+        if (!empty($resPromoCode) && $resPromoCode['is_error'] && empty($resPromoCode['text']) && $codeType == 'Discount delivery') {
             $resPromoCode['text'] = ['Silahkan pilih layanan pengiriman yang diinginkan'];
         }
 
         $data['promo_code'] = $resPromoCode;
-        if($totalAllDisc > 0){
+        if ($totalAllDisc > 0) {
             $data['summary_order'][] = [
-                'name' => 'Diskon'.($discDeliveryAll > 0 ? ' Pengiriman':''),
+                'name' => 'Diskon' . ($discDeliveryAll > 0 ? ' Pengiriman' : ''),
                 'is_discount' => 1,
-                'value' => '-Rp '.number_format($totalAllDisc,0,",",".")
+                'value' => '-Rp ' . number_format($totalAllDisc, 0, ",", ".")
             ];
             $data['total_discount'] = $totalAllDisc;
-            $data['grandtotal'] = $data['grandtotal']-$totalAllDisc;
-            $data['grandtotal_text'] = 'Rp '.number_format($data['grandtotal'],0,",",".");
+            $data['grandtotal'] = $data['grandtotal'] - $totalAllDisc;
+            $data['grandtotal_text'] = 'Rp ' . number_format($data['grandtotal'], 0, ",", ".");
         }
         $data['available_payment'] = $validPayment;
         $data['available_checkout'] = $continueCheckOut;
@@ -437,7 +438,7 @@ class ApiPromoTransaction extends Controller
         $codeErr = [];
         $codePayment = [];
         if (isset($userPromo['promo_campaign'])) {
-            $promoCode = $this->validatePromoCode($userPromo['promo_campaign']->id_reference, $data['doctor']['id_doctor']??$data['id_doctor']);
+            $promoCode = $this->validatePromoCode($userPromo['promo_campaign']->id_reference, $data['doctor']['id_doctor'] ?? $data['id_doctor']);
 
             if ($promoCode['status'] == 'fail') {
                 $codeErr = $promoCode['messages'];
@@ -478,7 +479,6 @@ class ApiPromoTransaction extends Controller
 
         $totalAllDisc = 0;
         if (isset($userPromo['promo_campaign'])) {
-
             if (empty($codeErr)) {
                 $applyCode = $this->applyPromoCode($userPromo['promo_campaign']->id_reference, $data);
                 $codeErr = $applyCode['messages'] ?? $codeErr;
@@ -486,57 +486,58 @@ class ApiPromoTransaction extends Controller
 
             $err = $applyCode['result']['text'] ?? $codeErr;
             $resPromoCode = [
-                'promo_code' 		=> $sharedPromoTrx['promo_campaign']['promo_code'] ?? null,
-                'title' 			=> $applyCode['result']['title'] ?? null,
-                'text' 				=> array_map(function($v){
+                'promo_code'        => $sharedPromoTrx['promo_campaign']['promo_code'] ?? null,
+                'title'             => $applyCode['result']['title'] ?? null,
+                'text'              => array_map(function ($v) {
                     return trim(strip_tags($v));
-                },$err),
-                'remove_text' 		=> 'Batalkan penggunaan ' . ($sharedPromoTrx['promo_campaign']['promo_title'] ?? null)
+                }, $err),
+                'remove_text'       => 'Batalkan penggunaan ' . ($sharedPromoTrx['promo_campaign']['promo_title'] ?? null)
             ];
 
             $resPromo = $applyCode['result'] ?? null;
-            $disc = $resPromo['discount']??0;
+            $disc = $resPromo['discount'] ?? 0;
             $totalAllDisc = $disc;
-            $data['id_promo_campaign_promo_code'] = $resPromo['id_promo_campaign_promo_code']??null;
+            $data['id_promo_campaign_promo_code'] = $resPromo['id_promo_campaign_promo_code'] ?? null;
 
-            if(!empty($resPromoCode)){
+            if (!empty($resPromoCode)) {
                 $resPromoCode['is_error'] = (!empty($codeErr) ? true : false);
             }
         }
 
         $data['promo_code'] = $resPromoCode;
-        if($totalAllDisc > 0){
+        if ($totalAllDisc > 0) {
             $data['payment_detail'][] = [
                 'name' => 'Diskon',
                 'is_discount' => 1,
-                'value' => '-Rp '.number_format($totalAllDisc,0,",",".")
+                'value' => '-Rp ' . number_format($totalAllDisc, 0, ",", ".")
             ];
             $data['total_discount'] = $totalAllDisc;
-            $data['grandtotal'] = $data['grandtotal']-$totalAllDisc;
-            $data['grandtotal_text'] = 'Rp '.number_format($data['grandtotal'],0,",",".");
+            $data['grandtotal'] = $data['grandtotal'] - $totalAllDisc;
+            $data['grandtotal_text'] = 'Rp ' . number_format($data['grandtotal'], 0, ",", ".");
         }
         return $data;
     }
 
-    public function checkRuleItem($data, $promo){
+    public function checkRuleItem($data, $promo)
+    {
         //all id product in cart
         $allIDItem = [];
-        foreach ($data['items'] as $dt){
+        foreach ($data['items'] as $dt) {
             $column = array_column($dt['items'], 'id_product');
             $allIDItem = array_merge($allIDItem, $column);
         }
 
         switch ($promo->promo_type) {
             case 'Product discount':
-                $productFromPromo 	= PromoCampaignProductDiscount::where('id_promo_campaign', $promo->id_promo_campaign)->pluck('id_product')->toArray();
+                $productFromPromo   = PromoCampaignProductDiscount::where('id_promo_campaign', $promo->id_promo_campaign)->pluck('id_product')->toArray();
                 break;
 
             case 'Tier discount':
-                $productFromPromo 	= PromoCampaignTierDiscountProduct::where('id_promo_campaign', $promo->id_promo_campaign)->pluck('id_product')->toArray();
+                $productFromPromo   = PromoCampaignTierDiscountProduct::where('id_promo_campaign', $promo->id_promo_campaign)->pluck('id_product')->toArray();
                 break;
 
             case 'Discount bill':
-                $productFromPromo 	= PromoCampaignDiscountBillProduct::where('id_promo_campaign', $promo->id_promo_campaign)->pluck('id_product')->toArray();
+                $productFromPromo   = PromoCampaignDiscountBillProduct::where('id_promo_campaign', $promo->id_promo_campaign)->pluck('id_product')->toArray();
                 break;
 
             default:
@@ -546,17 +547,17 @@ class ApiPromoTransaction extends Controller
 
         $check = array_diff($productFromPromo, $allIDItem);
         $statusCanUse = true;
-        if(!empty($productFromPromo) && $promo->product_rule == 'or' && count($check) == count($productFromPromo)){
+        if (!empty($productFromPromo) && $promo->product_rule == 'or' && count($check) == count($productFromPromo)) {
             $statusCanUse = false;
             $msg = ['Promo dapat digunakan dengan membeli produk bertanda khusus'];
-        }elseif(!empty($productFromPromo) && $promo->product_rule == 'and' && !empty($check)){
+        } elseif (!empty($productFromPromo) && $promo->product_rule == 'and' && !empty($check)) {
             $statusCanUse = false;
             $msg = ['Promo dapat digunakan dengan membeli semua produk bertanda khusus'];
         }
 
         return [
             'status' => $statusCanUse,
-            'message' => $msg??''
+            'message' => $msg ?? ''
         ];
     }
 
@@ -580,8 +581,8 @@ class ApiPromoTransaction extends Controller
             return $validateGlobalRulesAfter;
         }
 
-        $getProduct = app($this->promo_campaign)->getProduct('deals',$deals);
-        $desc = app($this->promo_campaign)->getPromoDescription('deals', $deals, $getProduct['product']??'');
+        $getProduct = app($this->promo_campaign)->getProduct('deals', $deals);
+        $desc = app($this->promo_campaign)->getPromoDescription('deals', $deals, $getProduct['product'] ?? '');
 
         $res = [
             'id_deals' => $deals->id_deals,
@@ -644,8 +645,8 @@ class ApiPromoTransaction extends Controller
             return $validateGlobalRulesAfter;
         }
 
-        $getProduct = app($this->promo_campaign)->getProduct('promo_campaign',$promoCampaign);
-        $desc = app($this->promo_campaign)->getPromoDescription('promo_campaign', $promoCampaign, $getProduct['product']??'');
+        $getProduct = app($this->promo_campaign)->getProduct('promo_campaign', $promoCampaign);
+        $desc = app($this->promo_campaign)->getPromoDescription('promo_campaign', $promoCampaign, $getProduct['product'] ?? '');
 
         $res = [
             'id_promo_campaign' => $promoCampaign->id_promo_campaign,
@@ -675,11 +676,11 @@ class ApiPromoTransaction extends Controller
             return $this->failResponse('Promo tidak ditemukan');
         }
 
-        if(!empty($id_doctor) && $promo->promo_use_in != 'Consultation'){
+        if (!empty($id_doctor) && $promo->promo_use_in != 'Consultation') {
             return $this->failResponse('Promo tidak bisa digunakan untuk transaksi konsultasi');
         }
 
-        if(empty($id_doctor) && $promo->promo_use_in == 'Consultation'){
+        if (empty($id_doctor) && $promo->promo_use_in == 'Consultation') {
             return $this->failResponse('Promo hanya bisa digunakan pada transaksi konsultasi');
         }
 
@@ -687,7 +688,7 @@ class ApiPromoTransaction extends Controller
             return $this->failResponse('Terdapat kesalahan pada promo');
         }
 
-        $pct = new PromoCampaignTools;
+        $pct = new PromoCampaignTools();
         $user = request()->user();
         if ($promo->user_type == 'New user') {
             $check = Transaction::where('id_user', '=', $user->id)
@@ -706,14 +707,13 @@ class ApiPromoTransaction extends Controller
 
         if ($promo->code_type == 'Single') {
             if ($promo->limitation_usage) {
-                $usedCode = PromoCampaignReport::where('id_promo_campaign',$promo->id_promo_campaign)->where('id_user', $user->id)->distinct()->count('id_transaction_group');
+                $usedCode = PromoCampaignReport::where('id_promo_campaign', $promo->id_promo_campaign)->where('id_user', $user->id)->distinct()->count('id_transaction_group');
                 if ($usedCode >= $promo->limitation_usage) {
                     return $this->failResponse('Promo tidak tersedia');
                 }
             }
-
         } else {
-            $used_by_other_user = PromoCampaignReport::where('id_promo_campaign',$promo->id_promo_campaign)
+            $used_by_other_user = PromoCampaignReport::where('id_promo_campaign', $promo->id_promo_campaign)
                 ->where('id_user', '!=', $user->id)
                 ->where('id_promo_campaign_promo_code', $id_code)
                 ->first();
@@ -722,8 +722,8 @@ class ApiPromoTransaction extends Controller
                 return $this->failResponse('Promo tidak berlaku untuk akun Anda');
             }
 
-            $used_code = PromoCampaignReport::where('id_promo_campaign',$promo->id_promo_campaign)
-                ->where('id_user',$user->id)
+            $used_code = PromoCampaignReport::where('id_promo_campaign', $promo->id_promo_campaign)
+                ->where('id_user', $user->id)
                 ->where('id_promo_campaign_promo_code', $id_code)
                 ->distinct()->count('id_transaction_group');
 
@@ -737,7 +737,7 @@ class ApiPromoTransaction extends Controller
                 $used_diff_code = PromoCampaignReport::where('id_promo_campaign', $promo->id_promo_campaign)
                     ->where('id_user', $user->id)
                     ->distinct()
-                    ->count('id_promo_campaign_promo_code','id_promo_campaign_promo_code');
+                    ->count('id_promo_campaign_promo_code', 'id_promo_campaign_promo_code');
 
                 if ($used_diff_code >= $promo->user_limit) {
                     return $this->failResponse('Promo tidak tersedia');
@@ -762,10 +762,10 @@ class ApiPromoTransaction extends Controller
         $promo = $promoQuery;
         $sharedPromoTrx = TemporaryDataManager::create('promo_trx');
         $promoName = $this->promoName($promoSource);
-        $pct = new PromoCampaignTools;
+        $pct = new PromoCampaignTools();
 
         if (!empty($data['delivery_price']['shipment_code']) || !empty($data['transaction_shipments']['shipment_courier_code'])) {
-            $shipment = $data['delivery_price']['shipment_code']??$data['transaction_shipments']['shipment_courier_code'];
+            $shipment = $data['delivery_price']['shipment_code'] ?? $data['transaction_shipments']['shipment_courier_code'];
             $promoShipment = $promo->{$promoSource . '_shipment_method'}->pluck('shipment_method');
             $checkShipment = $pct->checkShipmentRule($promo->is_all_shipment ?? 0, $shipment, $promoShipment);
             if (!$checkShipment) {
@@ -799,7 +799,7 @@ class ApiPromoTransaction extends Controller
         $sharedPromoTrx = TemporaryDataManager::create('promo_trx');
         if (isset($sharedPromoTrx['subtotal'])) {
             if ($sharedPromoTrx['subtotal'] < $promo->min_basket_size) {
-                $min_basket_size = MyHelper::requestNumber($promo->min_basket_size,'_CURRENCY');
+                $min_basket_size = MyHelper::requestNumber($promo->min_basket_size, '_CURRENCY');
                 return $this->failResponse('Pembelian minimum ' . $min_basket_size);
             }
         }
@@ -840,15 +840,15 @@ class ApiPromoTransaction extends Controller
 
     public function productDiscount($promoSource, $promoQuery, $data)
     {
-        $promo 			= $promoQuery;
-        $pct 			= new PromoCampaignTools;
-        $promo_rules 	= $promo->{$promoSource . '_product_discount_rules'};
-        $promo_product 	= $promo->{$promoSource . '_product_discount'}->toArray();
-        $promo_brand 	= $promo->{$promoSource . '_brands'}->pluck('id_brand')->toArray();
-        $product_name 	= $pct->getProductName($promo_product, $promo->product_rule);
-        $shared_promo 	= TemporaryDataManager::create('promo_trx');
-        $promo_item 	= $data['items'];
-        $discount 		= 0;
+        $promo          = $promoQuery;
+        $pct            = new PromoCampaignTools();
+        $promo_rules    = $promo->{$promoSource . '_product_discount_rules'};
+        $promo_product  = $promo->{$promoSource . '_product_discount'}->toArray();
+        $promo_brand    = $promo->{$promoSource . '_brands'}->pluck('id_brand')->toArray();
+        $product_name   = $pct->getProductName($promo_product, $promo->product_rule);
+        $shared_promo   = TemporaryDataManager::create('promo_trx');
+        $promo_item     = $data['items'];
+        $discount       = 0;
 
         if ($promo_rules->is_all_product) {
             $promo_product = "*";
@@ -859,7 +859,7 @@ class ApiPromoTransaction extends Controller
 
         if (!$product) {
             $message = $pct->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.';
-            $message = MyHelper::simpleReplace($message,['product'=>$product_name]);
+            $message = MyHelper::simpleReplace($message, ['product' => $product_name]);
             return $this->failResponse($message);
         }
 
@@ -868,8 +868,7 @@ class ApiPromoTransaction extends Controller
         foreach ($product as $key => $value) {
             if (isset($merge_product[$value['id_product']])) {
                 $merge_product[$value['id_product']] += $value['qty'];
-            }
-            else {
+            } else {
                 $merge_product[$value['id_product']] = $value['qty'];
             }
         }
@@ -907,7 +906,7 @@ class ApiPromoTransaction extends Controller
                 }
             }
 
-            $index = $data['id_outlet'].'-'.$p['product_price'] . '-' . ($p['id_brand']??'brand') . '-' . $p['id_product'];
+            $index = $data['id_outlet'] . '-' . $p['product_price'] . '-' . ($p['id_brand'] ?? 'brand') . '-' . $p['id_product'];
             if (isset($product_per_price[$index])) {
                 $product_per_price[$index]['qty'] += $product_qty;
                 continue;
@@ -919,13 +918,13 @@ class ApiPromoTransaction extends Controller
         }
 
         // sort by most expensive product price
-        uasort($product_per_price, function($a, $b){
+        uasort($product_per_price, function ($a, $b) {
             return $b['new_price'] - $a['new_price'];
         });
 
         foreach ($product_per_price as $k => $p) {
             if (!empty($promo_qty_each)) {
-                $brand = $p['id_brand']??'brand';
+                $brand = $p['id_brand'] ?? 'brand';
                 if (!isset($qty_each[$brand][$p['id_product']])) {
                     $qty_each[$brand][$p['id_product']] = $promo_qty_each;
                 }
@@ -936,12 +935,12 @@ class ApiPromoTransaction extends Controller
 
                 if ($qty_each[$brand][$p['id_product']] > $p['qty']) {
                     $promo_qty = $p['qty'];
-                }else{
+                } else {
                     $promo_qty = $qty_each[$brand][$p['id_product']];
                 }
 
                 $qty_each[$brand][$p['id_product']] -= $p['qty'];
-            }else{
+            } else {
                 $promo_qty = $p['qty'];
             }
             $product_per_price[$k]['promo_qty'] = $promo_qty;
@@ -953,7 +952,7 @@ class ApiPromoTransaction extends Controller
 
         if ($discount <= 0) {
             $message = $pct->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.';
-            $message = MyHelper::simpleReplace($message,['product'=>'produk tertentu']);
+            $message = MyHelper::simpleReplace($message, ['product' => 'produk tertentu']);
 
             return $this->failResponse($message);
         }
@@ -961,22 +960,22 @@ class ApiPromoTransaction extends Controller
         $shared_promo['items'] = $product_per_price;
 
         return MyHelper::checkGet([
-            'discount'	=> $discount,
-            'promo_type'=> $promo->promo_type
+            'discount'  => $discount,
+            'promo_type' => $promo->promo_type
         ]);
     }
 
     public function tierDiscount($promoSource, $promoQuery, $data)
     {
-        $promo 			= $promoQuery;
-        $pct 			= new PromoCampaignTools;
-        $promo_rules 	= $promo->{$promoSource . '_tier_discount_rules'};
-        $promo_product 	= $promo->{$promoSource . '_tier_discount_product'}->toArray();
-        $promo_brand 	= $promo->{$promoSource . '_brands'}->pluck('id_brand')->toArray();
-        $product_name 	= $pct->getProductName($promo_product, $promo->product_rule);
-        $shared_promo 	= TemporaryDataManager::create('promo_trx');
-        $promo_item 	= $data['items'];
-        $discount 		= 0;
+        $promo          = $promoQuery;
+        $pct            = new PromoCampaignTools();
+        $promo_rules    = $promo->{$promoSource . '_tier_discount_rules'};
+        $promo_product  = $promo->{$promoSource . '_tier_discount_product'}->toArray();
+        $promo_brand    = $promo->{$promoSource . '_brands'}->pluck('id_brand')->toArray();
+        $product_name   = $pct->getProductName($promo_product, $promo->product_rule);
+        $shared_promo   = TemporaryDataManager::create('promo_trx');
+        $promo_item     = $data['items'];
+        $discount       = 0;
 
         // get min max required for error message
         $min_qty = null;
@@ -998,7 +997,7 @@ class ApiPromoTransaction extends Controller
         $product = $get_promo_product['product'];
         $total_product = $get_promo_product['total_product'];
 
-        if(!$product){
+        if (!$product) {
             $minmax = ($min_qty != $max_qty ? "$min_qty sampai $max_qty" : $min_qty) . " item";
             $message = $pct->getMessage('error_tier_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b> sebanyak %minmax%.';
             $message = MyHelper::simpleReplace($message, ['product' => $product_name, 'minmax' => $minmax]);
@@ -1011,18 +1010,16 @@ class ApiPromoTransaction extends Controller
         $item_get_promo = []; // include brand
         $item_promo = []; // only product/item
         foreach ($product as $key => $value) {
-            $brand = $value['id_brand']??'brand';
+            $brand = $value['id_brand'] ?? 'brand';
             if (isset($item_promo[$value['id_product']])) {
                 $item_promo[$value['id_product']] += $value['qty'];
-            }
-            else{
+            } else {
                 $item_promo[$value['id_product']] = $value['qty'];
             }
 
             if (isset($item_get_promo[$brand . '-' . $value['id_product']])) {
                 $item_get_promo[$brand . '-' . $value['id_product']] += $value['qty'];
-            }
-            else{
+            } else {
                 $item_get_promo[$brand . '-' . $value['id_product']] = $value['qty'];
             }
         }
@@ -1030,14 +1027,14 @@ class ApiPromoTransaction extends Controller
         //find promo rules
         $promo_rule = null;
         if ($promo->product_rule == "and" && $promo_product != "*") {
-            $req_valid 	= true;
-            $rule_key	= [];
+            $req_valid  = true;
+            $rule_key   = [];
             $promo_qty_each = 0;
             foreach ($product as $key => &$val) {
-                $min_qty 	= null;
-                $max_qty 	= null;
+                $min_qty    = null;
+                $max_qty    = null;
                 $temp_rule_key[$key] = [];
-                $valBrand = $val['id_brand']??'brand';
+                $valBrand = $val['id_brand'] ?? 'brand';
 
                 foreach ($promo_rules as $key2 => $rule) {
                     if ($min_qty === null || $rule->min_qty < $min_qty) {
@@ -1048,7 +1045,7 @@ class ApiPromoTransaction extends Controller
                         $max_qty = $rule->max_qty;
                     }
 
-                    if ($rule->min_qty > $item_get_promo[$valBrand.'-'.$val['id_product']]) {
+                    if ($rule->min_qty > $item_get_promo[$valBrand . '-' . $val['id_product']]) {
                         if (empty($temp_rule_key[$key])) {
                             $req_valid = false;
                             break;
@@ -1056,7 +1053,7 @@ class ApiPromoTransaction extends Controller
                             continue;
                         }
                     }
-                    $temp_rule_key[$key][] 	= $key2;
+                    $temp_rule_key[$key][]  = $key2;
                 }
 
                 if ($item_get_promo[$valBrand . '-' . $val['id_product']] < $promo_qty_each || $promo_qty_each == 0) {
@@ -1075,13 +1072,13 @@ class ApiPromoTransaction extends Controller
             }
 
             if ($req_valid && !empty($rule_key)) {
-                $rule_key 	= end($rule_key);
+                $rule_key   = end($rule_key);
                 $promo_rule = $promo_rules[$rule_key];
                 $promo_qty_each = $promo_qty_each > $promo_rule->max_qty ? $promo_rule->max_qty : $promo_qty_each;
             }
         } else {
-            $min_qty 	= null;
-            $max_qty 	= null;
+            $min_qty    = null;
+            $max_qty    = null;
 
             foreach ($promo_rules as $rule) {
                 if ($min_qty === null || $rule->min_qty < $min_qty) {
@@ -1108,7 +1105,7 @@ class ApiPromoTransaction extends Controller
 
         $product_per_price = [];
         foreach ($product as $p) {
-            $pBrand = $p['id_brand']??'brand';
+            $pBrand = $p['id_brand'] ?? 'brand';
             $product_qty = $p['qty'];
             if (isset($p['new_price'])) {
                 $qty_discount = $p['qty_discount'];
@@ -1123,7 +1120,7 @@ class ApiPromoTransaction extends Controller
                 }
             }
 
-            $index = $data['id_outlet'].'-'.$p['product_price'] . '-' . $pBrand . '-' . $p['id_product'] . '-' . ($p['id_transaction_product']??'');
+            $index = $data['id_outlet'] . '-' . $p['product_price'] . '-' . $pBrand . '-' . $p['id_product'] . '-' . ($p['id_transaction_product'] ?? '');
             if (isset($product_per_price[$index])) {
                 $product_per_price[$index]['qty'] += $product_qty;
                 continue;
@@ -1135,14 +1132,14 @@ class ApiPromoTransaction extends Controller
         }
 
         // sort by most expensive product price
-        uasort($product_per_price, function($a, $b){
+        uasort($product_per_price, function ($a, $b) {
             return $b['new_price'] - $a['new_price'];
         });
 
         // get max qty of product that can get promo
         $total_promo_qty = $promo_rule->max_qty < $total_product ? $promo_rule->max_qty : $total_product;
         foreach ($product_per_price as $k => $p) {
-            $pBrand = $p['id_brand']??'brand';
+            $pBrand = $p['id_brand'] ?? 'brand';
             if (!empty($promo_qty_each)) {
                 if (!isset($qty_each[$pBrand][$p['id_product']])) {
                     $qty_each[$pBrand][$p['id_product']] = $promo_qty_each;
@@ -1154,12 +1151,11 @@ class ApiPromoTransaction extends Controller
 
                 if ($qty_each[$pBrand][$p['id_product']] > $p['qty']) {
                     $promo_qty = $p['qty'];
-                }else{
+                } else {
                     $promo_qty = $qty_each[$pBrand][$p['id_product']];
                 }
 
                 $qty_each[$pBrand][$p['id_product']] -= $p['qty'];
-
             } else {
                 if ($total_promo_qty < 0) {
                     $total_promo_qty = 0;
@@ -1180,8 +1176,7 @@ class ApiPromoTransaction extends Controller
         // count discount
         $product_id = array_column($product, 'id_product');
         foreach ($product_per_price as $key => &$item) {
-
-            if (!in_array($item['id_brand']??null, $promo_brand) && !empty($promo_brand)) {
+            if (!in_array($item['id_brand'] ?? null, $promo_brand) && !empty($promo_brand)) {
                 continue;
             }
 
@@ -1194,8 +1189,8 @@ class ApiPromoTransaction extends Controller
         $shared_promo['items'] = $product_per_price;
 
         return MyHelper::checkGet([
-            'discount'	=> $discount,
-            'promo_type'=> $promo->promo_type
+            'discount'  => $discount,
+            'promo_type' => $promo->promo_type
         ]);
     }
 
@@ -1207,33 +1202,33 @@ class ApiPromoTransaction extends Controller
     public function billDiscount($promoSource, $promoQuery, $data)
     {
         // load required relationship
-        $promo 			= $promoQuery;
-        $pct 			= new PromoCampaignTools;
-        $promo_rules 	= $promo->{$promoSource . '_discount_bill_rules'};
-        $promo_product 	= $promo->{$promoSource . '_discount_bill_products'}->toArray();
-        $promo_brand 	= $promo->{$promoSource . '_brands'}->pluck('id_brand')->toArray();
-        $product_name 	= $pct->getProductName($promo_product, $promo->product_rule);
-        $promo_item 	= $data['items']??[];
-        $discount 		= 0;
+        $promo          = $promoQuery;
+        $pct            = new PromoCampaignTools();
+        $promo_rules    = $promo->{$promoSource . '_discount_bill_rules'};
+        $promo_product  = $promo->{$promoSource . '_discount_bill_products'}->toArray();
+        $promo_brand    = $promo->{$promoSource . '_brands'}->pluck('id_brand')->toArray();
+        $product_name   = $pct->getProductName($promo_product, $promo->product_rule);
+        $promo_item     = $data['items'] ?? [];
+        $discount       = 0;
 
-        $allProductStatus = $promo_rules->is_all_product??1;
+        $allProductStatus = $promo_rules->is_all_product ?? 1;
         if ($allProductStatus) {
             $promo_product = "*";
         }
 
-        if($promoQuery['promo_use_in'] == 'Product'){
+        if ($promoQuery['promo_use_in'] == 'Product') {
             $get_promo_product = $pct->getPromoProduct($promo_item, $promo_brand, $promo_product, $promoQuery['product_type']);
             $product = $get_promo_product['product'];
 
             if (!$product) {
                 $message = $pct->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.';
-                $message = MyHelper::simpleReplace($message,['product'=>$product_name]);
+                $message = MyHelper::simpleReplace($message, ['product' => $product_name]);
                 return $this->failResponse($message);
             }
         }
 
         $total_price = $data['subtotal'];
-        $discountType = $promo_rules->discount_type??'Nominal';
+        $discountType = $promo_rules->discount_type ?? 'Nominal';
         if ($discountType == 'Percent') {
             $discount += ($total_price * $promo_rules->discount_value) / 100;
             if (!empty($promo_rules->max_percent_discount) && $discount > $promo_rules->max_percent_discount) {
@@ -1249,63 +1244,64 @@ class ApiPromoTransaction extends Controller
 
         if ($discount <= 0) {
             $message = $pct->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli <b>%product%</b>.';
-            $message = MyHelper::simpleReplace($message,['product'=>'produk tertentu']);
-            return $this->failResponse($message);;
+            $message = MyHelper::simpleReplace($message, ['product' => 'produk tertentu']);
+            return $this->failResponse($message);
+            ;
         }
 
         return MyHelper::checkGet([
-            'discount'	=> $discount,
-            'promo_type'=> $promo->promo_type
+            'discount'  => $discount,
+            'promo_type' => $promo->promo_type
         ]);
     }
 
     public function deliveryDiscount($promoSource, $promoQuery, $data)
     {
-        $promo 			= $promoQuery;
-        $pct 			= new PromoCampaignTools;
-        $promo_rules 	= $promo->{$promoSource . '_discount_delivery_rules'};
-        $promo_brand 	= $promo->{$promoSource . '_brands'}->pluck('id_brand')->toArray();
-        $shared_promo 	= TemporaryDataManager::create('promo_trx');
-        $delivery_fee 	= $data['delivery_price']['shipment_price'] ?? $data['transaction_shipment'] ?? 0;
-        $discount 		= 0;
+        $promo          = $promoQuery;
+        $pct            = new PromoCampaignTools();
+        $promo_rules    = $promo->{$promoSource . '_discount_delivery_rules'};
+        $promo_brand    = $promo->{$promoSource . '_brands'}->pluck('id_brand')->toArray();
+        $shared_promo   = TemporaryDataManager::create('promo_trx');
+        $delivery_fee   = $data['delivery_price']['shipment_price'] ?? $data['transaction_shipment'] ?? 0;
+        $discount       = 0;
 
-        $discount_type	= $promo_rules->discount_type;
-        $discount_value	= $promo_rules->discount_value;
-        $discount_max	= $promo_rules->max_percent_discount;
+        $discount_type  = $promo_rules->discount_type;
+        $discount_value = $promo_rules->discount_value;
+        $discount_max   = $promo_rules->max_percent_discount;
 
-        $promo_item 	= $data['items'];
+        $promo_item     = $data['items'];
         $total_product = 0;
         foreach ($promo_item as $key => $trx) {
             $notGetDiscountStatus = false;
-            if(!empty($promoQuery['product_type']) && $promoQuery['product_type'] != 'single + variant'){
-                if($promoQuery['product_type'] == 'single' && !empty($trx['id_product_variant_group'])){
+            if (!empty($promoQuery['product_type']) && $promoQuery['product_type'] != 'single + variant') {
+                if ($promoQuery['product_type'] == 'single' && !empty($trx['id_product_variant_group'])) {
                     $notGetDiscountStatus = true;
-                }elseif ($promoQuery['product_type'] == 'variant' && empty($trx['id_product_variant_group'])){
+                } elseif ($promoQuery['product_type'] == 'variant' && empty($trx['id_product_variant_group'])) {
                     $notGetDiscountStatus = true;
                 }
             }
 
             $product[$key]['not_get_discount'] = $notGetDiscountStatus;
-            if(!$notGetDiscountStatus){
+            if (!$notGetDiscountStatus) {
                 $total_product += $trx['qty'];
             }
         }
 
         if ($total_product <= 0) {
             $msg = '';
-            if($promoQuery['product_type'] == 'single'){
+            if ($promoQuery['product_type'] == 'single') {
                 $msg = 'product tanpa variant';
-            }elseif($promoQuery['product_type'] == 'variant'){
+            } elseif ($promoQuery['product_type'] == 'variant') {
                 $msg = 'product dengan variant';
             }
 
-            $message = $pct->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli '.$msg.'.';
+            $message = $pct->getMessage('error_product_discount')['value_text'] = 'Promo hanya berlaku jika membeli ' . $msg . '.';
             return $this->failResponse($message);
         }
 
         if ($promo_rules) {
             if ($discount_type == 'Percent') {
-                $discount = ($delivery_fee * $discount_value) /100;
+                $discount = ($delivery_fee * $discount_value) / 100;
                 if (!empty($discount_max) && $discount > $discount_max) {
                     $discount = $discount_max;
                 }
@@ -1319,24 +1315,24 @@ class ApiPromoTransaction extends Controller
         }
 
         return MyHelper::checkGet([
-            'discount_delivery'	=> $discount,
-            'promo_type'=> $promo->promo_type
+            'discount_delivery' => $discount,
+            'promo_type' => $promo->promo_type
         ]);
     }
 
     public function discountPerItem(&$item, $promo_rules)
     {
-        $discount 		= 0;
-        $prev_discount 	= $item['total_discount'] ?? 0;
-        $discount_qty 	= $item['promo_qty'];
-        $product_price 	= ($item['new_price'] ?? 0) ?: $item['product_price'];
+        $discount       = 0;
+        $prev_discount  = $item['total_discount'] ?? 0;
+        $discount_qty   = $item['promo_qty'];
+        $product_price  = ($item['new_price'] ?? 0) ?: $item['product_price'];
 
-        $item['total_discount']	= $prev_discount;
-        $item['discount']		= 0;
-        $item['new_price']		= $product_price;
-        $item['base_discount']	= 0;
-        $item['is_promo']		= 0;
-        $item['qty_discount']	= 0;
+        $item['total_discount'] = $prev_discount;
+        $item['discount']       = 0;
+        $item['new_price']      = $product_price;
+        $item['base_discount']  = 0;
+        $item['is_promo']       = 0;
+        $item['qty_discount']   = 0;
 
         if (empty($discount_qty) || $item['not_get_discount']) {
             return 0;
@@ -1350,9 +1346,9 @@ class ApiPromoTransaction extends Controller
                 $discount = $product_price_total;
             }
 
-            $item['total_discount']	= $prev_discount + $discount;
-            $item['new_price']		= $product_price - $discount_per_item;
-            $item['base_discount']	= ($product_price < $promo_rules->discount_value) ? $product_price : $promo_rules->discount_value;
+            $item['total_discount'] = $prev_discount + $discount;
+            $item['new_price']      = $product_price - $discount_per_item;
+            $item['base_discount']  = ($product_price < $promo_rules->discount_value) ? $product_price : $promo_rules->discount_value;
         } else {
             // percent
             $discount_per_item = ($promo_rules->discount_value / 100) * $product_price;
@@ -1361,23 +1357,23 @@ class ApiPromoTransaction extends Controller
             }
             $discount = (int) ($discount_per_item * $discount_qty);
 
-            $item['total_discount']	= $prev_discount + $discount;
-            $item['new_price']		= $product_price - $discount_per_item;
-            $item['base_discount']	= $discount_per_item;
+            $item['total_discount'] = $prev_discount + $discount;
+            $item['new_price']      = $product_price - $discount_per_item;
+            $item['base_discount']  = $discount_per_item;
         }
 
         // if new price is negative
         if ($item['new_price'] < 0) {
-            $discount 				= $product_price * $discount_qty;
+            $discount               = $product_price * $discount_qty;
 
-            $item['total_discount']	= $prev_discount + $discount;
-            $item['new_price']		= 0;
-            $item['base_discount']	= $product_price;
+            $item['total_discount'] = $prev_discount + $discount;
+            $item['new_price']      = 0;
+            $item['base_discount']  = $product_price;
         }
 
-        $item['is_promo']		= 1;
-        $item['qty_discount']	= $discount_qty;
-        $item['discount']		= $discount;
+        $item['is_promo']       = 1;
+        $item['qty_discount']   = $discount_qty;
+        $item['discount']       = $discount;
         unset($item['promo_qty']);
 
         return $discount;
@@ -1403,7 +1399,8 @@ class ApiPromoTransaction extends Controller
         $outlet = Outlet::find($dataTrx['outlet']['id_outlet'] ?? $dataTrx['id_outlet']);
         foreach ($items as $val) {
             $productType = 'Product';
-            if (isset($val['id_user_hair_stylist'])
+            if (
+                isset($val['id_user_hair_stylist'])
                 || request()->transaction_from == 'home-service'
             ) {
                 $productType = 'Service';
@@ -1411,14 +1408,14 @@ class ApiPromoTransaction extends Controller
 
             $price = $val['product_price'] ?? $val['transaction_product_price'];
             if ($outlet->is_tax) {
-                if($outlet->outlet_different_price){
+                if ($outlet->outlet_different_price) {
                     $productPrice = ProductSpecialPrice::where(['id_product' => $val['id_product'], 'id_outlet' => $outlet['id_outlet']])->first();
-                    if($productPrice){
+                    if ($productPrice) {
                         $price = $productPrice['product_special_price'];
                     }
-                }else{
+                } else {
                     $productPrice = ProductGlobalPrice::where(['id_product' => $val['id_product']])->first();
-                    if($productPrice){
+                    if ($productPrice) {
                         $price = $productPrice['product_global_price'];
                     }
                 }
@@ -1453,16 +1450,17 @@ class ApiPromoTransaction extends Controller
         return $sharedPromoTrx;
     }
 
-    public function applyPromoNewTrx($trx){
+    public function applyPromoNewTrx($trx)
+    {
         $user = request()->user();
         $promoCashback = 'promo_code';
         $cashback = $trx['transaction_cashback_earned'];
         $totalDiscount = (int) abs($trx['transaction_discount']);
-        $idPromoCampaign = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $trx['id_promo_campaign_promo_code'])->first()['id_promo_campaign']??null;
+        $idPromoCampaign = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $trx['id_promo_campaign_promo_code'])->first()['id_promo_campaign'] ?? null;
         $dataDiscount = PromoCampaign::where('id_promo_campaign', $idPromoCampaign)->first();
-        $chargedCentral = ($dataDiscount['charged_central']/100) * $totalDiscount;
+        $chargedCentral = ($dataDiscount['charged_central'] / 100) * $totalDiscount;
         $chargedCentral = round($chargedCentral);
-        $chargedOutlet = ($dataDiscount['charged_outlet']/100) * $totalDiscount;
+        $chargedOutlet = ($dataDiscount['charged_outlet'] / 100) * $totalDiscount;
         $chargedOutlet = round($chargedOutlet);
 
         $promoGetPoint = app($this->online_trx)->checkPromoGetPoint($promoCashback);
@@ -1473,15 +1471,15 @@ class ApiPromoTransaction extends Controller
             'discount_charged_outlet' => $chargedOutlet
         ]);
 
-        $totalDiscountBill = $trx['transaction_discount_bill']??0;
-        $totalDiscountDelivery = $trx['transaction_discount_delivery']??0;
-        if($totalDiscountBill > 0 || $totalDiscountDelivery > 0){
+        $totalDiscountBill = $trx['transaction_discount_bill'] ?? 0;
+        $totalDiscountDelivery = $trx['transaction_discount_delivery'] ?? 0;
+        if ($totalDiscountBill > 0 || $totalDiscountDelivery > 0) {
             $totalSubProduct = TransactionProduct::where('id_transaction', $trx['id_transaction'])->sum('transaction_product_subtotal');
             $products = TransactionProduct::where('id_transaction', $trx['id_transaction'])->get()->toArray();
-            foreach ($products as $product){
-                if($totalDiscountBill > 0){
+            foreach ($products as $product) {
+                if ($totalDiscountBill > 0) {
                     $disc = $product['transaction_product_subtotal'] / $totalSubProduct * $totalDiscountBill;
-                }elseif ($totalDiscountDelivery > 0){
+                } elseif ($totalDiscountDelivery > 0) {
                     $disc = $product['transaction_product_subtotal'] / $totalSubProduct * $totalDiscountDelivery;
                 }
 
@@ -1492,7 +1490,7 @@ class ApiPromoTransaction extends Controller
             }
         }
 
-        if(!empty($dataDiscount)){
+        if (!empty($dataDiscount)) {
             TransactionPromo::create([
                 'id_transaction' => $trx['id_transaction'],
                 'promo_name' => $dataDiscount['promo_title'],
@@ -1544,7 +1542,7 @@ class ApiPromoTransaction extends Controller
     {
         $deviceId = request()->device_id ?: '';
         $deviceType = request()->device_type ?: null;
-        if($fromTriger == 1){
+        if ($fromTriger == 1) {
             $deviceId = '';
             $deviceType = null;
         }
@@ -1568,7 +1566,8 @@ class ApiPromoTransaction extends Controller
     public function paymentDetailPromo($result)
     {
         $paymentDetail = [];
-        if ((!empty($result['promo_deals']) && !$result['promo_deals']['is_error'])
+        if (
+            (!empty($result['promo_deals']) && !$result['promo_deals']['is_error'])
             || (!empty($result['promo_code']) && !$result['promo_code']['is_error'])
         ) {
             $paymentDetail[] = [
@@ -1581,7 +1580,7 @@ class ApiPromoTransaction extends Controller
                 $paymentDetail[] = [
                     'name'          => $result['promo_deals']['title'],
                     "is_discount"   => 1,
-                    'amount'        => '-' . number_format(((int) $result['promo_deals']['discount'] ?: $result['promo_deals']['discount_delivery']),0,',','.')
+                    'amount'        => '-' . number_format(((int) $result['promo_deals']['discount'] ?: $result['promo_deals']['discount_delivery']), 0, ',', '.')
                 ];
             }
 
@@ -1589,7 +1588,7 @@ class ApiPromoTransaction extends Controller
                 $paymentDetail[] = [
                     'name'          => $result['promo_code']['title'],
                     "is_discount"   => 1,
-                    'amount'        => '-' . number_format(((int) $result['promo_code']['discount'] ?: $result['promo_code']['discount_delivery']),0,',','.')
+                    'amount'        => '-' . number_format(((int) $result['promo_code']['discount'] ?: $result['promo_code']['discount_delivery']), 0, ',', '.')
                 ];
             }
         }

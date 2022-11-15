@@ -11,20 +11,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class Advert extends Model
 {
-	protected $table = 'adverts';
+    protected $table = 'adverts';
 
-	protected $primaryKey = 'id_advert';
-	
-	protected $fillable   = [
-		'id_news',
-		'page',
-		'value',
-		'type',
-		'order'
-	];
+    protected $primaryKey = 'id_advert';
 
-	public function news()
-	{
-		return $this->belongsTo(\App\Http\Models\News::class, 'id_news');
-	}
+    protected $fillable   = [
+        'id_news',
+        'page',
+        'value',
+        'type',
+        'order'
+    ];
+
+    public function news()
+    {
+        return $this->belongsTo(\App\Http\Models\News::class, 'id_news');
+    }
 }

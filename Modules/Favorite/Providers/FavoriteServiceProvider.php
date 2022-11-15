@@ -39,10 +39,11 @@ class FavoriteServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('favorite.php'),
+            __DIR__ . '/../Config/config.php' => config_path('favorite.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'favorite'
+            __DIR__ . '/../Config/config.php',
+            'favorite'
         );
     }
 
@@ -55,11 +56,11 @@ class FavoriteServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/favorite');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/favorite';
@@ -78,7 +79,7 @@ class FavoriteServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'favorite');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'favorite');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'favorite');
         }
     }
 

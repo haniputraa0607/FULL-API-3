@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Setting
- * 
+ *
  * @property int $id_setting
  * @property string $key
  * @property string $value
@@ -23,11 +23,11 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Setting extends Model
 {
-	protected $primaryKey = 'id_setting';
+    protected $primaryKey = 'id_setting';
 
-	protected $fillable = [
-		'key',
-		'value',
-		'value_text'
-	];
+    protected $fillable = [
+        'key',
+        'value',
+        'value_text'
+    ];
 }

@@ -1,26 +1,30 @@
 <?php
+
 namespace Modules\Xendit\Lib;
 
 use Xendit\HttpClientInterface;
 use GuzzleHttp\Client as Guzzle;
 use Modules\Xendit\Entities\LogXendit;
 use GuzzleHttp\Psr7;
+
 /**
  * Xendit custom http client for logging purpose
  */
 class CustomHttpClient implements HttpClientInterface
 {
-	public static $request_type = 'unknown';
-	public static $id_reference = null;
+    public static $request_type = 'unknown';
+    public static $id_reference = null;
 
     private $_guzz;
 
-    public static function setLogType(string $type) {
-    	static::$request_type = $type;
+    public static function setLogType(string $type)
+    {
+        static::$request_type = $type;
     }
 
-    public static function setIdReference($id_reference) {
-    	static::$id_reference = $id_reference;
+    public static function setIdReference($id_reference)
+    {
+        static::$id_reference = $id_reference;
     }
 
     public function __construct(Guzzle $guzz)

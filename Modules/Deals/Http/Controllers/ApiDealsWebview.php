@@ -7,7 +7,6 @@ use App\Http\Models\Outlet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\Deal;
 use App\Http\Models\DealsUser;
 use App\Lib\MyHelper;
@@ -15,12 +14,11 @@ use Illuminate\Support\Facades\Auth;
 use Modules\Brand\Entities\BrandOutlet;
 use App\Http\Models\Setting;
 use Route;
-
 use Modules\Deals\Http\Requests\Deals\ListDeal;
 
 class ApiDealsWebview extends Controller
 {
-	function __construct()
+    public function __construct()
     {
         $this->outlet_group_filter  = "Modules\Outlet\Http\Controllers\ApiOutletGroupFilterController";
     }
@@ -29,21 +27,21 @@ class ApiDealsWebview extends Controller
     public function dealsDetail(Request $request)
     {
         $deals = Deal::with([
-        			'brand', 
-        			'outlets' => function($q) {
-        				$q->where('outlet_status', 'Active');
-        			},
-        			'outlets.city', 
-        			'outlet_groups',
-        			'deals_content' => function($q){
-        				$q->where('is_active',1);
-        			},
-        			'deals_content.deals_content_details',
-        			'deals_brands'
-        		])
-        		->where('id_deals', $request->id_deals)
-        		->get()
-        		->toArray()[0];
+                    'brand',
+                    'outlets' => function ($q) {
+                        $q->where('outlet_status', 'Active');
+                    },
+                    'outlets.city',
+                    'outlet_groups',
+                    'deals_content' => function ($q) {
+                        $q->where('is_active', 1);
+                    },
+                    'deals_content.deals_content_details',
+                    'deals_brands'
+                ])
+                ->where('id_deals', $request->id_deals)
+                ->get()
+                ->toArray()[0];
 
         $deals['outlet_by_city'] = [];
 
@@ -51,32 +49,31 @@ class ApiDealsWebview extends Controller
             $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
                 ->join('deals', 'deals.id_brand', '=', 'brand_outlet.id_brand')
                 ->where('deals.id_deals', $deals['id_deals'])
-                ->where('outlet_status','Active')
+                ->where('outlet_status', 'Active')
                 ->select('outlets.*')->with('city')->get()->toArray();
             $deals['outlets'] = $outlets;
-
-        }elseif ($deals['is_all_outlet'] == 1 && isset($deals['deals_brands'])) {
-        	$list_outlet = array_column($deals['deals_brands'], 'id_brand');
+        } elseif ($deals['is_all_outlet'] == 1 && isset($deals['deals_brands'])) {
+            $list_outlet = array_column($deals['deals_brands'], 'id_brand');
             $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet');
 
-        	if (($deals['brand_rule']??false) == 'or') {
-	            $outlets = $outlets->whereHas('brands',function($query) use ($list_outlet){
-		                    $query->whereIn('brands.id_brand',$list_outlet);
-		                });
-        	}else{
+            if (($deals['brand_rule'] ?? false) == 'or') {
+                $outlets = $outlets->whereHas('brands', function ($query) use ($list_outlet) {
+                            $query->whereIn('brands.id_brand', $list_outlet);
+                });
+            } else {
                 foreach ($list_outlet as $value) {
-	                $outlets = $outlets->whereHas('brands',function($query) use ($value){
-			                    $query->where('brands.id_brand',$value);
-			                });
-	            }
-        	}
+                    $outlets = $outlets->whereHas('brands', function ($query) use ($value) {
+                                $query->where('brands.id_brand', $value);
+                    });
+                }
+            }
 
-            $outlets = $outlets->where('outlet_status','Active')->select('outlets.*')->with('city')->groupBy('id_outlet')->get()->toArray();
+            $outlets = $outlets->where('outlet_status', 'Active')->select('outlets.*')->with('city')->groupBy('id_outlet')->get()->toArray();
             $deals['outlets'] = $outlets;
         }
 
         if (!empty($deals['outlet_groups'])) {
-        	$deals['outlets'] = $this->getOutletGroupFilter($deals['outlet_groups'], $deals['deals_brands'], $deals['brand_rule']);
+            $deals['outlets'] = $this->getOutletGroupFilter($deals['outlet_groups'], $deals['deals_brands'], $deals['brand_rule']);
         }
 
         if (!empty($deals['outlets'])) {
@@ -102,14 +99,14 @@ class ApiDealsWebview extends Controller
             $deals['outlet_by_city'] = $kota;
         }
 
-        usort($deals['outlet_by_city'], function($a, $b) {
-            if(isset($a['city_name']) && isset($b['city_name'])){
+        usort($deals['outlet_by_city'], function ($a, $b) {
+            if (isset($a['city_name']) && isset($b['city_name'])) {
                 return $a['city_name'] <=> $b['city_name'];
             }
         });
 
         for ($i = 0; $i < count($deals['outlet_by_city']); $i++) {
-            usort($deals['outlet_by_city'][$i]['outlet'] ,function($a, $b) {
+            usort($deals['outlet_by_city'][$i]['outlet'], function ($a, $b) {
                 return $a['outlet_name'] <=> $b['outlet_name'];
             });
         }
@@ -128,7 +125,7 @@ class ApiDealsWebview extends Controller
         $available_voucher = ($deals['deals_voucher_type'] == 'Unlimited') ? 'Unlimited' : $deals['deals_total_voucher'] - $deals['deals_total_claimed'] . '/' . $deals['deals_total_voucher'];
         $available_voucher_text = "";
         if ($deals['deals_voucher_type'] != 'Unlimited') {
-        	$available_voucher_text = ($deals['deals_total_voucher'] - $deals['deals_total_claimed']). " kupon tersedia";
+            $available_voucher_text = ($deals['deals_total_voucher'] - $deals['deals_total_claimed']) . " kupon tersedia";
         }
 
         $result = [
@@ -158,35 +155,31 @@ class ApiDealsWebview extends Controller
             // 'payment_message'               => 'Are you sure want to claim Free Voucher Offline x Online Limited voucher ?',
             'payment_success_message'       => 'Beli Kupon Berhasil! Apakah Anda ingin menggunakannya sekarang?',
             'user_point'                    => Auth()->user()->balance,
-            'deals_start_indo'              => MyHelper::dateFormatInd($deals['deals_start'], false, false).' pukul '.date('H:i', strtotime($deals['deals_start'])),
-            'deals_end_indo'                => MyHelper::dateFormatInd($deals['deals_end'], false, false).' pukul '.date('H:i', strtotime($deals['deals_end'])),
-            'time_server_indo'              => MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i', strtotime(date('Y-m-d H:i:s')))
+            'deals_start_indo'              => MyHelper::dateFormatInd($deals['deals_start'], false, false) . ' pukul ' . date('H:i', strtotime($deals['deals_start'])),
+            'deals_end_indo'                => MyHelper::dateFormatInd($deals['deals_end'], false, false) . ' pukul ' . date('H:i', strtotime($deals['deals_end'])),
+            'time_server_indo'              => MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false) . ' pukul ' . date('H:i', strtotime(date('Y-m-d H:i:s')))
         ];
 
-        if($deals['deals_type'] == 'Quest'){
+        if ($deals['deals_type'] == 'Quest') {
             $result['time_server'] = null;
         }
 
-        if($deals['deals_voucher_price_type']=='free'){
+        if ($deals['deals_voucher_price_type'] == 'free') {
             //voucher free
             $deals['button_text'] = 'Get';
-            $payment_message = Setting::where('key', 'payment_messages')->pluck('value_text')->first()??'Kamu yakin ingin mengambil voucher ini?';
-            $payment_message = MyHelper::simpleReplace($payment_message,['deals_title'=>$deals['deals_title']]);
-        }
-        elseif($deals['deals_voucher_price_type']=='point')
-        {
+            $payment_message = Setting::where('key', 'payment_messages')->pluck('value_text')->first() ?? 'Kamu yakin ingin mengambil voucher ini?';
+            $payment_message = MyHelper::simpleReplace($payment_message, ['deals_title' => $deals['deals_title']]);
+        } elseif ($deals['deals_voucher_price_type'] == 'point') {
             $deals['button_text'] = 'Claim';
-            $payment_message = Setting::where('key', 'payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% points anda dengan Voucher %deals_title%?';
-            $payment_message = MyHelper::simpleReplace($payment_message,['point'=>$deals['deals_voucher_price_pretty'],'deals_title'=>$deals['deals_title']]);
-        }
-        else
-        {
+            $payment_message = Setting::where('key', 'payment_messages_point')->pluck('value_text')->first() ?? 'Anda akan menukarkan %point% points anda dengan Voucher %deals_title%?';
+            $payment_message = MyHelper::simpleReplace($payment_message, ['point' => $deals['deals_voucher_price_pretty'],'deals_title' => $deals['deals_title']]);
+        } else {
             $deals['button_text'] = 'Buy';
-            $payment_message = Setting::where('key', 'payment_messages_cash')->pluck('value_text')->first()??'Kamu yakin ingin membeli deals %deals_title% dengan harga %cash%?';
-            $payment_message = MyHelper::simpleReplace($payment_message,['cash'=>$deals['deals_voucher_price_pretty'],'deals_title'=>$deals['deals_title']]);
+            $payment_message = Setting::where('key', 'payment_messages_cash')->pluck('value_text')->first() ?? 'Kamu yakin ingin membeli deals %deals_title% dengan harga %cash%?';
+            $payment_message = MyHelper::simpleReplace($payment_message, ['cash' => $deals['deals_voucher_price_pretty'],'deals_title' => $deals['deals_title']]);
         }
 
-    	$result['payment_success_message'] = Setting::where('key', 'payment_success_messages')->pluck('value_text')->first()??'Klaim Kupon Berhasil! Apakah Anda ingin menggunakannya sekarang?';
+        $result['payment_success_message'] = Setting::where('key', 'payment_success_messages')->pluck('value_text')->first() ?? 'Klaim Kupon Berhasil! Apakah Anda ingin menggunakannya sekarang?';
 
         $result['payment_message'] = $payment_message;
         if ($deals['deals_voucher_price_cash'] != "") {
@@ -327,9 +320,9 @@ class ApiDealsWebview extends Controller
             'balance'                   => number_format($dealsUser['balance_nominal'], 0, ",", ".") . ' poin',
             'use_point'                 => (!is_null($dealsUser['balance_nominal'])) ? 1 : 0 ,
             'voucher_expired_at_indo'   => MyHelper::dateFormatInd($dealsUser['voucher_expired_at'], false, false),
-            'voucher_expired_at_time_indo' => 'pukul '.date('H:i', strtotime($dealsUser['voucher_expired_at'])),
+            'voucher_expired_at_time_indo' => 'pukul ' . date('H:i', strtotime($dealsUser['voucher_expired_at'])),
             'claimed_at_indo'           => MyHelper::dateFormatInd($dealsUser['claimed_at'], false, false),
-            'claimed_at_time_indo'      => 'pukul '.date('H:i', strtotime($dealsUser['claimed_at']))
+            'claimed_at_time_indo'      => 'pukul ' . date('H:i', strtotime($dealsUser['claimed_at']))
         ];
 
         if ($dealsUser['voucher_price_point'] != null) {
@@ -361,48 +354,48 @@ class ApiDealsWebview extends Controller
 
     public function getOutletGroupFilter($promo_outlet_groups = [], $promo_brands = [], $brand_rule = 'or')
     {
-    	$outlets = [];
-    	foreach ($promo_outlet_groups as $val) {
-    		$temp = app($this->outlet_group_filter)->outletGroupFilter($val['id_outlet_group']);
-			$outlets = array_merge($outlets, $temp);
-    	}
+        $outlets = [];
+        foreach ($promo_outlet_groups as $val) {
+            $temp = app($this->outlet_group_filter)->outletGroupFilter($val['id_outlet_group']);
+            $outlets = array_merge($outlets, $temp);
+        }
 
-    	$id_outlets = [];
-    	foreach ($outlets as $val) {
-    		$id_outlets[] = $val['id_outlet'];
-    	}
+        $id_outlets = [];
+        foreach ($outlets as $val) {
+            $id_outlets[] = $val['id_outlet'];
+        }
 
-    	$outlet_with_city = Outlet::whereIn('id_outlet', $id_outlets)
-    						->with(['city', 'brands' => function($q) {
-    							$q->select('brands.id_brand', 'id_outlet');
-    						}])
-    						->get()
-    						->toArray();
+        $outlet_with_city = Outlet::whereIn('id_outlet', $id_outlets)
+                            ->with(['city', 'brands' => function ($q) {
+                                $q->select('brands.id_brand', 'id_outlet');
+                            }])
+                            ->get()
+                            ->toArray();
 
-    	$result = $outlet_with_city;
+        $result = $outlet_with_city;
 
-    	if (!empty($promo_brands)) {
-    		$id_promo_brands = array_column($promo_brands, 'id_brand');
-    		$result = [];
+        if (!empty($promo_brands)) {
+            $id_promo_brands = array_column($promo_brands, 'id_brand');
+            $result = [];
 
-    		foreach ($outlet_with_city as $val) {
-    			$id_outlet_brands = array_column($val['brands'], 'id_brand');
-    			$check_brand 	= array_diff($id_promo_brands, $id_outlet_brands);
+            foreach ($outlet_with_city as $val) {
+                $id_outlet_brands = array_column($val['brands'], 'id_brand');
+                $check_brand    = array_diff($id_promo_brands, $id_outlet_brands);
 
-		    	if ($brand_rule == 'or') {
-		    		if (count($check_brand) == count($promo_brands)) {
-			    		continue;
-			    	}
-		    	}else{
-			    	if (!empty($check_brand)) {
-		    			continue;
-		    		}
-		    	}
+                if ($brand_rule == 'or') {
+                    if (count($check_brand) == count($promo_brands)) {
+                        continue;
+                    }
+                } else {
+                    if (!empty($check_brand)) {
+                        continue;
+                    }
+                }
 
-    			$result[] = $val;
-    		}
-    	}
+                $result[] = $val;
+            }
+        }
 
-    	return $result;
+        return $result;
     }
 }

@@ -10,11 +10,9 @@ use App\Http\Models\NewsFormDataDetail;
 use App\Http\Models\NewsOutlet;
 use App\Http\Models\NewsProduct;
 use App\Http\Models\Configs;
-
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Lib\MyHelper;
 use Validator;
 use Hash;
@@ -22,7 +20,6 @@ use DB;
 use Mail;
 use File;
 use Auth;
-
 use Modules\News\Http\Requests\Create;
 use Modules\News\Http\Requests\Update;
 use Modules\News\Http\Requests\CreateRelation;
@@ -30,7 +27,7 @@ use Modules\News\Http\Requests\DeleteRelation;
 
 class ApiElearning extends Controller
 {
-    function __construct()
+    public function __construct()
     {
         date_default_timezone_set('Asia/Jakarta');
         $this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
@@ -39,7 +36,8 @@ class ApiElearning extends Controller
     public $saveImage = "img/news/";
     public $endPoint  = "http://localhost/crmsys-api/public/";
 
-    public function home(Request $request){
+    public function home(Request $request)
+    {
         $post = $request->json()->all();
         $now = date('Y-m-d');
         $list = News::whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
@@ -47,10 +45,10 @@ class ApiElearning extends Controller
                 ->orWhere('news_expired_date', null);
         })->where('news_featured_status', 1)->orderBy('news_publish_date', 'desc');
 
-        if(!empty($post['search_key'])){
-            $list = $list->where(function ($query) use ($post){
-                $query->where('news_title', 'like', '%'.$post['search_key'].'%')
-                    ->orWhere('news_content_short', 'like', '%'.$post['search_key'].'%');
+        if (!empty($post['search_key'])) {
+            $list = $list->where(function ($query) use ($post) {
+                $query->where('news_title', 'like', '%' . $post['search_key'] . '%')
+                    ->orWhere('news_content_short', 'like', '%' . $post['search_key'] . '%');
             });
         }
 
@@ -59,8 +57,8 @@ class ApiElearning extends Controller
         $article = [];
         $onlineClass = [];
 
-        foreach ($list as $value){
-            if($value['news_type'] == 'video'){
+        foreach ($list as $value) {
+            if ($value['news_type'] == 'video') {
                 $video[] = [
                     'slug' => $value['news_slug'],
                     'title' => $value['news_title'],
@@ -69,7 +67,7 @@ class ApiElearning extends Controller
                     'short_description' => $value['news_content_short'],
                     'post_date' => MyHelper::dateFormatInd($value['news_publish_date'], true, false, false)
                 ];
-            }elseif($value['news_type'] == 'article'){
+            } elseif ($value['news_type'] == 'article') {
                 $article[] = [
                     'slug' => $value['news_slug'],
                     'title' => $value['news_title'],
@@ -77,16 +75,16 @@ class ApiElearning extends Controller
                     'short_description' => $value['news_content_short'],
                     'post_date' => MyHelper::dateFormatInd($value['news_publish_date'], true, false, false)
                 ];
-            }elseif($value['news_type'] == 'online_class'){
+            } elseif ($value['news_type'] == 'online_class') {
                 $date = '';
-                if(!empty($value['news_event_date_start'])){
+                if (!empty($value['news_event_date_start'])) {
                     $dateEventStart = MyHelper::dateFormatInd($value['news_event_date_start'], true, false);
                     $dateEventEnd = MyHelper::dateFormatInd($value['news_event_date_end'], true, false);
 
-                    if($dateEventStart == $dateEventEnd){
+                    if ($dateEventStart == $dateEventEnd) {
                         $date = $dateEventStart;
-                    }else{
-                        $date = $dateEventStart.' - '.$dateEventEnd;
+                    } else {
+                        $date = $dateEventStart . ' - ' . $dateEventEnd;
                     }
                 }
 
@@ -106,32 +104,32 @@ class ApiElearning extends Controller
         $bannerArticle = $this->queryList('article', ['news_featured_status' => 1]);
         $bannerOnlineClass = $this->queryList('online_class', ['news_featured_status' => 1]);
 
-        if(count($bannerArticle) >= 2){
+        if (count($bannerArticle) >= 2) {
             $bannerTmp[] = $bannerArticle[0];
             $bannerTmp[] = $bannerArticle[1];
         }
 
-        if(count($bannerVideo) >= 1){
+        if (count($bannerVideo) >= 1) {
             $bannerTmp[] = $bannerVideo[0];
         }
 
-        if(count($bannerOnlineClass) >= 1){
+        if (count($bannerOnlineClass) >= 1) {
             $bannerTmp[] = $bannerOnlineClass[0];
         }
 
-        if(count($bannerTmp) != 4){
+        if (count($bannerTmp) != 4) {
             $listBanner = News::whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
                 $query->whereDate('news_expired_date', '>=', $now)
                     ->orWhere('news_expired_date', null);
             })->where('news_featured_status', 1)->orderBy('news_publish_date', 'desc')->get()->toArray();
             shuffle($listBanner);
-            $bannerTmp = array_slice($listBanner,0, 5);
-        }else{
+            $bannerTmp = array_slice($listBanner, 0, 5);
+        } else {
             shuffle($bannerTmp);
         }
 
         $banners = [];
-        foreach ($bannerTmp as $tmp){
+        foreach ($bannerTmp as $tmp) {
             $banners[] = [
                 'type' => $tmp['news_type'],
                 'slug' => $tmp['news_slug'],
@@ -152,21 +150,22 @@ class ApiElearning extends Controller
         return response()->json(MyHelper::checkGet($res));
     }
 
-    public function queryList($type, $post){
+    public function queryList($type, $post)
+    {
         $now = date('Y-m-d');
         $list = News::whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
                     $query->whereDate('news_expired_date', '>=', $now)
                         ->orWhere('news_expired_date', null);
-                })->where('news_type', $type);
+        })->where('news_type', $type);
 
-        if(!empty($post['search_key'])){
-            $list = $list->where(function ($query) use ($post){
-                        $query->where('news_title', 'like', '%'.$post['search_key'].'%')
-                            ->orWhere('news_content_short', 'like', '%'.$post['search_key'].'%');
-                    });
+        if (!empty($post['search_key'])) {
+            $list = $list->where(function ($query) use ($post) {
+                        $query->where('news_title', 'like', '%' . $post['search_key'] . '%')
+                            ->orWhere('news_content_short', 'like', '%' . $post['search_key'] . '%');
+            });
         }
 
-        if(isset($post['news_featured_status'])){
+        if (isset($post['news_featured_status'])) {
             $list = $list->where('news_featured_status', $post['news_featured_status']);
         }
 
@@ -175,12 +174,13 @@ class ApiElearning extends Controller
         return $list;
     }
 
-    public function videoList(Request $request){
+    public function videoList(Request $request)
+    {
         $post = $request->json()->all();
 
         $list = $this->queryList('video', $post);
         $res = [];
-        foreach ($list as $value){
+        foreach ($list as $value) {
             $res[] = [
                 'slug' => $value['news_slug'],
                 'title' => $value['news_title'],
@@ -193,13 +193,14 @@ class ApiElearning extends Controller
         return response()->json(MyHelper::checkGet($res));
     }
 
-    public function videoDetail(Request $request){
+    public function videoDetail(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(!empty($post['slug'])){
+        if (!empty($post['slug'])) {
             $detail = News::where('news_slug', $post['slug'])->first();
 
-            if(!empty($detail)){
+            if (!empty($detail)) {
                 $favorite = NewsFavorite::where('id_user', $request->user()->id)->where('id_news', $detail['id_news'])->first();
                 $res = [
                     'slug' => $detail['news_slug'],
@@ -210,18 +211,19 @@ class ApiElearning extends Controller
                     'favorite' => (!empty($favorite) ? 1 : 0)
                 ];
             }
-            return response()->json(MyHelper::checkGet($res??$detail));
-        }else{
+            return response()->json(MyHelper::checkGet($res ?? $detail));
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['Slug can not be empty']]);
         }
     }
 
-    public function articleList(Request $request){
+    public function articleList(Request $request)
+    {
         $post = $request->json()->all();
 
         $list = $this->queryList('article', $post);
         $res = [];
-        foreach ($list as $value){
+        foreach ($list as $value) {
             $res[] = [
                 'slug' => $value['news_slug'],
                 'title' => $value['news_title'],
@@ -233,13 +235,14 @@ class ApiElearning extends Controller
         return response()->json(MyHelper::checkGet($res));
     }
 
-    public function articleDetail(Request $request){
+    public function articleDetail(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(!empty($post['slug'])){
-            $news = News::where('news_slug', $post['slug'])->with('newsOutlet','newsOutlet.outlet','newsProduct.product.photos')->first();
+        if (!empty($post['slug'])) {
+            $news = News::where('news_slug', $post['slug'])->with('newsOutlet', 'newsOutlet.outlet', 'newsProduct.product.photos')->first();
 
-            if(!empty($news)){
+            if (!empty($news)) {
                 $favorite = NewsFavorite::where('id_user', $request->user()->id)->where('id_news', $news['id_news'])->first();
                 $res = [
                     'slug' => $news['news_slug'],
@@ -255,8 +258,8 @@ class ApiElearning extends Controller
                 $res['video_text'] = $news['news_video_text'];
                 $res['video_link'] = (is_null($news['news_video'])) ? [] : explode(';', $news['news_video']);
 
-                $res['location'] = NULL;
-                if(!empty($news['news_event_location_name'])){
+                $res['location'] = null;
+                if (!empty($news['news_event_location_name'])) {
                     $res['location'] = [
                         "name" => $news['news_event_location_name'],
                         "phone" => $news['news_event_location_phone'],
@@ -284,51 +287,52 @@ class ApiElearning extends Controller
                     unset($news['news_product']);
                     foreach ($newsProduct as $keyProduct => $valProduct) {
                         $res['products'][$keyProduct]['product_name']  = $valProduct['product']['product_name'];
-                        $res['products'][$keyProduct]['product_image'] = config('url.storage_url_api').($valProduct['product']['photos'][0]['product_photo']??'img/product/item/default.png');
+                        $res['products'][$keyProduct]['product_image'] = config('url.storage_url_api') . ($valProduct['product']['photos'][0]['product_photo'] ?? 'img/product/item/default.png');
                     }
                 }
 
-                $res['event_date'] = NULL;
-                if($news['news_event_date_start'] != null && $news['news_event_time_end'] != null){
+                $res['event_date'] = null;
+                if ($news['news_event_date_start'] != null && $news['news_event_time_end'] != null) {
                     $dateEventStart = MyHelper::dateFormatInd($news['news_event_date_start'], true, false);
                     $dateEventEnd = MyHelper::dateFormatInd($news['news_event_date_end'], true, false);
 
-                    if($dateEventStart == $dateEventEnd){
+                    if ($dateEventStart == $dateEventEnd) {
                         $res['event_date'] = $dateEventStart;
-                    }else{
-                        $res['event_date'] = $dateEventStart.' - '.$dateEventEnd;
+                    } else {
+                        $res['event_date'] = $dateEventStart . ' - ' . $dateEventEnd;
                     }
                 }
 
-                $res['event_hours'] = NULL;
-                if($news['news_event_time_start'] != null && $news['news_event_time_end'] != null) {
+                $res['event_hours'] = null;
+                if ($news['news_event_time_start'] != null && $news['news_event_time_end'] != null) {
                     $res['event_hours'] = date('H:i', strtotime($news['news_event_time_start'])) . ' - ' . date('H:i', strtotime($news['news_event_time_end']));
                 }
 
                 $res['button_text'] = $news['news_button_text'];
                 $res['button_link'] = $news['news_button_link'];
             }
-            return response()->json(MyHelper::checkGet($res??$news));
-        }else{
+            return response()->json(MyHelper::checkGet($res ?? $news));
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['Slug can not be empty']]);
         }
     }
 
-    public function onlineClassBanner(){
+    public function onlineClassBanner()
+    {
         $now = date('Y-m-d');
-        $banner = News::whereRaw('"'.$now.'" BETWEEN DATE(news_event_date_start) AND  DATE(news_event_date_end)')
+        $banner = News::whereRaw('"' . $now . '" BETWEEN DATE(news_event_date_start) AND  DATE(news_event_date_end)')
                     ->where('news_type', 'online_class')->first();
 
         $res = null;
-        if(!empty($banner)){
-            if(!empty($banner['news_event_date_start'])){
+        if (!empty($banner)) {
+            if (!empty($banner['news_event_date_start'])) {
                 $dateEventStart = MyHelper::dateFormatInd($banner['news_event_date_start'], true, false);
                 $dateEventEnd = MyHelper::dateFormatInd($banner['news_event_date_end'], true, false);
 
-                if($dateEventStart == $dateEventEnd){
+                if ($dateEventStart == $dateEventEnd) {
                     $date = $dateEventStart;
-                }else{
-                    $date = $dateEventStart.' - '.$dateEventEnd;
+                } else {
+                    $date = $dateEventStart . ' - ' . $dateEventEnd;
                 }
             }
 
@@ -344,21 +348,22 @@ class ApiElearning extends Controller
         return response()->json(MyHelper::checkGet($res));
     }
 
-    public function onlineClassList(Request $request){
+    public function onlineClassList(Request $request)
+    {
         $post = $request->json()->all();
 
         $list = $this->queryList('online_class', $post);
         $res = [];
-        foreach ($list as $value){
+        foreach ($list as $value) {
             $date = '';
-            if(!empty($value['news_event_date_start'])){
+            if (!empty($value['news_event_date_start'])) {
                 $dateEventStart = MyHelper::dateFormatInd($value['news_event_date_start'], true, false);
                 $dateEventEnd = MyHelper::dateFormatInd($value['news_event_date_end'], true, false);
 
-                if($dateEventStart == $dateEventEnd){
+                if ($dateEventStart == $dateEventEnd) {
                     $date = $dateEventStart;
-                }else{
-                    $date = $dateEventStart.' - '.$dateEventEnd;
+                } else {
+                    $date = $dateEventStart . ' - ' . $dateEventEnd;
                 }
             }
 
@@ -374,13 +379,14 @@ class ApiElearning extends Controller
         return response()->json(MyHelper::checkGet($res));
     }
 
-    public function onlineClassDetail(Request $request){
+    public function onlineClassDetail(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(!empty($post['slug'])){
-            $news = News::where('news_slug', $post['slug'])->with('newsOutlet','newsOutlet.outlet','newsProduct.product.photos')->first();
+        if (!empty($post['slug'])) {
+            $news = News::where('news_slug', $post['slug'])->with('newsOutlet', 'newsOutlet.outlet', 'newsProduct.product.photos')->first();
 
-            if(!empty($news)){
+            if (!empty($news)) {
                 $favorite = NewsFavorite::where('id_user', $request->user()->id)->where('id_news', $news['id_news'])->first();
                 $res = [
                     'slug' => $news['news_slug'],
@@ -393,33 +399,34 @@ class ApiElearning extends Controller
                     'favorite' => (!empty($favorite) ? 1 : 0)
                 ];
 
-                $res['class_date'] = NULL;
-                if($news['news_event_date_start'] != null && $news['news_event_time_end'] != null){
+                $res['class_date'] = null;
+                if ($news['news_event_date_start'] != null && $news['news_event_time_end'] != null) {
                     $dateEventStart = MyHelper::dateFormatInd($news['news_event_date_start'], true, false);
                     $dateEventEnd = MyHelper::dateFormatInd($news['news_event_date_end'], true, false);
 
-                    if($dateEventStart == $dateEventEnd){
+                    if ($dateEventStart == $dateEventEnd) {
                         $res['class_date'] = $dateEventStart;
-                    }else{
-                        $res['class_date'] = $dateEventStart.' - '.$dateEventEnd;
+                    } else {
+                        $res['class_date'] = $dateEventStart . ' - ' . $dateEventEnd;
                     }
                 }
 
-                $res['class_hours'] = NULL;
-                if($news['news_event_time_start'] != null && $news['news_event_time_end'] != null) {
+                $res['class_hours'] = null;
+                if ($news['news_event_time_start'] != null && $news['news_event_time_end'] != null) {
                     $res['class_hours'] = date('H:i', strtotime($news['news_event_time_start'])) . ' - ' . date('H:i', strtotime($news['news_event_time_end']));
                 }
 
                 $res['button_text'] = $news['news_button_text'];
                 $res['button_link'] = $news['news_button_link'];
             }
-            return response()->json(MyHelper::checkGet($res??$news));
-        }else{
+            return response()->json(MyHelper::checkGet($res ?? $news));
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['Slug can not be empty']]);
         }
     }
 
-    public function favoriteList(Request $request){
+    public function favoriteList(Request $request)
+    {
         $idUser = $request->user()->id;
         $post = $request->json()->all();
         $now = date('Y-m-d');
@@ -429,10 +436,10 @@ class ApiElearning extends Controller
                 ->orWhere('news_expired_date', null);
         })->where('news_favorites.id_user', $idUser)->orderBy('news_publish_date', 'desc');
 
-        if(!empty($post['search_key'])){
-            $list = $list->where(function ($query) use ($post){
-                $query->where('news_title', 'like', '%'.$post['search_key'].'%')
-                    ->orWhere('news_content_short', 'like', '%'.$post['search_key'].'%');
+        if (!empty($post['search_key'])) {
+            $list = $list->where(function ($query) use ($post) {
+                $query->where('news_title', 'like', '%' . $post['search_key'] . '%')
+                    ->orWhere('news_content_short', 'like', '%' . $post['search_key'] . '%');
             });
         }
 
@@ -441,8 +448,8 @@ class ApiElearning extends Controller
         $article = [];
         $onlineClass = [];
 
-        foreach ($list as $value){
-            if($value['news_type'] == 'video'){
+        foreach ($list as $value) {
+            if ($value['news_type'] == 'video') {
                 $video[] = [
                     'slug' => $value['news_slug'],
                     'title' => $value['news_title'],
@@ -451,7 +458,7 @@ class ApiElearning extends Controller
                     'short_description' => $value['news_content_short'],
                     'post_date' => MyHelper::dateFormatInd($value['news_publish_date'], true, false, false)
                 ];
-            }elseif($value['news_type'] == 'article'){
+            } elseif ($value['news_type'] == 'article') {
                 $article[] = [
                     'slug' => $value['news_slug'],
                     'title' => $value['news_title'],
@@ -459,16 +466,16 @@ class ApiElearning extends Controller
                     'short_description' => $value['news_content_short'],
                     'post_date' => MyHelper::dateFormatInd($value['news_publish_date'], true, false, false)
                 ];
-            }elseif($value['news_type'] == 'online_class'){
+            } elseif ($value['news_type'] == 'online_class') {
                 $date = '';
-                if(!empty($value['news_event_date_start'])){
+                if (!empty($value['news_event_date_start'])) {
                     $dateEventStart = MyHelper::dateFormatInd($value['news_event_date_start'], true, false);
                     $dateEventEnd = MyHelper::dateFormatInd($value['news_event_date_end'], true, false);
 
-                    if($dateEventStart == $dateEventEnd){
+                    if ($dateEventStart == $dateEventEnd) {
                         $date = $dateEventStart;
-                    }else{
-                        $date = $dateEventStart.' - '.$dateEventEnd;
+                    } else {
+                        $date = $dateEventStart . ' - ' . $dateEventEnd;
                     }
                 }
 
@@ -491,15 +498,16 @@ class ApiElearning extends Controller
         return response()->json(MyHelper::checkGet($res));
     }
 
-    public function favoriteAdd(Request $request){
+    public function favoriteAdd(Request $request)
+    {
         $post = $request->json()->all();
         $idUser = $request->user()->id;
 
-        if(empty($post['slug'])){
+        if (empty($post['slug'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Slug news can not be empty']]);
         }
-        $idNews = News::where('news_slug', $post['slug'])->first()['id_news']??null;
-        if(empty($idNews)){
+        $idNews = News::where('news_slug', $post['slug'])->first()['id_news'] ?? null;
+        if (empty($idNews)) {
             return response()->json(['status' => 'fail', 'messages' => ['News not found']]);
         }
 
@@ -515,15 +523,16 @@ class ApiElearning extends Controller
         return response()->json(MyHelper::checkUpdate($save));
     }
 
-    public function favoriteDelete(Request $request){
+    public function favoriteDelete(Request $request)
+    {
         $post = $request->json()->all();
         $idUser = $request->user()->id;
 
-        if(empty($post['slug'])){
+        if (empty($post['slug'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Slug news can not be empty']]);
         }
-        $idNews = News::where('news_slug', $post['slug'])->first()['id_news']??null;
-        if(empty($idNews)){
+        $idNews = News::where('news_slug', $post['slug'])->first()['id_news'] ?? null;
+        if (empty($idNews)) {
             return response()->json(['status' => 'fail', 'messages' => ['News not found']]);
         }
         NewsFavorite::where('id_user', $idUser)->where('id_news', $idNews)->delete();

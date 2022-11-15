@@ -16,16 +16,16 @@ use Illuminate\Database\Eloquent\Model;
  */
 class RequestTrxSyncFailed extends Model
 {
-	/**
-	 * The database name used by the model.
-	 *
-	 * @var string
-	 */
-	protected $connection = 'mysql2';
-	
+    /**
+     * The database name used by the model.
+     *
+     * @var string
+     */
+    protected $connection = 'mysql2';
+
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'request_trx_sync_faileds';
@@ -34,5 +34,4 @@ class RequestTrxSyncFailed extends Model
      * @var array
      */
     protected $fillable = ['id_request_trx_sync_failed', 'request', 'sent_at', 'created_at', 'updated_at'];
-
 }

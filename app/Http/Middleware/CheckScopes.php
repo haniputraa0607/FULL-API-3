@@ -23,20 +23,20 @@ class CheckScopes extends AddCustomProvider
     {
         /*check status maintenance mode for apps*/
         $appScope = ['apps', 'doctor-apps'];
-        if (in_array($scope,$appScope)) {
+        if (in_array($scope, $appScope)) {
             $getMaintenance = Setting::where('key', 'maintenance_mode')->first();
-            if($getMaintenance && $getMaintenance['value'] == 1){
+            if ($getMaintenance && $getMaintenance['value'] == 1) {
                 $dt = (array)json_decode($getMaintenance['value_text']);
                 $message = $dt['message'];
-                if($dt['image'] != ""){
-                    $url_image = config('url.storage_url_api').$dt['image'];
-                }else{
-                    $url_image = config('url.storage_url_api').'img/maintenance/default.png';
+                if ($dt['image'] != "") {
+                    $url_image = config('url.storage_url_api') . $dt['image'];
+                } else {
+                    $url_image = config('url.storage_url_api') . 'img/maintenance/default.png';
                 }
                 return response()->json([
                     'status' => 'fail',
                     'messages' => [$message],
-                    'maintenance' => config('url.api_url') ."api/maintenance-mode",
+                    'maintenance' => config('url.api_url') . "api/maintenance-mode",
                     'data_maintenance' => [
                         'url_image' => $url_image,
                         'text' => $message
@@ -45,23 +45,23 @@ class CheckScopes extends AddCustomProvider
             }
         }
 
-        if($request->user()){
+        if ($request->user()) {
             $dataToken = json_decode($request->user()->token());
             $scopeUser = $dataToken->scopes[0];
-        }else{
-            try{
+        } else {
+            try {
                 $bearerToken = $request->bearerToken();
                 $tokenId = (new Parser())->parse($bearerToken)->getHeader('jti');
                 $getOauth = OauthAccessToken::find($tokenId);
-                $scopeUser = str_replace(str_split('[]""'),"",$getOauth['scopes']);
-            }catch (\Exception $e){
+                $scopeUser = str_replace(str_split('[]""'), "", $getOauth['scopes']);
+            } catch (\Exception $e) {
                 return response()->json(['error' => 'Unauthenticated.'], 401);
             }
         }
 
         $arrScope = ['pos', 'be', 'apps', 'franchise-client', 'franchise-super-admin',
             'franchise-user', 'client', 'doctor-apps', 'merchant'];
-        if((in_array($scope, $arrScope) && $scope == $scopeUser)){
+        if ((in_array($scope, $arrScope) && $scope == $scopeUser)) {
             return $next($request);
         }
 

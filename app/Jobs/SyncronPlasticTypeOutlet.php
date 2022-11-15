@@ -28,7 +28,11 @@ use Illuminate\Support\Facades\Cache;
 
 class SyncronPlasticTypeOutlet implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
     protected $data;
     /**
      * Create a new job instance.
@@ -48,7 +52,7 @@ class SyncronPlasticTypeOutlet implements ShouldQueue
     public function handle()
     {
         $plasticType = PlasticType::get()->toArray();
-        foreach ($plasticType as $pt){
+        foreach ($plasticType as $pt) {
             app('Modules\Plastic\Http\Controllers\ApiPlasticTypeController')->syncPlasticTypeOutlet($pt['id_plastic_type']);
         }
         return true;

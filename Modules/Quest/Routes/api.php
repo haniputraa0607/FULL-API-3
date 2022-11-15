@@ -31,12 +31,12 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('start', 'ApiQuest@start');
     Route::post('trigger-manual-autoclaim', 'ApiQuest@triggerManualAutoclaim');
 
-	Route::group(['prefix' => 'report'], function () {
-    	Route::any('/', 'ApiReportQuest@list');
-    	Route::any('detail', 'ApiReportQuest@detail');
+    Route::group(['prefix' => 'report'], function () {
+        Route::any('/', 'ApiReportQuest@list');
+        Route::any('detail', 'ApiReportQuest@detail');
         Route::any('list/user-quest', 'ApiReportQuest@listUser');
         Route::any('export', 'ApiReportQuest@exportListUser');
-	});
+    });
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'prefix' => 'quest'], function () {

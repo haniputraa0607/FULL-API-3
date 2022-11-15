@@ -11,6 +11,6 @@
 |
 */
 
-Route::prefix('plastic')->group(function() {
+Route::prefix('plastic')->group(function () {
     Route::get('/', 'PlasticController@index');
 });

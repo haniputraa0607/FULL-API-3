@@ -6,10 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class MonthlyReportTrxMenu extends Model
 {
-	protected $connection = 'mysql';
+    protected $connection = 'mysql';
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'monthly_report_trx_menu';
@@ -46,19 +46,19 @@ class MonthlyReportTrxMenu extends Model
         'product_name',
         'id_brand'
     ];
-	
+
     public function product()
     {
         return $this->belongsTo(Product::class, 'id_product', 'id_product')->select('id_product', 'product_code', 'product_name');
     }
 
-    public function outlet() 
+    public function outlet()
     {
         return $this->belongsTo(Outlet::class, 'id_outlet', 'id_outlet');
     }
 
     public function brand()
     {
-		return $this->belongsTo(\Modules\Brand\Entities\Brand::class,'id_brand');
-	}
+        return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
+    }
 }

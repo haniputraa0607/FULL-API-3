@@ -11,8 +11,8 @@ class DoctorSpecialistCreate extends FormRequest
     public function rules()
     {
         return [
-            'doctor_specialist_name'=>'required|string',
-            'id_doctor_specialist_category'=>'required|integer'
+            'doctor_specialist_name' => 'required|string',
+            'id_doctor_specialist_category' => 'required|integer'
         ];
     }
 

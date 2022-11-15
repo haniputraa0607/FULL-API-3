@@ -15,7 +15,6 @@ use Illuminate\Routing\Controller;
 use Modules\Transaction\Entities\TransactionGroup;
 use Modules\Transaction\Entities\TransactionPaymentCash;
 use Modules\Transaction\Http\Requests\RuleUpdate;
-
 use Modules\Transaction\Http\Requests\TransactionNew;
 use App\Lib\MyHelper;
 use App\Lib\GoSend;
@@ -31,7 +30,8 @@ class ApiTransactionRefund extends Controller
 {
     public $saveImage = "img/transaction/manual-payment/";
 
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
         $this->xendit         = 'Modules\Xendit\Http\Controllers\XenditController';
         $this->trx = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
@@ -53,14 +53,14 @@ class ApiTransactionRefund extends Controller
         $transaction = Transaction::where('id_transaction', $trx['id_transaction'])->first();
 
         $multiple = TransactionMultiplePayment::where('id_transaction_group', $trx['id_transaction_group'])->get()->toArray();
-        $nominalBalanceEachTrx = TransactionPaymentBalance::where('id_transaction', $trx['id_transaction'])->first()['balance_nominal']??0;
+        $nominalBalanceEachTrx = TransactionPaymentBalance::where('id_transaction', $trx['id_transaction'])->first()['balance_nominal'] ?? 0;
 
         foreach ($multiple as $pay) {
             if ($pay['type'] == 'Balance') {
                 $payBalance = TransactionPaymentBalance::find($pay['id_payment']);
-                if(!empty($trx['refund_partial'])){
+                if (!empty($trx['refund_partial'])) {
                     $nominal = $nominalBalanceEachTrx;
-                }else{
+                } else {
                     $nominal = $payBalance['balance_nominal'];
                 }
 
@@ -88,21 +88,21 @@ class ApiTransactionRefund extends Controller
                 $payXendit = TransactionPaymentXendit::find($pay['id_payment']);
                 if ($payXendit) {
                     $doRefundPayment = MyHelper::setting('refund_xendit');
-                    if(!empty($trx['refund_partial'])){
-                        $amountXendit = $trx['refund_partial']-$nominalBalanceEachTrx;
-                    }else{
+                    if (!empty($trx['refund_partial'])) {
+                        $amountXendit = $trx['refund_partial'] - $nominalBalanceEachTrx;
+                    } else {
                         $amountXendit = $payXendit['amount'];
                     }
 
-                    if($doRefundPayment){
+                    if ($doRefundPayment) {
                         $ewallets = ["OVO","DANA","LINKAJA","SHOPEEPAY","SAKUKU"];
-                        if(in_array(strtoupper($payXendit['type']), $ewallets)){
-                            if(!empty($trx['refundnominal'])){
+                        if (in_array(strtoupper($payXendit['type']), $ewallets)) {
+                            if (!empty($trx['refundnominal'])) {
                                 $refund = app($this->xendit)->refund($payXendit['id_transaction_group'], 'trx', [
                                     'amount' => $amountXendit,
                                     'reason' => 'Rejected transaction from merchant'
                                 ], $errors);
-                            }else{
+                            } else {
                                 $refund = app($this->xendit)->refund($payXendit['id_transaction_group'], 'trx', [], $errors);
                             }
 
@@ -131,7 +131,7 @@ class ApiTransactionRefund extends Controller
                                     }
                                 }
                             }
-                        }else{
+                        } else {
                             $transaction->update([
                                 'refund_requirement' => $amountXendit,
                                 'reject_type' => 'refund',
@@ -160,17 +160,17 @@ class ApiTransactionRefund extends Controller
                 $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
                 if ($payMidtrans) {
                     $doRefundPayment = MyHelper::setting('refund_midtrans');
-                    if(!empty($trx['refund_partial'])){
-                        $amountMidtrans = $trx['refund_partial']-$nominalBalanceEachTrx;
-                    }else{
+                    if (!empty($trx['refund_partial'])) {
+                        $amountMidtrans = $trx['refund_partial'] - $nominalBalanceEachTrx;
+                    } else {
                         $amountMidtrans = $payMidtrans['gross_amount'];
                     }
 
                     if ($doRefundPayment) {
-                        if(!empty($trx['refundnominal'])){
-                            $refund = Midtrans::refundPartial($payMidtrans['vt_transaction_id'],['reason' => $order['reject_reason']??'', 'amount' => $amountMidtrans]);
-                        }else{
-                            $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $order['reject_reason']??'']);
+                        if (!empty($trx['refundnominal'])) {
+                            $refund = Midtrans::refundPartial($payMidtrans['vt_transaction_id'], ['reason' => $order['reject_reason'] ?? '', 'amount' => $amountMidtrans]);
+                        } else {
+                            $refund = Midtrans::refund($payMidtrans['vt_transaction_id'], ['reason' => $order['reject_reason'] ?? '']);
                         }
 
                         $transaction->update([
@@ -204,7 +204,7 @@ class ApiTransactionRefund extends Controller
                         $transaction->update([
                             'reject_type'   => 'point',
                         ]);
-                        $refund = app($this->balance)->addLogBalance( $transaction['id_user'], $amountMidtrans, $transaction['id_transaction'], 'Rejected Order Midtrans', $amountMidtrans);
+                        $refund = app($this->balance)->addLogBalance($transaction['id_user'], $amountMidtrans, $transaction['id_transaction'], 'Rejected Order Midtrans', $amountMidtrans);
                         if ($refund == false) {
                             return [
                                 'status'    => 'fail',
@@ -215,13 +215,14 @@ class ApiTransactionRefund extends Controller
                     }
                 }
             }
-
         }
 
         //send notif point refund
-        if($rejectBalance == true){
+        if ($rejectBalance == true) {
             $outlet = Outlet::find($transaction['id_outlet']);
-            $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'],
+            $send = app($this->autocrm)->SendAutoCRM(
+                'Rejected Order Point Refund',
+                $user['phone'],
                 [
                     "outlet_name"      => $outlet['outlet_name'],
                     "transaction_date" => $order['transaction_date'],
@@ -229,7 +230,8 @@ class ApiTransactionRefund extends Controller
                     'receipt_number'   => $order['transaction_receipt_number'],
                     'received_point'   => (string) $point,
                     'order_id'         => $order->order_id,
-                ]);
+                ]
+            );
             if ($send != true) {
                 return [
                     'status'   => 'fail',

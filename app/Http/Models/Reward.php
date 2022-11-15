@@ -9,17 +9,17 @@ class Reward extends Model
     protected $primaryKey = 'id_reward';
 
     protected $casts = [
-		'id_reward' => 'int',
-		'id_user' => 'int',
-		'reward_coupon_point' => 'int'
-	];
+        'id_reward' => 'int',
+        'id_user' => 'int',
+        'reward_coupon_point' => 'int'
+    ];
 
-	protected $dates = [
-		'reward_start',
-		'reward_end'
-	];
+    protected $dates = [
+        'reward_start',
+        'reward_end'
+    ];
 
-	protected $fillable = [
+    protected $fillable = [
         'reward_name',
         'reward_image',
         'reward_description',
@@ -30,30 +30,29 @@ class Reward extends Model
         'reward_publish_end',
         'count_winner',
         'winner_type',
-		'created_at',
-		'updated_at'
-	];
+        'created_at',
+        'updated_at'
+    ];
 
     protected $appends  = ['url_reward_image'];
 
-	// ATTRIBUTE IMAGE URL
-	public function getUrlRewardImageAttribute() {
-		if (empty($this->reward_image)) {
-            return config('url.storage_url_api').'img/default.jpg';
-        }
-        else {
-            return config('url.storage_url_api').$this->reward_image;
+    // ATTRIBUTE IMAGE URL
+    public function getUrlRewardImageAttribute()
+    {
+        if (empty($this->reward_image)) {
+            return config('url.storage_url_api') . 'img/default.jpg';
+        } else {
+            return config('url.storage_url_api') . $this->reward_image;
         }
     }
 
-	public function reward_user()
-	{
-		return $this->hasMany(\App\Http\Models\RewardUser::class, 'id_reward')->orderBy('total_coupon', 'DESC');
-	}
+    public function reward_user()
+    {
+        return $this->hasMany(\App\Http\Models\RewardUser::class, 'id_reward')->orderBy('total_coupon', 'DESC');
+    }
 
-	public function winner()
-	{
-		return $this->hasMany(\App\Http\Models\RewardUser::class, 'id_reward')->where('is_winner', '1');
-	}
-
+    public function winner()
+    {
+        return $this->hasMany(\App\Http\Models\RewardUser::class, 'id_reward')->where('is_winner', '1');
+    }
 }

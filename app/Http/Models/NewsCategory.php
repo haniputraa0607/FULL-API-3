@@ -12,11 +12,12 @@ class NewsCategory extends Model
      * @var array
      */
     protected $fillable = [
-    	'category_name',
+        'category_name',
         'news_category_order'
-	];
+    ];
 
-	public function news(){
-		return $this->hasMany(\App\Http\Models\News::class,'id_news_category','id_news_category');
-	}
+    public function news()
+    {
+        return $this->hasMany(\App\Http\Models\News::class, 'id_news_category', 'id_news_category');
+    }
 }

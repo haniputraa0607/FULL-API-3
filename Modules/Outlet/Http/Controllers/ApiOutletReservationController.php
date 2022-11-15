@@ -5,32 +5,30 @@ namespace Modules\Outlet\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\Outlet;
 use App\Http\Models\OutletReservation;
 use App\Http\Models\OutletDoctor;
 use App\Http\Models\OutletDoctorSchedule;
 use App\Http\Models\OutletHoliday;
 use App\Http\Models\OutletPhoto;
-
 use App\Lib\MyHelper;
 use Validator;
 use Hash;
 use DB;
 use Mail;
-
-
 use Modules\Outlet\Http\Requests\Outlet\Reservation;
 
 class ApiOutletReservationController extends Controller
 {
     public $saveImage = "img/outlet/";
 
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
     }
 
-    function checkInput($post) {
+    public function checkInput($post)
+    {
         $data = [];
 
         if (isset($post['day'])) {
@@ -48,7 +46,7 @@ class ApiOutletReservationController extends Controller
         if (isset($post['id_outlet'])) {
             $data['id_outlet'] = $post['id_outlet'];
         }
-        
+
         if (isset($post['limit'])) {
             $data['limit'] = $post['limit'];
         }
@@ -56,19 +54,20 @@ class ApiOutletReservationController extends Controller
         return $data;
     }
 
-    function checkCreate($post) {
+    public function checkCreate($post)
+    {
         $check = OutletReservation::where('id_store', $post['id_store'])->where('day', $post['day'])->count();
 
         if ($check > 0) {
             return false;
-        }
-        else {
+        } else {
             return true;
         }
     }
 
     /* CREATE */
-    function create(Reservation $request) {
+    public function create(Reservation $request)
+    {
         $data = $this->checkInput($request->json()->all());
 
         // save
@@ -77,17 +76,15 @@ class ApiOutletReservationController extends Controller
     }
 
     /* DELETE */
-    function delete(Request $request) {
+    public function delete(Request $request)
+    {
 
         if (is_array($request->json('id_outlet_reservation'))) {
             $delete = OutletReservation::whereIn('id_outlet_reservation', $request->json('id_outlet_reservation'))->delete();
-        }
-        else {
+        } else {
             $delete = OutletReservation::where('id_outlet_reservation', $request->json('id_outlet_reservation'))->delete();
         }
 
         return response()->json(MyHelper::checkDelete($delete));
-
     }
-
 }

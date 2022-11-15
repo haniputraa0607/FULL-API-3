@@ -7,11 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class PromoPaymentGatewayValidation extends Model
 {
     protected $table = 'promo_payment_gateway_validation';
-	protected $primaryKey = 'id_promo_payment_gateway_validation';
+    protected $primaryKey = 'id_promo_payment_gateway_validation';
 
-	protected $fillable = [
-	    'id_user',
-	    'id_rule_promo_payment_gateway',
+    protected $fillable = [
+        'id_user',
+        'id_rule_promo_payment_gateway',
         'processing_status',
         'reference_by',
         'validation_cashback_type',
@@ -26,5 +26,5 @@ class PromoPaymentGatewayValidation extends Model
         'wrong_cashback',
         'invalid_data',
         'file'
-	];
+    ];
 }

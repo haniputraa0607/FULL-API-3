@@ -11,14 +11,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class UserNotification extends Model
 {
-	protected $table = 'user_notifications';
+    protected $table = 'user_notifications';
 
-	protected $primaryKey = 'id_user_notification';
-	
-	protected $fillable   = [
-		'id_user',
-		'inbox',
-		'voucher',
-		'history'
-	];
+    protected $primaryKey = 'id_user_notification';
+
+    protected $fillable   = [
+        'id_user',
+        'inbox',
+        'voucher',
+        'history'
+    ];
 }

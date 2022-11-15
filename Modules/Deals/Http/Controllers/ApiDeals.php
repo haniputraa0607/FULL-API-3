@@ -7,9 +7,7 @@ use App\Http\Models\DealTotal;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Lib\MyHelper;
-
 use App\Http\Models\Outlet;
 use App\Http\Models\Deal;
 use App\Http\Models\DealsOutlet;
@@ -28,7 +26,6 @@ use Modules\Promotion\Entities\DealsPromotionOutlet;
 use Modules\Promotion\Entities\DealsPromotionOutletGroup;
 use Modules\Promotion\Entities\DealsPromotionContent;
 use Modules\Promotion\Entities\DealsPromotionContentDetail;
-
 use Modules\Deals\Entities\DealsProductDiscount;
 use Modules\Deals\Entities\DealsProductDiscountRule;
 use Modules\Deals\Entities\DealsTierDiscountProduct;
@@ -40,9 +37,7 @@ use Modules\Deals\Entities\DealsContent;
 use Modules\Deals\Entities\DealsContentDetail;
 use Modules\Deals\Entities\DealsBrand;
 use Modules\Deals\Entities\DealsOutletGroup;
-
 use DB;
-
 use Modules\Deals\Http\Requests\Deals\Create;
 use Modules\Deals\Http\Requests\Deals\Update;
 use Modules\Deals\Http\Requests\Deals\Delete;
@@ -51,17 +46,13 @@ use Modules\Deals\Http\Requests\Deals\DetailDealsRequest;
 use Modules\Deals\Http\Requests\Deals\UpdateContentRequest;
 use Modules\Deals\Http\Requests\Deals\ImportDealsRequest;
 use Modules\Deals\Http\Requests\Deals\UpdateComplete;
-
 use Illuminate\Support\Facades\Schema;
-
 use Image;
-
 use App\Jobs\SendDealsJob;
 
 class ApiDeals extends Controller
 {
-
-    function __construct()
+    public function __construct()
     {
         date_default_timezone_set('Asia/Jakarta');
         $this->user     = "Modules\Users\Http\Controllers\ApiUser";
@@ -71,13 +62,13 @@ class ApiDeals extends Controller
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->promotion_deals      = "Modules\Promotion\Http\Controllers\ApiPromotionDeals";
         $this->deals_claim    = "Modules\Deals\Http\Controllers\ApiDealsClaim";
-        $this->promo       	= "Modules\PromoCampaign\Http\Controllers\ApiPromo";
+        $this->promo        = "Modules\PromoCampaign\Http\Controllers\ApiPromo";
     }
 
     public $saveImage = "img/deals/";
 
 
-    function rangePoint()
+    public function rangePoint()
     {
         $start = Setting::where('key', 'point_range_start')->get()->first();
         $end = Setting::where('key', 'point_range_end')->get()->first();
@@ -100,7 +91,7 @@ class ApiDeals extends Controller
     }
 
     /* CHECK INPUTAN */
-    function checkInputan($post)
+    public function checkInputan($post)
     {
         $data = [];
 
@@ -113,16 +104,15 @@ class ApiDeals extends Controller
         if (isset($post['deals_voucher_type'])) {
             $data['deals_voucher_type'] = $post['deals_voucher_type'];
             if ($data['deals_voucher_type'] == 'Unlimited') {
-            	$data['deals_total_voucher'] = 0;
+                $data['deals_total_voucher'] = 0;
             }
 
-            if ($post['deals_type'] == 'Promotion')
-            {
-	            if($post['deals_voucher_type'] == 'List Vouchers'){
-					$data['deals_list_voucher'] = str_replace("\r\n", ',', $post['voucher_code']);
-				}else{
-					$data['deals_list_voucher'] = null;
-				}
+            if ($post['deals_type'] == 'Promotion') {
+                if ($post['deals_voucher_type'] == 'List Vouchers') {
+                    $data['deals_list_voucher'] = str_replace("\r\n", ',', $post['voucher_code']);
+                } else {
+                    $data['deals_list_voucher'] = null;
+                }
             }
         }
         if (isset($post['deals_promo_id'])) {
@@ -147,16 +137,14 @@ class ApiDeals extends Controller
             $data['deals_short_description'] = $post['deals_short_description'];
         }
         if (isset($post['deals_image'])) {
-
-            if ($post['deals_type'] == 'Promotion')
-            {
-            	$promotionPath = 'img/promotion/deals/';
+            if ($post['deals_type'] == 'Promotion') {
+                $promotionPath = 'img/promotion/deals/';
             }
-            if (!file_exists($promotionPath??$this->saveImage)) {
-                mkdir($promotionPath??$this->saveImage, 0777, true);
+            if (!file_exists($promotionPath ?? $this->saveImage)) {
+                mkdir($promotionPath ?? $this->saveImage, 0777, true);
             }
 
-            $upload = MyHelper::uploadPhotoStrict($post['deals_image'], ($promotionPath??$this->saveImage), 500, 500);
+            $upload = MyHelper::uploadPhotoStrict($post['deals_image'], ($promotionPath ?? $this->saveImage), 500, 500);
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $data['deals_image'] = $upload['path'];
@@ -208,7 +196,7 @@ class ApiDeals extends Controller
             $data['deals_voucher_expired'] = null;
         }
         // ---------------------------- VOUCHER START
-        $data['deals_voucher_start']=$post['deals_voucher_start']??null;
+        $data['deals_voucher_start'] = $post['deals_voucher_start'] ?? null;
         // ---------------------------- POINT
         if (isset($post['deals_voucher_price_point'])) {
             $data['deals_voucher_price_point'] = $post['deals_voucher_price_point'];
@@ -240,12 +228,12 @@ class ApiDeals extends Controller
         }
         /* replaced by check filter outlet
         if (isset($post['id_outlet'])) {
-        	if ($post['deals_type'] == 'Promotion') {
-        		$data['deals_list_outlet'] = implode(',', $post['id_outlet']);
-				unset($data['id_outlet']);
-        	}else{
-        	    $data['id_outlet'] = $post['id_outlet'];
-        	}
+            if ($post['deals_type'] == 'Promotion') {
+                $data['deals_list_outlet'] = implode(',', $post['id_outlet']);
+                unset($data['id_outlet']);
+            }else{
+                $data['id_outlet'] = $post['id_outlet'];
+            }
             if (in_array("all", $post['id_outlet'])){
                 $data['is_all_outlet'] = 1;
                 $data['id_outlet'] = [];
@@ -277,54 +265,54 @@ class ApiDeals extends Controller
             $data['charged_central'] = $post['charged_central'];
             $data['charged_outlet'] = $post['charged_outlet'];
         }
-        
+
         if (isset($post['custom_outlet_text'])) {
-        	$data['custom_outlet_text'] = $post['custom_outlet_text'];
+            $data['custom_outlet_text'] = $post['custom_outlet_text'];
         }
 
         if (isset($post['id_brand'])) {
-        	$data['id_brand'] = $post['id_brand'];
+            $data['id_brand'] = $post['id_brand'];
         }
 
         if (isset($post['brand_rule'])) {
-        	$data['brand_rule'] = $post['brand_rule'];
+            $data['brand_rule'] = $post['brand_rule'];
         }
 
         if (isset($post['product_type'])) {
-        	$data['product_type'] = $post['product_type'];
+            $data['product_type'] = $post['product_type'];
         }
 
         if (isset($post['product_type'])) {
-        	$data['product_type'] = $post['product_type'];
+            $data['product_type'] = $post['product_type'];
         }
 
         if (isset($post['filter_outlet'])) {
-        	switch ($post['filter_outlet']) {
-        		case 'selected_outlet':
-		        	$data['id_outlet'] = $post['id_outlet'] ?? [];
-		        	$data['is_all_outlet'] = 0;
-		        	unset($data['id_outlet_group']);
-        			break;
-        		
-        		case 'outlet_group':
-		        	$data['id_outlet_group'] = $post['id_outlet_group'] ?? [];
-		        	$data['is_all_outlet'] = 0;
-		        	unset($data['id_outlet']);
-        			break;
+            switch ($post['filter_outlet']) {
+                case 'selected_outlet':
+                    $data['id_outlet'] = $post['id_outlet'] ?? [];
+                    $data['is_all_outlet'] = 0;
+                    unset($data['id_outlet_group']);
+                    break;
 
-        		default:
-        			$data['is_all_outlet'] = 1;
-        			unset($data['id_outlet']);
-        			unset($data['id_outlet_group']);
-        			break;
-        	}
+                case 'outlet_group':
+                    $data['id_outlet_group'] = $post['id_outlet_group'] ?? [];
+                    $data['is_all_outlet'] = 0;
+                    unset($data['id_outlet']);
+                    break;
+
+                default:
+                    $data['is_all_outlet'] = 1;
+                    unset($data['id_outlet']);
+                    unset($data['id_outlet_group']);
+                    break;
+            }
         }
 
         return $data;
     }
 
     /* CREATE */
-    function create($data)
+    public function create($data)
     {
         $data = $this->checkInputan($data);
         $data['created_by'] = auth()->user()->id;
@@ -335,23 +323,23 @@ class ApiDeals extends Controller
         }
 
         //for 1 brand
-        if(!isset($data['id_brand'])){
+        if (!isset($data['id_brand'])) {
             $configBrand = Configs::where('config_name', 'use brand')->select('is_active')->first();
-            if(isset($configBrand['is_active']) && $configBrand['is_active'] != '1'){
+            if (isset($configBrand['is_active']) && $configBrand['is_active'] != '1') {
                 $brand = Brand::select('id_brand')->first();
-                if(isset($brand['id_brand'])){
+                if (isset($brand['id_brand'])) {
                     $data['id_brand'] = $brand['id_brand'];
                 }
             }
-        }else{
-        	$data_brand = $data['id_brand'];
-        	unset($data['id_brand']);
+        } else {
+            $data_brand = $data['id_brand'];
+            unset($data['id_brand']);
         }
 
         if ($data['deals_type'] == 'Promotion') {
-        	$save = DealsPromotionTemplate::create($data);
-        }else{
-        	$save = Deal::create($data);
+            $save = DealsPromotionTemplate::create($data);
+        } else {
+            $save = Deal::create($data);
         }
         if ($save) {
             if (isset($data['id_outlet']) && $data['is_all_outlet'] == 0) {
@@ -375,8 +363,8 @@ class ApiDeals extends Controller
             }
 
             if (isset($data_brand)) {
-            	$save_brand = $this->saveBrand($save, $data_brand);
-            	if (!$save_brand) {
+                $save_brand = $this->saveBrand($save, $data_brand);
+                if (!$save_brand) {
                     return false;
                 }
             }
@@ -385,7 +373,7 @@ class ApiDeals extends Controller
     }
 
     /* CREATE REQUEST */
-    function createReq(Create $request)
+    public function createReq(Create $request)
     {
         DB::beginTransaction();
         $save = $this->create($request->json()->all());
@@ -393,7 +381,7 @@ class ApiDeals extends Controller
         if ($save) {
             DB::commit();
             $dt = '';
-            switch ($save->deals_type){
+            switch ($save->deals_type) {
                 case 'Deals':
                     $dt = 'Deals';
                     break;
@@ -409,16 +397,16 @@ class ApiDeals extends Controller
             }
 
             if ($dt !== '') {
-	            $save->setAppends(['deals_shipment_text', 'deals_payment_text', 'deals_outlet_text', 'brand_rule_text']);
-	            $deals = $save->toArray();
-	            $send = app($this->autocrm)->SendAutoCRM('Create '.$dt, $request->user()->phone, [
-	                'voucher_type' => $deals['deals_voucher_type']??'',
-	                'promo_id_type' => $deals['deals_promo_id_type']??'',
-	                'promo_id' => $deals['deals_promo_id']??'',
-	                'detail' => view('deals::emails.detail',['detail'=>$deals])->render(),
-	                'created_at' => $deals['created_at'] ? date('d F Y H:i', strtotime($deals['created_at'])) : '',
-	                'updated_at' => $deals['updated_at'] ? date('d F Y H:i', strtotime($deals['updated_at'])) : '',
-	            ]+$deals,null,true);
+                $save->setAppends(['deals_shipment_text', 'deals_payment_text', 'deals_outlet_text', 'brand_rule_text']);
+                $deals = $save->toArray();
+                $send = app($this->autocrm)->SendAutoCRM('Create ' . $dt, $request->user()->phone, [
+                    'voucher_type' => $deals['deals_voucher_type'] ?? '',
+                    'promo_id_type' => $deals['deals_promo_id_type'] ?? '',
+                    'promo_id' => $deals['deals_promo_id'] ?? '',
+                    'detail' => view('deals::emails.detail', ['detail' => $deals])->render(),
+                    'created_at' => $deals['created_at'] ? date('d F Y H:i', strtotime($deals['created_at'])) : '',
+                    'updated_at' => $deals['updated_at'] ? date('d F Y H:i', strtotime($deals['updated_at'])) : '',
+                ] + $deals, null, true);
             }
         } else {
             DB::rollBack();
@@ -428,30 +416,30 @@ class ApiDeals extends Controller
     }
 
     /* LIST */
-    function listDeal(ListDeal $request) {
-        if($request->json('forSelect2'))
-        {
-            $deals = Deal::select('id_deals','deals_title')
-            		->where('deals_type','Deals')
-            		->whereDoesntHave('featured_deals');
+    public function listDeal(ListDeal $request)
+    {
+        if ($request->json('forSelect2')) {
+            $deals = Deal::select('id_deals', 'deals_title')
+                    ->where('deals_type', 'Deals')
+                    ->whereDoesntHave('featured_deals');
 
             if ($request->json('featured')) {
-            	$deals = $deals->where('deals_end', '>', date('Y-m-d H:i:s'))
-            			->where('deals_publish_end', '>', date('Y-m-d H:i:s'))
-            			->where('step_complete', '=', 1);
+                $deals = $deals->where('deals_end', '>', date('Y-m-d H:i:s'))
+                        ->where('deals_publish_end', '>', date('Y-m-d H:i:s'))
+                        ->where('step_complete', '=', 1);
             }
 
             return MyHelper::checkGet($deals->get());
         }
 
-        $deals = (new Deal)->newQuery();
+        $deals = (new Deal())->newQuery();
         $user = $request->user();
-        $curBalance = (int) $user->balance??0;
-        if($request->json('admin')){
+        $curBalance = (int) $user->balance ?? 0;
+        if ($request->json('admin')) {
             $deals->addSelect('id_brand', 'deals_voucher_expired');
             $deals->with('brand');
-        }else{
-            if($request->json('deals_type') != 'WelcomeVoucher' && !$request->json('web')){
+        } else {
+            if ($request->json('deals_type') != 'WelcomeVoucher' && !$request->json('web')) {
                 $deals->where('deals_end', '>', date('Y-m-d H:i:s'));
             }
         }
@@ -463,7 +451,7 @@ class ApiDeals extends Controller
 
         // brand
         if ($request->json('id_brand')) {
-            $deals->where('id_brand',$request->json('id_brand'));
+            $deals->where('id_brand', $request->json('id_brand'));
         }
         // deals subscription
         if ($request->json('deals_type') == "Subscription") {
@@ -476,29 +464,29 @@ class ApiDeals extends Controller
                 // 'deals_vouchers.deals_voucher_user',
                 // 'deals_vouchers.deals_user.user'
             ])->where('id_deals', $request->json('id_deals'))->with(['deals_content', 'deals_content.deals_content_details', 'outlets', 'outlets.city', 'product','brand']);
-        }else{
-            $deals->addSelect('id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type','is_offline','is_online','step_complete','deals_total_used','promo_type','deals_promo_id_type','deals_promo_id');
-            if(strpos($request->user()->level,'Admin')>=0){
-                $deals->addSelect('deals_promo_id','deals_publish_start','deals_publish_end','created_at');
+        } else {
+            $deals->addSelect('id_deals', 'deals_title', 'deals_second_title', 'deals_voucher_price_point', 'deals_voucher_price_cash', 'deals_total_voucher', 'deals_total_claimed', 'deals_voucher_type', 'deals_image', 'deals_start', 'deals_end', 'deals_type', 'is_offline', 'is_online', 'step_complete', 'deals_total_used', 'promo_type', 'deals_promo_id_type', 'deals_promo_id');
+            if (strpos($request->user()->level, 'Admin') >= 0) {
+                $deals->addSelect('deals_promo_id', 'deals_publish_start', 'deals_publish_end', 'created_at');
             }
         }
-        if ($request->json('rule')){
-             $this->filterList($deals,$request->json('rule'),$request->json('operator')??'and');
+        if ($request->json('rule')) {
+             $this->filterList($deals, $request->json('rule'), $request->json('operator') ?? 'and');
         }
         if ($request->json('publish')) {
-            $deals->where( function($q) {
-            	$q->where('deals_publish_start', '<=', date('Y-m-d H:i:s'))
-            		->where('deals_publish_end', '>=', date('Y-m-d H:i:s'));
+            $deals->where(function ($q) {
+                $q->where('deals_publish_start', '<=', date('Y-m-d H:i:s'))
+                    ->where('deals_publish_end', '>=', date('Y-m-d H:i:s'));
             });
 
-            $deals->where( function($q) {
-	        	$q->where('deals_voucher_type','Unlimited')
-	        		->orWhereRaw('(deals.deals_total_voucher - deals.deals_total_claimed) > 0 ');
-	        });
+            $deals->where(function ($q) {
+                $q->where('deals_voucher_type', 'Unlimited')
+                    ->orWhereRaw('(deals.deals_total_voucher - deals.deals_total_claimed) > 0 ');
+            });
             $deals->where('step_complete', '=', 1);
 
-            $deals->whereDoesntHave('deals_user_limits', function($q) use ($user){
-            	$q->where('id_user',$user->id);
+            $deals->whereDoesntHave('deals_user_limits', function ($q) use ($user) {
+                $q->where('id_user', $user->id);
             });
         }
 
@@ -511,17 +499,17 @@ class ApiDeals extends Controller
             }
         }
 
-		if ($request->json('deals_type_array')) {
+        if ($request->json('deals_type_array')) {
             // get > 1 deals types
             $deals->whereIn('deals_type', $request->json('deals_type_array'));
-        }        
+        }
 
         if ($request->json('deals_promo_id')) {
             $deals->where('deals_promo_id', $request->json('deals_promo_id'));
         }
 
         if ($request->json('key_free')) {
-            $deals->where(function($query) use ($request){
+            $deals->where(function ($query) use ($request) {
                 $query->where('deals_title', 'LIKE', '%' . $request->json('key_free') . '%')
                     ->orWhere('deals_second_title', 'LIKE', '%' . $request->json('key_free') . '%');
             });
@@ -534,11 +522,11 @@ class ApiDeals extends Controller
             if ($request->json('voucher_type_paid')) {
                 $query->orWhere(function ($amp) use ($request) {
                     $amp->whereNotNull('deals_voucher_price_cash');
-                    if(is_numeric($val=$request->json('price_range_start'))){
-                        $amp->where('deals_voucher_price_cash','>=',$val);
+                    if (is_numeric($val = $request->json('price_range_start'))) {
+                        $amp->where('deals_voucher_price_cash', '>=', $val);
                     }
-                    if(is_numeric($val=$request->json('price_range_end'))){
-                        $amp->where('deals_voucher_price_cash','<=',$val);
+                    if (is_numeric($val = $request->json('price_range_end'))) {
+                        $amp->where('deals_voucher_price_cash', '<=', $val);
                     }
                 });
                 // print_r('voucher_type_paid');
@@ -548,11 +536,11 @@ class ApiDeals extends Controller
             if ($request->json('voucher_type_point')) {
                 $query->orWhere(function ($amp) use ($request) {
                     $amp->whereNotNull('deals_voucher_price_point');
-                    if(is_numeric($val=$request->json('point_range_start'))){
-                        $amp->where('deals_voucher_price_point','>=',$val);
+                    if (is_numeric($val = $request->json('point_range_start'))) {
+                        $amp->where('deals_voucher_price_point', '>=', $val);
                     }
-                    if(is_numeric($val=$request->json('point_range_end'))){
-                        $amp->where('deals_voucher_price_point','<=',$val);
+                    if (is_numeric($val = $request->json('point_range_end'))) {
+                        $amp->where('deals_voucher_price_point', '<=', $val);
                     }
                 });
                 // print_r('voucher_type_point');
@@ -581,21 +569,21 @@ class ApiDeals extends Controller
 
         if ($request->json('alphabetical')) {
             $deals->orderBy('deals_title', 'ASC');
-        } else if ($request->json('newest')) {
+        } elseif ($request->json('newest')) {
             $deals->orderBy('deals_publish_start', 'DESC');
-        } else if ($request->json('oldest')) {
+        } elseif ($request->json('oldest')) {
             $deals->orderBy('deals_publish_start', 'ASC');
-        } else if ($request->json('updated_at')) {
+        } elseif ($request->json('updated_at')) {
             $deals->orderBy('updated_at', 'DESC');
         } else {
             $deals->orderBy('deals_end', 'ASC');
         }
         if ($request->json('id_city')) {
-            $deals->with('outlets','outlets.city');
+            $deals->with('outlets', 'outlets.city');
         }
 
         if ($request->json('paginate') && $request->json('admin')) {
-        	return $this->dealsPaginate($deals, $request);
+            return $this->dealsPaginate($deals, $request);
         }
 
         $deals = $deals->get()->toArray();
@@ -609,7 +597,7 @@ class ApiDeals extends Controller
                 $city = $request->json('id_city');
             }
 
-            $deals = $this->kotacuks($deals, $city,$request->json('admin'));
+            $deals = $this->kotacuks($deals, $city, $request->json('admin'));
         }
 
         if ($request->json('highest_available_voucher')) {
@@ -671,37 +659,33 @@ class ApiDeals extends Controller
             // text tombol beli
             $deals[0]['button_status'] = 0;
             //text konfirmasi pembelian
-            if($deals[0]['deals_voucher_price_type']=='free'){
+            if ($deals[0]['deals_voucher_price_type'] == 'free') {
                 //voucher free
                 $deals[0]['button_text'] = 'Ambil';
-                $payment_message = Setting::where('key', 'payment_messages')->pluck('value_text')->first()??'Kamu yakin ingin mengambil voucher ini?';
-                $payment_message = MyHelper::simpleReplace($payment_message,['deals_title'=>$deals[0]['deals_title']]);
-            }
-            elseif($deals[0]['deals_voucher_price_type']=='point')
-            {
+                $payment_message = Setting::where('key', 'payment_messages')->pluck('value_text')->first() ?? 'Kamu yakin ingin mengambil voucher ini?';
+                $payment_message = MyHelper::simpleReplace($payment_message, ['deals_title' => $deals[0]['deals_title']]);
+            } elseif ($deals[0]['deals_voucher_price_type'] == 'point') {
                 $deals[0]['button_text'] = 'Tukar';
-                $payment_message = Setting::where('key', 'payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% points anda dengan Voucher %deals_title%?';
-                $payment_message = MyHelper::simpleReplace($payment_message,['point'=>$deals[0]['deals_voucher_price_point'],'deals_title'=>$deals[0]['deals_title']]);
-            }
-            else
-            {
+                $payment_message = Setting::where('key', 'payment_messages_point')->pluck('value_text')->first() ?? 'Anda akan menukarkan %point% points anda dengan Voucher %deals_title%?';
+                $payment_message = MyHelper::simpleReplace($payment_message, ['point' => $deals[0]['deals_voucher_price_point'],'deals_title' => $deals[0]['deals_title']]);
+            } else {
                 $deals[0]['button_text'] = 'Beli';
-                $payment_message = Setting::where('key', 'payment_messages_cash')->pluck('value_text')->first()??'Anda akan membeli Voucher %deals_title% dengan harga %cash% ?';
-                $payment_message = MyHelper::simpleReplace($payment_message,['cash'=>$deals[0]['deals_voucher_price_cash'],'deals_title'=>$deals[0]['deals_title']]);
+                $payment_message = Setting::where('key', 'payment_messages_cash')->pluck('value_text')->first() ?? 'Anda akan membeli Voucher %deals_title% dengan harga %cash% ?';
+                $payment_message = MyHelper::simpleReplace($payment_message, ['cash' => $deals[0]['deals_voucher_price_cash'],'deals_title' => $deals[0]['deals_title']]);
             }
-            $payment_success_message = Setting::where('key', 'payment_success_messages')->pluck('value_text')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
+            $payment_success_message = Setting::where('key', 'payment_success_messages')->pluck('value_text')->first() ?? 'Apakah kamu ingin menggunakan Voucher sekarang?';
             $deals[0]['payment_message'] = $payment_message;
             $deals[0]['payment_success_message'] = $payment_success_message;
-            if($deals[0]['deals_voucher_price_type']=='free'&&$deals[0]['deals_status']=='available'){
-                $deals[0]['button_status']=1;
-            }else {
-                if($deals[0]['deals_voucher_price_type']=='point'){
-                    $deals[0]['button_status']=$deals[0]['deals_voucher_price_point']<=$curBalance?1:0;
-                    if($deals[0]['deals_voucher_price_point']>$curBalance){
-                        $deals[0]['payment_fail_message'] = Setting::where('key', 'payment_fail_messages')->pluck('value_text')->first()??'Mohon maaf, point anda tidak cukup';
+            if ($deals[0]['deals_voucher_price_type'] == 'free' && $deals[0]['deals_status'] == 'available') {
+                $deals[0]['button_status'] = 1;
+            } else {
+                if ($deals[0]['deals_voucher_price_type'] == 'point') {
+                    $deals[0]['button_status'] = $deals[0]['deals_voucher_price_point'] <= $curBalance ? 1 : 0;
+                    if ($deals[0]['deals_voucher_price_point'] > $curBalance) {
+                        $deals[0]['payment_fail_message'] = Setting::where('key', 'payment_fail_messages')->pluck('value_text')->first() ?? 'Mohon maaf, point anda tidak cukup';
                     }
-                }else{
-                    if($deals[0]['deals_status']=='available'){
+                } else {
+                    if ($deals[0]['deals_status'] == 'available') {
                         $deals[0]['button_status'] = 1;
                     }
                 }
@@ -730,8 +714,8 @@ class ApiDeals extends Controller
             }
 
 
-            for ($i=$start; $i < $end; $i++) {
-                $deals[$i]['time_to_end']=strtotime($deals[$i]['deals_end'])-time();
+            for ($i = $start; $i < $end; $i++) {
+                $deals[$i]['time_to_end'] = strtotime($deals[$i]['deals_end']) - time();
                 array_push($resultData, $deals[$i]);
             }
 
@@ -746,38 +730,38 @@ class ApiDeals extends Controller
 
 
             // print_r($deals); exit();
-            if(!$result['total']){
-                $result=[];
+            if (!$result['total']) {
+                $result = [];
             }
 
-            if(
+            if (
                 $request->json('voucher_type_point') ||
                 $request->json('voucher_type_paid') ||
                 $request->json('voucher_type_free') ||
                 $request->json('id_city') ||
                 $request->json('key_free')
-            ){
+            ) {
                 $resultMessage = 'Maaf, voucher yang kamu cari belum tersedia';
-            }else{
+            } else {
                 $resultMessage = 'Nantikan penawaran menarik dari kami';
             }
             return response()->json(MyHelper::checkGet($result, $resultMessage));
-
-        }else{
+        } else {
             return response()->json(MyHelper::checkGet($deals));
         }
     }
 
     /* list of deals that haven't ended yet */
-    function listActiveDeals(Request $request){
+    public function listActiveDeals(Request $request)
+    {
         $post = $request->json()->all();
 
-        $deals = Deal::where('deals_type','Deals')
-        		->where('deals_end', '>', date('Y-m-d H:i:s'))
-        		->where('step_complete', '=', 1)
-        		->orderBy('updated_at', 'DESC');
+        $deals = Deal::where('deals_type', 'Deals')
+                ->where('deals_end', '>', date('Y-m-d H:i:s'))
+                ->where('step_complete', '=', 1)
+                ->orderBy('updated_at', 'DESC');
 
-        if(isset($post['select'])){
+        if (isset($post['select'])) {
             $deals = $deals->select($post['select']);
         }
         $deals = $deals->get();
@@ -785,7 +769,7 @@ class ApiDeals extends Controller
     }
 
     /* LIST */
-    function myDeal(Request $request)
+    public function myDeal(Request $request)
     {
         $post = $request->json()->all();
         $user = $request->user();
@@ -799,83 +783,84 @@ class ApiDeals extends Controller
 
         return response()->json(MyHelper::checkGet($deals));
     }
-    public function filterList($query,$rules,$operator='and'){
-        $newRule=[];
+    public function filterList($query, $rules, $operator = 'and')
+    {
+        $newRule = [];
         foreach ($rules as $var) {
-            $rule=[$var['operator']??'=',$var['parameter']];
-            if($rule[0]=='like'){
-                $rule[1]='%'.$rule[1].'%';
+            $rule = [$var['operator'] ?? '=',$var['parameter']];
+            if ($rule[0] == 'like') {
+                $rule[1] = '%' . $rule[1] . '%';
             }
-            $newRule[$var['subject']][]=$rule;
+            $newRule[$var['subject']][] = $rule;
         }
-        $where=$operator=='and'?'where':'orWhere';
-        $subjects=['deals_title','deals_title','deals_second_title','deals_promo_id_type','deals_promo_id','id_brand','deals_total_voucher','deals_start', 'deals_end', 'deals_publish_start', 'deals_publish_end', 'deals_voucher_start', 'deals_voucher_expired', 'deals_voucher_duration', 'user_limit', 'total_voucher_subscription', 'deals_total_claimed', 'deals_total_redeemed', 'deals_total_used', 'created_at', 'updated_at'];
+        $where = $operator == 'and' ? 'where' : 'orWhere';
+        $subjects = ['deals_title','deals_title','deals_second_title','deals_promo_id_type','deals_promo_id','id_brand','deals_total_voucher','deals_start', 'deals_end', 'deals_publish_start', 'deals_publish_end', 'deals_voucher_start', 'deals_voucher_expired', 'deals_voucher_duration', 'user_limit', 'total_voucher_subscription', 'deals_total_claimed', 'deals_total_redeemed', 'deals_total_used', 'created_at', 'updated_at'];
         foreach ($subjects as $subject) {
-            if($rules2=$newRule[$subject]??false){
+            if ($rules2 = $newRule[$subject] ?? false) {
                 foreach ($rules2 as $rule) {
-                    $query->$where($subject,$rule[0],$rule[1]);
+                    $query->$where($subject, $rule[0], $rule[1]);
                 }
             }
         }
-        if($rules2=$newRule['voucher_code']??false){
+        if ($rules2 = $newRule['voucher_code'] ?? false) {
             foreach ($rules2 as $rule) {
-                $query->{$where.'Has'}('deals_vouchers',function($query) use ($rule){
-                    $query->where('deals_vouchers.voucher_code',$rule[0],$rule[1]);
+                $query->{$where . 'Has'}('deals_vouchers', function ($query) use ($rule) {
+                    $query->where('deals_vouchers.voucher_code', $rule[0], $rule[1]);
                 });
             }
         }
-        if($rules2=$newRule['used_by']??false){
+        if ($rules2 = $newRule['used_by'] ?? false) {
             foreach ($rules2 as $rule) {
-                $query->{$where.'Has'}('deals_vouchers.deals_voucher_user',function($query) use ($rule){
-                    $query->where('phone',$rule[0],$rule[1]);
+                $query->{$where . 'Has'}('deals_vouchers.deals_voucher_user', function ($query) use ($rule) {
+                    $query->where('phone', $rule[0], $rule[1]);
                 });
             }
         }
-        if($rules2=$newRule['deals_total_available']??false){
+        if ($rules2 = $newRule['deals_total_available'] ?? false) {
             foreach ($rules2 as $rule) {
-                $query->$where(DB::raw('(deals.deals_total_voucher - deals.deals_total_claimed)'),$rule[0],$rule[1]);
+                $query->$where(DB::raw('(deals.deals_total_voucher - deals.deals_total_claimed)'), $rule[0], $rule[1]);
             }
         }
-        if($rules2=$newRule['id_outlet']??false){
+        if ($rules2 = $newRule['id_outlet'] ?? false) {
             foreach ($rules2 as $rule) {
-                $query->{$where.'Has'}('outlets',function($query) use ($rule){
-                    $query->where('outlets.id_outlet',$rule[0],$rule[1]);
+                $query->{$where . 'Has'}('outlets', function ($query) use ($rule) {
+                    $query->where('outlets.id_outlet', $rule[0], $rule[1]);
                 });
             }
         }
-        if($rules2=$newRule['voucher_claim_time']??false){
+        if ($rules2 = $newRule['voucher_claim_time'] ?? false) {
             foreach ($rules2 as $rule) {
-                $rule[1]=strtotime($rule[1]);
-                $query->{$where.'Has'}('deals_vouchers',function($query) use ($rule){
-                    $query->whereHas('deals_user',function($query) use ($rule){
-                        $query->where(DB::raw('UNIX_TIMESTAMP(deals_users.claimed_at)'),$rule[0],$rule[1]);
+                $rule[1] = strtotime($rule[1]);
+                $query->{$where . 'Has'}('deals_vouchers', function ($query) use ($rule) {
+                    $query->whereHas('deals_user', function ($query) use ($rule) {
+                        $query->where(DB::raw('UNIX_TIMESTAMP(deals_users.claimed_at)'), $rule[0], $rule[1]);
                     });
                 });
             }
         }
-        if($rules2=$newRule['voucher_redeem_time']??false){
+        if ($rules2 = $newRule['voucher_redeem_time'] ?? false) {
             foreach ($rules2 as $rule) {
-                $rule[1]=strtotime($rule[1]);
-                $query->{$where.'Has'}('deals_vouchers',function($query) use ($rule){
-                    $query->whereHas('deals_user',function($query) use ($rule){
-                        $query->where('deals_users.redeemed_at',$rule[0],$rule[1]);
+                $rule[1] = strtotime($rule[1]);
+                $query->{$where . 'Has'}('deals_vouchers', function ($query) use ($rule) {
+                    $query->whereHas('deals_user', function ($query) use ($rule) {
+                        $query->where('deals_users.redeemed_at', $rule[0], $rule[1]);
                     });
                 });
             }
         }
-        if($rules2=$newRule['voucher_used_time']??false){
+        if ($rules2 = $newRule['voucher_used_time'] ?? false) {
             foreach ($rules2 as $rule) {
-                $rule[1]=strtotime($rule[1]);
-                $query->{$where.'Has'}('deals_vouchers',function($query) use ($rule){
-                    $query->whereHas('deals_user',function($query) use ($rule){
-                        $query->where('deals_users.used_at',$rule[0],$rule[1]);
+                $rule[1] = strtotime($rule[1]);
+                $query->{$where . 'Has'}('deals_vouchers', function ($query) use ($rule) {
+                    $query->whereHas('deals_user', function ($query) use ($rule) {
+                        $query->where('deals_users.used_at', $rule[0], $rule[1]);
                     });
                 });
             }
         }
     }
     /* UNLIMITED */
-    function unlimited($deals)
+    public function unlimited($deals)
     {
         $unlimited = array_filter(array_column($deals, "available_voucher"), function ($deals) {
             if ($deals == "*") {
@@ -886,7 +871,7 @@ class ApiDeals extends Controller
         return $unlimited;
     }
 
-    function limited($deals)
+    public function limited($deals)
     {
         $limited = array_filter(array_column($deals, "available_voucher"), function ($deals) {
             if ($deals != "*") {
@@ -898,7 +883,7 @@ class ApiDeals extends Controller
     }
 
     /* SORT DEALS */
-    function highestAvailableVoucher($deals)
+    public function highestAvailableVoucher($deals)
     {
         usort($deals, function ($a, $b) {
             return $a['available_voucher'] < $b['available_voucher'];
@@ -907,7 +892,7 @@ class ApiDeals extends Controller
         return $deals;
     }
 
-    function lowestAvailableVoucher($deals)
+    public function lowestAvailableVoucher($deals)
     {
         usort($deals, function ($a, $b) {
             return $a['available_voucher'] > $b['available_voucher'];
@@ -917,7 +902,7 @@ class ApiDeals extends Controller
     }
 
     /* INI LIST KOTA */
-    function kotacuks($deals, $city = "",$admin=false)
+    public function kotacuks($deals, $city = "", $admin = false)
     {
         $timeNow = date('Y-m-d H:i:s');
 
@@ -945,7 +930,6 @@ class ApiDeals extends Controller
 
                 foreach ($kota as $k => $v) {
                     if ($v) {
-
                         $kota[$k]['outlet'] = [];
 
                         foreach ($value['outlets'] as $outlet) {
@@ -979,14 +963,14 @@ class ApiDeals extends Controller
                 $calc = '*';
             }
 
-            if(is_numeric($calc) && $value['deals_total_voucher'] !== 0){
-                if($calc||$admin){
-                    $deals[$key]['percent_voucher'] = $calc*100/$value['deals_total_voucher'];
-                }else{
+            if (is_numeric($calc) && $value['deals_total_voucher'] !== 0) {
+                if ($calc || $admin) {
+                    $deals[$key]['percent_voucher'] = $calc * 100 / $value['deals_total_voucher'];
+                } else {
                     unset($deals[$key]);
                     continue;
                 }
-            }else{
+            } else {
                 $deals[$key]['percent_voucher'] = 100;
             }
 
@@ -994,7 +978,7 @@ class ApiDeals extends Controller
             $deals[$key]['available_voucher'] = (string) $calc;
             $deals[$key]['available_voucher_text'] = "";
             if ($calc != "*") {
-            	$deals[$key]['available_voucher_text'] = $calc. " kupon tersedia";
+                $deals[$key]['available_voucher_text'] = $calc . " kupon tersedia";
             }
             // deals masih ada?
             // print_r($deals[$key]['available_voucher']);
@@ -1007,129 +991,122 @@ class ApiDeals extends Controller
     }
 
     /* LIST USER */
-    function listUserVoucher(Request $request)
+    public function listUserVoucher(Request $request)
     {
-    	$post = $request->json()->all();
+        $post = $request->json()->all();
         $deals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher');
 
         if ($request->json('id_deals')) {
             $deals->where('deals_vouchers.id_deals', $request->json('id_deals'));
         }
 
-        if ($request->json('rule')){
-             $this->filterUserVoucher($deals,$request->json('rule'),$request->json('operator')??'and');
+        if ($request->json('rule')) {
+             $this->filterUserVoucher($deals, $request->json('rule'), $request->json('operator') ?? 'and');
         }
 
         $deals = $deals->with([
-        			'user',
-        			'outlet',
-        			'dealVoucher.transaction_voucher' => function($q) {
-        				$q->where('status','=','success');
-        			},
-        			'dealVoucher.transaction_voucher.transaction' => function($q) {
-        				$q->select(
-        					'id_transaction',
-        					'transaction_receipt_number',
-        					'trasaction_type',
-        					'transaction_grandtotal'
-        				);
-        			}
-        		]);
+                    'user',
+                    'outlet',
+                    'dealVoucher.transaction_voucher' => function ($q) {
+                        $q->where('status', '=', 'success');
+                    },
+                    'dealVoucher.transaction_voucher.transaction' => function ($q) {
+                        $q->select(
+                            'id_transaction',
+                            'transaction_receipt_number',
+                            'trasaction_type',
+                            'transaction_grandtotal'
+                        );
+                    }
+                ]);
         $data = $deals->orderBy('claimed_at', "DESC")->paginate(10)->toArray();
         $data['data'] = $deals->paginate(10)
-        				->each(function($q){
-						    $q->setAppends([
-						        'get_transaction'
-						    ]);
-						})
-	        			->toArray();
+                        ->each(function ($q) {
+                            $q->setAppends([
+                                'get_transaction'
+                            ]);
+                        })
+                        ->toArray();
 
         return response()->json(MyHelper::checkGet($data));
     }
 
     /* FILTER LIST USER VOUCHER */
-    public function filterUserVoucher($query,$rules,$operator='and'){
-        $newRule=[];
+    public function filterUserVoucher($query, $rules, $operator = 'and')
+    {
+        $newRule = [];
         foreach ($rules as $var) {
-            $rule=[$var['operator']??'=',$var['parameter']];
-            if($rule[0]=='like'){
-                $rule[1]='%'.$rule[1].'%';
+            $rule = [$var['operator'] ?? '=',$var['parameter']];
+            if ($rule[0] == 'like') {
+                $rule[1] = '%' . $rule[1] . '%';
             }
-            $newRule[$var['subject']][]=$rule;
+            $newRule[$var['subject']][] = $rule;
         }
 
-        $where=$operator=='and'?'where':'orWhere';
+        $where = $operator == 'and' ? 'where' : 'orWhere';
 
-        if($rules2=$newRule['status']??false){
+        if ($rules2 = $newRule['status'] ?? false) {
             foreach ($rules2 as $rule) {
-
-            	if ($rule[1] == 'used')
-            	{
-	                $query->{$where.'NotNull'}('used_at');
-            	}
-            	elseif ($rule[1] == 'expired')
-            	{
-	                $query->$where(function($q) {
-	                	$q->whereNotNull('voucher_expired_at')
-	                		->whereDate('voucher_expired_at','<',date("Y-m-d H:i:s"));
-	                });
-            	}
-            	elseif ($rule[1] == 'redeemed')
-            	{
-	                $query->{$where.'NotNull'}('redeemed_at');
-            	}
-            	else
-            	{
-	                $query->{$where.'NotNull'}('claimed_at');
-            	}
+                if ($rule[1] == 'used') {
+                    $query->{$where . 'NotNull'}('used_at');
+                } elseif ($rule[1] == 'expired') {
+                    $query->$where(function ($q) {
+                        $q->whereNotNull('voucher_expired_at')
+                            ->whereDate('voucher_expired_at', '<', date("Y-m-d H:i:s"));
+                    });
+                } elseif ($rule[1] == 'redeemed') {
+                    $query->{$where . 'NotNull'}('redeemed_at');
+                } else {
+                    $query->{$where . 'NotNull'}('claimed_at');
+                }
             }
         }
-        if($rules2=$newRule['used_by']??false){
+        if ($rules2 = $newRule['used_by'] ?? false) {
             foreach ($rules2 as $rule) {
-                $query->{$where.'Has'}('user',function($query) use ($rule){
-                    $query->where('phone',$rule[0],$rule[1]);
+                $query->{$where . 'Has'}('user', function ($query) use ($rule) {
+                    $query->where('phone', $rule[0], $rule[1]);
                 });
             }
         }
-        if($rules2=$newRule['claim_date']??false){
+        if ($rules2 = $newRule['claim_date'] ?? false) {
             foreach ($rules2 as $rule) {
-                $query->{$where.'Date'}('claimed_at',$rule[0],date("Y-m-d H:i:s", strtotime($rule[1])));
+                $query->{$where . 'Date'}('claimed_at', $rule[0], date("Y-m-d H:i:s", strtotime($rule[1])));
             }
         }
-        if($rules2=$newRule['id_outlet']??false){
+        if ($rules2 = $newRule['id_outlet'] ?? false) {
             foreach ($rules2 as $rule) {
-                $query->{$where.'Has'}('outlet',function($query) use ($rule){
-                    $query->where('outlets.id_outlet',$rule[0],$rule[1]);
+                $query->{$where . 'Has'}('outlet', function ($query) use ($rule) {
+                    $query->where('outlets.id_outlet', $rule[0], $rule[1]);
                 });
             }
         }
     }
 
     /* LIST VOUCHER */
-    function listVoucher(Request $request)
+    public function listVoucher(Request $request)
     {
 
-    	if ($request->select) {
-        	$deals = DealsVoucher::select($request->select);
-    	}else{
-        	$deals = DealsVoucher::select('*');
-    	}
+        if ($request->select) {
+            $deals = DealsVoucher::select($request->select);
+        } else {
+            $deals = DealsVoucher::select('*');
+        }
 
         if ($request->json('id_deals')) {
             $deals->where('id_deals', $request->json('id_deals'));
         }
 
         if ($request->is_all) {
-        	$deals = $deals->get();
-        }else{
-        	$deals = $deals->paginate(10);
+            $deals = $deals->get();
+        } else {
+            $deals = $deals->paginate(10);
         }
 
         return response()->json(MyHelper::checkGet($deals));
     }
 
     /* UPDATE */
-    function update($id, $data)
+    public function update($id, $data)
     {
         $data = $this->checkInputan($data);
 
@@ -1137,35 +1114,36 @@ class ApiDeals extends Controller
         $data['step_complete'] = 0;
         $data['last_updated_by'] = auth()->user()->id;
 
-        $del_rule 	= false;
+        $del_rule   = false;
         if ($data['id_brand'] && is_array($data['id_brand'])) {
-           	$brand_now 	= $deals->deals_brands->pluck('id_brand')->toArray();
-           	$brand_new	= $data['id_brand'];
-        	$data_brand = $brand_new;
+            $brand_now  = $deals->deals_brands->pluck('id_brand')->toArray();
+            $brand_new  = $data['id_brand'];
+            $data_brand = $brand_new;
 
-           	$check_brand = array_merge(array_diff($brand_now, $brand_new), array_diff($brand_new, $brand_now));
+            $check_brand = array_merge(array_diff($brand_now, $brand_new), array_diff($brand_new, $brand_now));
 
-       		if (!empty($check_brand)) {
-       			$del_rule = true;
-       		}
+            if (!empty($check_brand)) {
+                $del_rule = true;
+            }
         }
 
-        if ( $data['is_online'] == 0 
-    		|| (isset($data['id_brand']) 
-	    		&& ((!is_array($data['id_brand']) && $data['id_brand'] != $deals['id_brand']) 
-	    			|| (is_array($data['id_brand']) && $del_rule)
-	    			) 
-	    		)
+        if (
+            $data['is_online'] == 0
+            || (isset($data['id_brand'])
+                && ((!is_array($data['id_brand']) && $data['id_brand'] != $deals['id_brand'])
+                    || (is_array($data['id_brand']) && $del_rule)
+                    )
+                )
         ) {
-        	app($this->promo_campaign)->deleteAllProductRule('deals', $id);
+            app($this->promo_campaign)->deleteAllProductRule('deals', $id);
         }
 
-        if (($data['deals_voucher_type']??false) != 'List Vouchers') {
-        	DealsVoucher::where('id_deals',$id)->delete();
+        if (($data['deals_voucher_type'] ?? false) != 'List Vouchers') {
+            DealsVoucher::where('id_deals', $id)->delete();
         }
 
-        if ( !empty($deals['deals_total_claimed']) ) {
-        	return false;
+        if (!empty($deals['deals_total_claimed'])) {
+            return false;
         }
         // error
         if (isset($data['error'])) {
@@ -1183,8 +1161,7 @@ class ApiDeals extends Controller
 
         // save outlet
         if (isset($data['id_outlet'])) {
-
-            if($data['is_all_outlet'] == 0){
+            if ($data['is_all_outlet'] == 0) {
                 $saveOutlet = $this->saveOutlet('deals', $deals, $data['id_outlet']);
             }
             unset($data['id_outlet']);
@@ -1192,17 +1169,16 @@ class ApiDeals extends Controller
 
         // save outlet group
         if (isset($data['id_outlet_group'])) {
-
-            if($data['is_all_outlet'] == 0){
+            if ($data['is_all_outlet'] == 0) {
                 $saveOutlet = $this->saveOutletGroup('deals', $deals, $data['id_outlet_group']);
             }
             unset($data['id_outlet_group']);
         }
 
         if (isset($data['id_brand'])) {
-        	$save_brand = $this->saveBrand($deals, $data['id_brand']);
-        	unset($data['id_brand']);
-        	if (!$save_brand) {
+            $save_brand = $this->saveBrand($deals, $data['id_brand']);
+            unset($data['id_brand']);
+            if (!$save_brand) {
                 return false;
             }
         }
@@ -1213,7 +1189,7 @@ class ApiDeals extends Controller
     }
 
     /* DELETE IMAGE */
-    function deleteImage($id)
+    public function deleteImage($id)
     {
         $cekImage = Deal::where('id_deals', $id)->get()->first();
 
@@ -1226,66 +1202,65 @@ class ApiDeals extends Controller
     }
 
     /* UPDATE REQUEST */
-    function updateReq(Update $request)
+    public function updateReq(Update $request)
     {
         DB::beginTransaction();
         if ($request->json('id_deals')) {
-        	$save = $this->update($request->json('id_deals'), $request->json()->all());
+            $save = $this->update($request->json('id_deals'), $request->json()->all());
 
-	        if ($save) {
-	            DB::commit();
-	            $dt = '';
-	            switch (strtolower($request->json('deals_type'))){
-	                case 'deals':
-	                    $dt = 'Deals';
-	                    break;
-	                case 'hidden':
-	                    $dt = 'Inject Voucher';
-	                    break;
-	                case 'welcomevoucher':
-	                    $dt = 'Welcome Voucher';
-	                    break;
+            if ($save) {
+                DB::commit();
+                $dt = '';
+                switch (strtolower($request->json('deals_type'))) {
+                    case 'deals':
+                        $dt = 'Deals';
+                        break;
+                    case 'hidden':
+                        $dt = 'Inject Voucher';
+                        break;
+                    case 'welcomevoucher':
+                        $dt = 'Welcome Voucher';
+                        break;
                     case 'quest':
                         $dt = 'Quest Voucher';
                         break;
-	            }
+                }
 
-	            if ($dt !== '') {
-		            $deals = Deal::where('id_deals',$request->json('id_deals'))
-	                    ->first();
-	                $deals->setAppends(['deals_shipment_text', 'deals_payment_text', 'deals_outlet_text', 'brand_rule_text']);
-	                $deals = $deals->toArray();
+                if ($dt !== '') {
+                    $deals = Deal::where('id_deals', $request->json('id_deals'))
+                        ->first();
+                    $deals->setAppends(['deals_shipment_text', 'deals_payment_text', 'deals_outlet_text', 'brand_rule_text']);
+                    $deals = $deals->toArray();
 
-		            $send = app($this->autocrm)->SendAutoCRM('Update '.$dt, $request->user()->phone, [
-		                'voucher_type' => $deals['deals_voucher_type']?:'',
-		                'promo_id_type' => $deals['deals_promo_id_type']?:'',
-		                'promo_id' => $deals['deals_promo_id']?:'',
-		                'detail' => view('deals::emails.detail',['detail'=>$deals])->render(),
-	                    'created_at' => $deals['created_at'] ? date('d F Y H:i', strtotime($deals['created_at'])) : '-',
-	                    'updated_at' => $deals['updated_at'] ? date('d F Y H:i', strtotime($deals['updated_at'])) : '-',
-		            ]+$deals,null,true);
-	            }
-		        return response()->json(MyHelper::checkUpdate($save));
-	        } else {
-	            DB::rollBack();
-	        	return response()->json(['status' => 'fail','messages' => ['Cannot update deals because someone has already claimed a voucher']]);
-	        }
-        }
-        else{
-        	$save = $this->updatePromotionDeals($request->json('id_deals_promotion_template'), $request->json()->all());
+                    $send = app($this->autocrm)->SendAutoCRM('Update ' . $dt, $request->user()->phone, [
+                        'voucher_type' => $deals['deals_voucher_type'] ?: '',
+                        'promo_id_type' => $deals['deals_promo_id_type'] ?: '',
+                        'promo_id' => $deals['deals_promo_id'] ?: '',
+                        'detail' => view('deals::emails.detail', ['detail' => $deals])->render(),
+                        'created_at' => $deals['created_at'] ? date('d F Y H:i', strtotime($deals['created_at'])) : '-',
+                        'updated_at' => $deals['updated_at'] ? date('d F Y H:i', strtotime($deals['updated_at'])) : '-',
+                    ] + $deals, null, true);
+                }
+                return response()->json(MyHelper::checkUpdate($save));
+            } else {
+                DB::rollBack();
+                return response()->json(['status' => 'fail','messages' => ['Cannot update deals because someone has already claimed a voucher']]);
+            }
+        } else {
+            $save = $this->updatePromotionDeals($request->json('id_deals_promotion_template'), $request->json()->all());
 
-        	if ($save) {
-	            DB::commit();
-		        return response()->json(MyHelper::checkUpdate($save));
-	        } else {
-	            DB::rollBack();
-	        	return response()->json(['status' => 'fail','messages' => ['Update Promotion Deals Failed']]);
-	        }
+            if ($save) {
+                DB::commit();
+                return response()->json(MyHelper::checkUpdate($save));
+            } else {
+                DB::rollBack();
+                return response()->json(['status' => 'fail','messages' => ['Update Promotion Deals Failed']]);
+            }
         }
     }
 
     /* DELETE */
-    function delete($id)
+    public function delete($id)
     {
         // delete outlet
         DealsOutlet::where('id_deals', $id)->delete();
@@ -1295,7 +1270,7 @@ class ApiDeals extends Controller
     }
 
     /* DELETE REQUEST */
-    function deleteReq(Delete $request)
+    public function deleteReq(Delete $request)
     {
         DB::beginTransaction();
 
@@ -1333,7 +1308,7 @@ class ApiDeals extends Controller
     }
 
     /* CHECK DELETE */
-    function checkDelete($id)
+    public function checkDelete($id)
     {
         $database = [
             'deals_vouchers',
@@ -1362,14 +1337,14 @@ class ApiDeals extends Controller
     }
 
     /* OUTLET */
-    function saveOutlet($deals_type, $deals, $id_outlet = [])
+    public function saveOutlet($deals_type, $deals, $id_outlet = [])
     {
-    	if ($deals_type == 'Promotion') {
-        	$id_deals = $deals->id_deals_promotion_template;
-        	$outlet_table = new DealsPromotionOutlet;
-        }else{
-	        $id_deals = $deals->id_deals;
-        	$outlet_table = new DealsOutlet;
+        if ($deals_type == 'Promotion') {
+            $id_deals = $deals->id_deals_promotion_template;
+            $outlet_table = new DealsPromotionOutlet();
+        } else {
+            $id_deals = $deals->id_deals;
+            $outlet_table = new DealsOutlet();
         }
 
         $dataOutlet = [];
@@ -1392,15 +1367,15 @@ class ApiDeals extends Controller
     }
 
     /* OUTLET */
-    function saveOutletGroup($deals_type, $deals, $id_outlet_group = [])
+    public function saveOutletGroup($deals_type, $deals, $id_outlet_group = [])
     {
 
         if ($deals_type == 'Promotion') {
-        	$id_deals = $deals->id_deals_promotion_template;
-        	$outlet_group_table = new DealsPromotionOutletGroup;
-        }else{
-	        $id_deals = $deals->id_deals;
-        	$outlet_group_table = new DealsOutletGroup;
+            $id_deals = $deals->id_deals_promotion_template;
+            $outlet_group_table = new DealsPromotionOutletGroup();
+        } else {
+            $id_deals = $deals->id_deals;
+            $outlet_group_table = new DealsOutletGroup();
         }
 
         $data_outlet = [];
@@ -1423,37 +1398,36 @@ class ApiDeals extends Controller
     }
 
     /* DELETE OUTLET */
-    function deleteOutlet($deals_type, $id_deals)
+    public function deleteOutlet($deals_type, $id_deals)
     {
-    	if ($deals_type == 'Promotion') {
-	        $delete = DealsPromotionOutlet::where('id_deals', $id_deals)->delete();
-	        $delete = DealsPromotionOutletGroup::where('id_deals', $id_deals)->delete();
-	    }else{
-	        $delete = DealsOutlet::where('id_deals', $id_deals)->delete();
-	        $delete = DealsOutletGroup::where('id_deals', $id_deals)->delete();
-	    }
+        if ($deals_type == 'Promotion') {
+            $delete = DealsPromotionOutlet::where('id_deals', $id_deals)->delete();
+            $delete = DealsPromotionOutletGroup::where('id_deals', $id_deals)->delete();
+        } else {
+            $delete = DealsOutlet::where('id_deals', $id_deals)->delete();
+            $delete = DealsOutletGroup::where('id_deals', $id_deals)->delete();
+        }
 
         return $delete;
     }
 
-    function saveBrand($deals, $id_brand)
+    public function saveBrand($deals, $id_brand)
     {
 
-    	if (isset($deals->id_deals_promotion_template)) {
-    		$table = new DealsPromotionBrand;
-    		$id_deals = $deals->id_deals_promotion_template;
-
-    	}else{
-    		$table = new DealsBrand;
-    		$id_deals = $deals->id_deals;
-    	}
-    	$delete = $table::where('id_deals', $id_deals)->delete();
+        if (isset($deals->id_deals_promotion_template)) {
+            $table = new DealsPromotionBrand();
+            $id_deals = $deals->id_deals_promotion_template;
+        } else {
+            $table = new DealsBrand();
+            $id_deals = $deals->id_deals;
+        }
+        $delete = $table::where('id_deals', $id_deals)->delete();
 
         $data_brand = [];
 
         foreach ($id_brand as $value) {
             array_push($data_brand, [
-                'id_brand' 	=> $value,
+                'id_brand'  => $value,
                 'id_deals'  => $id_deals
             ]);
         }
@@ -1470,21 +1444,22 @@ class ApiDeals extends Controller
     }
 
     /*Welcome Voucher*/
-    function listDealsWelcomeVoucher(Request $request){
-        $getDeals = Deal::where('deals_type','WelcomeVoucher')
+    public function listDealsWelcomeVoucher(Request $request)
+    {
+        $getDeals = Deal::where('deals_type', 'WelcomeVoucher')
             ->select('deals.*')
             ->get()->toArray();
         $configUseBrand = Configs::where('config_name', 'use brand')->first();
 
-        if($configUseBrand['is_active']){
-            foreach ($getDeals as $key=>$data){
+        if ($configUseBrand['is_active']) {
+            foreach ($getDeals as $key => $data) {
                 $brands = DealsBrand::leftJoin('brands', 'brands.id_brand', 'deals_brands.id_brand')
                             ->where('id_deals', $data['id_deals'])
                             ->pluck('brands.name_brand')->toArray();
                 $brands = array_filter($brands);
                 $stringName = '';
-                if(!empty($brands)){
-                    $stringName = '('.implode(',', $brands).')';
+                if (!empty($brands)) {
+                    $stringName = '(' . implode(',', $brands) . ')';
                 }
                 $getDeals[$key]['name_brand'] = $stringName;
             }
@@ -1497,22 +1472,23 @@ class ApiDeals extends Controller
         return response()->json($result);
     }
 
-    function welcomeVoucherSetting(Request $request){
+    public function welcomeVoucherSetting(Request $request)
+    {
         $setting = Setting::where('key', 'welcome_voucher_setting')->first();
         $configUseBrand = Configs::where('config_name', 'use brand')->first();
         $getDeals = DealTotal::join('deals', 'deals.id_deals', 'deals_total.id_deals')
-            ->select('deals.*','deals_total.deals_total')
+            ->select('deals.*', 'deals_total.deals_total')
             ->get()->toArray();
 
-        if($configUseBrand['is_active']){
-            foreach ($getDeals as $key=>$data){
+        if ($configUseBrand['is_active']) {
+            foreach ($getDeals as $key => $data) {
                 $brands = DealsBrand::leftJoin('brands', 'brands.id_brand', 'deals_brands.id_brand')
                             ->where('id_deals', $data['id_deals'])
                             ->pluck('brands.name_brand')->toArray();
                 $brands = array_filter($brands);
                 $stringName = '';
-                if(!empty($brands)){
-                    $stringName = '('.implode(',', $brands).')';
+                if (!empty($brands)) {
+                    $stringName = '(' . implode(',', $brands) . ')';
                 }
                 $getDeals[$key]['name_brand'] = $stringName;
             }
@@ -1528,7 +1504,8 @@ class ApiDeals extends Controller
         return response()->json($result);
     }
 
-    function welcomeVoucherSettingUpdate(Request $request){
+    public function welcomeVoucherSettingUpdate(Request $request)
+    {
         $post = $request->json()->all();
 
         $deleteDealsTotal = DB::table('deals_total')->delete();//Delete all data from tabel deals total
@@ -1539,22 +1516,22 @@ class ApiDeals extends Controller
         $list_deals_total = $post['list_deals_total'];
         $count = count($list_id);
 
-        for($i=0;$i<$count;$i++){
+        for ($i = 0; $i < $count; $i++) {
             $data = [
                 'id_deals' => $list_id[$i],
                 'deals_total' => $list_deals_total[$i],
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
-            array_push($arrInsert,$data);
+            array_push($arrInsert, $data);
         }
 
         $insert = DealTotal::insert($arrInsert);
-        if($insert){
+        if ($insert) {
             $result = [
                 'status' => 'success'
             ];
-        }else{
+        } else {
             $result = [
                 'status' => 'fail'
             ];
@@ -1563,7 +1540,8 @@ class ApiDeals extends Controller
         return response()->json($result);
     }
 
-    function welcomeVoucherSettingUpdateStatus(Request $request){
+    public function welcomeVoucherSettingUpdateStatus(Request $request)
+    {
         $post = $request->json()->all();
         $status = $post['status'];
         $updateStatus = Setting::where('key', 'welcome_voucher_setting')->update(['value' => $status]);
@@ -1571,26 +1549,27 @@ class ApiDeals extends Controller
         return response()->json(MyHelper::checkUpdate($updateStatus));
     }
 
-    function injectWelcomeVoucher($user, $phone){
-    	$now = date("Y-m-d H:i:s");
+    public function injectWelcomeVoucher($user, $phone)
+    {
+        $now = date("Y-m-d H:i:s");
         $getDeals = DealTotal::join('deals', 'deals.id_deals', '=', 'deals_total.id_deals')
-        			->where('deals_start', "<", $now)
-            		->where('deals_end', ">", $now)
-            		->where('step_complete','=','1')
-            		->where(function($q){
-            			$q->where('deals_total_voucher','0')
-            			->orWhereColumn('deals_total_claimed','<','deals_total_voucher');
-            		})
-            		->select('deals.*','deals_total.deals_total')->get();
+                    ->where('deals_start', "<", $now)
+                    ->where('deals_end', ">", $now)
+                    ->where('step_complete', '=', '1')
+                    ->where(function ($q) {
+                        $q->where('deals_total_voucher', '0')
+                        ->orWhereColumn('deals_total_claimed', '<', 'deals_total_voucher');
+                    })
+                    ->select('deals.*', 'deals_total.deals_total')->get();
 
         if (!$getDeals->isEmpty()) {
-        	$getDeals = $getDeals->toArray();
-        	$data = [
-        		'deals' => $getDeals,
-        		'user'	=> $user,
-        		'phone' => $phone
-        	];
-        	SendDealsJob::dispatch($data)->allOnConnection('dealsqueue');
+            $getDeals = $getDeals->toArray();
+            $data = [
+                'deals' => $getDeals,
+                'user'  => $user,
+                'phone' => $phone
+            ];
+            SendDealsJob::dispatch($data)->allOnConnection('dealsqueue');
         }
 
         return true;
@@ -1605,7 +1584,7 @@ class ApiDeals extends Controller
 
         if (isset($deals)) {
             $deals = $deals->toArray();
-        }else{
+        } else {
             $deals = false;
         }
 
@@ -1624,93 +1603,93 @@ class ApiDeals extends Controller
         return response()->json($result);
     }
 
-    function getDealsData($id_deals, $step, $deals_type='Deals')
+    public function getDealsData($id_deals, $step, $deals_type = 'Deals')
     {
-    	$post['id_deals'] = $id_deals;
-    	$post['step'] = $step;
-    	$post['deals_type'] = $deals_type;
+        $post['id_deals'] = $id_deals;
+        $post['step'] = $step;
+        $post['deals_type'] = $deals_type;
 
-    	if ($deals_type == 'Promotion' || $deals_type == 'deals_promotion') {
-    		$deals = DealsPromotionTemplate::where('id_deals_promotion_template', '=', $post['id_deals']);
-    		$table = 'deals_promotion';
-    	}else{
-    		if ($deals_type == 'promotion-deals') {
-    			$post['deals_type'] = 'promotion';
-    		}
-    		$deals = Deal::where('id_deals', '=', $post['id_deals'])->where('deals_type','=',$post['deals_type']);
-    		$table = 'deals';
-    	}
-
-        if ( ($post['step'] == 1 || $post['step'] == 'all') ){
-			$deals = $deals->with(['outlets', 'outlet_groups']);
+        if ($deals_type == 'Promotion' || $deals_type == 'deals_promotion') {
+            $deals = DealsPromotionTemplate::where('id_deals_promotion_template', '=', $post['id_deals']);
+            $table = 'deals_promotion';
+        } else {
+            if ($deals_type == 'promotion-deals') {
+                $post['deals_type'] = 'promotion';
+            }
+            $deals = Deal::where('id_deals', '=', $post['id_deals'])->where('deals_type', '=', $post['deals_type']);
+            $table = 'deals';
         }
 
-        if ( ($post['step'] == 1 || $post['step'] == 'all') ){
-			$deals = $deals->with([$table.'_brands']);
+        if (($post['step'] == 1 || $post['step'] == 'all')) {
+            $deals = $deals->with(['outlets', 'outlet_groups']);
+        }
+
+        if (($post['step'] == 1 || $post['step'] == 'all')) {
+            $deals = $deals->with([$table . '_brands']);
         }
 
         if ($post['step'] == 2 || $post['step'] == 'all') {
-			$deals = $deals->with([
-                $table.'_product_discount.product',
-                $table.'_product_discount.brand',
-                $table.'_product_discount.product_variant_pivot.product_variant',
-                $table.'_product_discount_rules',
-                $table.'_tier_discount_product.product',
-                $table.'_tier_discount_product.brand',
-                $table.'_tier_discount_product.product_variant_pivot.product_variant',
-                $table.'_tier_discount_rules',
-                $table.'_buyxgety_product_requirement.product',
-                $table.'_buyxgety_product_requirement.brand',
-                $table.'_buyxgety_product_requirement.product_variant_pivot.product_variant',
-                $table.'_buyxgety_rules.product',
-                $table.'_buyxgety_rules.brand',
-                $table.'_buyxgety_rules.product_variant_pivot.product_variant',
-                $table.'_buyxgety_rules.deals_buyxgety_product_modifiers.modifier',
-                $table.'_discount_bill_rules',
-                $table.'_discount_bill_products.product',
-                $table.'_discount_bill_products.brand',
-                $table.'_discount_bill_products.product_variant_pivot.product_variant',
-                $table.'_discount_delivery_rules',
-                $table.'_shipment_method',
-                $table.'_payment_method',
+            $deals = $deals->with([
+                $table . '_product_discount.product',
+                $table . '_product_discount.brand',
+                $table . '_product_discount.product_variant_pivot.product_variant',
+                $table . '_product_discount_rules',
+                $table . '_tier_discount_product.product',
+                $table . '_tier_discount_product.brand',
+                $table . '_tier_discount_product.product_variant_pivot.product_variant',
+                $table . '_tier_discount_rules',
+                $table . '_buyxgety_product_requirement.product',
+                $table . '_buyxgety_product_requirement.brand',
+                $table . '_buyxgety_product_requirement.product_variant_pivot.product_variant',
+                $table . '_buyxgety_rules.product',
+                $table . '_buyxgety_rules.brand',
+                $table . '_buyxgety_rules.product_variant_pivot.product_variant',
+                $table . '_buyxgety_rules.deals_buyxgety_product_modifiers.modifier',
+                $table . '_discount_bill_rules',
+                $table . '_discount_bill_products.product',
+                $table . '_discount_bill_products.brand',
+                $table . '_discount_bill_products.product_variant_pivot.product_variant',
+                $table . '_discount_delivery_rules',
+                $table . '_shipment_method',
+                $table . '_payment_method',
                 'brand',
                 'brands',
-                'created_by_user' => function($q) {
-                	$q->select('id', 'name', 'level');
+                'created_by_user' => function ($q) {
+                    $q->select('id', 'name', 'level');
                 }
             ]);
         }
 
         if ($post['step'] == 3 || $post['step'] == 'all') {
-			$deals = $deals->with([$table.'_content.'.$table.'_content_details']);
+            $deals = $deals->with([$table . '_content.' . $table . '_content_details']);
         }
 
         if ($post['step'] == 'all') {
-			// $deals = $deals->with(['created_by_user']);
+            // $deals = $deals->with(['created_by_user']);
         }
 
         $deals = $deals->first();
 
         if ($deals) {
-        	if ($post['step'] == 'all' && $deals_type != 'Promotion' && $deals_type != 'promotion-deals') {
-	        	$deals_array = $deals->toArray();
-	        	if ($deals_type == 'Deals' || $deals_type == 'Hidden' || $deals_type == 'WelcomeVoucher' || $deals_type == 'Quest') {
-	        		$type = 'deals';
-	        	}else{
-	        		$type = $deals_type;
-	        	}
-	        	$getProduct = app($this->promo_campaign)->getProduct($type, $deals_array);
-	    		$desc = app($this->promo_campaign)->getPromoDescription($type, $deals_array, $getProduct['product']??'', true);
-	    		$deals['description'] = $desc;
-        	}
+            if ($post['step'] == 'all' && $deals_type != 'Promotion' && $deals_type != 'promotion-deals') {
+                $deals_array = $deals->toArray();
+                if ($deals_type == 'Deals' || $deals_type == 'Hidden' || $deals_type == 'WelcomeVoucher' || $deals_type == 'Quest') {
+                    $type = 'deals';
+                } else {
+                    $type = $deals_type;
+                }
+                $getProduct = app($this->promo_campaign)->getProduct($type, $deals_array);
+                $desc = app($this->promo_campaign)->getPromoDescription($type, $deals_array, $getProduct['product'] ?? '', true);
+                $deals['description'] = $desc;
+            }
         }
 
         if ($deals_type != 'Promotion' && $post['step'] == 'all') {
-        	$used_voucher = DealsVoucher::join('transaction_vouchers', 'deals_vouchers.id_deals_voucher', 'transaction_vouchers.id_deals_voucher')
-        					->where('id_deals', $deals->id_deals)
-        					->where('transaction_vouchers.status', 'success')
-        					->count();
-        	$deals->deals_total_used = $used_voucher;
+            $used_voucher = DealsVoucher::join('transaction_vouchers', 'deals_vouchers.id_deals_voucher', 'transaction_vouchers.id_deals_voucher')
+                            ->where('id_deals', $deals->id_deals)
+                            ->where('transaction_vouchers.status', 'success')
+                            ->count();
+            $deals->deals_total_used = $used_voucher;
         }
 
         return $deals;
@@ -1718,59 +1697,51 @@ class ApiDeals extends Controller
 
     public function updateContent(UpdateContentRequest $request)
     {
-    	$post = $request->json()->all();
+        $post = $request->json()->all();
 
-    	db::beginTransaction();
+        db::beginTransaction();
 
-    	if ($post['deals_type'] != 'Promotion') {
-    		$source = 'deals';
-	    	$check = Deal::where('id_deals','=',$post['id_deals'])->first();
-	    	/* change to can update content deals even after someone has already claimed a voucher 
-	    	if (!empty($check['deals_total_claimed']) ) {
-				return [
-	                'status'  => 'fail',
-	                'messages' => 'Cannot update deals because someone has already claimed a voucher'
-	            ];
-			}*/
-    	}
-    	else
-    	{
-    		$source = 'deals_promotion';
-    		$check = DealsPromotionTemplate::where('id_deals_promotion_template','=',$post['id_deals'])->first();
-    	}
+        if ($post['deals_type'] != 'Promotion') {
+            $source = 'deals';
+            $check = Deal::where('id_deals', '=', $post['id_deals'])->first();
+            /* change to can update content deals even after someone has already claimed a voucher
+            if (!empty($check['deals_total_claimed']) ) {
+                return [
+                    'status'  => 'fail',
+                    'messages' => 'Cannot update deals because someone has already claimed a voucher'
+                ];
+            }*/
+        } else {
+            $source = 'deals_promotion';
+            $check = DealsPromotionTemplate::where('id_deals_promotion_template', '=', $post['id_deals'])->first();
+        }
 
-    	if ( empty($check) ) {
-			return [
+        if (empty($check)) {
+            return [
                 'status'  => 'fail',
                 'messages' => 'Deals not found'
             ];
-		}
-
-    	// $update = app($this->subscription)->createOrUpdateContent($post, $source);
-    	$update = $this->updateContentV2($post, $source);
-    	if ($update)
-    	{
-    		if ($post['deals_type'] != 'Promotion') {
-				$update = Deal::where('id_deals','=',$post['id_deals'])->update(['deals_description' => $post['deals_description'], 'last_updated_by' => auth()->user()->id]);
-    		}else{
-				$update = DealsPromotionTemplate::where('id_deals_promotion_template','=',$post['id_deals'])->update(['deals_description' => $post['deals_description'], 'step_complete' => 0, 'last_updated_by' => auth()->user()->id]);
-    		}
-
-            if ($update)
-			{
-		        DB::commit();
-		    }
-		    else
-		    {
-		        DB::rollBack();
-		        return  response()->json([
-		            'status'   => 'fail',
-		            'messages' => 'Update Deals failed'
-		        ]);
-		    }
         }
-        else
-        {
+
+        // $update = app($this->subscription)->createOrUpdateContent($post, $source);
+        $update = $this->updateContentV2($post, $source);
+        if ($update) {
+            if ($post['deals_type'] != 'Promotion') {
+                $update = Deal::where('id_deals', '=', $post['id_deals'])->update(['deals_description' => $post['deals_description'], 'last_updated_by' => auth()->user()->id]);
+            } else {
+                $update = DealsPromotionTemplate::where('id_deals_promotion_template', '=', $post['id_deals'])->update(['deals_description' => $post['deals_description'], 'step_complete' => 0, 'last_updated_by' => auth()->user()->id]);
+            }
+
+            if ($update) {
+                DB::commit();
+            } else {
+                DB::rollBack();
+                return  response()->json([
+                    'status'   => 'fail',
+                    'messages' => 'Update Deals failed'
+                ]);
+            }
+        } else {
             DB::rollBack();
             return  response()->json([
                 'status'   => 'fail',
@@ -1782,95 +1753,93 @@ class ApiDeals extends Controller
     }
 
     /*============================= Start Filter & Sort V2 ================================*/
-    function listDealV2(Request $request) {
-        $deals = (new Deal)->newQuery();
-        $deals->where('deals_type', '!=','WelcomeVoucher');
-        $deals->where( function($q) {
-        	$q->where('deals_publish_start', '<=', date('Y-m-d H:i:s'))
-        	->where('deals_publish_end', '>=', date('Y-m-d H:i:s'))
-        	->where('deals_end', '>=', date('Y-m-d H:i:s'));
+    public function listDealV2(Request $request)
+    {
+        $deals = (new Deal())->newQuery();
+        $deals->where('deals_type', '!=', 'WelcomeVoucher');
+        $deals->where(function ($q) {
+            $q->where('deals_publish_start', '<=', date('Y-m-d H:i:s'))
+            ->where('deals_publish_end', '>=', date('Y-m-d H:i:s'))
+            ->where('deals_end', '>=', date('Y-m-d H:i:s'));
         });
-        $deals->where( function($q) {
-        	$q->where('deals_voucher_type','Unlimited')
-        		->orWhereRaw('(deals.deals_total_voucher - deals.deals_total_claimed) > 0 ');
+        $deals->where(function ($q) {
+            $q->where('deals_voucher_type', 'Unlimited')
+                ->orWhereRaw('(deals.deals_total_voucher - deals.deals_total_claimed) > 0 ');
         });
         $deals->where('step_complete', '=', 1);
 
         if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {
             $deals->leftJoin('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
-            	->where(function($query) use ($request){
-	                $query->where('id_outlet', $request->json('id_outlet'))
-	                		->orWhere('deals.is_all_outlet','=',1);
-            	})
-	            ->addSelect('deals.*')->distinct();
+                ->where(function ($query) use ($request) {
+                    $query->where('id_outlet', $request->json('id_outlet'))
+                            ->orWhere('deals.is_all_outlet', '=', 1);
+                })
+                ->addSelect('deals.*')->distinct();
         }
 
         // brand
         if ($request->json('id_brand')) {
-            $deals->where('id_brand',$request->json('id_brand'));
+            $deals->where('id_brand', $request->json('id_brand'));
         }
 
-        $deals->addSelect('id_brand', 'deals.id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type','is_offline','is_online');
+        $deals->addSelect('id_brand', 'deals.id_deals', 'deals_title', 'deals_second_title', 'deals_voucher_price_point', 'deals_voucher_price_cash', 'deals_total_voucher', 'deals_total_claimed', 'deals_voucher_type', 'deals_image', 'deals_start', 'deals_end', 'deals_type', 'is_offline', 'is_online');
 
         if ($request->json('key_free')) {
-            $deals->where(function($query) use ($request){
+            $deals->where(function ($query) use ($request) {
                 $query->where('deals_title', 'LIKE', '%' . $request->json('key_free') . '%')
                     ->orWhere('deals_second_title', 'LIKE', '%' . $request->json('key_free') . '%');
             });
         }
 
-        $deals->where(function($query) use ($request){
+        $deals->where(function ($query) use ($request) {
 
-        	if(!$request->json('voucher_type_cash') &&  !$request->json('voucher_type_point') &&  !$request->json('voucher_type_free'))
-        	{
-        		if ($request->json('min_price')) {
-	                $query->where('deals_voucher_price_cash', '>=', $request->json('min_price'));
-	            }
+            if (!$request->json('voucher_type_cash') &&  !$request->json('voucher_type_point') &&  !$request->json('voucher_type_free')) {
+                if ($request->json('min_price')) {
+                    $query->where('deals_voucher_price_cash', '>=', $request->json('min_price'));
+                }
 
-	            if ($request->json('max_price')) {
-	                $query->where('deals_voucher_price_cash', '<=', $request->json('max_price'));
-	            }
-        	}
-        	else
-        	{
-	        	if ($request->json('voucher_type_cash')) {
-	                $query->orWhere(function ($amp) use ($request) {
-	                    $amp->whereNotNull('deals_voucher_price_cash');
-	                    if($val=$request->json('min_price')){
-	                        $amp->where('deals_voucher_price_cash','>=',$val);
-	                    }
-	                    if($val=$request->json('max_price')){
-	                        $amp->where('deals_voucher_price_cash','<=',$val);
-	                    }
-	                });
-	            }
+                if ($request->json('max_price')) {
+                    $query->where('deals_voucher_price_cash', '<=', $request->json('max_price'));
+                }
+            } else {
+                if ($request->json('voucher_type_cash')) {
+                    $query->orWhere(function ($amp) use ($request) {
+                        $amp->whereNotNull('deals_voucher_price_cash');
+                        if ($val = $request->json('min_price')) {
+                            $amp->where('deals_voucher_price_cash', '>=', $val);
+                        }
+                        if ($val = $request->json('max_price')) {
+                            $amp->where('deals_voucher_price_cash', '<=', $val);
+                        }
+                    });
+                }
 
-	            if ($request->json('voucher_type_point')) {
-	                $query->orWhere(function ($amp) use ($request) {
-	                    $amp->whereNotNull('deals_voucher_price_point');
-	                    if($val=$request->json('min_interval_point')){
-	                        $amp->where('deals_voucher_price_point','>=',$val);
-	                    }
-	                    if($val=$request->json('max_interval_point')){
-	                        $amp->where('deals_voucher_price_point','<=',$val);
-	                    }
-	                });
-	            }
+                if ($request->json('voucher_type_point')) {
+                    $query->orWhere(function ($amp) use ($request) {
+                        $amp->whereNotNull('deals_voucher_price_point');
+                        if ($val = $request->json('min_interval_point')) {
+                            $amp->where('deals_voucher_price_point', '>=', $val);
+                        }
+                        if ($val = $request->json('max_interval_point')) {
+                            $amp->where('deals_voucher_price_point', '<=', $val);
+                        }
+                    });
+                }
 
-	            if ($request->json('voucher_type_free')) {
-	                $query->orWhere(function ($amp) use ($request) {
-	                    $amp->whereNull('deals_voucher_price_point')->whereNull('deals_voucher_price_cash');
-	                });
-	            }
-        	}
+                if ($request->json('voucher_type_free')) {
+                    $query->orWhere(function ($amp) use ($request) {
+                        $amp->whereNull('deals_voucher_price_point')->whereNull('deals_voucher_price_cash');
+                    });
+                }
+            }
         });
 
-        if($request->json('sort')){
-            if($request->json('sort') == 'best'){
+        if ($request->json('sort')) {
+            if ($request->json('sort') == 'best') {
                 $deals->orderBy('deals_total_claimed', 'desc');
-            }elseif($request->json('sort') == 'new'){
+            } elseif ($request->json('sort') == 'new') {
                 $deals->orderBy('deals_publish_start', 'desc');
-            }elseif($request->json('sort') == 'periode'){
+            } elseif ($request->json('sort') == 'periode') {
                 $deals->orderBy('deals_end', 'asc');
             }
         }
@@ -1884,7 +1853,7 @@ class ApiDeals extends Controller
                 $city = $request->json('id_city');
             }
 
-            $deals = $this->kotacuks($deals, $city,$request->json('admin'));
+            $deals = $this->kotacuks($deals, $city, $request->json('admin'));
         }
 
         if ($request->get('page')) {
@@ -1906,11 +1875,11 @@ class ApiDeals extends Controller
         }
 
 
-        for ($i=$start; $i < $end; $i++) {
-            $deals[$i]['time_to_end']		= strtotime($deals[$i]['deals_end'])-time();
-            $deals[$i]['deals_start_indo']	= MyHelper::dateFormatInd($deals[$i]['deals_start'], false, false).' pukul '.date('H:i', strtotime($deals[$i]['deals_start']));
-            $deals[$i]['deals_end_indo']	= MyHelper::dateFormatInd($deals[$i]['deals_end'], false, false).' pukul '.date('H:i', strtotime($deals[$i]['deals_end']));
-            $deals[$i]['time_server_indo']  = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i', strtotime(date('Y-m-d H:i:s')));
+        for ($i = $start; $i < $end; $i++) {
+            $deals[$i]['time_to_end']       = strtotime($deals[$i]['deals_end']) - time();
+            $deals[$i]['deals_start_indo']  = MyHelper::dateFormatInd($deals[$i]['deals_start'], false, false) . ' pukul ' . date('H:i', strtotime($deals[$i]['deals_start']));
+            $deals[$i]['deals_end_indo']    = MyHelper::dateFormatInd($deals[$i]['deals_end'], false, false) . ' pukul ' . date('H:i', strtotime($deals[$i]['deals_end']));
+            $deals[$i]['time_server_indo']  = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false) . ' pukul ' . date('H:i', strtotime(date('Y-m-d H:i:s')));
             array_push($resultData, $deals[$i]);
         }
 
@@ -1923,191 +1892,182 @@ class ApiDeals extends Controller
             $result['next_page_url'] = ENV('APP_API_URL') . 'api/deals/list/v2?page=' . $next_page;
         }
 
-        if(!$result['total']){
-            $result=[];
+        if (!$result['total']) {
+            $result = [];
         }
 
-        if(
+        if (
             $request->json('voucher_type_point') ||
             $request->json('voucher_type_cash') ||
             $request->json('voucher_type_free') ||
             $request->json('key_free')
-        ){
+        ) {
             $resultMessage = 'Maaf, voucher yang kamu cari belum tersedia';
-        }else{
+        } else {
             $resultMessage = 'Nantikan penawaran menarik dari kami';
         }
         return response()->json(MyHelper::checkGet($result, $resultMessage));
     }
     /*============================= End Filter & Sort V2 ================================*/
- 
+
     public function updateComplete(UpdateComplete $request)
     {
-    	$post = $request->json()->all();
+        $post = $request->json()->all();
 
-    	$check = $this->checkComplete($post['id_deals'], $step, $errors, $post['deals_type']);
+        $check = $this->checkComplete($post['id_deals'], $step, $errors, $post['deals_type']);
 
-		if ($check)
-		{
-			if ($post['deals_type'] == 'Promotion' || $post['deals_type'] == 'deals_promotion') {
-				$update = DealsPromotionTemplate::where('id_deals_promotion_template','=',$post['id_deals'])->update(['step_complete' => 1, 'last_updated_by' => auth()->user()->id]);
-			}else{
-				$update = Deal::where('id_deals','=',$post['id_deals'])->update(['step_complete' => 1, 'last_updated_by' => auth()->user()->id]);
-			}
+        if ($check) {
+            if ($post['deals_type'] == 'Promotion' || $post['deals_type'] == 'deals_promotion') {
+                $update = DealsPromotionTemplate::where('id_deals_promotion_template', '=', $post['id_deals'])->update(['step_complete' => 1, 'last_updated_by' => auth()->user()->id]);
+            } else {
+                $update = Deal::where('id_deals', '=', $post['id_deals'])->update(['step_complete' => 1, 'last_updated_by' => auth()->user()->id]);
+            }
 
-			if ($update)
-			{
-				return ['status' => 'success'];
-			}else{
-				return ['status'=> 'fail', 'messages' => ['Update deals failed']];
-			}
-		}
-		else
-		{
-			return [
-				'status'	=> 'fail',
-				'step' 		=> $step,
-				'messages' 	=> $errors
-			];
-		}
+            if ($update) {
+                return ['status' => 'success'];
+            } else {
+                return ['status' => 'fail', 'messages' => ['Update deals failed']];
+            }
+        } else {
+            return [
+                'status'    => 'fail',
+                'step'      => $step,
+                'messages'  => $errors
+            ];
+        }
     }
 
-    public function checkComplete($id, &$step, &$errors = [], $promo_type)
+    public function checkComplete($id, &$step, &$errors = [], $promo_type = null)
     {
-    	$errors = [];
-    	$deals = $this->getDealsData($id, 'all', $promo_type);
-    	if (!$deals) {
-    		$errors[] = 'Deals not found';
-    		return false;
-    	}
+        $errors = [];
+        $deals = $this->getDealsData($id, 'all', $promo_type);
+        if (!$deals) {
+            $errors[] = 'Deals not found';
+            return false;
+        }
 
-    	if ($promo_type == 'deals_promotion') {
-    		return app($this->promotion_deals)->checkComplete($deals, $step, $errors);
-    	}
+        if ($promo_type == 'deals_promotion') {
+            return app($this->promotion_deals)->checkComplete($deals, $step, $errors);
+        }
 
-    	$deals = $deals->load('deals_outlets')->toArray();
-    	if ( $deals['is_online'] == 1)
-    	{
-	    	if ( empty($deals['deals_product_discount_rules']) 
-	    		&& empty($deals['deals_tier_discount_rules']) 
-	    		&& empty($deals['deals_buyxgety_rules']) 
-	    		&& empty($deals['deals_discount_bill_rules']) 
-	    		&& empty($deals['deals_discount_delivery_rules'])
-	    	){
-	    		$step = 2;
-	    		$errors[] = 'Deals not complete';
-	    		return false;
-	    	}
-	    	else{
-	    		$products = $deals['deals_product_discount']??$deals['deals_tier_discount_product']??$deals['deals_buyxgety_product_requirement'];
+        $deals = $deals->load('deals_outlets')->toArray();
+        if ($deals['is_online'] == 1) {
+            if (
+                empty($deals['deals_product_discount_rules'])
+                && empty($deals['deals_tier_discount_rules'])
+                && empty($deals['deals_buyxgety_rules'])
+                && empty($deals['deals_discount_bill_rules'])
+                && empty($deals['deals_discount_delivery_rules'])
+            ) {
+                $step = 2;
+                $errors[] = 'Deals not complete';
+                return false;
+            } else {
+                $products = $deals['deals_product_discount'] ?? $deals['deals_tier_discount_product'] ?? $deals['deals_buyxgety_product_requirement'];
 
-		    	if (!empty($deals['deals_outlets']) 
-		    		&& !empty($products) 
-		    		&& $deals['is_all_outlet'] != 1 
-		    		&& ($deals['deals_product_discount_rules']['is_all_product']??0) != 1
-		    	) {
-			        $check_brand_product = app($this->promo)->checkBrandProduct($deals['deals_outlets'], $products);
-		        	if ($check_brand_product['status'] == false) {
-		        		$step = 2;
-		        		$errors = array_merge($errors,$check_brand_product['messages']??['Outlet tidak mempunyai produk dengan brand yang sesuai.']);
-			    		return false;
-		        	}
-		        }
-	    		
-	    	}
-    	}
+                if (
+                    !empty($deals['deals_outlets'])
+                    && !empty($products)
+                    && $deals['is_all_outlet'] != 1
+                    && ($deals['deals_product_discount_rules']['is_all_product'] ?? 0) != 1
+                ) {
+                    $check_brand_product = app($this->promo)->checkBrandProduct($deals['deals_outlets'], $products);
+                    if ($check_brand_product['status'] == false) {
+                        $step = 2;
+                        $errors = array_merge($errors, $check_brand_product['messages'] ?? ['Outlet tidak mempunyai produk dengan brand yang sesuai.']);
+                        return false;
+                    }
+                }
+            }
+        }
 
 
-    	if ( $deals['is_offline'] == 1)
-    	{
-    		if ( empty($deals['deals_promo_id_type']) && empty($deals['deals_promo_id']) )
-	    	{
-	    		$step = 2;
-	    		$errors[] = 'Deals not complete';
-	    		return false;
-	    	}
-    	}
+        if ($deals['is_offline'] == 1) {
+            if (empty($deals['deals_promo_id_type']) && empty($deals['deals_promo_id'])) {
+                $step = 2;
+                $errors[] = 'Deals not complete';
+                return false;
+            }
+        }
 
-    	if ( empty($deals['deals_content']) || empty($deals['deals_description'])) {
-    		$step = 3;
-	    	$errors[] = 'Deals not complete';
-    		return false;
-    	}
+        if (empty($deals['deals_content']) || empty($deals['deals_description'])) {
+            $step = 3;
+            $errors[] = 'Deals not complete';
+            return false;
+        }
 
-    	return true;
+        return true;
     }
 
     public function getProductByCode($product_type, $code)
     {
-		if ($product_type == 'single') 
-		{
-    		$product = Product::select('id_product')->whereIn('product_code',$code)->first();
-    	}
-    	else
-    	{
-    		$product = ProductGroup::select('id_product_group')->where('product_group_code', $code)->first();
-    	}
+        if ($product_type == 'single') {
+            $product = Product::select('id_product')->whereIn('product_code', $code)->first();
+        } else {
+            $product = ProductGroup::select('id_product_group')->where('product_group_code', $code)->first();
+        }
 
-    	return $product['id_product']??$product['id_product_group']??null;
+        return $product['id_product'] ?? $product['id_product_group'] ?? null;
     }
 
-	function dealsPaginate($query, $request)
-	{
-		$query->with('brands');
-		$query = $query->addSelect('deals.updated_at')->paginate($request->paginate);
+    public function dealsPaginate($query, $request)
+    {
+        $query->with('brands');
+        $query = $query->addSelect('deals.updated_at')->paginate($request->paginate);
 
-		return MyHelper::checkGet($query);
-	}
+        return MyHelper::checkGet($query);
+    }
 
-	/* UPDATE */
-    function updatePromotionDeals($id, $data)
+    /* UPDATE */
+    public function updatePromotionDeals($id, $data)
     {
         $data = $this->checkInputan($data);
         $deals = DealsPromotionTemplate::find($id);
         unset(
-        	$data['deals_type'],
-        	$data['deals_voucher_price_point'],
-        	$data['deals_voucher_price_cash']
+            $data['deals_type'],
+            $data['deals_voucher_price_point'],
+            $data['deals_voucher_price_cash']
         );
         $data['step_complete'] = 0;
         $data['last_updated_by'] = auth()->user()->id;
 
-        $del_rule 	= false;
+        $del_rule   = false;
         if ($data['id_brand'] && is_array($data['id_brand'])) {
-           	$brand_now 	= $deals->deals_promotion_brands->pluck('id_brand')->toArray();
-           	$brand_new	= $data['id_brand'];
-        	$data_brand = $brand_new;
+            $brand_now  = $deals->deals_promotion_brands->pluck('id_brand')->toArray();
+            $brand_new  = $data['id_brand'];
+            $data_brand = $brand_new;
 
-           	$check_brand = array_merge(array_diff($brand_now, $brand_new), array_diff($brand_new, $brand_now));
+            $check_brand = array_merge(array_diff($brand_now, $brand_new), array_diff($brand_new, $brand_now));
 
-       		if (!empty($check_brand)) {
-       			$del_rule = true;
-       		}
+            if (!empty($check_brand)) {
+                $del_rule = true;
+            }
         }
-        if ( $data['is_online'] == 0 
-    		|| (isset($data['id_brand']) 
-	    		&& ((!is_array($data['id_brand']) && $data['id_brand'] != $deals['id_brand']) 
-	    			|| (is_array($data['id_brand']) && $del_rule)
-	    			) 
-	    		)
+        if (
+            $data['is_online'] == 0
+            || (isset($data['id_brand'])
+                && ((!is_array($data['id_brand']) && $data['id_brand'] != $deals['id_brand'])
+                    || (is_array($data['id_brand']) && $del_rule)
+                    )
+                )
         ) {
-        	app($this->promo_campaign)->deleteAllProductRule('deals_promotion', $id);
+            app($this->promo_campaign)->deleteAllProductRule('deals_promotion', $id);
         }
 
-        if(!isset($data['id_brand'])){
+        if (!isset($data['id_brand'])) {
             $configBrand = Configs::where('config_name', 'use brand')->select('is_active')->first();
-            if(isset($configBrand['is_active']) && $configBrand['is_active'] != '1'){
+            if (isset($configBrand['is_active']) && $configBrand['is_active'] != '1') {
                 $brand = Brand::select('id_brand')->first();
-                if(isset($brand['id_brand'])){
+                if (isset($brand['id_brand'])) {
                     $data['id_brand'] = $brand['id_brand'];
                 }
             }
         }
 
         if (isset($data['id_brand']) && is_array($data['id_brand'])) {
-        	$save_brand = $this->saveBrand($deals, $data['id_brand']);
-        	unset($data['id_brand']);
-        	if (!$save_brand) {
+            $save_brand = $this->saveBrand($deals, $data['id_brand']);
+            unset($data['id_brand']);
+            if (!$save_brand) {
                 return false;
             }
         }
@@ -2117,8 +2077,7 @@ class ApiDeals extends Controller
 
         // save outlet
         if (isset($data['id_outlet'])) {
-
-            if($data['is_all_outlet'] == 0){
+            if ($data['is_all_outlet'] == 0) {
                 $saveOutlet = $this->saveOutlet('Promotion', $deals, $data['id_outlet']);
             }
             unset($data['id_outlet']);
@@ -2126,7 +2085,7 @@ class ApiDeals extends Controller
 
         // save outlet group
         if (isset($data['id_outlet_group'])) {
-            if($data['is_all_outlet'] == 0){
+            if ($data['is_all_outlet'] == 0) {
                 $saveOutlet = $this->saveOutletGroup('Promotion', $deals, $data['id_outlet_group']);
             }
             unset($data['id_outlet_group']);
@@ -2148,17 +2107,17 @@ class ApiDeals extends Controller
         return $save;
     }
 
-    public function updateContentV2($data, $type='deals')
+    public function updateContentV2($data, $type = 'deals')
     {
         $post = $data;
 
         if ($type == 'deals') {
-        	$contentTable = new DealsContent;
-        	$contentTableDetail = new DealsContentDetail;
-        }elseif ($type == 'deals_promotion') {
-        	$contentTable = new DealsPromotionContent;
-        	$contentTableDetail = new DealsPromotionContentDetail;
-        	$type = 'deals';
+            $contentTable = new DealsContent();
+            $contentTableDetail = new DealsContentDetail();
+        } elseif ($type == 'deals_promotion') {
+            $contentTable = new DealsPromotionContent();
+            $contentTableDetail = new DealsPromotionContentDetail();
+            $type = 'deals';
         }
 
         $data_content = [];
@@ -2170,17 +2129,17 @@ class ApiDeals extends Controller
             $data_content[$key]['id_deals'] = $post['id_deals'];
             $data_content[$key]['id_deals_content'] = $value;
             $data_content[$key]['title'] = $post['content_title'][$key];
-            $data_content[$key]['is_active'] = ($post['visible'][$key+1]??0) ? 1 : null;
+            $data_content[$key]['is_active'] = ($post['visible'][$key + 1] ?? 0) ? 1 : null;
             $data_content[$key]['order'] = ($content_order++);
             $data_content[$key]['created_at'] = date('Y-m-d H:i:s');
             $data_content[$key]['updated_at'] = date('Y-m-d H:i:s');
 
             $detail_order = 1;
-            if ( ($post['id_content_detail'][$key+1]??0) ) {
-                foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
+            if (($post['id_content_detail'][$key + 1] ?? 0)) {
+                foreach ($post['id_content_detail'][$key + 1] as $key2 => $value2) {
                     $data_content_detail[$key][$key2]['id_deals_content'] = $value;
                     $data_content_detail[$key][$key2]['id_deals_content_detail'] = $value2;
-                    $data_content_detail[$key][$key2]['content'] = $post['content_detail'][$key+1][$key2];
+                    $data_content_detail[$key][$key2]['content'] = $post['content_detail'][$key + 1][$key2];
                     $data_content_detail[$key][$key2]['order'] = $detail_order++;
                     $data_content_detail[$key][$key2]['created_at'] = date('Y-m-d H:i:s');
                     $data_content_detail[$key][$key2]['updated_at'] = date('Y-m-d H:i:s');
@@ -2189,19 +2148,16 @@ class ApiDeals extends Controller
         }
 
         // hapus content & detail
-        $del_content = $contentTable::where('id_deals','=',$post['id_deals'])->delete();
+        $del_content = $contentTable::where('id_deals', '=', $post['id_deals'])->delete();
 
         // create content & detail
-        foreach ($post['id_deals_content'] as $key => $value) 
-        {
+        foreach ($post['id_deals_content'] as $key => $value) {
             $save = $contentTable::create($data_content[$key]);
 
             $id_deals_content = $save['id_deals_content'];
 
-            if ( ($post['id_content_detail'][$key+1]??0) ) {
-
-                foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
-
+            if (($post['id_content_detail'][$key + 1] ?? 0)) {
+                foreach ($post['id_content_detail'][$key + 1] as $key2 => $value2) {
                     $data_content_detail[$key][$key2]['id_deals_content'] = $id_deals_content;
 
                     $save = $contentTableDetail::create($data_content_detail[$key][$key2]);
@@ -2216,7 +2172,8 @@ class ApiDeals extends Controller
         return $save;
     }
 
-    function listAllDeals(Request $request){
+    public function listAllDeals(Request $request)
+    {
         $post = $request->json()->all();
 
         $list = Deal::where('deals_type', $post['deals_type'])

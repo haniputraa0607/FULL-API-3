@@ -5,11 +5,9 @@ namespace Modules\Deals\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Lib\MyHelper;
 use App\Lib\Midtrans;
 use App\Lib\Ovo;
-
 use App\Http\Models\Deal;
 use App\Http\Models\DealsOutlet;
 use App\Http\Models\DealsPaymentManual;
@@ -22,34 +20,30 @@ use App\Http\Models\User;
 use App\Http\Models\LogBalance;
 use App\Http\Models\Setting;
 use App\Http\Models\OvoReference;
-
 use Modules\Deals\Http\Controllers\ApiDealsVoucher;
 use Modules\Deals\Http\Controllers\ApiDealsClaim;
 use Modules\Balance\Http\Controllers\NewTopupController;
 use Modules\Balance\Http\Controllers\BalanceController;
 use Modules\ShopeePay\Entities\DealsPaymentShopeePay;
-
 use Modules\Deals\Http\Requests\Deals\Voucher;
 use Modules\Deals\Http\Requests\Claim\Paid;
 use Modules\Deals\Http\Requests\Claim\PayNow;
-
 use Modules\Deals\Http\Requests\Ovo\Confirm;
-
 use Illuminate\Support\Facades\Schema;
-
 use DB;
 use Hash;
 
 class ApiDealsClaimPay extends Controller
 {
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
 
         $this->deals   = "Modules\Deals\Http\Controllers\ApiDeals";
         $this->voucher = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->claim   = "Modules\Deals\Http\Controllers\ApiDealsClaim";
         $this->balance = "Modules\Balance\Http\Controllers\BalanceController";
-        if(\Module::collections()->has('Autocrm')) {
+        if (\Module::collections()->has('Autocrm')) {
             $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         }
         $this->shopeepay      = "Modules\ShopeePay\Http\Controllers\ShopeePayController";
@@ -58,28 +52,28 @@ class ApiDealsClaimPay extends Controller
     public $saveImage = "img/receipt_deals/";
 
     /* BAYAR DEALS */
-    function bayar(Request $request)
+    public function bayar(Request $request)
     {
-
     }
 
-    public function cancel(Request $request) {
+    public function cancel(Request $request)
+    {
         $id_deals_user = $request->id_deals_user;
         $deals_user = DealsUser::where(['id_deals_user' => $id_deals_user, 'id_user' => $request->user()->id])->first();
-        if(!$deals_user || $deals_user->paid_status != 'Pending'){
-            return MyHelper::checkGet([],'Deals cannot be canceled');
+        if (!$deals_user || $deals_user->paid_status != 'Pending') {
+            return MyHelper::checkGet([], 'Deals cannot be canceled');
         }
         $payment_type = $deals_user->payment_method;
         switch (strtolower($payment_type)) {
             case 'ipay88':
                 $errors = '';
-                $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('deals',$deals_user,$errors, $request->last_url);
-                if($cancel){
-                    return ['status'=>'success'];
+                $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('deals', $deals_user, $errors, $request->last_url);
+                if ($cancel) {
+                    return ['status' => 'success'];
                 }
                 return [
-                    'status'=>'fail', 
-                    'messages' => $errors?:['Something went wrong']
+                    'status' => 'fail',
+                    'messages' => $errors ?: ['Something went wrong']
                 ];
             case 'midtrans':
                 $trx_mid = DealsPaymentMidtran::where('id_deals_user', $deals_user->id_deals_user)->first();
@@ -113,8 +107,8 @@ class ApiDealsClaimPay extends Controller
                     continue;
                 }
                 //reversal balance
-                if($singleTrx->balance_nominal) {
-                    $reversal = app($this->balance)->addLogBalance( $singleTrx->id_user, $singleTrx->balance_nominal, $singleTrx->id_deals_user, 'Claim Deals Failed', $singleTrx->voucher_price_point?:$singleTrx->voucher_price_cash);
+                if ($singleTrx->balance_nominal) {
+                    $reversal = app($this->balance)->addLogBalance($singleTrx->id_user, $singleTrx->balance_nominal, $singleTrx->id_deals_user, 'Claim Deals Failed', $singleTrx->voucher_price_point ?: $singleTrx->voucher_price_cash);
                     if (!$reversal) {
                         DB::rollBack();
                         continue;
@@ -127,226 +121,212 @@ class ApiDealsClaimPay extends Controller
     }
 
     /* CLAIM DEALS */
-    function claim(Paid $request)
+    public function claim(Paid $request)
     {
-    	try {
-	        $post      = $request->json()->all();
-	        if (isset($post['pin']) && strtolower($post['payment_deals']) == 'balance') {
-	            if (!password_verify($post['pin'], $request->user()->password)) {
-	                return [
-	                    'status' => 'fail',
-	                    'messages' => ['Incorrect PIN']
-	                ];
-	            }
-	        }
-	        $dataDeals = app($this->claim)->chekDealsData($request->json('id_deals'));
-	        $id_user   = $request->user()->id;
-	        if (empty($dataDeals)) {
-	            return response()->json([
-	                'status'   => 'fail',
-	                'messages' => ['Data deals not found']
-	            ]);
-	        }
-	        else {
-	            // CEK VALID DATE
-	            if (app($this->claim)->checkValidDate($dataDeals)) {
+        try {
+            $post      = $request->json()->all();
+            if (isset($post['pin']) && strtolower($post['payment_deals']) == 'balance') {
+                if (!password_verify($post['pin'], $request->user()->password)) {
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Incorrect PIN']
+                    ];
+                }
+            }
+            $dataDeals = app($this->claim)->chekDealsData($request->json('id_deals'));
+            $id_user   = $request->user()->id;
+            if (empty($dataDeals)) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Data deals not found']
+                ]);
+            } else {
+                // CEK VALID DATE
+                if (app($this->claim)->checkValidDate($dataDeals)) {
+                    if (!empty($dataDeals->deals_voucher_price_point) || !empty($dataDeals->deals_voucher_price_cash)) {
+                        if (!empty($dataDeals->deals_voucher_price_point)) {
+                            if (!app($this->claim)->checkDealsPoint($dataDeals, $request->user()->id)) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => ['Your point not enough.']
+                                ]);
+                            }
+                        }
 
-	                if (!empty($dataDeals->deals_voucher_price_point) || !empty($dataDeals->deals_voucher_price_cash)) {
-	                    if (!empty($dataDeals->deals_voucher_price_point)) {
-	                        if (!app($this->claim)->checkDealsPoint($dataDeals, $request->user()->id)) {
-	                            DB::rollback();
-	                            return response()->json([
-	                                'status'   => 'fail',
-	                                'messages' => ['Your point not enough.']
-	                            ]);
-	                        }
-	                    }
+                        //CEK IF BALANCE O
+                        if (isset($post['balance']) && $post['balance'] == true) {
+                            if (app($this->claim)->getPoint($request->user()->id) <= 0) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => ['Your need more point.']
+                                ]);
+                            }
+                        }
 
-	                    //CEK IF BALANCE O
-	                    if(isset($post['balance']) && $post['balance'] == true){
-	                        if(app($this->claim)->getPoint($request->user()->id) <= 0){
-	                            DB::rollback();
-	                            return response()->json([
-	                                'status'   => 'fail',
-	                                'messages' => ['Your need more point.']
-	                            ]);
-	                        }
-	                    }
+                        // CEK USER ALREADY CLAIMED
+                        DB::beginTransaction();
+                        if (app($this->claim)->checkUserClaimed($request->user(), $dataDeals->id_deals)) {
+                            // if deals subscription
+                            if ($dataDeals->deals_type == "Subscription") {
+                                $id_deals = $dataDeals->id_deals;
 
-	                    // CEK USER ALREADY CLAIMED
-	            		DB::beginTransaction();
-	                    if (app($this->claim)->checkUserClaimed($request->user(), $dataDeals->id_deals)) {
+                                // count claimed deals by id_deals_subscription (how many times deals are claimed)
+                                $dealsVoucherSubs = DealsVoucher::where('id_deals', $id_deals)->count();
+                                $voucherClaimed = 0;
+                                if ($dealsVoucherSubs > 0) {
+                                    $voucherClaimed = $dealsVoucherSubs / $dataDeals->total_voucher_subscription;
+                                    if (is_float($voucherClaimed)) { // if miss calculate use deals_total_claimed
+                                        $voucherClaimed = $dataDeals->deals_total_claimed;
+                                    }
+                                }
 
-	                        // if deals subscription
-	                        if ($dataDeals->deals_type == "Subscription") {
-	                            $id_deals = $dataDeals->id_deals;
+                                // check available voucher
+                                if ($dataDeals->deals_total_voucher > $voucherClaimed || $dataDeals->deals_voucher_type == "Unlimited") {
+                                    $deals_subs = $dataDeals->deals_subscriptions()->get();
+                                    // dd($deals_subs);
 
-	                            // count claimed deals by id_deals_subscription (how many times deals are claimed)
-	                            $dealsVoucherSubs = DealsVoucher::where('id_deals', $id_deals)->count();
-	                            $voucherClaimed = 0;
-	                            if ($dealsVoucherSubs > 0) {
-	                                $voucherClaimed = $dealsVoucherSubs / $dataDeals->total_voucher_subscription;
-	                                if(is_float($voucherClaimed)){ // if miss calculate use deals_total_claimed
-	                                    $voucherClaimed = $dataDeals->deals_total_claimed;
-	                                }
-	                            }
+                                    // create deals voucher and deals user x times
+                                    $user_voucher = [];
+                                    $apiDealsVoucher = new ApiDealsVoucher();
+                                    $apiDealsClaim   = new ApiDealsClaim();
 
-	                            // check available voucher
-	                            if ($dataDeals->deals_total_voucher > $voucherClaimed || $dataDeals->deals_voucher_type == "Unlimited") {
-	                                $deals_subs = $dataDeals->deals_subscriptions()->get();
-	                                // dd($deals_subs);
+                                    foreach ($deals_subs as $key => $deals_sub) {
+                                        // deals subscription may have > 1 voucher
+                                        for ($i = 1; $i <= $deals_sub->total_voucher; $i++) {
+                                            // generate voucher code
+                                            do {
+                                                $code = $apiDealsVoucher->generateCode($dataDeals->id_deals);
+                                                $voucherCode = DealsVoucher::where('id_deals', $id_deals)->where('voucher_code', $code)->first();
+                                            } while (!empty($voucherCode));
 
-	                                // create deals voucher and deals user x times
-	                                $user_voucher = [];
-	                                $apiDealsVoucher = new ApiDealsVoucher();
-	                                $apiDealsClaim   = new ApiDealsClaim();
+                                            $voucher = DealsVoucher::create([
+                                                'id_deals'             => $id_deals,
+                                                'id_deals_subscription' => $deals_sub->id_deals_subscription,
+                                                'voucher_code'         => strtoupper($code),
+                                                'deals_voucher_status' => 'Sent',
+                                            ]);
+                                            if (!$voucher) {
+                                                DB::rollback();
+                                                return response()->json([
+                                                    'status'   => 'fail',
+                                                    'messages' => ['Failed to save data.']
+                                                ]);
+                                            }
 
-	                                foreach ($deals_subs as $key => $deals_sub) {
-	                                    // deals subscription may have > 1 voucher
-	                                    for ($i=1; $i <= $deals_sub->total_voucher; $i++) {
-	                                        // generate voucher code
-	                                        do {
-	                                            $code = $apiDealsVoucher->generateCode($dataDeals->id_deals);
-	                                            $voucherCode = DealsVoucher::where('id_deals', $id_deals)->where('voucher_code', $code)->first();
-	                                        } while (!empty($voucherCode));
+                                            // create user voucher
+                                            // give price to user voucher only if first voucher
+                                            if ($key == 0 && $i == 1) {
+                                                $voucher = $apiDealsClaim->createVoucherUser($id_user, $voucher->id_deals_voucher, $dataDeals, $deals_sub);
+                                            } else {
+                                                // price or point = null
+                                                $voucher = $apiDealsClaim->createVoucherUser($id_user, $voucher->id_deals_voucher, $dataDeals, $deals_sub, 0);
+                                            }
+                                            if (!$voucher) {
+                                                DB::rollback();
+                                                return response()->json([
+                                                    'status'   => 'fail',
+                                                    'messages' => ['Failed to save data.']
+                                                ]);
+                                            }
+                                            // keep user voucher in order to return in response
+                                            array_push($user_voucher, $voucher);
+                                        }   // end of for
+                                    }   // end of foreach
 
-	                                        $voucher = DealsVoucher::create([
-	                                            'id_deals'             => $id_deals,
-	                                            'id_deals_subscription'=> $deals_sub->id_deals_subscription,
-	                                            'voucher_code'         => strtoupper($code),
-	                                            'deals_voucher_status' => 'Sent',
-	                                        ]);
-	                                        if (!$voucher) {
-	                                            DB::rollback();
-	                                            return response()->json([
-	                                                'status'   => 'fail',
-	                                                'messages' => ['Failed to save data.']
-	                                            ]);
-	                                        }
+                                    // update deals total claim
+                                    $updateDeals = $apiDealsClaim->updateDeals($dataDeals);
 
-	                                        // create user voucher
-	                                        // give price to user voucher only if first voucher
-	                                        if ($key==0 && $i==1) {
-	                                            $voucher = $apiDealsClaim->createVoucherUser($id_user, $voucher->id_deals_voucher, $dataDeals, $deals_sub);
-	                                        }
-	                                        else{
-	                                            // price or point = null
-	                                            $voucher = $apiDealsClaim->createVoucherUser($id_user, $voucher->id_deals_voucher, $dataDeals, $deals_sub, 0);
-	                                        }
-	                                        if (!$voucher) {
-	                                            DB::rollback();
-	                                            return response()->json([
-	                                                'status'   => 'fail',
-	                                                'messages' => ['Failed to save data.']
-	                                            ]);
-	                                        }
-	                                        // keep user voucher in order to return in response
-	                                        array_push($user_voucher, $voucher);
+                                    // multi vouchers
+                                    $voucher = $user_voucher;
+                                } else {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'   => 'fail',
+                                        'messages' => ['Voucer telah habis']
+                                    ]);
+                                }
+                            } else {
+                                // CHECK TYPE VOUCHER
+                                // IF LIST VOUCHER, GET 1 FROM DEALS VOUCHER
+                                if ($dataDeals->deals_voucher_type == "List Vouchers") {
+                                    $voucher = app($this->claim)->getVoucherFromTable($request->user(), $dataDeals);
 
-	                                    }   // end of for
+                                    if (!$voucher) {
+                                        DB::rollback();
+                                        return response()->json([
+                                            'status'   => 'fail',
+                                            'messages' => ['Voucer telah habis']
+                                        ]);
+                                    }
+                                } else {
+                                // GENERATE VOUCHER CODE & ASSIGN
+                                    $voucher = app($this->claim)->getVoucherGenerate($request->user(), $dataDeals);
 
-	                                }   // end of foreach
+                                    if (!$voucher) {
+                                        DB::rollback();
+                                        return response()->json([
+                                            'status'   => 'fail',
+                                            'messages' => ['Voucer telah habis']
+                                        ]);
+                                    }
+                                }
+                            }
 
-	                                // update deals total claim
-	                                $updateDeals = $apiDealsClaim->updateDeals($dataDeals);
+                            if ($voucher) {
+                                if (!empty($dataDeals->deals_voucher_price_point)) {
+                                    $req['payment_deals'] = 'balance';
+                                }
+                                $req['id_deals_user'] =  $voucher['id_deals_user'];
+                                $payNow = new PayNow($req);
 
-	                                // multi vouchers
-	                                $voucher = $user_voucher;
-	                            }
-	                            else {
-	                                DB::rollback();
-	                                return response()->json([
-	                                    'status'   => 'fail',
-	                                    'messages' => ['Voucer telah habis']
-	                                ]);
-	                            }
-	                        }
-	                        else{
-	                            // CHECK TYPE VOUCHER
-	                            // IF LIST VOUCHER, GET 1 FROM DEALS VOUCHER
-	                            if ($dataDeals->deals_voucher_type == "List Vouchers") {
-	                                $voucher = app($this->claim)->getVoucherFromTable($request->user(), $dataDeals);
-
-	                                if (!$voucher) {
-	                                    DB::rollback();
-	                                    return response()->json([
-	                                        'status'   => 'fail',
-	                                        'messages' => ['Voucer telah habis']
-	                                    ]);
-	                                }
-	                            }
-	                            // GENERATE VOUCHER CODE & ASSIGN
-	                            else {
-	                                $voucher = app($this->claim)->getVoucherGenerate($request->user(), $dataDeals);
-
-	                                if (!$voucher) {
-	                                    DB::rollback();
-	                                    return response()->json([
-	                                        'status'   => 'fail',
-	                                        'messages' => ['Voucer telah habis']
-	                                    ]);
-	                                }
-	                            }
-	                        }
-
-	                        if ($voucher) {
-
-	                            if (!empty($dataDeals->deals_voucher_price_point)){
-	                                $req['payment_deals'] = 'balance';
-	                            }
-	                            $req['id_deals_user'] =  $voucher['id_deals_user'];
-	                            $payNow = new PayNow($req);
-
-	                            DB::commit();
-	                            // update deals total claim
-	                            $updateDeals = app($this->claim)->updateDeals($dataDeals);
-	                            return $this->bayarSekarang($payNow);
-	                        }
-	                        else {
-	                            DB::rollback();
-	                            return response()->json([
-	                                'status'   => 'fail',
-	                                'messages' => ['Transaction is failed.']
-	                            ]);
-	                        }
-	                        DB::commit();
-	                        return response()->json(MyHelper::checkCreate($voucher));
-	                    }
-	                    else {
-	                        return response()->json([
-	                            'status'   => 'fail',
-	                            'messages' => ['Pengambilan voucer telah mencapai limit pengguna']
-	                        ]);
-	                    }
-	                }
-	                else {
-	                    DB::rollback();
-	                    return response()->json([
-	                        'status' => 'fail',
-	                        'messages' => ['This is a free voucher.']
-	                    ]);
-	                }
-	            }
-	            else {
-	                DB::rollback();
-	                return response()->json([
-	                    'status' => 'fail',
-	                    'messages' => ['Voucer berlaku pada '.MyHelper::dateFormatInd($dataDeals->deals_start, true, false).' sampai '.MyHelper::dateFormatInd($dataDeals->deals_end, true, false)]
-	                ]);
-	            }
-	        }
-    	} catch (\Exception $e) {
-    		\Log::error($e);
-    		return response()->json([
+                                DB::commit();
+                                // update deals total claim
+                                $updateDeals = app($this->claim)->updateDeals($dataDeals);
+                                return $this->bayarSekarang($payNow);
+                            } else {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => ['Transaction is failed.']
+                                ]);
+                            }
+                            DB::commit();
+                            return response()->json(MyHelper::checkCreate($voucher));
+                        } else {
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => ['Pengambilan voucer telah mencapai limit pengguna']
+                            ]);
+                        }
+                    } else {
+                        DB::rollback();
+                        return response()->json([
+                            'status' => 'fail',
+                            'messages' => ['This is a free voucher.']
+                        ]);
+                    }
+                } else {
+                    DB::rollback();
+                    return response()->json([
+                        'status' => 'fail',
+                        'messages' => ['Voucer berlaku pada ' . MyHelper::dateFormatInd($dataDeals->deals_start, true, false) . ' sampai ' . MyHelper::dateFormatInd($dataDeals->deals_end, true, false)]
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error($e);
+            return response()->json([
                 'status'   => 'fail',
                 'messages' => ['Pengambilan voucer gagal. Silakan coba kembali']
             ]);
-    	}
+        }
     }
 
     /* BAYAR SEKARANG */
     /* KARENA TADI NGGAK BAYAR MAKANYA SEKARANG KUDU BAYAR*/
-    function bayarSekarang(PayNow $request)
+    public function bayarSekarang(PayNow $request)
     {
         DB::beginTransaction();
         $post      = $request->json()->all();
@@ -370,25 +350,25 @@ class ApiDealsClaimPay extends Controller
 
             if ($voucher) {
                 $pay = $this->paymentMethod($dataDeals, $voucher, $request);
-                if (($pay['payment']??false) == 'ipay88'){
+                if (($pay['payment'] ?? false) == 'ipay88') {
                     DB::commit();
                     return [
                         'status'    => 'success',
                         'result'    => [
-                            'url'  => config('url.api_url').'api/ipay88/pay?'.http_build_query([
+                            'url'  => config('url.api_url') . 'api/ipay88/pay?' . http_build_query([
                                 'type' => 'deals',
                                 'id_reference' => $voucher->id_deals_user,
-                                'payment_id' => $request->json('payment_id')?:''
+                                'payment_id' => $request->json('payment_id') ?: ''
                             ]),
                             'redirect' => true,
                             'id_deals_user' => $voucher->id_deals_user,
                             'cancel_message' => 'Are you sure you want to cancel this transaction?'
                         ]
                     ];
-                }elseif (($pay['payment']??false) == 'shopeepay'){
+                } elseif (($pay['payment'] ?? false) == 'shopeepay') {
                     DB::commit();
                     $pay['message_timeout_shopeepay'] = "Sorry, your payment has expired";
-                    $pay['timer_shopeepay'] = (int) MyHelper::setting('shopeepay_validity_period','value', 300);
+                    $pay['timer_shopeepay'] = (int) MyHelper::setting('shopeepay_validity_period', 'value', 300);
                     return [
                         'status'    => 'success',
                         'result'    => $pay
@@ -415,45 +395,45 @@ class ApiDealsClaimPay extends Controller
                     $pay['cancel_message'] = 'Are you sure you want to cancel this transaction?';
                     return response()->json(MyHelper::checkCreate($pay));
                 }
-            }
-            elseif ($pay) {
+            } elseif ($pay) {
                 DB::commit();
                 $pay['cancel_message'] = 'Are you sure you want to cancel this transaction?';
                 $return = MyHelper::checkCreate($pay);
-                if(isset($return['status']) && $return['status'] == 'success'){
-                    if(\Module::collections()->has('Autocrm')) {
-                        $phone=User::where('id', $voucher->id_user)->pluck('phone')->first();
+                if (isset($return['status']) && $return['status'] == 'success') {
+                    if (\Module::collections()->has('Autocrm')) {
+                        $phone = User::where('id', $voucher->id_user)->pluck('phone')->first();
                         $voucher->load('dealVoucher.deals');
 
-                        if (($pay['voucher']['payment_method']??false) == 'Balance') 
-                        {
-	                        $autocrm = app($this->autocrm)->SendAutoCRM('Claim Point Deals Success', $phone,
-	                            [
-	                                'claimed_at'                => $voucher->claimed_at, 
-	                                'deals_title'               => $voucher->dealVoucher->deals->deals_title,
-	                                'id_deals_user'             => $return['result']['voucher']['id_deals_user'],
-	                                'deals_voucher_price_point' => (string) $voucher->voucher_price_point,
-	                                'id_deals'                  => $voucher->dealVoucher->deals->id_deals,
-	                                'id_brand'                  => $voucher->dealVoucher->deals->id_brand
-	                            ]
-	                        );
+                        if (($pay['voucher']['payment_method'] ?? false) == 'Balance') {
+                            $autocrm = app($this->autocrm)->SendAutoCRM(
+                                'Claim Point Deals Success',
+                                $phone,
+                                [
+                                    'claimed_at'                => $voucher->claimed_at,
+                                    'deals_title'               => $voucher->dealVoucher->deals->deals_title,
+                                    'id_deals_user'             => $return['result']['voucher']['id_deals_user'],
+                                    'deals_voucher_price_point' => (string) $voucher->voucher_price_point,
+                                    'id_deals'                  => $voucher->dealVoucher->deals->id_deals,
+                                    'id_brand'                  => $voucher->dealVoucher->deals->id_brand
+                                ]
+                            );
                         }
                     }
                     $result = [
-                        'id_deals_user'=>$return['result']['voucher']['id_deals_user'],
-                        'id_deals_voucher'=>$return['result']['voucher']['id_deals_voucher'],
-                        'paid_status'=>$return['result']['voucher']['paid_status'],
+                        'id_deals_user' => $return['result']['voucher']['id_deals_user'],
+                        'id_deals_voucher' => $return['result']['voucher']['id_deals_voucher'],
+                        'paid_status' => $return['result']['voucher']['paid_status'],
                     ];
-                    if(isset($return['result']['midtrans'])){
+                    if (isset($return['result']['midtrans'])) {
                         $result['redirect'] = true;
                         $result['midtrans'] = $return['result']['midtrans'];
-                    }elseif(isset($return['result']['ovo'])){
+                    } elseif (isset($return['result']['ovo'])) {
                         $result['redirect'] = true;
                         $result['ovo'] = $return['result']['ovo'];
-                    }else{
+                    } else {
                         $result['redirect'] = false;
                     }
-                    $result['webview_later'] = config('url.api_url').'api/webview/mydeals/'.$return['result']['voucher']['id_deals_user'];
+                    $result['webview_later'] = config('url.api_url') . 'api/webview/mydeals/' . $return['result']['voucher']['id_deals_user'];
                     unset($return['result']);
                     $result['cancel_message'] = 'Are you sure you want to cancel this transaction?';
                     $return['result'] = $result;
@@ -470,21 +450,20 @@ class ApiDealsClaimPay extends Controller
     }
 
     /* DEALS */
-    function deals($idDealsUser)
+    public function deals($idDealsUser)
     {
         $deals = Deal::leftjoin('deals_vouchers', 'deals_vouchers.id_deals', '=', 'deals.id_deals')->leftjoin('deals_users', 'deals_users.id_deals_voucher', '=', 'deals_vouchers.id_deals_voucher')->select('deals.*')->where('deals_users.id_deals_user', $idDealsUser)->first();
         return $deals;
     }
 
     /* PAYMENT */
-    function paymentMethod($dataDeals, $voucher, $request)
+    public function paymentMethod($dataDeals, $voucher, $request)
     {
         //IF USING BALANCE
-        if ($request->json('balance') == true){
+        if ($request->json('balance') == true) {
             /* BALANCE */
-            $pay = $this->balance($dataDeals, $voucher,$request->json('payment_deals'), $request->json()->all());
-        }else{
-
+            $pay = $this->balance($dataDeals, $voucher, $request->json('payment_deals'), $request->json()->all());
+        } else {
             /* BALANCE */
             if ($request->json('payment_deals') && $request->json('payment_deals') == "balance") {
                 $pay = $this->balance($dataDeals, $voucher);
@@ -508,7 +487,7 @@ class ApiDealsClaimPay extends Controller
 
            /* OVO */
             if ($request->json('payment_deals') && $request->json('payment_deals') == "ovo") {
-                $pay = $this->ovo($dataDeals, $voucher, null,$request->json('phone'));
+                $pay = $this->ovo($dataDeals, $voucher, null, $request->json('phone'));
             }
 
            /* ShopeePay */
@@ -525,7 +504,7 @@ class ApiDealsClaimPay extends Controller
             }
         }
 
-        if(!isset($pay)){
+        if (!isset($pay)) {
             $pay = $this->midtrans($dataDeals, $voucher);
         }
 
@@ -534,22 +513,21 @@ class ApiDealsClaimPay extends Controller
     }
 
     /* MIDTRANS */
-    function midtrans($deals, $voucher, $grossAmount=null)
+    public function midtrans($deals, $voucher, $grossAmount = null)
     {
         // simpan dulu di deals payment midtrans
         $data = [
             'id_deals'      => $deals->id_deals,
             'id_deals_user' => $voucher->id_deals_user,
             'gross_amount'  => $voucher->voucher_price_cash,
-            'order_id'      => time().sprintf("%05d", $voucher->id_deals_user)
+            'order_id'      => time() . sprintf("%05d", $voucher->id_deals_user)
         ];
 
         if (is_null($grossAmount)) {
             if (!$this->updateInfoDealUsers($voucher->id_deals_user, ['payment_method' => 'Midtrans'])) {
                  return false;
             }
-        }
-        else {
+        } else {
             $data['gross_amount'] = $grossAmount;
         }
 
@@ -574,20 +552,20 @@ class ApiDealsClaimPay extends Controller
     }
 
     /* IPay88 */
-    function ipay88($deals, $voucher, $grossAmount=null,$post = null)
+    public function ipay88($deals, $voucher, $grossAmount = null, $post = null)
     {
         $ipay = \Modules\IPay88\Lib\IPay88::create();
-        $payment_id = $post['payment_id']??''; // ex. CREDIT_CARD, OVO, MANDIRI_ATM
+        $payment_id = $post['payment_id'] ?? ''; // ex. CREDIT_CARD, OVO, MANDIRI_ATM
         // simpan dulu di deals payment ipay88
-        $order_id = time().sprintf("%05d", $voucher->id_deals_user).'-'.$voucher->id_deals_user;
+        $order_id = time() . sprintf("%05d", $voucher->id_deals_user) . '-' . $voucher->id_deals_user;
         $data = [
             'id_deals'       => $deals->id_deals,
             'id_deals_user'  => $voucher->id_deals_user,
-            'amount'         => $voucher->voucher_price_cash*100,
+            'amount'         => $voucher->voucher_price_cash * 100,
             'order_id'       => $order_id,
-            'payment_id'     => $ipay->getPaymentId($payment_id??''), // ex. 1,2,3,7,19
+            'payment_id'     => $ipay->getPaymentId($payment_id ?? ''), // ex. 1,2,3,7,19
             'payment_method' => $ipay->getPaymentMethod($payment_id), // ex CREDIT CARD, BRI VA, MANDIRI ATM
-            'user_contact'   => $post['phone']??null,
+            'user_contact'   => $post['phone'] ?? null,
             'merchant_code'  => $ipay->merchant_code,
             'ref_no'         => $order_id,
         ];
@@ -595,16 +573,15 @@ class ApiDealsClaimPay extends Controller
             if (!$this->updateInfoDealUsers($voucher->id_deals_user, ['payment_method' => 'Ipay88'])) {
                  return false;
             }
-        }
-        else {
-            $data['amount'] = $grossAmount*100;
+        } else {
+            $data['amount'] = $grossAmount * 100;
         }
         $create = DealsPaymentIpay88::create($data);
         return $create;
     }
 
     /* OVO */
-    function ovo($deals, $voucher, $grossAmount=null, $phone)
+    public function ovo($deals, $voucher, $grossAmount = null, $phone = null)
     {
         return [
             'ovo' => true,
@@ -615,7 +592,7 @@ class ApiDealsClaimPay extends Controller
     }
 
     /* ShopeePay */
-    function shopeepay($deals, $voucher, $grossAmount=null)
+    public function shopeepay($deals, $voucher, $grossAmount = null)
     {
         $paymentShopeepay = DealsPaymentShopeePay::where('id_deals_user', $voucher['id_deals_user'])->first();
         $trx_shopeepay    = null;
@@ -624,13 +601,13 @@ class ApiDealsClaimPay extends Controller
                  return false;
             }
         }
-        $grossAmount = $grossAmount??($voucher->voucher_price_cash);
+        $grossAmount = $grossAmount ?? ($voucher->voucher_price_cash);
         if (!$paymentShopeepay) {
-            $paymentShopeepay                       = new DealsPaymentShopeePay;
+            $paymentShopeepay                       = new DealsPaymentShopeePay();
             $paymentShopeepay->id_deals_user        = $voucher['id_deals_user'];
             $paymentShopeepay->id_deals             = $deals['id_deals'];
             $paymentShopeepay->amount               = $grossAmount * 100;
-            $paymentShopeepay->order_id = time().sprintf("%05d", $voucher->id_deals_user);
+            $paymentShopeepay->order_id = time() . sprintf("%05d", $voucher->id_deals_user);
             $paymentShopeepay->save();
             $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'deals', $errors);
         } elseif (!($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http)) {
@@ -657,14 +634,15 @@ class ApiDealsClaimPay extends Controller
         ];
     }
     //process void
-    public function void(Request $request){
+    public function void(Request $request)
+    {
         $post = $request->json()->all();
         $transaction = DealsUser::where('deals_users.id_deals_user', $post['id_deals_user'])
-            ->join('deals_payment_ovos','deals_users.id_deals_user','=','deals_payment_ovos.id_deals_user')
-            ->where('paid_status','Completed')
-            ->whereDate('deals_payment_ovos.created_at','=',date('Y-m-d'))
+            ->join('deals_payment_ovos', 'deals_users.id_deals_user', '=', 'deals_payment_ovos.id_deals_user')
+            ->where('paid_status', 'Completed')
+            ->whereDate('deals_payment_ovos.created_at', '=', date('Y-m-d'))
             ->first();
-        if(!$transaction){
+        if (!$transaction) {
             return [
                 'status' => 'fail',
                 'messages' => [
@@ -674,13 +652,13 @@ class ApiDealsClaimPay extends Controller
         }
 
         $void = Ovo::Void($transaction);
-        if($void['status_code'] == "200"){
-            $transaction->update(['paid_status'=>'Cancelled']);
+        if ($void['status_code'] == "200") {
+            $transaction->update(['paid_status' => 'Cancelled']);
             return [
                 'status' => 'success',
                 'result' => $void
             ];
-        }else{
+        } else {
             return [
                 'status' => 'fail',
                 'result' => $void
@@ -688,16 +666,17 @@ class ApiDealsClaimPay extends Controller
         }
     }
     /* CONFIRM OVO */
-    function confirm(Confirm $request) {
-        if(DealsPaymentOvo::where('id_deals_user',$request->json('id_deals_user'))->exists()){
+    public function confirm(Confirm $request)
+    {
+        if (DealsPaymentOvo::where('id_deals_user', $request->json('id_deals_user'))->exists()) {
             return [
-                'status'=>'fail',
-                'messages'=>'Deals Invalid'
+                'status' => 'fail',
+                'messages' => 'Deals Invalid'
             ];
         }
-        $voucher = DealsUser::where('id_deals_user',$request->json('id_deals_user'))->with('deals_voucher.deals')->first();
+        $voucher = DealsUser::where('id_deals_user', $request->json('id_deals_user'))->with('deals_voucher.deals')->first();
         $deals = $voucher->deals_voucher->deals;
-        if(!$voucher){
+        if (!$voucher) {
             return [
                 'status' => 'fail',
                 'messages' => ['Deals User not found']
@@ -705,43 +684,42 @@ class ApiDealsClaimPay extends Controller
         }
         //get last ref number
         $lastRef = OvoReference::orderBy('id_ovo_reference', 'DESC')->first();
-        if($lastRef){
+        if ($lastRef) {
             //cek jika beda tanggal, bacth_no + 1, ref_number reset ke 1
-            if($lastRef['date'] != date('Y-m-d')){
+            if ($lastRef['date'] != date('Y-m-d')) {
                 $batchNo = $lastRef['batch_no'] + 1;
                 $refnumber = 1;
-            }
+            } else {
             //tanggal sama, batch_no tetap, ref_number +1
-            else{
                 $batchNo = $lastRef['batch_no'];
 
                 //cek jika ref_number sudah lebih dari 999.999
-                if($lastRef['reference_number'] >= 999999){
+                if ($lastRef['reference_number'] >= 999999) {
                     //reset ref_number ke 1 dan batch_no +1
                     $refnumber = 1;
                     $batchNo = $lastRef['batch_no'] + 1;
-                }else{
+                } else {
                     $refnumber = $lastRef['reference_number'] + 1;
                 }
             }
-        }else{
+        } else {
             $batch_no = 1;
             $refnumber = 1;
         }
         $type = env('OVO_ENV');
-        if($type == 'production'){
+        if ($type == 'production') {
             $is_prod = '1';
-        }else{
+        } else {
             $is_prod = '0';
         }
         \DB::beginTransaction();
         //update ovo_references
-        $updateOvoRef = OvoReference::updateOrCreate(['id_ovo_reference'=> 1], [
+        $updateOvoRef = OvoReference::updateOrCreate(['id_ovo_reference' => 1], [
             'date' => date('Y-m-d'),
             'batch_no' => $batchNo,
             'reference_number' => $refnumber
         ]);
-        $payData = DealsPaymentOvo::where('id_deals_user',$request->json('id_deals_user'))->first();
+        $payData = DealsPaymentOvo::where('id_deals_user', $request->json('id_deals_user'))->first();
 
         $data = [
             'id_deals'      => $deals->id_deals,
@@ -752,22 +730,20 @@ class ApiDealsClaimPay extends Controller
             'phone' => $request->json('phone'),
             'reversal' => 'not yet',
             'is_production' => $is_prod,
-            'order_id' => time().sprintf("%05d", $voucher->id_deals_user)
+            'order_id' => time() . sprintf("%05d", $voucher->id_deals_user)
         ];
 
         $payData = DealsPaymentOvo::create($data);
-        $payOvo = Ovo::PayTransaction($voucher, $payData, $voucher->voucher_price_cash, $type,'deals');
+        $payOvo = Ovo::PayTransaction($voucher, $payData, $voucher->voucher_price_cash, $type, 'deals');
         //jika response code 200
-        if(isset($payOvo['status_code']) && $payOvo['status_code'] == '200'){
+        if (isset($payOvo['status_code']) && $payOvo['status_code'] == '200') {
             $response = $payOvo['response'];
 
-            if($response['responseCode'] == '00'){
-
+            if ($response['responseCode'] == '00') {
                 //update payment
-                if(isset($response['referenceNumber'])){
-
+                if (isset($response['referenceNumber'])) {
                     $payment = DealsPaymentOvo::where('id_deals_user', $voucher['id_deals_user'])->first();
-                    if($payment){
+                    if ($payment) {
                         $dataUpdate['reversal'] = 'no';
                         $dataUpdate['trace_number'] = $response['traceNumber'];
                         $dataUpdate['approval_code'] = $response['approvalCode'];
@@ -784,14 +760,16 @@ class ApiDealsClaimPay extends Controller
                         $dataUpdate['payment_type'] = $response['transactionResponseData']['paymentType'];
 
                         $update = $payment->update($dataUpdate);
-                        if($update){
+                        if ($update) {
                             $updatePaymentStatus = DealsUser::where('id_deals_user', $voucher['id_deals_user'])->update(['paid_status' => 'Completed']);
-                            if($updatePaymentStatus){
-                                $phone=User::where('id', $voucher->id_user)->pluck('phone')->first();
+                            if ($updatePaymentStatus) {
+                                $phone = User::where('id', $voucher->id_user)->pluck('phone')->first();
                                 $voucher->load('dealVoucher.deals');
-                                $autocrm = app($this->autocrm)->SendAutoCRM('Claim Paid Deals Success', $phone,
+                                $autocrm = app($this->autocrm)->SendAutoCRM(
+                                    'Claim Paid Deals Success',
+                                    $phone,
                                     [
-                                        'claimed_at'                => $voucher->claimed_at, 
+                                        'claimed_at'                => $voucher->claimed_at,
                                         'deals_title'               => $voucher->dealVoucher->deals->deals_title,
                                         'id_deals_user'             => $voucher->id_deals_user,
                                         'deals_voucher_price_point' => (string) $voucher->voucher_price_point,
@@ -799,16 +777,14 @@ class ApiDealsClaimPay extends Controller
                                         'id_brand'                  => $voucher->dealVoucher->deals->id_brand
                                     ]
                                 );
-                            }
-                            else{
+                            } else {
                                 DB::rollBack();
                                 return response()->json([
                                     'status'   => 'fail',
                                     'messages' => [' Update Deals Payment Status Failed']
                                 ]);
                             }
-                        }
-                        else{
+                        } else {
                             DB::rollBack();
                             return response()->json([
                                 'status'   => 'fail',
@@ -822,32 +798,30 @@ class ApiDealsClaimPay extends Controller
 
                 //
             }
-
-        }
-        else{
+        } else {
             //response failed
 
             $response = [];
 
-            if(isset($payOvo['response'])){
+            if (isset($payOvo['response'])) {
                 $response = $payOvo['response'];
             }
 
             $payment = DealsPaymentOvo::where('id_deals_user', $voucher['id_deals_user'])->first();
-            if($payment){
+            if ($payment) {
                 $dataUpdate = [];
 
-                if(isset($payOvo['status_code']) && $payOvo['status_code'] != '404'){
+                if (isset($payOvo['status_code']) && $payOvo['status_code'] != '404') {
                     $dataUpdate['reversal'] = 'no';
                 }
 
-                if(isset($response['traceNumber'])){
+                if (isset($response['traceNumber'])) {
                     $dataUpdate['trace_number'] = $response['traceNumber'];
                 }
-                if(isset($response['type']) && $response['type'] == '0210'){
+                if (isset($response['type']) && $response['type'] == '0210') {
                     $dataUpdate['payment_type'] = 'PUSH TO PAY';
                 }
-                if(isset($response['responseCode'])){
+                if (isset($response['responseCode'])) {
                     $dataUpdate['response_code'] = $response['responseCode'];
                     $dataUpdate = Ovo::detailResponse($dataUpdate);
                 }
@@ -857,7 +831,7 @@ class ApiDealsClaimPay extends Controller
                 $updatePaymentStatus = DealsUser::where('id_deals_user', $voucher['id_deals_user'])->update(['paid_status' => 'Cancelled']);
 
                 //return balance\
-                
+
                 if ($voucher->balance_nominal) {
                     $insertDataLogCash = app($this->balance)->addLogBalance($voucher['id_user'], $voucher['balance_nominal'], $voucher['id_deals_user'], 'Claim Deals Failed');
                     if (!$insertDataLogCash) {
@@ -871,22 +845,22 @@ class ApiDealsClaimPay extends Controller
 
                 DB::commit();
                 //request reversal
-                if(!isset($payOvo['status_code']) || $payOvo['status_code'] == '404'){
-                    $reversal = Ovo::Reversal($voucher, $payData, $voucher->voucher_price_cash, $type,'deals');
+                if (!isset($payOvo['status_code']) || $payOvo['status_code'] == '404') {
+                    $reversal = Ovo::Reversal($voucher, $payData, $voucher->voucher_price_cash, $type, 'deals');
 
-                    if(isset($reversal['response'])){
+                    if (isset($reversal['response'])) {
                         $response = $reversal['response'];
                         $dataUpdate = [];
 
                         $dataUpdate['reversal'] = 'yes';
 
-                        if(isset($response['traceNumber'])){
+                        if (isset($response['traceNumber'])) {
                             $dataUpdate['trace_number'] = $response['traceNumber'];
                         }
-                        if(isset($response['type']) && $response['type'] == '0410'){
+                        if (isset($response['type']) && $response['type'] == '0410') {
                             $dataUpdate['payment_type'] = 'REVERSAL';
                         }
-                        if(isset($response['responseCode'])){
+                        if (isset($response['responseCode'])) {
                             $dataUpdate['response_code'] = $response['responseCode'];
                             $dataUpdate = Ovo::detailResponse($dataUpdate);
                         }
@@ -896,24 +870,24 @@ class ApiDealsClaimPay extends Controller
                 }
             }
         }
-        $voucher = DealsUser::where('id_deals_user',$request->json('id_deals_user'))->with('deals_voucher.deals')->first();
+        $voucher = DealsUser::where('id_deals_user', $request->json('id_deals_user'))->with('deals_voucher.deals')->first();
         switch ($voucher->paid_status) {
             case 'Pending':
                 $title = 'Pending';
                 break;
-            
+
             case 'Paid':
                 $title = 'Terbayar';
                 break;
-            
+
             case 'Completed':
                     $title = 'Sukses';
-                    break;
+                break;
 
             case 'Cancelled':
                     $title = 'Gagal';
-                    break;
-            
+                break;
+
             default:
                 $title = 'Sukses';
                 break;
@@ -932,19 +906,20 @@ class ApiDealsClaimPay extends Controller
         return response()->json($send);
     }
     /* CEK STATUS */
-    public function status(Request $request) {
-        $voucher = DealsUser::select('id_deals_user','paid_status')->where('id_deals_user',$request->json('id_deals_user'))->first()->toArray();
-        if($voucher['paid_status'] == 'Completed'){
-            $voucher['message'] = Setting::where('key', 'payment_success_messages')->pluck('value_text')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
-            $voucher['url_webview'] = config('url.api_url').'api/webview/mydeals/'.$voucher['id_deals_user'];
-        }elseif($voucher['paid_status'] == 'Cancelled'){
-            $voucher['message'] = Setting::where('key', 'payment_ovo_fail_messages')->pluck('value_text')->first()??'Transaksi Gagal';
+    public function status(Request $request)
+    {
+        $voucher = DealsUser::select('id_deals_user', 'paid_status')->where('id_deals_user', $request->json('id_deals_user'))->first()->toArray();
+        if ($voucher['paid_status'] == 'Completed') {
+            $voucher['message'] = Setting::where('key', 'payment_success_messages')->pluck('value_text')->first() ?? 'Apakah kamu ingin menggunakan Voucher sekarang?';
+            $voucher['url_webview'] = config('url.api_url') . 'api/webview/mydeals/' . $voucher['id_deals_user'];
+        } elseif ($voucher['paid_status'] == 'Cancelled') {
+            $voucher['message'] = Setting::where('key', 'payment_ovo_fail_messages')->pluck('value_text')->first() ?? 'Transaksi Gagal';
         }
 
         return MyHelper::checkGet($voucher);
     }
     /* MANUAL */
-    function manual($voucher, $post)
+    public function manual($voucher, $post)
     {
         $data = [];
         $data['id_deals_user'] = $voucher->id_deals_user;
@@ -954,8 +929,7 @@ class ApiDealsClaimPay extends Controller
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $data['payment_receipt_image'] = $upload['path'];
-            }
-            else {
+            } else {
                 return false;
             }
         }
@@ -991,12 +965,12 @@ class ApiDealsClaimPay extends Controller
     }
 
     /* BALANCE */
-    function balance($deals, $voucher, $paymentMethod = null,$post=null)
+    public function balance($deals, $voucher, $paymentMethod = null, $post = null)
     {
         $myBalance   = app($this->balance)->balanceNow($voucher->id_user);
         $kurangBayar = $myBalance - $voucher->voucher_price_cash;
 
-        if($paymentMethod == null){
+        if ($paymentMethod == null) {
             $paymentMethod = 'balance';
         }
 
@@ -1009,31 +983,30 @@ class ApiDealsClaimPay extends Controller
 
             if ($this->updateLogPoint(- $myBalance, $voucher)) {
                 if ($this->updateInfoDealUsers($voucher->id_deals_user, $dataDealsUserUpdate)) {
-                    if($paymentMethod == 'midtrans'){
+                    if ($paymentMethod == 'midtrans') {
                         return $this->midtrans($deals, $voucher, -$kurangBayar);
-                    }elseif($paymentMethod == 'ovo'){
+                    } elseif ($paymentMethod == 'ovo') {
                         return $this->ovo($deals, $voucher, -$kurangBayar);
-                    }elseif($paymentMethod == 'ipay88'){
-                        $pay = $this->ipay88($deals, $voucher, -$kurangBayar,$post);
+                    } elseif ($paymentMethod == 'ipay88') {
+                        $pay = $this->ipay88($deals, $voucher, -$kurangBayar, $post);
                         $ipay88 = [
                             'MERCHANT_TRANID'   => $pay['order_id'],
                             'AMOUNT'            => $pay['amount'],
                             'payment'           => 'ipay88'
                         ];
                         return $ipay88;
-                    }elseif($paymentMethod == 'shopeepay'){
+                    } elseif ($paymentMethod == 'shopeepay') {
                         return $this->shopeepay($deals, $voucher, -$kurangBayar);
                     }
                 }
             }
-
         } else {
             // update log balance
             $price = 0;
-            if(!empty($voucher->voucher_price_cash)){
+            if (!empty($voucher->voucher_price_cash)) {
                 $price = $voucher->voucher_price_cash;
             }
-            if(!empty($voucher->voucher_price_point)){
+            if (!empty($voucher->voucher_price_point)) {
                 $price = $voucher->voucher_price_point;
             }
             if ($this->updateLogPoint(- $price, $voucher)) {
@@ -1058,16 +1031,16 @@ class ApiDealsClaimPay extends Controller
     }
 
     /* UPDATE BALANCE */
-    function updateLogPoint($balance_nominal, $voucher)
+    public function updateLogPoint($balance_nominal, $voucher)
     {
         $user = User::with('memberships')->where('id', $voucher->id_user)->first();
 
         // $balance_nominal = -$voucher->voucher_price_cash;
         $grand_total = 0;
-        if(!empty($voucher->voucher_price_cash)){
+        if (!empty($voucher->voucher_price_cash)) {
             $grand_total = $voucher->voucher_price_cash;
         }
-        if(!empty($voucher->voucher_price_point)){
+        if (!empty($voucher->voucher_price_point)) {
             $grand_total = $voucher->voucher_price_point;
         }
         $id_reference = $voucher->id_deals_user;
@@ -1079,12 +1052,10 @@ class ApiDealsClaimPay extends Controller
     }
 
     /* UPDATE HARGA BALANCE */
-    function updateInfoDealUsers($idDealsUser, $data)
+    public function updateInfoDealUsers($idDealsUser, $data)
     {
         $update = DealsUser::where('id_deals_user', $idDealsUser)->update($data);
 
         return $update;
     }
-
-
 }

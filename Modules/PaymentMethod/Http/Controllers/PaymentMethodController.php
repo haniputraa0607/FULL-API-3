@@ -59,13 +59,13 @@ class PaymentMethodController extends Controller
     {
         $post  = $request->json()->all();
 
-        if(isset($post['status']) && $post['status'] == 'on'){
+        if (isset($post['status']) && $post['status'] == 'on') {
             $post['status'] = 'Enable';
-        }else{
+        } else {
             $post['status'] = 'Disable';
         }
 
-        if(isset($post['is_global']) && $post['is_global'] == 'on'){
+        if (isset($post['is_global']) && $post['is_global'] == 'on') {
             //delete all payment method outlet for this payment method id
             $delete = PaymentMethodOutlet::where('id_payment_method', $id)->delete();
             unset($post['is_global']);
@@ -84,47 +84,48 @@ class PaymentMethodController extends Controller
     {
         $payment_method = PaymentMethod::find($id);
 
-        if($payment_method){
+        if ($payment_method) {
             return MyHelper::checkDelete($payment_method->delete());
         }
 
         return response()->json(['status' => 'fail']);
     }
 
-    public function getDifferentPaymentMethod(Request $request, $id) {
+    public function getDifferentPaymentMethod(Request $request, $id)
+    {
 
-        $outlets = Outlet::select('id_outlet','outlet_code','outlet_name');
+        $outlets = Outlet::select('id_outlet', 'outlet_code', 'outlet_name');
 
-        if($keyword = $request->json('keyword')){
-            $outlets->where('outlet_code','like',"%$keyword%")
-                 ->orWhere('outlet_name','like',"%$keyword%");
+        if ($keyword = $request->json('keyword')) {
+            $outlets->where('outlet_code', 'like', "%$keyword%")
+                 ->orWhere('outlet_name', 'like', "%$keyword%");
         }
 
         $outlets = $outlets->get()->toArray();
-        
+
         $payment_method = PaymentMethod::find($id);
 
         //assign default payment method status to all outlet
-        foreach($outlets as $key => $outlet){
+        foreach ($outlets as $key => $outlet) {
             $outlets[$key]['status'] = $payment_method->status ?? $payment_method['status'];
         }
 
         $outlet_payments = PaymentMethodOutlet::with([
-            'outlet' => function($query) use($request){
-                $query->select('id_outlet','outlet_code','outlet_name');
+            'outlet' => function ($query) use ($request) {
+                $query->select('id_outlet', 'outlet_code', 'outlet_name');
 
-                if($keyword = $request->json('keyword')){
-                    $query->where('outlet_code','like',"%$keyword%")
-                         ->orWhere('outlet_name','like',"%$keyword%");
+                if ($keyword = $request->json('keyword')) {
+                    $query->where('outlet_code', 'like', "%$keyword%")
+                         ->orWhere('outlet_name', 'like', "%$keyword%");
                 }
             }
         ])->where('id_payment_method', $id)->get();
 
-        if($outlet_payments){
+        if ($outlet_payments) {
             //modified status of outlet
-            foreach($outlets as $key => $outlet){
-                foreach($outlet_payments as $outlet_payment){
-                    if($outlets[$key]['id_outlet'] == $outlet_payment->id_outlet){
+            foreach ($outlets as $key => $outlet) {
+                foreach ($outlet_payments as $outlet_payment) {
+                    if ($outlets[$key]['id_outlet'] == $outlet_payment->id_outlet) {
                         $outlets[$key]['status'] = $outlet_payment->status;
                         break;
                     }
@@ -133,23 +134,25 @@ class PaymentMethodController extends Controller
         }
 
         return response()->json($outlets);
-
     }
 
-    public function updateDifferentPaymentMethod(Request $request) {
+    public function updateDifferentPaymentMethod(Request $request)
+    {
         $post = $request->json()->all();
-        $update = PaymentMethodOutlet::updateOrCreate(['id_outlet' => $post['id_outlet'][0]??'', 'id_payment_method' => $post['id_payment_method']],['status'=>$post['status']]);
-        if($update){
+        $update = PaymentMethodOutlet::updateOrCreate(['id_outlet' => $post['id_outlet'][0] ?? '', 'id_payment_method' => $post['id_payment_method']], ['status' => $post['status']]);
+        if ($update) {
             return [
-                'status'=>'success',
-                'result'=>$post['status']
+                'status' => 'success',
+                'result' => $post['status']
             ];
         }
-        return ['status'=>'fail'];
+        return ['status' => 'fail'];
     }
 
-    public function getItemWithID($id){
+    public function getItemWithID($id)
+    {
         $data = PaymentMethod::find($id);
-        return response()->json(MyHelper::checkGet($data));exit;
+        return response()->json(MyHelper::checkGet($data));
+        exit;
     }
 }

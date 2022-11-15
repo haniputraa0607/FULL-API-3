@@ -11,7 +11,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class GlobalMonthlyReportTrxModifier
- * 
+ *
  * @property int $id_global_monthly_report_trx_modifier
  * @property int $trx_month
  * @property \Carbon\Carbon $trx_year
@@ -41,30 +41,30 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  */
 class GlobalMonthlyReportTrxModifier extends Eloquent
 {
-	protected $table = 'global_monthly_report_trx_modifier';
-	protected $primaryKey = 'id_global_monthly_report_trx_modifier';
+    protected $table = 'global_monthly_report_trx_modifier';
+    protected $primaryKey = 'id_global_monthly_report_trx_modifier';
 
-	protected $fillable = [
-		'trx_month',
-		'trx_year',
-		'id_product_modifier',
-		'text',
-		'total_rec',
-		'total_qty',
-		'total_nominal',
-		'cust_male',
-		'cust_female',
-		'cust_android',
-		'cust_ios',
-		'cust_telkomsel',
-		'cust_xl',
-		'cust_indosat',
-		'cust_tri',
-		'cust_axis',
-		'cust_smart',
-		'cust_teens',
-		'cust_young_adult',
-		'cust_adult',
-		'cust_old'
-	];
+    protected $fillable = [
+        'trx_month',
+        'trx_year',
+        'id_product_modifier',
+        'text',
+        'total_rec',
+        'total_qty',
+        'total_nominal',
+        'cust_male',
+        'cust_female',
+        'cust_android',
+        'cust_ios',
+        'cust_telkomsel',
+        'cust_xl',
+        'cust_indosat',
+        'cust_tri',
+        'cust_axis',
+        'cust_smart',
+        'cust_teens',
+        'cust_young_adult',
+        'cust_adult',
+        'cust_old'
+    ];
 }

@@ -7,15 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 class LogCheckPromoCode extends Model
 {
     /**
-	 * The database name used by the model.
-	 *
-	 * @var string
-	 */
-	protected $connection = 'mysql2';
-	
+     * The database name used by the model.
+     *
+     * @var string
+     */
+    protected $connection = 'mysql2';
+
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'log_check_promo_code';
@@ -29,7 +29,7 @@ class LogCheckPromoCode extends Model
         'device_id',
         'promo_code',
         'ip',
-        'created_at', 
+        'created_at',
         'updated_at'
     ];
 }

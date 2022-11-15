@@ -76,22 +76,22 @@ class QuestDetail extends Model
                 $total = $this->different_outlet;
                 $progress = QuestOutletLog::where(['id_quest_detail' => $this->id_quest_detail, 'id_user' => $this->id_user])->count();
                 break;
-            
+
             case 'total_province':
                 $total = $this->different_province;
                 $progress = QuestProvinceLog::where(['id_quest_detail' => $this->id_quest_detail, 'id_user' => $this->id_user])->count();
                 break;
-            
+
             case 'total_transaction':
                 $total = $this->trx_total;
                 $progress = QuestTransactionLog::where(['id_quest_detail' => $this->id_quest_detail, 'id_user' => $this->id_user])->count();
                 break;
-            
+
             case 'total_product':
                 $total = $this->product_total;
                 $progress = QuestProductLog::where(['id_quest_detail' => $this->id_quest_detail, 'id_user' => $this->id_user])->sum('product_total');
                 break;
-            
+
             case 'nominal_transaction':
                 $total = $this->trx_nominal;
                 $progress = QuestTransactionLog::where(['id_quest_detail' => $this->id_quest_detail, 'id_user' => $this->id_user])->sum('transaction_nominal');
