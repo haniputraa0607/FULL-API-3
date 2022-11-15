@@ -955,7 +955,7 @@ class ApiHistoryController extends Controller
             $log->where(function ($query) use ($post) {
                 $query->whereIn(
                     'log_balances.id_log_balance',
-                    public function ($query) use ($post) {
+                    function ($query) use ($post) {
                         $query->select('id_log_balance')
                             ->from('log_balances')
                             ->join('transactions', 'log_balances.id_reference', '=', 'transactions.id_transaction')
@@ -974,7 +974,7 @@ class ApiHistoryController extends Controller
                 );
                 $query->orWhereIn(
                     'log_balances.id_log_balance',
-                    public function ($query) use ($post) {
+                    function ($query) use ($post) {
                         $query->select('id_log_balance')
                             ->from('log_balances')
                             ->join('deals_users', 'log_balances.id_reference', '=', 'deals_users.id_deals_user')
