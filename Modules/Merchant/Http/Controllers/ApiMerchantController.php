@@ -642,7 +642,10 @@ class ApiMerchantController extends Controller
     }
 
     public function bankList(){
-        $list = BankName::select('id_bank_name', 'bank_code', 'bank_name', DB::raw("'' as bank_image"))->get()->toArray();
+        $list = BankName::select('id_bank_name', 'bank_code', 'bank_name', 'bank_image')->get()->toArray();
+        foreach ($list as $key=>$val){
+            $list[$key]['bank_image'] = (empty($val['bank_image']) ? config('url.storage_url_api').'img/default.jpg': config('url.storage_url_api').$val['bank_image']);
+        }
         return response()->json(MyHelper::checkGet($list));
     }
 
@@ -715,9 +718,13 @@ class ApiMerchantController extends Controller
 
         $list = BankAccount::join('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
                 ->join('bank_account_outlets', 'bank_account_outlets.id_bank_account', 'bank_accounts.id_bank_account')
-                ->select('bank_account_outlets.id_bank_account', 'beneficiary_name', 'beneficiary_account', DB::raw("'' as bank_image"), 'bank_name.bank_name')
+                ->select('bank_account_outlets.id_bank_account', 'beneficiary_name', 'beneficiary_account', 'bank_image', 'bank_name.bank_name')
                 ->where('id_outlet', $checkMerchant['id_outlet'])
                 ->get()->toArray();
+
+        foreach ($list as $key=>$val){
+            $list[$key]['bank_image'] = (empty($val['bank_image']) ? config('url.storage_url_api').'img/default.jpg': config('url.storage_url_api').$val['bank_image']);
+        }
         return response()->json(['status' => 'success' , 'result' => $list]);
     }
 
@@ -1427,6 +1434,7 @@ class ApiMerchantController extends Controller
         ];
         $saveBalanceMerchant = app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dt);
 
+        $date = date('d M Y H:i');
         if(!empty($saveBalanceMerchant['id_merchant_log_balance'])){
             $toSend = [
                 'beneficiary_name' => $checkBankAccount['beneficiary_name'],
@@ -1434,7 +1442,7 @@ class ApiMerchantController extends Controller
                 'beneficiary_bank' => $checkBankAccount['bank_code'],
                 'beneficiary_email' => $checkBankAccount['beneficiary_email'],
                 'amount' => $amount,
-                'notes' => 'Withdrawal '.date('d M Y H:i'),
+                'notes' => 'Withdrawal '.$date,
                 'id_merchant_log_balance' => $saveBalanceMerchant['id_merchant_log_balance'],
                 'fee' => $fee,
                 'id_bank_account' => $checkBankAccount['id_bank_account']
@@ -1454,7 +1462,18 @@ class ApiMerchantController extends Controller
                 $saveBalanceMerchant = app('Modules\Merchant\Http\Controllers\ApiMerchantTransactionController')->insertBalanceMerchant($dtFee);
             }
         }
-        return response()->json(MyHelper::checkUpdate($saveBalanceMerchant));
+
+        if($saveBalanceMerchant){
+            return response()->json(MyHelper::checkGet([
+                'amount' => $post['amount_withdrawal'],
+                'bank_account_number' => $checkBankAccount['beneficiary_account'],
+                'bank_account_name' => $checkBankAccount['bank_name'],
+                'bank_image' => (empty($checkBankAccount['bank_image']) ? config('url.storage_url_api').'img/default.jpg': config('url.storage_url_api').$checkBankAccount['bank_image']),
+                'date' => MyHelper::dateFormatInd($date)
+            ]));
+        }else{
+            return response()->json(MyHelper::checkUpdate($saveBalanceMerchant));
+        }
     }
 
     public function balanceList(Request $request){
