@@ -294,7 +294,7 @@ class ApiPromotionDeals extends Controller
             if ($post['voucher_type_listvoucher'][$key] != "") {
                 $ex = explode(PHP_EOL, $post['voucher_type_listvoucher'][$key]);
                 $ex = array_map(
-                    public function ($value) {
+                    function ($value) {
                         return (string) strtoupper($value);
                     },
                     $ex
