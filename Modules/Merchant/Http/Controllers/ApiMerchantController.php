@@ -1466,6 +1466,7 @@ class ApiMerchantController extends Controller
         if($saveBalanceMerchant){
             return response()->json(MyHelper::checkGet([
                 'amount' => $post['amount_withdrawal'],
+                'fee' => $fee,
                 'bank_account_number' => $checkBankAccount['beneficiary_account'],
                 'bank_account_name' => $checkBankAccount['bank_name'],
                 'bank_image' => (empty($checkBankAccount['bank_image']) ? config('url.storage_url_api').'img/default.jpg': config('url.storage_url_api').$checkBankAccount['bank_image']),
