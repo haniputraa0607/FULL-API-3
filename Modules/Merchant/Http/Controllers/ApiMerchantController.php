@@ -901,6 +901,10 @@ class ApiMerchantController extends Controller
                 'end_date' => date('Y-m-d', strtotime($post['end_date'])),
                 'total_days' => $totalDays
             ];
+
+            if($start > $end){
+                return response()->json(['status' => 'fail', 'messages' => ['Tanggal mulai harus lebih kecil dari tanggal berakhir']]);
+            }
         }
 
         $result = [];
@@ -1051,9 +1055,9 @@ class ApiMerchantController extends Controller
         $end = '';
         for ($i = 0; $i <= $totalMonth; $i++) {
             $date = date("Y-m-01", strtotime( $dateQuery." -$i months"));
-            if($i==1){
+            if($i==0){
                 $end = $date;
-            }elseif($i==12){
+            }elseif($i==$totalMonth){
                 $start = $date;
             }
             $monthFormat = MyHelper::dateFormatInd($date, false, false);
